@@ -1,0 +1,308 @@
+#
+# (C) Copyright IBM Corp. 2022.
+# SPDX-License-Identifier: Apache-2.0
+#
+
+- hosts: all
+  remote_user: root
+  tasks:
+    - name: Add Kubernetes apt repository signing key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+
+    - name: Add Kubernetes apt repository
+      apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+        filename: kubernetes
+
+    - name: Install deb packages
+      apt:
+        name:
+          - "linux-modules-extra-{{ ansible_kernel }}"
+          - build-essential
+          - jq
+          - qemu-utils
+          - libgpgme-dev
+          - libassuan-dev
+          - libdevmapper-dev
+          - pkg-config
+          - kubelet
+          - kubeadm
+          - kubectl
+          - kubernetes-cni
+          - cri-tools
+
+    - name: Install deb packages for Ubuntu 20.04 or later
+      apt:
+        name:
+          - libbtrfs-dev
+      when:
+        - ansible_facts['distribution'] == "Ubuntu"
+        - ansible_facts['distribution_major_version'] | int >= 20
+
+    - name: Install deb packages for Ubuntu 18.04 or before
+      apt:
+        name:
+          - btrfs-tools
+      when:
+        - ansible_facts['distribution'] == "Ubuntu"
+        - ansible_facts['distribution_major_version'] | int < 20
+
+    - name: Hold deb packages
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      with_items:
+        - kubelet
+        - kubeadm
+        - kubectl
+        - kubernetes-cni
+        - cri-tools
+
+    - name: Add local IP address in /etc/hosts
+      shell: |
+        if ! grep -q '^[^#].*\b{{ ansible_hostname }}\b' /etc/hosts; then
+          echo '{{ ansible_default_ipv4.address }} {{ ansible_hostname }}' >> /etc/hosts || exit 2
+          exit 1
+        fi
+      register: result
+      changed_when: result.rc == 1
+      failed_when: result.rc > 1
+
+    - name: Disable swap
+      shell: |
+        [ -z "$(swapon --show)" ] && exit 0
+        swapoff --all && exit 1
+        exit 2
+      register: result
+      changed_when: result.rc == 1
+      failed_when: result.rc > 1
+
+    - name: Disable swap in fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#\s]+\s+){2}swap\s'
+        replace: '# \1'
+
+    - name: Configure kernel modules to load at boot
+      copy:
+        dest: "{{ item.path }}"
+        content: "{{ item.content }}"
+      with_items:
+        - path: /etc/modules-load.d/k8s.conf
+          content: br_netfilter
+        - path: /etc/modules-load.d/peerpod.conf
+          content: vrf
+
+    - name: Load kernel modules
+      modprobe:
+        name: "{{ item }}"
+      with_items:
+        - br_netfilter
+        - vrf
+
+    - name: Set sysctl parameters for Kubernetes
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/k8s.conf
+        sysctl_set: yes
+        reload: yes
+      with_items:
+        - { name: net.ipv4.ip_forward, value: 1 }
+        - { name: net.bridge.bridge-nf-call-ip6tables, value: 1 }
+        - { name: net.bridge.bridge-nf-call-iptables, value: 1 }
+
+    - name: Install runc
+      shell: |
+        set -o errexit -o pipefail
+        arch="{{ ansible_architecture }}"
+        runc_release_url="https://api.github.com/repos/opencontainers/runc/releases/latest"
+        runc_download_url=$(curl -sL "$runc_release_url" | jq --arg arch "${arch/x86_64/amd64}" -r '.assets[] | select(.name == "runc."+$arch) | .browser_download_url')
+        curl -sL -o /usr/local/bin/runc "$runc_download_url"
+        chmod 755 /usr/local/bin/runc
+      args:
+        executable: /bin/bash
+        creates: /usr/local/bin/runc
+
+    - name: Install Go
+      shell: |
+        set -o errexit -o pipefail
+        arch="{{ ansible_architecture }}"
+        curl -sL "https://go.dev/dl/$(curl -sL 'https://golang.org/VERSION?m=text').linux-${arch/x86_64/amd64}.tar.gz" | tar -xzf - -C /usr/local
+
+        if ! grep -q '^PATH=/usr/local/go/bin:\$PATH$' /root/.bashrc; then
+          echo 'PATH=/usr/local/go/bin:$PATH' >> /root/.bashrc
+        fi
+      args:
+        executable: /bin/bash
+        creates: /usr/local/go/bin/go
+
+    - name: Install containerd
+      shell: |
+        set -o errexit -o pipefail
+        containerd_release_tag=$(curl -sL https://api.github.com/repos/containerd/containerd/releases/latest | jq -r .tag_name)
+        rm -fr /tmp/containerd
+        git clone -b "$containerd_release_tag" https://github.com/containerd/containerd.git /tmp/containerd
+        (cd /tmp/containerd && make && make install)
+        rm -fr /tmp/containerd
+      environment:
+        PATH: /usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      args:
+        executable: /bin/bash
+        creates: /usr/local/bin/containerd
+
+    - name: Ensure /etc/containerd directory exists
+      file:
+        path: /etc/containerd
+        state: directory
+
+    - name: Copy containerd config file
+      copy:
+        dest: /etc/containerd/config.toml
+        content: |
+          version = 2
+          root = "/var/lib/containerd"
+          state = "/run/containerd"
+          oom_score = -999
+
+          [grpc]
+            address = "/run/containerd/containerd.sock"
+            uid = 0
+            gid = 0
+
+          [debug]
+            address = "/run/containerd/debug.sock"
+            uid = 0
+            gid = 0
+            level = "debug"
+
+          [plugins]
+            [plugins."io.containerd.runtime.v1.linux"]
+              shim_debug = true
+            [plugins."io.containerd.grpc.v1.cri"]
+              [plugins."io.containerd.grpc.v1.cri".containerd]
+                default_runtime_name = "runc"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+                  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+                    runtime_type = "io.containerd.runc.v2"
+                  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.kata]
+                    runtime_type = "io.containerd.kata.v2"
+
+    - name: Copy systemd unit file for containerd
+      copy:
+        dest: /etc/systemd/system/containerd.service
+        content: |
+          [Unit]
+          Description=containerd container runtime
+          Documentation=https://containerd.io
+          After=network.target
+
+          [Service]
+          ExecStartPre=-/sbin/modprobe overlay
+          ExecStart=/usr/local/bin/containerd --config /etc/containerd/config.toml --log-level debug
+          Delegate=yes
+          KillMode=process
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start containerd service
+      systemd:
+        name: containerd.service
+        state: started
+
+    - name: Ensure /etc/kata-containers directory exists
+      file:
+        path: /etc/kata-containers
+        state: directory
+
+    - name: Copy configuration file for kata containers
+      copy:
+        dest: /etc/kata-containers/configuration.toml
+        content: |
+          [runtime]
+          internetworking_model = "none"
+          disable_new_netns = true
+          enable_pprof = true
+          enable_debug = true
+          [hypervisor.remote]
+          remove_hypervisor = "/run/peerpod/hypervisor.sock"
+          [agent.kata]
+
+    - name: Copy systemd unit file for fix-resolvconf
+      copy:
+        dest: /etc/systemd/system/fix-resolvconf.service
+        content: |
+          [Unit]
+          Description=Make /etc/resolv.conf a regular file
+          After=systemd-networkd.service
+
+          [Service]
+          ExecStart=/bin/bash -c 'rm -f /etc/resolv.conf && cp /run/systemd/resolve/resolv.conf /etc/resolv.conf'
+          ExecStop= /bin/bash -c 'rm -f /etc/resolv.conf && ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf'
+          Type=oneshot
+          RemainAfterExit=yes
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start fix-resolvconf service
+      systemd:
+        name: fix-resolvconf.service
+        state: started
+
+    - name: Install Rust
+      shell: |
+        set -o errexit -o pipefail
+        arch="{{ ansible_architecture }}"
+
+        curl --proto '=https' --tlsv1.2 -sSf -o /tmp/rustup-init https://sh.rustup.rs
+        sh /tmp/rustup-init -y
+        rm /tmp/rustup-init
+        source /root/.cargo/env
+
+        # The following two lines are necessary to work around the issue with the latest version of rustc.
+        # We will remove these lines, once we rebase our code base to the latest Kata upstream.
+        # https://github.com/kata-containers/kata-containers/issues/3180
+        rustup install 1.56.1
+        rustup default "1.56.1-$arch-unknown-linux-gnu"
+
+        rustup target add "$arch-unknown-linux-musl"
+
+        if ! grep -q '^source "\$HOME/.cargo/env"$' /root/.bashrc; then
+          echo 'source "$HOME/.cargo/env"' >> /root/.bashrc
+        fi
+      args:
+        executable: /bin/bash
+        creates: /root/.cargo/bin/cargo
+
+    - name: Install IBM Cloud CLI
+      shell: |
+        set -o errexit -o pipefail
+        curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+      args:
+        executable: /bin/bash
+        creates: /usr/local/bin/ibmcloud
+
+    - name: Install IBM Cloud CLI plugins
+      shell: |
+        set -o pipefail
+        plugin="{{ item }}"
+
+        installed_plugins=($(ibmcloud plugin list --output json | jq -r '.[].Name'))
+        (( $? > 0 )) && exit 2
+
+        [[ " ${installed_plugins[*]} " =~ " $plugin " ]] && exit 0
+
+        ibmcloud plugin install "$plugin"
+        (( $? > 0 )) && exit 2
+        exit 1
+      args:
+        executable: /bin/bash
+      register: result
+      changed_when: result.rc == 1
+      failed_when: result.rc > 1
+      with_items:
+        - vpc-infrastructure
+        - cloud-object-storage
