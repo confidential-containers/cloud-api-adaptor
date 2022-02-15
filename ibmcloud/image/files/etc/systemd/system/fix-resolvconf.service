@@ -1,0 +1,12 @@
+[Unit]
+Description=Make /etc/resolv.conf a regular file
+After=systemd-networkd.service
+
+[Service]
+ExecStart=/bin/bash -c 'rm -f /etc/resolv.conf && cp /run/systemd/resolve/resolv.conf /etc/resolv.conf'
+ExecStop= /bin/bash -c 'rm -f /etc/resolv.conf && ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf'
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

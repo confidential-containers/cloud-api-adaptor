@@ -1,0 +1,9 @@
+[Unit]
+Description=Agent Protocol Forwarder
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/agent-protocol-forwarder -host-interface ens4 -kata-agent-namespace /run/netns/podns -kata-agent-socket @/run/kata-containers/agent.sock
+
+[Install]
+WantedBy=multi-user.target
