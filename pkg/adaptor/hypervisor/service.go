@@ -50,6 +50,18 @@ type ServiceConfig struct {
 	VpcID                    string
 }
 
+type hypervisorService struct {
+	*ServiceConfig
+	vpcV1         VpcV1
+	cloudProvider *CloudProvider
+	sandboxes     map[sandboxID]*sandbox
+	podsDir       string
+	daemonPort    string
+	nodeName      string
+	workerNode    podnetwork.WorkerNode
+	sync.Mutex
+}
+
 func newService(vpcV1 VpcV1, config *ServiceConfig, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
 
 	hostname, err := os.Hostname()
@@ -73,17 +85,6 @@ func newService(vpcV1 VpcV1, config *ServiceConfig, workerNode podnetwork.Worker
 	}
 }
 
-type hypervisorService struct {
-	*ServiceConfig
-	vpcV1      VpcV1
-	sandboxes  map[sandboxID]*sandbox
-	podsDir    string
-	daemonPort string
-	nodeName   string
-	workerNode podnetwork.WorkerNode
-	sync.Mutex
-}
-
 type sandboxID string
 
 type sandbox struct {
@@ -102,7 +103,7 @@ func (s *hypervisorService) Version(ctx context.Context, req *pb.VersionRequest)
 	return &pb.VersionResponse{Version: Version}, nil
 }
 
-func (s *hypervisorService) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (*pb.CreateSandboxResponse, error) {
+func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (*pb.CreateVMResponse, error) {
 
 	sid := sandboxID(req.Id)
 
@@ -148,10 +149,10 @@ func (s *hypervisorService) CreateSandbox(ctx context.Context, req *pb.CreateSan
 	}
 	s.sandboxes[sid] = sandbox
 	logger.Printf("create a sandbox %s for pod %s in namespace %s (netns: %s)", req.Id, pod, namespace, sandbox.netNSPath)
-	return &pb.CreateSandboxResponse{AgentSocketPath: sandbox.agentSocketPath}, nil
+	return &pb.CreateVMResponse{AgentSocketPath: sandbox.agentSocketPath}, nil
 }
 
-func (s *hypervisorService) StartSandbox(ctx context.Context, req *pb.StartSandboxRequest) (*pb.StartSandboxResponse, error) {
+func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest) (*pb.StartVMResponse, error) {
 
 	sandbox, err := s.getSandbox(req.Id)
 	if err != nil {
@@ -284,7 +285,7 @@ func (s *hypervisorService) StartSandbox(ctx context.Context, req *pb.StartSandb
 
 	sandbox.socketForwarder = socketForwarder
 	logger.Printf("socket forwarder is ready")
-	return &pb.StartSandboxResponse{}, nil
+	return &pb.StartVMResponse{}, nil
 }
 
 func (s *hypervisorService) getSandbox(id string) (*sandbox, error) {
@@ -350,7 +351,7 @@ func (s *hypervisorService) deleteInstance(id string) error {
 	return nil
 }
 
-func (s *hypervisorService) StopSandbox(ctx context.Context, req *pb.StopSandboxRequest) (*pb.StopSandboxResponse, error) {
+func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.StopVMResponse, error) {
 	sandbox, err := s.getSandbox(req.Id)
 	if err != nil {
 		return nil, err
@@ -363,5 +364,5 @@ func (s *hypervisorService) StopSandbox(ctx context.Context, req *pb.StopSandbox
 		return nil, fmt.Errorf("failed to tear down netns %s: %w", sandbox.netNSPath, err)
 	}
 
-	return &pb.StopSandboxResponse{}, nil
+	return &pb.StopVMResponse{}, nil
 }

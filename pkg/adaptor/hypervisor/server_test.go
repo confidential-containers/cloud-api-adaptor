@@ -50,9 +50,9 @@ func TestCreateStartAndStop(t *testing.T) {
 	s, dir, socketPath, client, serverErrCh := testServerStart(t, ctx)
 	defer testServerShutdown(t, s, socketPath, dir, serverErrCh)
 	id := uuid.New().String()
-	if _, err := client.CreateSandbox(
+	if _, err := client.CreateVM(
 		context.Background(),
-		&pb.CreateSandboxRequest{
+		&pb.CreateVMRequest{
 			Id: id,
 			Annotations: map[string]string{
 				annotations.SandboxName:      "test",
@@ -62,7 +62,7 @@ func TestCreateStartAndStop(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.StartSandbox(context.Background(), &pb.StartSandboxRequest{Id: id}); err != nil {
+	if _, err := client.StartVM(context.Background(), &pb.StartVMRequest{Id: id}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -81,7 +81,7 @@ func TestCreateStartAndStop(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := client.StopSandbox(context.Background(), &pb.StopSandboxRequest{Id: id}); err != nil {
+	if _, err := client.StopVM(context.Background(), &pb.StopVMRequest{Id: id}); err != nil {
 		t.Fatal(err)
 	}
 }
