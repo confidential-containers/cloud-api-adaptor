@@ -236,7 +236,7 @@ func runMockShim(t *testing.T, ctx context.Context, helperSocketPath string) str
 
 	podID := "123"
 
-	req1 := &pb.CreateSandboxRequest{
+	req1 := &pb.CreateVMRequest{
 		Id: podID,
 		Annotations: map[string]string{
 			annotations.SandboxNamespace: "default",
@@ -244,18 +244,18 @@ func runMockShim(t *testing.T, ctx context.Context, helperSocketPath string) str
 		},
 	}
 
-	res1, err := client.CreateSandbox(ctx, req1)
+	res1, err := client.CreateVM(ctx, req1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	agentForwarderSocketPath := res1.AgentSocketPath
 
-	req2 := &pb.StartSandboxRequest{
+	req2 := &pb.StartVMRequest{
 		Id: podID,
 	}
 
-	if _, err := client.StartSandbox(ctx, req2); err != nil {
+	if _, err := client.StartVM(ctx, req2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -453,11 +453,11 @@ func (s *agentService) GetMetrics(ctx context.Context, req *agent.GetMetricsRequ
 	log.Printf("agent call: %T %#v", req, req)
 	return &agent.Metrics{}, nil
 }
-func (s *agentService) CreateSandbox(ctx context.Context, req *agent.CreateSandboxRequest) (*types.Empty, error) {
+func (s *agentService) CreateVM(ctx context.Context, req *agent.CreateVMRequest) (*types.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
-func (s *agentService) DestroySandbox(ctx context.Context, req *agent.DestroySandboxRequest) (*types.Empty, error) {
+func (s *agentService) DestroyVM(ctx context.Context, req *agent.DestroyVMRequest) (*types.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
