@@ -17,8 +17,8 @@ import (
 	// TODO: Handle agent proto
 	_ "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
 
-	"github.com/confidential-containers/peer-pod-opensource/pkg/util/http/upgrader"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/util/netops"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/util/http/upgrader"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/util/netops"
 )
 
 var logger = log.New(log.Writer(), "[daemon/agent] ", log.LstdFlags|log.Lmsgprefix)

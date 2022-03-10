@@ -1,7 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
-package hypervisor
+package ibmcloud
 
 import (
 	"context"
@@ -18,11 +18,12 @@ import (
 
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 
-	"github.com/confidential-containers/peer-pod-opensource/pkg/adaptor/forwarder"
-	daemon "github.com/confidential-containers/peer-pod-opensource/pkg/forwarder"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/forwarder"
+	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/util/cloudinit"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
@@ -38,22 +39,9 @@ const (
 	subnetBits    = "/24"
 )
 
-type ServiceConfig struct {
-	ProfileName              string
-	ZoneName                 string
-	ImageID                  string
-	PrimarySubnetID          string
-	PrimarySecurityGroupID   string
-	SecondarySubnetID        string
-	SecondarySecurityGroupID string
-	KeyID                    string
-	VpcID                    string
-}
-
 type hypervisorService struct {
-	*ServiceConfig
 	vpcV1         VpcV1
-	cloudProvider *CloudProvider
+	serviceConfig *hypervisor.ServiceConfig
 	sandboxes     map[sandboxID]*sandbox
 	podsDir       string
 	daemonPort    string
@@ -62,7 +50,7 @@ type hypervisorService struct {
 	sync.Mutex
 }
 
-func newService(vpcV1 VpcV1, config *ServiceConfig, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
+func newService(vpcV1 VpcV1, config *hypervisor.ServiceConfig, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -76,7 +64,7 @@ func newService(vpcV1 VpcV1, config *ServiceConfig, workerNode podnetwork.Worker
 
 	return &hypervisorService{
 		vpcV1:         vpcV1,
-		ServiceConfig: config,
+		serviceConfig: config,
 		sandboxes:     map[sandboxID]*sandbox{},
 		podsDir:       podsDir,
 		daemonPort:    daemonPort,
@@ -193,27 +181,27 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	prototype := &vpcv1.InstancePrototype{
 		Name:     &vmName,
-		Image:    &vpcv1.ImageIdentity{ID: &s.ImageID},
+		Image:    &vpcv1.ImageIdentity{ID: &s.serviceConfig.ImageID},
 		UserData: &userData,
-		Profile:  &vpcv1.InstanceProfileIdentity{Name: &s.ProfileName},
-		Zone:     &vpcv1.ZoneIdentity{Name: &s.ZoneName},
+		Profile:  &vpcv1.InstanceProfileIdentity{Name: &s.serviceConfig.ProfileName},
+		Zone:     &vpcv1.ZoneIdentity{Name: &s.serviceConfig.ZoneName},
 		Keys: []vpcv1.KeyIdentityIntf{
-			&vpcv1.KeyIdentity{ID: &s.KeyID},
+			&vpcv1.KeyIdentity{ID: &s.serviceConfig.KeyID},
 		},
-		VPC: &vpcv1.VPCIdentity{ID: &s.VpcID},
+		VPC: &vpcv1.VPCIdentity{ID: &s.serviceConfig.VpcID},
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfacePrototype{
 			AllowIPSpoofing: func(b bool) *bool { return &b }(true),
-			Subnet:          &vpcv1.SubnetIdentity{ID: &s.PrimarySubnetID},
+			Subnet:          &vpcv1.SubnetIdentity{ID: &s.serviceConfig.PrimarySubnetID},
 			SecurityGroups: []vpcv1.SecurityGroupIdentityIntf{
-				&vpcv1.SecurityGroupIdentityByID{ID: &s.PrimarySecurityGroupID},
+				&vpcv1.SecurityGroupIdentityByID{ID: &s.serviceConfig.PrimarySecurityGroupID},
 			},
 		},
 		NetworkInterfaces: []vpcv1.NetworkInterfacePrototype{
 			{
 				AllowIPSpoofing: func(b bool) *bool { return &b }(true),
-				Subnet:          &vpcv1.SubnetIdentity{ID: &s.SecondarySubnetID},
+				Subnet:          &vpcv1.SubnetIdentity{ID: &s.serviceConfig.SecondarySubnetID},
 				SecurityGroups: []vpcv1.SecurityGroupIdentityIntf{
-					&vpcv1.SecurityGroupIdentityByID{ID: &s.SecondarySecurityGroupID},
+					&vpcv1.SecurityGroupIdentityByID{ID: &s.serviceConfig.SecondarySecurityGroupID},
 				},
 			},
 		},

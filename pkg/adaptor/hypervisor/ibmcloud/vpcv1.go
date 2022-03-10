@@ -1,23 +1,25 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
-package hypervisor
+package ibmcloud
 
 import (
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 )
 
-type VpcV1 interface {
-	GetInstance(getInstanceOptions *vpcv1.GetInstanceOptions) (result *vpcv1.Instance, response *core.DetailedResponse, err error)
-	CreateInstance(createInstanceOptions *vpcv1.CreateInstanceOptions) (result *vpcv1.Instance, response *core.DetailedResponse, err error)
-	DeleteInstance(deleteInstanceOptions *vpcv1.DeleteInstanceOptions) (response *core.DetailedResponse, err error)
-}
 
 const (
 	IamServiceURL = "https://iam.cloud.ibm.com/identity/token"
 	VpcServiceURL = "https://jp-tok.iaas.cloud.ibm.com/v1"
 )
+
+type VpcV1 interface {
+        GetInstance(getInstanceOptions *vpcv1.GetInstanceOptions) (result *vpcv1.Instance, response *core.DetailedResponse, err error)
+        CreateInstance(createInstanceOptions *vpcv1.CreateInstanceOptions) (result *vpcv1.Instance, response *core.DetailedResponse, err error)
+        DeleteInstance(deleteInstanceOptions *vpcv1.DeleteInstanceOptions) (response *core.DetailedResponse, err error)
+}
+
 
 func NewVpcV1(apiKey string) (VpcV1, error) {
 	vpcv1, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{

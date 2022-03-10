@@ -1,4 +1,4 @@
-module github.com/confidential-containers/peer-pod-opensource
+module github.com/confidential-containers/cloud-api-adapter
 
 go 1.16
 

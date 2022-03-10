@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/confidential-containers/peer-pod-opensource/cmd"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/adaptor/hypervisor"
-	daemon "github.com/confidential-containers/peer-pod-opensource/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adapter/cmd"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor/registry"
+	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
 
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
 )
 
 const programName = "cloud-api-adaptor"
@@ -26,7 +27,8 @@ type daemonConfig struct {
 	apiKey            string
 	TunnelType        string
 	HostInterface     string
-	hypervisor.ServiceConfig
+        hypProvider       string
+        serviceConfig     hypervisor.ServiceConfig
 }
 
 const DefaultShimTimeout = "60s"
@@ -36,27 +38,23 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.StringVar(&cfg.socketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
 		flags.StringVar(&cfg.podsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
 		flags.StringVar(&cfg.apiKey, "api-key", "", "IBM Cloud API key")
-		flags.StringVar(&cfg.ProfileName, "profile-name", "", "Profile name")
-		flags.StringVar(&cfg.ZoneName, "zone-name", "", "Zone name")
-		flags.StringVar(&cfg.ImageID, "image-id", "", "Image ID")
-		flags.StringVar(&cfg.PrimarySubnetID, "primary-subnet-id", "", "Primary subnet ID")
-		flags.StringVar(&cfg.PrimarySecurityGroupID, "primary-security-group-id", "", "Primary security group ID")
-		flags.StringVar(&cfg.SecondarySubnetID, "secondary-subnet-id", "", "Secondary subnet ID")
-		flags.StringVar(&cfg.SecondarySecurityGroupID, "secondary-security-group-id", "", "Secondary security group ID")
-		flags.StringVar(&cfg.KeyID, "key-id", "", "SSH Key ID")
-		flags.StringVar(&cfg.VpcID, "vpc-id", "", "VPC ID")
+		flags.StringVar(&cfg.serviceConfig.ProfileName, "profile-name", "", "Profile name")
+		flags.StringVar(&cfg.serviceConfig.ZoneName, "zone-name", "", "Zone name")
+		flags.StringVar(&cfg.serviceConfig.ImageID, "image-id", "", "Image ID")
+		flags.StringVar(&cfg.serviceConfig.PrimarySubnetID, "primary-subnet-id", "", "Primary subnet ID")
+		flags.StringVar(&cfg.serviceConfig.PrimarySecurityGroupID, "primary-security-group-id", "", "Primary security group ID")
+		flags.StringVar(&cfg.serviceConfig.SecondarySubnetID, "secondary-subnet-id", "", "Secondary subnet ID")
+		flags.StringVar(&cfg.serviceConfig.SecondarySecurityGroupID, "secondary-security-group-id", "", "Secondary security group ID")
+		flags.StringVar(&cfg.serviceConfig.KeyID, "key-id", "", "SSH Key ID")
+		flags.StringVar(&cfg.serviceConfig.VpcID, "vpc-id", "", "VPC ID")
 		flags.StringVar(&cfg.TunnelType, "tunnel-type", "routing", "tunnel type for pod networking")
 		flags.StringVar(&cfg.HostInterface, "host-interface", "", "network interface name that is used for network tunnel traffic")
+		flags.StringVar(&cfg.hypProvider, "provider", "ibmcloud", "Hypervisor provider")
 	})
-
-	vpcV1, err := hypervisor.NewVpcV1(cfg.apiKey)
-	if err != nil {
-		return nil, err
-	}
 
 	workerNode := podnetwork.NewWorkerNode(cfg.TunnelType, cfg.HostInterface)
 
-	hypervisorServer := hypervisor.NewServer(cfg.socketPath, vpcV1, &cfg.ServiceConfig, workerNode, cfg.podsDir, daemon.DefaultListenPort)
+	hypervisorServer := registry.NewServer(cfg, workerNode, daemon.DefaultListenPort)
 
 	return cmd.NewStarter(hypervisorServer), nil
 }
