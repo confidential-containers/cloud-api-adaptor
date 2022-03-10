@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/confidential-containers/peer-pod-opensource/pkg/util/http/upgrader"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/util/http/upgrader"
 )
 
 const SocketName = "agent.ttrpc"

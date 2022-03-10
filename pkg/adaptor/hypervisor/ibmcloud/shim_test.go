@@ -1,7 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
-package hypervisor
+package ibmcloud
 
 import (
 	"context"
@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	daemon "github.com/confidential-containers/peer-pod-opensource/pkg/forwarder"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork"
+	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	"github.com/gogo/protobuf/types"

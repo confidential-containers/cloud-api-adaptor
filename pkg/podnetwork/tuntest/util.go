@@ -17,7 +17,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
-	"github.com/confidential-containers/peer-pod-opensource/pkg/util/netops"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/util/netops"
 )
 
 func NewNamedNS(t *testing.T, prefix string) *netops.NS {

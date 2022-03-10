@@ -11,9 +11,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/confidential-containers/peer-pod-opensource/cmd"
-	daemon "github.com/confidential-containers/peer-pod-opensource/pkg/forwarder"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adapter/cmd"
+	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
 )
 
 const programName = "agent-protocol-forwarder"

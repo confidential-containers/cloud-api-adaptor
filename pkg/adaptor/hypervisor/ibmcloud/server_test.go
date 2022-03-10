@@ -1,7 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
-package hypervisor
+package ibmcloud
 
 import (
 	"context"
@@ -20,10 +20,10 @@ import (
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 
-	"github.com/confidential-containers/peer-pod-opensource/pkg/adaptor/forwarder"
-	daemon "github.com/confidential-containers/peer-pod-opensource/pkg/forwarder"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/util/http/upgrader"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/forwarder"
+	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/util/http/upgrader"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	"github.com/google/uuid"

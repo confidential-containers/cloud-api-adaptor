@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork/tuntest"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tuntest"
 	"github.com/coreos/go-iptables/iptables"
 )
 

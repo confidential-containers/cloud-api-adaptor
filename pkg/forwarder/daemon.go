@@ -11,9 +11,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/confidential-containers/peer-pod-opensource/pkg/forwarder/agent"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/forwarder/agent"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
 )
 
 var logger = log.New(log.Writer(), "[agent-protocol-forwarder] ", log.LstdFlags|log.Lmsgprefix)

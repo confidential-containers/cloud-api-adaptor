@@ -8,8 +8,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/confidential-containers/peer-pod-opensource/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/peer-pod-opensource/pkg/util/netops"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/util/netops"
 )
 
 type PodNode interface {
