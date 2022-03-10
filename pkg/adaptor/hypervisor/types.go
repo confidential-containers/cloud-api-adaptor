@@ -10,21 +10,13 @@ type Server interface {
 	Ready() chan struct{}
 }
 
-type Config interface {}
-
 const (
         DefaultSocketPath = "/run/peerpod/hypervisor.sock"
         DefaultPodsDir    = "/run/peerpod/pods"
 )
 
-type ServiceConfig struct {
-        ProfileName              string
-        ZoneName                 string
-        ImageID                  string
-        PrimarySubnetID          string
-        PrimarySecurityGroupID   string
-        SecondarySubnetID        string
-        SecondarySecurityGroupID string
-        KeyID                    string
-        VpcID                    string
+type Config struct {
+        SocketPath        string
+        PodsDir           string
+        HypProvider       string
 }

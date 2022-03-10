@@ -34,28 +34,18 @@ type server struct {
 	stopOnce sync.Once
 }
 
-type Config struct {
-        socketPath        string
-        podsDir           string
-        helperDaemonRoot  string
-        httpTunnelTimeout string
-        apiKey            string
-        TunnelType        string
-        HostInterface     string
-        hypProvider       string
-        serviceConfig     hypervisor.ServiceConfig
-}
+func NewServer(cfg hypervisor.Config, cloudCfg Config, workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
 
-func NewServer(cfg Config, workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
-
-     vpcV1, err := NewVpcV1(cfg.apiKey)
+     logger.Printf("hypervisor config %v", cfg)
+     logger.Printf("cloud config %v", cloudCfg)
+     vpcV1, err := NewVpcV1(cloudCfg.ApiKey)
      if err != nil {
           return nil
      }
 
     return &server{
-		socketPath: cfg.socketPath,
-		service:    newService(vpcV1, &cfg.serviceConfig, workerNode, cfg.podsDir, daemonPort),
+		socketPath: cfg.SocketPath,
+		service:    newService(vpcV1, &cloudCfg, workerNode, cfg.PodsDir, daemonPort),
 		workerNode: workerNode,
 		readyCh:    make(chan struct{}),
 		stopCh:     make(chan struct{}),

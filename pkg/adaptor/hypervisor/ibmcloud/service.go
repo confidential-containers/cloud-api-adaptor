@@ -21,7 +21,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/forwarder"
 	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor"
 	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adapter/pkg/util/cloudinit"
 	"github.com/containerd/containerd/pkg/cri/annotations"
@@ -41,7 +40,7 @@ const (
 
 type hypervisorService struct {
 	vpcV1         VpcV1
-	serviceConfig *hypervisor.ServiceConfig
+	serviceConfig *Config
 	sandboxes     map[sandboxID]*sandbox
 	podsDir       string
 	daemonPort    string
@@ -50,7 +49,9 @@ type hypervisorService struct {
 	sync.Mutex
 }
 
-func newService(vpcV1 VpcV1, config *hypervisor.ServiceConfig, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
+func newService(vpcV1 VpcV1, config *Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
+        
+        logger.Printf("service config %v", config)
 
 	hostname, err := os.Hostname()
 	if err != nil {
