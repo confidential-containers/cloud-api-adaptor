@@ -9,7 +9,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
 )
 
-func newServer(cfg interface{}, workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
-
-	return ibmcloud.NewServer(cfg.(ibmcloud.Config), workerNode, daemonPort)
+func newServer(cfg hypervisor.Config, cloudConfig interface{}, workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
+	return ibmcloud.NewServer(cfg, cloudConfig.(ibmcloud.Config), workerNode, daemonPort)
 }

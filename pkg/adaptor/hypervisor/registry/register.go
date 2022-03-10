@@ -6,6 +6,6 @@ import (
 )
 
 
-func NewServer(cfg interface{}, workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
-	return newServer(cfg, workerNode, daemonPort)
+func NewServer(cfg hypervisor.Config, cloudConfig interface{},  workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
+	return newServer(cfg, cloudConfig, workerNode, daemonPort)
 }
