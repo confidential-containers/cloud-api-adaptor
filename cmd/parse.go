@@ -18,6 +18,21 @@ func Parse(programName string, args []string, fn func(flags *flag.FlagSet)) {
 
 	fn(flags)
 
+	switch programName {
+	case "ibmcloud":
+		if len(args) < 10 {
+			flags.PrintDefaults()
+			Exit(1)
+		}
+	case "aws":
+		if len(args) < 2 {
+			flags.PrintDefaults()
+			Exit(1)
+		}
+
+	}
+
+
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			Exit(0)
