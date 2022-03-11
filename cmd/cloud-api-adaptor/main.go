@@ -11,6 +11,7 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adapter/cmd"
 	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor/ibmcloud"
+	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor/aws"
 	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor"
 	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor/registry"
 	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
@@ -31,6 +32,7 @@ type daemonConfig struct {
 const DefaultShimTimeout = "60s"
 
 var ibmcfg ibmcloud.Config
+var awscfg aws.Config
 var hypcfg hypervisor.Config
 
 func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
@@ -58,7 +60,10 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
  
         if hypcfg.HypProvider == "ibmcloud" {
                  hypervisorServer = registry.NewServer(hypcfg, ibmcfg, workerNode, daemon.DefaultListenPort)
+        } else if hypcfg.HypProvider == "aws" {
+                 hypervisorServer = registry.NewServer(hypcfg, awscfg, workerNode, daemon.DefaultListenPort)
         }
+
 	return cmd.NewStarter(hypervisorServer), nil
 }
 
