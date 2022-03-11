@@ -1,10 +1,8 @@
-// (C) Copyright IBM Corp. 2022.
-// SPDX-License-Identifier: Apache-2.0
-
-package ibmcloud
+package aws
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,9 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/IBM/vpc-go-sdk/vpcv1"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
 	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/forwarder"
 	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
@@ -28,18 +27,14 @@ import (
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 )
 
-// TODO: implement a ttrpc server to serve hypervisor RPC calls from kata shim
-// https://github.com/kata-containers/kata-containers/blob/2.2.0-alpha1/src/runtime/virtcontainers/hypervisor.go#L843-L883
 
 const (
 	Version       = "0.0.0"
-	maxRetries    = 10
-	queryInterval = 2
-	subnetBits    = "/24"
+	EC2LaunchTemplateName = "kata"
 )
 
 type hypervisorService struct {
-	vpcV1         VpcV1
+	ec2Client     *ec2.Client
 	serviceConfig *Config
 	sandboxes     map[sandboxID]*sandbox
 	podsDir       string
@@ -49,9 +44,8 @@ type hypervisorService struct {
 	sync.Mutex
 }
 
-func newService(vpcV1 VpcV1, config *Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
-        
-        logger.Printf("service config %v", config)
+func newService(ec2Client *ec2.Client, config *Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
+	logger.Printf("service config %v", config)
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -64,7 +58,7 @@ func newService(vpcV1 VpcV1, config *Config, workerNode podnetwork.WorkerNode, p
 	}
 
 	return &hypervisorService{
-		vpcV1:         vpcV1,
+		ec2Client:     ec2Client,
 		serviceConfig: config,
 		sandboxes:     map[sandboxID]*sandbox{},
 		podsDir:       podsDir,
@@ -148,7 +142,6 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-	vmName := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
 
 	daemonConfig := daemon.Config{
 		PodNamespace: sandbox.namespace,
@@ -180,66 +173,48 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-	prototype := &vpcv1.InstancePrototype{
-		Name:     &vmName,
-		Image:    &vpcv1.ImageIdentity{ID: &s.serviceConfig.ImageID},
-		UserData: &userData,
-		Profile:  &vpcv1.InstanceProfileIdentity{Name: &s.serviceConfig.ProfileName},
-		Zone:     &vpcv1.ZoneIdentity{Name: &s.serviceConfig.ZoneName},
-		Keys: []vpcv1.KeyIdentityIntf{
-			&vpcv1.KeyIdentity{ID: &s.serviceConfig.KeyID},
+	//Convert userData to base64
+	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
+
+	input := &ec2.RunInstancesInput{
+		MinCount: aws.Int32(1),
+		MaxCount: aws.Int32(1),
+		LaunchTemplate: &types.LaunchTemplateSpecification{
+			LaunchTemplateName: aws.String(EC2LaunchTemplateName),
 		},
-		VPC: &vpcv1.VPCIdentity{ID: &s.serviceConfig.VpcID},
-		PrimaryNetworkInterface: &vpcv1.NetworkInterfacePrototype{
-			AllowIPSpoofing: func(b bool) *bool { return &b }(true),
-			Subnet:          &vpcv1.SubnetIdentity{ID: &s.serviceConfig.PrimarySubnetID},
-			SecurityGroups: []vpcv1.SecurityGroupIdentityIntf{
-				&vpcv1.SecurityGroupIdentityByID{ID: &s.serviceConfig.PrimarySecurityGroupID},
-			},
-		},
-		NetworkInterfaces: []vpcv1.NetworkInterfacePrototype{
-			{
-				AllowIPSpoofing: func(b bool) *bool { return &b }(true),
-				Subnet:          &vpcv1.SubnetIdentity{ID: &s.serviceConfig.SecondarySubnetID},
-				SecurityGroups: []vpcv1.SecurityGroupIdentityIntf{
-					&vpcv1.SecurityGroupIdentityByID{ID: &s.serviceConfig.SecondarySecurityGroupID},
-				},
-			},
-		},
+		UserData: &userDataEnc,
 	}
 
-	result, resp, err := s.vpcV1.CreateInstance(&vpcv1.CreateInstanceOptions{InstancePrototype: prototype})
+	result, err := CreateInstance(context.TODO(), s.ec2Client, input)
 	if err != nil {
-		logger.Printf("failed to create an instance : %v and the response is %s", err, resp)
+		logger.Printf("failed to create an instance : %v and the response is %s", err, result)
 		return nil, err
 	}
 
-	sandbox.vsi = *result.ID
+	sandbox.vsi = *result.Instances[0].InstanceId
 
-	logger.Printf("created an instance %s for sandbox %s", *result.Name, req.Id)
+	logger.Printf("created an instance %s for sandbox %s", *result.Instances[0].PublicDnsName, req.Id)
 
-	var podNodeIPs []net.IP
+	vmName := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
+        tagInput := &ec2.CreateTagsInput{
+		Resources: []string{*result.Instances[0].InstanceId},
+		Tags: []types.Tag{
+			{
+				Key:   aws.String("name"),
+				Value: aws.String(vmName),
+			},
+		},
+	}
 
-	for retries := 0; retries < maxRetries; retries++ {
+        _, err = MakeTags(context.TODO(), s.ec2Client, tagInput)
+        if err != nil {
+                logger.Printf("failed to tag the instance", err)
+        }
 
-		ips, err := getIPs(prototype, result)
-
-		if err == nil {
-			podNodeIPs = ips
-			break
-		} else if err != errNotReady {
-			return nil, err
-		}
-
-		time.Sleep(time.Duration(queryInterval) * time.Second)
-
-		var id string = *result.ID
-		getResult, resp, err := s.vpcV1.GetInstance(&vpcv1.GetInstanceOptions{ID: &id})
-		if err != nil {
-			logger.Printf("failed to get an instance : %v and the response is %s", err, resp)
-			return nil, err
-		}
-		result = getResult
+	podNodeIPs, err := getIPs(result.Instances[0])
+	if err != nil {
+		logger.Printf("failed to get IPs for the instance : %v ", err)
+		return nil, err
 	}
 
 	if err := s.workerNode.Setup(sandbox.netNSPath, podNodeIPs, sandbox.podNetworkConfig); err != nil {
@@ -294,24 +269,12 @@ func (s *hypervisorService) getSandbox(id string) (*sandbox, error) {
 
 var errNotReady = errors.New("address not ready")
 
-func getIPs(prototype *vpcv1.InstancePrototype, result *vpcv1.Instance) ([]net.IP, error) {
-
-	if len(result.NetworkInterfaces) < 1+len(prototype.NetworkInterfaces) {
-		return nil, errNotReady
-	}
-
-	interfaces := []*vpcv1.NetworkInterfaceInstanceContextReference{result.PrimaryNetworkInterface}
-	for i, nic := range result.NetworkInterfaces {
-		if *nic.ID != *result.PrimaryNetworkInterface.ID {
-			interfaces = append(interfaces, &result.NetworkInterfaces[i])
-		}
-	}
+func getIPs(instance types.Instance) ([]net.IP, error) {
 
 	var podNodeIPs []net.IP
+	for i, nic := range instance.NetworkInterfaces {
+		addr := nic.PrivateIpAddress
 
-	for i, nic := range interfaces {
-
-		addr := nic.PrimaryIpv4Address
 		if addr == nil || *addr == "" || *addr == "0.0.0.0" {
 			return nil, errNotReady
 		}
@@ -329,9 +292,15 @@ func getIPs(prototype *vpcv1.InstancePrototype, result *vpcv1.Instance) ([]net.I
 }
 
 func (s *hypervisorService) deleteInstance(id string) error {
-        options := &vpcv1.DeleteInstanceOptions{}
-        options.SetID(id)
-	resp, err := s.vpcV1.DeleteInstance(options)
+
+	terminateInput := &ec2.TerminateInstancesInput{
+		InstanceIds: []string{
+			id,
+		},
+	}
+
+	resp, err := DeleteInstance(context.TODO(), s.ec2Client, terminateInput)
+
 	if err != nil {
 		logger.Printf("failed to delete an instance: %v and the response is %v", err, resp)
 		return err

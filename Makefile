@@ -4,7 +4,7 @@
 #
 
 .PHONY: all build check fmt vet clean
-
+GOFLAGS    ?= -tags=$(CLOUD_PROVIDER)
 BINARIES   := cloud-api-adaptor agent-protocol-forwarder
 SOURCEDIRS := ./cmd ./pkg
 PACKAGES   := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
@@ -14,7 +14,7 @@ all: build
 build: $(BINARIES)
 
 $(BINARIES): $(SOURCES)
-	CGO_ENABLED=0 go build -o "$@" "cmd/$@/main.go"
+	CGO_ENABLED=0 go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
 
 test:
 	 go test -cover $(PACKAGES)
