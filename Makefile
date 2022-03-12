@@ -4,6 +4,10 @@
 #
 
 .PHONY: all build check fmt vet clean
+ifndef CLOUD_PROVIDER
+$(error CLOUD_PROVIDER is not set)
+endif
+
 GOFLAGS    ?= -tags=$(CLOUD_PROVIDER)
 BINARIES   := cloud-api-adaptor agent-protocol-forwarder
 SOURCEDIRS := ./cmd ./pkg
