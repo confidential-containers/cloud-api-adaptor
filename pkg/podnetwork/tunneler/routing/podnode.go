@@ -9,8 +9,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/util/netops"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 	"golang.org/x/sys/unix"
 )
 

@@ -6,7 +6,7 @@ package routing
 import (
 	"testing"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tuntest"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tuntest"
 )
 
 func TestRouting(t *testing.T) {

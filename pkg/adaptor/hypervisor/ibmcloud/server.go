@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	"github.com/containerd/ttrpc"
 
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"

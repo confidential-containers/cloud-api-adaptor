@@ -9,14 +9,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/confidential-containers/cloud-api-adapter/cmd"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor/aws"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor/ibmcloud"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/hypervisor/registry"
-	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/cmd"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/aws"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/ibmcloud"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/registry"
+	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 )
 
 const programName = "cloud-api-adaptor"

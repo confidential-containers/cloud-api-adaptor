@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/util/http/upgrader"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/http/upgrader"
 )
 
 func TestNewForwarder(t *testing.T) {

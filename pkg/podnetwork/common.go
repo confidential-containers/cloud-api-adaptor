@@ -8,9 +8,9 @@ import (
 	"log"
 	"net"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler/routing"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/util/netops"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/routing"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 )
 
 var logger = log.New(log.Writer(), "[podnetwork] ", log.LstdFlags|log.Lmsgprefix)
