@@ -17,11 +17,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/forwarder"
-	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/forwarder"
+	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"

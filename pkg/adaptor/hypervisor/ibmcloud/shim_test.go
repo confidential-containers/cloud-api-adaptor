@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
+	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	"github.com/gogo/protobuf/types"

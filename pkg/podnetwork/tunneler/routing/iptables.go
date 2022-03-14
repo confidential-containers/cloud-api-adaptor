@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/util/netops"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 	"github.com/coreos/go-iptables/iptables"
 )
 

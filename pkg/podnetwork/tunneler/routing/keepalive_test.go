@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tuntest"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tuntest"
 	"github.com/vishvananda/netlink"
 )
 

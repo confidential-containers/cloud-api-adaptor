@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tuntest"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tuntest"
 )
 
 type mockWorkerNodeTunneler struct{}

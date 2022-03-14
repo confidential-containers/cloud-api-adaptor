@@ -18,11 +18,11 @@ import (
 
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 
-	"github.com/confidential-containers/cloud-api-adapter/pkg/adaptor/forwarder"
-	daemon "github.com/confidential-containers/cloud-api-adapter/pkg/forwarder"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/cloud-api-adapter/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/forwarder"
+	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
