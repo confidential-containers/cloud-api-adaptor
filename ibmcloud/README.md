@@ -80,6 +80,8 @@ terraform plan
 terraform apply
 ```
 
+You can check the status of provisioned Kubernetes node VM instances at [https://cloud.ibm.com/vpc-ext/compute/vs](https://cloud.ibm.com/vpc-ext/compute/vs).
+
 This Terraform configuration also triggers execution of an Ansible playbook to set up
 Kubernetes and other prerequisite software in the two nodes. Please check [ansible/playbook.yml](terraform/cluster/ansible/playbook.yml) for the details.
 
@@ -89,7 +91,13 @@ cd ansible
 ansible-playbook -i ./inventory -u root ./playbook.yml
 ```
 
-When two VSIs are successfully provisioned, a floating IP address is assigned to the worker node. Please use the floating IP address to access the worker node from the Internet. You can check the floating IP using Web UI [https://cloud.ibm.com/vpc-ext/compute/vs](https://cloud.ibm.com/vpc-ext/compute/vs).
+When ansible fails, Terraform does not execute the setup script for Kubernetes. In this case, you can manually run it as follows. Note that you do not need to run this script manually, when everything goes well.
+
+```
+./scripts/setup.sh --bastion <floating IP of the worker node> --control-plane <IP address of the control-plane node> --workers  <IP address of the worker node>
+```
+
+When two VSIs are successfully provisioned, a floating IP address is assigned to the worker node. Please use the floating IP address to access the worker node from the Internet.
 
 ## Build a pod VM image
 
