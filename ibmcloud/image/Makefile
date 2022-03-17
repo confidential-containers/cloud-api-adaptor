@@ -10,7 +10,7 @@ CONTAINERD_VERSION = 1.5.7
 SKOPEO_VERSION     = 1.5.0
 UMOCI_VERSION      = 0.4.7
 
-IMAGE_PREFIX := pod
+IMAGE_PREFIX := podvm
 ARCH := $(subst x86_64,amd64,$(shell uname -m))
 
 FILES_DIR := files
