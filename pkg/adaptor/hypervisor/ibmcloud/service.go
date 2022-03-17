@@ -191,13 +191,14 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		},
 		VPC: &vpcv1.VPCIdentity{ID: &s.serviceConfig.VpcID},
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfacePrototype{
-			AllowIPSpoofing: func(b bool) *bool { return &b }(true),
 			Subnet:          &vpcv1.SubnetIdentity{ID: &s.serviceConfig.PrimarySubnetID},
 			SecurityGroups: []vpcv1.SecurityGroupIdentityIntf{
 				&vpcv1.SecurityGroupIdentityByID{ID: &s.serviceConfig.PrimarySecurityGroupID},
 			},
 		},
-		NetworkInterfaces: []vpcv1.NetworkInterfacePrototype{
+	}
+	if s.serviceConfig.SecondarySubnetID != "" {
+		prototype.NetworkInterfaces = []vpcv1.NetworkInterfacePrototype{
 			{
 				AllowIPSpoofing: func(b bool) *bool { return &b }(true),
 				Subnet:          &vpcv1.SubnetIdentity{ID: &s.serviceConfig.SecondarySubnetID},
@@ -205,7 +206,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 					&vpcv1.SecurityGroupIdentityByID{ID: &s.serviceConfig.SecondarySecurityGroupID},
 				},
 			},
-		},
+		}
 	}
 
 	result, resp, err := s.vpcV1.CreateInstance(&vpcv1.CreateInstanceOptions{InstancePrototype: prototype})
