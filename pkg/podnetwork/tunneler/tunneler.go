@@ -21,6 +21,7 @@ type Config struct {
 	WorkerNodeIP  string   `json:"worker-node-ip"`
 	TunnelType    string   `json:"tunnel-type"`
 	Dedicated     bool     `json:"dedicated"`
+	Index         int      `json:"index"`
 }
 
 type Route struct {
