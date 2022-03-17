@@ -25,6 +25,7 @@
           - libgpgme-dev
           - libassuan-dev
           - libdevmapper-dev
+          - libseccomp-dev
           - pkg-config
           - kubelet
           - kubeadm
@@ -129,7 +130,11 @@
       shell: |
         set -o errexit -o pipefail
         arch="{{ ansible_architecture }}"
-        curl -sL "https://go.dev/dl/$(curl -sL 'https://golang.org/VERSION?m=text').linux-${arch/x86_64/amd64}.tar.gz" | tar -xzf - -C /usr/local
+        # go1.18 cannot compile containerd v1.6.1. Use go1.17.8 until the issue is fixed.
+        # https://github.com/containerd/containerd/issues/6586
+        # gover=$(curl -sL 'https://golang.org/VERSION?m=text')
+        gover=go1.17.8
+        curl -sL "https://go.dev/dl/$gover.linux-${arch/x86_64/amd64}.tar.gz" | tar -xzf - -C /usr/local
 
         if ! grep -q '^PATH=/usr/local/go/bin:\$PATH$' /root/.bashrc; then
           echo 'PATH=/usr/local/go/bin:$PATH' >> /root/.bashrc
@@ -217,19 +222,6 @@
         path: /etc/kata-containers
         state: directory
 
-    - name: Copy configuration file for kata containers
-      copy:
-        dest: /etc/kata-containers/configuration.toml
-        content: |
-          [runtime]
-          internetworking_model = "none"
-          disable_new_netns = true
-          enable_pprof = true
-          enable_debug = true
-          [hypervisor.remote]
-          remove_hypervisor = "/run/peerpod/hypervisor.sock"
-          [agent.kata]
-
     - name: Copy systemd unit file for fix-resolvconf
       copy:
         dest: /etc/systemd/system/fix-resolvconf.service
@@ -262,13 +254,9 @@
         rm /tmp/rustup-init
         source /root/.cargo/env
 
-        # The following two lines are necessary to work around the issue with the latest version of rustc.
-        # We will remove these lines, once we rebase our code base to the latest Kata upstream.
-        # https://github.com/kata-containers/kata-containers/issues/3180
-        rustup install 1.56.1
-        rustup default "1.56.1-$arch-unknown-linux-gnu"
-
-        rustup target add "$arch-unknown-linux-musl"
+        case "$arch" in
+          x86_64) rustup target add "$arch-unknown-linux-musl" ;;
+        esac
 
         if ! grep -q '^source "\$HOME/.cargo/env"$' /root/.bashrc; then
           echo 'source "$HOME/.cargo/env"' >> /root/.bashrc
@@ -306,3 +294,55 @@
       with_items:
         - vpc-infrastructure
         - cloud-object-storage
+
+    - name: Checkout the Kata containers repository
+      shell: |
+        set -o errexit -o pipefail
+        cd /root
+        git clone -b CCv0-peerpod https://github.com/yoheiueda/kata-containers.git
+      args:
+        executable: /bin/bash
+        creates: /root/kata-containers
+
+    - name: Checkout the cloud-api-adaptor repository
+      shell: |
+        set -o errexit -o pipefail
+        cd /root
+        git clone -b code-import https://github.com/yoheiueda/cloud-api-adaptor.git
+      args:
+        executable: /bin/bash
+        creates: /root/cloud-api-adaptor
+
+    - name: Install the Kata shim
+      shell: |
+        set -o errexit
+        cd /root/kata-containers/src/runtime
+        PATH=/usr/local/go/bin:$PATH make $PWD/containerd-shim-kata-v2
+        install containerd-shim-kata-v2 /usr/local/bin/
+      args:
+        executable: /bin/bash
+        creates: /usr/local/bin/containerd-shim-kata-v2
+
+    - name: Copy configuration file for kata containers
+      copy:
+        dest: /etc/kata-containers/configuration.toml
+        content: |
+          [runtime]
+          internetworking_model = "none"
+          disable_new_netns = true
+          disable_guest_seccomp = true
+          enable_pprof = true
+          enable_debug = true
+          [hypervisor.remote]
+          remove_hypervisor = "/run/peerpod/hypervisor.sock"
+          [agent.kata]
+
+    - name: Install cloud-api-adaptor
+      shell: |
+        set -o errexit
+        cd /root/cloud-api-adaptor
+        PATH=/usr/local/go/bin:$PATH make cloud-api-adaptor
+        install cloud-api-adaptor /usr/local/bin/
+      args:
+        executable: /bin/bash
+        creates: /usr/local/bin/cloud-api-adaptor
