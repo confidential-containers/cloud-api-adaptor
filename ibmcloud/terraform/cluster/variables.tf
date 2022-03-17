@@ -27,14 +27,6 @@ variable "primary_subnet_name" {
     default = "tok-primary-subnet"
 }
 
-variable "secondary_subnet_name" {
-    default = "tok-secondary-subnet"
-}
-
 variable "primary_security_group_name" {
     default = "tok-primary-security-group"
-}
-
-variable "secondary_security_group_name" {
-    default = "tok-secondary-security-group"
 }

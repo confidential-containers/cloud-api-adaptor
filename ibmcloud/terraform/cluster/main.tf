@@ -29,16 +29,8 @@ data "ibm_is_subnet" "primary" {
   name = var.primary_subnet_name
 }
 
-data "ibm_is_subnet" "secondary" {
-  name = var.secondary_subnet_name
-}
-
 data "ibm_is_security_group" "primary" {
   name = var.primary_security_group_name
-}
-
-data "ibm_is_security_group" "secondary" {
-  name = var.secondary_security_group_name
 }
 
 resource "ibm_is_instance_template" "k8s_node" {
@@ -53,36 +45,16 @@ resource "ibm_is_instance_template" "k8s_node" {
     subnet = data.ibm_is_subnet.primary.id
     security_groups = [data.ibm_is_security_group.primary.id]
   }
-
-  network_interfaces {
-    subnet = data.ibm_is_subnet.secondary.id
-    security_groups = [data.ibm_is_security_group.secondary.id]
-    allow_ip_spoofing = true
-  }
 }
 
 resource "ibm_is_instance" "controlplane" {
   name              = local.controlplane_name
   instance_template = ibm_is_instance_template.k8s_node.id
-
-  # For some reason, the following lines are necessary to avoid unnecessary replacements
-  network_interfaces {
-    subnet = data.ibm_is_subnet.secondary.id
-    security_groups = [data.ibm_is_security_group.secondary.id]
-    allow_ip_spoofing = true
-  }
 }
 
 resource "ibm_is_instance" "worker" {
   name              = local.worker_name
   instance_template = ibm_is_instance_template.k8s_node.id
-
-  # For some reason, the following lines are necessary to avoid unnecessary replacements
-  network_interfaces {
-    subnet = data.ibm_is_subnet.secondary.id
-    security_groups = [data.ibm_is_security_group.secondary.id]
-    allow_ip_spoofing = true
-  }
 }
 
 
