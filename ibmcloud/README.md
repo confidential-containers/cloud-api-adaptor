@@ -242,7 +242,7 @@ You can create a demo pod as follows. This YAML file will create an nginx pod us
 
 ```
 cd ibmcloud/demo
-kubectl apply -f runtime-class.yaml nginx.yaml
+kubectl apply -f runtime-class.yaml -f nginx.yaml
 ```
 
 The following command shows the status of the pod you just created. When it becomes running, a new peer pod VM instance is running.
