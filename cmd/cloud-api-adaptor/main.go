@@ -53,7 +53,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
 			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
 			flags.StringVar(&hypcfg.HypProvider, "provider", "aws", "Hypervisor provider")
-		        flags.StringVar(&cfg.TunnelType, "tunnel-type", "routing", "Tunnel provider")
+		        flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
 		        flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
 
 		})
@@ -73,7 +73,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
 			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
 			flags.StringVar(&hypcfg.HypProvider, "provider", "ibmcloud", "Hypervisor provider")
-		        flags.StringVar(&cfg.TunnelType, "tunnel-type", "routing", "Tunnel provider")
+		        flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
 		        flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
 		})
 
