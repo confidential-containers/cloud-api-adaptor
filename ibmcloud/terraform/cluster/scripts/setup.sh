@@ -43,7 +43,13 @@ if ! [[ -e /var/lib/kubelet/kubeadm-flags.env ]]; then
     kubeadm init --apiserver-advertise-address=$control_plane --pod-network-cidr=172.20.0.0/16 --cri-socket unix:///run/containerd/containerd.sock
     mkdir -p /root/.kube
     cp -f /etc/kubernetes/admin.conf /root/.kube/config
-    kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+    # The default setting of Flannel conflicts with the IP range of the Tokyo zones
+    # https://cloud.ibm.com/docs/vpc?topic=vpc-configuring-address-prefixes&locale=en
+
+    curl -sL -o /tmp/kube-flannel.yml https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    sed -i 's|"10.244.0.0/16"|"172.20.0.0/16"|' /tmp/kube-flannel.yml
+    kubectl apply -f /tmp/kube-flannel.yml
 fi
 "
 
