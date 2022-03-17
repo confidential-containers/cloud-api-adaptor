@@ -357,13 +357,23 @@ func (ns *NS) LinkList() ([]netlink.Link, error) {
 	return links, nil
 }
 
+func (ns *NS) LinkByName(name string) (netlink.Link, error) {
+
+	link, err := ns.handle.LinkByName(name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find interface %s: %w", name, err)
+	}
+
+	return link, nil
+}
+
 // LinkAdd creates a new link with an attribute specified by link
 func (ns *NS) LinkAdd(linkName string, link netlink.Link) error {
 	attrs := link.Attrs()
 	*attrs = netlink.NewLinkAttrs()
 	attrs.Name = linkName
 	if err := ns.handle.LinkAdd(link); err != nil {
-		return fmt.Errorf("failed to create an interface of %s: %s:  %w", linkName, link.Type(), err)
+		return fmt.Errorf("failed to create an interface of %s: %s:  %w", link.Type(), linkName, err)
 	}
 	return nil
 }
@@ -394,6 +404,36 @@ func (ns *NS) LinkSetMaster(linkName, masterName string) error {
 	if err := ns.handle.LinkSetMaster(link, master); err != nil {
 		return fmt.Errorf("failed to set master device of %s to %s: %w", linkName, masterName, err)
 	}
+	return nil
+}
+
+// LinkSetNS changes network namespace of a link
+func (ns *NS) LinkSetNS(linkName string, targetNS *NS) error {
+
+	link, err := ns.LinkByName(linkName)
+	if err != nil {
+		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
+	}
+
+	if err := ns.handle.LinkSetNsFd(link, targetNS.FD()); err != nil {
+		return fmt.Errorf("failed to change network namespace of interface %s from %s to %s: %w", linkName, ns.Path, targetNS.Path, err)
+	}
+
+	return nil
+}
+
+// LinkSetName changes name of a link
+func (ns *NS) LinkSetName(linkName, newName string) error {
+
+	link, err := ns.LinkByName(linkName)
+	if err != nil {
+		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
+	}
+
+	if err := ns.handle.LinkSetName(link, newName); err != nil {
+		return fmt.Errorf("failed to change name of interface %s on %s to %s: %w", linkName, ns.Path, newName, err)
+	}
+
 	return nil
 }
 

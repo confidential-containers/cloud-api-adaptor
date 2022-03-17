@@ -6,10 +6,13 @@ package podnetwork
 import (
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 )
+
+const DefaultTunnelType = "vxlan"
 
 type WorkerNode interface {
 	Inspect(nsPath string) (*tunneler.Config, error)
@@ -21,6 +24,24 @@ type workerNode struct {
 	tunnelType    string
 	hostInterface string
 	podNodeIP     net.IP
+}
+
+// TODO: Pod index is reset when this process restarts.
+// We need to manage a persistent unique index number for each pod VM
+var podIndexManager podIndex
+
+type podIndex struct {
+	index int
+	mutex sync.Mutex
+}
+
+func (p *podIndex) Get() int {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	index := p.index
+	p.index++
+	return index
 }
 
 func NewWorkerNode(tunnelType, hostInterface string) WorkerNode {
@@ -35,6 +56,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	config := &tunneler.Config{
 		TunnelType: n.tunnelType,
+		Index:      podIndexManager.Get(),
 	}
 
 	hostNS, err := netops.GetNS()

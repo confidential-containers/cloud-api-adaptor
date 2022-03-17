@@ -125,7 +125,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 		defer DeleteNamedNS(t, pod.podNS)
 	}
 
-	for _, pod := range pods {
+	for i, pod := range pods {
 
 		pod.config = &tunneler.Config{
 			PodIP:         pod.podAddr,
@@ -134,6 +134,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 			MTU:           1500,
 			TunnelType:    tunnelType,
 			Dedicated:     dedicated,
+			Index:         i,
 		}
 
 		podNodeIPs := []net.IP{net.ParseIP(getIP(t, pod.podNodePrimaryAddr))}

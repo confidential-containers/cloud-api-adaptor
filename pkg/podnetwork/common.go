@@ -10,6 +10,7 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/routing"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 )
 
@@ -17,6 +18,7 @@ var logger = log.New(log.Writer(), "[podnetwork] ", log.LstdFlags|log.Lmsgprefix
 
 func init() {
 	tunneler.Register("routing", routing.NewWorkerNodeTunneler, routing.NewPodNodeTunneler)
+	tunneler.Register("vxlan", vxlan.NewWorkerNodeTunneler, vxlan.NewPodNodeTunneler)
 }
 
 func getRoutes(ns *netops.NS) ([]*netops.Route, string, error) {
