@@ -236,3 +236,22 @@ You can create a demo pod as follows. This YAML file will create an nginx pod us
 cd ibmcloud/demo
 kubectl apply -f runtime-class.yaml nginx.yaml
 ```
+
+The following command shows the status of the pod you just created. When it becomes running, a new peer pod VM instance is running.
+```
+kubectl get pods
+```
+
+You can check the status of pod VM instance at [https://cloud.ibm.com/vpc-ext/compute/vs](https://cloud.ibm.com/vpc-ext/compute/vs). Alternatively, you can use the `ibmcloud` command to list your images as follows.
+
+```
+ibmcloud is instances
+```
+
+The above YAML file also define a NodePort service. You can access the HTTP port of the pod at the worker node as follows.
+
+```
+curl http://localhost:30080
+```
+
+The cloud API adaptor establishes a network tunnel between the worker and pod VMs, and the network traffic to/from the pod VM is transparently transferred via the tunnel.
