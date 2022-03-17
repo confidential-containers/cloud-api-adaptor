@@ -29,13 +29,6 @@ resource "ibm_is_subnet" "primary" {
   public_gateway           = ibm_is_public_gateway.gateway.id
 }
 
-resource "ibm_is_subnet" "secondary" {
-  name                     = var.secondary_subnet_name
-  vpc                      = ibm_is_vpc.vpc.id
-  zone                     = var.zone_name
-  total_ipv4_address_count = 256
-}
-
 resource "ibm_is_security_group" "primary" {
   name = var.primary_security_group_name
   vpc  = ibm_is_vpc.vpc.id
@@ -73,21 +66,4 @@ resource "ibm_is_security_group_rule" "primary_ping" {
     code = 0
     type = 8
   }
-}
-
-resource "ibm_is_security_group" "secondary" {
-  name = var.secondary_security_group_name
-  vpc  = ibm_is_vpc.vpc.id
-}
-
-resource "ibm_is_security_group_rule" "secondary_outbound" {
-  group      = ibm_is_security_group.secondary.id
-  direction  = "outbound"
-  remote     = "0.0.0.0/0"
-}
-
-resource "ibm_is_security_group_rule" "secondary_inbound" {
-  group      = ibm_is_security_group.secondary.id
-  direction  = "inbound"
-  remote     = "0.0.0.0/0"
 }
