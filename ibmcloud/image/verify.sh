@@ -27,10 +27,15 @@ if [[ -z "${image-}" ]]; then
 fi
 
 vpc=$IBMCLOUD_VPC_NAME
-profile=bx2-2x8
 zone=$IBMCLOUD_VPC_ZONE
 subnet=$IBMCLOUD_VPC_SUBNET_NAME
 image=${image%.qcow2}
+
+case "$image" in
+    *-amd64) profile=bx2-2x8 ;;
+    *-s390x) profile=bz2-2x8 ;;
+    *)       echo "$0: image for unknown architecture: $image" 1>&2; exit 1 ;;
+esac
 
 name=$(printf "imagetest-%.8s-%s" "$(uuidgen)" "$image")
 
