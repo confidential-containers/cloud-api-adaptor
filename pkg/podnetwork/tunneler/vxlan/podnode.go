@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	podVxlanInterface = "eth0"
+	podVxlanInterface = "vxlan0"
 )
 
 type podNodeTunneler struct {
