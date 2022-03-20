@@ -463,6 +463,8 @@ func (ns *NS) LinkSetUp(linkName string) error {
 
 // RouteAdd adds a new route
 func (ns *NS) RouteAdd(table int, dest *net.IPNet, gw net.IP, dev string) error {
+	logger.Printf("RouteAdd details: table(%d), dest(%v), gw(%v), dev(%d)", table, dest, gw, dev)
+
 	if dest == nil {
 		_, dest, _ = net.ParseCIDR("0.0.0.0/0")
 	}
