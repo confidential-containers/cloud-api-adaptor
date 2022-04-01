@@ -2,6 +2,10 @@
 
 This guide describes how to set up a demo environment on IBM Cloud for peer pod VMs.
 
+This procedure has been confirmed using the following repositories with the `peerpod-2022.04.01` tag.
+* https://github.com/yoheiueda/cloud-api-adaptor/tree/peerpod-2022.04.01
+* https://github.com/yoheiueda/kata-containers/tree/peerpod-2022.04.01
+
 The setup procedure includes the following sub tasks.
 
 * Create a Virtual Private Cloud (VPC) including security groups, subnet, and gateway
