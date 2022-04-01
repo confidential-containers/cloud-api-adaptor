@@ -596,6 +596,9 @@ func (ns *NS) GetRoutes() ([]*Route, error) {
 		switch r.Protocol {
 		case unix.RTPROT_STATIC:
 		case unix.RTPROT_BOOT:
+		case unix.RTPROT_DHCP:
+		case unix.RTPROT_KERNEL:
+			continue
 		default:
 			logger.Printf("route (dst:%s, gw:%s: dev:%s) has unexpected protocol %d. ignoring", r.Dst, r.Gw, dev, r.Protocol)
 			continue
