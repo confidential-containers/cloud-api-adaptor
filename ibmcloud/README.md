@@ -186,7 +186,7 @@ disable_guest_seccomp = true
 enable_pprof = true
 enable_debug = true
 [hypervisor.remote]
-remove_hypervisor = "/run/peerpod/hypervisor.sock"
+remote_hypervisor = "/run/peerpod/hypervisor.sock"
 [agent.kata]
 ```
 
@@ -196,7 +196,7 @@ The Ansible playbook automatically installs the Cloud API adaptor binary. If you
 
 ```
 cd /root/cloud-api-adaptor
-make cloud-api-adaptor
+CLOUD_PROVIDER=ibmcloud make
 install cloud-api-adaptor /usr/local/bin/
 ```
 
@@ -223,7 +223,7 @@ ssh_key_id=$(ibmcloud is key --output json $ssh_key_name | jq -r .id)
 subnet_id=$(ibmcloud is subnet --output json $subnet_name | jq -r .id)
 security_groupd_id=$(ibmcloud is security-group --output json $security_group_name | jq -r .id)
 
-/usr/local/bin/cloud-api-adaptor \
+/usr/local/bin/cloud-api-adaptor ibmcloud \
     -api-key "$api_key" \
     -key-id "$ssh_key_id" \
     -image-id "$image_id" \
