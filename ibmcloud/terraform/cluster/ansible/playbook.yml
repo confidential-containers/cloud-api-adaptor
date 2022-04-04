@@ -299,7 +299,7 @@
       shell: |
         set -o errexit -o pipefail
         cd /root
-        git clone -b peerpod-2022.04.01 https://github.com/yoheiueda/kata-containers.git
+        git clone -b peerpod-2022.04.04 https://github.com/yoheiueda/kata-containers.git
       args:
         executable: /bin/bash
         creates: /root/kata-containers
@@ -308,7 +308,7 @@
       shell: |
         set -o errexit -o pipefail
         cd /root
-        git clone -b peerpod-2022.04.01 https://github.com/yoheiueda/cloud-api-adaptor.git
+        git clone -b peerpod-2022.04.04 https://github.com/yoheiueda/cloud-api-adaptor.git
       args:
         executable: /bin/bash
         creates: /root/cloud-api-adaptor
