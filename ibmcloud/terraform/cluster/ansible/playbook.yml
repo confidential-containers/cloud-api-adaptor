@@ -299,7 +299,7 @@
       shell: |
         set -o errexit -o pipefail
         cd /root
-        git clone -b CCv0-peerpod https://github.com/yoheiueda/kata-containers.git
+        git clone -b peerpod-2022.04.01 https://github.com/yoheiueda/kata-containers.git
       args:
         executable: /bin/bash
         creates: /root/kata-containers
@@ -308,7 +308,7 @@
       shell: |
         set -o errexit -o pipefail
         cd /root
-        git clone -b code-import https://github.com/yoheiueda/cloud-api-adaptor.git
+        git clone -b peerpod-2022.04.01 https://github.com/yoheiueda/cloud-api-adaptor.git
       args:
         executable: /bin/bash
         creates: /root/cloud-api-adaptor
@@ -334,14 +334,14 @@
           enable_pprof = true
           enable_debug = true
           [hypervisor.remote]
-          remove_hypervisor = "/run/peerpod/hypervisor.sock"
+          remote_hypervisor = "/run/peerpod/hypervisor.sock"
           [agent.kata]
 
     - name: Install cloud-api-adaptor
       shell: |
         set -o errexit
         cd /root/cloud-api-adaptor
-        PATH=/usr/local/go/bin:$PATH make cloud-api-adaptor
+        PATH=/usr/local/go/bin:$PATH CLOUD_PROVIDER=ibmcloud make cloud-api-adaptor
         install cloud-api-adaptor /usr/local/bin/
       args:
         executable: /bin/bash
