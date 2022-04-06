@@ -13,6 +13,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/aws"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/ibmcloud"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/libvirt"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/registry"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 
@@ -32,6 +33,7 @@ const DefaultShimTimeout = "60s"
 
 var ibmcfg ibmcloud.Config
 var awscfg aws.Config
+var libvirtcfg libvirt.Config
 var hypcfg hypervisor.Config
 
 func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
@@ -77,6 +79,18 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		        flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
 		})
 
+	case "libvirt":
+		cmd.Parse("libvirt", os.Args[1:], func(flags *flag.FlagSet) {
+			flags.StringVar(&libvirtcfg.URI, "uri", "qemu:///system", "libvirt URI")
+			flags.StringVar(&libvirtcfg.PoolName, "pool-name", "default", "libvirt storage pool")
+			flags.StringVar(&libvirtcfg.NetworkName, "network-name", "default", "libvirt network pool")
+			flags.StringVar(&libvirtcfg.DataDir, "data-dir", "/var/lib/libvirt/images", "libvirt storage dir")
+			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
+			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
+			flags.StringVar(&hypcfg.HypProvider, "provider", "libvirt", "Hypervisor provider")
+		        flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
+		        flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
+		})
 	default:
 		os.Exit(1)
 	}
@@ -90,7 +104,10 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		hypervisorServer = registry.NewServer(hypcfg, ibmcfg, workerNode, daemon.DefaultListenPort)
 	} else if hypcfg.HypProvider == "aws" {
 		hypervisorServer = registry.NewServer(hypcfg, awscfg, workerNode, daemon.DefaultListenPort)
+	} else if hypcfg.HypProvider == "libvirt" {
+		hypervisorServer = registry.NewServer(hypcfg, libvirtcfg, workerNode, daemon.DefaultListenPort)
 	}
+
 
 	return cmd.NewStarter(hypervisorServer), nil
 }
