@@ -19,3 +19,14 @@ CLOUD_PROVIDER=aws make
 cd cloud-api-adaptor
 CLOUD_PROVIDER=ibmcloud make
 ```
+
+## Build for libvirt
+Note that libvirt go library uses `cgo` and hence there is no static build.
+Consequently you'll need to run the binary on the same OS/version where you have
+built it.
+You'll also need to install the libvirt dev packages before running the build.
+
+```
+cd cloud-api-adaptor
+CLOUD_PROVIDER=libvirt make
+```

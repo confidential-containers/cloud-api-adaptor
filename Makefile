@@ -18,10 +18,14 @@ all: build
 build: $(BINARIES)
 
 $(BINARIES): $(SOURCES)
+ifeq ($(CLOUD_PROVIDER),libvirt)
+	go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
+else
 	CGO_ENABLED=0 go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
+endif
 
 test:
-	 go test -cover $(PACKAGES)
+	go test -cover $(PACKAGES)
 
 check: fmt vet
 
