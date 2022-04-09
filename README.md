@@ -1,26 +1,26 @@
-# Cloud API adaptor for Peer Pod VMs
+# Introduction
 
-This repository contains the core components for Peer Pod VMs.
-A goal of this project is to secure workload pods from Kubernetes administrators by running them in a separate VM from a worker node VM.
+This repository contains the implementation of Kata [remote hypervisor](https://github.com/yoheiueda/kata-containers/tree/CCv0-peerpod).
+The remote hypervisor concept is currently work in progress. The primary purpose of remote hypervisor support is to create
+Kata VMs alongside the Kubernetes worker node VMs, without requiring any nested virtualization support.
 
 ## Goals
 
-* Accept requests from Kata shim to create/delete cloud VM instances
-* Manage VM instances to run pods using cloud API endpoint
+* Accept requests from Kata shim to create/delete Kata VM instances without requiring nested virtualization support.
+* Manage VM instances in the cloud to run PODs using cloud (virtualization) provider APIs
 * Forward communication between kata shim on a worker node VM and kata agent on a pod VM
 * Provide a mechanism to establish a network tunnel between a worker and pod VMs to Kubernetes pod network
 
 ## Architecture
 
-Architecture document is coming soon...
-
+The high level architecture is described in the picture below
 ![Architecture](./docs/architecture.png)
 
 ## Components
 
-* Cloud API adaptor ([cmd/cloud-api-adaptor](./cmd/cloud-api-adaptor))
+* Cloud API adaptor ([cmd/cloud-api-adaptor](./cmd/cloud-api-adaptor)) - `cloud-api-adator` implements the remote hypervisor support.
 * Agent protocol forwarder ([cmd/agent-protocol-forwarder](./cmd/agent-protocol-forwarder))
-* A modified version of the shim of Kata containers CCv0 (not included in this repository)
+* A modified version of Kata containers to support remote hypervisor based on CCv0 branch (not included in this repository)
 
 ## Contribution
 
