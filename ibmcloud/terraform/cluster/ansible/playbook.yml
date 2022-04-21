@@ -32,6 +32,9 @@
           - kubectl
           - kubernetes-cni
           - cri-tools
+          - git
+          - kpartx
+          - protobuf-compiler
 
     - name: Install deb packages for Ubuntu 20.04 or later
       apt:
@@ -308,7 +311,7 @@
       shell: |
         set -o errexit -o pipefail
         cd /root
-        git clone -b peerpod-2022.04.04 https://github.com/yoheiueda/cloud-api-adaptor.git
+        git clone -b zvsi https://github.com/liudalibj/cloud-api-adaptor.git
       args:
         executable: /bin/bash
         creates: /root/cloud-api-adaptor
@@ -341,7 +344,9 @@
       shell: |
         set -o errexit
         cd /root/cloud-api-adaptor
-        PATH=/usr/local/go/bin:$PATH CLOUD_PROVIDER=ibmcloud make cloud-api-adaptor
+        PATH=/usr/local/go/bin:$PATH
+        go mod tidy 
+        CLOUD_PROVIDER=ibmcloud make cloud-api-adaptor
         install cloud-api-adaptor /usr/local/bin/
       args:
         executable: /bin/bash

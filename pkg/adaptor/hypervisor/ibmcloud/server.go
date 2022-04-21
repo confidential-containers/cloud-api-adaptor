@@ -11,15 +11,14 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/containerd/ttrpc"
 
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 )
 
 var logger = log.New(log.Writer(), "[helper/hypervisor] ", log.LstdFlags|log.Lmsgprefix)
-
 
 type server struct {
 	socketPath string
@@ -36,14 +35,14 @@ type server struct {
 
 func NewServer(cfg hypervisor.Config, cloudCfg Config, workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
 
-     logger.Printf("hypervisor config %v", cfg)
-     logger.Printf("cloud config %v", cloudCfg)
-     vpcV1, err := NewVpcV1(cloudCfg.ApiKey)
-     if err != nil {
-          return nil
-     }
+	logger.Printf("hypervisor config %v", cfg)
+	logger.Printf("cloud config %v", cloudCfg)
+	vpcV1, err := NewVpcV1(cloudCfg.ApiKey, cloudCfg.IamServiceURL, cloudCfg.VpcServiceURL)
+	if err != nil {
+		return nil
+	}
 
-    return &server{
+	return &server{
 		socketPath: cfg.SocketPath,
 		service:    newService(vpcV1, &cloudCfg, workerNode, cfg.PodsDir, daemonPort),
 		workerNode: workerNode,
