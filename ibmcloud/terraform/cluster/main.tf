@@ -6,6 +6,7 @@
 locals {
   template_name = "${var.cluster_name}-k8s-node"
   controlplane_name = "${var.cluster_name}-cp"
+  controlplane_floating_ip_name = "${local.controlplane_name}-ip"
   worker_name = "${var.cluster_name}-worker"
   worker_floating_ip_name = "${local.worker_name}-ip"
   controlplane_ip = resource.ibm_is_instance.controlplane.primary_network_interface[0].primary_ipv4_address
@@ -50,6 +51,11 @@ resource "ibm_is_instance_template" "k8s_node" {
 resource "ibm_is_instance" "controlplane" {
   name              = local.controlplane_name
   instance_template = ibm_is_instance_template.k8s_node.id
+}
+
+resource "ibm_is_floating_ip" "controlplane" {
+    name = local.controlplane_floating_ip_name
+    target = ibm_is_instance.controlplane.primary_network_interface[0].id
 }
 
 resource "ibm_is_instance" "worker" {

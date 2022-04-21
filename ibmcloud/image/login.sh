@@ -9,7 +9,7 @@ set -o errexit -o pipefail -o nounset
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 api_key=${IBMCLOUD_API_KEY-}
-api_endpoint="https://cloud.ibm.com"
+api_endpoint=${IBMCLOUD_API_ENDPOINT-https://cloud.ibm.com}
 region=${IBMCLOUD_VPC_REGION:-jp-tok}
 
 ibmcloud config --http-timeout 60
