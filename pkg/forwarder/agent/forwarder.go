@@ -45,9 +45,6 @@ func NewForwarder(agentSocket, nsPath string) Forwarder {
 	// agent-ctl assumes a trailing zero in an abstract Unix domain socket path.
 	// https://github.com/kata-containers/kata-containers/blob/af0fbb94602a23501e2e8a17a5c98974ff0dc325/tools/agent-ctl/src/client.rs#L397-L404
 	socket := agentSocket
-	if len(socket) > 0 && socket[0] == '@' {
-		socket = socket + "\x00"
-	}
 
 	agentDialer := func(ctx context.Context) (net.Conn, error) {
 
