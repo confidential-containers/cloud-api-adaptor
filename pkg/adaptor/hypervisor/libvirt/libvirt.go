@@ -49,13 +49,13 @@ func createCloudInitISO(v *vmConfig, libvirtClient *libvirtClient) string {
 	}
 
 	// Set VM Hostname
-	v.metaData = "meta-data"
+	v.metaData = libvirtClient.dataDir + "/" + "meta-data"
 	metaFile, _ := os.Create(v.metaData)
 	metaFile.WriteString("local-hostname: " + v.name)
 	metaFile.Close()
 
 	// Write the userData to a file
-	userDataFile := "user-data"
+	userDataFile := libvirtClient.dataDir + "/" + "user-data"
 	udf, _ := os.Create(userDataFile)
 	udf.WriteString(v.userData)
 	udf.Close()
