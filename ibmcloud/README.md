@@ -3,7 +3,7 @@
 This guide describes how to set up a demo environment on IBM Cloud for peer pod VMs.
 
 This procedure has been confirmed using the following repositories.
-* https://github.com/liudalibj/cloud-api-adaptor/tree/zvsi
+* https://github.com/confidential-containers/cloud-api-adaptor/tree/staging
 * https://github.com/yoheiueda/kata-containers/tree/peerpod-2022.04.04
 
 The setup procedure includes the following sub tasks.
@@ -60,13 +60,11 @@ You need IBM Cloud API key. You can create your own API key at [https://cloud.ib
 
 First, you need to create a Virtual Private Cloud (VPC). The Terraform configuration files are in [ibmcloud/terraform/common](./terraform/common/).
 
-
 To use the Terraform configuration, you need to create a file `terraform.tfvars` at in the same directory of the other files of the Terraform configuration to specify your IBM Cloud API Key. `terraform.tfvars` looks like this.
 ```
 ibmcloud_api_key = "<your API key>"
 ```
 You can also customize the other parameters by specifying custom values in `terraform.tfvars`. The default values of such parameters are defined in [variables.tf](./terraform/common/variables.tf)
-
 
 Then, you can create your VPC by executing the following commands.
 
@@ -86,8 +84,7 @@ The following cloud resources will be created. Please check [main.tf](terraform/
 
 ## Create a Kubernetes cluster
 
-Another Terraform configuration is available at [ibmcloud/terraform/cluster](./terraform/cluster) to create a
-Kubernetes cluster on the VPC you just created.
+Another Terraform configuration is available at [ibmcloud/terraform/cluster](./terraform/cluster) to create a Kubernetes cluster on the VPC you just created.
 
 
 Note that you can create multiple clusters by using different cluster names.
@@ -164,7 +161,9 @@ You need to configure Cloud Object Storage (COS) to upload your custom VM image.
 
 https://cloud.ibm.com/objectstorage/
 
+
 First, create a COS service instance if you have not create one. Then, create a COS bucket with the COS instance. The COS service instance and bucket names are necessary to upload a custom VM image.
+
 
 Next, you need to grant access to COS to import images as described at [https://cloud.ibm.com/docs/vpc?topic=vpc-object-storage-prereq&interface=cli](https://cloud.ibm.com/docs/vpc?topic=vpc-object-storage-prereq&interface=cli).
 
@@ -206,7 +205,7 @@ The `cos_service_instance_name` and `cos_bucket_name` tfvars are optional and de
 | COS Service Instance name | peer-pod-cluster-cos-service-instance | 
 | COS Bucket name | peer-pod-cluster-cos-bucket |
 
-For uploding the pod VM image using Terraform, the COS Bucket must be a regional bucket in the same region (default `jp-tok`) as the VPC and VSIs.
+For uploading the pod VM image using Terraform, the COS Bucket must be a regional bucket in the same region (default `jp-tok`) as the VPC and VSIs.
 
 **Note:** The `Operator` and `Console Admin` roles must be [assigned](https://cloud.ibm.com/docs/vpc?topic=vpc-vsi_is_connecting_console&interface=ui) to the user. The Terraform template will create the `Console Admin` role for the user `ibmcloud_user_id` is set to in the template `terraform.tfvars`.
 
