@@ -1,5 +1,7 @@
 
-variable "ibmcloud_api_key" {}
+variable "ibmcloud_api_key" {
+    sensitive = true
+}
 variable "ssh_key_name" {}
 variable "cluster_name" {}
 
