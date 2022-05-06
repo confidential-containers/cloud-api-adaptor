@@ -55,8 +55,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
 			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
 			flags.StringVar(&hypcfg.HypProvider, "provider", "aws", "Hypervisor provider")
-		        flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
-		        flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
+			flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
+			flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
 
 		})
 
@@ -77,8 +77,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
 			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
 			flags.StringVar(&hypcfg.HypProvider, "provider", "ibmcloud", "Hypervisor provider")
-		        flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
-		        flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
+			flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
+			flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
 		})
 
 	case "libvirt":
@@ -90,8 +90,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
 			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
 			flags.StringVar(&hypcfg.HypProvider, "provider", "libvirt", "Hypervisor provider")
-		        flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
-		        flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
+			flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
+			flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
 		})
 	default:
 		os.Exit(1)
@@ -109,7 +109,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	} else if hypcfg.HypProvider == "libvirt" {
 		hypervisorServer = registry.NewServer(hypcfg, libvirtcfg, workerNode, daemon.DefaultListenPort)
 	}
-
 
 	return cmd.NewStarter(hypervisorServer), nil
 }

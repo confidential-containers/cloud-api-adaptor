@@ -311,7 +311,7 @@
       shell: |
         set -o errexit -o pipefail
         cd /root
-        git clone -b zvsi https://github.com/liudalibj/cloud-api-adaptor.git
+        git clone -b staging https://github.com/confidential-containers/cloud-api-adaptor.git
       args:
         executable: /bin/bash
         creates: /root/cloud-api-adaptor
