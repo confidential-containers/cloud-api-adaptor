@@ -2,3 +2,5 @@
 terraform.tfvars
 terraform.tfstate*
 /cluster/ansible/inventory
+/podvm-build/ansible/inventory
+/podvm-build/ansible/group_vars/all
