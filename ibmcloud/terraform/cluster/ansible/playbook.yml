@@ -35,6 +35,7 @@
           - git
           - kpartx
           - protobuf-compiler
+          - musl-tools
 
     - name: Install deb packages for Ubuntu 20.04 or later
       apt:
@@ -302,7 +303,7 @@
       shell: |
         set -o errexit -o pipefail
         cd /root
-        git clone -b peerpod-2022.04.04 https://github.com/yoheiueda/kata-containers.git
+        git clone -b CCv0-peerpod https://github.com/yoheiueda/kata-containers.git
       args:
         executable: /bin/bash
         creates: /root/kata-containers
