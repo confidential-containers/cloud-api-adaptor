@@ -263,81 +263,111 @@ $ install cloud-api-adaptor /usr/local/bin/
 
 ## Launch Cloud API adaptor
 
-You can start Cloud API adaptor as follows on the worker node. Please update the variable values if you use custom ones. The VPC, region, zone, subnet, security name are must same as the values you just used for creating VPC.
+A terraform template that will start the `cloud-api-adaptor` process on the Kubernetes worker node is available in [ibmcloud/terraform/start-cloud-api-adaptor](./terraform/start-cloud-api-adaptor).
+
+Create a `terraform.tfvars` file in the [template directory](./terraform/start-cloud-api-adaptor) for this Terraform template on your `development machine`. The `terraform.tfvars` file should look like this
+
+```
+ibmcloud_api_key = "<your API Key>"
+cluster_name = "<cluster name>"
+ssh_key_name = "<your SSH key name>"
+```
+
+> **Hint:** The `instance_profile_name` optional variable sets the CPU architecture, number of vCPUs and memory of each peer pod Virtual Server instance. E.g., the `bz8-2x8` instance profile uses the s390x CPU architecture, has 2 vCPUs and 8 GiB of memory
+
+> **Hint:** If you created the cluster based on an s390x architecture VSI image you must set the `instance_profile_name` parameter to the name of an s390x-architecture instance profile. E.g., if your cluster uses the **s390x** CPU architecture add the following line to the `terraform.tfvars` file
+>
+>     instance_profile_name = "bz2-2x8"
+>
+> "bz2-2x8" can be replced with the name of a different s390x-architecture instance profile
+
+> **Notes:**
+> - `ibmcloud_api_key` is your IBM Cloud API Key that you created at [https://cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
+> - `ssh_key_name` is a name of your SSH key registered in IBM Cloud. This must be the same SSH key that is installed on and used to access your control-plane and Kubernetes worker nodes.
+> - `cluster_name` is a name of a Kubernetes cluster. You must use the same value for this parameter as you used for the corresponding parameter when running the Terraform template in [ibmcloud/terraform/cluster](terraform/cluster) to create the cluster.
+> - `podvm_image_name` is the Custom Image for VPC that was built and uploaded by running the Terraform template in [ibmcloud/terraform/podvm-build](terraform/podvm-build). View [IBM Cloud Custom images for VPC](https://cloud.ibm.com/vpc-ext/compute/images) for your chosen region to view the name of the pod VM custom image that was built and uploaded.
+> - `instance_profile_name` is a name of IBM Cloud virtual server instance profile. This instance profile name is used to create IBM Cloud Virtual Server instances for peer pods.
+
+Execute the following commands on your `development machine` to start the cloud api adaptor on your worker instance:
 
 ```bash
-$ api_key=<your API key>
-$ image_name=<pod VM image name>
-$ ssh_key_name=<your SSH key name>
-$ vpc_name=tok-vpc
-$ subnet_name=tok-primary-subnet
-$ security_group_name=tok-primary-security-group
-$ vpc_region=jp-tok
-$ vpc_zone=jp-tok-2
-$ instance_profile=bx2-2x8
+$ cd ibmcloud/terraform/start-cloud-api-adaptor
+$ terraform init
+$ terraform plan
+$ terraform apply
 ```
-> **Tip:**: Modify **instance_profile** to change the type of VSI provisioned e.g. to create 2 vCPU, 8GB RAM balanced `s390x` VSIs for the peer-pod use `instance_profile=bz2-2x8`
 
-```bash
-$ ibmcloud login -a https://cloud.ibm.com -r $vpc_region -apikey $api_key
-$ image_id=$(ibmcloud is image --output json $image_name | jq -r .id)
-$ vpc_id=$(ibmcloud is vpc --output json $vpc_name | jq -r .id)
-$ ssh_key_id=$(ibmcloud is key --output json $ssh_key_name | jq -r .id)
-$ subnet_id=$(ibmcloud is subnet --output json $subnet_name | jq -r .id)
-$ security_groupd_id=$(ibmcloud is security-group --output json $security_group_name | jq -r .id)
-
-$ /usr/local/bin/cloud-api-adaptor ibmcloud \
-    -api-key "$api_key" \
-    -key-id "$ssh_key_id" \
-    -image-id "$image_id" \
-    -profile-name "$instance_profile" \
-    -zone-name "$vpc_zone" \
-    -primary-subnet-id "$subnet_id" \
-    -primary-security-group-id "$security_groupd_id" \
-    -vpc-id "$vpc_id" \
-    -pods-dir /run/peerpod/pods \
-    -socket /run/peerpod/hypervisor.sock
-```
+After `terraform apply` completes the `cloud-api-adaptor` process will run on the Kubernetes worker instance until you run `terraform destroy` to stop it.
 
 ## Demo
 
-Open a new terminal on your `development machine`, ssh to worker node.
-```bash
-ssh root@floating-ip-of-worker-node
-```
-You can create a demo pod as follows. This YAML file will create an nginx pod using a peer pod VM.
+A Terraform template that will deploy an nginx pod to the Kubernetes cluster is available in [ibmcloud/terraform/run-nginx-demo](./terraform/run-nginx-demo).
 
-```bash
-$ cd /root/cloud-api-adaptor/ibmcloud/demo
-$ kubectl apply -f runtime-class.yaml -f nginx.yaml
+Create a `terraform.tfvars` file in the [template directory](./terraform/run-nginx-demo) for this Terraform template on your `development machine`. The `terraform.tfvars` file should look like this
+
+```
+ibmcloud_api_key = "<your API Key>"
+cluster_name = "<cluster name>"
 ```
 
-The following command shows the status of the pod you just created. When it becomes running, a new peer pod VM instance is running.
+> **Notes:**
+> - `ibmcloud_api_key` is your IBM Cloud API Key that you created at [https://cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
+> - `cluster_name` is a name of a Kubernetes cluster. You must use the same value for this parameter as you used for the corresponding parameter when running the Terraform template in [ibmcloud/terraform/cluster](terraform/cluster) to create the cluster.
+
+Execute the following commands on your `development machine` to delpoy the nginx demo workload:
+
 ```bash
-$ kubectl get pods
+$ cd ibmcloud/terraform/run-nginx-demo
+$ terraform init
+$ terraform plan
+$ terraform apply
 ```
 
-> **Tip:** You can check the status of pod VM instance at [https://cloud.ibm.com/vpc-ext/compute/vs](https://cloud.ibm.com/vpc-ext/compute/vs). Alternatively, you can use the `ibmcloud` command to list your images as follows.
+Deploying the demo workload will create a new nginx Pod and a NodePort service on your Kubernetes cluster, and a new Virtual Server instance for the peer pod will be created in your IBM Cloud VPC. The `run-nginx-demo` Terraform template will also sniff test the deployed nginx server by accessing the HTTP port of the NodePort service and test that the CPU architecture of the Kubernetes worker matches that of the peer pod instance.
+
+> **Tip:** You can run the nginx sniff test manually if you log into the Kubernetes worker node and run the command
+> ```bash
+> $ curl http://localhost:30080
+> ```
+> You can also check the CPU architecture the pod VM instance is using by running the command
+> ```bash
+> $ kubectl exec nginx -- uname -a
+> ```
+> while logged into to Kubernetes worker node. If you are using a `s390x` based image as the pod VM image, the output looks like this.
+> ```
+> Linux nginx 5.4.0-109-generic #123-Ubuntu SMP [Date] s390x GNU/Linux
+> ```
+
+> **Note:** The cloud API adaptor establishes a network tunnel between the worker and pod VM, and the network traffic to/from the pod VM is transparently transferred via the tunnel.
+
+If you execute the `terraform destroy` command for the `run-nginx-demo` Terraform template the nginx Pod, ConfigMap and NodePort Service, as well as the RuntimeClass for Kata will be deleted on the cluster.
+
+A Terraform template that checks the nginx peer pod instance has been successfully created on your IBM Cloud VPC is available in [ibmcloud/terraform/check-podvm-instance](./terraform/check-podvm-instance).
+
+Create a `terraform.tfvars` file in the [template directory](./terraform/check-podvm-instance) for this Terraform template on your `development machine`. The `terraform.tfvars` file should look like this
+
+```
+ibmcloud_api_key = "<your API Key>"
+podvm_image_name = "<name of your pod VM image>"
+```
+
+> **Notes:**
+> - `ibmcloud_api_key` is your IBM Cloud API Key that you created at [https://cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
+> - `podvm_image_name` is the Custom Image for VPC that was built and uploaded by running the Terraform template in [ibmcloud/terraform/podvm-build](terraform/podvm). View [IBM Cloud Custom images for VPC](https://cloud.ibm.com/vpc-ext/compute/images) for your chosen region to view the name of the pod VM custom image that was built and uploaded.
+
+Execute the following commands on your `development machine` to check the nginx pod VM instance exists after deploying the nginx demo workload:
+
+```bash
+$ cd ibmcloud/terraform/check-podvm-instance
+$ terraform init
+$ terraform plan
+$ terraform apply
+```
+
+> **Tip:** You can also check the status of pod VM instance at [https://cloud.ibm.com/vpc-ext/compute/vs](https://cloud.ibm.com/vpc-ext/compute/vs). Alternatively, you can use the `ibmcloud` command to list your images as follows.
 >    ```bash
 >    $ ibmcloud is instances
 >    ```
-
-The above YAML file also define a NodePort service. You can access the HTTP port of the pod at the worker node as follows.
-```bash
-$ curl http://localhost:30080
-```
-
-The cloud API adaptor establishes a network tunnel between the worker and pod VMs, and the network traffic to/from the pod VM is transparently transferred via the tunnel.
-
-
-You can also check the pod VM instance architecture by command:
-```bash
-$ kubectl exec nginx -- uname -a
-```
-If you are using `s390x` based image as pod vm image, the output looks like this.
-```
-Linux nginx 5.4.0-109-generic #123-Ubuntu SMP [Date] s390x GNU/Linux
-```
 
 > **Tip:** When the peer pod VSI is created and it fails to start due to [capacity problems](https://cloud.ibm.com/docs/vpc?topic=vpc-instance-status-messages#cannot-start-capacity).
 > Please stop `cloud-api-adaptor` on worker node, try to run peer pod VSI on another zone:
