@@ -1,0 +1,23 @@
+#
+# (C) Copyright IBM Corp. 2022.
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+
+- hosts: all
+  remote_user: root
+  tasks:
+    - name: Record the number of processes containing 'cloud-api-adaptor'
+      shell:
+        cmd: |
+          ps -ef | grep -v grep | grep cloud-api-adaptor | wc -l
+      register: process_count
+    - name: Stop the Cloud API Adaptor process
+      shell:
+        cmd: |
+          killall cloud-api-adaptor
+      when: process_count.stdout | int > 0
+    - name: Delete the peer pod hypervisor socket if it exists
+      file:
+        path: /run/peerpod/hypervisor.sock
+        state: absent

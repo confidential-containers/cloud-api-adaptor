@@ -1,0 +1,38 @@
+#
+# (C) Copyright IBM Corp. 2022.
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+
+- hosts: all
+  remote_user: root
+  tasks:
+    - name: Get Kubernetes worker architecture
+      shell:
+        cmd: uname -m
+      register: k8s_worker_architecture
+    - name: Create Kubernetes resources for the nginx in peer pod demo
+      shell:
+        cmd: kubectl apply -f runtime-class.yaml -f nginx.yaml
+        chdir: cloud-api-adaptor/ibmcloud/demo
+    - name: Pause to start peer pod VM, and pull and start nginx container
+      pause:
+        seconds: 90
+    - name: Check nginx container has started in the peer pod
+      shell:
+        cmd: kubectl get pod nginx -o json | jq -r .status.containerStatuses[0].ready
+      register: nginx_container_ready
+      failed_when: nginx_container_ready.stdout != 'true'
+    - name: Send HTTP request to nginx container
+      get_url:
+        url: http://localhost:30080
+        dest: /tmp/nginx.html
+    - name: Delete the HTML document retrieved from nginx
+      file:
+        path: /tmp/nginx.html
+        state: absent
+    - name: Check peer pod VM architecture against the Kubernetes worker architecture
+      shell:
+        cmd: kubectl exec nginx -- uname -m
+      register: peer_pod_architecture
+      failed_when: peer_pod_architecture.stdout != k8s_worker_architecture.stdout
