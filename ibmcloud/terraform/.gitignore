@@ -4,3 +4,6 @@ terraform.tfstate*
 /cluster/ansible/inventory
 /podvm-build/ansible/inventory
 /podvm-build/ansible/group_vars/all
+/start-cloud-api-adaptor/ansible/inventory
+/start-cloud-api-adaptor/ansible/group_vars/all
+/run-nginx-demo/ansible/inventory

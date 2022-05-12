@@ -1,0 +1,13 @@
+#
+# (C) Copyright IBM Corp. 2022.
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+
+- hosts: all
+  remote_user: root
+  tasks:
+    - name: Delete Kubernetes resources for the nginx in peer pod demo
+      shell:
+        cmd: kubectl delete -f runtime-class.yaml -f nginx.yaml
+        chdir: cloud-api-adaptor/ibmcloud/demo
