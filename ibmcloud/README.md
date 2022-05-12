@@ -336,3 +336,51 @@ Linux nginx 5.4.0-109-generic #123-Ubuntu SMP [Date] s390x GNU/Linux
 > - Create a new subnet on the target zone by hand.
 > - Start `cloud-api-adaptor` with new `vpc_zone` and `primary-subnet-id` on worker node.
 > - Create nginx demo again. 
+
+## Clean up
+
+If you want to clean up the IBM Cloud resources created in the above instructions, you can use the following steps:
+
+### Delete the demo configuration and pod
+From a terminal session to the worker node, delete the demo pod configuration:
+```bash
+$ cd /root/cloud-api-adaptor/ibmcloud/demo
+$ kubectl delete -f runtime-class.yaml -f nginx.yaml
+```
+If the `cloud-api-adaptor` process was still running this should automatically delete the peer pod created VM instance
+too. If the `cloud-api-adaptor` process has stopped, then you can manually check for extra pod VSIs by running:
+```bash
+$ ibmcloud is instances
+```
+to see if there are instances other than the control-plane and worker VSIs.
+
+If so these can be deleted with: 
+```bash
+$ ibmcloud is instance-delete <peer_pod_instance_id>
+```
+
+### Delete the peer pod VM image
+
+To check and then delete the custom peer pod VM image created run:
+```bash
+$ ibmcloud is images --visibility=private
+$ ibmcloud is image-delete <image_id>
+```
+
+### Delete the cluster
+
+From your development machine navigate to the `cloud-api-adaptor` repository directory and delete the VPC Kubernetes
+cluster with:
+```bash
+$ cd ibmcloud/terraform/cluster
+$ terraform destroy
+```
+
+### Delete the VPC
+
+From your development machine navigate to the `cloud-api-adaptor` repository directory and delete the VPC, security
+groups, subnet and gateway with:
+```bash
+$ cd ibmcloud/terraform/common
+$ terraform destroy
+```
