@@ -161,13 +161,21 @@ https://cloud.ibm.com/objectstorage/
 
 First, create a COS service instance if you have not create one. Then, create a COS bucket with the COS instance. The COS service instance and bucket names are necessary to upload a custom VM image.
 
+You can use the Terraform template located at [ibmcloud/terraform/cos](./terraform/cos)to use Terraform to create a COS service instance, COS bucket, and IAM AuthorizationPolicy automatically. These resources are configured to store images. Create a `terraform.tfvars` file in the templates directory that includes these fields:
 
-Next, you need to grant access to COS to import images as described at [https://cloud.ibm.com/docs/vpc?topic=vpc-object-storage-prereq&interface=cli](https://cloud.ibm.com/docs/vpc?topic=vpc-object-storage-prereq&interface=cli).
+```
+ibmcloud_api_key = "<your API key>"
+cos_bucket_name = "<COS bucket name>"
+cos_service_instance_name = "<COS instance name>"
+```
+> **Note:** The environment variable `cos_service_instance_name` in `variables.tf` has the default value `cos-image-instance` which will be used by Terraform if you do not provide a unique value in `terraform.tfvars`.
 
+Then run the Template via the following commands: 
 ```bash
-$ ibmcloud login -r jp-tok -apikey <your API key>
-$ COS_INSTANCE_GUID=$(ibmcloud resource service-instance --output json "$IBMCLOUD_COS_SERVICE_INSTANCE" | jq -r '.[].guid')
-$ ibmcloud iam authorization-policy-create is cloud-object-storage Reader --source-resource-type image --target-service-instance-id $COS_INSTANCE_GUID
+$ cd ibmcloud/terraform/cos
+$ terraform init
+$ terraform plan
+$ terraform apply
 ```
 
 You can use a Terraform template located at [ibmcloud/terraform/podvm-build](./terraform/podvm-build) to use Terraform and Ansible to build a pod VM image on the k8s worker node, upload it to a COS bucket and verify it. The architecture of the pod VM image built on the k8s worker node will be the same as that of the node. For example, a k8s worker node using an Intel **x86** VSI will build an Intel **x86** pod VM image and a k8s worker node using an IBM **s390x** VSI will build an IBM **s390x** pod VM image.
