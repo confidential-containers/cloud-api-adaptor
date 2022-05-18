@@ -27,9 +27,8 @@ import (
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 )
 
-
 const (
-	Version       = "0.0.0"
+	Version               = "0.0.0"
 	EC2LaunchTemplateName = "kata"
 )
 
@@ -142,7 +141,6 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-
 	daemonConfig := daemon.Config{
 		PodNamespace: sandbox.namespace,
 		PodName:      sandbox.pod,
@@ -196,7 +194,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 	logger.Printf("created an instance %s for sandbox %s", *result.Instances[0].PublicDnsName, req.Id)
 
 	vmName := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
-        tagInput := &ec2.CreateTagsInput{
+	tagInput := &ec2.CreateTagsInput{
 		Resources: []string{*result.Instances[0].InstanceId},
 		Tags: []types.Tag{
 			{
@@ -206,10 +204,10 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		},
 	}
 
-        _, err = MakeTags(context.TODO(), s.ec2Client, tagInput)
-        if err != nil {
-                logger.Printf("failed to tag the instance", err)
-        }
+	_, err = MakeTags(context.TODO(), s.ec2Client, tagInput)
+	if err != nil {
+		logger.Printf("failed to tag the instance", err)
+	}
 
 	podNodeIPs, err := getIPs(result.Instances[0])
 	if err != nil {

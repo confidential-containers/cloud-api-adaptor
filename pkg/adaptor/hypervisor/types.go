@@ -1,7 +1,7 @@
 package hypervisor
 
 import (
-     "context"
+	"context"
 )
 
 type Server interface {
@@ -11,12 +11,12 @@ type Server interface {
 }
 
 const (
-        DefaultSocketPath = "/run/peerpod/hypervisor.sock"
-        DefaultPodsDir    = "/run/peerpod/pods"
+	DefaultSocketPath = "/run/peerpod/hypervisor.sock"
+	DefaultPodsDir    = "/run/peerpod/pods"
 )
 
 type Config struct {
-        SocketPath        string
-        PodsDir           string
-        HypProvider       string
+	SocketPath  string
+	PodsDir     string
+	HypProvider string
 }

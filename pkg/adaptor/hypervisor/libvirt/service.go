@@ -25,9 +25,8 @@ import (
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 )
 
-
 const (
-	Version       = "0.0.0"
+	Version = "0.0.0"
 )
 
 type hypervisorService struct {

@@ -50,8 +50,8 @@ type hypervisorService struct {
 }
 
 func newService(vpcV1 VpcV1, config *Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
-        
-        logger.Printf("service config %v", config)
+
+	logger.Printf("service config %v", config)
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -191,7 +191,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		},
 		VPC: &vpcv1.VPCIdentity{ID: &s.serviceConfig.VpcID},
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfacePrototype{
-			Subnet:          &vpcv1.SubnetIdentity{ID: &s.serviceConfig.PrimarySubnetID},
+			Subnet: &vpcv1.SubnetIdentity{ID: &s.serviceConfig.PrimarySubnetID},
 			SecurityGroups: []vpcv1.SecurityGroupIdentityIntf{
 				&vpcv1.SecurityGroupIdentityByID{ID: &s.serviceConfig.PrimarySecurityGroupID},
 			},
@@ -330,8 +330,8 @@ func getIPs(prototype *vpcv1.InstancePrototype, result *vpcv1.Instance) ([]net.I
 }
 
 func (s *hypervisorService) deleteInstance(id string) error {
-        options := &vpcv1.DeleteInstanceOptions{}
-        options.SetID(id)
+	options := &vpcv1.DeleteInstanceOptions{}
+	options.SetID(id)
 	resp, err := s.vpcV1.DeleteInstance(options)
 	if err != nil {
 		logger.Printf("failed to delete an instance: %v and the response is %v", err, resp)
