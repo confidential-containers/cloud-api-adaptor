@@ -3,8 +3,8 @@
 package registry
 
 import (
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/aws"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/aws"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 )
 

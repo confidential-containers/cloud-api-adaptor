@@ -32,7 +32,6 @@ func Parse(programName string, args []string, fn func(flags *flag.FlagSet)) {
 
 	}
 
-
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			Exit(0)

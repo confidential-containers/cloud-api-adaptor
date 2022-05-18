@@ -7,14 +7,14 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	libvirt "libvirt.org/go/libvirt"
+	libvirtxml "libvirt.org/go/libvirtxml"
 	"log"
 	"net"
 	"os"
 	"os/exec"
 	"strconv"
 	"time"
-	libvirt "libvirt.org/go/libvirt"
-	libvirtxml "libvirt.org/go/libvirtxml"
 )
 
 type libvirtClient struct {
