@@ -26,6 +26,6 @@ require (
 )
 
 replace (
-	github.com/kata-containers/kata-containers/src/runtime => ../kata-containers/src/runtime
+	github.com/kata-containers/kata-containers/src/runtime => github.com/yoheiueda/kata-containers/src/runtime v0.0.0-20220429130351-22a2aa8a867d
 	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
 )
