@@ -278,9 +278,9 @@ podvm_image_name = "<name of your pod VM image>"
 > - The `instance_profile_name` optional variable sets the CPU architecture, number of vCPUs and memory of each peer pod Virtual Server instance. E.g., the `bz2-2x8` instance profile uses the s390x CPU architecture, has 2 vCPUs and 8 GiB of memory
 > - If you created the cluster based on an s390x architecture VSI image you must set the `instance_profile_name` parameter to the name of an s390x-architecture instance profile. E.g., if your cluster uses the **s390x** CPU architecture add the following line to the `terraform.tfvars` file
 >
->     instance_profile_name = `"bz2-2x8"`
+>     instance_profile_name = "bz2-2x8"
 >
-> "bz2-2x8" can be replaced with the name of a different s390x-architecture instance profile
+> `bz2-2x8` can be replaced with the name of a different s390x-architecture instance profile
 
 > **Notes:**
 > - `ibmcloud_api_key` is your IBM Cloud API Key that you created at [https://cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
