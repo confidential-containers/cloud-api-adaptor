@@ -9,13 +9,15 @@ locals {
   controlplane_floating_ip_name = "${local.controlplane_name}-ip"
   worker_name = "${var.cluster_name}-worker"
   worker_floating_ip_name = "${local.worker_name}-ip"
+  ssh_key_name = "${var.cluster_name}-ssh-key"
   controlplane_ip = resource.ibm_is_instance.controlplane.primary_network_interface[0].primary_ipv4_address
   worker_ip = resource.ibm_is_instance.worker.primary_network_interface[0].primary_ipv4_address
   bastion_ip = resource.ibm_is_floating_ip.worker.address
 }
 
-data "ibm_is_ssh_key" "ssh_key" {
-  name = var.ssh_key_name
+resource "ibm_is_ssh_key" "ssh_key" {
+  name = local.ssh_key_name
+  public_key = var.ssh_pub_key
 }
 
 data "ibm_is_image" "k8s_node" {
@@ -40,7 +42,7 @@ resource "ibm_is_instance_template" "k8s_node" {
   profile = var.instance_profile_name
   vpc     = data.ibm_is_vpc.vpc.id
   zone    = var.zone_name
-  keys    = [data.ibm_is_ssh_key.ssh_key.id]
+  keys    = [ibm_is_ssh_key.ssh_key.id]
 
   primary_network_interface {
     subnet = data.ibm_is_subnet.primary.id

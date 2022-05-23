@@ -2,7 +2,7 @@
 variable "ibmcloud_api_key" {
     sensitive = true
 }
-variable "ssh_key_name" {}
+variable "ssh_pub_key" {}
 variable "cluster_name" {}
 
 variable "region_name" {
