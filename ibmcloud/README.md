@@ -298,7 +298,7 @@ $ terraform plan
 $ terraform apply
 ```
 
-After `terraform apply` completes the `cloud-api-adaptor` process will run on the Kubernetes worker instance until you run `terraform destroy` to stop it.
+After `terraform apply` completes the `cloud-api-adaptor` process will run on the Kubernetes worker instance until it is deleted. See the subsection [delete the demo configuration and pod](./README.md#delete-the-demo-configuration-and-pod).
 
 ## Demo
 
@@ -373,6 +373,13 @@ $ terraform plan
 $ terraform apply
 ```
 
+If you want to re-run the check, run:
+```bash
+$ terraform destroy
+$ terraform plan
+$ terraform apply
+```
+
 > **Tip:** You can also check the status of pod VM instance at [https://cloud.ibm.com/vpc-ext/compute/vs](https://cloud.ibm.com/vpc-ext/compute/vs). Alternatively, you can use the `ibmcloud` command to list your images as follows.
 >    ```bash
 >    $ ibmcloud is instances
@@ -389,13 +396,13 @@ $ terraform apply
 If you want to clean up the IBM Cloud resources created in the above instructions, you can use the following steps:
 
 ### Delete the demo configuration and pod
-From a terminal session to the worker node, delete the demo pod configuration:
+From your development machine navigate to the `run-nginx-demo` repository directory and delete nginx pod on your Kubernetes cluster with:
 ```bash
-$ cd /root/cloud-api-adaptor/ibmcloud/demo
-$ kubectl delete -f runtime-class.yaml -f nginx.yaml
+$ cd ibmcloud/terraform/run-nginx-demo
+$ terraform destroy
 ```
-If the `cloud-api-adaptor` process was still running this should automatically delete the peer pod created VM instance
-too. If the `cloud-api-adaptor` process has stopped, then you can manually check for extra pod VSIs by running:
+
+If the `cloud-api-adaptor` process was still running `terraform destroy` for this Terraform template should automatically delete the peer pod created VM instance too. If the `cloud-api-adaptor` process has stopped, then you can manually check for extra pod VSIs by running:
 ```bash
 $ ibmcloud is instances
 ```
@@ -404,6 +411,13 @@ to see if there are instances other than the control-plane and worker VSIs.
 If so these can be deleted with: 
 ```bash
 $ ibmcloud is instance-delete <peer_pod_instance_id>
+```
+
+### Stop the cloud API adaptor process
+From your development machine navigate to the `start-cloud-api-adaptor` repository directory and stop the cloud API adaptor process on the Kubernetes worker node with:
+```bash
+$ cd ibmcloud/terraform/start-cloud-api-adaptor
+$ terraform destroy
 ```
 
 ### Delete the peer pod VM image
