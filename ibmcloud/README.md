@@ -89,9 +89,18 @@ As usual, you need to create `terraform.tfvars` to specify parameter values. The
 
 ```
 ibmcloud_api_key = "<your API key>"
-ssh_key_name = "<your SSH key name>"
+ssh_pub_key = "<your SSH public key>"
 cluster_name = "<cluster name>"
 ```
+
+> **Hint:** To use a previously imported SSH key, use `terraform import ibm_is_ssh_key.ssh_key <ssh_key.ID>` after you run `terraform init`
+>
+>> You can find your key's ID using the following command `ibmcloud is keys --json | jq '.[] | select(.name == "<key_name>").id'` requires `jq`
+>>
+>> Or visit [https://cloud.ibm.com/vpc-ext/compute/sshKeys](https://cloud.ibm.com/vpc-ext/compute/sshKeys) to manage your keys
+>
+> Addtionally, to avoid the ssh key being deleted use `terraform state rm ibm_is_ssh_key.ssh_key` before `terraform destroy`
+
 > **Hint:** In order to create the cluster based on a different type of VSI image you can overwrite more parameters here e.g. to create a **s390x** based cluster add follow two lines to the `terraform.tfvars` file
 >
 >
@@ -101,7 +110,7 @@ cluster_name = "<cluster name>"
 
 > **Notes:**
 > - `ibmcloud_api_key` is your IBM Cloud API Key that you just created at [https://cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
-> - `ssh_key_name` is a name of your SSH key registered in IBM Cloud. It is used to access a Generation 2 virtual server instance. You can add your SSH key at [https://cloud.ibm.com/vpc-ext/compute/sshKeys](https://cloud.ibm.com/vpc-ext/compute/sshKeys). This ssh key will be installed on control-plane and worker nodes. For more information, about SSH key, see [managing SSH Keys](https://cloud.ibm.com/docs/vpc?topic=vpc-ssh-keys).
+> - `ssh_pub_key` is a ssh public key. It is used to access a Generation 2 virtual server instance. This ssh key will be installed on control-plane and worker nodes. For more information, about SSH keys, see [managing SSH Keys](https://cloud.ibm.com/docs/vpc?topic=vpc-ssh-keys).
 >
 > - `cluster_name` is a name of a Kubernetes cluster. This name is used for the prefix of the names of control-plane and worker nodes. If you want to create another cluster in the same VPC, you need to use a different name for the new cluster.
 > - `instance_profile_name` is a name of IBM Cloud virtual server instance profile. This name is used to create IBM Cloud virtual server instance. For more information, about virtual server instance profile, see [instance profiles](https://cloud.ibm.com/docs/vpc?topic=vpc-profiles).
