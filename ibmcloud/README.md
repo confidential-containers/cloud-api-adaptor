@@ -271,22 +271,23 @@ Create a `terraform.tfvars` file in the [template directory](./terraform/start-c
 ibmcloud_api_key = "<your API Key>"
 cluster_name = "<cluster name>"
 ssh_key_name = "<your SSH key name>"
+podvm_image_name = "<name of your pod VM image>"
 ```
 
-> **Hint:** The `instance_profile_name` optional variable sets the CPU architecture, number of vCPUs and memory of each peer pod Virtual Server instance. E.g., the `bz8-2x8` instance profile uses the s390x CPU architecture, has 2 vCPUs and 8 GiB of memory
-
-> **Hint:** If you created the cluster based on an s390x architecture VSI image you must set the `instance_profile_name` parameter to the name of an s390x-architecture instance profile. E.g., if your cluster uses the **s390x** CPU architecture add the following line to the `terraform.tfvars` file
+> **Hints:**
+> - The `instance_profile_name` optional variable sets the CPU architecture, number of vCPUs and memory of each peer pod Virtual Server instance. E.g., the `bz2-2x8` instance profile uses the s390x CPU architecture, has 2 vCPUs and 8 GiB of memory
+> - If you created the cluster based on an s390x architecture VSI image you must set the `instance_profile_name` parameter to the name of an s390x-architecture instance profile. E.g., if your cluster uses the **s390x** CPU architecture add the following line to the `terraform.tfvars` file
 >
->     instance_profile_name = "bz2-2x8"
+>     instance_profile_name = `"bz2-2x8"`
 >
-> "bz2-2x8" can be replced with the name of a different s390x-architecture instance profile
+> "bz2-2x8" can be replaced with the name of a different s390x-architecture instance profile
 
 > **Notes:**
 > - `ibmcloud_api_key` is your IBM Cloud API Key that you created at [https://cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
 > - `ssh_key_name` is a name of your SSH key registered in IBM Cloud. This must be the same SSH key that is installed on and used to access your control-plane and Kubernetes worker nodes.
 > - `cluster_name` is a name of a Kubernetes cluster. You must use the same value for this parameter as you used for the corresponding parameter when running the Terraform template in [ibmcloud/terraform/cluster](terraform/cluster) to create the cluster.
-> - `podvm_image_name` is the Custom Image for VPC that was built and uploaded by running the Terraform template in [ibmcloud/terraform/podvm-build](terraform/podvm-build). View [IBM Cloud Custom images for VPC](https://cloud.ibm.com/vpc-ext/compute/images) for your chosen region to view the name of the pod VM custom image that was built and uploaded.
-> - `instance_profile_name` is a name of IBM Cloud virtual server instance profile. This instance profile name is used to create IBM Cloud Virtual Server instances for peer pods.
+> - `podvm_image_name` is the Custom Image for VPC that was built and uploaded by running the Terraform template in [ibmcloud/terraform/podvm-build](terraform/podvm-build). View [IBM Cloud Custom images for VPC](https://cloud.ibm.com/vpc-ext/compute/images) for your chosen region to view the name of the pod VM custom image that was built and uploaded, or run the command `ibmcloud is images --visibility=private`.
+> - `instance_profile_name` is a name of IBM Cloud virtual server instance profile. This instance profile name is used to create IBM Cloud Virtual Server instances for peer pods. The default value is `bx2-2x8`, which is a Virtual Server instance that uses the Intel CPU architecture, has 2 vCPUs and 8 GiB of memory.
 
 Execute the following commands on your `development machine` to start the cloud api adaptor on your worker instance:
 
@@ -301,6 +302,8 @@ After `terraform apply` completes the `cloud-api-adaptor` process will run on th
 
 ## Demo
 
+### Deploy the nginx pod and sniff test nginx
+
 A Terraform template that will deploy an nginx pod to the Kubernetes cluster is available in [ibmcloud/terraform/run-nginx-demo](./terraform/run-nginx-demo).
 
 Create a `terraform.tfvars` file in the [template directory](./terraform/run-nginx-demo) for this Terraform template on your `development machine`. The `terraform.tfvars` file should look like this
@@ -314,7 +317,7 @@ cluster_name = "<cluster name>"
 > - `ibmcloud_api_key` is your IBM Cloud API Key that you created at [https://cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
 > - `cluster_name` is a name of a Kubernetes cluster. You must use the same value for this parameter as you used for the corresponding parameter when running the Terraform template in [ibmcloud/terraform/cluster](terraform/cluster) to create the cluster.
 
-Execute the following commands on your `development machine` to delpoy the nginx demo workload:
+Execute the following commands on your `development machine` to deploy the nginx demo workload:
 
 ```bash
 $ cd ibmcloud/terraform/run-nginx-demo
@@ -325,7 +328,11 @@ $ terraform apply
 
 Deploying the demo workload will create a new nginx Pod and a NodePort service on your Kubernetes cluster, and a new Virtual Server instance for the peer pod will be created in your IBM Cloud VPC. The `run-nginx-demo` Terraform template will also sniff test the deployed nginx server by accessing the HTTP port of the NodePort service and test that the CPU architecture of the Kubernetes worker matches that of the peer pod instance.
 
-> **Tip:** You can run the nginx sniff test manually if you log into the Kubernetes worker node and run the command
+> **Tip:** You can run the nginx sniff test manually if you log into the Kubernetes worker node using the floating IP that was assigned to it
+> ```bash
+> $ ssh root@floating-ip-of-worker-node
+> ```
+> Then run the command
 > ```bash
 > $ curl http://localhost:30080
 > ```
@@ -341,6 +348,8 @@ Deploying the demo workload will create a new nginx Pod and a NodePort service o
 > **Note:** The cloud API adaptor establishes a network tunnel between the worker and pod VM, and the network traffic to/from the pod VM is transparently transferred via the tunnel.
 
 If you execute the `terraform destroy` command for the `run-nginx-demo` Terraform template the nginx Pod, ConfigMap and NodePort Service, as well as the RuntimeClass for Kata will be deleted on the cluster.
+
+### Check the Virtual Server instance for the nginx pod exists
 
 A Terraform template that checks the nginx peer pod instance has been successfully created on your IBM Cloud VPC is available in [ibmcloud/terraform/check-podvm-instance](./terraform/check-podvm-instance).
 
