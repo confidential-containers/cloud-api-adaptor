@@ -2,8 +2,14 @@
 variable "ibmcloud_api_key" {
     sensitive = true
 }
-variable "ssh_key_name" {}
 variable "cluster_name" {}
+
+variable "user_ssh_key_name" {
+    default = ""
+}
+variable "ssh_pub_key" {
+    default = ""
+}
 
 variable "region_name" {
     default = "jp-tok"
