@@ -3,10 +3,8 @@ variable "ibmcloud_api_key" {
     sensitive = true
 }
 variable "cluster_name" {}
+variable "ssh_key_name" {}
 
-variable "user_ssh_key_name" {
-    default = ""
-}
 variable "ssh_pub_key" {
     default = ""
 }

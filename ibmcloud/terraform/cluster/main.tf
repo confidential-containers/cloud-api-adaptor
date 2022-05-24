@@ -9,21 +9,26 @@ locals {
   controlplane_floating_ip_name = "${local.controlplane_name}-ip"
   worker_name = "${var.cluster_name}-worker"
   worker_floating_ip_name = "${local.worker_name}-ip"
-  ssh_key_name = var.user_ssh_key_name == "" ? "${var.cluster_name}-ssh-key" : "${var.user_ssh_key_name}"
   controlplane_ip = resource.ibm_is_instance.controlplane.primary_network_interface[0].primary_ipv4_address
   worker_ip = resource.ibm_is_instance.worker.primary_network_interface[0].primary_ipv4_address
   bastion_ip = resource.ibm_is_floating_ip.worker.address
 }
 
 resource "ibm_is_ssh_key" "created_ssh_key" {
+  # Create the ssh key only if the public key is set
   count = var.ssh_pub_key == "" ? 0 : 1
-  name = local.ssh_key_name
+  name = var.ssh_key_name
   public_key = var.ssh_pub_key
 }
 
 data "ibm_is_ssh_key" "ssh_key" {
+  # Wait if the key needs creating first
   depends_on = [ibm_is_ssh_key.created_ssh_key]
-  name = local.ssh_key_name
+  name = var.ssh_key_name
+}
+
+output "ssh_key_name" {
+  value = var.ssh_key_name
 }
 
 data "ibm_is_image" "k8s_node" {

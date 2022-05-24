@@ -92,6 +92,10 @@ ibmcloud_api_key = "<your API key>"
 ssh_key_name = "<your SSH key name>"
 cluster_name = "<cluster name>"
 ```
+If you don't have your public key already configured in IBM Cloud you can add
+```
+ssh_pub_key = "<your SSH public key>"
+```
 > **Hint:** In order to create the cluster based on a different type of VSI image you can overwrite more parameters here e.g. to create a **s390x** based cluster add follow two lines to the `terraform.tfvars` file
 >
 >
@@ -101,8 +105,9 @@ cluster_name = "<cluster name>"
 
 > **Notes:**
 > - `ibmcloud_api_key` is your IBM Cloud API Key that you just created at [https://cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
-> - `ssh_key_name` is a name of your SSH key registered in IBM Cloud. It is used to access a Generation 2 virtual server instance. You can add your SSH key at [https://cloud.ibm.com/vpc-ext/compute/sshKeys](https://cloud.ibm.com/vpc-ext/compute/sshKeys). This ssh key will be installed on control-plane and worker nodes. For more information, about SSH key, see [managing SSH Keys](https://cloud.ibm.com/docs/vpc?topic=vpc-ssh-keys).
->
+> - An SSH Key is used to access a Generation 2 virtual server instance. This ssh key will be installed on control-plane and worker nodes.
+>   - `ssh_key_name` is the name of your SSH key registered in IBM Cloud or the name of a new SSH key if a public key is also provided. You can add your SSH key at [https://cloud.ibm.com/vpc-ext/compute/sshKeys](https://cloud.ibm.com/vpc-ext/compute/sshKeys). For more information, about SSH key, see [managing SSH Keys](https://cloud.ibm.com/docs/vpc?topic=vpc-ssh-keys).
+>   - `ssh_pub_key` is an **optional** field for a SSH public key which has **not** been registered in IBM Cloud, terraform will manage this key instead.
 > - `cluster_name` is a name of a Kubernetes cluster. This name is used for the prefix of the names of control-plane and worker nodes. If you want to create another cluster in the same VPC, you need to use a different name for the new cluster.
 > - `instance_profile_name` is a name of IBM Cloud virtual server instance profile. This name is used to create IBM Cloud virtual server instance. For more information, about virtual server instance profile, see [instance profiles](https://cloud.ibm.com/docs/vpc?topic=vpc-profiles).
 > - `image_name` is a name of IBM Cloud Infrastructure image. This name is used to create IBM Cloud virtual server instance. For more information, about VPC custom images, see [IBM Cloud Importing and managing custom images](https://cloud.ibm.com/docs/vpc?topic=vpc-managing-images).
@@ -119,9 +124,14 @@ $ terraform apply
 
 > **Tip:** You can check the status of provisioned Kubernetes node VM instances at [https://cloud.ibm.com/vpc-ext/compute/vs](https://cloud.ibm.com/vpc-ext/compute/vs).
 
+The SSH key installed on control-plane and worker nodes will be output at the end of the terraform configuration.
+
+```bash
+Outputs:
+ssh_key_name = <SSH key name>
+```
 
 This Terraform configuration also triggers execution of an Ansible playbook to set up Kubernetes and other prerequisite software in the two nodes. Please check [ansible/playbook.yml](terraform/cluster/ansible/playbook.yml) for the details.
-
 
 If ansible fails for some reason, you can rerun the ansible playbook as follows.
 ```bash
@@ -445,3 +455,22 @@ groups, subnet and gateway with:
 $ cd ibmcloud/terraform/common
 $ terraform destroy
 ```
+
+## Troubleshooting
+
+### Cluster creation when switching use `ssh_pub_key`
+
+If you provide your SSH public key via the `ssh_pub_key` Terraform variable and, having already run `terraform apply`, you run `terraform apply` again then you may see the following error regarding your SSH key:
+> Error: Error deleting SSH Key : SSH-key still in use
+
+This is caused by the IBM Cloud terraform provider forcing the replacement of the SSH key resource. As such Terraform may try to delete the existing SSH key while the Virtual Server Instances are using it.
+
+To resolve this issue:
+
+- Use `terraform state rm ibm_is_ssh_key.created_ssh_key[0]` to remove the SSH key resource from Terraform's internal state.
+- Delete the `ssh_pub_key` variable from the `terraform.tfvars` file
+- Then run `terraform apply` again
+
+This will remove the SSH Key from the list of resources whose lifecycle is managed by Terraform.
+
+When you delete the cluster you will need to manually delete the SSH Key in your IBM Cloud VPC Infrastructure.
