@@ -54,3 +54,9 @@ These methods are required by Kata and a Kata hypervisor needs to implement thes
 Add additional files to modularize the code.
 
 See existing providers - `aws|ibmcloud|libvirt`
+
+#### Step 3: Update Continuous Integration (CI) workflows
+
+Each provider should be built and tested on CI.
+
+Update the `provider` list under the `matrix` property in [`.github/workflows/build.yaml`](../.github/workflows/build.yaml).

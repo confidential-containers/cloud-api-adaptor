@@ -1,0 +1,48 @@
+# (C) Copyright Red Hat 2022.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build the project for each cloud provider.
+---
+name: build
+on: [pull_request]
+env:
+  GO_VERSION: '1.16'
+jobs:
+  build_job:
+    name: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        provider:
+          # Please keep this list in alphabetical order.
+          - aws
+          - ibmcloud
+          - libvirt
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@v3
+        with:
+          # Need this to clone the repository side-by-side with kata's.
+          path: cloud-api-adaptor
+      - name: Checkout the Kata Containers fork
+        uses: actions/checkout@v3
+        with:
+          # TODO: this repository is temporary and so should be replaced
+          # once the required changes are merged on kata's repo.
+          repository: yoheiueda/kata-containers
+          ref: CCv0-peerpod
+          path: kata-containers
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Install build dependencies
+        if: ${{ matrix.provider == 'libvirt' }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libvirt-dev
+      - name: Build
+        run: |
+          cd cloud-api-adaptor
+          make CLOUD_PROVIDER=${{ matrix.provider }} build
