@@ -103,7 +103,7 @@ resource "null_resource" "ansible" {
   }
   provisioner "local-exec" {
     working_dir = "./ansible"
-    command = "ansible-playbook -i inventory -u root ./playbook.yml"
+    command = "ansible-playbook -i inventory -u root ./kube-playbook.yml && ansible-playbook -i inventory -u root ./kata-playbook.yml"
   }
   provisioner "local-exec" {
     command = "./scripts/setup.sh --bastion ${local.bastion_ip} --control-plane ${local.controlplane_ip} --workers ${local.worker_ip}"

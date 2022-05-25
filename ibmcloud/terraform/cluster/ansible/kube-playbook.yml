@@ -4,7 +4,7 @@
 #
 
 - hosts: all
-  remote_user: root
+  remote_user: root 
   tasks:
     - name: Add Kubernetes apt repository signing key
       apt_key:
@@ -20,11 +20,7 @@
         name:
           - "linux-modules-extra-{{ ansible_kernel }}"
           - build-essential
-          - jq
-          - qemu-utils
-          - libgpgme-dev
-          - libassuan-dev
-          - libdevmapper-dev
+          - jq 
           - libseccomp-dev
           - pkg-config
           - kubelet
@@ -32,12 +28,10 @@
           - kubectl
           - kubernetes-cni
           - cri-tools
-          - git
+          - git 
           - kpartx
-          - protobuf-compiler
-          - musl-tools
 
-    - name: Install deb packages for Ubuntu 20.04 or later
+    - name: Install deb packages for Ubuntu 20.04 or later 
       apt:
         name:
           - libbtrfs-dev
@@ -53,7 +47,7 @@
         - ansible_facts['distribution'] == "Ubuntu"
         - ansible_facts['distribution_major_version'] | int < 20
 
-    - name: Hold deb packages
+    - name: Hold deb packages 
       dpkg_selections:
         name: "{{ item }}"
         selection: hold
@@ -96,17 +90,14 @@
       with_items:
         - path: /etc/modules-load.d/k8s.conf
           content: br_netfilter
-        - path: /etc/modules-load.d/peerpod.conf
-          content: vrf
 
     - name: Load kernel modules
       modprobe:
         name: "{{ item }}"
       with_items:
         - br_netfilter
-        - vrf
 
-    - name: Set sysctl parameters for Kubernetes
+    - name: Set sysctl parameters for Kubernetes 
       sysctl:
         name: "{{ item.name }}"
         value: "{{ item.value }}"
@@ -118,7 +109,7 @@
         - { name: net.bridge.bridge-nf-call-ip6tables, value: 1 }
         - { name: net.bridge.bridge-nf-call-iptables, value: 1 }
 
-    - name: Install runc
+    - name: Install runc  but kube might install its own version 
       shell: |
         set -o errexit -o pipefail
         arch="{{ ansible_architecture }}"
@@ -130,7 +121,7 @@
         executable: /bin/bash
         creates: /usr/local/bin/runc
 
-    - name: Install Go
+    - name: Install Go  CAA go scripts
       shell: |
         set -o errexit -o pipefail
         arch="{{ ansible_architecture }}"
@@ -160,8 +151,8 @@
       args:
         executable: /bin/bash
         creates: /usr/local/bin/containerd
-
-    - name: Ensure /etc/containerd directory exists
+    
+    - name: Ensure /etc/containerd directory exists  specific to config
       file:
         path: /etc/containerd
         state: directory
@@ -171,7 +162,7 @@
         dest: /etc/containerd/config.toml
         content: |
           version = 2
-          root = "/var/lib/containerd"
+          root = "/var/lib/containerd" 
           state = "/run/containerd"
           oom_score = -999
 
@@ -221,137 +212,4 @@
       systemd:
         name: containerd.service
         state: started
-
-    - name: Ensure /etc/kata-containers directory exists
-      file:
-        path: /etc/kata-containers
-        state: directory
-
-    - name: Copy systemd unit file for fix-resolvconf
-      copy:
-        dest: /etc/systemd/system/fix-resolvconf.service
-        content: |
-          [Unit]
-          Description=Make /etc/resolv.conf a regular file
-          After=systemd-networkd.service
-
-          [Service]
-          ExecStart=/bin/bash -c 'rm -f /etc/resolv.conf && cp /run/systemd/resolve/resolv.conf /etc/resolv.conf'
-          ExecStop= /bin/bash -c 'rm -f /etc/resolv.conf && ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf'
-          Type=oneshot
-          RemainAfterExit=yes
-
-          [Install]
-          WantedBy=multi-user.target
-
-    - name: Start fix-resolvconf service
-      systemd:
-        name: fix-resolvconf.service
-        state: started
-
-    - name: Install Rust
-      shell: |
-        set -o errexit -o pipefail
-        arch="{{ ansible_architecture }}"
-
-        curl --proto '=https' --tlsv1.2 -sSf -o /tmp/rustup-init https://sh.rustup.rs
-        sh /tmp/rustup-init -y
-        rm /tmp/rustup-init
-        source /root/.cargo/env
-
-        case "$arch" in
-          x86_64) rustup target add "$arch-unknown-linux-musl" ;;
-        esac
-
-        if ! grep -q '^source "\$HOME/.cargo/env"$' /root/.bashrc; then
-          echo 'source "$HOME/.cargo/env"' >> /root/.bashrc
-        fi
-      args:
-        executable: /bin/bash
-        creates: /root/.cargo/bin/cargo
-
-    - name: Install IBM Cloud CLI
-      shell: |
-        set -o errexit -o pipefail
-        curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
-      args:
-        executable: /bin/bash
-        creates: /usr/local/bin/ibmcloud
-
-    - name: Install IBM Cloud CLI plugins
-      shell: |
-        set -o pipefail
-        plugin="{{ item }}"
-
-        installed_plugins=($(ibmcloud plugin list --output json | jq -r '.[].Name'))
-        (( $? > 0 )) && exit 2
-
-        [[ " ${installed_plugins[*]} " =~ " $plugin " ]] && exit 0
-
-        ibmcloud plugin install "$plugin"
-        (( $? > 0 )) && exit 2
-        exit 1
-      args:
-        executable: /bin/bash
-      register: result
-      changed_when: result.rc == 1
-      failed_when: result.rc > 1
-      with_items:
-        - vpc-infrastructure
-        - cloud-object-storage
-
-    - name: Checkout the Kata containers repository
-      shell: |
-        set -o errexit -o pipefail
-        cd /root
-        git clone -b CCv0-peerpod https://github.com/yoheiueda/kata-containers.git
-      args:
-        executable: /bin/bash
-        creates: /root/kata-containers
-
-    - name: Checkout the cloud-api-adaptor repository
-      shell: |
-        set -o errexit -o pipefail
-        cd /root
-        git clone -b staging https://github.com/confidential-containers/cloud-api-adaptor.git
-      args:
-        executable: /bin/bash
-        creates: /root/cloud-api-adaptor
-
-    - name: Install the Kata shim
-      shell: |
-        set -o errexit
-        cd /root/kata-containers/src/runtime
-        PATH=/usr/local/go/bin:$PATH make $PWD/containerd-shim-kata-v2
-        install containerd-shim-kata-v2 /usr/local/bin/
-      args:
-        executable: /bin/bash
-        creates: /usr/local/bin/containerd-shim-kata-v2
-
-    - name: Copy configuration file for kata containers
-      copy:
-        dest: /etc/kata-containers/configuration.toml
-        content: |
-          [runtime]
-          internetworking_model = "none"
-          disable_new_netns = true
-          disable_guest_seccomp = true
-          enable_pprof = true
-          enable_debug = true
-          [hypervisor.remote]
-          remote_hypervisor = "/run/peerpod/hypervisor.sock"
-          [agent.kata]
-          [image]
-          service_offload = true
-
-    - name: Install cloud-api-adaptor
-      shell: |
-        set -o errexit
-        cd /root/cloud-api-adaptor
-        PATH=/usr/local/go/bin:$PATH
-        go mod tidy 
-        CLOUD_PROVIDER=ibmcloud make cloud-api-adaptor
-        install cloud-api-adaptor /usr/local/bin/
-      args:
-        executable: /bin/bash
-        creates: /usr/local/bin/cloud-api-adaptor
+    
