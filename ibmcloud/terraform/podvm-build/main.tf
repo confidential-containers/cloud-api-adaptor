@@ -9,8 +9,6 @@ locals {
   worker_ip = data.ibm_is_instance.worker.primary_network_interface[0].primary_ipv4_address
   bastion_ip = data.ibm_is_floating_ip.worker.address
   zone_name = data.ibm_is_subnet.primary.zone
-  cos_service_instance_name = var.cos_service_instance_name != null ? var.cos_service_instance_name : "${var.cluster_name}-cos-service-instance"
-  cos_bucket_name = var.cos_bucket_name != null ? var.cos_bucket_name : "${var.cluster_name}-cos-bucket"
   ibmcloud_api_endpoint = var.use_ibmcloud_test ? "https://test.cloud.ibm.com" : "https://cloud.ibm.com"
   is_policies_and_roles = flatten([
     for policy in data.ibm_iam_user_policy.user_policies.policies: [
@@ -54,8 +52,8 @@ resource "local_file" "group_vars" {
 
 ibmcloud_api_key: ${var.ibmcloud_api_key}
 ibmcloud_api_endpoint: ${local.ibmcloud_api_endpoint}
-ibmcloud_cos_service_instance: ${local.cos_service_instance_name}
-ibmcloud_cos_bucket: ${local.cos_bucket_name}
+ibmcloud_cos_service_instance: ${var.cos_service_instance_name}
+ibmcloud_cos_bucket: ${var.cos_bucket_name}
 ibmcloud_region_name: ${var.region_name}
 ibmcloud_vpc_name: ${var.vpc_name}
 ibmcloud_vpc_subnet_name: ${var.primary_subnet_name}
