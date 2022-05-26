@@ -278,7 +278,7 @@ func getIPs(instance types.Instance) ([]net.IP, error) {
 		}
 
 		ip := net.ParseIP(*addr)
-		if addr == nil {
+		if ip == nil {
 			return nil, fmt.Errorf("failed to parse pod node IP %q", *addr)
 		}
 		podNodeIPs = append(podNodeIPs, ip)
