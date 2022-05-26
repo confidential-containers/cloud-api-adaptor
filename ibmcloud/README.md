@@ -209,8 +209,8 @@ If you used the Terraform templates in [common](./terraform/common) and [cluster
 >     $ ibmcloud account users
 >     ```
 >     If command `ibmcloud account users` displays multiple user IDs, choose the user ID whose state is `ACTIVE`.
-> - `cos_service_instance_name` is the COS Service Instance Name, optional, default to value based on your `cluster_name` tfvar if not set, `${cluster_name}-cos-service-instance`.
-> - `cos_bucket_name` is the COS Bucket Name, optional, default to value based on your `cluster_name` tfvar if not set, `${cluster_name}-cos-bucket`.
+> - `cos_service_instance_name` is the optional variable for COS Service Instance Name with a default value of `cos-image-instance` if not set in `terraform.tfvars`.
+> - `cos_bucket_name` is the COS Bucket Name, which must be unique.
 
 
 > **Notes:**
