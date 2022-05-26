@@ -20,12 +20,10 @@ variable "primary_subnet_name" {
 }
 
 variable "cos_service_instance_name" {
-    default = null
+    default = "cos-image-instance"
 }
 
-variable "cos_bucket_name" {
-    default = null
-}
+variable "cos_bucket_name" {}
 
 variable "use_ibmcloud_test" {
     type = bool
