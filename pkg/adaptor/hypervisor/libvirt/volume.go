@@ -116,11 +116,11 @@ func timeFromEpoch(str string) time.Time {
 	return time.Unix(int64(s), int64(ns))
 }
 
-func uploadVolume(libvirtClient *libvirtClient, volumeDef libvirtxml.StorageVolume, img image) (string, error) {
+func uploadVolume(libvirtClient *libvirtClient, volumeDef libvirtxml.StorageVolume, img image) (volumeKey string, err error) {
 
 	// Refresh the pool of the volume so that libvirt knows it is
 	// not longer in use.
-	err := waitForSuccess("Error refreshing pool for volume", func() error {
+	err = waitForSuccess("Error refreshing pool for volume", func() error {
 		return libvirtClient.pool.Refresh(0)
 	})
 	if err != nil {
@@ -136,7 +136,7 @@ func uploadVolume(libvirtClient *libvirtClient, volumeDef libvirtxml.StorageVolu
 	if err != nil {
 		return "", fmt.Errorf("Error creating libvirt volume for device %s: %s", volumeDef.Name, err)
 	}
-	defer volume.Free()
+	defer freeVolume(volume, &err)
 
 	// upload ISO file
 	err = img.importImage(newCopier(libvirtClient.connection, volume, volumeDef.Capacity.Value), volumeDef)
@@ -144,7 +144,7 @@ func uploadVolume(libvirtClient *libvirtClient, volumeDef libvirtxml.StorageVolu
 		return "", fmt.Errorf("Error while uploading volume %s: %s", img.string(), err)
 	}
 
-	volumeKey, err := volume.GetKey()
+	volumeKey, err = volume.GetKey()
 	if err != nil {
 		return "", fmt.Errorf("Error retrieving volume key: %s", err)
 	}
@@ -153,7 +153,7 @@ func uploadVolume(libvirtClient *libvirtClient, volumeDef libvirtxml.StorageVolu
 }
 
 func newCopier(conn *libvirt.Connect, volume *libvirt.StorageVol, size uint64) func(src io.Reader) error {
-	copier := func(src io.Reader) error {
+	copier := func(src io.Reader) (err error) {
 		var bytesCopied int64
 
 		stream, err := conn.NewStream(0)
@@ -162,15 +162,24 @@ func newCopier(conn *libvirt.Connect, volume *libvirt.StorageVol, size uint64) f
 		}
 
 		defer func() {
+			var newErr error
 			if uint64(bytesCopied) != size {
-				stream.Abort()
+				newErr = stream.Abort()
 			} else {
-				stream.Finish()
+				newErr = stream.Finish()
 			}
-			stream.Free()
+			if newErr != nil && err == nil {
+				err = newErr
+			}
+			newErr = stream.Free()
+			if newErr != nil && err == nil {
+				err = newErr
+			}
 		}()
 
-		volume.Upload(stream, 0, size, 0)
+		if err = volume.Upload(stream, 0, size, 0); err != nil {
+			return err
+		}
 
 		sio := newStreamIO(*stream)
 
@@ -184,7 +193,7 @@ func newCopier(conn *libvirt.Connect, volume *libvirt.StorageVol, size uint64) f
 	return copier
 }
 
-func createVolume(volName string, volSize uint64, baseVolName string, libvirtClient *libvirtClient) error {
+func createVolume(volName string, volSize uint64, baseVolName string, libvirtClient *libvirtClient) (err error) {
 	volumeDef := newDefVolume(volName)
 	volumeDef.Target.Format.Type = "qcow2"
 
@@ -193,7 +202,8 @@ func createVolume(volName string, volSize uint64, baseVolName string, libvirtCli
 	if err != nil {
 		return fmt.Errorf("Can't retrieve volume %s", baseVolName)
 	}
-	defer baseVolume.Free()
+	defer freeVolume(baseVolume, &err)
+
 	var baseVolumeInfo *libvirt.StorageVolInfo
 	baseVolumeInfo, err = baseVolume.GetInfo()
 	if err != nil {
@@ -231,7 +241,7 @@ func createVolume(volName string, volSize uint64, baseVolName string, libvirtCli
 	if err != nil {
 		return fmt.Errorf("Error creating libvirt volume: %s", err)
 	}
-	defer volume.Free()
+	defer freeVolume(volume, &err)
 
 	// we use the key as the id
 	key, err := volume.GetKey()
@@ -259,18 +269,19 @@ func getVolume(libvirtClient *libvirtClient, volumeName string) (*libvirt.Storag
 }
 
 // VolumeExists checks if a volume exists
-func volumeExists(libvirtClient *libvirtClient, volumeName string) (bool, error) {
+func volumeExists(libvirtClient *libvirtClient, volumeName string) (exist bool, err error) {
 
 	logger.Printf("Check if %s volume exists", volumeName)
 	volume, err := getVolume(libvirtClient, volumeName)
 	if err != nil {
 		return false, nil
 	}
-	volume.Free()
+	defer freeVolume(volume, &err)
+
 	return true, nil
 }
 
-func deleteVolumeByPath(libvirtClient *libvirtClient, path string) error {
+func deleteVolumeByPath(libvirtClient *libvirtClient, path string) (err error) {
 
 	// Get volume name from path
 
@@ -280,7 +291,8 @@ func deleteVolumeByPath(libvirtClient *libvirtClient, path string) error {
 		return err
 	}
 
-	defer volume.Free()
+	defer freeVolume(volume, &err)
+
 	// Get name
 	name, err := volume.GetName()
 	if err != nil {
@@ -292,7 +304,7 @@ func deleteVolumeByPath(libvirtClient *libvirtClient, path string) error {
 
 }
 
-func deleteVolume(libvirtClient *libvirtClient, name string) error {
+func deleteVolume(libvirtClient *libvirtClient, name string) (err error) {
 	exists, err := volumeExists(libvirtClient, name)
 	if err != nil {
 		logger.Printf("Unable to check if volume (%s) exists", name)
@@ -308,7 +320,7 @@ func deleteVolume(libvirtClient *libvirtClient, name string) error {
 	if err != nil {
 		return fmt.Errorf("Can't retrieve volume %s", name)
 	}
-	defer volume.Free()
+	defer freeVolume(volume, &err)
 
 	// Refresh the pool of the volume so that libvirt knows it is
 	// not longer in use.
@@ -316,11 +328,19 @@ func deleteVolume(libvirtClient *libvirtClient, name string) error {
 	if err != nil {
 		return fmt.Errorf("Error retrieving pool for volume: %s", err)
 	}
-	defer volPool.Free()
+	defer func() {
+		newErr := volPool.Free()
+		if newErr != nil && err == nil {
+			err = newErr
+		}
+	}()
 
-	waitForSuccess("Error refreshing pool for volume", func() error {
+	err = waitForSuccess("Error refreshing pool for volume", func() error {
 		return volPool.Refresh(0)
 	})
+	if err != nil {
+		return fmt.Errorf("timeout when calling waitForSuccess: %v", err)
+	}
 
 	err = volume.Delete(0)
 	if err != nil {
@@ -328,4 +348,14 @@ func deleteVolume(libvirtClient *libvirtClient, name string) error {
 	}
 
 	return nil
+}
+
+// freeVolume releases the volume pointer. If the operation fail and the error
+// context is nil then it gets updated, otherwise it preserve the pointer to
+// keep any previous error reported.
+func freeVolume(volume *libvirt.StorageVol, errCtx *error) {
+	newErr := volume.Free()
+	if newErr != nil && *errCtx == nil {
+		*errCtx = newErr
+	}
 }

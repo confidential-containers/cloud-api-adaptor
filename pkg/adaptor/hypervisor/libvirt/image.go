@@ -110,10 +110,10 @@ func (i *localImage) size() (uint64, error) {
 
 func (i *localImage) importImage(copier func(io.Reader) error, vol libvirtxml.StorageVolume) error {
 	file, err := os.Open(i.path)
-	defer file.Close()
 	if err != nil {
 		return fmt.Errorf("Error while opening %s: %s", i.path, err)
 	}
+	defer file.Close()
 
 	fi, err := file.Stat()
 	if err != nil {
