@@ -238,8 +238,6 @@ func (s *hypervisorService) getSandbox(id string) (*sandbox, error) {
 	return s.sandboxes[sid], nil
 }
 
-var errNotReady = errors.New("address not ready")
-
 func getIPs(instance *vmConfig) ([]net.IP, error) {
 
 	return instance.ips, nil

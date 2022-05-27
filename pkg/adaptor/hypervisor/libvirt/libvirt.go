@@ -31,9 +31,6 @@ type libvirtClient struct {
 	dataDir string
 }
 
-// Pod VM base image
-const podImageFile = "/var/lib/libvirt/images/podvm.qcow2"
-
 // Create a base volume
 // Create qcow2 image with prerequisites
 // virsh vol-create-as --pool default --name podvm-base.qcow2 --capacity 107374182400 --allocation 2361393152 --prealloc-metadata --format qcow2
