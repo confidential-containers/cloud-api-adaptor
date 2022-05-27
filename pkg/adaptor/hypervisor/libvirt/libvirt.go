@@ -132,8 +132,7 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 
 	exists, err := checkInstanceExistsByName(v.name, libvirtClient)
 	if err != nil {
-		logger.Printf("Error in checking instance ")
-		return nil, err
+		return nil, fmt.Errorf("Error in checking instance: %s", err)
 	}
 	if exists {
 		logger.Printf("Instance already exists ")
@@ -145,8 +144,7 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 	rootVolName := v.name + "-root.qcow2"
 	err = createVolume(rootVolName, v.rootDiskSize, podBaseVolName, libvirtClient)
 	if err != nil {
-		logger.Printf("Error in creating volume ")
-		return nil, err
+		return nil, fmt.Errorf("Error in creating volume: %s", err)
 	}
 
 	cloudInitIso := createCloudInitISO(v, libvirtClient)
@@ -154,13 +152,12 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 	isoVolName := v.name + "-cloudinit.iso"
 	isoVolFile, err := uploadIso(cloudInitIso, isoVolName, libvirtClient)
 	if err != nil {
-		logger.Printf("Error in uploading iso volume ")
-		return nil, err
+		return nil, fmt.Errorf("Error in uploading iso volume: %s", err)
 	}
 
 	rootVol, err := getVolume(libvirtClient, rootVolName)
 	if err != nil {
-		return nil, fmt.Errorf("Error retrieving volume : %s", err)
+		return nil, fmt.Errorf("Error retrieving volume: %s", err)
 	}
 
 	rootVolFile, err := rootVol.GetPath()
@@ -254,29 +251,25 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 	logger.Printf("Create XML for '%s'", v.name)
 	domXML, err := domCfg.Marshal()
 	if err != nil {
-		logger.Printf("Failed to create domain xml", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to create domain xml: %s", err)
 	}
 
 	logger.Printf("Creating VM '%s'", v.name)
 	dom, err := libvirtClient.connection.DomainDefineXML(domXML)
 	if err != nil {
-		logger.Printf("Failed to define domain", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to define domain: %s", err)
 	}
 
 	// Start Domain.
 	logger.Printf("Starting VM '%s'", v.name)
 	err = dom.Create()
 	if err != nil {
-		logger.Printf("Failed to start VM", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to start VM: %s", err)
 	}
 
 	id, err := dom.GetID()
 	if err != nil {
-		logger.Printf("Failed to get domain ID", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to get domain ID: %s", err)
 	}
 
 	v.instanceId = strconv.FormatUint(uint64(id), 10)
@@ -288,8 +281,7 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 
 	domInterface, err := dom.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 	if err != nil {
-		logger.Printf("Failed to get domain interfaces", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to get domain interfaces: %s", err)
 	}
 
 	logger.Printf("domain IP details %v", domInterface)
