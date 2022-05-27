@@ -14,8 +14,6 @@ type Config struct {
 type vmConfig struct {
 	name         string
 	num          uint8
-	image        string
-	desc         string
 	cpu          uint
 	mem          uint
 	rootDiskSize uint64
