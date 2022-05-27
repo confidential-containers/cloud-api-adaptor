@@ -150,7 +150,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 	}
 
 	// Store daemon.json in worker node for debuggig
-	if err := os.WriteFile(filepath.Join(sandbox.podDirPath, "daemon.json"), daemonJSON, 0666); err != nil {
+	if err = os.WriteFile(filepath.Join(sandbox.podDirPath, "daemon.json"), daemonJSON, 0666); err != nil {
 		return nil, fmt.Errorf("failed to store daemon.json at %s: %w", sandbox.podDirPath, err)
 	}
 	logger.Printf("store daemon.json at %s", sandbox.podDirPath)

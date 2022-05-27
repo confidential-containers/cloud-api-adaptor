@@ -48,13 +48,19 @@ func createCloudInitISO(v *vmConfig, libvirtClient *libvirtClient) string {
 	// Set VM Hostname
 	v.metaData = libvirtClient.dataDir + "/" + "meta-data"
 	metaFile, _ := os.Create(v.metaData)
-	metaFile.WriteString("local-hostname: " + v.name)
+	if _, err := metaFile.WriteString("local-hostname: " + v.name); err != nil {
+		metaFile.Close()
+		log.Fatalf("Failed to write to %s: %s", v.metaData, err)
+	}
 	metaFile.Close()
 
 	// Write the userData to a file
 	userDataFile := libvirtClient.dataDir + "/" + "user-data"
 	udf, _ := os.Create(userDataFile)
-	udf.WriteString(v.userData)
+	if _, err := udf.WriteString(v.userData); err != nil {
+		udf.Close()
+		log.Fatalf("Failed to write to %s: %s", userDataFile, err)
+	}
 	udf.Close()
 
 	fmt.Printf("Executing genisoimage\n")
@@ -69,7 +75,7 @@ func createCloudInitISO(v *vmConfig, libvirtClient *libvirtClient) string {
 	return cloudInitIso
 }
 
-func checkInstanceExistsByName(name string, libvirtClient *libvirtClient) (bool, error) {
+func checkInstanceExistsByName(name string, libvirtClient *libvirtClient) (exist bool, err error) {
 
 	logger.Printf("Checking if instance (%s) exists", name)
 	domain, err := libvirtClient.connection.LookupDomainByName(name)
@@ -79,13 +85,13 @@ func checkInstanceExistsByName(name string, libvirtClient *libvirtClient) (bool,
 		}
 		return false, err
 	}
-	defer domain.Free()
+	defer freeDomain(domain, &err)
 
 	return true, nil
 
 }
 
-func checkInstanceExistsById(id uint32, libvirtClient *libvirtClient) (bool, error) {
+func checkInstanceExistsById(id uint32, libvirtClient *libvirtClient) (exist bool, err error) {
 
 	logger.Printf("Checking if instance (%d) exists", id)
 	domain, err := libvirtClient.connection.LookupDomainById(id)
@@ -95,7 +101,7 @@ func checkInstanceExistsById(id uint32, libvirtClient *libvirtClient) (bool, err
 		}
 		return false, err
 	}
-	defer domain.Free()
+	defer freeDomain(domain, &err)
 
 	return true, nil
 
@@ -299,7 +305,7 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}, nil
 }
 
-func DeleteInstance(c context.Context, libvirtClient *libvirtClient, id string) error {
+func DeleteInstance(c context.Context, libvirtClient *libvirtClient, id string) (err error) {
 
 	logger.Printf("Deleting instance (%s)", id)
 	idUint, _ := strconv.ParseUint(id, 10, 64)
@@ -323,7 +329,7 @@ func DeleteInstance(c context.Context, libvirtClient *libvirtClient, id string) 
 		logger.Printf("Error retrieving libvirt domain: %s", err)
 		return err
 	}
-	defer domain.Free()
+	defer freeDomain(domain, &err)
 
 	state, _, err := domain.GetState()
 	if err != nil {
@@ -332,7 +338,7 @@ func DeleteInstance(c context.Context, libvirtClient *libvirtClient, id string) 
 	}
 
 	if state == libvirt.DOMAIN_RUNNING || state == libvirt.DOMAIN_PAUSED {
-		if err := domain.Destroy(); err != nil {
+		if err = domain.Destroy(); err != nil {
 			logger.Printf("Couldn't destroy libvirt domain: %s", err)
 			return err
 		}
@@ -367,7 +373,7 @@ func DeleteInstance(c context.Context, libvirtClient *libvirtClient, id string) 
 	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
 		if e := err.(libvirt.Error); e.Code == libvirt.ERR_NO_SUPPORT || e.Code == libvirt.ERR_INVALID_ARG {
 			logger.Printf("libvirt does not support undefine flags: will try again without flags")
-			if err := domain.Undefine(); err != nil {
+			if err = domain.Undefine(); err != nil {
 				logger.Printf("couldn't undefine libvirt domain: %v", err)
 				return err
 			}
@@ -402,4 +408,14 @@ func NewLibvirtClient(libvirtCfg Config) (*libvirtClient, error) {
 		networkName: libvirtCfg.NetworkName,
 		dataDir:     libvirtCfg.DataDir,
 	}, nil
+}
+
+// freeDomain releases the domain pointer. If the operation fail and the error
+// context is nil then it gets updated, otherwise it preserve the pointer to
+// keep any previous error reported.
+func freeDomain(domain *libvirt.Domain, errCtx *error) {
+	newErr := domain.Free()
+	if newErr != nil && *errCtx == nil {
+		*errCtx = newErr
+	}
 }
