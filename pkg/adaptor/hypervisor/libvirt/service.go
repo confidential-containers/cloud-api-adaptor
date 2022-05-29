@@ -99,7 +99,7 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 		return nil, fmt.Errorf("pod name %s is missing in annotations", annotations.SandboxName)
 	}
 	namespace := req.Annotations[annotations.SandboxNamespace]
-	if pod == "" {
+	if namespace == "" {
 		return nil, fmt.Errorf("namespace name %s is missing in annotations", annotations.SandboxNamespace)
 	}
 
