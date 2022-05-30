@@ -131,12 +131,12 @@ Outputs:
 ssh_key_name = <SSH key name>
 ```
 
-This Terraform configuration also triggers execution of an Ansible playbook to set up Kubernetes and other prerequisite software in the two nodes. Please check [ansible/playbook.yml](terraform/cluster/ansible/playbook.yml) for the details.
+This Terraform configuration also triggers execution of two Ansible playbooks to set up Kubernetes and other prerequisite software in the two nodes. Please check [ansible/kube-playbook.yml](terraform/cluster/ansible/kube-playbook.yml) and [ansible/kata-playbook.yml](terraform/cluster/ansible/kata-playbook.yml) for the details.
 
-If ansible fails for some reason, you can rerun the ansible playbook as follows.
+If ansible fails for some reason, you can rerun the Ansible playbooks as follows.
 ```bash
 $ cd ansible
-$ ansible-playbook -i ./inventory -u root ./playbook.yml
+$ ansible-playbook -i inventory -u root ./kube-playbook.yml && ansible-playbook -i inventory -u root ./kata-playbook.yml
 ```
 
 When ansible fails, Terraform does not execute the setup script for Kubernetes. In this case, you can manually run it as follows.
