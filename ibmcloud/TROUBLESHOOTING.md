@@ -165,6 +165,48 @@ After discussions with the community who maintain the [terraform-provider-ibm](h
 
 In the meantime, if this problem occurs for other users, a check for policies containing service-specific attributes should be undertaken, as per the above example, where the User Policy is tagged with a Service Name of `container-kubernetes`.
 
+Whilst it's not 100% clear which service-specific attributes might cause this issue, one can check using the [IBM Cloud CLI tool](https://cloud.ibm.com/docs/cli?topic=cli-getting-started) and the `vpc-infrastructure` plugin ( aka `is` ), using a command similar to the following example: -
+
+`ibmcloud iam user-policies david_hay@uk.ibm.com --output JSON | jq '.[] | select(.resources[].attributes[].value=="containers-kubernetes") | {ID:.id,Resources:.resources,Roles:.roles}'`
+
+which should return output similar to the following: -
+
+```json
+{
+  "ID": "8993f73a-06b1-4e59-81e2-2bd49ddbee3d",
+  "Resources": [
+    {
+      "attributes": [
+        {
+          "name": "region",
+          "operator": "stringEquals",
+          "value": "us-south"
+        },
+        {
+          "name": "serviceName",
+          "operator": "stringEquals",
+          "value": "containers-kubernetes"
+        },
+        {
+          "name": "accountId",
+          "operator": "stringEquals",
+          "value": "f5e2ac71094077500e0d4b1ef85fdaec"
+        }
+      ]
+    }
+  ],
+  "Roles": [
+    {
+      "role_id": "crn:v1:bluemix:public:iam::::role:Viewer",
+      "display_name": "Viewer",
+      "description": "As a viewer, you can view service instances, but you can't modify them."
+    }
+  ]
+}
+```
+
+Commands such as this allow the engineer to selectively export, and then delete the User Policy or Policies that may be blocking the `terraform plan` stage, until the `terraform-provider-ibm` team are able to resolve [Data source of IAM policies failing to list the policies if the policy has service specific attributes #3801](https://github.com/IBM-Cloud/terraform-provider-ibm/issues/3801)
+
 In terms of troubleshooting tips, setting the `TF_LOG` and `TF_LOG_PATH` variables proved useful, in terms of confirming that the `terraform plan` step did correctly return IBM Cloud User Policies etc. from the target account.
 
 For more information, please see [Environment Variables](https://www.terraform.io/cli/config/environment-variables).
