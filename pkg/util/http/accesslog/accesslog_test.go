@@ -18,7 +18,9 @@ func TestAcccessLog(t *testing.T) {
 		header["HEADER1"] = []string{"value1"}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello"))
+		if _, err := w.Write([]byte("Hello")); err != nil {
+			t.Errorf("%v", err)
+		}
 	})
 	logger := NewLogger(mux, WithLogger(log.Default()), WithLabel("test"), WithHeader(), WithBody())
 
