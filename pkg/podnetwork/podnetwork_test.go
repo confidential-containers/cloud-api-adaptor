@@ -6,12 +6,12 @@ package podnetwork
 import (
 	"fmt"
 	"net"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tuntest"
 )
@@ -45,6 +45,7 @@ func (t *mockPodNodeTunneler) Teardown(nsPath, hostInterface string, config *tun
 }
 
 func TestWorkerNode(t *testing.T) {
+	testutils.SkipTestIfNotRoot(t)
 
 	mockTunnelType := "mock"
 	tunneler.Register(mockTunnelType, newMockWorkerNodeTunneler, newMockPodNodeTunneler)
@@ -113,6 +114,7 @@ func TestWorkerNode(t *testing.T) {
 }
 
 func TestPodNode(t *testing.T) {
+	testutils.SkipTestIfNotRoot(t)
 
 	mockTunnelType := "mock"
 	tunneler.Register(mockTunnelType, newMockWorkerNodeTunneler, newMockPodNodeTunneler)
@@ -181,10 +183,7 @@ func TestPodNode(t *testing.T) {
 }
 
 func TestPluginDetectHostInterface(t *testing.T) {
-	if os.Geteuid() != 0 {
-		t.Log("This test requires root privileges. Skipping")
-		return
-	}
+	testutils.SkipTestIfNotRoot(t)
 
 	hostNS := tuntest.NewNamedNS(t, "test-host")
 	defer tuntest.DeleteNamedNS(t, hostNS)
