@@ -87,7 +87,7 @@ func GetNS() (*NS, error) {
 }
 
 // NewNamedNS returns an NS of the current network namespace
-func NewNamedNS(name string) (*NS, error) {
+func NewNamedNS(name string) (ns *NS, err error) {
 	runtime.LockOSThread()
 	defer runtime.LockOSThread()
 
@@ -95,7 +95,11 @@ func NewNamedNS(name string) (*NS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the current network namespace: %w", err)
 	}
-	defer netns.Set(old)
+	defer func() {
+		if e := netns.Set(old); e != nil {
+			err = fmt.Errorf("failed to set back to the old network namespace: %w (previous error %v)", e, err)
+		}
+	}()
 
 	nsHandle, err := netns.NewNamed(name)
 	if err != nil {
@@ -105,7 +109,7 @@ func NewNamedNS(name string) (*NS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get a netlink handle for the current network namespace: %w", err)
 	}
-	ns := &NS{
+	ns = &NS{
 		Name:     name,
 		Path:     filepath.Join("/run/netns", name),
 		nsHandle: nsHandle,
@@ -175,7 +179,7 @@ func (ns *NS) Run(fn func() error) (err error) {
 	}()
 
 	if ns.nsHandle != oldNS {
-		if err := netns.Set(ns.nsHandle); err != nil {
+		if err = netns.Set(ns.nsHandle); err != nil {
 			return fmt.Errorf("failed to set a network namespace: %w", err)
 		}
 		defer func() {
@@ -463,7 +467,7 @@ func (ns *NS) LinkSetUp(linkName string) error {
 
 // RouteAdd adds a new route
 func (ns *NS) RouteAdd(table int, dest *net.IPNet, gw net.IP, dev string) error {
-	logger.Printf("RouteAdd details: table(%d), dest(%v), gw(%v), dev(%d)", table, dest, gw, dev)
+	logger.Printf("RouteAdd details: table(%d), dest(%v), gw(%v), dev(%s)", table, dest, gw, dev)
 
 	if dest == nil {
 		_, dest, _ = net.ParseCIDR("0.0.0.0/0")
@@ -862,7 +866,7 @@ func (ns *NS) RedirectDel(src string) error {
 	}
 	for _, filter := range filters {
 		if _, ok := filter.(*netlink.U32); ok {
-			if err := ns.handle.FilterDel(filter); err != nil {
+			if err = ns.handle.FilterDel(filter); err != nil {
 				return fmt.Errorf("failed to delete a filter to %s : %w", src, err)
 			}
 		}

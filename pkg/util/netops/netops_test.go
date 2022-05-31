@@ -25,6 +25,9 @@ func TestRoute(t *testing.T) {
 	}
 
 	podns, err := netns.New()
+	if err != nil {
+		t.Fatalf("Failed to create network namespace: %v", err)
+	}
 	defer func() {
 		if err := netns.Set(oldns); err != nil {
 			t.Fatalf("Failed to set a network namespace: %v", err)
