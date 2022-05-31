@@ -12,6 +12,9 @@ locals {
   controlplane_ip = resource.ibm_is_instance.controlplane.primary_network_interface[0].primary_ipv4_address
   worker_ip = resource.ibm_is_instance.worker.primary_network_interface[0].primary_ipv4_address
   bastion_ip = resource.ibm_is_floating_ip.worker.address
+  vpc_id = var.vpc_name != null ? data.ibm_is_vpc.vpc[0].id : var.vpc_id
+  primary_security_group_id = var.primary_security_group_name != null ? data.ibm_is_security_group.primary[0].id : var.primary_security_group_id
+  primary_subnet_id = var.primary_subnet_name != null ? data.ibm_is_subnet.primary[0].id : var.primary_subnet_id
 }
 
 resource "ibm_is_ssh_key" "created_ssh_key" {
@@ -27,23 +30,22 @@ data "ibm_is_ssh_key" "ssh_key" {
   name = var.ssh_key_name
 }
 
-output "ssh_key_name" {
-  value = var.ssh_key_name
-}
-
 data "ibm_is_image" "k8s_node" {
-    name = var.image_name
+  name = var.image_name
 }
 
 data "ibm_is_vpc" "vpc" {
+  count = var.vpc_name != null ? 1 : 0
   name = var.vpc_name
 }
 
 data "ibm_is_subnet" "primary" {
+  count = var.primary_subnet_name != null ? 1 : 0
   name = var.primary_subnet_name
 }
 
 data "ibm_is_security_group" "primary" {
+  count = var.primary_security_group_name != null ? 1 : 0
   name = var.primary_security_group_name
 }
 
@@ -51,13 +53,13 @@ resource "ibm_is_instance_template" "k8s_node" {
   name    = local.template_name
   image   = data.ibm_is_image.k8s_node.id
   profile = var.instance_profile_name
-  vpc     = data.ibm_is_vpc.vpc.id
+  vpc     = local.vpc_id
   zone    = var.zone_name
   keys    = [data.ibm_is_ssh_key.ssh_key.id]
 
   primary_network_interface {
-    subnet = data.ibm_is_subnet.primary.id
-    security_groups = [data.ibm_is_security_group.primary.id]
+    subnet = local.primary_subnet_id
+    security_groups = [local.primary_security_group_id]
   }
 }
 
@@ -78,12 +80,12 @@ resource "ibm_is_instance" "worker" {
 
 
 resource "ibm_is_floating_ip" "worker" {
-    name = local.worker_floating_ip_name
-    target = ibm_is_instance.worker.primary_network_interface[0].id
+  name = local.worker_floating_ip_name
+  target = ibm_is_instance.worker.primary_network_interface[0].id
 }
 
 resource "local_file" "inventory" {
-  filename = "./ansible/inventory"
+  filename = "${var.ansible_dir}/inventory"
   content = <<EOF
 [cluster]
 ${local.controlplane_ip}
@@ -98,14 +100,24 @@ resource "null_resource" "ansible" {
   triggers = {
     inventry = resource.local_file.inventory.content
   }
+
   provisioner "local-exec" {
-    command = "scripts/keygen.sh --bastion ${local.bastion_ip} ${local.controlplane_ip} ${local.worker_ip}"
+    working_dir = "${var.scripts_dir}"
+    command = "./keygen.sh --bastion ${local.bastion_ip} ${local.controlplane_ip} ${local.worker_ip}"
   }
+
   provisioner "local-exec" {
-    working_dir = "./ansible"
+    working_dir = "${var.ansible_dir}"
     command = "ansible-playbook -i inventory -u root ./kube-playbook.yml && ansible-playbook -i inventory -u root ./kata-playbook.yml"
   }
+  
   provisioner "local-exec" {
-    command = "./scripts/setup.sh --bastion ${local.bastion_ip} --control-plane ${local.controlplane_ip} --workers ${local.worker_ip}"
+    working_dir = "${var.scripts_dir}"
+    command = "./setup.sh --bastion ${local.bastion_ip} --control-plane ${local.controlplane_ip} --workers ${local.worker_ip}"
   }
+}
+
+data "ibm_is_instance" "provisioned_worker" {
+  depends_on = [null_resource.ansible]
+  name = local.worker_name
 }

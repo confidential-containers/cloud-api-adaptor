@@ -7,3 +7,4 @@ terraform.tfstate*
 /start-cloud-api-adaptor/ansible/inventory
 /start-cloud-api-adaptor/ansible/group_vars/all
 /run-nginx-demo/ansible/inventory
+/ansible
