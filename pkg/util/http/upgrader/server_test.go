@@ -82,10 +82,10 @@ func (w *mockresponseWriter2) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	buf := bytes.NewBuffer([]byte(""))
 	writer := bufio.NewWriterSize(buf, 1024)
 
-	writer.WriteString("non-empty buffer")
+	_, err := writer.WriteString("non-empty buffer")
 	rw := bufio.NewReadWriter(reader, writer)
 
-	return nil, rw, nil
+	return nil, rw, err
 }
 
 func TestNewConnWriter(t *testing.T) {

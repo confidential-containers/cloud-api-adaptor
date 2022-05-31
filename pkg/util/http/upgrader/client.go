@@ -49,8 +49,6 @@ func WithLogger(logger *log.Logger) Option {
 	}
 }
 
-type emptyLogger log.Logger
-
 func (c *client) printf(format string, v ...interface{}) {
 	if c.logger != nil {
 		c.logger.Printf(format, v...)
@@ -90,7 +88,7 @@ func SendUpgradeRequest(ctx context.Context, serverURL *url.URL, protocol string
 	case "https":
 		tlsConn := tls.Client(tcpConn, c.tlsConfig)
 
-		if err := tlsConn.Handshake(); err != nil {
+		if err = tlsConn.Handshake(); err != nil {
 			return nil, fmt.Errorf("failed to handshake TLS protocol with %s for http upgrade request: %w", serverURL.Host, err)
 		}
 		rawConn = tlsConn
@@ -106,7 +104,7 @@ func SendUpgradeRequest(ctx context.Context, serverURL *url.URL, protocol string
 
 	c.printf("[http/upgrader] connected to a server: %s", serverURL.String())
 
-	if err := req.Write(conn); err != nil {
+	if err = req.Write(conn); err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("failed to send an http upgrade request to %s: %w", serverURL.Host, err)
 	}
