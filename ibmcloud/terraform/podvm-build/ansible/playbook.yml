@@ -8,6 +8,7 @@
   remote_user: root
   environment:
     CLOUD_PROVIDER: ibmcloud
+    IMAGE_NAME: "{{ ibmcloud_vpc_image_name }}"
   tasks:
     - name: Set COS service endpoint for IBM Cloud
       set_fact:

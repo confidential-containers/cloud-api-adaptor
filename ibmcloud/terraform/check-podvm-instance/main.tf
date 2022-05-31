@@ -4,31 +4,22 @@
 #
 
 locals {
+  podvm_image_id = var.podvm_image_name != null ? data.ibm_is_image.podvm_image[0].id : var.podvm_image_id
+  number_of_peer_pod_vms = length(local.peer_pod_vms)
   peer_pod_vms = [ 
-    for instance in data.ibm_is_instances.instances.instances: instance.name
-    if instance.image == data.ibm_is_image.podvm_image.id
+    for instance in var.virtual_server_instances.instances: instance.name
+    if instance.image == local.podvm_image_id
   ]
 }
 
 data "ibm_is_image" "podvm_image" {
+  count = var.podvm_image_name != null ? 1 : 0
   name = var.podvm_image_name
 }
 
-data "ibm_is_instances" "instances" {
-  vpc_name = var.vpc_name
-}
-
-resource "null_resource" "check_passed" {
-  count = length(local.peer_pod_vms) == 1 ? 1 : 0
+resource "null_resource" "check" {
   provisioner "local-exec" {
-    command = "echo 1 Virtual Server instance ${local.peer_pod_vms[0]} that uses the peer pod VM found. Test passed"
-  }
-}
-
-resource "null_resource" "check_failed" {
-  count = length(local.peer_pod_vms) != 1 ? 1 : 0
-  provisioner "local-exec" {
-    command = "echo ${length(local.peer_pod_vms)} Virtual Server instances that use the peer pod VM found. Test failed\nexit 1"
+    command = "if [ ${local.number_of_peer_pod_vms} -eq 1 ]; then echo 1 Virtual Server instance ${local.peer_pod_vms[0]} that uses the peer pod VM found. Test passed; else echo ${local.number_of_peer_pod_vms} Virtual Server instances that use the peer pod VM found. Test failed; exit 1; fi"
   }
 }
 

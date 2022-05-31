@@ -1,5 +1,5 @@
 data "ibm_resource_group" "group" {
-  name = "default"
+  name = var.resource_group_name
 }
 
 ########## Create a COS instance
@@ -21,9 +21,9 @@ resource "ibm_iam_authorization_policy" "policy" {
 }
 
 ######## Create COS bucket
-resource "ibm_cos_bucket" "state_bucket" {
+resource "ibm_cos_bucket" "bucket" {
   bucket_name          = var.cos_bucket_name
   resource_instance_id = ibm_resource_instance.cos_instance.id
-  region_location      = var.ibm_region
+  region_location      = var.region_name
   storage_class        = "standard"
 }

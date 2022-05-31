@@ -3,10 +3,10 @@
 ##############################################################################
 
 # Resource Group Variables
-variable "resource_group_id" {
+variable "resource_group_name" {
   type        = string
   description = "The resource group ID where the environment will be created"
-  default     = "default"
+  default     = "Default"
 }
 
 variable "ibmcloud_api_key" {
@@ -15,7 +15,7 @@ variable "ibmcloud_api_key" {
   sensitive   = true
 }
 
-variable "ibm_region" {
+variable "region_name" {
   description = "Name of the Region to deploy in to"
   type        = string
   default     = "jp-tok"
