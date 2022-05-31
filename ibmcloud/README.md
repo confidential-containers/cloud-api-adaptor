@@ -458,19 +458,4 @@ $ terraform destroy
 
 ## Troubleshooting
 
-### Cluster creation when switching use `ssh_pub_key`
-
-If you provide your SSH public key via the `ssh_pub_key` Terraform variable and, having already run `terraform apply`, you run `terraform apply` again then you may see the following error regarding your SSH key:
-> Error: Error deleting SSH Key : SSH-key still in use
-
-This is caused by the IBM Cloud terraform provider forcing the replacement of the SSH key resource. As such Terraform may try to delete the existing SSH key while the Virtual Server Instances are using it.
-
-To resolve this issue:
-
-- Use `terraform state rm ibm_is_ssh_key.created_ssh_key[0]` to remove the SSH key resource from Terraform's internal state.
-- Delete the `ssh_pub_key` variable from the `terraform.tfvars` file
-- Then run `terraform apply` again
-
-This will remove the SSH Key from the list of resources whose lifecycle is managed by Terraform.
-
-When you delete the cluster you will need to manually delete the SSH Key in your IBM Cloud VPC Infrastructure.
+Please see the [Troubleshooting Guide](./TROUBLESHOOTING.md), if needed.
