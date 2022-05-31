@@ -36,7 +36,7 @@ func TestUpgrader(t *testing.T) {
 	go func() {
 		defer close(errCh)
 
-		if err := httpServer.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err = httpServer.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 			return
 		}
@@ -51,10 +51,10 @@ func TestUpgrader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expect no error, got %v", err)
 	}
-	if _, err := serverConn.Write([]byte(message)); err != nil {
+	if _, err = serverConn.Write([]byte(message)); err != nil {
 		t.Fatalf("Expect no error, got %v", err)
 	}
-	if err := serverConn.Close(); err != nil {
+	if err = serverConn.Close(); err != nil {
 		t.Fatalf("Expect no error, got %v", err)
 	}
 
