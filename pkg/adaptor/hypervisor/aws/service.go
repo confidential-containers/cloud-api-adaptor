@@ -152,7 +152,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 	}
 
 	// Store daemon.json in worker node for debuggig
-	if err := os.WriteFile(filepath.Join(sandbox.podDirPath, "daemon.json"), daemonJSON, 0666); err != nil {
+	if err = os.WriteFile(filepath.Join(sandbox.podDirPath, "daemon.json"), daemonJSON, 0666); err != nil {
 		return nil, fmt.Errorf("failed to store daemon.json at %s: %w", sandbox.podDirPath, err)
 	}
 	logger.Printf("store daemon.json at %s", sandbox.podDirPath)
@@ -185,8 +185,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	result, err := CreateInstance(context.TODO(), s.ec2Client, input)
 	if err != nil {
-		logger.Printf("failed to create an instance : %v and the response is %s", err, result)
-		return nil, err
+		return nil, fmt.Errorf("Creating instance (%v) returned error: %s", result, err)
 	}
 
 	sandbox.vsi = *result.Instances[0].InstanceId
@@ -206,7 +205,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	_, err = MakeTags(context.TODO(), s.ec2Client, tagInput)
 	if err != nil {
-		logger.Printf("failed to tag the instance", err)
+		logger.Printf("Adding tags to the instance failed with error: %s", err)
 	}
 
 	podNodeIPs, err := getIPs(result.Instances[0])

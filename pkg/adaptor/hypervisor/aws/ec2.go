@@ -59,8 +59,7 @@ func NewEC2Client(cloudCfg Config) (*ec2.Client, error) {
 		cfg, err = config.LoadDefaultConfig(context.TODO(),
 			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cloudCfg.AccessKeyId, cloudCfg.SecretKey, "")))
 		if err != nil {
-			fmt.Errorf("configuration error, " + err.Error())
-			return nil, err
+			return nil, fmt.Errorf("configuration error when using creds: %s", err)
 		}
 
 	} else {
@@ -69,8 +68,7 @@ func NewEC2Client(cloudCfg Config) (*ec2.Client, error) {
 			config.WithRegion(cloudCfg.Region),
 			config.WithSharedConfigProfile(cloudCfg.LoginProfile))
 		if err != nil {
-			fmt.Errorf("configuration error, " + err.Error())
-			return nil, err
+			return nil, fmt.Errorf("configuration error when using shared profile: %s", err)
 		}
 	}
 	client := ec2.NewFromConfig(cfg)
