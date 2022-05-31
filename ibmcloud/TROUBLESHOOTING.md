@@ -161,7 +161,7 @@ If this policy was removed from the account, the plan ran to completion, and the
 
 If the policy was then added back into the account, the same `A null value cannot be used as the collection in a 'for' expression` exception occurred.
 
-After discussions with the community who maintain the [terraform-provider-ibm](https://github.com/IBM-Cloud/terraform-provider-ibm) project, an issue - [Data source of IAM policies failing to list the policies if the policy has service specific attributes #3801] - was raised, and is being actively worked at time of writing ( May 2022 ).
+After discussions with the community who maintain the [terraform-provider-ibm](https://github.com/IBM-Cloud/terraform-provider-ibm) project, an issue - [Data source of IAM policies failing to list the policies if the policy has service specific attributes #3801](https://github.com/IBM-Cloud/terraform-provider-ibm/issues/3801) - was raised, and is being actively worked at time of writing ( May 2022 ).
 
 In the meantime, if this problem occurs for other users, a check for policies containing service-specific attributes should be undertaken, as per the above example, where the User Policy is tagged with a Service Name of `container-kubernetes`.
 
