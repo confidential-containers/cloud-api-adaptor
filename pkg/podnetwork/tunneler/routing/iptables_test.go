@@ -4,19 +4,15 @@
 package routing
 
 import (
-	"os"
 	"testing"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tuntest"
 	"github.com/coreos/go-iptables/iptables"
 )
 
 func TestIPTables(t *testing.T) {
-
-	if os.Geteuid() != 0 {
-		t.Log("This test requires root privileges. Skipping")
-		return
-	}
+	testutils.SkipTestIfNotRoot(t)
 
 	workerNS := tuntest.NewNamedNS(t, "test-host")
 	defer tuntest.DeleteNamedNS(t, workerNS)

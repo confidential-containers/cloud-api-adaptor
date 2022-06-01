@@ -4,18 +4,16 @@
 package netops
 
 import (
-	"os"
 	"runtime"
 	"testing"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
 	"github.com/vishvananda/netns"
 )
 
 func TestRoute(t *testing.T) {
-	if os.Geteuid() != 0 {
-		t.Log("This test requires root privileges. Skipping")
-		return
-	}
+	testutils.SkipTestIfNotRoot(t)
+
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -39,10 +37,7 @@ func TestRoute(t *testing.T) {
 }
 
 func TestRouteList(t *testing.T) {
-	if os.Geteuid() != 0 {
-		t.Log("This test requires root privileges. Skipping")
-		return
-	}
+	testutils.SkipTestIfNotRoot(t)
 
 	ns, err := GetNS()
 	if err != nil {
