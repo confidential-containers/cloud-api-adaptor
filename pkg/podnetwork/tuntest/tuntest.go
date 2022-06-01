@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"testing"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 	"github.com/coreos/go-iptables/iptables"
@@ -38,11 +38,7 @@ func getIP(t *testing.T, addr string) string {
 }
 
 func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPodNodeTunneler func() tunneler.Tunneler, dedicated bool) {
-
-	if os.Geteuid() != 0 {
-		t.Log("This test requires root privileges. Skipping")
-		return
-	}
+	testutils.SkipTestIfNotRoot(t)
 
 	const (
 		gatewayIP           = "10.128.0.1"
