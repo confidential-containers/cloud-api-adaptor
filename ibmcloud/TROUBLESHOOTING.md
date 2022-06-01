@@ -165,7 +165,7 @@ After discussions with the community who maintain the [terraform-provider-ibm](h
 
 In the meantime, if this problem occurs for other users, a check for policies containing service-specific attributes should be undertaken, as per the above example, where the User Policy is tagged with a Service Name of `container-kubernetes`.
 
-Whilst it's not 100% clear which service-specific attributes might cause this issue, one can check using the [IBM Cloud CLI tool](https://cloud.ibm.com/docs/cli?topic=cli-getting-started) and the `vpc-infrastructure` plugin ( aka `is` ), using a command similar to the following example: -
+Whilst it's not 100% clear which service-specific attributes might cause this issue, one can check using the [IBM Cloud CLI tool](https://cloud.ibm.com/docs/cli?topic=cli-getting-started), using a command similar to the following example: -
 
 `ibmcloud iam user-policies david_hay@uk.ibm.com --output JSON | jq '.[] | select(.resources[].attributes[].value=="containers-kubernetes") | {ID:.id,Resources:.resources,Roles:.roles}'`
 
