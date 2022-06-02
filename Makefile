@@ -25,7 +25,7 @@ else
 endif
 
 test:
-	go test -cover $(PACKAGES)
+	go test -v $(GOFLAGS) -cover $(PACKAGES)
 
 check: fmt vet
 
