@@ -1,7 +1,7 @@
 # (C) Copyright Red Hat 2022.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Build the project for each cloud provider.
+# Build and run unit tests the project for each cloud provider.
 ---
 name: build
 on: [pull_request]
@@ -48,3 +48,19 @@ jobs:
         run: |
           cd cloud-api-adaptor
           make CLOUD_PROVIDER=${{ matrix.provider }} build
+      - name: Test
+        # TODO: the tests for ibmcloud don't compile. Remove below guard when
+        # they get fixed (see https://github.com/confidential-containers/cloud-api-adaptor/issues/48).
+        if: ${{ matrix.provider != 'ibmcloud' }}
+        working-directory: ${{ github.workspace }}/cloud-api-adaptor
+        run: |
+          go install github.com/jstemmer/go-junit-report@v1.0.0
+          make CLOUD_PROVIDER=${{ matrix.provider }} test | tee tests_report.txt
+          cat tests_report.txt | $(go env GOPATH)/bin/go-junit-report -set-exit-code > tests_report_junit.xml
+      - name: Upload tests report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: tests_report_junit-${{ matrix.provider }}_${{ matrix.runner }}_${{ matrix.go_version }}
+          path: ${{ github.workspace }}/cloud-api-adaptor/tests_report_junit.xml
+          retention-days: 1
