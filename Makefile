@@ -25,7 +25,9 @@ else
 endif
 
 test:
-	go test -v $(GOFLAGS) -cover $(PACKAGES)
+	# Note: sending stderr to stdout so that tools like go-junit-report can
+	# parse build errors.
+	go test -v $(GOFLAGS) -cover $(PACKAGES) 2>&1
 
 check: fmt vet
 
