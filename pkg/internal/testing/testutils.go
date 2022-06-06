@@ -15,3 +15,12 @@ func SkipTestIfNotRoot(t *testing.T) {
 		t.Skip("This test requires root privileges. Skipping.")
 	}
 }
+
+// SkipTestIfRunningInCI skips the test if running in CI environment.
+func SkipTestIfRunningInCI(t *testing.T) {
+	value, exported := os.LookupEnv("CI")
+
+	if exported && value == "true" {
+		t.Skip("This test is disabled on CI. Skipping.")
+	}
+}
