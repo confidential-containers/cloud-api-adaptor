@@ -6,7 +6,7 @@
 variable "resource_group_name" {
   type        = string
   description = "The resource group ID where the environment will be created"
-  default     = "Default"
+  default     = null
 }
 
 variable "ibmcloud_api_key" {

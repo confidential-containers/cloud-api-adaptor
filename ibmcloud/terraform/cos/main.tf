@@ -1,5 +1,14 @@
+locals {
+  resource_group_id = var.resource_group_name != null ? data.ibm_resource_group.group[0].id : data.ibm_resource_group.default_group.id
+}
+
 data "ibm_resource_group" "group" {
+  count = var.resource_group_name != null ? 1 : 0
   name = var.resource_group_name
+}
+
+data "ibm_resource_group" "default_group" {
+  is_default = "true"
 }
 
 ########## Create a COS instance
@@ -8,7 +17,7 @@ resource "ibm_resource_instance" "cos_instance" {
   service           = "cloud-object-storage"
   plan              = "standard"
   location          = "global"
-  resource_group_id = data.ibm_resource_group.group.id
+  resource_group_id = local.resource_group_id
 }
 
 ####### Create IAM Authorization Policy

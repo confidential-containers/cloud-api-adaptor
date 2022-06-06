@@ -3,7 +3,7 @@
 ##############################################################################
 output "resource_group_id" {
   description = "Resource Group ID"
-  value       = data.ibm_resource_group.group.id
+  value       = local.resource_group_id
 }
 
 output "s3_region" {
