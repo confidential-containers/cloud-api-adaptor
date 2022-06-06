@@ -55,7 +55,8 @@ jobs:
         working-directory: ${{ github.workspace }}/cloud-api-adaptor
         run: |
           go install github.com/jstemmer/go-junit-report@v1.0.0
-          make CLOUD_PROVIDER=${{ matrix.provider }} test | tee tests_report.txt
+          sudo -E make CLOUD_PROVIDER=${{ matrix.provider }} test | tee tests_report.txt
+          sudo chmod o+rw tests_report.txt
           cat tests_report.txt | $(go env GOPATH)/bin/go-junit-report -set-exit-code > tests_report_junit.xml
       - name: Upload tests report
         uses: actions/upload-artifact@v3
