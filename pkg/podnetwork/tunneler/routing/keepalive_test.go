@@ -9,12 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
+	testutils "github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tuntest"
 	"github.com/vishvananda/netlink"
 )
 
 func TestKeepAlive(t *testing.T) {
+	// TODO: enable this test once https://github.com/confidential-containers/cloud-api-adaptor/issues/52 is fixed
+	testutils.SkipTestIfRunningInCI(t)
 	testutils.SkipTestIfNotRoot(t)
 
 	workerNS := tuntest.NewNamedNS(t, "test-host")
