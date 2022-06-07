@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 ---
-
 - hosts: all
   remote_user: root
   tasks:
@@ -36,3 +35,18 @@
         cmd: kubectl exec nginx -- uname -m
       register: peer_pod_architecture
       failed_when: peer_pod_architecture.stdout != k8s_worker_architecture.stdout
+    - name: Check mounted volume from configMap
+      shell:
+        cmd: kubectl exec nginx -- cat /etc/config/example.txt
+      register: volume_configmap_mounted
+      failed_when: volume_configmap_mounted.stdout != 'Hello, world'
+    - name: Check mounted volume from secret - username
+      shell:
+        cmd: kubectl exec nginx -- cat /etc/secret/username
+      register: volume_secret_mounted_username
+      failed_when: volume_secret_mounted_username.stdout != 'admin'
+    - name: Check mounted volume from secret - password
+      shell:
+        cmd: kubectl exec nginx -- cat /etc/secret/password
+      register: volume_secret_mounted_password
+      failed_when: volume_secret_mounted_password.stdout != '123456'
