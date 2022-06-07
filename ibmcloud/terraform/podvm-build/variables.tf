@@ -53,7 +53,7 @@ variable "bastion_ip" {
 }
 
 variable "podvm_image_name" {
-    description = "Name to give the VPC custom image. If not provided, the image tag is based on it git commit hash of the cloud-api-adaptor code base being built on the worker instance"
+    description = "Name to give the VPC custom image. If not provided, the image tag is based on it git commit hash of the cloud-api-adaptor code base being built on the worker instance. If provided, the podvm_image_name must end in '-amd64' and '-s390x'. The ending should match the CPU architecture the peer pod VM image is being built for"
     default = null
 }
 
