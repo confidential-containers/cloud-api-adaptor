@@ -7,15 +7,20 @@ metadata:
 spec:
   runtimeClassName: kata
   containers:
-  - name: nginx
-    image: nginx
-    volumeMounts:
-      - name: config-volume
-        mountPath: /etc/config
+    - name: nginx
+      image: nginx
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+        - name: secret-volume
+          mountPath: /etc/secret
   volumes:
-  - name: config-volume
-    configMap:
-      name: nginx-config
+    - name: config-volume
+      configMap:
+        name: nginx-config
+    - name: secret-volume
+      secret:
+        secretName: nginx-secret
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -26,16 +31,25 @@ data:
     Hello, world
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: nginx-secret
+data:
+  password: MTIzNDU2
+  username: YWRtaW4=
+type: Opaque
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: nginx-service
 spec:
   type: NodePort
   ports:
-  - name: port80
-    port: 80
-    targetPort: 80
-    nodePort: 30080
-    protocol: TCP
+    - name: port80
+      port: 80
+      targetPort: 80
+      nodePort: 30080
+      protocol: TCP
   selector:
     app: nginx
