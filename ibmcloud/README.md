@@ -112,7 +112,7 @@ vpc_name = "<vpc name>"
 >     If command `ibmcloud account users` displays multiple user IDs, choose the user ID whose state is `ACTIVE`.
 > - `cluster_name` is a name of a Kubernetes cluster. This name is used for the prefix of the names of control plane and worker node virtual server instances.
 > - `ssh_key_name` is the name of your SSH key registered in IBM Cloud or the name of a new SSH key if a public key is also provided using the optional the optional `ssh_pub_key` parameter. You can add your SSH key at [https://cloud.ibm.com/vpc-ext/compute/sshKeys](https://cloud.ibm.com/vpc-ext/compute/sshKeys). For more information about SSH keys see [managing SSH Keys](https://cloud.ibm.com/docs/vpc?topic=vpc-ssh-keys). The SSH key will be installed on the Kubernetes control plane and worker nodes and is used to access them from your `development machine`.
-> - `podvm_image_name` is the name of the VPC infrastructure custom image for the peer pod VM that the Kubernetes worker will build.
+> - `podvm_image_name` is the name of the VPC infrastructure custom image for the peer pod VM that the Kubernetes worker will build. This name will have `-amd64` or `-s390x` appended to it to name the image that eventually gets imported to VPC infrastructure custom images, depending on if the `image_name` parameter for the instance the peer pod VM image is built on uses the amd64 or s390x CPU architecture
 > - `cos_bucket_name` is the name of the COS bucket that will store the peer pod .vsi image. This bucket name must be unique across all IBM Cloud accounts.
 > - `zone_name` (optional) is the zone in the region Terraform will create the demo environment in. If not set it defaults to `jp-tok-2`.
 > - `ssh_pub_key` (optional) is an variable for a SSH public key which has **not** been registered in IBM Cloud in the targeted region. Terraform will manage this key instead. You cannot register the same SSH public key in the same region twice under different SSHs key names.
@@ -303,6 +303,7 @@ cos_bucket_name = "<COS bucket name>"
 > - All COS and VPC infrastructure resources must exist before running this Terraform configuration.
 > - Additional variables and their defaults are defined in the [variables.tf](./terraform/podvm-build/variables.tf) file for this Terraform configuration.
 > - If you don't specify the optional `podvm_image_name` variable then the name of the custom image created will be based on the latest commit hash of the [latest commit hash](https://github.com/confidential-containers/cloud-api-adaptor/commits/staging) of the confidential containers cloud API adaptor staging branch.
+> - If you specify `podvm_image_name` yourself you must add the `-amd64` or `-s390x` suffix to `podvm_image_name` depending on the CPU architecture of the instance you are building the peer pod VM image on. This is different to the behaviour of this parameter in the e2e Terraform configuration.
 > - The `Operator` and `Console Admin` roles must be [assigned](https://cloud.ibm.com/docs/vpc?topic=vpc-vsi_is_connecting_console&interface=ui) to the user. The Terraform configuration will create the `Console Admin` role for the user `ibmcloud_user_id` is set to in the configuration `terraform.tfvars`.
 
 Execute the following commands on your `development machine` to build, upload and verify the pod VM image.

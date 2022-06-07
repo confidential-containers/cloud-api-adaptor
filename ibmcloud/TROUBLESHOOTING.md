@@ -11,7 +11,8 @@ This is caused by the IBM Cloud terraform provider forcing the replacement of th
 
 To resolve this issue:
 
-- Use `terraform state rm ibm_is_ssh_key.created_ssh_key[0]` to remove the SSH key resource from Terraform's internal state.
+- If running the end-to-end Terraform configuration in [ibmcloud/terraform](./terraform), run `terraform state rm module.cluster.ibm_is_ssh_key.created_ssh_key[0]` to remove the SSH key resource from Terraform's internal state.
+- If running the stand-alone cluster creation Terraform configuration in [ibmcloud/terraform/cluster](./terraform/cluster), run `terraform state rm ibm_is_ssh_key.created_ssh_key[0]` to remove the SSH key resource from Terraform's internal state.
 - Delete the `ssh_pub_key` variable from the `terraform.tfvars` file
 - Then run `terraform apply` again
 
