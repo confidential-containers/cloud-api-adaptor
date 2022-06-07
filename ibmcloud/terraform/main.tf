@@ -3,6 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+locals {
+    podvm_image_name_with_arch = length(regexall("s390x", var.image_name)) == 1 ? "${var.podvm_image_name}-s390x" : "${var.podvm_image_name}-amd64"
+}
+
 module "common" {
     source = "./common"
     ibmcloud_api_key = var.ibmcloud_api_key
@@ -52,7 +56,7 @@ module "podvm_build" {
     vpc_name = var.vpc_name
     worker_ip = module.cluster.worker_ip
     bastion_ip = module.cluster.bastion_ip
-    podvm_image_name = var.podvm_image_name
+    podvm_image_name = local.podvm_image_name_with_arch
     ansible_dir = "./podvm-build/ansible"
 }
 
