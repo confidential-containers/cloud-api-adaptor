@@ -196,7 +196,7 @@ linters-settings:
   varcheck:
     # Check usage of exported fields and variables.
     # Default: false
-    exported-fields: true
+    #exported-fields: true
 
   # The custom section can be used to define linter plugins to be loaded at runtime.
   # See README documentation for more info.
