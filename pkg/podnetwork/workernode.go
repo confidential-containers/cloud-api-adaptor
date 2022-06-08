@@ -23,7 +23,6 @@ type WorkerNode interface {
 type workerNode struct {
 	tunnelType    string
 	hostInterface string
-	podNodeIP     net.IP
 }
 
 // TODO: Pod index is reset when this process restarts.
