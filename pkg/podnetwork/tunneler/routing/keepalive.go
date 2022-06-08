@@ -177,10 +177,13 @@ func launchKeepAliveClient(targetNS *netops.NS, serverAddr string, stopCh chan s
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, err error) {
-				ns.Run(func() error {
+				runErr := ns.Run(func() error {
 					conn, err = dialer.DialContext(ctx, network, addr)
 					return err
 				})
+				if err == nil && runErr != nil {
+					err = runErr
+				}
 				return
 			},
 		},
@@ -272,7 +275,9 @@ func launchKeepAliveServer(targetNS *netops.NS, useVRF bool, stopCh chan struct{
 
 	go func() {
 		<-stopCh
-		httpServer.Shutdown(context.Background())
+		if err := httpServer.Shutdown(context.Background()); err != nil {
+			logger.Printf("error on shutdown of http server for keep alive: %v", err)
+		}
 	}()
 
 	return nil

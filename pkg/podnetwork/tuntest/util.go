@@ -131,7 +131,7 @@ type httpHandler string
 const testHTTPHandler = httpHandler("Hello")
 
 func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, string(h))
+	fmt.Fprintf(w, "%s", string(h))
 }
 
 type TestHTTPServer struct {
@@ -174,9 +174,9 @@ func (s *TestHTTPServer) Shutdown(t *testing.T) {
 	t.Helper()
 
 	err := s.ns.Run(func() error {
-		s.server.Shutdown(context.Background())
+		err := s.server.Shutdown(context.Background())
 		s.listener.Close()
-		return nil
+		return err
 	})
 	if err != nil {
 		t.Fatal("failed to run a function at a network namespace")
