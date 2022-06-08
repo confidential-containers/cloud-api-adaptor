@@ -36,8 +36,7 @@ const (
 )
 
 const (
-	vethPrefix     = "ppveth"
-	interfaceIndex = 1
+	vethPrefix = "ppveth"
 )
 
 type workerNodeTunneler struct {
