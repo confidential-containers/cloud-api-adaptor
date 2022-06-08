@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/confidential-containers/cloud-api-adaptor/cmd"
@@ -17,8 +16,6 @@ import (
 )
 
 const programName = "agent-protocol-forwarder"
-
-var logger = log.New(log.Writer(), "[agent-protocol-forwarder] ", log.LstdFlags|log.Lmsgprefix)
 
 type Config struct {
 	configPath          string
