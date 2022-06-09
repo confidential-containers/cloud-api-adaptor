@@ -53,19 +53,20 @@ Optionally, you can install IBM Cloud CLI.
 
 * You need IBM Cloud API key. You can create your own API key at [https://cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
 
-## Create and test the demo environment on IBM Cloud for peer pod VMs
+## Create and test the demo environment on IBM Cloud for peer pod VMs - Basic Usage
 
 ### End to end Terraform configuration
 
 You can create the demo environment for peer pod VMs on IBM Cloud Virtual Private Cloud (VPC) with the Terraform configuration located in [ibmcloud/terraform](./terraform). This Terraform configuration will:
 
-* Set up VPC infrastructure network resources, including the VPC, Subnets and Security groups
+* Set up VPC infrastructure network resources, including the VPC, subnets and security groups
 * Set up VPC infrastructure compute resources, including virtual server instances for the Kubernetes control plane and worker
 * Optionally import a SSH public key to VPC Infrastructure
-* Build and install dependencies on and configure the Kubernetes control plane and worker instances
-* Build the peer pod VSI on the Kubernetes worker instance
+* Build and install software package dependencies on the Kubernetes control plane and worker instances
+* Configure the Kubernetes control plane and worker instances
+* Build the peer pod VM image on the Kubernetes worker instance
 * Set up IBM Cloud Object Storage (COS) resources
-* Push the built peer pod VSI to COS and import it from COS to VPC Infrastructure as a Custom image
+* Push the built peer pod VM image to COS and import it from COS to VPC Infrastructure as a custom image
 * Start the `cloud-api-adaptor` process on the Kubernetes worker instance
 * Create an nginx pod that runs on a peer pod instance on the Kubernetes cluster
 * Test the nginx peer pod
@@ -139,7 +140,7 @@ $ terraform plan
 $ terraform apply
 ```
 
-The following IBM Cloud resources will be created. Please check [main.tf](terraform/common/main.tf) for the details.
+The following IBM Cloud resources will be created when running the end-to-end Terraform configuration. Please check the `main.tf` file in each subdirectory of [ibmcloud/terraform/](./terraform) for details regarding which resources each individual module creates.
 * VPC
 * Security groups
 * Subnets
@@ -153,6 +154,8 @@ The following IBM Cloud resources will be created. Please check [main.tf](terraf
 * SSH key, if you specified the optional `ssh_pub_key` variable
 
 On a cluster using `instance_profile_name = "bz2-2x8"` and `image_name = "ibm-ubuntu-18-04-1-minimal-s390x-3"` the end-to-end playbook takes approximately 50 minutes to complete. 
+
+## Create and test the demo environment on IBM Cloud for peer pod VMs - advanced usage
 
 The individual modules this Terraform configuration calls can also be ran as stand-alone Terraform configurations. This is recommended for experienced users to users who want to try to set up the demo environment on pre-existing infrastructure.
 
@@ -193,10 +196,14 @@ primary_security_group_name = "<name of your primary security group>" OR primary
 vpc_name = "<name of your VPC>" OR vpc_id = "<ID of your VPC>"
 ```
 
+If you created your VPC, subnet and security group without using the `common` Terraform configuration you should provide the name or ID of your existing resources as the `primary_subnet_name/primary_subnet_id`, `primary_security_group_name/primary_security_group_id` and `vpc_name/vpc_id` parameters. If you created your VPC, subnet and security group using the `common` Terraform configuration you can find the IDs of your VPC, subnet and security group in the outputs of the `common` Terraform configuration.
+
 If you don't have your public key already configured in IBM Cloud you can add
 ```
 ssh_pub_key = "<your SSH public key>"
 ```
+
+> **Hint:** In order to create the cluster based on a different type of VSI image you can overwrite more parameters here e.g. to create a **s390x** based cluster add follow two lines to the `terraform.tfvars` file.
 
 > **Notes:**
 > - Some resources can be specified using their name or ID. For example, the subnet can be specified using the `primary_subnet_name` or `primary_subnet_id` variables. Where this option exists the `..._name` and `..._id` variables are mutually exclusive.
@@ -263,7 +270,7 @@ https://cloud.ibm.com/objectstorage/
 
 First, create a COS service instance if you have not create one. Then, create a COS bucket with the COS instance. The COS service instance and bucket names are necessary to upload a custom VM image.
 
-You can use the Terraform configuration located at [ibmcloud/terraform/cos](./terraform/cos) to use Terraform to create a COS service instance, COS bucket, and IAM Authorization Policy automatically. These resources are configured to store images. Create a `terraform.tfvars` file in the configurations directory that includes these fields:
+You can use the Terraform configuration located at [ibmcloud/terraform/cos](./terraform/cos) to use Terraform to create a COS service instance, COS bucket, and IAM Authorization Policy automatically. These resources are configured to store the peer pod VM images. Create a `terraform.tfvars` file in the configurations directory that includes these fields:
 
 ```
 ibmcloud_api_key = "<your API key>"
@@ -273,7 +280,7 @@ cos_service_instance_name = "<name of the COS instance to create>"
 
 > **Notes:**
 > - Variables with the same name as variables in the end to end Terraform configuration are as described in that [configuration's parameters](#parameters).
-> - Additional variables and their defaults are defined in the [variables.tf]()./terraform/cos/variables.tf) file for this Terraform configuration.
+> - Additional variables and their defaults are defined in the [variables.tf](./terraform/cos/variables.tf) file for this Terraform configuration.
 > - The COS Bucket must be a regional bucket in the same region (default `jp-tok`) as the VPC and VSIs.
 
 Then run the Template via the following commands: 
@@ -294,15 +301,17 @@ ibmcloud_api_key = "<your API key>"
 ibmcloud_user_id = "<IBM Cloud User ID>"
 cluster_name = "<cluster name>"
 cos_service_instance_name = "<Name of your COS service instance>" OR cos_service_instance_id = "<ID of your COS service instance>"
-cos_bucket_name = "<COS bucket name>"
+cos_bucket_name = "<Name of your COS bucket name>"
 ```
+
+If you created your COS resources without using with `cos` Terraform configuration you should provide the name or ID of your existing COS service instance as the `cos_service_instance_name/cos_service_instance_id` parameter and the name of your existing COS bucket as the `cos_bucket_name` parameter. If you created your COS service instance `cos` Terraform configuration you can find the ID of your COS service instance in the outputs of the `cos` Terraform configuration.
 
 > **Notes:**
 > - The `cos_service_instance` resource can be specified using its name or ID. The `cos_service_instance_name` and `cos_service_instance_id` variables are mutually exclusive.
 > - Variables with the same name as variables in the end to end Terraform configuration are as described in that [configuration's parameters](#parameters).
 > - All COS and VPC infrastructure resources must exist before running this Terraform configuration.
 > - Additional variables and their defaults are defined in the [variables.tf](./terraform/podvm-build/variables.tf) file for this Terraform configuration.
-> - If you don't specify the optional `podvm_image_name` variable then the name of the custom image created will be based on the latest commit hash of the [latest commit hash](https://github.com/confidential-containers/cloud-api-adaptor/commits/staging) of the confidential containers cloud API adaptor staging branch.
+> - If you don't specify the optional `podvm_image_name` variable then the name of the custom image created will be based on [the latest commit hash](https://github.com/confidential-containers/cloud-api-adaptor/commits/staging) of the confidential containers cloud API adaptor staging branch.
 > - If you specify `podvm_image_name` yourself you must add the `-amd64` or `-s390x` suffix to `podvm_image_name` depending on the CPU architecture of the instance you are building the peer pod VM image on. This is different to the behaviour of this parameter in the e2e Terraform configuration.
 > - The `Operator` and `Console Admin` roles must be [assigned](https://cloud.ibm.com/docs/vpc?topic=vpc-vsi_is_connecting_console&interface=ui) to the user. The Terraform configuration will create the `Console Admin` role for the user `ibmcloud_user_id` is set to in the configuration `terraform.tfvars`.
 
@@ -376,6 +385,8 @@ primary_subnet_name = "<name of your primary subnet>" OR primary_subnet_id = "<I
 primary_security_group_name = "<name of your primary security group>" OR primary_security_group_id = "<ID of your primary security group>"
 ```
 
+If you created your infrastructure using the other Terraform configurations included in this repo then you can find the ID of your SSH key in the output values of the `cluster` Terraform configuration, the ID of your peer pod VM image in the output values of the `podvm-image` Terraform configuration and the IDs of your VPC, subnet and security group in the output values of the `common` Terraform configuration. If you created these resources without using the Terraform configurations then you should find the names or IDs of these resources in your existing IBM Cloud infrastructure and provide them to the respective parameters.
+
 > **Hints:**
 > - The `instance_profile_name` optional variable sets the CPU architecture, number of vCPUs and memory of each peer pod virtual server instance. E.g., the `bz2-2x8` instance profile uses the s390x CPU architecture, has 2 vCPUs and 8 GiB of memory
 > - If you created the cluster based on an s390x architecture VSI image you must set the `instance_profile_name` parameter to the name of an s390x-architecture instance profile. E.g., if your cluster uses the **s390x** CPU architecture add the following line to the `terraform.tfvars` file
@@ -413,7 +424,10 @@ Create a `terraform.tfvars` file in the [configuration directory](./terraform/ru
 ibmcloud_api_key = "<your API Key>"
 cluster_name = "<cluster name>"
 vpc_name = "<name of your VPC>" OR vpc_id = "<ID of your VPC>"
+podvm_image_name = "<name of your peer pod VM image>" OR podvm_image_id = "<ID of your peer pod VM image>"
 ```
+
+If you created your infrastructure using the other Terraform configurations included in this repo then you can find the ID of your peer pod VM image in the output values of the `podvm-image` Terraform configuration and the ID of your VPC the output values of the `common` Terraform configuration. If you created these resources without using the Terraform configurations then you should find the names or IDs of these resources in your existing IBM Cloud infrastructure and provide them to the respective parameters.
 
 > **Notes:**
 > - The `vpc` resource can be specified using its name or ID. The `vpc_name` and `vpc_id` variables are mutually exclusive.
@@ -429,7 +443,7 @@ $ terraform plan
 $ terraform apply
 ```
 
-Deploying the demo workload will create a new nginx Pod and a NodePort service on your Kubernetes cluster, and a new virtual server instance for the peer pod will be created in your IBM Cloud VPC. The `run-nginx-demo` Terraform configuration will also sniff test the deployed nginx server by accessing the HTTP port of the NodePort service and test that the CPU architecture of the Kubernetes worker matches that of the peer pod instance.
+Deploying the demo workload will create a new configMap, secret, nginx Pod and NodePort service on your Kubernetes cluster. It will also create a new virtual server instance for the peer pod in your IBM Cloud VPC. The `run-nginx-demo` Terraform configuration will also sniff test the deployed nginx server by accessing the HTTP port of the NodePort service, test that the CPU architecture of the Kubernetes worker matches that of the peer pod instance and test the volumes from configMap and secret be mounted correctly.
 
 > **Tip:** You can run the nginx sniff test manually if you log into the Kubernetes worker node using the floating IP that was assigned to it
 > ```bash
@@ -455,8 +469,8 @@ Deploying the demo workload will create a new nginx Pod and a NodePort service o
 >    $ ibmcloud is instances
 >    ```
 
-> **Tip:** When the peer pod VSI is created and it fails to start due to [capacity problems](https://cloud.ibm.com/docs/vpc?topic=vpc-instance-status-messages#cannot-start-capacity).
-> Please stop `cloud-api-adaptor` on worker node, try to run peer pod VSI on another zone:
+> **Tip:** When the peer pod instance is created and it fails to start due to [capacity problems](https://cloud.ibm.com/docs/vpc?topic=vpc-instance-status-messages#cannot-start-capacity).
+> Please stop `cloud-api-adaptor` on worker node, try to run peer pod instance on another zone:
 > - Create a new subnet on the target zone by hand.
 > - Start `cloud-api-adaptor` with new `vpc_zone` and `primary-subnet-id` on worker node.
 > - Create nginx demo again. 
@@ -494,7 +508,7 @@ If the `cloud-api-adaptor` process was still running `terraform destroy` for thi
 ```bash
 $ ibmcloud is instances
 ```
-to see if there are instances other than the control-plane and worker VSIs.
+to see if there are instances other than the control-plane and worker instances.
 
 If so these can be deleted with: 
 ```bash
