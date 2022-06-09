@@ -51,19 +51,6 @@ func (*mockForwarder) Shutdown() error {
 func (*mockForwarder) ServeHTTP(http.ResponseWriter, *http.Request) {
 }
 
-type mockBackend struct{}
-
-func (*mockBackend) Start(ctx context.Context) error {
-	<-ctx.Done()
-	return nil
-}
-func (*mockBackend) Shutdown() error {
-	return nil
-}
-func (*mockBackend) AddHandler(pattern string, handler http.Handler) error {
-	return nil
-}
-
 func TestStart(t *testing.T) {
 	d := &daemon{
 		agentForwarder: &mockForwarder{},
@@ -97,6 +84,7 @@ func TestStart(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Expect no error, got %q", err)
 		}
+	default:
 	}
 }
 
