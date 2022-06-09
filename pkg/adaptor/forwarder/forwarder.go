@@ -89,7 +89,9 @@ func (f *socketForwarder) Start(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		f.Shutdown()
+		if shutdownErr := f.Shutdown(); shutdownErr != nil {
+			logger.Printf("error on shutdown: %v", shutdownErr)
+		}
 	case <-f.stopCh:
 	case err := <-listenerErr:
 		return err

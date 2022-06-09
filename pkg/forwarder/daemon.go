@@ -119,7 +119,10 @@ func (d *daemon) Start(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		d.Shutdown()
+		shutdownErr := d.Shutdown()
+		if shutdownErr != nil && err == nil {
+			err = shutdownErr
+		}
 	case <-d.stopCh:
 	case err = <-agentForwarder:
 	case err = <-httpServerErrCh:
