@@ -1,0 +1,42 @@
+# (C) Copyright Red Hat 2022.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Run linting tools on the sources of the project.
+---
+name: lint
+on: [pull_request]
+jobs:
+  golangci-lint_job:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        go_version:
+          - 1.16
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@v3
+        with:
+          # Need this to clone the repository side-by-side with kata's.
+          path: cloud-api-adaptor
+      - name: Checkout the Kata Containers fork
+        uses: actions/checkout@v3
+        with:
+          # TODO: this repository is temporary and so should be replaced
+          # once the required changes are merged on kata's repo.
+          repository: yoheiueda/kata-containers
+          ref: CCv0-peerpod
+          path: kata-containers
+      - name: Setup Golang version ${{ matrix.go_version }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go_version }}
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
+          version: v1.46.2
+          working-directory: ${{ github.workspace }}/cloud-api-adaptor
