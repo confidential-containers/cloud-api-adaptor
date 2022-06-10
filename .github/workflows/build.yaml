@@ -49,9 +49,6 @@ jobs:
           cd cloud-api-adaptor
           make CLOUD_PROVIDER=${{ matrix.provider }} build
       - name: Test
-        # TODO: the tests for ibmcloud don't compile. Remove below guard when
-        # they get fixed (see https://github.com/confidential-containers/cloud-api-adaptor/issues/48).
-        if: ${{ matrix.provider != 'ibmcloud' }}
         working-directory: ${{ github.workspace }}/cloud-api-adaptor
         run: |
           go install github.com/jstemmer/go-junit-report@v1.0.0

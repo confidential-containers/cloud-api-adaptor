@@ -1,6 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build ibmcloud
 // +build ibmcloud
 
 package ibmcloud
@@ -23,6 +24,7 @@ import (
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/http/upgrader"
@@ -88,7 +90,7 @@ func TestCreateStartAndStop(t *testing.T) {
 	}
 }
 
-func testServerStart(t *testing.T, ctx context.Context) (Server, string, string, pb.HypervisorService, chan error) {
+func testServerStart(t *testing.T, ctx context.Context) (hypervisor.Server, string, string, pb.HypervisorService, chan error) {
 	dir, err := ioutil.TempDir("", "helper")
 	if err != nil {
 		t.Fatal(err)
@@ -158,26 +160,33 @@ func startAgentServer(t *testing.T) string {
 	return port
 }
 
-func newServer(t *testing.T, socketPath, podsDir string) Server {
+func newServer(t *testing.T, socketPath, podsDir string) hypervisor.Server {
 	switch strings.ToLower(os.Getenv("USE_IBM_CLOUD")) {
 	case "", "no", "false", "0":
 		port := startAgentServer(t)
-		return NewServer(socketPath, &mockVpcV1{}, &ServiceConfig{}, &mockWorkerNode{}, podsDir, port)
+		cfg := hypervisor.Config{
+			SocketPath:  socketPath,
+			PodsDir:     podsDir,
+			HypProvider: "ibmcloud",
+		}
+		srv := NewServer(cfg, Config{}, &mockWorkerNode{}, port)
+		srv.(*server).service.(*hypervisorService).vpcV1 = &mockVpcV1{}
+		return srv
 	}
 	log.Print("Using IBM Cloud...")
 	apiKey := os.Getenv("API_KEY")
 	if apiKey == "" {
 		t.Fatal("Specify the API key as API_KEY")
 	}
-	vpcv1, err := NewVpcV1(apiKey)
-	if err != nil {
-		t.Fatal(err)
-	}
+
 	keyId := os.Getenv("KEY_ID")
 	if keyId == "" {
 		t.Fatal("Specify the SSH key ID as KEY_ID")
 	}
-	serviceConfig := &ServiceConfig{
+	serviceConfig := Config{
+		ApiKey:                   apiKey,
+		IamServiceURL:            "https://iam.cloud.ibm.com/identity/token",
+		VpcServiceURL:            "https://jp-tok.iaas.cloud.ibm.com/v1",
 		ProfileName:              "bx2-2x8",
 		ZoneName:                 "us-south-2",
 		ImageID:                  "r134-d2090805-5652-4845-b287-46232e1098c3",
@@ -189,10 +198,17 @@ func newServer(t *testing.T, socketPath, podsDir string) Server {
 		VpcID:                    "r134-c199bf26-ec6d-4c5d-a0a2-1e74d312891f",
 	}
 
-	return NewServer(socketPath, vpcv1, serviceConfig, &mockWorkerNode{}, podsDir, daemon.DefaultListenPort)
+	cfg := hypervisor.Config{
+		SocketPath:  socketPath,
+		PodsDir:     podsDir,
+		HypProvider: "ibmcloud",
+	}
+	srv := NewServer(cfg, serviceConfig, &mockWorkerNode{}, daemon.DefaultListenPort)
+
+	return srv
 }
 
-func testServerShutdown(t *testing.T, s Server, socketPath, dir string, serverErrCh chan error) {
+func testServerShutdown(t *testing.T, s hypervisor.Server, socketPath, dir string, serverErrCh chan error) {
 
 	if err := s.Shutdown(); err != nil {
 		t.Error(err)

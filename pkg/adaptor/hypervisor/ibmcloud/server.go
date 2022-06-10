@@ -37,9 +37,15 @@ func NewServer(cfg hypervisor.Config, cloudCfg Config, workerNode podnetwork.Wor
 
 	logger.Printf("hypervisor config %v", cfg)
 	logger.Printf("cloud config %v", cloudCfg)
-	vpcV1, err := NewVpcV1(cloudCfg.ApiKey, cloudCfg.IamServiceURL, cloudCfg.VpcServiceURL)
-	if err != nil {
-		return nil
+
+	var vpcV1 VpcV1
+	if cloudCfg.ApiKey != "" {
+		//FIXME: Null ApiKey is used in unit tests
+		var err error
+		vpcV1, err = NewVpcV1(cloudCfg.ApiKey, cloudCfg.IamServiceURL, cloudCfg.VpcServiceURL)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return &server{
