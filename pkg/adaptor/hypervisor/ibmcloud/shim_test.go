@@ -1,6 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build ibmcloud
 // +build ibmcloud
 
 package ibmcloud
@@ -19,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/containerd/containerd/pkg/cri/annotations"
@@ -87,18 +89,24 @@ func TestShim(t *testing.T) {
 		workerNode = podnetwork.NewWorkerNode(t, "")
 	}
 
-	server := NewServer(helperSocketPath, &mockVpcV1{primaryIP: primaryIP, secondaryIP: secondaryIP}, &ServiceConfig{}, workerNode, podsDir, port)
+	cfg := hypervisor.Config{
+		SocketPath:  helperSocketPath,
+		PodsDir:     podsDir,
+		HypProvider: "ibmcloud",
+	}
+	srv := NewServer(cfg, Config{}, workerNode, port)
+	srv.(*server).service.(*hypervisorService).vpcV1 = &mockVpcV1{primaryIP: primaryIP, secondaryIP: secondaryIP}
 
 	serverDone := make(chan struct{})
 	go func() {
 		defer close(serverDone)
 
-		if err := server.Start(ctx); err != nil {
+		if err := srv.Start(ctx); err != nil {
 			t.Error(err)
 		}
 	}()
 
-	<-server.Ready()
+	<-srv.Ready()
 
 	clientDone := make(chan error)
 
@@ -190,9 +198,6 @@ func startTestAgent(t *testing.T, ctx context.Context, agentSocketPath string, d
 	agent.RegisterHealthService(ttrpcServer, &healthService{})
 
 	socket := agentSocketPath
-	if len(socket) > 0 && socket[0] == '@' {
-		socket = socket + "\x00"
-	}
 
 	listener, err := net.Listen("unix", socket)
 	if err != nil {
@@ -443,6 +448,8 @@ func (s *agentService) AddARPNeighbors(ctx context.Context, req *agent.AddARPNei
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
+
+/*
 func (s *agentService) StartTracing(ctx context.Context, req *agent.StartTracingRequest) (*types.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
@@ -451,15 +458,16 @@ func (s *agentService) StopTracing(ctx context.Context, req *agent.StopTracingRe
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
+*/
 func (s *agentService) GetMetrics(ctx context.Context, req *agent.GetMetricsRequest) (*agent.Metrics, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &agent.Metrics{}, nil
 }
-func (s *agentService) CreateVM(ctx context.Context, req *agent.CreateVMRequest) (*types.Empty, error) {
+func (s *agentService) CreateSandbox(ctx context.Context, req *agent.CreateSandboxRequest) (*types.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
-func (s *agentService) DestroyVM(ctx context.Context, req *agent.DestroyVMRequest) (*types.Empty, error) {
+func (s *agentService) DestroySandbox(ctx context.Context, req *agent.DestroySandboxRequest) (*types.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
@@ -496,7 +504,14 @@ func (s *agentService) AddSwap(ctx context.Context, req *agent.AddSwapRequest) (
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
-
+func (s *agentService) GetVolumeStats(ctx context.Context, req *agent.VolumeStatsRequest) (*agent.VolumeStatsResponse, error) {
+	log.Printf("agent call: %T %#v", req, req)
+	return &agent.VolumeStatsResponse{}, nil
+}
+func (s *agentService) ResizeVolume(ctx context.Context, req *agent.ResizeVolumeRequest) (*types.Empty, error) {
+	log.Printf("agent call: %T %#v", req, req)
+	return &types.Empty{}, nil
+}
 func (s *agentService) PullImage(ctx context.Context, req *agent.PullImageRequest) (*types.Empty, error) {
 	log.Printf("agent call: PullImage %#v", req)
 	return &types.Empty{}, nil
