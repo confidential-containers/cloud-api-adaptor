@@ -209,10 +209,8 @@ func startTestAgent(t *testing.T, ctx context.Context, agentSocketPath string, d
 	go func() {
 		defer close(ttrpcServerErr)
 
-		if ttrpcServer.Serve(ctx, listener); err != nil {
-			if err != nil {
-				ttrpcServerErr <- err
-			}
+		if err := ttrpcServer.Serve(ctx, listener); err != nil {
+			ttrpcServerErr <- err
 		}
 	}()
 	defer func() {
