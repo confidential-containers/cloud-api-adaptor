@@ -318,7 +318,7 @@ func getIPs(prototype *vpcv1.InstancePrototype, result *vpcv1.Instance) ([]net.I
 		}
 
 		ip := net.ParseIP(*addr)
-		if addr == nil {
+		if ip == nil {
 			return nil, fmt.Errorf("failed to parse pod node IP %q", *addr)
 		}
 		podNodeIPs = append(podNodeIPs, ip)
