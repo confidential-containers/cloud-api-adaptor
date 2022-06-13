@@ -57,7 +57,7 @@ func NewServer(cfg hypervisor.Config, cloudCfg Config, workerNode podnetwork.Wor
 	}
 }
 
-func (s *server) Start(ctx context.Context) error {
+func (s *server) Start(ctx context.Context) (err error) {
 
 	ttRpc, err := ttrpc.NewServer()
 	if err != nil {
@@ -80,13 +80,21 @@ func (s *server) Start(ctx context.Context) error {
 			ttRpcErr <- err
 		}
 	}()
-	defer s.ttRpc.Shutdown(context.Background())
+	defer func() {
+		ttRpcShutdownErr := s.ttRpc.Shutdown(context.Background())
+		if ttRpcShutdownErr != nil && err == nil {
+			err = ttRpcShutdownErr
+		}
+	}()
 
 	close(s.readyCh)
 
 	select {
 	case <-ctx.Done():
-		s.Shutdown()
+		shutdownErr := s.Shutdown()
+		if shutdownErr != nil && err == nil {
+			err = shutdownErr
+		}
 	case <-s.stopCh:
 	case err = <-ttRpcErr:
 	}

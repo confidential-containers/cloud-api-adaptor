@@ -8,6 +8,7 @@ package ibmcloud
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net"
@@ -145,8 +146,8 @@ func startAgentServer(t *testing.T) string {
 	ctx := context.Background()
 
 	go func() {
-		if ttrpcServer.Serve(ctx, handler); err != nil {
-			if err != nil {
+		if err := ttrpcServer.Serve(ctx, handler); err != nil {
+			if !errors.Is(err, ttrpc.ErrServerClosed) {
 				t.Error(err)
 			}
 		}

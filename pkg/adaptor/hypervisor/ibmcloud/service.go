@@ -35,7 +35,6 @@ const (
 	Version       = "0.0.0"
 	maxRetries    = 10
 	queryInterval = 2
-	subnetBits    = "/24"
 )
 
 type hypervisorService struct {
