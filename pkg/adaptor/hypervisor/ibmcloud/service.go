@@ -218,7 +218,9 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
+	s.Lock()
 	sandbox.vsi = *result.ID
+	s.Unlock()
 
 	logger.Printf("created an instance %s for sandbox %s", *result.Name, req.Id)
 
