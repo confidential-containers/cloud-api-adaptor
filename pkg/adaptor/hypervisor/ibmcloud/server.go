@@ -13,9 +13,11 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
-	"github.com/containerd/ttrpc"
 
-	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
+	"github.com/containerd/ttrpc"
+	pbHypervisor "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
+
+	pbPodVMInfo "github.com/confidential-containers/cloud-api-adaptor/proto/podvminfo"
 )
 
 var logger = log.New(log.Writer(), "[helper/hypervisor] ", log.LstdFlags|log.Lmsgprefix)
@@ -23,8 +25,9 @@ var logger = log.New(log.Writer(), "[helper/hypervisor] ", log.LstdFlags|log.Lms
 type server struct {
 	socketPath string
 
-	ttRpc   *ttrpc.Server
-	service pb.HypervisorService
+	ttRpc         *ttrpc.Server
+	service       pbHypervisor.HypervisorService
+	vmInfoService pbPodVMInfo.PodVMInfoService
 
 	workerNode podnetwork.WorkerNode
 
@@ -48,13 +51,17 @@ func NewServer(cfg hypervisor.Config, cloudCfg Config, workerNode podnetwork.Wor
 		}
 	}
 
-	return &server{
+	s := &server{
 		socketPath: cfg.SocketPath,
 		service:    newService(vpcV1, &cloudCfg, workerNode, cfg.PodsDir, daemonPort),
 		workerNode: workerNode,
 		readyCh:    make(chan struct{}),
 		stopCh:     make(chan struct{}),
 	}
+
+	s.vmInfoService = newPodVMInfoService(s.service.(*hypervisorService)) // TODO: refactor not to use type casting
+
+	return s
 }
 
 func (s *server) Start(ctx context.Context) (err error) {
@@ -70,7 +77,9 @@ func (s *server) Start(ctx context.Context) (err error) {
 	if err := os.RemoveAll(s.socketPath); err != nil { // just in case socket wasn't cleaned
 		return err
 	}
-	pb.RegisterHypervisorService(s.ttRpc, s.service)
+	pbHypervisor.RegisterHypervisorService(s.ttRpc, s.service)
+	pbPodVMInfo.RegisterPodVMInfoService(s.ttRpc, s.vmInfoService)
+
 	listener, err := net.Listen("unix", s.socketPath)
 	if err != nil {
 		return err

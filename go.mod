@@ -21,6 +21,7 @@ require (
 	github.com/vishvananda/netlink v1.1.1-0.20220115184804-dd687eb2f2d4
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
 	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150
+	google.golang.org/grpc v1.43.0
 	gopkg.in/yaml.v2 v2.4.0
 	libvirt.org/go/libvirt v1.8002.0
 	libvirt.org/go/libvirtxml v1.8002.0
