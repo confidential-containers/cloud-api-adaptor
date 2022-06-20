@@ -446,17 +446,14 @@ func (s *agentService) AddARPNeighbors(ctx context.Context, req *agent.AddARPNei
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
-
-/*
-func (s *agentService) StartTracing(ctx context.Context, req *agent.StartTracingRequest) (*types.Empty, error) {
+func (s *agentService) GetIPTables(ctx context.Context, req *agent.GetIPTablesRequest) (*agent.GetIPTablesResponse, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &agent.GetIPTablesResponse{}, nil
 }
-func (s *agentService) StopTracing(ctx context.Context, req *agent.StopTracingRequest) (*types.Empty, error) {
+func (s *agentService) SetIPTables(ctx context.Context, req *agent.SetIPTablesRequest) (*agent.SetIPTablesResponse, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &agent.SetIPTablesResponse{}, nil
 }
-*/
 func (s *agentService) GetMetrics(ctx context.Context, req *agent.GetMetricsRequest) (*agent.Metrics, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &agent.Metrics{}, nil
