@@ -1,0 +1,28 @@
+#########ibmcloud#########
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: peer-pods
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: peer-pods-config
+  namespace: peer-pods
+data:
+  CLOUD_PROVIDER: "ibmcloud"
+  IMAGE_ID:
+  VPC_PRIMARY_SUBNET_ID:
+  VPC_SECONDARY_SUBNET_ID:
+  VPC_PRIMARY_SECURITY_GROUP_ID:
+  VPC_SECONDARY_SECURITY_GROUP_ID:
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: peer-pods-secret
+  namespace: peer-pods
+type: Opaque
+stringData:
+  IBMCLOUD_API_KEY:
+  SSH_KEY_ID:

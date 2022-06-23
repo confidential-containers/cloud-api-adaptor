@@ -1,0 +1,16 @@
+##########libvirt###########
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: peer-pods
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: peer-pods-config
+  namespace: peer-pods
+data:
+  CLOUD_PROVIDER: "libvirt"
+  LIBVIRT_URI: "qemu+ssh://root@192.168.122.1/system"
+  LIBVIRT_NET: "default"
+  LIBVIRT_POOL: "default"

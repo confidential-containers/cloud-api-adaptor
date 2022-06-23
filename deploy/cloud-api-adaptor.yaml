@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: peer-pods
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-api-adaptor-deployment
+  namespace: peer-pods
+  labels:
+    app: cloud-api-adaptor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloud-api-adaptor
+  template:
+    metadata:
+      labels:
+        app: cloud-api-adaptor
+    spec:
+      hostNetwork: true
+      containers:
+      - name: cloud-api-adaptor-con
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN", "SYS_ADMIN"]
+        image: quay.io/snir/cloud-api-adaptor:latest
+        envFrom:
+        - configMapRef:
+            name: peer-pods-config
+        - secretRef:
+            name: peer-pods-secret
+            optional: true
+        command: ["/usr/local/bin/entrypoint.sh"]
+        volumeMounts:
+        - mountPath: /run/peerpod
+          name: pods-dir
+        - mountPath: /run/netns
+          mountPropagation: HostToContainer
+          name: netns
+      volumes:
+      - name: pods-dir # drop?
+        hostPath:
+          path: /run/peerpod
+      - name: netns
+        #readOnly: true
+        hostPath:
+         path: /run/netns
