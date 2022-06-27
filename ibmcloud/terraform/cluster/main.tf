@@ -21,7 +21,7 @@ resource "ibm_is_ssh_key" "created_ssh_key" {
   # Create the ssh key only if the public key is set
   count = var.ssh_pub_key == "" ? 0 : 1
   name = var.ssh_key_name
-  public_key = var.ssh_pub_key
+  public_key = regex("(ssh-rsa [^ ]+)", var.ssh_pub_key)[0]
 }
 
 data "ibm_is_ssh_key" "ssh_key" {
