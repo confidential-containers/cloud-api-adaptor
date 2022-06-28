@@ -39,7 +39,7 @@ var hypcfg hypervisor.Config
 func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 	if len(os.Args) < 2 {
-		fmt.Printf("%s aws|ibmcloud <options>\n", os.Args[0])
+		fmt.Printf("%s aws|ibmcloud|libvirt <options>\n", os.Args[0])
 		cmd.Exit(1)
 	}
 
