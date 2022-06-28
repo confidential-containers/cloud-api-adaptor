@@ -58,6 +58,9 @@ func (s *server) Start(ctx context.Context) (err error) {
 	if err = os.MkdirAll(filepath.Dir(s.socketPath), os.ModePerm); err != nil {
 		return err
 	}
+	if err := os.RemoveAll(s.socketPath); err != nil { // just in case socket wasn't cleaned
+		return err
+	}
 	pb.RegisterHypervisorService(s.ttRpc, s.service)
 	listener, err := net.Listen("unix", s.socketPath)
 	if err != nil {
