@@ -46,6 +46,9 @@ func createCloudInitISO(v *vmConfig, libvirtClient *libvirtClient) string {
 	}
 
 	// Set VM Hostname
+	if err := os.MkdirAll(libvirtClient.dataDir, os.ModePerm); err != nil {
+	       log.Fatalf("Failed to create data-dir path %s: %s", v.metaData, err)
+	}
 	v.metaData = libvirtClient.dataDir + "/" + "meta-data"
 	metaFile, _ := os.Create(v.metaData)
 	if _, err := metaFile.WriteString("local-hostname: " + v.name); err != nil {
