@@ -14,6 +14,7 @@ import (
 
 const (
 	podVxlanInterface = "vxlan0"
+	maxMTU            = 1450
 )
 
 type podNodeTunneler struct {
@@ -64,6 +65,9 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 	}
 
 	mtu := int(config.MTU)
+	if mtu > maxMTU {
+		mtu = maxMTU
+	}
 	if err := podNS.SetMTU(podVxlanInterface, mtu); err != nil {
 		return fmt.Errorf("failed to set MTU of %s to %d on %s: %w", podVxlanInterface, mtu, nsPath, err)
 	}
