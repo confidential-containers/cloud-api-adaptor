@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.15.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.10.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.31.0
-	github.com/containerd/containerd v1.6.2
+	github.com/containerd/containerd v1.6.6
 	github.com/containerd/ttrpc v1.1.0
 	github.com/containernetworking/plugins v1.1.1
 	github.com/coreos/go-iptables v0.6.0
@@ -19,7 +19,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/vishvananda/netlink v1.1.1-0.20210924202909-187053b97868
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
-	golang.org/x/sys v0.0.0-20220330033206-e17cdc41300f
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
 	gopkg.in/yaml.v2 v2.4.0
 	libvirt.org/go/libvirt v1.8002.0
 	libvirt.org/go/libvirtxml v1.8002.0
