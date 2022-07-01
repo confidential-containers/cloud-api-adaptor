@@ -196,6 +196,9 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 			},
 		},
 	}
+	if s.serviceConfig.ResourceGroupID != "" {
+		prototype.ResourceGroup = &vpcv1.ResourceGroupIdentity{ID: &s.serviceConfig.ResourceGroupID}
+	}
 	if s.serviceConfig.SecondarySubnetID != "" {
 		prototype.NetworkInterfaces = []vpcv1.NetworkInterfacePrototype{
 			{

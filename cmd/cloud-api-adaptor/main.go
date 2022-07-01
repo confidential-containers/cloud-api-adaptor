@@ -65,6 +65,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&ibmcfg.ApiKey, "api-key", "", "IBM Cloud API key")
 			flags.StringVar(&ibmcfg.IamServiceURL, "iam-service-url", "https://iam.cloud.ibm.com/identity/token", "IBM Cloud IAM Service URL")
 			flags.StringVar(&ibmcfg.VpcServiceURL, "vpc-service-url", "https://jp-tok.iaas.cloud.ibm.com/v1", "IBM Cloud VPC Service URL")
+			flags.StringVar(&ibmcfg.ResourceGroupID, "resource-group-id", "", "Resource Group ID")
 			flags.StringVar(&ibmcfg.ProfileName, "profile-name", "", "Profile name")
 			flags.StringVar(&ibmcfg.ZoneName, "zone-name", "", "Zone name")
 			flags.StringVar(&ibmcfg.ImageID, "image-id", "", "Image ID")
