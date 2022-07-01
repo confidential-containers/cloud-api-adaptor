@@ -1,0 +1,6 @@
+domain: confidential-containers
+layout:
+- go.kubebuilder.io/v3
+projectName: peer-pods-webhook
+repo: confidential-containers/peer-pods-webhook
+version: "3"

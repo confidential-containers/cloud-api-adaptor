@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ext-res-updater
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ext-res-updater
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - 'nodes/status'
+  verbs:
+  - 'patch'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ext-res-updater
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ext-res-updater
+subjects:
+- kind: ServiceAccount
+  name: ext-res-updater
+  namespace: kube-system

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: ext-res-updater
+  name: ext-res-updater
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: ext-res-updater
+  template:
+    metadata:
+      labels:
+        app: ext-res-updater
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      serviceAccountName: ext-res-updater
+      containers:
+      - image: curlimages/curl
+        command: ["sh"]
+        args: ["/ext-res-updater.sh"]
+        name: updater
+        env:
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: configmap
+          mountPath: /ext-res-updater.sh
+          subPath: ext-res-updater.sh
+      volumes:
+      - name: configmap
+        configMap:
+          name: ext-res-updater
+          items:
+          - key: script 
+            path: ext-res-updater.sh
