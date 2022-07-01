@@ -1,0 +1,21 @@
+apiVersion: v1
+data:
+  script: |-
+    #!/bin/sh
+    patch_node() {
+    curl -k --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+    --header "Content-Type: application/json-patch+json" \
+    --request PATCH \
+    --data '[{"op": "add", "path": "/status/capacity/kata.peerpods.io~1vm", "value": "'$1'"}]' \
+    https://kubernetes.default.svc.cluster.local/api/v1/nodes/${MY_NODE_NAME}/status
+    }
+    patch_node 20
+    while [ 1 ]
+    do
+    sleep 10
+    done
+
+kind: ConfigMap
+metadata:
+  name: ext-res-updater
+  namespace: kube-system
