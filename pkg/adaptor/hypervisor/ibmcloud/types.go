@@ -4,6 +4,7 @@ type Config struct {
 	ApiKey                   string
 	IamServiceURL            string
 	VpcServiceURL            string
+	ResourceGroupID          string
 	ProfileName              string
 	ZoneName                 string
 	ImageID                  string

@@ -188,6 +188,7 @@ func newServer(t *testing.T, socketPath, podsDir string) hypervisor.Server {
 		ApiKey:                   apiKey,
 		IamServiceURL:            "https://iam.cloud.ibm.com/identity/token",
 		VpcServiceURL:            "https://jp-tok.iaas.cloud.ibm.com/v1",
+		ResourceGroupID:          "33e11ea6cbf340f2bfb6c8414f511b8d",
 		ProfileName:              "bx2-2x8",
 		ZoneName:                 "us-south-2",
 		ImageID:                  "r134-d2090805-5652-4845-b287-46232e1098c3",
