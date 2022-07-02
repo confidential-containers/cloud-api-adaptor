@@ -26,6 +26,7 @@
               -api-key "{{ ibmcloud_api_key }}" \
               -iam-service-url "{{ ibmcloud_iam_endpoint }}" \
               -vpc-service-url "{{ ibmcloud_vpc_endpoint }}" \
+              -resource-group-id "{{ ibmcloud_resource_group_id }}" \
               -key-id "{{ ibmcloud_vpc_ssh_key_id }}" \
               -image-id "{{ ibmcloud_vpc_podvm_image_id }}" \
               -profile-name "{{ ibmcloud_vpc_podvm_instance_profile_name }}" \
