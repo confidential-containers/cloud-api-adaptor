@@ -120,7 +120,7 @@ vpc_name = "<vpc name>"
 > - `cos_service_instance_name` (optional) is the name of the COS service instance Terraform will create. If not set it defaults to `cos-image-instance`.
 > - `floating_ip_name` (optional) is the name of the floating IP that is assigned to the Kubernetes worker. If not set it defaults to `tok-gateway-ip`.
 > - `image_name` (optional) is a name of IBM Cloud infrastructure image. This name is used to create virtual server instances for the Kubernetes control plane and worker. For more information, about VPC custom images, see [IBM Cloud Importing and managing custom images](https://cloud.ibm.com/docs/vpc?topic=vpc-managing-images). If not set it defaults to `ibm-ubuntu-20-04-3-minimal-amd64-1`.
-> - `resource-group-id` (optional) is the resource group ID in IBM Cloud, under which the peer pod will be created. 
+> - `resource-group-id` (optional) is the resource group ID in IBM Cloud, under which the peer pod will be created. If not set it defaults to your default resource group.
 > - `instance_profile_name` (optional) is a name of IBM Cloud virtual server instance profile. This name is used to create virtual server instances for the Kubernetes control plane and worker. For more information, about virtual server instance profile, see [instance profiles](https://cloud.ibm.com/docs/vpc?topic=vpc-profiles). If not set it defaults to `bx2-2x8`, which uses the amd64 architecture, has 2 vCPUs and 8 GB memory.
 > - `primary_security_group_name` (optional) is the name of the security group Terraform will create. If not set it defaults to `tok-primary-security-group`.
 > - `primary_subnet_name` (optional) is the name of the subnet Terraform will create. If not set it defaults to `tok-primary-subnet`.
