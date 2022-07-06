@@ -19,7 +19,10 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/http/upgrader"
 )
 
-const SocketName = "agent.ttrpc"
+const (
+	SocketName = "agent.ttrpc"
+	maxRetries = 20
+)
 
 var logger = log.New(log.Writer(), "[helper/forwarder] ", log.LstdFlags|log.Lmsgprefix)
 
@@ -106,6 +109,7 @@ func (f *socketForwarder) Ready() chan struct{} {
 }
 
 func (f *socketForwarder) Shutdown() error {
+	logger.Printf("shutting down socket forwarder")
 	f.stopOnce.Do(func() {
 		close(f.stopCh)
 	})
@@ -123,6 +127,7 @@ func startForwarding(ctx context.Context, shimConn net.Conn, serverURL *url.URL)
 
 		var serverConn net.Conn
 
+		count := 1
 		for {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 
@@ -134,8 +139,15 @@ func startForwarding(ctx context.Context, shimConn net.Conn, serverURL *url.URL)
 				break
 			}
 
-			logger.Printf("failed to establish an upgraded connection to %s: %v. (retrying...)", serverURL, err)
+			logger.Printf("failed to establish an upgraded connection to %s: %v. (retrying... %d/%d)", serverURL, err, count, maxRetries)
 			<-ctx.Done()
+
+			if count >= maxRetries {
+				cancel()
+				logger.Printf("reaches max retry count. gave up establishing connection to %s", serverURL)
+				return
+			}
+			count++
 		}
 		defer func() {
 			if err := serverConn.Close(); err != nil {
