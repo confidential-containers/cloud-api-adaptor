@@ -95,6 +95,11 @@ variable "outbound_security_group_rule_id" {
     default = ""
 }
 
+variable "resource_group_name" {
+  description = "The resource group ID where the cloud api adaptor will start peer pod instances"
+  default     = null
+}
+
 variable "ansible_dir" {
     description = "Subdirectory for Ansible playbook, inventory and vars files"
     default = "./ansible"
