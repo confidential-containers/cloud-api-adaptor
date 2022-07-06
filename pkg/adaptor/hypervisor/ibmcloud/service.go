@@ -81,7 +81,6 @@ type sandbox struct {
 	namespace        string
 	netNSPath        string
 	podDirPath       string
-	agentSocketPath  string
 	vsi              string
 	socketForwarder  forwarder.SocketForwarder
 	podNetworkConfig *tunneler.Config
@@ -126,18 +125,20 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
 	}
 
+	socketForwarder := forwarder.NewSocketForwarder(socketPath)
+
 	sandbox := &sandbox{
 		id:               sid,
 		pod:              pod,
 		namespace:        namespace,
 		netNSPath:        netNSPath,
 		podDirPath:       podDirPath,
-		agentSocketPath:  socketPath,
+		socketForwarder:  socketForwarder,
 		podNetworkConfig: podNetworkConfig,
 	}
 	s.sandboxes[sid] = sandbox
 	logger.Printf("create a sandbox %s for pod %s in namespace %s (netns: %s)", req.Id, pod, namespace, sandbox.netNSPath)
-	return &pb.CreateVMResponse{AgentSocketPath: sandbox.agentSocketPath}, nil
+	return &pb.CreateVMResponse{AgentSocketPath: socketPath}, nil
 }
 
 func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest) (*pb.StartVMResponse, error) {
@@ -159,7 +160,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-	// Store daemon.json in worker node for debuggig
+	// Store daemon.json in worker node for debugging
 	if err := os.WriteFile(filepath.Join(sandbox.podDirPath, "daemon.json"), daemonJSON, 0666); err != nil {
 		return nil, fmt.Errorf("failed to store daemon.json at %s: %w", sandbox.podDirPath, err)
 	}
@@ -255,13 +256,11 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		Path:   daemon.AgentURLPath,
 	}
 
-	socketForwarder := forwarder.NewSocketForwarder(sandbox.agentSocketPath, serverURL)
-
 	errCh := make(chan error)
 	go func() {
 		defer close(errCh)
 
-		if err := socketForwarder.Start(context.Background()); err != nil {
+		if err := sandbox.socketForwarder.Start(context.Background(), serverURL); err != nil {
 			logger.Printf("error running socket forwarder: %v", err)
 			errCh <- err
 		}
@@ -272,10 +271,9 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, ctx.Err()
 	case err := <-errCh:
 		return nil, err
-	case <-socketForwarder.Ready():
+	case <-sandbox.socketForwarder.Ready():
 	}
 
-	sandbox.socketForwarder = socketForwarder
 	logger.Printf("socket forwarder is ready")
 	return &pb.StartVMResponse{}, nil
 }
@@ -348,6 +346,11 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 	if err != nil {
 		return nil, err
 	}
+
+	if err := sandbox.socketForwarder.Shutdown(); err != nil {
+		logger.Printf("failed to stop socket forwarder: %v", err)
+	}
+
 	if err := s.deleteInstance(sandbox.vsi); err != nil {
 		return nil, err
 	}

@@ -24,30 +24,28 @@ const SocketName = "agent.ttrpc"
 var logger = log.New(log.Writer(), "[helper/forwarder] ", log.LstdFlags|log.Lmsgprefix)
 
 type SocketForwarder interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context, serverURL *url.URL) error
 	Ready() chan struct{}
 	Shutdown() error
 }
 
 type socketForwarder struct {
-	socketPath string
-	serverURL  *url.URL
 	readyCh    chan struct{}
 	stopCh     chan struct{}
 	stopOnce   sync.Once
+	socketPath string
 }
 
-func NewSocketForwarder(socketPath string, serverURL *url.URL) SocketForwarder {
+func NewSocketForwarder(socketPath string) SocketForwarder {
 
 	return &socketForwarder{
 		socketPath: socketPath,
-		serverURL:  serverURL,
 		readyCh:    make(chan struct{}),
 		stopCh:     make(chan struct{}),
 	}
 }
 
-func (f *socketForwarder) Start(ctx context.Context) error {
+func (f *socketForwarder) Start(ctx context.Context, serverURL *url.URL) error {
 
 	if err := os.MkdirAll(filepath.Dir(f.socketPath), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create parent directories for socket: %s", f.socketPath)
@@ -65,6 +63,9 @@ func (f *socketForwarder) Start(ctx context.Context) error {
 
 	close(f.readyCh)
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	listenerErr := make(chan error)
 	go func() {
 		defer close(listenerErr)
@@ -78,7 +79,7 @@ func (f *socketForwarder) Start(ctx context.Context) error {
 				return
 			}
 
-			startForwarding(ctx, conn, f.serverURL)
+			startForwarding(ctx, conn, serverURL)
 		}
 	}()
 	defer func() {
