@@ -14,7 +14,17 @@ locals {
   ssh_key_id = var.ssh_key_name != null ? data.ibm_is_ssh_key.ssh_key[0].id : var.ssh_key_id
   primary_subnet_id = var.primary_subnet_name != null ? data.ibm_is_subnet.primary_subnet_by_name[0].id : var.primary_subnet_id
   primary_security_group_id = var.primary_security_group_name != null ? data.ibm_is_security_group.primary_security_group[0].id : var.primary_security_group_id
+  resource_group_id = var.resource_group_name != null ? data.ibm_resource_group.group[0].id : data.ibm_resource_group.default_group.id
   ibmcloud_api_endpoint = var.use_ibmcloud_test ? "https://test.cloud.ibm.com" : "https://cloud.ibm.com"
+}
+
+data "ibm_resource_group" "group" {
+  count = var.resource_group_name != null ? 1 : 0
+  name = var.resource_group_name
+}
+
+data "ibm_resource_group" "default_group" {
+  is_default = "true"
 }
 
 data "ibm_is_instance" "worker" {
@@ -88,6 +98,7 @@ ibmcloud_vpc_zone_name: ${local.zone_name}
 ibmcloud_vpc_subnet_id: ${local.primary_subnet_id}
 ibmcloud_vpc_security_group_id: ${local.primary_security_group_id}
 ibmcloud_vpc_id: ${local.vpc_id}
+ibmcloud_resource_group_id: ${local.resource_group_id}
 EOF
 }
 
