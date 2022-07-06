@@ -19,20 +19,13 @@ import (
 func TestNewForwarder(t *testing.T) {
 
 	socketPath := "/run/dummy.sock"
-	serverURL, err := url.Parse("http://192.0.2.1:15150")
-	if err != nil {
-		t.Fatalf("expect no error, got %q", err)
-	}
 
-	forwarder := NewSocketForwarder(socketPath, serverURL)
+	forwarder := NewSocketForwarder(socketPath)
 	f, ok := forwarder.(*socketForwarder)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &socketForwarder{}, forwarder)
 	}
 	if e, a := socketPath, f.socketPath; e != a {
-		t.Fatalf("expect %q, got %q", e, a)
-	}
-	if e, a := serverURL.String(), f.serverURL.String(); e != a {
 		t.Fatalf("expect %q, got %q", e, a)
 	}
 }
@@ -55,7 +48,7 @@ func TestStartStop(t *testing.T) {
 	mux.Handle(path, handler)
 	serverURL.Path = path
 
-	forwarder := NewSocketForwarder(socketPath, serverURL)
+	forwarder := NewSocketForwarder(socketPath)
 	f, ok := forwarder.(*socketForwarder)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &socketForwarder{}, forwarder)
@@ -65,7 +58,7 @@ func TestStartStop(t *testing.T) {
 	go func() {
 		defer close(forwarderErrCh)
 
-		if err := forwarder.Start(context.Background()); err != nil {
+		if err := forwarder.Start(context.Background(), serverURL); err != nil {
 			forwarderErrCh <- err
 		}
 	}()
