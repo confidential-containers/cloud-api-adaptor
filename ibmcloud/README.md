@@ -356,7 +356,7 @@ disable_guest_seccomp = true
 enable_pprof = true
 enable_debug = true
 [hypervisor.remote]
-remote_hypervisor = "/run/peerpod/hypervisor.sock"
+remote_hypervisor_socket = "/run/peerpod/hypervisor.sock"
 [agent.kata]
 ```
 
