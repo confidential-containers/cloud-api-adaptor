@@ -7,13 +7,9 @@ import (
 	"context"
 	"errors"
 	"net"
-	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"path/filepath"
 	"testing"
-
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/http/upgrader"
 )
 
 func TestNewForwarder(t *testing.T) {
@@ -24,27 +20,12 @@ func TestNewForwarder(t *testing.T) {
 	if ret == nil {
 		t.Fatal("Expect non nil, got nil")
 	}
-	if _, ok := ret.(http.Handler); !ok {
-		t.Fatalf("Expect http.Handler, got %T", ret)
-	}
 	f, ok := ret.(*forwarder)
 	if !ok {
 		t.Fatalf("Expect *forwarder, got %T", f)
 	}
 	if f.agentDialer == nil {
 		t.Fatal("Expect non nil, got nil")
-	}
-	if f.httpUpgrader == nil {
-		t.Fatal("Expect non nil, got nil")
-	}
-	if _, ok := f.httpUpgrader.(upgrader.Handler); !ok {
-		t.Fatalf("Expect upgrader.Handler, got %T", f.httpUpgrader)
-	}
-	if f.listener == nil {
-		t.Fatal("Expect non nil, got nil")
-	}
-	if _, ok := f.listener.(upgrader.Handler); !ok {
-		t.Fatalf("Expect upgrader.Handler, got %T", f.listener)
 	}
 	if f.stopCh == nil {
 		t.Fatal("Expect non nil, got nil")
@@ -66,18 +47,21 @@ func TestStart(t *testing.T) {
 		t.Fatal("Expect non nil, got nil")
 	}
 
-	httpServer := httptest.NewServer(f)
-
-	serverURL, err := url.Parse(httpServer.URL)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Expect no error, got %q", err)
+	}
+
+	serverURL := url.URL{
+		Scheme: "grpc",
+		Host:   listener.Addr().String(),
 	}
 
 	forwarderErrCh := make(chan error)
 	go func() {
 		defer close(forwarderErrCh)
 
-		if err := f.Start(context.Background()); err != nil {
+		if err := f.Start(context.Background(), listener); err != nil {
 			forwarderErrCh <- err
 		}
 	}()
@@ -127,7 +111,7 @@ func TestStart(t *testing.T) {
 	default:
 	}
 
-	conn, err := upgrader.SendUpgradeRequest(context.Background(), serverURL, "agent")
+	conn, err := net.Dial("tcp", serverURL.Host)
 	if err != nil {
 		t.Fatalf("Expect no error, got %q", err)
 	}

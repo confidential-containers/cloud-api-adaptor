@@ -5,7 +5,7 @@ package daemon
 
 import (
 	"context"
-	"net/http"
+	"net"
 	"testing"
 )
 
@@ -20,9 +20,6 @@ func TestNew(t *testing.T) {
 	d, ok := ret.(*daemon)
 	if !ok {
 		t.Fatalf("Expect *daemon, got %T", d)
-	}
-	if d.httpServer == nil {
-		t.Fatal("Expect non nil, got nil")
 	}
 	if d.agentForwarder == nil {
 		t.Fatal("Expect non nil, got nil")
@@ -39,7 +36,7 @@ func TestNew(t *testing.T) {
 
 type mockForwarder struct{}
 
-func (*mockForwarder) Start(ctx context.Context) error {
+func (*mockForwarder) Start(ctx context.Context, listener net.Listener) error {
 	<-ctx.Done()
 	return nil
 }
@@ -48,14 +45,10 @@ func (*mockForwarder) Shutdown() error {
 	return nil
 }
 
-func (*mockForwarder) ServeHTTP(http.ResponseWriter, *http.Request) {
-}
-
 func TestStart(t *testing.T) {
 	d := &daemon{
 		agentForwarder: &mockForwarder{},
 		podNode:        &mockPodNode{},
-		httpServer:     &http.Server{Addr: "127.0.0.1:0"},
 		readyCh:        make(chan struct{}),
 		stopCh:         make(chan struct{}),
 	}

@@ -7,13 +7,9 @@ import (
 	"context"
 	"errors"
 	"net"
-	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"path/filepath"
 	"testing"
-
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/http/upgrader"
 )
 
 func TestNewForwarder(t *testing.T) {
@@ -36,17 +32,15 @@ func TestStartStop(t *testing.T) {
 
 	socketPath := filepath.Join(dir, "test.sock")
 
-	handler := upgrader.NewHandler()
-
-	mux := http.NewServeMux()
-	httpServer := httptest.NewServer(mux)
-	serverURL, err := url.Parse(httpServer.URL)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatalf("expect no error, got %q", err)
+		t.Fatalf("Expect no error, got %q", err)
 	}
-	path := "/agent"
-	mux.Handle(path, handler)
-	serverURL.Path = path
+
+	serverURL := &url.URL{
+		Scheme: "grpc",
+		Host:   listener.Addr().String(),
+	}
 
 	forwarder := NewSocketForwarder(socketPath)
 	f, ok := forwarder.(*socketForwarder)
@@ -68,14 +62,14 @@ func TestStartStop(t *testing.T) {
 	clientMsg := "hello"
 	serverMsg := "good bye"
 
-	handlerErrCh := make(chan error)
+	listenerErrCh := make(chan error)
 	receivedMsgCh := make(chan string)
 	go func() {
-		defer close(handlerErrCh)
+		defer close(listenerErrCh)
 
 		err := func() error {
 			for {
-				conn, err := handler.Accept()
+				conn, err := listener.Accept()
 				if err != nil {
 					if !errors.Is(err, net.ErrClosed) {
 						return err
@@ -100,7 +94,7 @@ func TestStartStop(t *testing.T) {
 			}
 		}()
 		if err != nil {
-			handlerErrCh <- err
+			listenerErrCh <- err
 			return
 		}
 	}()
@@ -141,7 +135,7 @@ func TestStartStop(t *testing.T) {
 	}
 
 	select {
-	case err := <-handlerErrCh:
+	case err := <-listenerErrCh:
 		t.Fatalf("expect no error, got %q", err)
 	case err := <-forwarderErrCh:
 		t.Fatalf("expect no error, got %q", err)
@@ -156,11 +150,11 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("expect no error, got %q", err)
 	}
 
-	if err := handler.Close(); err != nil {
+	if err := listener.Close(); err != nil {
 		t.Fatalf("expect no error, got %q", err)
 	}
 
-	if err := <-handlerErrCh; err != nil {
+	if err := <-listenerErrCh; err != nil {
 		t.Fatalf("expect no error, got %q", err)
 	}
 

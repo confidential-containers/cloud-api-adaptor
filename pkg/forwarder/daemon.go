@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 	"sync"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/agent"
@@ -43,7 +42,6 @@ type Daemon interface {
 
 type daemon struct {
 	listenAddr     string
-	httpServer     *http.Server
 	agentForwarder agent.Forwarder
 	podNode        podnetwork.PodNode
 
@@ -54,18 +52,10 @@ type daemon struct {
 
 func New(spec *Config, listenAddr, kataAgentSocketPath, kataAgentNamespace string, podNode podnetwork.PodNode) Daemon {
 
-	mux := http.NewServeMux()
-	httpServer := &http.Server{
-		Handler: mux,
-	}
-
 	agentForwarder := agent.NewForwarder(kataAgentSocketPath, kataAgentNamespace)
-
-	mux.Handle(AgentURLPath, agentForwarder)
 
 	daemon := &daemon{
 		listenAddr:     listenAddr,
-		httpServer:     httpServer,
 		agentForwarder: agentForwarder,
 		podNode:        podNode,
 		readyCh:        make(chan struct{}),
@@ -86,32 +76,23 @@ func (d *daemon) Start(ctx context.Context) error {
 		}
 	}()
 
-	agentForwarder := make(chan error)
-	go func() {
-		defer close(agentForwarder)
-
-		if err := d.agentForwarder.Start(ctx); err != nil {
-			agentForwarder <- fmt.Errorf("error running kata agent forwarder: %w", err)
-		}
-	}()
-
 	listener, err := net.Listen("tcp", d.listenAddr)
 	if err != nil {
 		return err
 	}
 	d.listenAddr = listener.Addr().String()
 
-	httpServerErrCh := make(chan error)
+	agentForwarderErrCh := make(chan error)
 	go func() {
-		defer close(httpServerErrCh)
+		defer close(agentForwarderErrCh)
 
-		if err := d.httpServer.Serve(listener); err != nil {
-			httpServerErrCh <- fmt.Errorf("error running an http server: %w", err)
+		if err := d.agentForwarder.Start(ctx, listener); err != nil {
+			agentForwarderErrCh <- fmt.Errorf("error running kata agent forwarder: %w", err)
 		}
 	}()
 	defer func() {
-		if err := d.httpServer.Shutdown(context.Background()); err != nil {
-			logger.Printf("error shutting down http server: %v", err)
+		if err := d.agentForwarder.Shutdown(); err != nil {
+			logger.Printf("error shutting down kata agent forwarder: %v", err)
 		}
 	}()
 
@@ -119,16 +100,13 @@ func (d *daemon) Start(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		shutdownErr := d.Shutdown()
-		if shutdownErr != nil && err == nil {
-			err = shutdownErr
-		}
+		return d.Shutdown()
 	case <-d.stopCh:
-	case err = <-agentForwarder:
-	case err = <-httpServerErrCh:
+	case err := <-agentForwarderErrCh:
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (d *daemon) Shutdown() error {
