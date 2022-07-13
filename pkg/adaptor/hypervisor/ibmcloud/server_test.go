@@ -12,9 +12,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,7 +25,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/http/upgrader"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	"github.com/google/uuid"
@@ -121,16 +117,12 @@ func testServerStart(t *testing.T, ctx context.Context) (hypervisor.Server, stri
 }
 
 func startAgentServer(t *testing.T) string {
-	handler := upgrader.NewHandler()
 
-	mux := http.NewServeMux()
-	httpServer := httptest.NewServer(mux)
-	serverURL, err := url.Parse(httpServer.URL)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Expect no error, got %q", err)
 	}
-	mux.Handle(daemon.AgentURLPath, handler)
-	_, port, err := net.SplitHostPort(serverURL.Host)
+	_, port, err := net.SplitHostPort(listener.Addr().String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +138,7 @@ func startAgentServer(t *testing.T) string {
 	ctx := context.Background()
 
 	go func() {
-		if err := ttrpcServer.Serve(ctx, handler); err != nil {
+		if err := ttrpcServer.Serve(ctx, listener); err != nil {
 			if !errors.Is(err, ttrpc.ErrServerClosed) {
 				t.Error(err)
 			}

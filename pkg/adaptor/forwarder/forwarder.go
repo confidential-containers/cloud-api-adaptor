@@ -15,8 +15,6 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/http/upgrader"
 )
 
 const (
@@ -132,14 +130,15 @@ func startForwarding(ctx context.Context, shimConn net.Conn, serverURL *url.URL)
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 
 			var err error
-			serverConn, err = upgrader.SendUpgradeRequest(ctx, serverURL, "ttrpc")
+			// TODO: Support TLS
+			serverConn, err = net.Dial("tcp", serverURL.Host)
 			if err == nil {
-				logger.Printf("Upgrade is done.")
+				logger.Printf("connection established: %s", serverURL.Host)
 				cancel()
 				break
 			}
 
-			logger.Printf("failed to establish an upgraded connection to %s: %v. (retrying... %d/%d)", serverURL, err, count, maxRetries)
+			logger.Printf("failed to connect to peer pod VM %s: %v. (retrying... %d/%d)", serverURL, err, count, maxRetries)
 			<-ctx.Done()
 
 			if count >= maxRetries {

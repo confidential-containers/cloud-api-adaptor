@@ -10,29 +10,24 @@ import (
 	"io"
 	"log"
 	"net"
-	"net/http"
 	"sync"
 	"time"
 
 	// TODO: Handle agent proto
 	_ "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/http/upgrader"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 )
 
 var logger = log.New(log.Writer(), "[daemon/agent] ", log.LstdFlags|log.Lmsgprefix)
 
 type Forwarder interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context, listener net.Listener) error
 	Shutdown() error
-	ServeHTTP(w http.ResponseWriter, req *http.Request)
 }
 
 type forwarder struct {
-	agentDialer  dialer
-	listener     net.Listener
-	httpUpgrader http.Handler
+	agentDialer dialer
 
 	stopCh   chan struct{}
 	stopOnce sync.Once
@@ -42,14 +37,10 @@ type dialer func(context.Context) (net.Conn, error)
 
 func NewForwarder(agentSocket, nsPath string) Forwarder {
 
-	// agent-ctl assumes a trailing zero in an abstract Unix domain socket path.
-	// https://github.com/kata-containers/kata-containers/blob/af0fbb94602a23501e2e8a17a5c98974ff0dc325/tools/agent-ctl/src/client.rs#L397-L404
-	socket := agentSocket
-
 	agentDialer := func(ctx context.Context) (net.Conn, error) {
 
 		if nsPath == "" {
-			return (&net.Dialer{}).DialContext(ctx, "unix", socket)
+			return (&net.Dialer{}).DialContext(ctx, "unix", agentSocket)
 		}
 
 		ns, err := netops.NewNSFromPath(nsPath)
@@ -60,7 +51,7 @@ func NewForwarder(agentSocket, nsPath string) Forwarder {
 		var conn net.Conn
 		if err := ns.Run(func() error {
 			var err error
-			conn, err = (&net.Dialer{}).DialContext(ctx, "unix", socket)
+			conn, err = (&net.Dialer{}).DialContext(ctx, "unix", agentSocket)
 			return err
 		}); err != nil {
 			return nil, fmt.Errorf("failed to call dialer at namespace %q: %w", nsPath, err)
@@ -69,24 +60,20 @@ func NewForwarder(agentSocket, nsPath string) Forwarder {
 		return conn, nil
 	}
 
-	httpUpgrader := upgrader.NewHandler()
-
 	return &forwarder{
-		agentDialer:  agentDialer,
-		listener:     httpUpgrader,
-		httpUpgrader: httpUpgrader,
-		stopCh:       make(chan struct{}),
+		agentDialer: agentDialer,
+		stopCh:      make(chan struct{}),
 	}
 }
 
-func (f *forwarder) Start(ctx context.Context) error {
+func (f *forwarder) Start(ctx context.Context, listener net.Listener) error {
 
 	listenerErr := make(chan error)
 	go func() {
 		defer close(listenerErr)
 
 		for {
-			conn, err := f.listener.Accept()
+			conn, err := listener.Accept()
 			if err != nil {
 				if !errors.Is(err, net.ErrClosed) {
 					listenerErr <- err
@@ -101,8 +88,8 @@ func (f *forwarder) Start(ctx context.Context) error {
 		}
 	}()
 	defer func() {
-		if err := f.listener.Close(); err != nil {
-			logger.Printf("error closing upgraded connection listener: %v", err)
+		if err := listener.Close(); err != nil {
+			logger.Printf("error closing connection listener: %v", err)
 		}
 	}()
 
@@ -164,8 +151,4 @@ func startForwarding(ctx context.Context, shimConn net.Conn, agentDialer dialer)
 	}()
 
 	return nil
-}
-
-func (f *forwarder) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	f.httpUpgrader.ServeHTTP(w, req)
 }
