@@ -21,8 +21,8 @@ import (
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/containerd/containerd/pkg/cri/annotations"
@@ -67,7 +67,7 @@ func TestCreateStartAndStop(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	forwarderSocket := filepath.Join(dir, "pods", id, forwarder.SocketName)
+	forwarderSocket := filepath.Join(dir, "pods", id, proxy.SocketName)
 	conn, err := net.Dial("unix", forwarderSocket)
 	if err != nil {
 		t.Fatal(err)

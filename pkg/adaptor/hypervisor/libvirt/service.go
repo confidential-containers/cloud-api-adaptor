@@ -15,7 +15,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
@@ -73,7 +73,7 @@ type sandbox struct {
 	netNSPath        string
 	podDirPath       string
 	vsi              string
-	socketForwarder  forwarder.SocketForwarder
+	agentProxy       proxy.AgentProxy
 	podNetworkConfig *tunneler.Config
 }
 
@@ -107,7 +107,7 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 		return nil, fmt.Errorf("failed to create a pod directory: %s: %w", podDirPath, err)
 	}
 
-	socketPath := filepath.Join(podDirPath, forwarder.SocketName)
+	socketPath := filepath.Join(podDirPath, proxy.SocketName)
 
 	netNSPath := req.NetworkNamespacePath
 
@@ -116,7 +116,7 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
 	}
 
-	socketForwarder := forwarder.NewSocketForwarder(socketPath)
+	agentProxy := proxy.NewAgentProxy(socketPath)
 
 	sandbox := &sandbox{
 		id:               sid,
@@ -124,7 +124,7 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 		namespace:        namespace,
 		netNSPath:        netNSPath,
 		podDirPath:       podDirPath,
-		socketForwarder:  socketForwarder,
+		agentProxy:       agentProxy,
 		podNetworkConfig: podNetworkConfig,
 	}
 	s.sandboxes[sid] = sandbox
@@ -203,8 +203,8 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 	go func() {
 		defer close(errCh)
 
-		if err := sandbox.socketForwarder.Start(context.Background(), serverURL); err != nil {
-			logger.Printf("error running socket forwarder: %v", err)
+		if err := sandbox.agentProxy.Start(context.Background(), serverURL); err != nil {
+			logger.Printf("error running agent proxy: %v", err)
 			errCh <- err
 		}
 	}()
@@ -214,10 +214,10 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, ctx.Err()
 	case err := <-errCh:
 		return nil, err
-	case <-sandbox.socketForwarder.Ready():
+	case <-sandbox.agentProxy.Ready():
 	}
 
-	logger.Printf("socket forwarder is ready")
+	logger.Printf("agent proxy is ready")
 	return &pb.StartVMResponse{}, nil
 }
 
@@ -259,8 +259,8 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 		return nil, err
 	}
 
-	if err := sandbox.socketForwarder.Shutdown(); err != nil {
-		logger.Printf("failed to stop socket forwarder: %v", err)
+	if err := sandbox.agentProxy.Shutdown(); err != nil {
+		logger.Printf("failed to stop agent proxy: %v", err)
 	}
 
 	if err := s.deleteInstance(ctx, sandbox.vsi); err != nil {
