@@ -65,28 +65,25 @@ $(IMAGE_FILE): $(UBUNTU_IMAGE_FILE) $(BINARIES) $(FILES)
 
 $(AGENT_PROTOCOL_FORWARDER): force
 	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && $(MAKE) agent-protocol-forwarder
-	install --compare "$(AGENT_PROTOCOL_FORWARDER_SRC)/agent-protocol-forwarder" "$@"
+	install -D --compare "$(AGENT_PROTOCOL_FORWARDER_SRC)/agent-protocol-forwarder" "$@"
 
 $(KATA_AGENT): force
 	cd "$(KATA_AGENT_SRC)" && $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE)
-	mkdir -p "$(@D)"
-	install --compare "$(KATA_AGENT_SRC)/target/$(shell uname -m)-unknown-linux-$(if $(findstring s390x,$(shell uname -m)),gnu,musl)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
+	install -D --compare "$(KATA_AGENT_SRC)/target/$(shell uname -m)-unknown-linux-$(if $(findstring s390x,$(shell uname -m)),gnu,musl)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
 
 $(SKOPEO_SRC):
 	git clone -b "v$(SKOPEO_VERSION)" "$(SKOPEO_REPO)" "$(SKOPEO_SRC)"
 
 $(SKOPEO): $(SKOPEO_SRC)
 	cd "$(SKOPEO_SRC)" && make bin/skopeo
-	mkdir -p "$(@D)"
-	install --compare "$(SKOPEO_SRC)/bin/skopeo" "$@"
+	install -D --compare "$(SKOPEO_SRC)/bin/skopeo" "$@"
 
 $(UMOCI_SRC):
 	git clone -b "v$(UMOCI_VERSION)" "$(UMOCI_REPO)" "$(UMOCI_SRC)"
 
 $(UMOCI): $(UMOCI_SRC)
 	cd "$(UMOCI_SRC)" && make
-	mkdir -p "$(@D)"
-	install --compare "$(UMOCI_SRC)/umoci" "$@"
+	install -D --compare "$(UMOCI_SRC)/umoci" "$@"
 
 ubuntu: $(UBUNTU_IMAGE_FILE)
 $(UBUNTU_IMAGE_FILE):
