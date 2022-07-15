@@ -198,7 +198,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		Resources: []string{*result.Instances[0].InstanceId},
 		Tags: []types.Tag{
 			{
-				Key:   aws.String("name"),
+				Key:   aws.String("Name"),
 				Value: aws.String(vmName),
 			},
 		},
