@@ -50,7 +50,7 @@ fi
 function cleanup () {
     msg=$1
 
-    for mnt in "$src_mnt/etc/resolv.conf" "$src_mnt/dev/pts" "$src_mnt/dev" \
+    for mnt in "$src_mnt/run" "$src_mnt/dev/pts" "$src_mnt/dev" \
                "$src_mnt/proc" "$src_mnt/sys" "$src_mnt" \
                "$dst_mnt/dev" "$dst_mnt/proc" "$dst_mnt"; do
         mountpoint -q "$mnt" && umount "$mnt"
@@ -166,9 +166,10 @@ mount -t proc proc "$src_mnt/proc"
 mount --bind /dev "$src_mnt/dev"
 mount --bind /dev/pts "$src_mnt/dev/pts"
 
-rm -f "$src_mnt/etc/resolv.conf"
-touch "$src_mnt/etc/resolv.conf"
-mount --bind /etc/resolv.conf "$src_mnt/etc/resolv.conf"
+mount -t tmpfs tmpfs "$src_mnt/run"
+mkdir -p "$src_mnt/run/systemd/resolve"
+cp /run/systemd/resolve/resolv.conf "$src_mnt/run/systemd/resolve/resolv.conf"
+cp /run/systemd/resolve/stub-resolv.conf "$src_mnt/run/systemd/resolve/stub-resolv.conf"
 
 if (( ${#packages[@]} )); then
     echo -e "\nInstalling packages: ${packages[*]}\n"
@@ -194,7 +195,7 @@ chroot "$src_mnt" bash -c 'rm -rf /var/lib/apt/lists/*'
 
 cp -a "$files_dir"/* "$src_mnt"
 
-umount "$src_mnt/etc/resolv.conf"
+umount "$src_mnt/run"
 umount "$src_mnt/dev/pts"
 umount "$src_mnt/dev"
 umount "$src_mnt/proc"

@@ -150,28 +150,6 @@
         path: /etc/kata-containers
         state: directory
 
-    - name: Copy systemd unit file for fix-resolvconf
-      copy:
-        dest: /etc/systemd/system/fix-resolvconf.service
-        content: |
-          [Unit]
-          Description=Make /etc/resolv.conf a regular file
-          After=systemd-networkd.service
-
-          [Service]
-          ExecStart=/bin/bash -c 'rm -f /etc/resolv.conf && cp /run/systemd/resolve/resolv.conf /etc/resolv.conf'
-          ExecStop= /bin/bash -c 'rm -f /etc/resolv.conf && ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf'
-          Type=oneshot
-          RemainAfterExit=yes
-
-          [Install]
-          WantedBy=multi-user.target
-
-    - name: Start fix-resolvconf service
-      systemd:
-        name: fix-resolvconf.service
-        state: started
-
     - name: Install Rust
       shell: |
         set -o errexit -o pipefail
