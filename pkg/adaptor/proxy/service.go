@@ -108,6 +108,24 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 			logger.Printf("        %s: %s", k, v)
 		}
 	}
+	if len(req.OCI.Mounts) > 0 {
+		logger.Print("    mounts:")
+		for _, m := range req.OCI.Mounts {
+			logger.Printf("         destination:%s source:%s type:%s", m.Destination, m.Source, m.Type)
+		}
+	}
+	if len(req.Storages) > 0 {
+		logger.Print("    storages:")
+		for _, s := range req.Storages {
+			logger.Printf("         mount_point:%s source:%s fstype:%s driver:%s", s.MountPoint, s.Source, s.Fstype, s.Driver)
+		}
+	}
+	if len(req.Devices) > 0 {
+		logger.Print("    devices:")
+		for _, d := range req.Devices {
+			logger.Printf("         container_path:%s vm_path:%s type:%s", d.ContainerPath, d.VmPath, d.Type)
+		}
+	}
 
 	s.redirect(ctx, func(c *client) {
 		res, err = c.CreateContainer(ctx, req)
@@ -309,17 +327,43 @@ func (s *proxyService) GetMetrics(ctx context.Context, req *pb.GetMetricsRequest
 
 func (s *proxyService) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (res *types.Empty, err error) {
 
+	logger.Printf("CreateSandbox: hostname:%s sandboxId:%s", req.Hostname, req.SandboxId)
+	if len(req.Dns) > 0 {
+		logger.Print("    dns:")
+		for _, d := range req.Dns {
+			logger.Printf("         %s", d)
+		}
+	}
+	if len(req.Storages) > 0 {
+		logger.Print("    storages:")
+		for _, s := range req.Storages {
+			logger.Printf("         mountpoint:%s source:%s fstype:%s driver:%s", s.MountPoint, s.Source, s.Fstype, s.Driver)
+		}
+	}
+
 	s.redirect(ctx, func(c *client) {
 		res, err = c.CreateSandbox(ctx, req)
 	})
+
+	if err != nil {
+		logger.Printf("CreateSandbox fails: %v", err)
+	}
+
 	return
 }
 
 func (s *proxyService) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (res *types.Empty, err error) {
 
+	logger.Printf("DestroySandbox")
+
 	s.redirect(ctx, func(c *client) {
 		res, err = c.DestroySandbox(ctx, req)
 	})
+
+	if err != nil {
+		logger.Printf("DestroySandbox fails: %v", err)
+	}
+
 	return
 }
 
