@@ -333,6 +333,10 @@ func (s *proxyService) CreateSandbox(ctx context.Context, req *pb.CreateSandboxR
 		for _, d := range req.Dns {
 			logger.Printf("         %s", d)
 		}
+
+		logger.Print("    Eliminated the DNS setting above from CreateSandboxRequest to stop updating /etc/resolv.conf on the peer pod VM")
+		logger.Print("    See https://github.com/confidential-containers/cloud-api-adaptor/issues/98 for the details.")
+		req.Dns = nil
 	}
 	if len(req.Storages) > 0 {
 		logger.Print("    storages:")
