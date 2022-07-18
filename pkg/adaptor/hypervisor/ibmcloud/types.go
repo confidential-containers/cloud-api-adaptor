@@ -40,11 +40,9 @@ func init() {
 
 // Add Stringer interface to return keyMask when outputting ApiKey field
 func (config *Config) String() string {
-	apikey := config.ApiKey
-	if apikey != "" {
-		apikey = keyMask
-	}
-	return fmt.Sprintf(apikey)
+	toMask := config
+	toMask.ApiKey = keyMask
+	return fmt.Sprint(toMask)
 }
 
 // Add custom Formatter to handle different output cases
