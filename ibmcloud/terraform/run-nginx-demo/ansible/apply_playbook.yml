@@ -14,9 +14,9 @@
       shell:
         cmd: kubectl apply -f runtime-class.yaml -f nginx.yaml
         chdir: cloud-api-adaptor/ibmcloud/demo
-    - name: Pause to start peer pod VM, and pull and start nginx container
-      pause:
-        seconds: 90
+    - name: Wait for pod to be ready
+      shell:
+        cmd: kubectl wait --timeout=300s --for=condition=ready pods/nginx
     - name: Check nginx container has started in the peer pod
       shell:
         cmd: kubectl get pod nginx -o json | jq -r .status.containerStatuses[0].ready
