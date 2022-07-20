@@ -12,14 +12,15 @@ require (
 	github.com/containerd/containerd v1.6.6
 	github.com/containerd/ttrpc v1.1.0
 	github.com/containernetworking/plugins v1.1.1
+	github.com/containers/podman/v4 v4.1.1
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-00010101000000-000000000000
-	github.com/stretchr/testify v1.7.0
-	github.com/vishvananda/netlink v1.1.1-0.20210924202909-187053b97868
+	github.com/stretchr/testify v1.7.1
+	github.com/vishvananda/netlink v1.1.1-0.20220115184804-dd687eb2f2d4
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
+	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150
 	gopkg.in/yaml.v2 v2.4.0
 	libvirt.org/go/libvirt v1.8002.0
 	libvirt.org/go/libvirtxml v1.8002.0

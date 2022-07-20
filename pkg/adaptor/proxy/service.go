@@ -13,6 +13,9 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
+
+	cri "github.com/containerd/containerd/pkg/cri/annotations"
+	crio "github.com/containers/podman/v4/pkg/annotations"
 )
 
 const (
@@ -97,6 +100,29 @@ func (s *proxyService) redirect(ctx context.Context, fn func(c *client)) {
 	fn(s.agentClient)
 }
 
+// TODO: parameterize the pause container image name
+const pauseContainerImage = "k8s.gcr.io/pause:3.7"
+
+func getImageName(annotations map[string]string) (string, error) {
+
+	for _, a := range []string{cri.ImageName, crio.ImageName} {
+		if image, ok := annotations[a]; ok {
+			return image, nil
+		}
+	}
+
+	for containerType, containerTypeSandbox := range map[string]string{
+		cri.ContainerType:  cri.ContainerTypeSandbox,
+		crio.ContainerType: crio.ContainerTypeSandbox,
+	} {
+		if annotations[containerType] == containerTypeSandbox {
+			return pauseContainerImage, nil
+		}
+	}
+
+	return "", fmt.Errorf("container image name is not specified in annotations: %#v", annotations)
+}
+
 // AgentServiceService methods
 
 func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (res *types.Empty, err error) {
@@ -126,7 +152,30 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 			logger.Printf("        container_path:%s vm_path:%s type:%s", d.ContainerPath, d.VmPath, d.Type)
 		}
 	}
+	imageName, err := getImageName(req.OCI.Annotations)
+	if err != nil {
+		logger.Printf("CreateContainer: image name is not available in CreateContainerRequest: %v", err)
+	} else {
+		logger.Printf("CreateContainer: calling PullImage for %q before CreateContainer", imageName)
 
+		pullImageReq := &pb.PullImageRequest{
+			Image:       imageName,
+			ContainerId: req.ContainerId,
+		}
+
+		var pullImageRes *pb.PullImageResponse
+		var pullImageErr error
+
+		s.redirect(ctx, func(c *client) {
+			pullImageRes, pullImageErr = c.PullImage(ctx, pullImageReq)
+		})
+
+		if pullImageErr != nil {
+			logger.Printf("CreateContainer: failed to call PullImage, probably because the image has already been pulled. ignored: %v", pullImageErr)
+		} else {
+			logger.Printf("CreateContainer: successfully pulled image %q", pullImageRes.ImageRef)
+		}
+	}
 	s.redirect(ctx, func(c *client) {
 		res, err = c.CreateContainer(ctx, req)
 	})
