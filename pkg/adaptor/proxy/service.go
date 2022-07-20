@@ -111,19 +111,19 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 	if len(req.OCI.Mounts) > 0 {
 		logger.Print("    mounts:")
 		for _, m := range req.OCI.Mounts {
-			logger.Printf("         destination:%s source:%s type:%s", m.Destination, m.Source, m.Type)
+			logger.Printf("        destination:%s source:%s type:%s", m.Destination, m.Source, m.Type)
 		}
 	}
 	if len(req.Storages) > 0 {
 		logger.Print("    storages:")
 		for _, s := range req.Storages {
-			logger.Printf("         mount_point:%s source:%s fstype:%s driver:%s", s.MountPoint, s.Source, s.Fstype, s.Driver)
+			logger.Printf("        mount_point:%s source:%s fstype:%s driver:%s", s.MountPoint, s.Source, s.Fstype, s.Driver)
 		}
 	}
 	if len(req.Devices) > 0 {
 		logger.Print("    devices:")
 		for _, d := range req.Devices {
-			logger.Printf("         container_path:%s vm_path:%s type:%s", d.ContainerPath, d.VmPath, d.Type)
+			logger.Printf("        container_path:%s vm_path:%s type:%s", d.ContainerPath, d.VmPath, d.Type)
 		}
 	}
 
@@ -331,17 +331,18 @@ func (s *proxyService) CreateSandbox(ctx context.Context, req *pb.CreateSandboxR
 	if len(req.Dns) > 0 {
 		logger.Print("    dns:")
 		for _, d := range req.Dns {
-			logger.Printf("         %s", d)
+			logger.Printf("        %s", d)
 		}
 
-		logger.Print("    Eliminated the DNS setting above from CreateSandboxRequest to stop updating /etc/resolv.conf on the peer pod VM")
-		logger.Print("    See https://github.com/confidential-containers/cloud-api-adaptor/issues/98 for the details.")
+		logger.Print("      Eliminated the DNS setting above from CreateSandboxRequest to stop updating /etc/resolv.conf on the peer pod VM")
+		logger.Print("      See https://github.com/confidential-containers/cloud-api-adaptor/issues/98 for the details.")
+		logger.Println()
 		req.Dns = nil
 	}
 	if len(req.Storages) > 0 {
 		logger.Print("    storages:")
 		for _, s := range req.Storages {
-			logger.Printf("         mountpoint:%s source:%s fstype:%s driver:%s", s.MountPoint, s.Source, s.Fstype, s.Driver)
+			logger.Printf("        mountpoint:%s source:%s fstype:%s driver:%s", s.MountPoint, s.Source, s.Fstype, s.Driver)
 		}
 	}
 
