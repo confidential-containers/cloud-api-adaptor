@@ -178,7 +178,7 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 		var addr string
 		addrTail := v.num
 		switch {
-		case addrTail >= 2 && addrTail < 10:
+		case addrTail >= 0 && addrTail < 10:
 			addr = "02:00:AA:AA:AA:0" + strconv.Itoa(int(addrTail))
 		case addrTail >= 10 && addrTail < 100:
 			addr = "02:00:AA:AA:AA:" + strconv.Itoa(int(addrTail))

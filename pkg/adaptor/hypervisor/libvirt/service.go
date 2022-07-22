@@ -170,8 +170,9 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
+	vNum := uint8(daemonConfig.PodNetwork.Index)
 	vmName := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
-	vm := &vmConfig{name: vmName, userData: userData}
+	vm := &vmConfig{name: vmName, num: vNum, userData: userData}
 	result, err := CreateInstance(context.TODO(), s.libvirtClient, vm)
 	if err != nil {
 		logger.Printf("failed to create an instance : %v", err)
