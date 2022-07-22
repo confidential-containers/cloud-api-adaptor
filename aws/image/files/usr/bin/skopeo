@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# Copyright Confidential Containers Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+# This script is a wrapper for the skopeo command.
+#
+# skopeo is invoked from the kata-agent process, which runs as a systemd service defined
+# in /etc/systemd/system/kata-agent.service. This systemd service launches kata-agent in 
+# a newly created network namespace called "netns".  This network namespace is connected to
+# Kubernetes pod network, not host network of the pod VM. The skopeo command is used to 
+# pull images from remote container registries, and requires network access when pulling
+# images. When network accesses to remote registries are restricted by some mechanisms such 
+# as iptables, the skopeo command fails to pull images, and kata-agent fails to create
+# containers.
+#
+# To work around this issue, this wrapper script launches the skopeo command in the the network
+# namespace of the process with PID 1, which is usually the systemd process.
+#
+# TODO: If kata-agent has a mechanism to create a new network namespace in addition to other
+# network namespace such as mount and PID namespaces, we can remote this wrapper script by using
+# that mechanism.
+
+exec nsenter --target 1 --net /usr/local/bin/skopeo.bin "$@"
