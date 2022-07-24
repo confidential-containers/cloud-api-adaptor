@@ -15,6 +15,7 @@ jobs:
         provider:
           # Please keep this list in alphabetical order.
           - aws
+          - azure
           - ibmcloud
           - libvirt
         runner:
