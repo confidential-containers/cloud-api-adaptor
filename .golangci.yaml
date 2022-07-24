@@ -190,7 +190,7 @@ linters-settings:
   staticcheck:
     # Select the Go version to target.
     # Default: 1.13
-    go: "1.16"
+    go: "1.18"
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
 
@@ -274,7 +274,7 @@ issues:
   # To list all excluded by default patterns execute `golangci-lint run --help`
   #
   # Default: []
-  exclude: 
+  exclude:
     - 'declaration of "(err|ctx)" shadows declaration at'
 
   # Excluding configuration per-path, per-linter, per-text and per-source
