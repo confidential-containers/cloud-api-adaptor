@@ -236,6 +236,17 @@ func (s *hypervisorService) getSandbox(id string) (*sandbox, error) {
 	return s.sandboxes[sid], nil
 }
 
+func (s *hypervisorService) deleteSandbox(id string) error {
+	sid := sandboxID(id)
+	if id == "" {
+		return errors.New("empty sandbox id")
+	}
+	s.Lock()
+	defer s.Unlock()
+	delete(s.sandboxes, sid)
+	return nil
+}
+
 func getIPs(instance *vmConfig) ([]net.IP, error) {
 
 	return instance.ips, nil
@@ -270,6 +281,9 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 	if err := s.workerNode.Teardown(sandbox.netNSPath, sandbox.podNetworkConfig); err != nil {
 		return nil, fmt.Errorf("failed to tear down netns %s: %w", sandbox.netNSPath, err)
 	}
-
+	err = s.deleteSandbox(req.Id)
+	if err != nil {
+		return nil, err
+	}
 	return &pb.StopVMResponse{}, nil
 }
