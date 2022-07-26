@@ -26,7 +26,7 @@ spec:
         securityContext:
           capabilities:
             add: ["NET_ADMIN", "SYS_ADMIN"]
-        image: quay.io/snir/cloud-api-adaptor:latest
+        image: quay.io/confidential-containers/cloud-api-adaptor:latest
         envFrom:
         - configMapRef:
             name: peer-pods-config
