@@ -1,1 +1,8 @@
 ./install/runtime-payload/bin/*
+
+# Binaries
+agent-protocol-forwarder
+cloud-api-adaptor
+
+# IDEs
+.vscode
