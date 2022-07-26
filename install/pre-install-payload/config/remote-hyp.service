@@ -1,0 +1,12 @@
+[Unit]
+Description=Run cloud-api-adaptor after network becomes reachable
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+EnvironmentFile=-/run/hyp.env
+ExecStart=/opt/confidential-containers/scripts/run-hyp.sh
+TimeoutStartSec=0
+
+[Install]
+WantedBy=default.target

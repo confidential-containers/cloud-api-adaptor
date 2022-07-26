@@ -1,0 +1,2 @@
+build: 
+	hack/build.sh
