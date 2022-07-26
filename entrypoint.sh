@@ -2,7 +2,15 @@
 
 CLOUD_PROVIDER=${1:-$CLOUD_PROVIDER}
 
+test_vars() {
+        for i in $@; do
+                [ -z ${!i} ] && echo "\$$i is NOT set" && EXT=1
+        done
+        [[ -n $EXT ]] && exit 1
+}
+
 aws() {
+test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
 set -x
 cloud-api-adaptor aws \
 	-aws-access-key-id ${AWS_ACCESS_KEY_ID} \
@@ -13,6 +21,7 @@ cloud-api-adaptor aws \
 }
 
 libvirt() {
+test_vars LIBVIRT_URI
 set -x
 cloud-api-adaptor-libvirt libvirt \
 	-uri ${LIBVIRT_URI} \
@@ -24,6 +33,8 @@ cloud-api-adaptor-libvirt libvirt \
 }
 
 ibmcloud() {
+test_vars IBMCLOUD_API_KEY SSH_KEY_ID IMAGE_ID VPC_PRIMARY_SUBNET_ID VPC_PRIMARY_SECURITY_GROUP_ID \
+	VPC_SECONDARY_SECURITY_SUBNET_ID VPC_SECONDARY_SECURITY_GROUP_ID VPC_ID
 set -x
 cloud-api-adaptor ibmcloud \
 	-api-key ${IBMCLOUD_API_KEY} \
@@ -40,13 +51,7 @@ cloud-api-adaptor ibmcloud \
 	-socket /run/peerpod/hypervisor.sock
 }
 
-if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
-	aws
-elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
-	libvirt
-elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then
-	ibmcloud
-else
+help_msg() {
 	cat <<EOF
 Usage:
 	CLOUD_PROVIDER=aws|libvirt|ibmcloud $0
@@ -55,4 +60,14 @@ or
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
 EOF
+}
+
+if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
+	aws
+elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
+	libvirt
+elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then
+	ibmcloud
+else
+	help_msg
 fi
