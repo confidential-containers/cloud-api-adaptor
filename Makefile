@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-.PHONY: all build check fmt vet clean
+.PHONY: all build check fmt vet clean image deploy delete
 ifndef CLOUD_PROVIDER
 $(error CLOUD_PROVIDER is not set)
 endif
@@ -23,6 +23,18 @@ ifeq ($(CLOUD_PROVIDER),libvirt)
 else
 	CGO_ENABLED=0 go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
 endif
+
+# Build and push docker image to $regestry
+image:
+	hack/build.sh
+
+# Deploy cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml
+deploy:
+	kubectl apply -f install/yamls/deploy.yaml
+	kubectl apply -k install/overlays/$(CLOUD_PROVIDER)
+
+delete:
+	kubectl delete -k install/overlays/$(CLOUD_PROVIDER)
 
 test:
 	# Note: sending stderr to stdout so that tools like go-junit-report can
