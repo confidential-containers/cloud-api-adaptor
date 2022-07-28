@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
@@ -49,7 +50,7 @@ type hypervisorService struct {
 }
 
 func newService(azureClient azcore.TokenCredential, config *Config, hypervisorConfig *hypervisor.Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
-	logger.Printf("service config %v", config)
+	logger.Printf("service config %+v", config)
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -192,6 +193,22 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
+	// require ssh key for authentication on linux
+	sshPublicKeyPath := os.ExpandEnv(s.serviceConfig.SSHKeyPath)
+	var sshBytes []byte
+	if _, err := os.Stat(sshPublicKeyPath); err == nil {
+		sshBytes, err = ioutil.ReadFile(sshPublicKeyPath)
+		if err != nil {
+			err = fmt.Errorf("reading ssh public key file: %w", err)
+			logger.Printf("%v", err)
+			return nil, err
+		}
+	} else {
+		err = fmt.Errorf("ssh public key: %w", err)
+		logger.Printf("%v", err)
+		return nil, err
+	}
+
 	vmParameters := armcompute.VirtualMachine{
 		Location: to.Ptr(s.serviceConfig.Region),
 		Properties: &armcompute.VirtualMachineProperties{
@@ -220,7 +237,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 					SSH: &armcompute.SSHConfiguration{
 						PublicKeys: []*armcompute.SSHPublicKey{{
 							Path:    to.Ptr(fmt.Sprintf("/home/%s/.ssh/authorized_keys", DefaultUserName)),
-							KeyData: to.Ptr("aaaaaa"),
+							KeyData: to.Ptr(string(sshBytes)),
 						}},
 					},
 				},
