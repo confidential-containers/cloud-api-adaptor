@@ -1,0 +1,25 @@
+bases:
+- ../../yamls
+nameSuffix: -libvirt
+
+images:
+- name: kustomize.this/cloud-api-adaptor/image:url
+  newName: quay.io/confidential-containers/cloud-api-adaptor-libvirt # change image if needed
+  newTag: latest
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="libvirt"
+  - LIBVIRT_URI="qemu+ssh://root@192.168.122.1/system" #set
+  - LIBVIRT_NET="default" # set
+  - LIBVIRT_POOL="default" # set
+
+secretGenerator:
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  literals:
+
+patchesStrategicMerge:
+  #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
