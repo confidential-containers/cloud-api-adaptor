@@ -1,0 +1,26 @@
+bases:
+- ../../yamls
+nameSuffix: -aws
+
+images:
+- name: kustomize.this/cloud-api-adaptor/image:url
+  newName: quay.io/confidential-containers/cloud-api-adaptor-aws # change image if needed
+  newTag: latest
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="aws"
+  - PODVM_LAUNCHTEMPLATE_NAME="kata"
+
+secretGenerator:
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  literals:
+  - AWS_ACCESS_KEY_ID="" # set
+  - AWS_SECRET_ACCESS_KEY="" # set
+  - AWS_REGION="" #set
+
+patchesStrategicMerge:
+  #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)

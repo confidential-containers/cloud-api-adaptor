@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-api-adaptor-deployment
+  namespace: confidential-containers-system
+  labels:
+    app: cloud-api-adaptor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloud-api-adaptor
+  template:
+    metadata:
+      labels:
+        app: cloud-api-adaptor
+    spec:
+      hostNetwork: true
+      containers:
+      - name: cloud-api-adaptor-con
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN", "SYS_ADMIN"]
+        image: kustomize.this/cloud-api-adaptor/image:url
+        imagePullPolicy: Always
+        envFrom:
+        - secretRef:
+            name: peer-pods-secret
+        - configMapRef:
+            name: peer-pods-cm
+        command: ["/usr/local/bin/entrypoint.sh"]
+        volumeMounts:
+        - mountPath: /run/peerpod
+          name: pods-dir
+        - mountPath: /run/netns
+          mountPropagation: HostToContainer
+          name: netns
+      volumes:
+      - name: pods-dir # drop?
+        hostPath:
+          path: /run/peerpod
+      - name: netns
+        #readOnly: true
+        hostPath:
+         path: /run/netns
+---
+apiVersion: confidentialcontainers.org/v1beta1
+kind: CcRuntime
+metadata:
+  name: ccruntime-sample
+  namespace: confidential-containers-system
+spec:
+  # Add fields here
+  runtimeName: kata
+  ccNodeSelector:
+    matchLabels:
+      node-role.kubernetes.io/worker: ""
+  config:
+    installType: bundle
+    payloadImage: quay.io/confidential-containers/peer-pods-runtime-payload:2022072707271658906867
+    installDoneLabel:
+      katacontainers.io/kata-runtime: "true"
+    uninstallDoneLabel:
+      katacontainers.io/kata-runtime: "cleanup"
+    installerVolumeMounts:
+      - mountPath: /etc/containerd/
+        name: containerd-conf
+      - mountPath: /opt/confidential-containers/
+        name: kata-artifacts
+      - mountPath: /var/run/dbus
+        name: dbus
+      - mountPath: /run/systemd
+        name: systemd
+      - mountPath: /usr/local/bin/
+        name: local-bin
+    installerVolumes:
+      - hostPath:
+          path: /etc/containerd/
+          type: ""
+        name: containerd-conf
+      - hostPath:
+          path: /opt/confidential-containers/
+          type: DirectoryOrCreate
+        name: kata-artifacts
+      - hostPath:
+          path: /var/run/dbus
+          type: ""
+        name: dbus
+      - hostPath:
+          path: /run/systemd
+          type: ""
+        name: systemd
+      - hostPath:
+          path: /usr/local/bin/
+          type: ""
+        name: local-bin
+    installCmd: ["/opt/kata-artifacts/scripts/kata-deploy.sh", "install"]
+    uninstallCmd: ["/opt/kata-artifacts/scripts/kata-deploy.sh", "cleanup"]
+    cleanupCmd: ["/opt/kata-artifacts/scripts/kata-deploy.sh", "reset"]
+    environmentVariables:
+      - name: NODE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: spec.nodeName
+      - name: "CONFIGURE_CC"
+        value: "yes"
