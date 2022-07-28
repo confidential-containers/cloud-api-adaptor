@@ -15,4 +15,5 @@ type Config struct {
 	SecurityGroupId   string
 	Size              string
 	ImageId           string
+	SSHKeyPath        string
 }

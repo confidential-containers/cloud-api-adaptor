@@ -77,6 +77,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&azurecfg.Size, "instance-size", "", "Instance size")
 			flags.StringVar(&azurecfg.ImageId, "imageid", "", "Image Id")
 			flags.StringVar(&azurecfg.SubscriptionId, "subscriptionid", "", "Subscription ID")
+			flags.StringVar(&azurecfg.SSHKeyPath, "ssh-key-path", "$HOME/.ssh/id_rsa.pub", "Path to SSH public key")
 			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
 			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
 			flags.StringVar(&hypcfg.HypProvider, "provider", "azure", "Hypervisor provider")
