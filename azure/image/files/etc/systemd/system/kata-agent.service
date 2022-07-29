@@ -1,0 +1,15 @@
+[Unit]
+Description=Kata Agent
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/kata-agent
+ExecStartPre=-umount /sys/fs/cgroup/misc
+ExecStartPre=ip netns add podns
+ExecStartPre=ip netns exec podns ip link set lo up
+ExecStopPost=ip netns delete podns
+Environment="KATA_AGENT_SERVER_ADDR=unix:///run/kata-containers/agent.sock"
+SyslogIdentifier=kata-agent
+
+[Install]
+WantedBy=multi-user.target
