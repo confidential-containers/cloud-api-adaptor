@@ -195,6 +195,8 @@ chroot "$src_mnt" bash -c 'rm -rf /var/lib/apt/lists/*'
 
 cp -a "$files_dir"/* "$src_mnt"
 
+mkdir -p "$src_mnt/var/lib/kubelet"
+
 umount "$src_mnt/run"
 umount "$src_mnt/dev/pts"
 umount "$src_mnt/dev"
