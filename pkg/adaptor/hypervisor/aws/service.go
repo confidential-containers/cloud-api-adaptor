@@ -187,7 +187,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		UserData: &userDataEnc,
 	}
 
-	result, err := CreateInstance(context.TODO(), s.ec2Client, input)
+	result, err := CreateInstance(ctx, s.ec2Client, input)
 	if err != nil {
 		return nil, fmt.Errorf("Creating instance (%v) returned error: %s", result, err)
 	}
@@ -207,7 +207,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		},
 	}
 
-	_, err = MakeTags(context.TODO(), s.ec2Client, tagInput)
+	_, err = MakeTags(ctx, s.ec2Client, tagInput)
 	if err != nil {
 		logger.Printf("Adding tags to the instance failed with error: %s", err)
 	}
@@ -240,6 +240,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	select {
 	case <-ctx.Done():
+		_ = sandbox.agentProxy.Shutdown()
 		return nil, ctx.Err()
 	case err := <-errCh:
 		return nil, err
@@ -300,7 +301,7 @@ func getIPs(instance types.Instance) ([]net.IP, error) {
 	return podNodeIPs, nil
 }
 
-func (s *hypervisorService) deleteInstance(id string) error {
+func (s *hypervisorService) deleteInstance(ctx context.Context, id string) error {
 
 	terminateInput := &ec2.TerminateInstancesInput{
 		InstanceIds: []string{
@@ -308,7 +309,7 @@ func (s *hypervisorService) deleteInstance(id string) error {
 		},
 	}
 
-	resp, err := DeleteInstance(context.TODO(), s.ec2Client, terminateInput)
+	resp, err := DeleteInstance(ctx, s.ec2Client, terminateInput)
 
 	if err != nil {
 		logger.Printf("failed to delete an instance: %v and the response is %v", err, resp)
@@ -328,7 +329,7 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 		logger.Printf("failed to stop agent proxy: %v", err)
 	}
 
-	if err := s.deleteInstance(sandbox.vsi); err != nil {
+	if err := s.deleteInstance(ctx, sandbox.vsi); err != nil {
 		return nil, err
 	}
 
