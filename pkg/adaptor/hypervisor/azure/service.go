@@ -142,7 +142,6 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 }
 
 func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest) (*pb.StartVMResponse, error) {
-
 	sandbox, err := s.getSandbox(req.Id)
 	if err != nil {
 		return nil, err
@@ -186,8 +185,10 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 	nicName := fmt.Sprintf("%s-net", vmName)
 
 	// Get NIC using subnet and allow ports on the ssh group
-	err = s.createNetworkInterface(ctx, nicName)
+	vmNIC, err := s.createNetworkInterface(ctx, nicName)
 	if err != nil {
+		err = fmt.Errorf("creating VM network interface: %w", err)
+		logger.Printf("%v", err)
 		return nil, err
 	}
 
@@ -225,28 +226,8 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 				},
 			},
 			NetworkProfile: &armcompute.NetworkProfile{
-				NetworkInterfaceConfigurations: []*armcompute.VirtualMachineNetworkInterfaceConfiguration{
-					{
-						Name: to.Ptr(nicName),
-						Properties: &armcompute.VirtualMachineNetworkInterfaceConfigurationProperties{
-							IPConfigurations: []*armcompute.VirtualMachineNetworkInterfaceIPConfiguration{
-								{
-									Name: to.Ptr(nicName + "-conf"),
-									Properties: &armcompute.VirtualMachineNetworkInterfaceIPConfigurationProperties{
-										Primary: to.Ptr(true),
-										Subnet: &armcompute.SubResource{
-											ID: to.Ptr(s.serviceConfig.SubnetId),
-										},
-									},
-								},
-							},
-							Primary:      to.Ptr(true),
-							DeleteOption: to.Ptr(armcompute.DeleteOptionsDelete),
-							NetworkSecurityGroup: &armcompute.SubResource{
-								ID: to.Ptr(s.serviceConfig.SecurityGroupId),
-							},
-						},
-					},
+				NetworkInterfaces: []*armcompute.NetworkInterfaceReference{
+					{ID: vmNIC.ID},
 				},
 			},
 		},
@@ -357,6 +338,41 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 	return &pb.StopVMResponse{}, nil
 }
 
-func (s *hypervisorService) createNetworkInterface(ctx context.Context, nicName string) error {
-	return nil
+func (s *hypervisorService) createNetworkInterface(ctx context.Context, nicName string) (*armnetwork.Interface, error) {
+	nicClient, err := armnetwork.NewInterfacesClient(s.serviceConfig.SubscriptionId, s.azureClient, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating network interfaces client: %w", err)
+	}
+
+	parameters := armnetwork.Interface{
+		Location: to.Ptr(s.serviceConfig.Region),
+		Properties: &armnetwork.InterfacePropertiesFormat{
+			IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
+				{
+					Name: to.Ptr(fmt.Sprintf("%s-ipConfig", nicName)),
+					Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
+						PrivateIPAllocationMethod: to.Ptr(armnetwork.IPAllocationMethodDynamic),
+						Subnet: &armnetwork.Subnet{
+							ID: to.Ptr(s.serviceConfig.SubnetId),
+						},
+					},
+				},
+			},
+			NetworkSecurityGroup: &armnetwork.SecurityGroup{
+				ID: to.Ptr(s.serviceConfig.SecurityGroupId),
+			},
+		},
+	}
+
+	pollerResponse, err := nicClient.BeginCreateOrUpdate(ctx, s.serviceConfig.ResourceGroupName, nicName, parameters, nil)
+	if err != nil {
+		return nil, fmt.Errorf("beginning creation or update of network interface: %w", err)
+	}
+
+	resp, err := pollerResponse.PollUntilDone(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("polling network interface creation: %w", err)
+	}
+
+	return &resp.Interface, nil
 }
