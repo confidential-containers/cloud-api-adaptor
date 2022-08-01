@@ -5,8 +5,11 @@ package proxy
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/containerd/ttrpc"
@@ -103,10 +106,35 @@ func (s *proxyService) redirect(ctx context.Context, fn func(c *client)) {
 // TODO: parameterize the pause container image name
 const pauseContainerImage = "k8s.gcr.io/pause:3.7"
 
+func getImageFromDigest(digest string) (string, error) {
+	cmd := exec.Command("bash", "-c", "/usr/local/bin/crictl inspecti "+digest+" | /usr/bin/jq '.status.repoTags'")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+
+	var arr []string
+	err = json.Unmarshal(out, &arr)
+	if err != nil {
+		return "", err
+	}
+	if len(arr) == 0 {
+		return "", fmt.Errorf("did not get imageName from digest: %s", digest)
+	}
+	return arr[0], nil
+}
+
 func getImageName(annotations map[string]string) (string, error) {
 
 	for _, a := range []string{cri.ImageName, crio.ImageName} {
 		if image, ok := annotations[a]; ok {
+			if strings.HasPrefix(image, "sha256:") {
+				image, err := getImageFromDigest(image)
+				if err != nil {
+					return image, err
+				}
+				return image, nil
+			}
 			return image, nil
 		}
 	}
