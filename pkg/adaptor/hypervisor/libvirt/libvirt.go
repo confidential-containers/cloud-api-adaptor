@@ -174,23 +174,6 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 		return nil, fmt.Errorf("Error retrieving volume path: %s", err)
 	}
 
-	macAddr := func() string {
-		var addr string
-		addrTail := v.num
-		switch {
-		case addrTail >= 2 && addrTail < 10:
-			addr = "02:00:AA:AA:AA:0" + strconv.Itoa(int(addrTail))
-		case addrTail >= 10 && addrTail < 100:
-			addr = "02:00:AA:AA:AA:" + strconv.Itoa(int(addrTail))
-		case addrTail >= 100 && addrTail < 200:
-			addrTail = addrTail - 100
-			addr = "02:00:AA:AA:AB:" + strconv.Itoa(int(addrTail))
-		case addrTail >= 200 && addrTail < 255:
-			addrTail = addrTail - 200
-			addr = "02:00:AA:AA:AC:" + strconv.Itoa(int(addrTail))
-		}
-		return addr
-	}
 
 	// Gen Domain XML.
 	var diskControllerAddr uint = 0
@@ -243,7 +226,6 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 			// Network Interfaces.
 			Interfaces: []libvirtxml.DomainInterface{
 				{
-					MAC:    &libvirtxml.DomainInterfaceMAC{Address: macAddr()},
 					Source: &libvirtxml.DomainInterfaceSource{Network: &libvirtxml.DomainInterfaceSourceNetwork{Network: libvirtClient.networkName}},
 					Model:  &libvirtxml.DomainInterfaceModel{Type: "virtio"},
 				},
