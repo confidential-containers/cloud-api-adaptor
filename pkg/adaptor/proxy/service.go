@@ -7,15 +7,17 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/containerd/ttrpc"
 	"github.com/gogo/protobuf/types"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
-	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 
 	cri "github.com/containerd/containerd/pkg/cri/annotations"
 	crio "github.com/containers/podman/v4/pkg/annotations"
+	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
+	criapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 )
 
 const (
@@ -44,10 +46,13 @@ type proxyService struct {
 	agentClient   *client
 	maxRetries    int
 	retryInterval time.Duration
+	criClient     *criClient
 }
 
-func newProxyService() *proxyService {
+func newProxyService(criClient *criClient) *proxyService {
+
 	return &proxyService{
+		criClient:     criClient,
 		maxRetries:    defaultMaxRetries,
 		retryInterval: defaultRetryInterval,
 	}
@@ -98,6 +103,27 @@ func (s *proxyService) connect(ctx context.Context, address string) error {
 func (s *proxyService) redirect(ctx context.Context, fn func(c *client)) {
 
 	fn(s.agentClient)
+}
+
+func (s *proxyService) getImageFromDigest(ctx context.Context, digest string) (string, error) {
+	if s.criClient == nil {
+		return "", fmt.Errorf("getImageFromDigest: criClient is nil.")
+	}
+
+	req := &criapi.ListImagesRequest{}
+	resp, err := s.criClient.ImageServiceClient.ListImages(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	images := resp.GetImages()
+	for _, img := range images {
+		logger.Printf("imageTag: %s, image digest: %s", img.RepoTags[0], img.Id)
+		if img.Id == digest {
+			return img.RepoTags[0], nil
+		}
+	}
+	return "", fmt.Errorf("Did not find imageTag from image digest %s", digest)
 }
 
 // TODO: parameterize the pause container image name
@@ -156,6 +182,16 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 	if err != nil {
 		logger.Printf("CreateContainer: image name is not available in CreateContainerRequest: %v", err)
 	} else {
+		// Get the imageName from digest
+		if strings.HasPrefix(imageName, "sha256:") {
+			digest := imageName
+			logger.Printf("CreateContainer: get imageName from digest %q", digest)
+			imageName, err = s.getImageFromDigest(ctx, digest)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		logger.Printf("CreateContainer: calling PullImage for %q before CreateContainer", imageName)
 
 		pullImageReq := &pb.PullImageRequest{

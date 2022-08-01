@@ -16,7 +16,8 @@ const (
 )
 
 type Config struct {
-	SocketPath  string
-	PodsDir     string
-	HypProvider string
+	SocketPath    string
+	CriSocketPath string
+	PodsDir       string
+	HypProvider   string
 }

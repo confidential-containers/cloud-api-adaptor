@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
@@ -30,17 +31,18 @@ const (
 )
 
 type hypervisorService struct {
-	libvirtClient *libvirtClient
-	serviceConfig *Config
-	sandboxes     map[sandboxID]*sandbox
-	podsDir       string
-	daemonPort    string
-	nodeName      string
-	workerNode    podnetwork.WorkerNode
+	libvirtClient    *libvirtClient
+	serviceConfig    *Config
+	hypervisorConfig *hypervisor.Config
+	sandboxes        map[sandboxID]*sandbox
+	podsDir          string
+	daemonPort       string
+	nodeName         string
+	workerNode       podnetwork.WorkerNode
 	sync.Mutex
 }
 
-func newService(libvirtClient *libvirtClient, config *Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
+func newService(libvirtClient *libvirtClient, config *Config, hypervisorConfig *hypervisor.Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
 	logger.Printf("service config %v", config)
 
 	hostname, err := os.Hostname()
@@ -54,13 +56,14 @@ func newService(libvirtClient *libvirtClient, config *Config, workerNode podnetw
 	}
 
 	return &hypervisorService{
-		libvirtClient: libvirtClient,
-		serviceConfig: config,
-		sandboxes:     map[sandboxID]*sandbox{},
-		podsDir:       podsDir,
-		daemonPort:    daemonPort,
-		nodeName:      hostname,
-		workerNode:    workerNode,
+		libvirtClient:    libvirtClient,
+		serviceConfig:    config,
+		hypervisorConfig: hypervisorConfig,
+		sandboxes:        map[sandboxID]*sandbox{},
+		podsDir:          podsDir,
+		daemonPort:       daemonPort,
+		nodeName:         hostname,
+		workerNode:       workerNode,
 	}
 }
 
@@ -116,7 +119,7 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
 	}
 
-	agentProxy := proxy.NewAgentProxy(socketPath)
+	agentProxy := proxy.NewAgentProxy(socketPath, s.hypervisorConfig.CriSocketPath)
 
 	sandbox := &sandbox{
 		id:               sid,

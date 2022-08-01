@@ -23,6 +23,7 @@ require (
 	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150
 	google.golang.org/grpc v1.43.0
 	gopkg.in/yaml.v2 v2.4.0
+	k8s.io/cri-api v0.23.1
 	libvirt.org/go/libvirt v1.8002.0
 	libvirt.org/go/libvirtxml v1.8002.0
 )
