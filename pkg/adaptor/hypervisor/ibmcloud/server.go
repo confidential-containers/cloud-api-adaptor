@@ -53,7 +53,7 @@ func NewServer(cfg hypervisor.Config, cloudCfg Config, workerNode podnetwork.Wor
 
 	s := &server{
 		socketPath: cfg.SocketPath,
-		service:    newService(vpcV1, &cloudCfg, workerNode, cfg.PodsDir, daemonPort),
+		service:    newService(vpcV1, &cloudCfg, &cfg, workerNode, cfg.PodsDir, daemonPort),
 		workerNode: workerNode,
 		readyCh:    make(chan struct{}),
 		stopCh:     make(chan struct{}),

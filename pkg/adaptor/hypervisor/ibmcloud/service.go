@@ -18,6 +18,7 @@ import (
 
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
@@ -38,17 +39,18 @@ const (
 )
 
 type hypervisorService struct {
-	vpcV1         VpcV1
-	serviceConfig *Config
-	sandboxes     map[sandboxID]*sandbox
-	podsDir       string
-	daemonPort    string
-	nodeName      string
-	workerNode    podnetwork.WorkerNode
+	vpcV1            VpcV1
+	serviceConfig    *Config
+	hypervisorConfig *hypervisor.Config
+	sandboxes        map[sandboxID]*sandbox
+	podsDir          string
+	daemonPort       string
+	nodeName         string
+	workerNode       podnetwork.WorkerNode
 	sync.Mutex
 }
 
-func newService(vpcV1 VpcV1, config *Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
+func newService(vpcV1 VpcV1, config *Config, hypervisorConfig *hypervisor.Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
 
 	logger.Printf("service config %v", config)
 
@@ -63,13 +65,14 @@ func newService(vpcV1 VpcV1, config *Config, workerNode podnetwork.WorkerNode, p
 	}
 
 	return &hypervisorService{
-		vpcV1:         vpcV1,
-		serviceConfig: config,
-		sandboxes:     map[sandboxID]*sandbox{},
-		podsDir:       podsDir,
-		daemonPort:    daemonPort,
-		nodeName:      hostname,
-		workerNode:    workerNode,
+		vpcV1:            vpcV1,
+		serviceConfig:    config,
+		hypervisorConfig: hypervisorConfig,
+		sandboxes:        map[sandboxID]*sandbox{},
+		podsDir:          podsDir,
+		daemonPort:       daemonPort,
+		nodeName:         hostname,
+		workerNode:       workerNode,
 	}
 }
 
@@ -125,7 +128,7 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
 	}
 
-	agentProxy := proxy.NewAgentProxy(socketPath)
+	agentProxy := proxy.NewAgentProxy(socketPath, s.hypervisorConfig.CriSocketPath)
 
 	sandbox := &sandbox{
 		id:               sid,

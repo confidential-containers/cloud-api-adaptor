@@ -15,7 +15,11 @@ import (
 	"sync"
 
 	"github.com/containerd/ttrpc"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
+	criapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 )
 
 const (
@@ -24,6 +28,10 @@ const (
 
 var logger = log.New(log.Writer(), "[adaptor/proxy] ", log.LstdFlags|log.Lmsgprefix)
 
+type criClient struct {
+	criapi.ImageServiceClient
+}
+
 type AgentProxy interface {
 	Start(ctx context.Context, serverURL *url.URL) error
 	Ready() chan struct{}
@@ -31,19 +39,43 @@ type AgentProxy interface {
 }
 
 type agentProxy struct {
-	readyCh    chan struct{}
-	stopCh     chan struct{}
-	stopOnce   sync.Once
-	socketPath string
+	readyCh       chan struct{}
+	stopCh        chan struct{}
+	stopOnce      sync.Once
+	socketPath    string
+	criSocketPath string
 }
 
-func NewAgentProxy(socketPath string) AgentProxy {
+func NewAgentProxy(socketPath, criSocketPath string) AgentProxy {
 
 	return &agentProxy{
-		socketPath: socketPath,
-		readyCh:    make(chan struct{}),
-		stopCh:     make(chan struct{}),
+		socketPath:    socketPath,
+		criSocketPath: criSocketPath,
+		readyCh:       make(chan struct{}),
+		stopCh:        make(chan struct{}),
 	}
+}
+
+func initCriClient(ctx context.Context, target string) (*criClient, error) {
+	if target != "" {
+		conn, err := grpc.DialContext(ctx, target, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(),
+			grpc.WithContextDialer(func(ctx context.Context, target string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, "unix", target)
+			}),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		criClient := &criClient{
+			ImageServiceClient: criapi.NewImageServiceClient(conn),
+		}
+
+		logger.Printf("established cri uds connection to %s", target)
+		return criClient, nil
+	}
+
+	return nil, fmt.Errorf("cri runtime endpoint is not specified, it is used to get the image name from image digest.")
 }
 
 func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
@@ -64,7 +96,13 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 
 	close(p.readyCh)
 
-	proxyService := newProxyService()
+	criClient, err := initCriClient(ctx, p.criSocketPath)
+	if err != nil {
+		// cri client is optional currently, we ignore any errors here
+		logger.Printf("failed to init cri client, the err: %v", err)
+	}
+
+	proxyService := newProxyService(criClient)
 
 	if err := proxyService.connect(ctx, serverURL.Host); err != nil {
 		return err

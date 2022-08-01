@@ -45,7 +45,7 @@ func NewServer(cfg hypervisor.Config, cloudCfg Config, workerNode podnetwork.Wor
 	}
 	return &server{
 		socketPath: cfg.SocketPath,
-		service:    newService(libvirtClient, &cloudCfg, workerNode, cfg.PodsDir, daemonPort),
+		service:    newService(libvirtClient, &cloudCfg, &cfg, workerNode, cfg.PodsDir, daemonPort),
 		workerNode: workerNode,
 		readyCh:    make(chan struct{}),
 		stopCh:     make(chan struct{}),
