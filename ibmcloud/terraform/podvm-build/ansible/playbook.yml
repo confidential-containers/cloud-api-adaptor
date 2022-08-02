@@ -36,6 +36,7 @@
         IBMCLOUD_VPC_SUBNET_NAME: "{{ ibmcloud_vpc_subnet_name }}"
         IBMCLOUD_VPC_REGION: "{{ ibmcloud_region_name }}"
         IBMCLOUD_VPC_ZONE: "{{ ibmcloud_vpc_zone }}"
+        SKIP_VERIFY_CONSOLE: "{{ ibmcloud_skip_verify_console }}"
       shell:
         cmd: |
           . ~/.bashrc
