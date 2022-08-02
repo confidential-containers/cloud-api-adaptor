@@ -54,6 +54,11 @@ while ! ibmcloud is instance $id --output json | jq -e '.status == "running"' > 
     sleep 5
 done
 
+if [[ -n "${SKIP_VERIFY_CONSOLE:-}" ]]; then
+    echo "SKIP_VERIFY_CONSOLE is set. Skipping console check..."
+    exit 0
+fi
+
 echo "Watch console log..."
 
 python3 - "$id" <<'END'
