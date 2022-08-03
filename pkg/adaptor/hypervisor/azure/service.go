@@ -217,7 +217,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 			},
 			StorageProfile: &armcompute.StorageProfile{
 				ImageReference: &armcompute.ImageReference{
-					CommunityGalleryImageID: to.Ptr(s.serviceConfig.ImageId),
+					ID: to.Ptr(s.serviceConfig.ImageId),
 				},
 				OSDisk: &armcompute.OSDisk{
 					Name:         to.Ptr(diskName),
@@ -229,8 +229,9 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 				},
 			},
 			OSProfile: &armcompute.OSProfile{
-				ComputerName: to.Ptr(vmName),
-				CustomData:   to.Ptr(userDataEnc),
+				AdminUsername: to.Ptr(DefaultUserName),
+				ComputerName:  to.Ptr(vmName),
+				CustomData:    to.Ptr(userDataEnc),
 				LinuxConfiguration: &armcompute.LinuxConfiguration{
 					DisablePasswordAuthentication: to.Ptr(true),
 					//TBD: replace with a suitable mechanism to use precreated SSH key
@@ -250,24 +251,29 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		},
 	}
 
-	err = CreateInstance(context.TODO(), s.azureClient, &vmParameters)
+	vm, err := CreateInstance(context.TODO(), s, &vmParameters)
 	if err != nil {
-		return nil, fmt.Errorf("Creating instance returned error: %s", err)
+		err = fmt.Errorf("Creating instance returned error: %s", err)
+		logger.Printf("%v", err)
+		return nil, err
 	}
 
-	//Set vsi to instance id
-	sandbox.vsi = *vmParameters.ID
+	// Set vsi to instance id
+	sandbox.vsi = *vm.ID
 
-	logger.Printf("created an instance %s for sandbox %s", *vmParameters.Name, req.Id)
+	logger.Printf("created an instance %s for sandbox %s", *vm.Name, req.Id)
 
-	podNodeIPs, err := getIPs(vmParameters)
+	podNodeIPs, err := getIPs(vmNIC)
 	if err != nil {
-		logger.Printf("failed to get IPs for the instance : %v ", err)
+		err = fmt.Errorf("failed to get IPs for the instance : %w", err)
+		logger.Printf("%v", err)
 		return nil, err
 	}
 
 	if err := s.workerNode.Setup(sandbox.netNSPath, podNodeIPs, sandbox.podNetworkConfig); err != nil {
-		return nil, fmt.Errorf("failed to set up pod network tunnel on netns %s: %w", sandbox.netNSPath, err)
+		err = fmt.Errorf("failed to set up pod network tunnel on netns %s: %w", sandbox.netNSPath, err)
+		logger.Printf("%v", err)
+		return nil, err
 	}
 
 	serverURL := &url.URL{
@@ -275,6 +281,8 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		Host:   net.JoinHostPort(podNodeIPs[0].String(), s.daemonPort),
 		Path:   daemon.AgentURLPath,
 	}
+
+	logger.Printf("server URL running the agent: %v", serverURL)
 
 	errCh := make(chan error)
 	go func() {
@@ -317,7 +325,9 @@ func (s *hypervisorService) getSandbox(id string) (*sandbox, error) {
 func getIPs(nic *armnetwork.Interface) ([]net.IP, error) {
 	var podNodeIPs []net.IP
 
-	//Get VM IP
+	for _, ipc := range nic.Properties.IPConfigurations {
+		podNodeIPs = append(podNodeIPs, net.ParseIP(*ipc.Properties.PrivateIPAddress))
+	}
 
 	return podNodeIPs, nil
 }
