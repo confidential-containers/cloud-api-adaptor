@@ -14,12 +14,15 @@ function usage() {
 
 declare -a packages
 
+workdir=.
+
 while (( $# )); do
     case "$1" in
         --base)     base_img_path=$2 ;;
         --output)   dst_img_path=$2 ;;
         --root)     files_dir=$2 ;;
         --packages) IFS=', ' read -a packages <<< "$2" ;;
+        --workdir)  workdir=$2 ;;
         --help)     usage; exit 0 ;;
         *)          usage 1>&2; exit 1;;
     esac
@@ -31,8 +34,9 @@ if [[ -z "${base_img_path-}" || -z "${dst_img_path-}" || -z "${files_dir-}" ]]; 
     exit 1
 fi
 
-src_img_path=src.qcow2
-tmp_img_path=tmp.qcow2
+base_img_path=$(realpath "$base_img_path")
+src_img_path="$workdir/src.qcow2"
+tmp_img_path="$workdir/tmp.qcow2"
 
 src_nbd=/dev/nbd0
 tmp_nbd=/dev/nbd1
