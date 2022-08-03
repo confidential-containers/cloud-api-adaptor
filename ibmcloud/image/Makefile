@@ -59,9 +59,11 @@ push: $(IMAGE_FILE)
 verify: push
 	./verify.sh --image "$(IMAGE_NAME)"
 
+WORDIR = .
+
 $(IMAGE_FILE): $(UBUNTU_IMAGE_FILE) $(BINARIES) $(FILES)
 	rm -f "$(IMAGE_FILE)"
-	./build.sh  --root "$(FILES_DIR)" --packages "$(UBUNTU_PACKAGES)" --base "$(UBUNTU_IMAGE_FILE)" --output "$(IMAGE_FILE)"
+	./build.sh  --root "$(FILES_DIR)" --packages "$(UBUNTU_PACKAGES)" --base "$(UBUNTU_IMAGE_FILE)" --output "$(IMAGE_FILE)"  --workdir "$(WORKDIR)"
 
 $(AGENT_PROTOCOL_FORWARDER): force
 	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && $(MAKE) agent-protocol-forwarder
