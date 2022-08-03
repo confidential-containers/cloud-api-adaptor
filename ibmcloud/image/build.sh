@@ -186,7 +186,6 @@ case "$(uname -m)" in
         ;;
     *)
         echo -e "\nUpdating initramfs\n"
-        sed -i -r -e 's|^GRUB_CMDLINE_LINUX=""$|GRUB_CMDLINE_LINUX="nomodeset nofb vga=normal console=ttyS0"|' "$src_mnt/etc/default/grub"
         echo -e "virtio_pci\nvirtio_blk" >> "$src_mnt/etc/initramfs-tools/modules"
         chroot "$src_mnt" update-initramfs  -u
         ;;
@@ -217,6 +216,12 @@ mount "$dst_part" "$dst_mnt"
 tar_opts=(--numeric-owner --preserve-permissions --acl --selinux --xattrs --xattrs-include='*' --sparse)
 tar -cf - "${tar_opts[@]}" --sort=none -C "$src_mnt" . | tar -xf - "${tar_opts[@]}" --preserve-order  -C "$dst_mnt"
 
+umount "$src_mnt"
+
+mount -t sysfs sysfs "$dst_mnt/sys"
+mount -t proc proc "$dst_mnt/proc"
+mount --bind /dev "$dst_mnt/dev"
+
 case "$(uname -m)" in
     s390x)
         echo -e "\nExecuting zipl\n"
@@ -228,19 +233,27 @@ echo "targetblocksize=512"
 echo "targetoffset=$target_offset"
 END
         chmod 755 "$helper"
-
-        mount -t proc proc "$dst_mnt/proc"
-        mount --bind /dev "$dst_mnt/dev"
-
         chroot "$dst_mnt" zipl -V
-
-        umount "$dst_mnt/proc"
-        umount "$dst_mnt/dev"
         rm "$helper"
+        ;;
+    *)
+        echo -e "\nUpdating GRUB settings\n"
+        sed -i -r -e 's|^GRUB_CMDLINE_LINUX=|#\0"|' "$dst_mnt/etc/default/grub"
+        cat <<END >> "$dst_mnt/etc/default/grub"
+
+GRUB_CMDLINE_LINUX="nomodeset nofb vga=normal console=ttyS0"
+GRUB_DISABLE_LINUX_UUID=true
+GRUB_DISABLE_OS_PROBER=true
+GRUB_DEVICE="LABEL=cloudimg-rootfs"
+END
+        chroot "$dst_mnt" update-grub
         ;;
 esac
 
-umount "$src_mnt"
+umount "$dst_mnt/dev"
+umount "$dst_mnt/proc"
+umount "$dst_mnt/sys"
+
 umount "$dst_mnt"
 
 qemu-nbd --disconnect "$src_nbd"
