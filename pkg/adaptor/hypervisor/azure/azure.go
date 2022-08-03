@@ -34,7 +34,23 @@ func CreateInstance(ctx context.Context, s *hypervisorService, parameters *armco
 	return &resp.VirtualMachine, nil
 }
 
-func DeleteInstance(c context.Context, cred azcore.TokenCredential, id string) error {
+func DeleteInstance(ctx context.Context, s *hypervisorService, vmName string) error {
+	vmClient, err := armcompute.NewVirtualMachinesClient(s.serviceConfig.SubscriptionId, s.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating VM client: %w", err)
+	}
+
+	pollerResponse, err := vmClient.BeginDelete(ctx, s.serviceConfig.ResourceGroupName, vmName, nil)
+	if err != nil {
+		return fmt.Errorf("beginning VM deletion: %w", err)
+	}
+
+	if _, err = pollerResponse.PollUntilDone(ctx, nil); err != nil {
+		return fmt.Errorf("waiting for the VM deletion: %w", err)
+	}
+
+	logger.Printf("deleted VM successfully: %s", vmName)
+
 	return nil
 }
 

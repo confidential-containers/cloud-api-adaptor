@@ -83,6 +83,7 @@ type sandbox struct {
 	netNSPath        string
 	podDirPath       string
 	vsi              string
+	vmName           string
 	agentProxy       proxy.AgentProxy
 	podNetworkConfig *tunneler.Config
 }
@@ -260,6 +261,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	// Set vsi to instance id
 	sandbox.vsi = *vm.ID
+	sandbox.vmName = vmName
 
 	logger.Printf("created an instance %s for sandbox %s", *vm.Name, req.Id)
 
@@ -332,15 +334,30 @@ func getIPs(nic *armnetwork.Interface) ([]net.IP, error) {
 	return podNodeIPs, nil
 }
 
-func (s *hypervisorService) deleteInstance(ctx context.Context, id string) error {
+func (s *hypervisorService) deleteInstance(ctx context.Context, vmName string) error {
 
-	err := DeleteInstance(ctx, s.azureClient, id)
-
-	if err != nil {
-		logger.Printf("failed to delete an instance: %v", err)
+	if err := DeleteInstance(ctx, s, vmName); err != nil {
+		err = fmt.Errorf("failed to delete an instance: %w", err)
+		logger.Printf("%v", err)
 		return err
 	}
-	logger.Printf("deleted an instance %s", id)
+
+	logger.Printf("deleted an instance %s", vmName)
+
+	diskName := fmt.Sprintf("%s-disk", vmName)
+	if err := s.deleteDisk(ctx, diskName); err != nil {
+		err = fmt.Errorf("failed to delete disk: %w", err)
+		logger.Print(err)
+		return err
+	}
+
+	nicName := fmt.Sprintf("%s-net", vmName)
+	if err := s.deleteNetworkInterface(ctx, nicName); err != nil {
+		err = fmt.Errorf("failed to delete network interface: %w", err)
+		logger.Print(err)
+		return err
+	}
+
 	return nil
 }
 
@@ -354,7 +371,7 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 		logger.Printf("failed to stop agent proxy: %v", err)
 	}
 
-	if err := s.deleteInstance(ctx, sandbox.vsi); err != nil {
+	if err := s.deleteInstance(ctx, sandbox.vmName); err != nil {
 		return nil, err
 	}
 
@@ -402,4 +419,46 @@ func (s *hypervisorService) createNetworkInterface(ctx context.Context, nicName 
 	}
 
 	return &resp.Interface, nil
+}
+
+func (s *hypervisorService) deleteNetworkInterface(ctx context.Context, nicName string) error {
+	nicClient, err := armnetwork.NewInterfacesClient(s.serviceConfig.SubscriptionId, s.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating network interfaces client: %w", err)
+	}
+
+	pollerResponse, err := nicClient.BeginDelete(ctx, s.serviceConfig.ResourceGroupName, nicName, nil)
+	if err != nil {
+		return fmt.Errorf("beginning deletion of network interface: %w", err)
+	}
+
+	_, err = pollerResponse.PollUntilDone(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("polling network interface deletion: %w", err)
+	}
+
+	logger.Printf("deleted network interface successfully: %s", nicName)
+
+	return nil
+}
+
+func (s *hypervisorService) deleteDisk(ctx context.Context, diskName string) error {
+	diskClient, err := armcompute.NewDisksClient(s.serviceConfig.SubscriptionId, s.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating disk client: %w", err)
+	}
+
+	pollerResponse, err := diskClient.BeginDelete(ctx, s.serviceConfig.ResourceGroupName, diskName, nil)
+	if err != nil {
+		return fmt.Errorf("beginning disk deletion: %w", err)
+	}
+
+	_, err = pollerResponse.PollUntilDone(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("waiting for the disk deletion: %w", err)
+	}
+
+	logger.Printf("deleted disk successfully: %s", diskName)
+
+	return nil
 }
