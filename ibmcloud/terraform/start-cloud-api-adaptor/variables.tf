@@ -104,3 +104,8 @@ variable "ansible_dir" {
     description = "Subdirectory for Ansible playbook, inventory and vars files"
     default = "./ansible"
 }
+
+variable "cri_runtime_endpoint" {
+    description = "cri-runtime-endpoint for Ansible playbook, inventory and vars files"
+    default = "/run/containerd/containerd.sock"
+}

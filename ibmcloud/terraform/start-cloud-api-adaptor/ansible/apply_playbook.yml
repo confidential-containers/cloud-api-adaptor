@@ -35,5 +35,6 @@
               -primary-security-group-id "{{ ibmcloud_vpc_security_group_id }}" \
               -vpc-id "{{ ibmcloud_vpc_id }}" \
               -pods-dir /run/peerpod/pods \
+              -cri-runtime-endpoint "{{ ibmcloud_cri_runtime_endpoint }}" \
               -socket /run/peerpod/hypervisor.sock \
               > /var/log/cloud-api-adaptor.log 2>&1 &
