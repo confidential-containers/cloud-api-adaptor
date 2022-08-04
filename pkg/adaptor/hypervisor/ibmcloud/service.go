@@ -273,6 +273,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	select {
 	case <-ctx.Done():
+		_ = sandbox.agentProxy.Shutdown()
 		return nil, ctx.Err()
 	case err := <-errCh:
 		return nil, err
@@ -345,7 +346,7 @@ func getIPs(prototype *vpcv1.InstancePrototype, result *vpcv1.Instance) ([]net.I
 	return podNodeIPs, nil
 }
 
-func (s *hypervisorService) deleteInstance(id string) error {
+func (s *hypervisorService) deleteInstance(ctx context.Context, id string) error {
 	options := &vpcv1.DeleteInstanceOptions{}
 	options.SetID(id)
 	resp, err := s.vpcV1.DeleteInstance(options)
@@ -367,7 +368,7 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 		logger.Printf("failed to stop agent proxy: %v", err)
 	}
 
-	if err := s.deleteInstance(sandbox.vsi); err != nil {
+	if err := s.deleteInstance(ctx, sandbox.vsi); err != nil {
 		return nil, err
 	}
 
