@@ -131,12 +131,12 @@
 
 ### Building Runtime Payload Image
 
-    Set container registry and image name
+* Set container registry and image name
     ```
     export REGISTRY=<NAMESPACE>/<IMAGE_NAME>
     ```
 
-    Build the container image
+* Build the container image
     ```
     cd runtime-payload
     make binaries
@@ -146,14 +146,26 @@
 
 ### Building Pre-Install Payload Image
 
-    Set container registry and image name
+* Set container registry and image name
     ```
     export REGISTRY=<NAMESPACE>/<IMAGE_NAME>
     ```
 
-    Build the container image
+* Build the container image
     ```
     cd pre-install-payload
     make build
     ```
 
+## Build and install with cloud-api-adaptor running in a pod
+
+* set CLOUD_PROVIDER
+    ```
+    export CLOUD_PROVIDER=<aws|ibmcloud|libvirt>
+    ```
+
+* `make image` builds the container image and push it to `$registry`
+* `make deploy` deploys operator, runtime and cloud-api-adaptor pod in the configured cluster
+    * configure install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml with your own settings
+    * validate kubectl is available in your `$PATH` and `$KUBECONFIG` is set
+* `make delete` deletes the pod deployment from the configured cluster
