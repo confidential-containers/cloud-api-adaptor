@@ -175,7 +175,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	vmName := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
 	vm := &vmConfig{name: vmName, userData: userData}
-	result, err := CreateInstance(context.TODO(), s.libvirtClient, vm)
+	result, err := CreateInstance(ctx, s.libvirtClient, vm)
 	if err != nil {
 		logger.Printf("failed to create an instance : %v", err)
 		return nil, err
@@ -214,6 +214,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	select {
 	case <-ctx.Done():
+		_ = sandbox.agentProxy.Shutdown()
 		return nil, ctx.Err()
 	case err := <-errCh:
 		return nil, err

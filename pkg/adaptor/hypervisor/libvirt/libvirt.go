@@ -133,7 +133,7 @@ func uploadIso(isoFile string, isoVolName string, libvirtClient *libvirtClient) 
 
 }
 
-func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig) (result *createInstanceOutput, err error) {
+func CreateInstance(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig) (result *createInstanceOutput, err error) {
 
 	v.cpu = uint(2)
 	v.mem = uint(8)
@@ -290,7 +290,7 @@ func CreateInstance(c context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}, nil
 }
 
-func DeleteInstance(c context.Context, libvirtClient *libvirtClient, id string) (err error) {
+func DeleteInstance(ctx context.Context, libvirtClient *libvirtClient, id string) (err error) {
 
 	logger.Printf("Deleting instance (%s)", id)
 	idUint, _ := strconv.ParseUint(id, 10, 64)
