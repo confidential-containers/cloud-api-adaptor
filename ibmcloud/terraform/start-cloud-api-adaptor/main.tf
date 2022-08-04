@@ -99,6 +99,7 @@ ibmcloud_vpc_subnet_id: ${local.primary_subnet_id}
 ibmcloud_vpc_security_group_id: ${local.primary_security_group_id}
 ibmcloud_vpc_id: ${local.vpc_id}
 ibmcloud_resource_group_id: ${local.resource_group_id}
+ibmcloud_cri_runtime_endpoint: ${var.cri_runtime_endpoint}
 EOF
 }
 
