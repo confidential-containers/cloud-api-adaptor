@@ -20,7 +20,7 @@ jobs:
         runner:
           - ubuntu-latest
         go_version:
-          - 1.16
+          - 1.18
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v3
