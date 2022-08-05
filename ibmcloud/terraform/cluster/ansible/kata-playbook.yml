@@ -57,7 +57,8 @@
       shell: |
         set -o errexit -o pipefail
         arch="{{ ansible_architecture }}"
-        gover=$(curl -sL 'https://golang.org/VERSION?m=text')
+        # gover=$(curl -sL 'https://golang.org/VERSION?m=text')
+        gover=go1.18.5
         curl -sL "https://go.dev/dl/$gover.linux-${arch/x86_64/amd64}.tar.gz" | tar -xzf - -C /usr/local
 
         if ! grep -q '^PATH=/usr/local/go/bin:\$PATH$' /root/.bashrc; then
