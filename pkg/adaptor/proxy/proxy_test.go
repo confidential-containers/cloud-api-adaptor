@@ -9,7 +9,9 @@ import (
 	"net"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/containerd/ttrpc"
 	"github.com/gogo/protobuf/types"
@@ -56,6 +58,23 @@ func TestStartStop(t *testing.T) {
 		}
 	}()
 
+	agentServerErrCh := make(chan error)
+	go func() {
+		defer close(agentServerErrCh)
+
+		err := agentServer.Serve(context.Background(), agentListener)
+		if err != nil {
+			agentServerErrCh <- err
+			return
+		}
+	}()
+	defer func() {
+		err := agentServer.Shutdown(context.Background())
+		if err != nil {
+			t.Fatalf("expect no error, got %q", err)
+		}
+	}()
+
 	serverURL := &url.URL{
 		Scheme: "grpc",
 		Host:   agentListener.Addr().String(),
@@ -81,31 +100,28 @@ func TestStartStop(t *testing.T) {
 		}
 	}()
 
-	<-proxy.Ready()
-
-	agentServerErrCh := make(chan error)
-	go func() {
-		defer close(agentServerErrCh)
-
-		err := agentServer.Serve(context.Background(), agentListener)
-		if err != nil {
-			agentServerErrCh <- err
-			return
-		}
-	}()
-	defer func() {
-		err := agentServer.Shutdown(context.Background())
-		if err != nil {
-			t.Fatalf("expect no error, got %q", err)
-		}
-	}()
+	select {
+	case err := <-proxyErrCh:
+		t.Fatalf("expect no error, got %q", err)
+	case <-proxy.Ready():
+	}
 
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
 		t.Fatalf("expect no error, got %q", err)
 	}
 
-	client := newClient(conn)
+	ttrpcClient := ttrpc.NewClient(conn)
+
+	client := struct {
+		pb.AgentServiceService
+		pb.ImageService
+		pb.HealthService
+	}{
+		AgentServiceService: pb.NewAgentServiceClient(ttrpcClient),
+		ImageService:        pb.NewImageClient(ttrpcClient),
+		HealthService:       pb.NewHealthClient(ttrpcClient),
+	}
 
 	{
 		res, err := client.PullImage(context.Background(), &pb.PullImageRequest{Image: "abc", ContainerId: "123"})
@@ -133,6 +149,77 @@ func TestStartStop(t *testing.T) {
 	case err := <-proxyErrCh:
 		t.Fatalf("expect no error, got %q", err)
 	default:
+	}
+}
+
+func TestDialerSuccess(t *testing.T) {
+	p := &agentProxy{
+		maxRetries:    20,
+		retryInterval: 100 * time.Millisecond,
+	}
+
+	for {
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("expect no error, got %q", err)
+		}
+
+		address := listener.Addr().String()
+
+		if err := listener.Close(); err != nil {
+			t.Fatalf("expect no error, got %q", err)
+		}
+
+		listenerErrCh := make(chan error)
+		go func() {
+			defer close(listenerErrCh)
+
+			time.Sleep(250 * time.Millisecond)
+
+			var err error
+			// Open the same port
+			listener, err = net.Listen("tcp", address)
+			if err != nil {
+				listenerErrCh <- err
+			}
+		}()
+
+		conn, err := p.dial(context.Background(), address)
+		if err == nil {
+			listener.Close()
+			break
+		}
+		defer conn.Close()
+
+		if e := <-listenerErrCh; e != nil {
+			// A rare case occurs. Retry the test.
+			t.Logf("%v", e)
+			continue
+		}
+
+		listener.Close()
+		if err != nil {
+			t.Fatalf("expect no error, got %q", err)
+		}
+		break
+	}
+}
+
+func TestDialerFailure(t *testing.T) {
+	p := &agentProxy{
+		maxRetries:    5,
+		retryInterval: 100 * time.Millisecond,
+	}
+
+	address := "0.0.0.0:0"
+	conn, err := p.dial(context.Background(), address)
+	if err == nil {
+		conn.Close()
+		t.Fatal("expect error, got nil")
+	}
+
+	if e, a := "reaches max retry count", err.Error(); !strings.Contains(a, e) {
+		t.Fatalf("expect %q, got %q", e, a)
 	}
 }
 
