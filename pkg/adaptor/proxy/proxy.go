@@ -13,17 +13,20 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/containerd/ttrpc"
+	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	criapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 )
 
 const (
 	SocketName = "agent.ttrpc"
+
+	defaultMaxRetries    = 20
+	defaultRetryInterval = 10 * time.Second
 )
 
 var logger = log.New(log.Writer(), "[adaptor/proxy] ", log.LstdFlags|log.Lmsgprefix)
@@ -44,6 +47,8 @@ type agentProxy struct {
 	stopOnce      sync.Once
 	socketPath    string
 	criSocketPath string
+	maxRetries    int
+	retryInterval time.Duration
 }
 
 func NewAgentProxy(socketPath, criSocketPath string) AgentProxy {
@@ -53,7 +58,49 @@ func NewAgentProxy(socketPath, criSocketPath string) AgentProxy {
 		criSocketPath: criSocketPath,
 		readyCh:       make(chan struct{}),
 		stopCh:        make(chan struct{}),
+		maxRetries:    defaultMaxRetries,
+		retryInterval: defaultRetryInterval,
 	}
+}
+
+func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error) {
+
+	var conn net.Conn
+
+	maxRetries := defaultMaxRetries
+	count := 1
+	for {
+		var err error
+
+		func() {
+			ctx, cancel := context.WithTimeout(ctx, p.retryInterval)
+			defer cancel()
+
+			// TODO: Support TLS
+			conn, err = (&net.Dialer{}).DialContext(ctx, "tcp", address)
+
+			if err == nil || count == maxRetries {
+				return
+			}
+			<-ctx.Done()
+		}()
+
+		if err == nil {
+			break
+		}
+		if count == maxRetries {
+			err := fmt.Errorf("reaches max retry count. gave up establishing agent proxy connection to %s: %w", address, err)
+			logger.Print(err)
+			return nil, err
+		}
+		logger.Printf("failed to establish agent proxy connection to %s: %v. (retrying... %d/%d)", address, err, count, p.maxRetries)
+
+		count++
+	}
+
+	logger.Printf("established agent proxy connection to %s", address)
+
+	return conn, nil
 }
 
 func initCriClient(ctx context.Context, target string) (*criClient, error) {
@@ -94,7 +141,9 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 		return fmt.Errorf("failed to listen on %s: %w", p.socketPath, err)
 	}
 
-	close(p.readyCh)
+	dialer := func(ctx context.Context) (net.Conn, error) {
+		return p.dial(ctx, serverURL.Host)
+	}
 
 	criClient, err := initCriClient(ctx, p.criSocketPath)
 	if err != nil {
@@ -102,10 +151,15 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 		logger.Printf("failed to init cri client, the err: %v", err)
 	}
 
-	proxyService := newProxyService(criClient)
+	proxyService := newProxyService(dialer, criClient)
+	defer func() {
+		if err := proxyService.Close(); err != nil {
+			logger.Printf("error closing agent proxy connection: %v", err)
+		}
+	}()
 
-	if err := proxyService.connect(ctx, serverURL.Host); err != nil {
-		return err
+	if err := proxyService.Connect(ctx); err != nil {
+		return fmt.Errorf("error connecting to agent: %v", err)
 	}
 
 	ttrpcServer, err := ttrpc.NewServer()
@@ -133,6 +187,8 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 			logger.Printf("error shutting down TTRPC server: %v", err)
 		}
 	}()
+
+	close(p.readyCh)
 
 	select {
 	case <-ctx.Done():
