@@ -57,10 +57,7 @@
       shell: |
         set -o errexit -o pipefail
         arch="{{ ansible_architecture }}"
-        # go1.18 cannot compile containerd v1.6.1. Use go1.17.8 until the issue is fixed.
-        # https://github.com/containerd/containerd/issues/6586
-        # gover=$(curl -sL 'https://golang.org/VERSION?m=text')
-        gover=go1.17.8
+        gover=$(curl -sL 'https://golang.org/VERSION?m=text')
         curl -sL "https://go.dev/dl/$gover.linux-${arch/x86_64/amd64}.tar.gz" | tar -xzf - -C /usr/local
 
         if ! grep -q '^PATH=/usr/local/go/bin:\$PATH$' /root/.bashrc; then
