@@ -6,11 +6,19 @@
 
 ## Creation of base storage volume
 
+- Ubuntu 20.04 VM with minimum 50GB disk and the following packages installed
+  - `cloud-image-utils`
+  - `qemu-system-x86`
+
+- Install packer on the VM by following the instructions in the following [link](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli)
+
 - Create qcow2 image by executing the following command
 ```
-cd ../ibmcloud/image
-make build
+cd image
+CLOUD_PROVIDER=libvirt make build
 ```
+
+The image will be available under the `output` directory
 
 - Copy the qcow2 image to the libvirt machine
 
@@ -26,13 +34,27 @@ If you want to set default password for debugging then you can use guestfish to 
 
 # Running cloud-api-adaptor
 
+Export the required environment variables.
+
 ```
+export LIBVIRT_URI=REPLACE_ME
+export LIBVIRT_POOL=REPLACE_ME
+export LIBVIRT_NET=REPLACE_ME
+```
+Note that the `LIBVIRT_URI` should be of the form - `qemu+ssh://root@<LIBVIRT_HOST_ADDR>/system`.
+
+Run the binary.
+
+```
+mkdir -p /opt/data-dir
+
 ./cloud-api-adaptor libvirt \
-     -host-interface ens3 \
-     -network-name default  \
-     -pool-name default \
-     -uri "qemu+ssh://root@192.168.122.1/system" \
-     -data-dir "/var/lib/libvirt" 
+    -uri ${LIBVIRT_URI}  \
+    -data-dir /opt/data-dir \
+    -pods-dir /run/peerpod/pods \
+    -network-name ${LIBVIRT_NET} \
+    -pool-name ${LIBVIRT_POOL} \
+    -socket /run/peerpod/hypervisor.sock
 
 ```
 

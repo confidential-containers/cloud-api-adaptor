@@ -3,7 +3,7 @@ Description=Kata Agent
 After=network.target
 
 [Service]
-ExecStart=nsenter --net=/run/netns/podns /usr/local/bin/kata-agent
+ExecStart=/usr/local/bin/kata-agent
 ExecStartPre=-umount /sys/fs/cgroup/misc
 ExecStartPre=ip netns add podns
 ExecStartPre=ip netns exec podns ip link set lo up
