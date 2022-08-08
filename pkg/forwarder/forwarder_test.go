@@ -1,7 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
-package daemon
+package forwarder
 
 import (
 	"context"
@@ -13,7 +13,7 @@ func TestNew(t *testing.T) {
 
 	config := &Config{}
 
-	ret := New(config, DefaultListenAddr, "dummy.sock", "", &mockPodNode{})
+	ret := NewDaemon(config, DefaultListenAddr, "dummy.sock", "", &mockPodNode{})
 	if ret == nil {
 		t.Fatal("Expect non nil, got nil")
 	}
@@ -21,7 +21,7 @@ func TestNew(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expect *daemon, got %T", d)
 	}
-	if d.agentForwarder == nil {
+	if d.interceptor == nil {
 		t.Fatal("Expect non nil, got nil")
 	}
 	if d.stopCh == nil {
@@ -34,23 +34,23 @@ func TestNew(t *testing.T) {
 	}
 }
 
-type mockForwarder struct{}
+type mockInterceptor struct{}
 
-func (*mockForwarder) Start(ctx context.Context, listener net.Listener) error {
+func (*mockInterceptor) Start(ctx context.Context, listener net.Listener) error {
 	<-ctx.Done()
 	return nil
 }
 
-func (*mockForwarder) Shutdown() error {
+func (*mockInterceptor) Shutdown() error {
 	return nil
 }
 
 func TestStart(t *testing.T) {
 	d := &daemon{
-		agentForwarder: &mockForwarder{},
-		podNode:        &mockPodNode{},
-		readyCh:        make(chan struct{}),
-		stopCh:         make(chan struct{}),
+		interceptor: &mockInterceptor{},
+		podNode:     &mockPodNode{},
+		readyCh:     make(chan struct{}),
+		stopCh:      make(chan struct{}),
 	}
 
 	errCh := make(chan error)

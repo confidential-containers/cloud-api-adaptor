@@ -1,7 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
-package agent
+package interceptor
 
 import (
 	"context"
@@ -19,14 +19,14 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 )
 
-var logger = log.New(log.Writer(), "[daemon/agent] ", log.LstdFlags|log.Lmsgprefix)
+var logger = log.New(log.Writer(), "[forwarder/interceptor] ", log.LstdFlags|log.Lmsgprefix)
 
-type Forwarder interface {
+type Interceptor interface {
 	Start(ctx context.Context, listener net.Listener) error
 	Shutdown() error
 }
 
-type forwarder struct {
+type interceptor struct {
 	agentDialer dialer
 
 	stopCh   chan struct{}
@@ -35,7 +35,7 @@ type forwarder struct {
 
 type dialer func(context.Context) (net.Conn, error)
 
-func NewForwarder(agentSocket, nsPath string) Forwarder {
+func NewInterceptor(agentSocket, nsPath string) Interceptor {
 
 	agentDialer := func(ctx context.Context) (net.Conn, error) {
 
@@ -60,13 +60,13 @@ func NewForwarder(agentSocket, nsPath string) Forwarder {
 		return conn, nil
 	}
 
-	return &forwarder{
+	return &interceptor{
 		agentDialer: agentDialer,
 		stopCh:      make(chan struct{}),
 	}
 }
 
-func (f *forwarder) Start(ctx context.Context, listener net.Listener) error {
+func (i *interceptor) Start(ctx context.Context, listener net.Listener) error {
 
 	listenerErr := make(chan error)
 	go func() {
@@ -81,7 +81,7 @@ func (f *forwarder) Start(ctx context.Context, listener net.Listener) error {
 				return
 			}
 
-			if err := startForwarding(ctx, conn, f.agentDialer); err != nil {
+			if err := startForwarding(ctx, conn, i.agentDialer); err != nil {
 				listenerErr <- err
 				return
 			}
@@ -94,7 +94,7 @@ func (f *forwarder) Start(ctx context.Context, listener net.Listener) error {
 	}()
 
 	select {
-	case <-f.stopCh:
+	case <-i.stopCh:
 	case err := <-listenerErr:
 		return err
 	}
@@ -102,9 +102,9 @@ func (f *forwarder) Start(ctx context.Context, listener net.Listener) error {
 	return nil
 }
 
-func (f *forwarder) Shutdown() error {
-	f.stopOnce.Do(func() {
-		close(f.stopCh)
+func (i *interceptor) Shutdown() error {
+	i.stopOnce.Do(func() {
+		close(i.stopCh)
 	})
 	return nil
 }

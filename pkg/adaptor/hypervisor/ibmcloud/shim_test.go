@@ -162,7 +162,7 @@ func startDaemon(t *testing.T, ctx context.Context, agentSocketPath string, port
 
 	nsPath := os.Getenv("AGENT_PROTOCOL_FORWARDER_NAMESPACE")
 
-	d := daemon.New(config, "127.0.0.1:0", agentSocketPath, nsPath, &mockPodNode{})
+	d := daemon.NewDaemon(config, "127.0.0.1:0", agentSocketPath, nsPath, &mockPodNode{})
 
 	daemonErr := make(chan error)
 	go func() {
