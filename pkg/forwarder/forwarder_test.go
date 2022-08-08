@@ -7,13 +7,19 @@ import (
 	"context"
 	"net"
 	"testing"
+
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/agentproto"
 )
+
+func dummyDialer(ctx context.Context) (net.Conn, error) {
+	return nil, nil
+}
 
 func TestNew(t *testing.T) {
 
 	config := &Config{}
 
-	ret := NewDaemon(config, DefaultListenAddr, "dummy.sock", "", &mockPodNode{})
+	ret := NewDaemon(config, DefaultListenAddr, agentproto.NewRedirector(dummyDialer), &mockPodNode{})
 	if ret == nil {
 		t.Fatal("Expect non nil, got nil")
 	}
@@ -34,20 +40,10 @@ func TestNew(t *testing.T) {
 	}
 }
 
-type mockInterceptor struct{}
-
-func (*mockInterceptor) Start(ctx context.Context, listener net.Listener) error {
-	<-ctx.Done()
-	return nil
-}
-
-func (*mockInterceptor) Shutdown() error {
-	return nil
-}
-
 func TestStart(t *testing.T) {
+
 	d := &daemon{
-		interceptor: &mockInterceptor{},
+		interceptor: agentproto.NewRedirector(dummyDialer),
 		podNode:     &mockPodNode{},
 		readyCh:     make(chan struct{}),
 		stopCh:      make(chan struct{}),

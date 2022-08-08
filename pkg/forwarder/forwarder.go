@@ -5,10 +5,14 @@ package forwarder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"sync"
+
+	"github.com/containerd/ttrpc"
+	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
@@ -50,9 +54,7 @@ type daemon struct {
 	stopOnce sync.Once
 }
 
-func NewDaemon(spec *Config, listenAddr, kataAgentSocketPath, kataAgentNamespace string, podNode podnetwork.PodNode) Daemon {
-
-	interceptor := interceptor.NewInterceptor(kataAgentSocketPath, kataAgentNamespace)
+func NewDaemon(spec *Config, listenAddr string, interceptor interceptor.Interceptor, podNode podnetwork.PodNode) Daemon {
 
 	daemon := &daemon{
 		listenAddr:  listenAddr,
@@ -67,6 +69,8 @@ func NewDaemon(spec *Config, listenAddr, kataAgentSocketPath, kataAgentNamespace
 
 func (d *daemon) Start(ctx context.Context) error {
 
+	// Set up pod network
+
 	if err := d.podNode.Setup(); err != nil {
 		return fmt.Errorf("failed to set up pod network: %w", err)
 	}
@@ -76,22 +80,36 @@ func (d *daemon) Start(ctx context.Context) error {
 		}
 	}()
 
+	// Set up agent protocol interceptor
+
 	listener, err := net.Listen("tcp", d.listenAddr)
 	if err != nil {
 		return err
 	}
 	d.listenAddr = listener.Addr().String()
 
-	interceptorErrCh := make(chan error)
-	go func() {
-		defer close(interceptorErrCh)
+	ttrpcServer, err := ttrpc.NewServer()
+	if err != nil {
+		return fmt.Errorf("failed to create TTRPC server: %w", err)
+	}
 
-		if err := d.interceptor.Start(ctx, listener); err != nil {
-			interceptorErrCh <- fmt.Errorf("error running kata agent interceptor: %w", err)
+	pb.RegisterAgentServiceService(ttrpcServer, d.interceptor)
+	pb.RegisterImageService(ttrpcServer, d.interceptor)
+	pb.RegisterHealthService(ttrpcServer, d.interceptor)
+
+	ttrpcServerErr := make(chan error)
+	go func() {
+		defer close(ttrpcServerErr)
+
+		if err := ttrpcServer.Serve(ctx, listener); err != nil && !errors.Is(err, ttrpc.ErrServerClosed) {
+			ttrpcServerErr <- fmt.Errorf("error running TTRPC server for kata agent interceptor: %w", err)
 		}
 	}()
 	defer func() {
-		if err := d.interceptor.Shutdown(); err != nil {
+		if err := ttrpcServer.Shutdown(ctx); err != nil {
+			logger.Printf("error shutting down TTRPC server: %v", err)
+		}
+		if err := d.interceptor.Close(); err != nil {
 			logger.Printf("error shutting down kata agent interceptor: %v", err)
 		}
 	}()
@@ -102,7 +120,7 @@ func (d *daemon) Start(ctx context.Context) error {
 	case <-ctx.Done():
 		return d.Shutdown()
 	case <-d.stopCh:
-	case err := <-interceptorErrCh:
+	case err := <-ttrpcServerErr:
 		return err
 	}
 

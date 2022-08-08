@@ -12,6 +12,7 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/cmd"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 )
 
@@ -59,9 +60,11 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		}
 	}
 
+	interceptor := interceptor.NewInterceptor(cfg.kataAgentSocketPath, cfg.kataAgentNamespace)
+
 	podNode := podnetwork.NewPodNode(cfg.kataAgentNamespace, cfg.HostInterface, cfg.daemonConfig.PodNetwork)
 
-	daemon := daemon.NewDaemon(&cfg.daemonConfig, cfg.listenAddr, cfg.kataAgentSocketPath, cfg.kataAgentNamespace, podNode)
+	daemon := daemon.NewDaemon(&cfg.daemonConfig, cfg.listenAddr, interceptor, podNode)
 
 	return cmd.NewStarter(daemon), nil
 }
