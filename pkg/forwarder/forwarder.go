@@ -1,7 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
-package daemon
+package forwarder
 
 import (
 	"context"
@@ -10,12 +10,12 @@ import (
 	"net"
 	"sync"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/agent"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 )
 
-var logger = log.New(log.Writer(), "[agent-protocol-forwarder] ", log.LstdFlags|log.Lmsgprefix)
+var logger = log.New(log.Writer(), "[forwarder] ", log.LstdFlags|log.Lmsgprefix)
 
 const (
 	DefaultListenHost          = "0.0.0.0"
@@ -41,25 +41,25 @@ type Daemon interface {
 }
 
 type daemon struct {
-	listenAddr     string
-	agentForwarder agent.Forwarder
-	podNode        podnetwork.PodNode
+	listenAddr  string
+	interceptor interceptor.Interceptor
+	podNode     podnetwork.PodNode
 
 	readyCh  chan struct{}
 	stopCh   chan struct{}
 	stopOnce sync.Once
 }
 
-func New(spec *Config, listenAddr, kataAgentSocketPath, kataAgentNamespace string, podNode podnetwork.PodNode) Daemon {
+func NewDaemon(spec *Config, listenAddr, kataAgentSocketPath, kataAgentNamespace string, podNode podnetwork.PodNode) Daemon {
 
-	agentForwarder := agent.NewForwarder(kataAgentSocketPath, kataAgentNamespace)
+	interceptor := interceptor.NewInterceptor(kataAgentSocketPath, kataAgentNamespace)
 
 	daemon := &daemon{
-		listenAddr:     listenAddr,
-		agentForwarder: agentForwarder,
-		podNode:        podNode,
-		readyCh:        make(chan struct{}),
-		stopCh:         make(chan struct{}),
+		listenAddr:  listenAddr,
+		interceptor: interceptor,
+		podNode:     podNode,
+		readyCh:     make(chan struct{}),
+		stopCh:      make(chan struct{}),
 	}
 
 	return daemon
@@ -82,17 +82,17 @@ func (d *daemon) Start(ctx context.Context) error {
 	}
 	d.listenAddr = listener.Addr().String()
 
-	agentForwarderErrCh := make(chan error)
+	interceptorErrCh := make(chan error)
 	go func() {
-		defer close(agentForwarderErrCh)
+		defer close(interceptorErrCh)
 
-		if err := d.agentForwarder.Start(ctx, listener); err != nil {
-			agentForwarderErrCh <- fmt.Errorf("error running kata agent forwarder: %w", err)
+		if err := d.interceptor.Start(ctx, listener); err != nil {
+			interceptorErrCh <- fmt.Errorf("error running kata agent interceptor: %w", err)
 		}
 	}()
 	defer func() {
-		if err := d.agentForwarder.Shutdown(); err != nil {
-			logger.Printf("error shutting down kata agent forwarder: %v", err)
+		if err := d.interceptor.Shutdown(); err != nil {
+			logger.Printf("error shutting down kata agent interceptor: %v", err)
 		}
 	}()
 
@@ -102,7 +102,7 @@ func (d *daemon) Start(ctx context.Context) error {
 	case <-ctx.Done():
 		return d.Shutdown()
 	case <-d.stopCh:
-	case err := <-agentForwarderErrCh:
+	case err := <-interceptorErrCh:
 		return err
 	}
 

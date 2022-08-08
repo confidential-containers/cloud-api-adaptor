@@ -61,7 +61,7 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 
 	podNode := podnetwork.NewPodNode(cfg.kataAgentNamespace, cfg.HostInterface, cfg.daemonConfig.PodNetwork)
 
-	daemon := daemon.New(&cfg.daemonConfig, cfg.listenAddr, cfg.kataAgentSocketPath, cfg.kataAgentNamespace, podNode)
+	daemon := daemon.NewDaemon(&cfg.daemonConfig, cfg.listenAddr, cfg.kataAgentSocketPath, cfg.kataAgentNamespace, podNode)
 
 	return cmd.NewStarter(daemon), nil
 }

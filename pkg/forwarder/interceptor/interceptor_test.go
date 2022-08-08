@@ -1,7 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
-package agent
+package interceptor
 
 import (
 	"context"
@@ -12,17 +12,17 @@ import (
 	"testing"
 )
 
-func TestNewForwarder(t *testing.T) {
+func TestNewInterceptor(t *testing.T) {
 
 	socketName := "dummy.sock"
 
-	ret := NewForwarder(socketName, "")
+	ret := NewInterceptor(socketName, "")
 	if ret == nil {
 		t.Fatal("Expect non nil, got nil")
 	}
-	f, ok := ret.(*forwarder)
+	f, ok := ret.(*interceptor)
 	if !ok {
-		t.Fatalf("Expect *forwarder, got %T", f)
+		t.Fatalf("Expect *interceptor, got %T", f)
 	}
 	if f.agentDialer == nil {
 		t.Fatal("Expect non nil, got nil")
@@ -42,8 +42,8 @@ func TestStart(t *testing.T) {
 	tmpDir := t.TempDir()
 	socketPath := filepath.Join(tmpDir, "agent.sock")
 
-	f := NewForwarder(socketPath, "")
-	if f == nil {
+	i := NewInterceptor(socketPath, "")
+	if i == nil {
 		t.Fatal("Expect non nil, got nil")
 	}
 
@@ -57,12 +57,12 @@ func TestStart(t *testing.T) {
 		Host:   listener.Addr().String(),
 	}
 
-	forwarderErrCh := make(chan error)
+	interceptorErrCh := make(chan error)
 	go func() {
-		defer close(forwarderErrCh)
+		defer close(interceptorErrCh)
 
-		if err := f.Start(context.Background(), listener); err != nil {
-			forwarderErrCh <- err
+		if err := i.Start(context.Background(), listener); err != nil {
+			interceptorErrCh <- err
 		}
 	}()
 
@@ -106,7 +106,7 @@ func TestStart(t *testing.T) {
 	}()
 
 	select {
-	case err := <-forwarderErrCh:
+	case err := <-interceptorErrCh:
 		t.Fatalf("Expect no error, got %q", err)
 	default:
 	}
@@ -130,12 +130,12 @@ func TestStart(t *testing.T) {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
 
-	if err := f.Shutdown(); err != nil {
+	if err := i.Shutdown(); err != nil {
 		t.Fatalf("Expect no error, got %q", err)
 	}
 
 	select {
-	case err := <-forwarderErrCh:
+	case err := <-interceptorErrCh:
 		if err != nil {
 			t.Fatalf("Expect no error, got %q", err)
 		}
