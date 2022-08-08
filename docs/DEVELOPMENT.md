@@ -1,6 +1,6 @@
 ## Prerequisites
 - make
-- golang 1.16+
+- golang 1.18.y
 
 ## Clone the source code
 ```
@@ -32,7 +32,7 @@ Example, if you are using Ubuntu then run the following command
 sudo apt-get install -y libvirt-dev
 ```
 
-## Build Kata runtime
+## Build Kata runtime and agent
 
 Install the prerequisites as mentioned in the following [link](https://github.com/kata-containers/kata-containers/blob/main/docs/Developer-Guide.md#requirements-to-build-individual-components)
 
@@ -46,5 +46,12 @@ Build the runtime
 
 ```
 cd $BUILD_DIR/kata-containers/src/runtime
+make
+```
+
+Build the agent
+
+```
+cd $BUILD_DIR/kata-containers/src/agent
 make
 ```

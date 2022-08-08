@@ -100,8 +100,10 @@
 
 ## Building runtime and pre-install images
 
-   These instructions should help you build your own images for development and testing
+   These instructions should help you build your own images for development and testing.
 
+   Before proceeding ensure you can build the kata runtime and the agent successfully by
+   following the instructions mentioned in the following [link](../docs/DEVELOPMENT.md)
 
 ### Building Runtime Payload Image
 

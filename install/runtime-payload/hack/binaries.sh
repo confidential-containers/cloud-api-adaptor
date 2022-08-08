@@ -24,6 +24,7 @@ function build_kata_runtime() {
 	popd
 }
 function main() {
+	mkdir -p ${bin_dir}
 	for i in "${providers[@]}"
 	do
 		build_cloud_api_adaptor $i
