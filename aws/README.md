@@ -15,6 +15,7 @@ export AWS_REGION="REPLACE_ME"
 
 - Create a custom AMI based on Ubuntu 20.04 having kata-agent and other dependencies.
 ```
+cd image
 CLOUD_PROVIDER=aws make build
 ```
 
