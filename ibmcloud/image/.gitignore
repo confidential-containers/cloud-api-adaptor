@@ -7,5 +7,5 @@
 /umoci
 /files/usr/local/bin/agent-protocol-forwarder
 /files/usr/local/bin/kata-agent
-/files/usr/local/bin/skopeo.bin
+/files/usr/bin/skopeo
 /files/usr/local/bin/umoci
