@@ -33,7 +33,7 @@ IMAGE_FILE := $(IMAGE_NAME)
 
 AGENT_PROTOCOL_FORWARDER = $(FILES_DIR)/usr/local/bin/agent-protocol-forwarder
 KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
-SKOPEO        = $(FILES_DIR)/usr/local/bin/skopeo.bin
+SKOPEO        = $(FILES_DIR)/usr/bin/skopeo
 UMOCI         = $(FILES_DIR)/usr/local/bin/umoci
 BINARIES = $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(SKOPEO) $(UMOCI)
 
