@@ -1,5 +1,6 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
+//go:build ibmcloud
 
 package ibmcloud
 
