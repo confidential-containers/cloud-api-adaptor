@@ -102,6 +102,18 @@ func (i *interceptor) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRe
 
 	logger.Printf("CreateSandbox: hostname:%s sandboxId:%s", req.Hostname, req.SandboxId)
 
+	if len(req.Dns) > 0 {
+		logger.Print("    dns:")
+		for _, d := range req.Dns {
+			logger.Printf("        %s", d)
+		}
+
+		logger.Print("      Eliminated the DNS setting above from CreateSandboxRequest to stop updating /etc/resolv.conf on the peer pod VM")
+		logger.Print("      See https://github.com/confidential-containers/cloud-api-adaptor/issues/98 for the details.")
+		logger.Println()
+		req.Dns = nil
+	}
+
 	res, err := i.Redirector.CreateSandbox(ctx, req)
 
 	if err != nil {
