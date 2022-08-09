@@ -5,15 +5,14 @@ package interceptor
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 
 	"github.com/gogo/protobuf/types"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/agentproto"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 )
 
 var logger = log.New(log.Writer(), "[forwarder/interceptor] ", log.LstdFlags|log.Lmsgprefix)
@@ -24,45 +23,38 @@ type Interceptor interface {
 
 type interceptor struct {
 	agentproto.Redirector
+
+	nsPath string
 }
 
 func NewInterceptor(agentSocket, nsPath string) Interceptor {
 
 	agentDialer := func(ctx context.Context) (net.Conn, error) {
-
-		if nsPath == "" {
-			return (&net.Dialer{}).DialContext(ctx, "unix", agentSocket)
-		}
-
-		ns, err := netops.NewNSFromPath(nsPath)
-		if err != nil {
-			err = fmt.Errorf("failed to open network namespace %q: %w", nsPath, err)
-			logger.Print(err)
-			return nil, err
-		}
-
-		var conn net.Conn
-		if err := ns.Run(func() error {
-			var err error
-			conn, err = (&net.Dialer{}).DialContext(ctx, "unix", agentSocket)
-			return err
-		}); err != nil {
-			return nil, fmt.Errorf("failed to call dialer at namespace %q: %w", nsPath, err)
-		}
-
-		return conn, nil
+		return (&net.Dialer{}).DialContext(ctx, "unix", agentSocket)
 	}
 
 	redirector := agentproto.NewRedirector(agentDialer)
 
 	return &interceptor{
 		Redirector: redirector,
+		nsPath:     nsPath,
 	}
 }
 
 func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*types.Empty, error) {
 
 	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
+
+	// Specify the network namespace path in the container spec
+	req.OCI.Linux.Namespaces = append(req.OCI.Linux.Namespaces, pb.LinuxNamespace{
+		Type: string(specs.NetworkNamespace),
+		Path: i.nsPath,
+	})
+
+	logger.Printf("    namespaces:")
+	for _, ns := range req.OCI.Linux.Namespaces {
+		logger.Printf("    %s: %q", ns.Type, ns.Path)
+	}
 
 	res, err := i.Redirector.CreateContainer(ctx, req)
 
