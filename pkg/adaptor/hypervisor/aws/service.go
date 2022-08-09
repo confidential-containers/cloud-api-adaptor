@@ -31,8 +31,7 @@ import (
 )
 
 const (
-	Version               = "0.0.0"
-	EC2LaunchTemplateName = "kata"
+	Version = "0.0.0"
 )
 
 type hypervisorService struct {
@@ -184,7 +183,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		MinCount: aws.Int32(1),
 		MaxCount: aws.Int32(1),
 		LaunchTemplate: &types.LaunchTemplateSpecification{
-			LaunchTemplateName: aws.String(EC2LaunchTemplateName),
+			LaunchTemplateName: aws.String(s.serviceConfig.LaunchTemplateName),
 		},
 		UserData: &userDataEnc,
 	}

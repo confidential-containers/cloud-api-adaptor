@@ -52,6 +52,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&awscfg.SecretKey, "aws-secret-key", "", "Secret Key")
 			flags.StringVar(&awscfg.Region, "aws-region", "ap-south-1", "Region")
 			flags.StringVar(&awscfg.LoginProfile, "aws-profile", "test", "AWS Login Profile")
+			flags.StringVar(&awscfg.LaunchTemplateName, "aws-lt-name", "kata", "AWS Launch Template Name")
 			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
 			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
 			flags.StringVar(&hypcfg.HypProvider, "provider", "aws", "Hypervisor provider")
