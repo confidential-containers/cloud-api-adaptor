@@ -53,7 +53,7 @@ type hypervisorService struct {
 
 func newService(vpcV1 VpcV1, config *Config, hypervisorConfig *hypervisor.Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
 
-	logger.Printf("service config %v", config)
+	logger.Printf("service config %v", config.Redact())
 
 	hostname, err := os.Hostname()
 	if err != nil {
