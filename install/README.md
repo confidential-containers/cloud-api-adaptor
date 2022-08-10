@@ -33,9 +33,10 @@
     data:
       hyp.env: |
           CAA_PROVIDER="aws"
-          AWS_ACCESS_KEY_ID="ABC"
-          AWS_SECRET_ACCESS_KEY="12345"
-          AWS_REGION="us-east-2"
+          AWS_ACCESS_KEY_ID="REPLACE_ME"
+          AWS_SECRET_ACCESS_KEY="REPLACE_ME"
+          AWS_REGION="REPLACE_ME"
+          PODVM_LAUNCHTEMPLATE_NAME="kata"
     ```
 
   Example configmap providing parameters for the Libvirt provider.
@@ -49,9 +50,32 @@
     data:
       hyp.env: |
           CAA_PROVIDER="libvirt"
-          LIBVIRT_URI="qemu+ssh://root@192.168.122.1/system"
-          LIBVIRT_NET="kubernetes"
-          LIBVIRT_POOL="kubernetes"
+          LIBVIRT_URI="qemu+ssh://root@REPLACE_ME/system"
+          LIBVIRT_NET="REPLACE_ME"
+          LIBVIRT_POOL="REPLACE_ME"
+    ```
+
+   Example configmap for providing parameters for the IBM cloud provider.
+   ```
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: hyp-env-cm
+      namespace: confidential-containers-system
+    data:
+      hyp.env: |
+          CAA_PROVIDER="ibmcloud"
+          IBMCLOUD_API_KEY="REPLACE_ME"
+          SSH_KEY_ID="REPLACE_ME"
+	  IMAGE_ID="REPLACE_ME"
+	  INSTANCE_PROFILE="REPLACE_ME"
+	  IBMCLOUD_ZONE="REPLACE_ME"
+	  VPC_ID="REPLACE_ME"
+	  VPC_PRIMARY_SUBNET_ID="REPLACE_ME"
+	  VPC_SECONDARY_SUBNET_ID="REPLACE_ME"
+	  VPC_PRIMARY_SECURITY_GROUP_ID="REPLACE_ME"
+	  VPC_SECONDARY_SECURITY_GROUP_ID="REPLACE_ME"
+	  CRI_RUNTIME_ENDPOINT="/run/containerd/containerd.sock"
     ```
 
 * **Create CCruntime Custom Resource (CR)** 

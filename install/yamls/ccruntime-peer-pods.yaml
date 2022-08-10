@@ -11,7 +11,7 @@ spec:
       node-role.kubernetes.io/worker: ""
   config:
     installType: bundle
-    payloadImage: quay.io/confidential-containers/peer-pods-runtime-payload:2022072707271658906867
+    payloadImage: quay.io/confidential-containers/peer-pods-runtime-payload:2022081017081660151315
     installDoneLabel:
       katacontainers.io/kata-runtime: "true"
     uninstallDoneLabel:
@@ -52,7 +52,7 @@ spec:
     uninstallCmd: ["/opt/kata-artifacts/scripts/kata-deploy.sh", "cleanup"]
     cleanupCmd: ["/opt/kata-artifacts/scripts/kata-deploy.sh", "reset"]
     postUninstall:
-      image: quay.io/confidential-containers/peer-pods-pre-install-payload:2022072617571658858262
+      image: quay.io/confidential-containers/peer-pods-pre-install-payload:2022081008261660119970
       volumeMounts:
         - mountPath: /opt/confidential-containers/
           name: confidential-containers-artifacts
@@ -80,7 +80,7 @@ spec:
             type: ""
           name: systemd
     preInstall:
-      image: quay.io/confidential-containers/peer-pods-pre-install-payload:2022072617571658858262
+      image: quay.io/confidential-containers/peer-pods-pre-install-payload:2022081008261660119970
       volumeMounts:
         - mountPath: /opt/confidential-containers/
           name: confidential-containers-artifacts

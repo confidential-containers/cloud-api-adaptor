@@ -6,7 +6,7 @@ set -o nounset
 
 AWS_EXEC="/opt/confidential-containers/bin/run-aws.sh"
 IBMCLOUD_EXEC="/opt/confidential-containers/bin/run-ibmcloud.sh"
-LIBVIRT_EXEC="/opt/kata/confidential-containers/run-libvirt.sh"
+LIBVIRT_EXEC="/opt/confidential-containers/bin/run-libvirt.sh"
 
 : "${CAA_PROVIDER:=aws}"
 
