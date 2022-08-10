@@ -5,4 +5,5 @@
     -aws-secret-key ${AWS_SECRET_ACCESS_KEY} \
     -aws-region ${AWS_REGION} \
     -pods-dir /run/peerpod/pods \
-    -socket /run/peerpod/hypervisor.sock 
+    -socket /run/peerpod/hypervisor.sock \
+    -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME}
