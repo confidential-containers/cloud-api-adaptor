@@ -10,5 +10,5 @@ type Config struct {
 }
 
 func (c Config) Redact() Config {
-	return *util.RedactStruct(&c, "SecretKey").(*Config)
+	return *util.RedactStruct(&c, "AccessKeyId", "SecretKey").(*Config)
 }
