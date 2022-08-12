@@ -61,3 +61,9 @@ variable "ansible_dir" {
     description = "Subdirectory for Ansible playbook, inventory and vars files"
     default = "./ansible"
 }
+
+variable "skip_verify_console" {
+    description = "Set to true to skip checking the console output after starting a virtual server instance using the built pod VM image"
+    type = bool
+    default = true
+}

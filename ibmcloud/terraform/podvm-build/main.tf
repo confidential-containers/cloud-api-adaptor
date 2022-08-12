@@ -11,6 +11,7 @@ locals {
   cos_service_instance_name_or_id = var.cos_service_instance_name != null ? var.cos_service_instance_name : var.cos_service_instance_id
   ibmcloud_api_endpoint = var.use_ibmcloud_test ? "https://test.cloud.ibm.com" : "https://cloud.ibm.com"
   podvm_image_name = var.podvm_image_name != null ? var.podvm_image_name : ""
+  skip_verify_console = var.skip_verify_console ? "true" : ""
 
   is_policies_and_roles = flatten([
     for policy in data.ibm_iam_user_policy.user_policies.policies: [
@@ -64,6 +65,7 @@ ibmcloud_vpc_name: ${var.vpc_name}
 ibmcloud_vpc_subnet_name: ${var.primary_subnet_name}
 ibmcloud_vpc_zone: ${data.ibm_is_subnet.primary.zone}
 ibmcloud_vpc_image_name: ${local.podvm_image_name}
+ibmcloud_skip_verify_console: ${local.skip_verify_console}
 EOF
 }
 
