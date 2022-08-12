@@ -62,3 +62,9 @@ variable "use_ibmcloud_test" {
 variable "zone_name" {
     default = "jp-tok-2"
 }
+
+variable "skip_verify_console" {
+    description = "Set to true to skip checking the console output after starting a virtual server instance using the built pod VM image"
+    type = bool
+    default = true
+}

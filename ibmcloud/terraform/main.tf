@@ -57,6 +57,7 @@ module "podvm_build" {
     worker_ip = module.cluster.worker_ip
     bastion_ip = module.cluster.bastion_ip
     podvm_image_name = local.podvm_image_name_with_arch
+    skip_verify_console = var.skip_verify_console
     ansible_dir = "./podvm-build/ansible"
 }
 
