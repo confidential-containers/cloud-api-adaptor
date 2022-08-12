@@ -53,7 +53,7 @@ jobs:
         run: |
           go install github.com/jstemmer/go-junit-report@v1.0.0
           export CI="true"
-          sudo -E make CLOUD_PROVIDER=${{ matrix.provider }} test | tee tests_report.txt
+          sudo -E env PATH="$PATH" make CLOUD_PROVIDER=${{ matrix.provider }} test | tee tests_report.txt
           sudo chmod o+rw tests_report.txt
           cat tests_report.txt | $(go env GOPATH)/bin/go-junit-report -set-exit-code > tests_report_junit.xml
         shell: bash
