@@ -1,6 +1,7 @@
 # Setup instructions
 
 - Install packer by following the instructions in the following [link](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli)
+	- Install packer's Amazon plugin `packer plugins install github.com/hashicorp/amazon`
 
 - Create a VPC with public internet access
 Note down the VPC ID, Subnet ID, Region
