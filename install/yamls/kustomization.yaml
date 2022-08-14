@@ -1,0 +1,2 @@
+resources:
+    - ccruntime-peer-pods-in-pod.yaml
