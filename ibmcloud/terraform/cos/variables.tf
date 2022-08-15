@@ -31,3 +31,9 @@ variable "cos_service_instance_name" {
   type        = string
   default     = "cos-image-instance"
 }
+
+variable "cos_bucket_region" {
+  description = "Name of the region in which to create the COS instance"
+  type        = string
+  default     = ""
+}

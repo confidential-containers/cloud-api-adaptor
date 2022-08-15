@@ -30,3 +30,8 @@ output "cos_instance_id" {
   description = "ID of the created COS instance"
   value       = ibm_resource_instance.cos_instance.id
 }
+
+output "cos_bucket_region" {
+  description = "Region of the created COS bucket"
+  value       = ibm_cos_bucket.bucket.region_location
+}

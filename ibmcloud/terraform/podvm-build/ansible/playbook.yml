@@ -12,7 +12,7 @@
   tasks:
     - name: Set COS service endpoint for IBM Cloud
       set_fact:
-        ibmcloud_cos_service_endpoint: https://s3.{{ ibmcloud_region_name }}.cloud-object-storage.appdomain.cloud
+        ibmcloud_cos_service_endpoint: https://s3.{{ ibmcloud_cos_bucket_region }}.cloud-object-storage.appdomain.cloud
       when: ibmcloud_api_endpoint == "https://cloud.ibm.com"
     - name: Set COS service endpoint for IBM Cloud test
       set_fact:
@@ -30,7 +30,7 @@
         IBMCLOUD_API_ENDPOINT: "{{ ibmcloud_api_endpoint }}"
         IBMCLOUD_COS_SERVICE_INSTANCE: "{{ ibmcloud_cos_service_instance }}"
         IBMCLOUD_COS_BUCKET: "{{ ibmcloud_cos_bucket }}"
-        IBMCLOUD_COS_REGION: "{{ ibmcloud_region_name }}"
+        IBMCLOUD_COS_REGION: "{{ ibmcloud_cos_bucket_region }}"
         IBMCLOUD_COS_SERVICE_ENDPOINT: "{{ ibmcloud_cos_service_endpoint }}"
         IBMCLOUD_VPC_NAME: "{{ ibmcloud_vpc_name }}"
         IBMCLOUD_VPC_SUBNET_NAME: "{{ ibmcloud_vpc_subnet_name }}"

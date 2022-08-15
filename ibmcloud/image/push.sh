@@ -82,10 +82,16 @@ while image_id=$(ibmcloud is images --output=json --visibility=private | jq -r "
 done
 
 echo -e "\nUploading $image_path to cloud object stroage at "$cos_bucket" with key $object_key\n"
-ibmcloud cos object-put  --bucket "$cos_bucket" --key "$object_key" --body "$image_path"
+./multipart_upload.sh --bucket "$cos_bucket" --file "$image_path"
+
 ibmcloud cos object-head --bucket "$cos_bucket" --key "$object_key"
 
-image_ref="cos://$region/$cos_bucket/$object_key"
+if [[ ! "$region" =~ - ]]; then 
+    location="${region}-geo"
+else 
+    location=$region
+fi
+image_ref="cos://$location/$cos_bucket/$object_key"
 arch=$(uname -m)
 os_name="ubuntu-20-04-${arch/x86_64/amd64}"
 

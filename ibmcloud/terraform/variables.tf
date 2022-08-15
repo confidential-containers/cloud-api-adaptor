@@ -22,6 +22,10 @@ variable "cos_service_instance_name" {
     default = "cos-image-instance"
 }
 
+variable "cos_bucket_region" {
+    default = ""
+}
+
 variable "floating_ip_name" {
     default = "tok-gateway-ip"
 }
