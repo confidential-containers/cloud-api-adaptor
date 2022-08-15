@@ -25,6 +25,7 @@ module "cos" {
     region_name = var.region_name
     cos_bucket_name = var.cos_bucket_name
     cos_service_instance_name = var.cos_service_instance_name
+    cos_bucket_region = var.cos_bucket_region
 }
 
 module "cluster" {
@@ -50,6 +51,7 @@ module "podvm_build" {
     ibmcloud_user_id = var.ibmcloud_user_id
     cos_bucket_name = module.cos.cos_bucket_name
     cos_service_instance_id = module.cos.cos_instance_id
+    cos_bucket_region = module.cos.cos_bucket_region
     primary_subnet_name = var.primary_subnet_name
     region_name = var.region_name
     use_ibmcloud_test = var.use_ibmcloud_test

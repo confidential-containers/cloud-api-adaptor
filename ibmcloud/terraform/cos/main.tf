@@ -1,5 +1,6 @@
 locals {
   resource_group_id = var.resource_group_name != null ? data.ibm_resource_group.group[0].id : data.ibm_resource_group.default_group.id
+  cos_bucket_region = var.cos_bucket_region != "" ? var.cos_bucket_region : var.region_name
 }
 
 data "ibm_resource_group" "group" {
@@ -33,6 +34,6 @@ resource "ibm_iam_authorization_policy" "policy" {
 resource "ibm_cos_bucket" "bucket" {
   bucket_name          = var.cos_bucket_name
   resource_instance_id = ibm_resource_instance.cos_instance.id
-  region_location      = var.region_name
+  region_location      = local.cos_bucket_region
   storage_class        = "standard"
 }

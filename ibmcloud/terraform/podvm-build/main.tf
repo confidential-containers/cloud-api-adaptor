@@ -11,6 +11,7 @@ locals {
   cos_service_instance_name_or_id = var.cos_service_instance_name != null ? var.cos_service_instance_name : var.cos_service_instance_id
   ibmcloud_api_endpoint = var.use_ibmcloud_test ? "https://test.cloud.ibm.com" : "https://cloud.ibm.com"
   podvm_image_name = var.podvm_image_name != null ? var.podvm_image_name : ""
+  cos_bucket_region = var.cos_bucket_region != "" ? var.cos_bucket_region : var.region_name
   skip_verify_console = var.skip_verify_console ? "true" : ""
 
   is_policies_and_roles = flatten([
@@ -60,6 +61,7 @@ ibmcloud_api_key: ${var.ibmcloud_api_key}
 ibmcloud_api_endpoint: ${local.ibmcloud_api_endpoint}
 ibmcloud_cos_service_instance: "${local.cos_service_instance_name_or_id}"
 ibmcloud_cos_bucket: ${var.cos_bucket_name}
+ibmcloud_cos_bucket_region: ${local.cos_bucket_region}
 ibmcloud_region_name: ${var.region_name}
 ibmcloud_vpc_name: ${var.vpc_name}
 ibmcloud_vpc_subnet_name: ${var.primary_subnet_name}

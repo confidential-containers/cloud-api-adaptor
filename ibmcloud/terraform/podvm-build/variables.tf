@@ -33,6 +33,10 @@ variable "cos_service_instance_id" {
     default = null
 }
 
+variable "cos_bucket_region" {
+    default = ""
+}
+
 variable "cos_bucket_name" {
     description = "Name of the COS bucket"
 }
