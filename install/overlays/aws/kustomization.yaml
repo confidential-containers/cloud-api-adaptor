@@ -7,6 +7,9 @@ images:
   newName: quay.io/confidential-containers/cloud-api-adaptor-aws # change image if needed
   newTag: latest
 
+generatorOptions:
+  disableNameSuffixHash: true
+
 configMapGenerator:
 - name: peer-pods-cm
   namespace: confidential-containers-system
