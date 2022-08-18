@@ -91,6 +91,7 @@ region_name = "<name of an IBM Cloud region>"
 zone_name = "<name of a zone in your IBM Cloud zone region>"
 ssh_pub_key = "<your SSH public key>"
 cos_service_instance_name = "<name of the COS instance to create>"
+cos_bucket_region = "<name of the region to create the COS bucket in>"
 floating_ip_name = "<name of the floating IP to create>"
 image_name = "<name of the image to use for the Kubernetes control plane and worker>"
 instance_profile_name = "<name of the instance profile to use for the Kubernetes control plane and worker>"
@@ -115,6 +116,7 @@ vpc_name = "<vpc name>"
 > - `ssh_key_name` is the name of your SSH key registered in IBM Cloud or the name of a new SSH key if a public key is also provided using the optional the optional `ssh_pub_key` parameter. You can add your SSH key at [https://cloud.ibm.com/vpc-ext/compute/sshKeys](https://cloud.ibm.com/vpc-ext/compute/sshKeys). For more information about SSH keys see [managing SSH Keys](https://cloud.ibm.com/docs/vpc?topic=vpc-ssh-keys). The SSH key will be installed on the Kubernetes control plane and worker nodes and is used to access them from your `development machine`.
 > - `podvm_image_name` is the name of the VPC infrastructure custom image for the peer pod VM that the Kubernetes worker will build. This name will have `-amd64` or `-s390x` appended to it to name the image that eventually gets imported to VPC infrastructure custom images, depending on if the `image_name` parameter for the instance the peer pod VM image is built on uses the amd64 or s390x CPU architecture
 > - `cos_bucket_name` is the name of the COS bucket that will store the peer pod .vsi image. This bucket name must be unique across all IBM Cloud accounts.
+> - `cos_bucket_region` (optional) is the name of the region that the COS bucket will be in, this can be regional (e.g. jp-tok) or cross-regional (e.g. eu). If not provided will be the region specified by `region_name`.
 > - `zone_name` (optional) is the zone in the region Terraform will create the demo environment in. If not set it defaults to `jp-tok-2`.
 > - `ssh_pub_key` (optional) is an variable for a SSH public key which has **not** been registered in IBM Cloud in the targeted region. Terraform will manage this key instead. You cannot register the same SSH public key in the same region twice under different SSHs key names.
 > - `cos_service_instance_name` (optional) is the name of the COS service instance Terraform will create. If not set it defaults to `cos-image-instance`.
@@ -277,12 +279,13 @@ You can use the Terraform configuration located at [ibmcloud/terraform/cos](./te
 ibmcloud_api_key = "<your API key>"
 cos_bucket_name = "<name of the COS bucket to create>"
 cos_service_instance_name = "<name of the COS instance to create>"
+cos_bucket_region = "<name of the region to create the COS bucket in>"
 ```
 
 > **Notes:**
 > - Variables with the same name as variables in the end to end Terraform configuration are as described in that [configuration's parameters](#parameters).
 > - Additional variables and their defaults are defined in the [variables.tf](./terraform/cos/variables.tf) file for this Terraform configuration.
-> - The COS Bucket must be a regional bucket in the same region (default `jp-tok`) as the VPC and VSIs.
+> - The bucket can be regional or cross-regional see [Endpoints & Locations](https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-endpoints)
 
 Then run the Template via the following commands: 
 ```bash
@@ -303,6 +306,7 @@ ibmcloud_user_id = "<IBM Cloud User ID>"
 cluster_name = "<cluster name>"
 cos_service_instance_name = "<Name of your COS service instance>" OR cos_service_instance_id = "<ID of your COS service instance>"
 cos_bucket_name = "<Name of your COS bucket name>"
+cos_bucket_region = "<name of the region to create the COS bucket in>"
 ```
 
 If you created your COS resources without using with `cos` Terraform configuration you should provide the name or ID of your existing COS service instance as the `cos_service_instance_name/cos_service_instance_id` parameter and the name of your existing COS bucket as the `cos_bucket_name` parameter. If you created your COS service instance `cos` Terraform configuration you can find the ID of your COS service instance in the outputs of the `cos` Terraform configuration.
