@@ -59,7 +59,7 @@ func NewEC2Client(cloudCfg Config) (*ec2.Client, error) {
 
 	if cloudCfg.AccessKeyId != "" && cloudCfg.SecretKey != "" {
 		cfg, err = config.LoadDefaultConfig(context.TODO(),
-			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cloudCfg.AccessKeyId, cloudCfg.SecretKey, "")))
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cloudCfg.AccessKeyId, cloudCfg.SecretKey, "")), config.WithRegion(cloudCfg.Region))
 		if err != nil {
 			return nil, fmt.Errorf("configuration error when using creds: %s", err)
 		}
