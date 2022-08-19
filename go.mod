@@ -73,4 +73,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
 
-replace github.com/kata-containers/kata-containers/src/runtime => ../kata-containers/src/runtime
+replace (
+	github.com/kata-containers/kata-containers/src/runtime => ../kata-containers/src/runtime
+	// The following line is a workaround for the issue descrined in https://github.com/containerd/ttrpc/issues/62
+	// We can remove this workaround when Kata stop using github.com/gogo/protobuf
+	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
+)
