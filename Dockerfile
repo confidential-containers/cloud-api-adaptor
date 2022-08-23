@@ -7,7 +7,7 @@ WORKDIR cloud-api-adaptor
 RUN if [ "$CLOUD_PROVIDER" = "libvirt" ] ; then apt-get update -y && apt-get install -y libvirt-dev; fi
 RUN make
 
-FROM debian:stable-slim
+FROM golang:1.18
 ARG CLOUD_PROVIDER
 ENV CLOUD_PROVIDER=${CLOUD_PROVIDER}
 RUN if [ "$CLOUD_PROVIDER" = "libvirt" ] ; then apt-get update -y && apt-get install -y libvirt0 genisoimage && apt-get clean; fi
