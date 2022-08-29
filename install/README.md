@@ -13,78 +13,20 @@
     kubectl label node $NODENAME node-role.kubernetes.io/worker=
     ```
 
-* **Deploy the `Confidential Containers` operator**
+## Build and install with cloud-api-adaptor running in a pod
 
+* set CLOUD_PROVIDER
     ```
-    kubectl apply -f https://raw.githubusercontent.com/confidential-containers/cloud-api-adaptor/staging/install/yamls/deploy.yaml
-    ```
-
-* **Create a `ConfigMap` with the cloud provider settings**
-
-  Example configmap providing parameters for the AWS provider.
-  Note the `name`, `namespace` and usage of `hyp.env` as the file name in the  data section. These values must not be changed.
-
-    ```
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: hyp-env-cm
-      namespace: confidential-containers-system
-    data:
-      hyp.env: |
-          CAA_PROVIDER="aws"
-          AWS_ACCESS_KEY_ID="REPLACE_ME"
-          AWS_SECRET_ACCESS_KEY="REPLACE_ME"
-          AWS_REGION="REPLACE_ME"
-          PODVM_LAUNCHTEMPLATE_NAME="kata"
+    export CLOUD_PROVIDER=<aws|ibmcloud|libvirt>
     ```
 
-  Example configmap providing parameters for the Libvirt provider.
+* `make image` builds the container image and push it to `$registry`
+* `make deploy` deploys operator, runtime and cloud-api-adaptor pod in the configured cluster
+    * configure install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml with your own settings
+    * validate kubectl is available in your `$PATH` and `$KUBECONFIG` is set
+* `make delete` deletes the pod deployment from the configured cluster
 
-    ```
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: hyp-env-cm
-      namespace: confidential-containers-system
-    data:
-      hyp.env: |
-          CAA_PROVIDER="libvirt"
-          LIBVIRT_URI="qemu+ssh://root@REPLACE_ME/system"
-          LIBVIRT_NET="REPLACE_ME"
-          LIBVIRT_POOL="REPLACE_ME"
-    ```
-
-   Example configmap for providing parameters for the IBM cloud provider.
-   ```
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: hyp-env-cm
-      namespace: confidential-containers-system
-    data:
-      hyp.env: |
-          CAA_PROVIDER="ibmcloud"
-          IBMCLOUD_API_KEY="REPLACE_ME"
-          SSH_KEY_ID="REPLACE_ME"
-	  IMAGE_ID="REPLACE_ME"
-	  INSTANCE_PROFILE="REPLACE_ME"
-	  IBMCLOUD_ZONE="REPLACE_ME"
-	  VPC_ID="REPLACE_ME"
-	  VPC_PRIMARY_SUBNET_ID="REPLACE_ME"
-	  VPC_SECONDARY_SUBNET_ID="REPLACE_ME"
-	  VPC_PRIMARY_SECURITY_GROUP_ID="REPLACE_ME"
-	  VPC_SECONDARY_SECURITY_GROUP_ID="REPLACE_ME"
-	  CRI_RUNTIME_ENDPOINT="/run/containerd/containerd.sock"
-    ```
-
-* **Create CCruntime Custom Resource (CR)** 
-
-    ```
-    kubectl apply -f https://raw.githubusercontent.com/confidential-containers/cloud-api-adaptor/staging/install/yamls/ccruntime-peer-pods.yaml
-    ```
-
-## Verify
+### Verify
 
 * Check POD status
 
@@ -94,10 +36,11 @@
   A successful install should show all PODs with "Running" status
   
     ```
-    NAME                                             READY   STATUS        RESTARTS   AGE
-    cc-operator-controller-manager-dc4846d94-nfnr7   2/2     Running       0          20h
-    cc-operator-daemon-install-bdp89                 1/1     Running       0          5s
-    cc-operator-pre-install-daemon-hclk9             1/1     Running       0          9s
+    NAME                                                 READY   STATUS        RESTARTS   AGE
+    cc-operator-controller-manager-dc4846d94-nfnr7       2/2     Running       0          20h
+    cc-operator-daemon-install-bdp89                     1/1     Running       0          5s
+    cc-operator-pre-install-daemon-hclk9                 1/1     Running       0          9s
+    cloud-api-adaptor-deployment-aws-7c66d68484-zpnnw    1/1     Running       0          9s
     ```
 
 * Check `RuntimeClasses`
@@ -113,13 +56,12 @@
     kata-qemu   kata-qemu   6m7s
     ```
 
-* Login to the worker node and verify the status remote hypervisor service
+* View cloud-api-adaptor logs
 
     ```
-    sudo systemctl status remote-hyp.service
+    kubectl logs pod/cloud-api-adaptor-deployment-aws-7c66d68484-zpnnw -n confidential-containers-system
     ```
 
-    It should be in running state.
 
 
 ## Building runtime and pre-install images
@@ -157,15 +99,3 @@
     make build
     ```
 
-## Build and install with cloud-api-adaptor running in a pod
-
-* set CLOUD_PROVIDER
-    ```
-    export CLOUD_PROVIDER=<aws|ibmcloud|libvirt>
-    ```
-
-* `make image` builds the container image and push it to `$registry`
-* `make deploy` deploys operator, runtime and cloud-api-adaptor pod in the configured cluster
-    * configure install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml with your own settings
-    * validate kubectl is available in your `$PATH` and `$KUBECONFIG` is set
-* `make delete` deletes the pod deployment from the configured cluster
