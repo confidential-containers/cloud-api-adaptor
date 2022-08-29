@@ -8,6 +8,8 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+crio_drop_in_conf_dir="/etc/crio/crio.conf.d/"
+crio_drop_in_conf_file="${crio_drop_in_conf_dir}/99-kata-deploy"
 containerd_conf_file="/etc/containerd/config.toml"
 containerd_conf_file_backup="${containerd_conf_file}.bak"
 
@@ -61,6 +63,9 @@ function configure_cri_runtime() {
 	configure_different_shims_base
 
 	case $1 in
+	crio)
+		configure_crio
+		;;
 	containerd | k3s | k3s-agent | rke2-agent | rke2-server)
 		configure_containerd
 		;;
@@ -120,6 +125,47 @@ function cleanup_different_shims_base() {
 	done
 
 	rm /usr/local/bin/containerd-shim-kata-v2
+}
+
+function configure_crio_runtime() {
+	local runtime="kata"
+	local configuration="configuration"
+	if [ -n "${1-}" ]; then
+		runtime+="-$1"
+		configuration+="-$1"
+	fi
+
+	local kata_path="/usr/local/bin/containerd-shim-${runtime}-v2"
+	local kata_conf="crio.runtime.runtimes.${runtime}"
+	local kata_config_path="/opt/confidential-containers/share/defaults/kata-containers/$configuration.toml"
+
+	cat <<EOT | tee -a "$crio_drop_in_conf_file"
+
+[$kata_conf]
+	runtime_path = "${kata_path}"
+	runtime_type = "vm"
+	runtime_root = "/run/vc"
+	runtime_config_path = "${kata_config_path}"
+	privileged_without_host_devices = true
+EOT
+}
+
+function configure_crio() {
+        # Configure crio to use Kata:
+        echo "Add Kata Containers as a supported runtime for CRIO:"
+
+        # As we don't touch the original configuration file in any way,
+        # let's just ensure we remove any exist configuration from a
+        # previous deployment.
+        mkdir -p "$crio_drop_in_conf_dir"
+        rm -f "$crio_drop_in_conf_file"
+        touch "$crio_drop_in_conf_file"
+
+        configure_crio_runtime
+
+        for shim in "${shims[@]}"; do
+                configure_crio_runtime $shim
+        done
 }
 
 function configure_containerd_runtime() {
@@ -204,11 +250,18 @@ function cleanup_cri_runtime() {
 	cleanup_different_shims_base
 
 	case $1 in
+	crio)
+		cleanup_crio
+		;;
 	containerd | k3s | k3s-agent | rke2-agent | rke2-server)
 		cleanup_containerd
 		;;
 	esac
 
+}
+
+function cleanup_crio() {
+	rm $crio_drop_in_conf_file
 }
 
 function cleanup_containerd() {
@@ -222,7 +275,7 @@ function reset_runtime() {
 	kubectl label node "$NODE_NAME" katacontainers.io/kata-runtime-
 	systemctl daemon-reload
 	systemctl restart "$1"
-	if [ "$1" == "containerd" ]; then
+	if [ "$1" == "crio" ] || [ "$1" == "containerd" ]; then
 		systemctl restart kubelet
 	fi
 }
@@ -250,6 +303,9 @@ function main() {
 			[ -x $(command -v containerd) ]; then
 			containerd config default > "$containerd_conf_file"
 		fi
+	# CRI-O isn't consistent with the naming -- let's use crio to match the service file
+	elif [ "$runtime" == "cri-o" ]; then
+		runtime="crio"
 	fi
 
 	action=${1:-}
@@ -259,7 +315,7 @@ function main() {
 	fi
 
 	# only install / remove / update if we are dealing with containerd
-	if [[ "$runtime" =~ ^(containerd|k3s|k3s-agent|rke2-agent|rke2-server)$ ]]; then
+	if [[ "$runtime" =~ ^(containerd|k3s|k3s-agent|rke2-agent|rke2-server|crio)$ ]]; then
 
 		case "$action" in
 		install)
