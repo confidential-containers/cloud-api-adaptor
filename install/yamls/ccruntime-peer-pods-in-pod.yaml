@@ -30,12 +30,20 @@ spec:
             name: peer-pods-cm
         command: ["/usr/local/bin/entrypoint.sh"]
         volumeMounts:
+        - name: ssh
+          mountPath: "/root/.ssh/"
+          readOnly: true
         - mountPath: /run/peerpod
           name: pods-dir
         - mountPath: /run/netns
           mountPropagation: HostToContainer
           name: netns
       volumes:
+      - name: ssh
+        secret:
+          secretName: ssh-key-secret
+          defaultMode: 0600
+          optional: true
       - name: pods-dir # drop?
         hostPath:
           path: /run/peerpod
