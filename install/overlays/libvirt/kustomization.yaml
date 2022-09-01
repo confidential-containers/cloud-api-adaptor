@@ -15,14 +15,19 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="libvirt"
-  - LIBVIRT_URI="qemu+ssh://root@192.168.122.1/system" #set
+  - LIBVIRT_URI="qemu+ssh://root@192.168.122.1/system?no_verify=1" #set
   - LIBVIRT_NET="default" # set
   - LIBVIRT_POOL="default" # set
 
 secretGenerator:
+- name: ssh-key-secret
+  namespace: confidential-containers-system
+  files: # key generation example: ssh-keygen -f ./id_rsa -N "" && sudo cat id_rsa.pub >> /root/.ssh/authorized_keys
+   #- id_rsa # set - path to private key
 - name: peer-pods-secret
   namespace: confidential-containers-system
   literals:
 
 patchesStrategicMerge:
   #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
+  - ssh_mount.yaml # mounts the ssh-key-secret from above as a ssh key (this is optional - no need to comment)
