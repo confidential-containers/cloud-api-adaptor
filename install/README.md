@@ -13,17 +13,21 @@
     kubectl label node $NODENAME node-role.kubernetes.io/worker=
     ```
 
-## Build and install with cloud-api-adaptor running in a pod
+## Deploy webhook
+
+Please refer to the instructions available [here](webhook/docs/INSTALL.md)
+
+## Deploy cloud-api-adaptor
 
 * set CLOUD_PROVIDER
     ```
     export CLOUD_PROVIDER=<aws|ibmcloud|libvirt>
     ```
 
-* `make image` builds the container image and push it to `$registry`
 * `make deploy` deploys operator, runtime and cloud-api-adaptor pod in the configured cluster
     * configure install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml with your own settings
     * validate kubectl is available in your `$PATH` and `$KUBECONFIG` is set
+
 * `make delete` deletes the pod deployment from the configured cluster
 
 ### Verify
@@ -62,7 +66,22 @@
     kubectl logs pod/cloud-api-adaptor-deployment-aws-7c66d68484-zpnnw -n confidential-containers-system
     ```
 
+### Building cloud-api-adaptor image
 
+* Set CLOUD_PROVIDER
+    ```
+    export CLOUD_PROVIDER=<aws|ibmcloud|libvirt>
+    ```
+
+* Set container registry and image name
+    ```
+    export registry=<namespace>/<image_name>
+    ```
+
+* Build the container image and push it to `$registry`
+   ```
+   make image
+   ```
 
 ## Building runtime and pre-install images
 
@@ -75,10 +94,10 @@
 
 * Set container registry and image name
     ```
-    export REGISTRY=<NAMESPACE>/<IMAGE_NAME>
+    export registry=<namespace>/<image_name>
     ```
 
-* Build the container image
+* Build the container image and push it to `$registry`
     ```
     cd runtime-payload
     make binaries
@@ -90,10 +109,10 @@
 
 * Set container registry and image name
     ```
-    export REGISTRY=<NAMESPACE>/<IMAGE_NAME>
+    export registry=<namespace>/<image_name>
     ```
 
-* Build the container image
+* Build the container image and push it to `$registry`
     ```
     cd pre-install-payload
     make build
