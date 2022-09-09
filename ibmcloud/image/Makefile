@@ -38,7 +38,8 @@ AGENT_PROTOCOL_FORWARDER = $(FILES_DIR)/usr/local/bin/agent-protocol-forwarder
 KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
 SKOPEO        = $(FILES_DIR)/usr/bin/skopeo
 UMOCI         = $(FILES_DIR)/usr/local/bin/umoci
-BINARIES = $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(SKOPEO) $(UMOCI)
+PAUSE         = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/pause
+BINARIES = $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(SKOPEO) $(UMOCI) $(PAUSE)
 
 AGENT_PROTOCOL_FORWARDER_SRC = ../..
 
@@ -50,6 +51,13 @@ SKOPEO_REPO = https://github.com/containers/skopeo
 
 UMOCI_SRC   = umoci
 UMOCI_REPO  = https://github.com/opencontainers/umoci
+
+# Embed the pause container image
+# https://github.com/arronwy/kata-containers/commit/75b9f3fa3caaae62f49b4733f65cbab0cc87dbee
+PAUSE_SRC     = pause
+PAUSE_REPO    = docker://k8s.gcr.io/pause
+PAUSE_VERSION = 3.6
+PAUSE_BUNDLE  = pause_bundle
 
 build: $(IMAGE_FILE)
 
@@ -88,13 +96,19 @@ $(UMOCI): $(UMOCI_SRC)
 	cd "$(UMOCI_SRC)" && make
 	install -D --compare "$(UMOCI_SRC)/umoci" "$@"
 
+$(PAUSE_SRC):
+	$(SKOPEO) --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
+
+$(PAUSE): | $(PAUSE_SRC)
+	$(UMOCI) unpack --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
+
 ubuntu: $(UBUNTU_IMAGE_FILE)
 $(UBUNTU_IMAGE_FILE):
 	curl -s -L -o "$@" "$(UBUNTU_IMAGE_URL)"
 
 clean:
 	rm -f "$(IMAGE_FILE)" "$(UBUNTU_IMAGE_FILE)" $(BINARIES)
-	rm -fr "$(SKOPEO_SRC)" "$(UMOCI_SRC)"
+	rm -fr "$(SKOPEO_SRC)" "$(UMOCI_SRC)" "$(PAUSE_SRC)" "$(FILES_DIR)/$(PAUSE_BUNDLE)"
 
 .PHONY: force
 force:
