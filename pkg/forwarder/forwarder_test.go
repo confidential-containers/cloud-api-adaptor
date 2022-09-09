@@ -7,12 +7,24 @@ import (
 	"context"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/agentproto"
 )
 
+type mockConn struct{}
+
+func (*mockConn) Read(b []byte) (n int, err error)   { return 0, nil }
+func (*mockConn) Write(b []byte) (n int, err error)  { return 0, nil }
+func (*mockConn) Close() error                       { return nil }
+func (*mockConn) LocalAddr() net.Addr                { return nil }
+func (*mockConn) RemoteAddr() net.Addr               { return nil }
+func (*mockConn) SetDeadline(t time.Time) error      { return nil }
+func (*mockConn) SetReadDeadline(t time.Time) error  { return nil }
+func (*mockConn) SetWriteDeadline(t time.Time) error { return nil }
+
 func dummyDialer(ctx context.Context) (net.Conn, error) {
-	return nil, nil
+	return &mockConn{}, nil
 }
 
 func TestNew(t *testing.T) {

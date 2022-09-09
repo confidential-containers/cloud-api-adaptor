@@ -5,8 +5,10 @@ package interceptor
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/gogo/protobuf/types"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
@@ -27,10 +29,51 @@ type interceptor struct {
 	nsPath string
 }
 
+func dial(ctx context.Context, agentSocket string) (net.Conn, error) {
+
+	var conn net.Conn
+
+	maxRetries := 30
+	retryInterval := 5 * time.Second
+
+	count := 1
+	for {
+		var err error
+
+		func() {
+			ctx, cancel := context.WithTimeout(ctx, retryInterval)
+			defer cancel()
+
+			conn, err = (&net.Dialer{}).DialContext(ctx, "unix", agentSocket)
+
+			if err == nil || count == maxRetries {
+				return
+			}
+			<-ctx.Done()
+		}()
+
+		if err == nil {
+			break
+		}
+		if count == maxRetries {
+			err := fmt.Errorf("reaches max retry count. gave up establishing agent connection to %s: %w", agentSocket, err)
+			logger.Print(err)
+			return nil, err
+		}
+		logger.Printf("failed to establish agent connection to %s: %v. (retrying... %d/%d)", agentSocket, err, count, maxRetries)
+
+		count++
+	}
+
+	logger.Printf("established agent connection to %s", agentSocket)
+
+	return conn, nil
+}
+
 func NewInterceptor(agentSocket, nsPath string) Interceptor {
 
 	agentDialer := func(ctx context.Context) (net.Conn, error) {
-		return (&net.Dialer{}).DialContext(ctx, "unix", agentSocket)
+		return dial(ctx, agentSocket)
 	}
 
 	redirector := agentproto.NewRedirector(agentDialer)
