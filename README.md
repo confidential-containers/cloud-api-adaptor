@@ -22,6 +22,10 @@ The high level architecture is described in the picture below
 * Agent protocol forwarder ([cmd/agent-protocol-forwarder](./cmd/agent-protocol-forwarder))
 * A modified version of Kata containers to support remote hypervisor based on CCv0 branch (not included in this repository)
 
+## Installation
+
+Please following the instructions mentioned in the following [doc](install/README.md).
+
 ## Contribution
 
 This project uses [the Apache 2.0 license](./LICENSE). Contribution to this project requires the [DCO 1.1](./DCO1.1.txt) process to be followed.

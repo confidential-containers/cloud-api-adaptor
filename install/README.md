@@ -1,21 +1,33 @@
 ## Installation
 
-*  **Setup Cloud Resources**
+* **Setup Cloud Resources**
 
   If using AWS, create VPC and AMI. Similarly for other providers create the
   necessary resources.
    
 * **Setup Kubernetes cluster in the cloud**
 
-  If using a single node cluster then label the node with "worker" role.
+  At least one node in the cluster must have the "worker" role.
+  Verify by executing the following command.
+  ```
+   kubectl get nodes
+  ```
+  You should see "worker" under the "ROLES" column as shown below:
+  ```
+   NAME             STATUS   ROLES                         AGE   VERSION
+   testk-master-0   Ready    control-plane,master,worker   37h   v1.25.0
+  ```
+
+  If "worker" role is missing, execute the following command to set the role.
    
     ```
+    export NODENAME=<node-name>
     kubectl label node $NODENAME node-role.kubernetes.io/worker=
     ```
 
 ## Deploy webhook
 
-Please refer to the instructions available [here](webhook/docs/INSTALL.md)
+   Please refer to the instructions available in the following [doc](../webhook/docs/INSTALL.md).
 
 ## Deploy cloud-api-adaptor
 
@@ -37,7 +49,8 @@ Please refer to the instructions available [here](webhook/docs/INSTALL.md)
     ```
     kubectl get pods -n confidential-containers-system
     ```
-  A successful install should show all PODs with "Running" status
+  A successful install should show all the PODs with "Running" status under the `confidential-containers-system`
+  namespace.
   
     ```
     NAME                                                 READY   STATUS        RESTARTS   AGE
@@ -52,7 +65,7 @@ Please refer to the instructions available [here](webhook/docs/INSTALL.md)
     ```
     kubectl get runtimeclass
     ```
-  A successful install should show the following `RuntimeClasses`
+  A successful install should show `kata` related `RuntimeClasses`
     ```
     NAME        HANDLER     AGE
     kata        kata        6m7s
@@ -66,7 +79,7 @@ Please refer to the instructions available [here](webhook/docs/INSTALL.md)
     kubectl logs pod/cloud-api-adaptor-deployment-aws-7c66d68484-zpnnw -n confidential-containers-system
     ```
 
-### Building cloud-api-adaptor image
+## Building custom cloud-api-adaptor image
 
 * Set CLOUD_PROVIDER
     ```
@@ -83,12 +96,12 @@ Please refer to the instructions available [here](webhook/docs/INSTALL.md)
    make image
    ```
 
-## Building runtime and pre-install images
+## Building custom runtime and pre-install images
 
    These instructions should help you build your own images for development and testing.
 
    Before proceeding ensure you can build the kata runtime and the agent successfully by
-   following the instructions mentioned in the following [link](../docs/DEVELOPMENT.md)
+   following the instructions mentioned in the following [link](../docs/DEVELOPMENT.md).
 
 ### Building Runtime Payload Image
 
