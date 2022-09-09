@@ -6,6 +6,7 @@ package agentproto
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 
@@ -45,12 +46,14 @@ func NewRedirector(dialer func(context.Context) (net.Conn, error)) Redirector {
 	}
 }
 
-func (s *redirector) Connect(ctx context.Context) (err error) {
+func (s *redirector) Connect(ctx context.Context) error {
+
+	var err error
 
 	s.once.Do(func() {
 
 		conn, e := s.dialer(ctx)
-		if err != nil {
+		if e != nil {
 			err = e
 			return
 		}
@@ -64,15 +67,23 @@ func (s *redirector) Connect(ctx context.Context) (err error) {
 		}
 	})
 
-	if s.agentClient == nil {
-		err = errors.New("agent connection is not established")
+	if err != nil {
+		return fmt.Errorf("agent connection is not established: %w", err)
 	}
 
-	return err
+	if s.agentClient == nil {
+		return errors.New("agent connection is not established")
+	}
+
+	return nil
 }
 
 func (s *redirector) Close() error {
-	return s.ttrpcClient.Close()
+	client := s.ttrpcClient
+	if client == nil {
+		return nil
+	}
+	return client.Close()
 }
 
 // AgentServiceService methods
