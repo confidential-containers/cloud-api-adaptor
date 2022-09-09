@@ -59,6 +59,12 @@ PAUSE_REPO    = docker://k8s.gcr.io/pause
 PAUSE_VERSION = 3.6
 PAUSE_BUNDLE  = pause_bundle
 
+# Static libseccomp is necessary for kata-agent
+# https://github.com/kata-containers/kata-containers/issues/5044#issuecomment-1239773921
+STATIC_LIB_BUILDER = ../../../kata-containers/ci/install_libseccomp.sh
+STATIC_LIB_DIR     = $(abspath staticlib)
+STATIC_LIB         = $(STATIC_LIB_DIR)/kata-libseccomp/lib/libseccomp.a
+
 build: $(IMAGE_FILE)
 
 push: $(IMAGE_FILE)
@@ -78,9 +84,12 @@ $(AGENT_PROTOCOL_FORWARDER): force
 	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && $(MAKE) agent-protocol-forwarder
 	install -D --compare "$(AGENT_PROTOCOL_FORWARDER_SRC)/agent-protocol-forwarder" "$@"
 
-$(KATA_AGENT): force
-	cd "$(KATA_AGENT_SRC)" && $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE)
+$(KATA_AGENT): force $(STATIC_LIB)
+	cd "$(KATA_AGENT_SRC)" && $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIB))
 	install -D --compare "$(KATA_AGENT_SRC)/target/$(shell uname -m)-unknown-linux-$(if $(findstring s390x,$(shell uname -m)),gnu,musl)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
+
+$(STATIC_LIB):
+	$(STATIC_LIB_BUILDER) $(STATIC_LIB_DIR)/kata-libseccomp $(STATIC_LIB_DIR)/kata-gperf
 
 $(SKOPEO_SRC):
 	git clone -b "v$(SKOPEO_VERSION)" "$(SKOPEO_REPO)" "$(SKOPEO_SRC)"

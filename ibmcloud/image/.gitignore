@@ -6,6 +6,7 @@
 /skopeo
 /umoci
 /pause
+/staticlib
 /files/usr/local/bin/agent-protocol-forwarder
 /files/usr/local/bin/kata-agent
 /files/usr/bin/skopeo
