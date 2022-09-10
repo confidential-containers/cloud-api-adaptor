@@ -136,6 +136,17 @@
         executable: /bin/bash
         creates: /usr/local/go/bin/go
 
+    - name: Create GOPATH
+      shell: |
+        mkdir -p /root/go
+
+        if ! grep -q '^GOPATH=/root/go' /root/.bashrc; then
+          echo 'export GOPATH=/root/go' >> /root/.bashrc
+        fi
+      args:
+        executable: /bin/bash
+        creates: /root/go
+        
     - name: Install containerd
       shell: |
         set -o errexit -o pipefail
