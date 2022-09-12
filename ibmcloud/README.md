@@ -128,6 +128,12 @@ vpc_name = "<vpc name>"
 > - `primary_subnet_name` (optional) is the name of the subnet Terraform will create. If not set it defaults to `tok-primary-subnet`.
 > - `public_gateway_name` (optional) is the name of the public gateway Terraform will create. If not set it defaults to `tok-gateway`.
 > - `vpc_name` (optional) is the name of the VPC Terraform will create. If not set it defaults to `tok-vpc`.
+> - `cloud_api_adaptor_repo` (optional) is the repository URL of Cloud API Adaptor. If not set it defaults to `https://github.com/confidential-containers/cloud-api-adaptor.git`.
+> - `cloud_api_adaptor_branch` (optional) is the branch name of Cloud API Adaptor. If not set it defaults to `staging`.
+> - `kata_containers_repo` (optional) is the repository URL of Kata Containers. If not set it defaults to `https://github.com/yoheiueda/kata-containers.git`.
+> - `kata_containers_branch` (optional) is the branch name of Kata Containers. If not set it defaults to `CCv0-peerpod`.
+> - `containerd_repo` (optional) is the repository URL of containerd. If not set it defaults to `https://github.com/confidential-containers/containerd.git`.
+> - `containerd_branch` (optional) is the branch name of containerd. If not set it defaults to `CC-main`.
 
 > **Hint:** In order to create a cluster based on a different type of VSI image you can use the `instance_profile_name` and `image_name` parameters. E.g., to create a **s390x** architecture based cluster, include the following two lines in the `terraform.tfvars` file
 >
@@ -204,6 +210,17 @@ If you created your VPC, subnet and security group without using the `common` Te
 If you don't have your public key already configured in IBM Cloud you can add
 ```
 ssh_pub_key = "<your SSH public key>"
+```
+
+Additionally,  you can customize source code repositories to be extracted under `/root` of each worker node. By default, the repository URLs and branch names listed below are used to fetch repositories. You can add variable definitions to `terraform.tfvars` to customize them.
+
+```
+cloud_api_adaptor_repo = "https://github.com/confidential-containers/cloud-api-adaptor.git"
+cloud_api_adaptor_branch = "staging"
+kata_containers_repo = "https://github.com/yoheiueda/kata-containers.git"
+kata_containers_branch = "CCv0-peerpod"
+containerd_repo = "https://github.com/confidential-containers/containerd.git"
+containerd_branch = "CC-main"
 ```
 
 > **Hint:** In order to create the cluster based on a different type of VSI image you can overwrite more parameters here e.g. to create a **s390x** based cluster add follow two lines to the `terraform.tfvars` file.

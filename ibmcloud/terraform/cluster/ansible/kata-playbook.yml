@@ -71,9 +71,8 @@
     - name: Install containerd
       shell: |
         set -o errexit -o pipefail
-        containerd_release_tag=$(curl -sL https://api.github.com/repos/containerd/containerd/releases/latest | jq -r .tag_name)
         rm -fr /tmp/containerd
-        git clone -b CC-main https://github.com/confidential-containers/containerd.git /tmp/containerd
+        git clone -b "{{ containerd_branch }}" "{{ containerd_repo }}" /tmp/containerd
         (cd /tmp/containerd && make && make install)
         rm -fr /tmp/containerd
       environment:
@@ -203,7 +202,7 @@
       shell: |
         set -o errexit -o pipefail
         cd /root
-        git clone -b CCv0-peerpod https://github.com/yoheiueda/kata-containers.git
+        git clone -b "{{ kata_containers_branch }}" "{{ kata_containers_repo }}"
       args:
         executable: /bin/bash
         creates: /root/kata-containers
@@ -212,7 +211,7 @@
       shell: |
         set -o errexit -o pipefail
         cd /root
-        git clone -b staging https://github.com/confidential-containers/cloud-api-adaptor.git
+        git clone -b "{{ cloud_api_adaptor_branch }}" "{{ cloud_api_adaptor_repo }}"
       args:
         executable: /bin/bash
         creates: /root/cloud-api-adaptor
