@@ -43,6 +43,12 @@ module "cluster" {
     zone_name = var.zone_name
     ansible_dir = "./cluster/ansible"
     scripts_dir = "./cluster/scripts"
+    cloud_api_adaptor_repo = var.cloud_api_adaptor_repo
+    cloud_api_adaptor_branch = var.cloud_api_adaptor_branch
+    kata_containers_repo = var.kata_containers_repo
+    kata_containers_branch = var.kata_containers_branch
+    containerd_repo = var.containerd_repo
+    containerd_branch = var.containerd_branch
 }
 
 module "podvm_build" {

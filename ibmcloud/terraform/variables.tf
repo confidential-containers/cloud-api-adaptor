@@ -72,3 +72,33 @@ variable "skip_verify_console" {
     type = bool
     default = true
 }
+
+variable "cloud_api_adaptor_repo" {
+    description = "Repository URL of Cloud API Adaptor"
+    default = "https://github.com/confidential-containers/cloud-api-adaptor.git"
+}
+
+variable "cloud_api_adaptor_branch" {
+    description = "Branch name of Cloud API Adaptor"
+    default = "staging"
+}
+
+variable "kata_containers_repo" {
+    description = "Repository URL of Kata Containers"
+    default = "https://github.com/yoheiueda/kata-containers.git"
+}
+
+variable "kata_containers_branch" {
+    description = "Branch name of Kata Containers"
+    default = "CCv0-peerpod"
+}
+
+variable "containerd_repo" {
+    description = "Repository URL of containerd"
+    default = "https://github.com/confidential-containers/containerd.git"
+}
+
+variable "containerd_branch" {
+    description = "Branch name of containerd"
+    default = "CC-main"
+}
