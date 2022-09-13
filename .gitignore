@@ -9,8 +9,8 @@ skopeo
 
 
 # Binaries
-agent-protocol-forwarder
-cloud-api-adaptor
+./agent-protocol-forwarder
+./cloud-api-adaptor
 
 # IDEs
 .vscode
