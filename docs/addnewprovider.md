@@ -53,7 +53,7 @@ These methods are required by Kata and a Kata hypervisor needs to implement thes
 
 Add additional files to modularize the code.
 
-See existing providers - `aws|ibmcloud|libvirt`
+See existing providers - `aws|azure|ibmcloud|libvirt`
 
 #### Step 3: Update Continuous Integration (CI) workflows
 

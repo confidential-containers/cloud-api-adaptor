@@ -14,7 +14,7 @@ cd cloud-api-adaptor
 
 ## Build the binary
 
-Set `CLOUD_PROVIDER` variable to either `aws|ibmcloud|libvirt` depending on your requirement.
+Set `CLOUD_PROVIDER` variable to either `aws|azure|ibmcloud|libvirt` depending on your requirement.
 
 ```
 export CLOUD_PROVIDER=aws
