@@ -179,13 +179,28 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 	//Convert userData to base64
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 
-	input := &ec2.RunInstancesInput{
-		MinCount: aws.Int32(1),
-		MaxCount: aws.Int32(1),
-		LaunchTemplate: &types.LaunchTemplateSpecification{
-			LaunchTemplateName: aws.String(s.serviceConfig.LaunchTemplateName),
-		},
-		UserData: &userDataEnc,
+	var input *ec2.RunInstancesInput
+
+	if s.serviceConfig.UseLaunchTemplate {
+		input = &ec2.RunInstancesInput{
+			MinCount: aws.Int32(1),
+			MaxCount: aws.Int32(1),
+			LaunchTemplate: &types.LaunchTemplateSpecification{
+				LaunchTemplateName: aws.String(s.serviceConfig.LaunchTemplateName),
+			},
+			UserData: &userDataEnc,
+		}
+	} else {
+		input = &ec2.RunInstancesInput{
+			MinCount:         aws.Int32(1),
+			MaxCount:         aws.Int32(1),
+			ImageId:          aws.String(s.serviceConfig.ImageId),
+			InstanceType:     types.InstanceType(s.serviceConfig.InstanceType),
+			SecurityGroupIds: []string{s.serviceConfig.SecurityGroupId},
+			KeyName:          aws.String(s.serviceConfig.KeyName),
+			SubnetId:         aws.String(s.serviceConfig.SubnetId),
+			UserData:         &userDataEnc,
+		}
 	}
 
 	result, err := CreateInstance(ctx, s.ec2Client, input)

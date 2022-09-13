@@ -8,6 +8,12 @@ type Config struct {
 	Region             string
 	LoginProfile       string
 	LaunchTemplateName string
+	ImageId            string
+	InstanceType       string
+	SecurityGroupId    string
+	KeyName            string
+	SubnetId           string
+	UseLaunchTemplate  bool
 }
 
 func (c Config) Redact() Config {
