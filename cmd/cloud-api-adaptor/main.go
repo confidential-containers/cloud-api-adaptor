@@ -72,7 +72,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&azurecfg.Zone, "zone", "", "Zone")
 			flags.StringVar(&azurecfg.Region, "region", "", "Region")
 			flags.StringVar(&azurecfg.SubnetId, "subnetid", "", "Network Subnet Id")
-			flags.StringVar(&azurecfg.VnetName, "vnetname", "", "Virtual Network Name")
 			flags.StringVar(&azurecfg.SecurityGroupId, "securitygroupid", "", "Security Group Id")
 			flags.StringVar(&azurecfg.Size, "instance-size", "", "Instance size")
 			flags.StringVar(&azurecfg.ImageId, "imageid", "", "Image Id")

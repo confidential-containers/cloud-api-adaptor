@@ -67,7 +67,6 @@ Use the output from the previous command as values for the next one, viz. for fl
   -resourcegroup $RESOURCE_GROUP_NAME \
   -region $LOCATION \
   -subnetid "/subscriptions/..." \
-  -vnetname "<name of virtual network>" \
   -securitygroupid "/subscriptions/... network security group" \
   -instance-size <> \
   -imageid "/subscriptions/... image id generated before"
