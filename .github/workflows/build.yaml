@@ -25,17 +25,6 @@ jobs:
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v3
-        with:
-          # Need this to clone the repository side-by-side with kata's.
-          path: cloud-api-adaptor
-      - name: Checkout the Kata Containers fork
-        uses: actions/checkout@v3
-        with:
-          # TODO: this repository is temporary and so should be replaced
-          # once the required changes are merged on kata's repo.
-          repository: yoheiueda/kata-containers
-          ref: CCv0-peerpod
-          path: kata-containers
       - name: Setup Golang version ${{ matrix.go_version }}
         uses: actions/setup-go@v3
         with:
@@ -47,10 +36,8 @@ jobs:
           sudo apt-get install -y libvirt-dev
       - name: Build
         run: |
-          cd cloud-api-adaptor
           make CLOUD_PROVIDER=${{ matrix.provider }} build
       - name: Test
-        working-directory: ${{ github.workspace }}/cloud-api-adaptor
         run: |
           go install github.com/jstemmer/go-junit-report@v1.0.0
           export CI="true"
@@ -63,5 +50,5 @@ jobs:
         if: always()
         with:
           name: tests_report_junit-${{ matrix.provider }}_${{ matrix.runner }}_${{ matrix.go_version }}
-          path: ${{ github.workspace }}/cloud-api-adaptor/tests_report_junit.xml
+          path: ${{ github.workspace }}/tests_report_junit.xml
           retention-days: 1
