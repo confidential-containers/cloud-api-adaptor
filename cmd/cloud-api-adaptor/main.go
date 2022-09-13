@@ -16,6 +16,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/ibmcloud"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/libvirt"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/registry"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/vsphere"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
@@ -31,7 +32,7 @@ type daemonConfig struct {
 }
 
 const DefaultShimTimeout = "60s"
-
+var vspherecfg vsphere.Config
 var ibmcfg ibmcloud.Config
 var awscfg aws.Config
 var azurecfg azure.Config
@@ -121,6 +122,33 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
 			flags.StringVar(&hypcfg.CriSocketPath, "cri-runtime-endpoint", "", "cri runtime uds endpoint")
 		})
+
+	case "vsphere":
+		cmd.Parse("vsphere", os.Args[1:], func(flags *flag.FlagSet) {
+			flags.StringVar(&vspherecfg.VcenterURL, "vcenter-url", "", "URL of vCenter instance to connect to")
+			flags.StringVar(&vspherecfg.UserName, "user-name", "", "Username")
+			flags.StringVar(&vspherecfg.Password, "password", "", "Password")
+			flag.BoolVar(&vspherecfg.Insecure, "insecure", true, "Disable certificate verification")
+
+			flags.StringVar(&vspherecfg.Template, "template", "podvm-template", "vCenter template to deploy")
+			// GOVC_DATACENTER
+			flags.StringVar(&vspherecfg.Datacenter, "data-center", "", "vCenter desination datacenter name")
+			// GOVC_CLUSTER
+			flags.StringVar(&vspherecfg.Vcluster, "vcluster-name", "", "vCenter desination cluster name for DRS placement")
+			// GOVC_DATASTORE
+			flags.StringVar(&vspherecfg.Datastore, "data-store", "", "vCenter datastore")
+			// GOVC_RESOURCE_POOL
+			flags.StringVar(&vspherecfg.Resourcepool, "resource-pool", "", "vCenter desination resource pool")
+			// GOVC_FOLDER
+			flags.StringVar(&vspherecfg.Deployfolder, "deploy-folder", "", "vCenter vm desintation folder relative to the vm inventory path (your-data-center/vm). \nExample '-deploy-folder peerods' will create or use the existing folder peerpods as the \ndeploy-folder in /datacenter/vm/peerpods")
+
+			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
+			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
+			flags.StringVar(&hypcfg.HypProvider, "provider", "vsphere", "Hypervisor provider")
+			flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
+			flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
+		})
+
 	default:
 		os.Exit(1)
 	}
@@ -138,6 +166,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		hypervisorServer = registry.NewServer(hypcfg, libvirtcfg, workerNode, daemon.DefaultListenPort)
 	} else if hypcfg.HypProvider == "azure" {
 		hypervisorServer = registry.NewServer(hypcfg, azurecfg, workerNode, daemon.DefaultListenPort)
+	} else if hypcfg.HypProvider == "vsphere" {
+		hypervisorServer = registry.NewServer(hypcfg, vspherecfg, workerNode, daemon.DefaultListenPort)
 	}
 
 	return cmd.NewStarter(hypervisorServer), nil

@@ -3,6 +3,7 @@ module github.com/confidential-containers/cloud-api-adaptor
 go 1.18
 
 require (
+	github.com/vmware/govmomi v0.29.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.1.2
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.1.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v3 v3.0.1
