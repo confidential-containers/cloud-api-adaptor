@@ -8,9 +8,7 @@ type Config struct {
 	ResourceGroupName string
 	Zone              string
 	Region            string
-	SubnetName        string
 	SubnetId          string
-	VnetName          string
 	SecurityGroupName string
 	SecurityGroupId   string
 	Size              string
