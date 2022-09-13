@@ -33,7 +33,7 @@
 
 * set CLOUD_PROVIDER
     ```
-    export CLOUD_PROVIDER=<aws|ibmcloud|libvirt>
+    export CLOUD_PROVIDER=<aws|azure|ibmcloud|libvirt>
     ```
 
 * `make deploy` deploys operator, runtime and cloud-api-adaptor pod in the configured cluster
@@ -83,7 +83,7 @@
 
 * Set CLOUD_PROVIDER
     ```
-    export CLOUD_PROVIDER=<aws|ibmcloud|libvirt>
+    export CLOUD_PROVIDER=<aws|azure|ibmcloud|libvirt>
     ```
 
 * Set container registry and image name
