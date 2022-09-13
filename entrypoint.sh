@@ -23,7 +23,12 @@ cloud-api-adaptor-aws aws \
 	-aws-secret-key ${AWS_SECRET_ACCESS_KEY} \
 	-aws-region ${AWS_REGION} \
 	-pods-dir /run/peerpod/pods \
-	-aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME:-kata} \
+	-use-lt false \
+	-imageid ${PODVM_AMI_ID} \
+	-instance-type ${PODVM_INSTANCE_TYPE:-t3.small} \
+	-securitygroupid ${AWS_SG_ID} \
+	-keyname ${SSH_KP_NAME} \
+	-subnetid ${AWS_SUBNET_ID} \
 	${optionals} \
 	-socket /run/peerpod/hypervisor.sock
 }
