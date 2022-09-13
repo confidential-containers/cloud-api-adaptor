@@ -7,7 +7,7 @@
 export BUILD_DIR=$HOME/remote-hyp
 mkdir -p $BUILD_DIR && cd $BUILD_DIR
 
-git clone -b CCv0-peerpod https://github.com/yoheiueda/kata-containers.git
+git clone -b CCv0 https://github.com/kata-containers/kata-containers.git
 git clone https://github.com/confidential-containers/cloud-api-adaptor.git
 cd cloud-api-adaptor
 ```
