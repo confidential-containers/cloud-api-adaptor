@@ -78,12 +78,12 @@ variable "cloud_api_adaptor_branch" {
 
 variable "kata_containers_repo" {
     description = "Repository URL of Kata Containers"
-    default = "https://github.com/yoheiueda/kata-containers.git"
+    default = "https://github.com/kata-containers/kata-containers.git"
 }
 
 variable "kata_containers_branch" {
     description = "Branch name of Kata Containers"
-    default = "CCv0-peerpod"
+    default = "CCv0"
 }
 
 variable "containerd_repo" {
