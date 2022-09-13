@@ -20,7 +20,6 @@ require (
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-00010101000000-000000000000
 	github.com/opencontainers/runtime-spec v1.0.3-0.20211214071223-8958f93039ab
 	github.com/stretchr/testify v1.8.0
 	github.com/vishvananda/netlink v1.1.1-0.20220115184804-dd687eb2f2d4
@@ -56,6 +55,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20220913141151-9b49a6ddc6fd // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -73,9 +73,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace (
-	github.com/kata-containers/kata-containers/src/runtime => ../kata-containers/src/runtime
-	// The following line is a workaround for the issue descrined in https://github.com/containerd/ttrpc/issues/62
-	// We can remove this workaround when Kata stop using github.com/gogo/protobuf
-	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
-)
+// The following line is a workaround for the issue descrined in https://github.com/containerd/ttrpc/issues/62
+// We can remove this workaround when Kata stop using github.com/gogo/protobuf
+replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
