@@ -4,7 +4,7 @@ This guide describes how to set up a demo environment on IBM Cloud for peer pod 
 
 This procedure has been confirmed using the following repositories.
 * https://github.com/confidential-containers/cloud-api-adaptor/tree/staging
-* https://github.com/yoheiueda/kata-containers/tree/peerpod-2022.04.04
+* https://github.com/kata-containers/kata-containers/tree/CCv0
 
 The setup procedure includes the following sub tasks.
 
@@ -130,8 +130,8 @@ vpc_name = "<vpc name>"
 > - `vpc_name` (optional) is the name of the VPC Terraform will create. If not set it defaults to `tok-vpc`.
 > - `cloud_api_adaptor_repo` (optional) is the repository URL of Cloud API Adaptor. If not set it defaults to `https://github.com/confidential-containers/cloud-api-adaptor.git`.
 > - `cloud_api_adaptor_branch` (optional) is the branch name of Cloud API Adaptor. If not set it defaults to `staging`.
-> - `kata_containers_repo` (optional) is the repository URL of Kata Containers. If not set it defaults to `https://github.com/yoheiueda/kata-containers.git`.
-> - `kata_containers_branch` (optional) is the branch name of Kata Containers. If not set it defaults to `CCv0-peerpod`.
+> - `kata_containers_repo` (optional) is the repository URL of Kata Containers. If not set it defaults to `https://github.com/kata-containers/kata-containers.git`.
+> - `kata_containers_branch` (optional) is the branch name of Kata Containers. If not set it defaults to `CCv0`.
 > - `containerd_repo` (optional) is the repository URL of containerd. If not set it defaults to `https://github.com/confidential-containers/containerd.git`.
 > - `containerd_branch` (optional) is the branch name of containerd. If not set it defaults to `CC-main`.
 
@@ -217,8 +217,8 @@ Additionally,  you can customize source code repositories to be extracted under 
 ```
 cloud_api_adaptor_repo = "https://github.com/confidential-containers/cloud-api-adaptor.git"
 cloud_api_adaptor_branch = "staging"
-kata_containers_repo = "https://github.com/yoheiueda/kata-containers.git"
-kata_containers_branch = "CCv0-peerpod"
+kata_containers_repo = "https://github.com/kata-containers/kata-containers.git"
+kata_containers_branch = "CCv0"
 containerd_repo = "https://github.com/confidential-containers/containerd.git"
 containerd_branch = "CC-main"
 ```

@@ -1,6 +1,6 @@
 # Introduction
 
-This repository contains the implementation of Kata [remote hypervisor](https://github.com/yoheiueda/kata-containers/tree/CCv0-peerpod).
+This repository contains the implementation of Kata [remote hypervisor](https://github.com/kata-containers/kata-containers/tree/CCv0).
 The remote hypervisor concept is currently work in progress. The primary purpose of remote hypervisor support is to create
 Kata VMs alongside the Kubernetes worker node VMs, without requiring any nested virtualization support.
 
