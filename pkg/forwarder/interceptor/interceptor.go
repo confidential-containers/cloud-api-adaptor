@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 
 	"github.com/gogo/protobuf/types"
@@ -97,6 +98,17 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 	logger.Printf("    namespaces:")
 	for _, ns := range req.OCI.Linux.Namespaces {
 		logger.Printf("    %s: %q", ns.Type, ns.Path)
+	}
+
+	if len(req.OCI.Mounts) > 0 {
+		for _, m := range req.OCI.Mounts {
+			if _, err := os.Stat(m.Source); os.IsNotExist(err) && m.Type == "bind" {
+				logger.Printf("mount source %s doesn't exist, try to create", m.Source)
+				if err = os.MkdirAll(m.Source, os.ModePerm); err != nil {
+					logger.Printf("Failed to create dir: %v", err)
+				}
+			}
+		}
 	}
 
 	res, err := i.Redirector.CreateContainer(ctx, req)
