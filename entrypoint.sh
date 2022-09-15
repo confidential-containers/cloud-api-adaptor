@@ -41,12 +41,26 @@ cloud-api-adaptor-libvirt libvirt \
 	-socket /run/peerpod/hypervisor.sock
 }
 
+vsphere() {
+set -x
+cloud-api-adaptor-vsphere vsphere \
+        -vcenter-url ${GOVC_URL}  \
+	-user-name ${GOVC_USERNAME} \
+	-password ${GOVC_PASSWORD} \
+	-data-store datastore2 \
+	-pods-dir /run/peerpod/pods \
+	-deploy-folder peerpods \
+	-template podvm-new-template \
+	${optionals} \
+	-socket /run/peerpod/hypervisor.sock
+}
+
 help_msg() {
 	cat <<EOF
 Usage:
-	CLOUD_PROVIDER=aws|libvirt $0
+	CLOUD_PROVIDER=aws|libvirt|vsphere $0
 or
-	$0 aws|libvirt
+	$0 aws|libvirt|vsphere
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
 EOF
@@ -56,6 +70,8 @@ if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
 	aws
 elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
 	libvirt
+elif [[ "$CLOUD_PROVIDER" == "vsphere" ]]; then
+	vsphere
 else
 	help_msg
 fi
