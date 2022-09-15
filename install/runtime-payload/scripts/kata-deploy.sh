@@ -14,9 +14,12 @@ containerd_conf_file="/etc/containerd/config.toml"
 containerd_conf_file_backup="${containerd_conf_file}.bak"
 
 shims=(
-	"remote"
-	"qemu"
-	"clh"
+        "remote"
+        "qemu"
+        "qemu-tdx"
+        "qemu-sev"
+        "clh"
+        "clh-tdx"
 )
 
 default_shim="remote"
@@ -232,18 +235,22 @@ function configure_containerd() {
 
 function remove_artifacts() {
 	echo "deleting kata artifacts"
-	rm -rf \
-		/opt/confidential-containers/libexec/virtiofsd \
-		/opt/confidential-containers/share/defaults/kata-containers/ \
-		/opt/confidential-containers/share/bash-completion/completions/kata-runtime \
-		/opt/confidential-containers/share/kata-qemu/ \
-		/opt/confidential-containers/share/kata-containers/ \
-		/opt/confidential-containers/bin/kata-monitor \
-		/opt/confidential-containers/bin/containerd-shim-kata-v2 \
-		/opt/confidential-containers/bin/kata-runtime \
-		/opt/confidential-containers/bin/kata-collect-data.sh \
-		/opt/confidential-containers/bin/qemu-system-x86_64 \
-		/opt/confidential-containers/bin/cloud-hypervisor
+        rm -rf \
+                /opt/confidential-containers/libexec/ \
+                /opt/confidential-containers/share/ \
+                /opt/confidential-containers/bin/kata-monitor \
+                /opt/confidential-containers/bin/containerd-shim-kata-v2 \
+                /opt/confidential-containers/bin/kata-runtime \
+                /opt/confidential-containers/bin/kata-collect-data.sh \
+                /opt/confidential-containers/bin/qemu-system-x86_64 \
+                /opt/confidential-containers/bin/qemu-system-x86_64-tdx \
+                /opt/confidential-containers/bin/cloud-hypervisor
+
+        # Try to remove the /opt/confidential-containers directory.
+        # If it's not empty, don't bother force removing it, as the
+        # pre-install script also drops files here.
+        rmdir --ignore-fail-on-non-empty -p /opt/confidential-containers/bin
+
 }
 
 function cleanup_cri_runtime() {

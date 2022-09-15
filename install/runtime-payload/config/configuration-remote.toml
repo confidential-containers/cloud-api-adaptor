@@ -13,7 +13,7 @@
 
 [hypervisor.remote]
 remote_hypervisor_socket = "/run/peerpod/hypervisor.sock"
-remote_hypervisor_timeout = 120
+remote_hypervisor_timeout = 600
 
 
 # Enable confidential guest support.
