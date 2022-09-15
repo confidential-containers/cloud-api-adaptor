@@ -1,0 +1,28 @@
+bases:
+- ../../yamls
+nameSuffix: -vsphere
+
+images:
+- name: kustomize.this/cloud-api-adaptor/image:url
+  newName: quay.io/confidential-containers/cloud-api-adaptor-vsphere # change image if needed
+  newTag: latest
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="vsphere"
+  - GOVC_URL="" # set
+
+secretGenerator:
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  literals:
+  - GOVC_USERNAME="" # set
+  - GOVC_PASSWORD="" # set
+
+patchesStrategicMerge:
+  #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
