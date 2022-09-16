@@ -1,4 +1,12 @@
-./install/runtime-payload/bin/*
+#Directories
+install/runtime-payload/bin
+pause_bundle
+output
+staticlib
+pause
+umoci
+skopeo
+
 
 # Binaries
 agent-protocol-forwarder
