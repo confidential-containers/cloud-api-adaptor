@@ -5,3 +5,5 @@ sudo cp -a /tmp/files/etc/systemd/* /etc/systemd/
 
 sudo mkdir -p /usr/local/bin
 sudo cp -a /tmp/files/usr/* /usr/
+
+sudo cp -a /tmp/files/pause_bundle /
