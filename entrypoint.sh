@@ -38,6 +38,26 @@ cloud-api-adaptor-aws aws \
 	-socket /run/peerpod/hypervisor.sock
 }
 
+ibmcloud() {
+set -x
+cloud-api-adaptor-ibmcloud ibmcloud \
+        -api-key ${IBMCLOUD_API_KEY} \
+        -iam-service-url ${IBMCLOUD_IAM_ENDPOINT} \
+        -vpc-service-url  ${IBMCLOUD_VPC_ENDPOINT} \
+        -resource-group-id ${IBMCLOUD_RESOURCE_GROUP_ID} \
+        -key-id ${IBMCLOUD_SSH_KEY_ID} \
+        -image-id ${IBMCLOUD_PODVM_IMAGE_ID} \
+        -profile-name ${IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME} \
+        -zone-name ${IBMCLOUD_ZONE} \
+        -primary-subnet-id ${IBMCLOUD_VPC_SUBNET_ID} \
+        -primary-security-group-id ${IBMCLOUD_VPC_SG_ID} \
+        -vpc-id ${IBMCLOUD_VPC_ID} \
+        -pods-dir /run/peerpod/pods \
+        -cri-runtime-endpoint ${IBMCLOUD_CRI_RUNTIME_ENDPOINT} \
+	${optionals} \
+        -socket /run/peerpod/hypervisor.sock
+}
+
 libvirt() {
 test_vars LIBVIRT_URI
 set -x
@@ -68,9 +88,9 @@ cloud-api-adaptor-vsphere vsphere \
 help_msg() {
 	cat <<EOF
 Usage:
-	CLOUD_PROVIDER=aws|libvirt|vsphere $0
+	CLOUD_PROVIDER=aws|ibmcloud|libvirt|vsphere $0
 or
-	$0 aws|libvirt|vsphere
+	$0 aws|ibmcloud|libvirt|vsphere
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
 EOF
@@ -78,6 +98,8 @@ EOF
 
 if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
 	aws
+elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then
+	ibmcloud
 elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
 	libvirt
 elif [[ "$CLOUD_PROVIDER" == "vsphere" ]]; then
