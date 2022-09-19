@@ -1,6 +1,7 @@
 ## Prerequisites
 - make
 - golang 1.18.y
+- g++
 
 ## Clone the source code
 ```
