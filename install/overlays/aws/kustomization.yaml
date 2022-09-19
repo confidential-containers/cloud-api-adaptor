@@ -16,6 +16,11 @@ configMapGenerator:
   literals:
   - CLOUD_PROVIDER="aws"
   - PODVM_LAUNCHTEMPLATE_NAME="kata"
+  - PODVM_AMI_ID="" #set
+  - PODVM_INSTANCE_TYPE="t3.small" #set
+  - AWS_SG_ID="" #set
+  - SSH_KP_NAME="" #set
+  - AWS_SUBNET_ID="" #set
 
 secretGenerator:
 - name: peer-pods-secret
