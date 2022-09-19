@@ -10,8 +10,8 @@ fi
 
 
 test_vars() {
-        for i in $@; do
-                [ -z ${!i} ] && echo "\$$i is NOT set" && EXT=1
+        for i in "$@"; do
+                [ -z "${!i}" ] && echo "\$$i is NOT set" && EXT=1
         done
         [[ -n $EXT ]] && exit 1
 }
@@ -30,9 +30,9 @@ else
 fi
 
 cloud-api-adaptor-aws aws \
-	-aws-access-key-id ${AWS_ACCESS_KEY_ID} \
-	-aws-secret-key ${AWS_SECRET_ACCESS_KEY} \
-	-aws-region ${AWS_REGION} \
+	-aws-access-key-id "${AWS_ACCESS_KEY_ID}" \
+	-aws-secret-key "${AWS_SECRET_ACCESS_KEY}" \
+	-aws-region "${AWS_REGION}" \
 	-pods-dir /run/peerpod/pods \
 	${optionals} \
 	-socket /run/peerpod/hypervisor.sock
@@ -41,20 +41,20 @@ cloud-api-adaptor-aws aws \
 ibmcloud() {
 set -x
 cloud-api-adaptor-ibmcloud ibmcloud \
-        -api-key ${IBMCLOUD_API_KEY} \
-        -iam-service-url ${IBMCLOUD_IAM_ENDPOINT} \
-        -vpc-service-url  ${IBMCLOUD_VPC_ENDPOINT} \
-        -resource-group-id ${IBMCLOUD_RESOURCE_GROUP_ID} \
-        -key-id ${IBMCLOUD_SSH_KEY_ID} \
-        -image-id ${IBMCLOUD_PODVM_IMAGE_ID} \
-        -profile-name ${IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME} \
-        -zone-name ${IBMCLOUD_ZONE} \
-        -primary-subnet-id ${IBMCLOUD_VPC_SUBNET_ID} \
-        -primary-security-group-id ${IBMCLOUD_VPC_SG_ID} \
-        -vpc-id ${IBMCLOUD_VPC_ID} \
+        -api-key "${IBMCLOUD_API_KEY}" \
+        -iam-service-url "${IBMCLOUD_IAM_ENDPOINT}" \
+        -vpc-service-url  "${IBMCLOUD_VPC_ENDPOINT}" \
+        -resource-group-id "${IBMCLOUD_RESOURCE_GROUP_ID}" \
+        -key-id "${IBMCLOUD_SSH_KEY_ID}" \
+        -image-id "${IBMCLOUD_PODVM_IMAGE_ID}" \
+        -profile-name "${IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME}" \
+        -zone-name "${IBMCLOUD_ZONE}" \
+        -primary-subnet-id "${IBMCLOUD_VPC_SUBNET_ID}" \
+        -primary-security-group-id "${IBMCLOUD_VPC_SG_ID}" \
+        -vpc-id "${IBMCLOUD_VPC_ID}" \
         -pods-dir /run/peerpod/pods \
-        -cri-runtime-endpoint ${IBMCLOUD_CRI_RUNTIME_ENDPOINT} \
-	${optionals} \
+        -cri-runtime-endpoint "${IBMCLOUD_CRI_RUNTIME_ENDPOINT}" \
+	"${optionals}" \
         -socket /run/peerpod/hypervisor.sock
 }
 
@@ -62,26 +62,26 @@ libvirt() {
 test_vars LIBVIRT_URI
 set -x
 cloud-api-adaptor-libvirt libvirt \
-	-uri ${LIBVIRT_URI} \
+	-uri "${LIBVIRT_URI}" \
 	-data-dir /opt/data-dir \
 	-pods-dir /run/peerpod/pods \
-	-network-name ${LIBVIRT_NET:-default} \
-	-pool-name ${LIBVIRT_POOL:-default} \
-	${optionals} \
+	-network-name "${LIBVIRT_NET:-default}" \
+	-pool-name "${LIBVIRT_POOL:-default}" \
+	"${optionals}" \
 	-socket /run/peerpod/hypervisor.sock
 }
 
 vsphere() {
 set -x
 cloud-api-adaptor-vsphere vsphere \
-        -vcenter-url ${GOVC_URL}  \
-	-user-name ${GOVC_USERNAME} \
-	-password ${GOVC_PASSWORD} \
+        -vcenter-url "${GOVC_URL}"  \
+	-user-name "${GOVC_USERNAME}" \
+	-password "${GOVC_PASSWORD}" \
 	-data-store datastore2 \
 	-pods-dir /run/peerpod/pods \
 	-deploy-folder peerpods \
 	-template podvm-new-template \
-	${optionals} \
+	"${optionals}" \
 	-socket /run/peerpod/hypervisor.sock
 }
 
