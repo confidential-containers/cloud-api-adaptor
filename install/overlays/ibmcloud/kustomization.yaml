@@ -1,0 +1,38 @@
+bases:
+- ../../yamls
+nameSuffix: -ibmcloud
+
+images:
+- name: kustomize.this/cloud-api-adaptor/image:url
+  newName: quay.io/confidential-containers/cloud-api-adaptor-ibmcloud # change image if needed
+  newTag: latest
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="ibmcloud"
+  - IBMCLOUD_VPC_ENDPOINT="" #set
+  - IBMCLOUD_RESOURCE_GROUP_ID="" #set
+  - IBMCLOUD_SSH_KEY_ID="" #set
+  - IBMCLOUD_PODVM_IMAGE_ID="" #set
+  - IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME="" #set
+  - IBMCLOUD_ZONE="" #set
+  - IBMCLOUD_VPC_SUBNET_ID="" #set
+  - IBMCLOUD_VPC_SG_ID="" #set
+  - IBMCLOUD_VPC_ID="" #set
+  - IBMCLOUD_CRI_RUNTIME_ENDPOINT="/run/containerd/containerd.sock" #set
+
+secretGenerator:
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  literals:
+  - IBMCLOUD_API_KEY="" # set
+  - IBMCLOUD_IAM_ENDPOINT="" #set
+  - IBMCLOUD_ZONE="" #set
+
+patchesStrategicMerge:
+  - cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
