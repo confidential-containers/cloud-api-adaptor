@@ -50,7 +50,7 @@ function build_caa_payload() {
 		--amend ${registry}:x86_64-${tag}
 
 	docker manifest push ${registry}:${tag}
-	docker manifest push ${registry}:latest
+	docker manifest push --purge ${registry}:latest
 
 	popd
 }
