@@ -2,6 +2,8 @@ package vsphere
 
 import (
 	"net"
+
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 )
 
 type Config struct {
@@ -20,4 +22,8 @@ type Config struct {
 type createInstanceOutput struct {
 	uuid string
 	ips  []net.IP
+}
+
+func (c Config) Redact() Config {
+	return *util.RedactStruct(&c, "UserName", "Password").(*Config)
 }
