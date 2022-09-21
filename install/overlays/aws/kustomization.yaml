@@ -15,6 +15,8 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="aws"
+  #- PODVM_LAUNCHTEMPLATE_NAME="" # Uncomment and set if you want to use launch template
+  # Comment out all the following variables if using launch template
   - PODVM_AMI_ID="" #set
   - PODVM_INSTANCE_TYPE="t3.small" #set
   - AWS_SG_ID="" #set

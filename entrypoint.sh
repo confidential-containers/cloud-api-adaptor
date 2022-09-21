@@ -8,6 +8,7 @@ if [[ -S ${CRI_RUNTIME_ENDPOINT} ]]; then # will skip if socket isn't exist in t
 	optionals+="-cri-runtime-endpoint ${CRI_RUNTIME_ENDPOINT} "
 fi
 
+
 test_vars() {
         for i in $@; do
                 [ -z ${!i} ] && echo "\$$i is NOT set" && EXT=1
@@ -16,19 +17,23 @@ test_vars() {
 }
 
 aws() {
-#test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
 set -x
+
+if [[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]]; then
+	optionals+="-use-lt -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME}"
+else
+	optionals+="-imageid ${PODVM_AMI_ID} "
+	optionals+="-instance-type ${PODVM_INSTANCE_TYPE:-t3.small} "
+	optionals+="-securitygroupid ${AWS_SG_ID} "
+	optionals+="-keyname ${SSH_KP_NAME} "
+	optionals+="-subnetid ${AWS_SUBNET_ID} "
+fi
+
 cloud-api-adaptor-aws aws \
 	-aws-access-key-id ${AWS_ACCESS_KEY_ID} \
 	-aws-secret-key ${AWS_SECRET_ACCESS_KEY} \
 	-aws-region ${AWS_REGION} \
 	-pods-dir /run/peerpod/pods \
-	-use-lt false \
-	-imageid ${PODVM_AMI_ID} \
-	-instance-type ${PODVM_INSTANCE_TYPE:-t3.small} \
-	-securitygroupid ${AWS_SG_ID} \
-	-keyname ${SSH_KP_NAME} \
-	-subnetid ${AWS_SUBNET_ID} \
 	${optionals} \
 	-socket /run/peerpod/hypervisor.sock
 }
