@@ -32,6 +32,7 @@ type daemonConfig struct {
 }
 
 const DefaultShimTimeout = "60s"
+
 var vspherecfg vsphere.Config
 var ibmcfg ibmcloud.Config
 var awscfg aws.Config
@@ -159,7 +160,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("cfg: %#v; hypcfg: %#v\n", cfg, hypcfg)
 	workerNode := podnetwork.NewWorkerNode(cfg.TunnelType, cfg.HostInterface)
 
 	var hypervisorServer hypervisor.Server
