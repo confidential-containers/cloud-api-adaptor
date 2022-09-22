@@ -23,6 +23,8 @@ type WorkerNode interface {
 type workerNode struct {
 	tunnelType    string
 	hostInterface string
+	vxlanPort     int
+	vxlanMinID    int
 }
 
 // TODO: Pod index is reset when this process restarts.
@@ -43,11 +45,13 @@ func (p *podIndex) Get() int {
 	return index
 }
 
-func NewWorkerNode(tunnelType, hostInterface string) WorkerNode {
+func NewWorkerNode(tunnelType, hostInterface string, vxlanPort, vxlanMinID int) WorkerNode {
 
 	return &workerNode{
 		tunnelType:    tunnelType,
 		hostInterface: hostInterface,
+		vxlanPort:     vxlanPort,
+		vxlanMinID:    vxlanMinID,
 	}
 }
 
@@ -128,6 +132,11 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 			r.GW = route.GW.String()
 		}
 		config.Routes = append(config.Routes, r)
+	}
+
+	if n.tunnelType == "vxlan" {
+		config.VXLANPort = n.vxlanPort
+		config.VXLANID = n.vxlanMinID + config.Index
 	}
 
 	return config, nil

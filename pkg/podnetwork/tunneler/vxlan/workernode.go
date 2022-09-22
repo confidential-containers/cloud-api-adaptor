@@ -18,8 +18,8 @@ import (
 var logger = log.New(log.Writer(), "[tunneler/vxlan] ", log.LstdFlags|log.Lmsgprefix)
 
 const (
-	vxlanPort                = 4789
-	vxlanMinID               = 555000
+	DefaultVXLANPort         = 4789
+	DefaultVXLANMinID        = 555000
 	hostVxlanInterfacePrefix = "ppvxlan"
 	secondPodInterface       = "vxlan1"
 )
@@ -82,14 +82,12 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 
 		if !found {
 
-			vxlanID := vxlanMinID + config.Index
-
 			vxlanLink := &netlink.Vxlan{
 				Group:   dstAddr,
-				VxlanId: vxlanID,
-				Port:    vxlanPort,
+				VxlanId: config.VXLANID,
+				Port:    config.VXLANPort,
 			}
-			logger.Printf("vxlan %s (remote %s, id: %d) created at %s", hostVxlanInterface, dstAddr.String(), vxlanID, hostNS.Path)
+			logger.Printf("vxlan %s (remote %s:%d, id: %d) created at %s", hostVxlanInterface, dstAddr.String(), config.VXLANPort, config.VXLANID, hostNS.Path)
 			err := hostNS.LinkAdd(hostVxlanInterface, vxlanLink)
 			if err == nil {
 				logger.Printf("vxlan %s created at %s", hostVxlanInterface, hostNS.Path)

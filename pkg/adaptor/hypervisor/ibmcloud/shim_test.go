@@ -85,9 +85,9 @@ func TestShim(t *testing.T) {
 	case "", "mock":
 		workerNode = &mockWorkerNode{}
 	case "routing":
-		workerNode = podnetwork.NewWorkerNode("routing", "ens4")
+		workerNode = podnetwork.NewWorkerNode("routing", "ens4", 0, 0)
 	default:
-		workerNode = podnetwork.NewWorkerNode(t, "")
+		workerNode = podnetwork.NewWorkerNode(t, "", 0, 0)
 	}
 
 	cfg := hypervisor.Config{
