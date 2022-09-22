@@ -15,8 +15,8 @@ spec:
           name: cri-runtime-endpoint
       volumes:
       - name: cri-runtime-endpoint
-        type: Socket
         hostPath:
           path: /run/containerd/containerd.sock # SET! (crio's default: /var/run/crio/crio.sock)
+          type: Socket
 
 # to apply this uncomment the patchesStrategicMerge of this file in kustomization.yaml
