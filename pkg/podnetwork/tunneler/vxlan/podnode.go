@@ -49,12 +49,10 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 	}
 	defer podNS.Close()
 
-	vxlanID := vxlanMinID + config.Index
-
 	vxlanLink := &netlink.Vxlan{
 		Group:   nodeIP,
-		VxlanId: vxlanID,
-		Port:    vxlanPort,
+		VxlanId: config.VXLANID,
+		Port:    config.VXLANPort,
 	}
 	if err := hostNS.LinkAdd(podVxlanInterface, vxlanLink); err != nil {
 		return fmt.Errorf("failed to add vxlan interface %s: %w", podVxlanInterface, err)

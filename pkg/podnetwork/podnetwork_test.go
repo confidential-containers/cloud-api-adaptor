@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
+	testutils "github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tuntest"
 )
@@ -83,7 +83,7 @@ func TestWorkerNode(t *testing.T) {
 
 		err := workerNodeNS.Run(func() error {
 
-			workerNode := NewWorkerNode(mockTunnelType, hostInterface)
+			workerNode := NewWorkerNode(mockTunnelType, hostInterface, 0, 0)
 			require.NotNil(t, workerNode, "hostInterface=%q", hostInterface)
 
 			config, err := workerNode.Inspect(workerPodNS.Path)

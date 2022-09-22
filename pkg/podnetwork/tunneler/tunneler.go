@@ -22,6 +22,8 @@ type Config struct {
 	TunnelType    string   `json:"tunnel-type"`
 	Dedicated     bool     `json:"dedicated"`
 	Index         int      `json:"index"`
+	VXLANPort     int      `json:"vxlan-port,omitempty"`
+	VXLANID       int      `json:"vxlan-id,omitempty"`
 }
 
 type Route struct {

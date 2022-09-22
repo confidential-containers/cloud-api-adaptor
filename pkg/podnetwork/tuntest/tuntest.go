@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
+	testutils "github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 	"github.com/coreos/go-iptables/iptables"
@@ -131,6 +131,11 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 			TunnelType:    tunnelType,
 			Dedicated:     dedicated,
 			Index:         i,
+		}
+
+		if tunnelType == "vxlan" {
+			pod.config.VXLANPort = 4789     // vxlan.DefaultVXLANPort
+			pod.config.VXLANID = 555000 + i // vxlan.DefaultVXLANMinID + index
 		}
 
 		podNodeIPs := []net.IP{net.ParseIP(getIP(t, pod.podNodePrimaryAddr))}
