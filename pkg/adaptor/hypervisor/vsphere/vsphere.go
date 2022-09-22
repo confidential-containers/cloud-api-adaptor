@@ -54,15 +54,6 @@ func CreateInstance(ctx context.Context, vim25Client *vim25.Client, vmcfg *Confi
 
 	finder := find.NewFinder(vim25Client)
 
-	// TODO change to tpl, err := template.FindTemplate(ctx, ctx.VSphereVM.Spec.Template)
-	// "github.com/vmware/govmomi/template"
-
-	vm, err := finder.VirtualMachine(ctx, vmcfg.Template)
-	if err != nil {
-		logger.Printf("Cannot find VM template %s error: %s", vmcfg.Template, err)
-		return nil, err
-	}
-
 	// If vmcfg.Datacenter is null DatacenterOrDefault will return the default datacenter
 	dc, err := finder.DatacenterOrDefault(ctx, vmcfg.Datacenter)
 	if err != nil {
@@ -76,6 +67,16 @@ func CreateInstance(ctx context.Context, vim25Client *vim25.Client, vmcfg *Confi
 
 	finder.SetDatacenter(dc)
 
+	// TODO change to tpl, err := template.FindTemplate(ctx, ctx.VSphereVM.Spec.Template)
+	// "github.com/vmware/govmomi/template"
+
+	vm, err := finder.VirtualMachine(ctx, vmcfg.Template)
+	if err != nil {
+		logger.Printf("Cannot find VM template %s error: %s", vmcfg.Template, err)
+		return nil, err
+	}
+
+	// TODO for DRS ResourcePoolOrDefault()
 	pool, err := finder.DefaultResourcePool(ctx)
 	if err != nil {
 		return nil, err
