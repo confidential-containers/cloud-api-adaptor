@@ -145,6 +145,12 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 
 func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest) (*pb.StartVMResponse, error) {
 
+	sess, lerr := VcenterLogin(s.vim25Client, s.serviceConfig)
+	if lerr != nil {
+		logger.Printf("StartVM login error  %s %v", lerr, sess)
+		return nil, lerr
+	}
+
 	sandbox, err := s.getSandbox(req.Id)
 	if err != nil {
 		return nil, err
@@ -152,6 +158,12 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	vmname := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
 	logger.Printf("StartVM %s", vmname)
+
+	defer func() {
+		if lerr == nil {
+			VcenterLogout(s.vim25Client, sess)
+		}
+	}()
 
 	daemonConfig := daemon.Config{
 		PodNamespace: sandbox.namespace,
@@ -262,6 +274,12 @@ func (s *hypervisorService) deleteInstance(ctx context.Context, id string, vmnam
 
 func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.StopVMResponse, error) {
 
+	sess, lerr := VcenterLogin(s.vim25Client, s.serviceConfig)
+	if lerr != nil {
+		logger.Printf("StopVM login error  %s", lerr)
+		return nil, lerr
+	}
+
 	sandbox, err := s.getSandbox(req.Id)
 	if err != nil {
 		return nil, err
@@ -270,6 +288,12 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 	vmname := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
 
 	logger.Printf("StopVM %s", vmname)
+
+	defer func() {
+		if lerr == nil {
+			VcenterLogout(s.vim25Client, sess)
+		}
+	}()
 
 	if err := sandbox.agentProxy.Shutdown(); err != nil {
 		logger.Printf("failed to stop agent proxy: %v", err)

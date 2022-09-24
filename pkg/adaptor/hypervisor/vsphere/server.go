@@ -35,10 +35,7 @@ func NewServer(cfg hypervisor.Config, vmcfg Config, workerNode podnetwork.Worker
 	logger.Printf("hypervisor config %v", cfg)
 	logger.Printf("cloud config %v", vmcfg)
 
-	vim25Client, err := NewVIM25Client(vmcfg)
-	if err != nil {
-		return nil
-	}
+	vim25Client := NewVIM25Client(vmcfg)
 
 	return &server{
 		socketPath: cfg.SocketPath,

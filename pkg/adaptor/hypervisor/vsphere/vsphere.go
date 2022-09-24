@@ -18,7 +18,14 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-func NewVIM25Client(vmcfg Config) (*vim25.Client, error) {
+func NewVIM25Client(vmcfg Config) *vim25.Client {
+
+	client := new(vim25.Client)
+
+	return client
+}
+
+func VcenterLogin(vim25Client *vim25.Client, vmcfg *Config) (*cache.Session, error) {
 
 	uinfo, err := soap.ParseURL(vmcfg.VcenterURL)
 	if err != nil {
@@ -27,23 +34,32 @@ func NewVIM25Client(vmcfg Config) (*vim25.Client, error) {
 
 	uinfo.User = url.UserPassword(vmcfg.UserName, vmcfg.Password)
 
-	sess := &cache.Session{
-		URL:      uinfo,
-		Insecure: vmcfg.Insecure,
-	}
-
-	client := new(vim25.Client)
-
 	// TODO finish implementing cached sessions and session management (s.SessionManager)
 	// TODO implement LoginByToken
 
 	// sess.Passthrough = true means no caching and must perform logout
-	err = sess.Login(context.Background(), client, nil)
+	// sess.Reauth      = true skips loading of cached sessions
+
+	sess := &cache.Session{
+		URL:         uinfo,
+		Insecure:    vmcfg.Insecure,
+		Passthrough: true,
+	}
+
+	err = sess.Login(context.Background(), vim25Client, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return client, nil
+	return sess, nil
+}
+
+func VcenterLogout(vim25Client *vim25.Client, sess *cache.Session) {
+
+	err := sess.Logout(context.Background(), vim25Client)
+	if err != nil {
+		logger.Printf("Vcenter logout returned %s", err)
+	}
 }
 
 type VmConfig []types.BaseOptionValue
