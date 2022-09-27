@@ -73,15 +73,36 @@ cloud-api-adaptor-libvirt libvirt \
 
 vsphere() {
 set -x
+
+if [[ "${GOVC_TEMPLATE}" ]]; then
+    optionals+="-template ${GOVC_TEMPLATE} "
+fi
+
+if [[ "${GOVC_DATACENTER}" ]]; then
+    optionals+="-data-center ${GOVC_DATACENTER} "
+fi
+
+if [[ "${GOVC_VCLUSTER}" ]]; then
+    optionals+="-vcluster ${GOVC_VCLUSTER} "
+fi
+
+if [[ "${GOVC_DATASTORE}" ]]; then
+    optionals+="-data-store ${GOVC_DATASTORE} "
+fi
+
+if [[ "${GOVC_RESOURCE_POOL}" ]]; then
+    optionals+="-resource-pool ${GOVC_RESOURCE_POOL} "
+fi
+
+if [[ "${GOVC_FOLDER}" ]]; then
+    optionals+="-deploy-folder ${GOVC_FOLDER} "
+fi
+
 cloud-api-adaptor-vsphere vsphere \
-        -vcenter-url "${GOVC_URL}"  \
-	-user-name "${GOVC_USERNAME}" \
-	-password "${GOVC_PASSWORD}" \
-	-data-store datastore2 \
-	-pods-dir /run/peerpod/pods \
-	-deploy-folder peerpods \
-	-template podvm-new-template \
-	"${optionals}" \
+	-vcenter-url ${GOVC_URL}  \
+	-user-name ${GOVC_USERNAME} \
+	-password ${GOVC_PASSWORD} \
+	${optionals} \
 	-socket /run/peerpod/hypervisor.sock
 }
 
