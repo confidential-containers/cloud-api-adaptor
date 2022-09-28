@@ -120,11 +120,10 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 			}
 		}
 
-		logger.Printf("CreateContainer: calling PullImage for %q before CreateContainer", imageName)
+		logger.Printf("CreateContainer: calling PullImage for %q before CreateContainer (cid: %q)", imageName, req.ContainerId)
 
 		pullImageReq := &pb.PullImageRequest{
-			Image:       imageName,
-			ContainerId: req.ContainerId,
+			Image: imageName,
 		}
 
 		pullImageRes, pullImageErr := s.Redirector.PullImage(ctx, pullImageReq)
@@ -134,6 +133,10 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 		} else {
 			logger.Printf("CreateContainer: successfully pulled image %q", pullImageRes.ImageRef)
 		}
+
+		// kata-agent uses this annotation to fix the image bundle path
+		// https://github.com/kata-containers/kata-containers/blob/8ad86e2ec9d26d2ef07f3bf794352a3fda7597e5/src/agent/src/rpc.rs#L694-L696
+		req.OCI.Annotations[cri.ImageName] = imageName
 	}
 
 	res, err := s.Redirector.CreateContainer(ctx, req)
