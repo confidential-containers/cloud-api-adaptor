@@ -182,3 +182,16 @@ func (i *interceptor) DestroySandbox(ctx context.Context, req *pb.DestroySandbox
 
 	return res, err
 }
+
+func (i *interceptor) PullImage(ctx context.Context, req *pb.PullImageRequest) (*pb.PullImageResponse, error) {
+
+	logger.Printf("PullImage: image: %q, containerID: %q", req.Image, req.ContainerId)
+
+	res, err := i.Redirector.PullImage(ctx, req)
+
+	if err != nil {
+		logger.Printf("PullImage failed with error: %v", err)
+	}
+
+	return res, err
+}
