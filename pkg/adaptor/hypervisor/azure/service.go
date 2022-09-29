@@ -27,6 +27,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/hvutil"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
@@ -104,11 +105,12 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 	if _, exists := s.sandboxes[sid]; exists {
 		return nil, fmt.Errorf("sandbox %s already exists", sid)
 	}
-	pod := req.Annotations[annotations.SandboxName]
+	pod := hvutil.GetPodName(req.Annotations)
 	if pod == "" {
 		return nil, fmt.Errorf("pod name %s is missing in annotations", annotations.SandboxName)
 	}
-	namespace := req.Annotations[annotations.SandboxNamespace]
+
+	namespace := hvutil.GetPodNamespace(req.Annotations)
 	if namespace == "" {
 		return nil, fmt.Errorf("namespace name %s is missing in annotations", annotations.SandboxNamespace)
 	}
