@@ -15,6 +15,7 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="aws"
+  #- PAUSE_IMAGE=" # Uncomment and set if you want to use a specific pause image
   #- PODVM_LAUNCHTEMPLATE_NAME="" # Uncomment and set if you want to use launch template
   # Comment out all the following variables if using launch template
   - PODVM_AMI_ID="" #set

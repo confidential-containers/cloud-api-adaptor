@@ -8,6 +8,9 @@ if [[ -S ${CRI_RUNTIME_ENDPOINT} ]]; then # will skip if socket isn't exist in t
 	optionals+="-cri-runtime-endpoint ${CRI_RUNTIME_ENDPOINT} "
 fi
 
+if [[ "${PAUSE_IMAGE}" ]]; then
+	optionals+="-pause-image ${PAUSE_IMAGE}"
+fi
 
 test_vars() {
         for i in "$@"; do

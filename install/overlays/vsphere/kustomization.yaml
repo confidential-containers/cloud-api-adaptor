@@ -16,6 +16,7 @@ configMapGenerator:
   literals:
   - CLOUD_PROVIDER="vsphere"
   - GOVC_URL="" # set
+  #- PAUSE_IMAGE=" # Uncomment and set if you want to use a specific pause image
 
 secretGenerator:
 - name: peer-pods-secret
