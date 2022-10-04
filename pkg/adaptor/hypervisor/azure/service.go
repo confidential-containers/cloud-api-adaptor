@@ -129,7 +129,7 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
 	}
 
-	agentProxy := proxy.NewAgentProxy(socketPath, s.hypervisorConfig.CriSocketPath)
+	agentProxy := proxy.NewAgentProxy(socketPath, s.hypervisorConfig.CriSocketPath, s.hypervisorConfig.PauseImage)
 
 	sandbox := &sandbox{
 		id:               sid,
