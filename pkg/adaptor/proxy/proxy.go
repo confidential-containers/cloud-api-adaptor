@@ -49,9 +49,10 @@ type agentProxy struct {
 	criSocketPath string
 	maxRetries    int
 	retryInterval time.Duration
+	pauseImage    string
 }
 
-func NewAgentProxy(socketPath, criSocketPath string) AgentProxy {
+func NewAgentProxy(socketPath, criSocketPath string, pauseImage string) AgentProxy {
 
 	return &agentProxy{
 		socketPath:    socketPath,
@@ -60,6 +61,7 @@ func NewAgentProxy(socketPath, criSocketPath string) AgentProxy {
 		stopCh:        make(chan struct{}),
 		maxRetries:    defaultMaxRetries,
 		retryInterval: defaultRetryInterval,
+		pauseImage:    pauseImage,
 	}
 }
 
@@ -151,7 +153,7 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 		logger.Printf("failed to init cri client, the err: %v", err)
 	}
 
-	proxyService := newProxyService(dialer, criClient)
+	proxyService := newProxyService(dialer, criClient, p.pauseImage)
 	defer func() {
 		if err := proxyService.Close(); err != nil {
 			logger.Printf("error closing agent proxy connection: %v", err)

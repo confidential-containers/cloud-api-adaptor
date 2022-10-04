@@ -19,17 +19,18 @@ import (
 
 type proxyService struct {
 	agentproto.Redirector
-
-	criClient *criClient
+	criClient  *criClient
+	pauseImage string
 }
 
-func newProxyService(dialer func(context.Context) (net.Conn, error), criClient *criClient) *proxyService {
+func newProxyService(dialer func(context.Context) (net.Conn, error), criClient *criClient, pauseImage string) *proxyService {
 
 	redirector := agentproto.NewRedirector(dialer)
 
 	return &proxyService{
 		Redirector: redirector,
 		criClient:  criClient,
+		pauseImage: pauseImage,
 	}
 }
 
@@ -54,23 +55,23 @@ func (s *proxyService) getImageFromDigest(ctx context.Context, digest string) (s
 	return "", fmt.Errorf("Did not find imageTag from image digest %s", digest)
 }
 
-// TODO: parameterize the pause container image name
-const pauseContainerImage = "k8s.gcr.io/pause:3.7"
+func (s *proxyService) getImageName(annotations map[string]string) (string, error) {
 
-func getImageName(annotations map[string]string) (string, error) {
-
-	for _, a := range []string{cri.ImageName, crio.ImageName} {
-		if image, ok := annotations[a]; ok {
-			return image, nil
-		}
-	}
-
+	logger.Printf("getImageName: check if its a sandbox type container")
 	for containerType, containerTypeSandbox := range map[string]string{
 		cri.ContainerType:  cri.ContainerTypeSandbox,
 		crio.ContainerType: crio.ContainerTypeSandbox,
 	} {
 		if annotations[containerType] == containerTypeSandbox {
-			return pauseContainerImage, nil
+			logger.Printf("getImageName: pause image: %s", s.pauseImage)
+			return s.pauseImage, nil
+		}
+	}
+
+	for _, a := range []string{cri.ImageName, crio.ImageName} {
+		if image, ok := annotations[a]; ok {
+			logger.Printf("getImageName: image: %s", image)
+			return image, nil
 		}
 	}
 
@@ -106,7 +107,7 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 			logger.Printf("        container_path:%s vm_path:%s type:%s", d.ContainerPath, d.VmPath, d.Type)
 		}
 	}
-	imageName, err := getImageName(req.OCI.Annotations)
+	imageName, err := s.getImageName(req.OCI.Annotations)
 	if err != nil {
 		logger.Printf("CreateContainer: image name is not available in CreateContainerRequest: %v", err)
 	} else {
