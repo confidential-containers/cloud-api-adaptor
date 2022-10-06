@@ -54,7 +54,7 @@ cloud-api-adaptor-ibmcloud ibmcloud \
         -vpc-id "${IBMCLOUD_VPC_ID}" \
         -pods-dir /run/peerpod/pods \
         -cri-runtime-endpoint "${IBMCLOUD_CRI_RUNTIME_ENDPOINT}" \
-	"${optionals}" \
+	${optionals} \
         -socket /run/peerpod/hypervisor.sock
 }
 
@@ -67,7 +67,7 @@ cloud-api-adaptor-libvirt libvirt \
 	-pods-dir /run/peerpod/pods \
 	-network-name "${LIBVIRT_NET:-default}" \
 	-pool-name "${LIBVIRT_POOL:-default}" \
-	"${optionals}" \
+	${optionals} \
 	-socket /run/peerpod/hypervisor.sock
 }
 
