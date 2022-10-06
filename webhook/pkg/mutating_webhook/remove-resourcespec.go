@@ -4,14 +4,15 @@ import (
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
-	DEFAULT_RUNTIME_CLASS_NAME  = "kata-remote-cc"
-	VM_ANNOTATION_INSTANCE_TYPE = "kata.peerpods.io/instance_type"
-	VM_INSTANCE_TYPE_DEFAULT    = "t2.small"
-	VM_EXTENDED_RESOURCE        = "kata.peerpods.io/vm"
+	RUNTIME_CLASS_NAME_DEFAULT       = "kata-remote-cc"
+	POD_VM_ANNOTATION_INSTANCE_TYPE  = "kata.peerpods.io/instance_type"
+	POD_VM_INSTANCE_TYPE_DEFAULT     = "t2.small"
+	POD_VM_EXTENDED_RESOURCE_DEFAULT = "kata.peerpods.io/vm"
 )
 
 // remove the POD resource spec
@@ -20,18 +21,23 @@ func removePodResourceSpec(pod *corev1.Pod) (*corev1.Pod, error) {
 	mpod := pod.DeepCopy()
 
 	if runtimeClassName = os.Getenv("TARGET_RUNTIMECLASS"); runtimeClassName == "" {
-		runtimeClassName = DEFAULT_RUNTIME_CLASS_NAME
+		runtimeClassName = RUNTIME_CLASS_NAME_DEFAULT
 	}
 	// Mutate only if the POD is using specific runtimeClass
 	if mpod.Spec.RuntimeClassName == nil || *mpod.Spec.RuntimeClassName != runtimeClassName {
 		return mpod, nil
 	}
 
+	var podVmInstanceType string
+	if podVmInstanceType = os.Getenv("POD_VM_INSTANCE_TYPE"); podVmInstanceType == "" {
+		podVmInstanceType = POD_VM_INSTANCE_TYPE_DEFAULT
+	}
+
 	if mpod.Annotations == nil {
 		mpod.Annotations = map[string]string{}
 	}
 
-	mpod.Annotations[VM_ANNOTATION_INSTANCE_TYPE] = VM_INSTANCE_TYPE_DEFAULT
+	mpod.Annotations[POD_VM_ANNOTATION_INSTANCE_TYPE] = podVmInstanceType
 
 	// Remove all resource specs
 	for idx := range mpod.Spec.Containers {
@@ -53,7 +59,12 @@ func defaultContainerResourceRequirements() corev1.ResourceRequirements {
 	requirements.Requests = corev1.ResourceList{}
 	requirements.Limits = corev1.ResourceList{}
 
-	requirements.Requests[VM_EXTENDED_RESOURCE] = resource.MustParse("1")
-	requirements.Limits[VM_EXTENDED_RESOURCE] = resource.MustParse("1")
+	var podVmExtResource string
+	if podVmExtResource = os.Getenv("POD_VM_EXTENDED_RESOURCE"); podVmExtResource == "" {
+		podVmExtResource = POD_VM_EXTENDED_RESOURCE_DEFAULT
+	}
+
+	requirements.Requests[v1.ResourceName(podVmExtResource)] = resource.MustParse("1")
+	requirements.Limits[v1.ResourceName(podVmExtResource)] = resource.MustParse("1")
 	return requirements
 }
