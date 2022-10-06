@@ -188,6 +188,9 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 	diskName := fmt.Sprintf("%s-disk", vmName)
 	nicName := fmt.Sprintf("%s-net", vmName)
 
+	// Set the vm name to the sandbox early for cleanup purposes
+	sandbox.vmName = vmName
+
 	// Get NIC using subnet and allow ports on the ssh group
 	vmNIC, err := s.createNetworkInterface(ctx, nicName)
 	if err != nil {
@@ -263,7 +266,6 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	// Set vsi to instance id
 	sandbox.vsi = *vm.ID
-	sandbox.vmName = vmName
 
 	logger.Printf("created an instance %s for sandbox %s", *vm.Name, req.Id)
 
