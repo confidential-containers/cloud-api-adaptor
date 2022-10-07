@@ -136,7 +136,7 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 
 	s.sandboxes[sid] = sandbox
 
-	vmname := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
+	vmname := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
 
 	logger.Printf("create a sandbox %s for pod %s in namespace %s (netns: %s)", req.Id, pod, namespace, sandbox.netNSPath)
 
@@ -152,7 +152,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-	vmname := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
+	vmname := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
 	logger.Printf("StartVM %s", vmname)
 
 	daemonConfig := daemon.Config{
@@ -269,7 +269,7 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 		return nil, err
 	}
 
-	vmname := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
+	vmname := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
 
 	logger.Printf("StopVM %s", vmname)
 
