@@ -175,7 +175,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-	vmName := fmt.Sprintf("%s-%s-%s-%.8s", s.nodeName, sandbox.namespace, sandbox.pod, sandbox.id)
+	vmName := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
 	vm := &vmConfig{name: vmName, userData: userData}
 	result, err := CreateInstance(ctx, s.libvirtClient, vm)
 	if err != nil {
