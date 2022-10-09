@@ -11,6 +11,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/containerd/ttrpc"
+	"github.com/vmware/govmomi"
 
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 )
@@ -22,6 +23,8 @@ type server struct {
 
 	ttRpc   *ttrpc.Server
 	service pb.HypervisorService
+
+	client *govmomi.Client
 
 	workerNode podnetwork.WorkerNode
 
@@ -35,14 +38,15 @@ func NewServer(cfg hypervisor.Config, vmcfg Config, workerNode podnetwork.Worker
 	logger.Printf("hypervisor config %v", cfg)
 	logger.Printf("cloud config %v", vmcfg)
 
-	vim25Client, err := NewVIM25Client(vmcfg)
+	govmomiClient, err := NewGovmomiClient(vmcfg)
 	if err != nil {
 		return nil
 	}
 
 	return &server{
 		socketPath: cfg.SocketPath,
-		service:    newService(vim25Client, &vmcfg, &cfg, workerNode, cfg.PodsDir, daemonPort),
+		service:    newService(govmomiClient, &vmcfg, &cfg, workerNode, cfg.PodsDir, daemonPort),
+		client:     govmomiClient,
 		workerNode: workerNode,
 		readyCh:    make(chan struct{}),
 		stopCh:     make(chan struct{}),
@@ -94,10 +98,13 @@ func (s *server) Start(ctx context.Context) (err error) {
 }
 
 func (s *server) Shutdown() error {
+
+	DeleteGovmomiClient(s.client)
+
 	s.stopOnce.Do(func() {
 		close(s.stopCh)
 	})
-	// TODO: Do we need logout and where do we put it.
+
 	return nil
 }
 
