@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
@@ -32,7 +32,7 @@ const (
 )
 
 type hypervisorService struct {
-	vim25Client      *vim25.Client
+	govmomiClient    *govmomi.Client
 	serviceConfig    *Config
 	hypervisorConfig *hypervisor.Config
 	sandboxes        map[sandboxID]*sandbox
@@ -43,7 +43,7 @@ type hypervisorService struct {
 	sync.Mutex
 }
 
-func newService(vim25Client *vim25.Client, config *Config, hypervisorConfig *hypervisor.Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
+func newService(govmomiClient *govmomi.Client, config *Config, hypervisorConfig *hypervisor.Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
 	logger.Printf("service config %v", config)
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -56,7 +56,7 @@ func newService(vim25Client *vim25.Client, config *Config, hypervisorConfig *hyp
 	}
 
 	return &hypervisorService{
-		vim25Client:      vim25Client,
+		govmomiClient:    govmomiClient,
 		serviceConfig:    config,
 		hypervisorConfig: hypervisorConfig,
 		sandboxes:        map[sandboxID]*sandbox{},
@@ -147,6 +147,8 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 
 func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest) (*pb.StartVMResponse, error) {
 
+	// TODO: Do we need to check session and reauthenticate since we have keep alive?
+
 	sandbox, err := s.getSandbox(req.Id)
 	if err != nil {
 		return nil, err
@@ -184,7 +186,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-	result, err := CreateInstance(ctx, s.vim25Client, s.serviceConfig, vmname, userData)
+	result, err := CreateInstance(ctx, s.govmomiClient.Client, s.serviceConfig, vmname, userData)
 	if err != nil {
 		return nil, fmt.Errorf("creating instance for vm %s returned error: %s", vmname, err)
 	}
@@ -253,7 +255,7 @@ func (s *hypervisorService) deleteSandbox(id string) error {
 
 func (s *hypervisorService) deleteInstance(ctx context.Context, id string, vmname string) error {
 
-	err := DeleteInstance(ctx, s.vim25Client, s.serviceConfig, vmname)
+	err := DeleteInstance(ctx, s.govmomiClient.Client, s.serviceConfig, vmname)
 	if err != nil {
 		logger.Printf("failed to delete the instance (%s): %v", id, err)
 		return err

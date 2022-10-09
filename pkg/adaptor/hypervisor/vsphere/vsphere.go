@@ -10,40 +10,76 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/session/cache"
+	"github.com/vmware/govmomi/session"
+	"github.com/vmware/govmomi/session/keepalive"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-func NewVIM25Client(vmcfg Config) (*vim25.Client, error) {
+func NewGovmomiClient(vmcfg Config) (*govmomi.Client, error) {
 
-	uinfo, err := soap.ParseURL(vmcfg.VcenterURL)
+	ctx := context.TODO()
+
+	urlinfo, err := soap.ParseURL(vmcfg.VcenterURL)
 	if err != nil {
 		return nil, err
 	}
 
-	uinfo.User = url.UserPassword(vmcfg.UserName, vmcfg.Password)
+	// TODO make credentials secure
+	urlinfo.User = url.UserPassword(vmcfg.UserName, vmcfg.Password)
 
-	sess := &cache.Session{
-		URL:      uinfo,
-		Insecure: vmcfg.Insecure,
-	}
+	soapClient := soap.NewClient(urlinfo, vmcfg.Insecure)
 
-	client := new(vim25.Client)
-
-	// TODO finish implementing cached sessions and session management (s.SessionManager)
-	// TODO implement LoginByToken
-
-	// sess.Passthrough = true means no caching and must perform logout
-	err = sess.Login(context.Background(), client, nil)
+	vim25Client, err := vim25.NewClient(ctx, soapClient)
 	if err != nil {
 		return nil, err
 	}
 
-	return client, nil
+	vim25Client.RoundTripper = keepalive.NewHandlerSOAP(vim25Client.RoundTripper, 1*time.Minute, soapKeepAliveHandler(ctx, vim25Client))
+
+	manager := session.NewManager(vim25Client)
+	err = manager.Login(ctx, urlinfo.User)
+	if err != nil {
+		return nil, err
+	}
+
+	us, _ := manager.UserSession(ctx)
+
+	logger.Printf("Vcenter api session %s created for user %s", us.Key, us.UserName)
+
+	gclient := govmomi.Client{
+		Client:         vim25Client,
+		SessionManager: manager,
+	}
+
+	return &gclient, nil
+}
+
+func soapKeepAliveHandler(ctx context.Context, c *vim25.Client) func() error {
+
+	return func() error {
+
+		_, err := methods.GetCurrentTime(ctx, c)
+		if err != nil {
+			logger.Printf("SOAP keep-alive handler error %s", err)
+			return err
+		}
+
+		return nil
+	}
+}
+
+func DeleteGovmomiClient(gclient *govmomi.Client) {
+
+	err := gclient.SessionManager.Logout(context.Background())
+	if err != nil {
+		logger.Printf("Vcenter logout failed error: %s", err)
+	}
 }
 
 type VmConfig []types.BaseOptionValue
