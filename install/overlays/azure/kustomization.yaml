@@ -1,0 +1,39 @@
+bases:
+- ../../yamls
+nameSuffix: -azure
+
+images:
+- name: kustomize.this/cloud-api-adaptor/image:url
+  newName: quay.io/confidential-containers/cloud-api-adaptor-azure # change image if needed
+  newTag: latest
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="azure"
+  - CRI_RUNTIME_ENDPOINT="/run/containerd/containerd.sock" #set
+  - AZURE_SUBSCRIPTION_ID="" #set
+  - AZURE_REGION="eastus" #set
+  - AZURE_INSTANCE_SIZE="Standard_D8as_v5" #set
+  - AZURE_RESOURCE_GROUP="" #set
+  - AZURE_VM_NAME="" #set
+  - AZURE_IMAGE="" #set
+
+secretGenerator:
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  literals:
+  - AZURE_CLIENT_ID="" # set
+  - AZURE_SECRET="" # set
+  - AZURE_TENANT_ID="" #set
+- name: ssh-key-secret
+  namespace: confidential-containers-system
+  files: # key generation example: ssh-keygen -f ./id_rsa -N "" && sudo cat id_rsa.pub >> /root/.ssh/authorized_keys
+  #- id_rsa # set - path to private key
+
+patchesStrategicMerge:
+  #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)

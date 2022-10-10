@@ -41,6 +41,23 @@ cloud-api-adaptor-aws aws \
 	-socket /run/peerpod/hypervisor.sock
 }
 
+azure() {
+set -x
+
+cloud-api-adaptor-azure azure \
+  -subscriptionid "${AZURE_SUBSCRIPTION_ID}" \
+  -clientid "${AZURE_CLIENT_ID}" \
+  -secret "${AZURE_SECRET}" \
+  -tenantid "${AZURE_TENANT_ID}" \
+  -region "${AZURE_REGION}" \
+  -instance-size "${AZURE_INSTANCE_SIZE}" \
+  -resourcegroup "${AZURE_RESOURCE_GROUP}" \
+  -subnetid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Network/virtualNetworks/${AZURE_VM_NAME}VNET/subnets/${AZURE_VM_NAME}Subnet" \
+  -securitygroupid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Network/networkSecurityGroups/${AZURE_VM_NAME}NSG" \
+  -imageid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Compute/images/${AZURE_IMAGE}" \
+  ${optionals}
+}
+
 ibmcloud() {
 set -x
 cloud-api-adaptor-ibmcloud ibmcloud \
@@ -111,9 +128,9 @@ cloud-api-adaptor-vsphere vsphere \
 help_msg() {
 	cat <<EOF
 Usage:
-	CLOUD_PROVIDER=aws|ibmcloud|libvirt|vsphere $0
+	CLOUD_PROVIDER=aws|azure|ibmcloud|libvirt|vsphere $0
 or
-	$0 aws|ibmcloud|libvirt|vsphere
+	$0 aws|azure|ibmcloud|libvirt|vsphere
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
 EOF
@@ -121,6 +138,8 @@ EOF
 
 if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
 	aws
+elif [[ "$CLOUD_PROVIDER" == "azure" ]]; then
+	azure
 elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then
 	ibmcloud
 elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
