@@ -56,7 +56,6 @@ cloud-api-adaptor-ibmcloud ibmcloud \
         -primary-security-group-id "${IBMCLOUD_VPC_SG_ID}" \
         -vpc-id "${IBMCLOUD_VPC_ID}" \
         -pods-dir /run/peerpod/pods \
-        -cri-runtime-endpoint "${IBMCLOUD_CRI_RUNTIME_ENDPOINT}" \
 	${optionals} \
         -socket /run/peerpod/hypervisor.sock
 }

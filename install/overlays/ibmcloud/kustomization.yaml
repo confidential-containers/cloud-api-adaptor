@@ -24,7 +24,7 @@ configMapGenerator:
   - IBMCLOUD_VPC_SUBNET_ID="" #set
   - IBMCLOUD_VPC_SG_ID="" #set
   - IBMCLOUD_VPC_ID="" #set
-  - IBMCLOUD_CRI_RUNTIME_ENDPOINT="/run/containerd/containerd.sock" #set
+  - CRI_RUNTIME_ENDPOINT="/run/containerd/containerd.sock" #set
   #- PAUSE_IMAGE=" # Uncomment and set if you want to use a specific pause image
 
 secretGenerator:
