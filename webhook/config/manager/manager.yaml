@@ -33,6 +33,13 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
+        env:
+        - name: TARGET_RUNTIMECLASS
+          value: kata-remote-cc
+        - name: POD_VM_INSTANCE_TYPE
+          value: t2.small
+        - name: POD_VM_EXTENDED_RESOURCE
+          value: kata.peerpods.io/vm
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

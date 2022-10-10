@@ -62,3 +62,5 @@ For example, executing the following command changes it to `kata`
 ```
 kubectl set env deployment/peer-pods-webhook-controller-manager -n peer-pods-webhook-system TARGET_RUNTIMECLASS=kata
 ```
+
+The default Pod VM instance type is `t2.small` and can be changed by modifying the `POD_VM_INSTANCE_TYPE` environment variable.
