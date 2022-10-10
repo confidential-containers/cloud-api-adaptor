@@ -1,5 +1,7 @@
 package azure
 
+import "github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+
 type Config struct {
 	SubscriptionId    string
 	ClientId          string
@@ -14,4 +16,8 @@ type Config struct {
 	Size              string
 	ImageId           string
 	SSHKeyPath        string
+}
+
+func (c Config) Redact() Config {
+	return *util.RedactStruct(&c, "ClientId", "TenantId", "ClientSecret").(*Config)
 }

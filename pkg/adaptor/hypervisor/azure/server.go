@@ -35,7 +35,7 @@ type server struct {
 func NewServer(cfg hypervisor.Config, cloudCfg Config, workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
 
 	logger.Printf("hypervisor config %v", cfg)
-	logger.Printf("cloud config %+v", cloudCfg)
+	logger.Printf("cloud config %+v", cloudCfg.Redact())
 
 	azureClient, err := NewAzureClient(cloudCfg)
 	if err != nil {
