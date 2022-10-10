@@ -253,6 +253,13 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
+        env:
+        - name: TARGET_RUNTIMECLASS
+          value: kata-remote-cc
+        - name: POD_VM_INSTANCE_TYPE
+          value: t2.small
+        - name: POD_VM_EXTENDED_RESOURCE
+          value: kata.peerpods.io/vm
         securityContext:
           allowPrivilegeEscalation: false
         volumeMounts:
