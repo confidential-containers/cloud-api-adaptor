@@ -55,8 +55,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	switch os.Args[1] {
 	case "aws":
 		cmd.Parse("aws", os.Args[1:], func(flags *flag.FlagSet) {
-			flags.StringVar(&awscfg.AccessKeyId, "aws-access-key-id", "", "Access Key ID")
-			flags.StringVar(&awscfg.SecretKey, "aws-secret-key", "", "Secret Key")
+			flags.StringVar(&awscfg.AccessKeyId, "aws-access-key-id", "", "Access Key ID, defaults to `AWS_ACCESS_KEY_ID`")
+			flags.StringVar(&awscfg.SecretKey, "aws-secret-key", "", "Secret Key, defaults to `AWS_SECRET_ACCESS_KEY`")
 			flags.StringVar(&awscfg.Region, "aws-region", "ap-south-1", "Region")
 			flags.StringVar(&awscfg.LoginProfile, "aws-profile", "test", "AWS Login Profile")
 			flags.StringVar(&awscfg.LaunchTemplateName, "aws-lt-name", "kata", "AWS Launch Template Name")
@@ -76,12 +76,14 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.IntVar(&cfg.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
 			flags.IntVar(&cfg.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
 		})
+		defaultToEnv(&awscfg.AccessKeyId, "AWS_ACCESS_KEY_ID")
+		defaultToEnv(&awscfg.SecretKey, "AWS_SECRET_ACCESS_KEY")
 
 	case "azure":
 		cmd.Parse("azure", os.Args[1:], func(flags *flag.FlagSet) {
-			flags.StringVar(&azurecfg.ClientId, "clientid", "", "Client Id")
-			flags.StringVar(&azurecfg.ClientSecret, "secret", "", "Client Secret")
-			flags.StringVar(&azurecfg.TenantId, "tenantid", "", "Tenant Id")
+			flags.StringVar(&azurecfg.ClientId, "clientid", "", "Client Id, defaults to `AZURE_CLIENT_ID`")
+			flags.StringVar(&azurecfg.ClientSecret, "secret", "", "Client Secret, defaults to `AZURE_CLIENT_SECRET`")
+			flags.StringVar(&azurecfg.TenantId, "tenantid", "", "Tenant Id, defaults to `AZURE_TENANT_ID`")
 			flags.StringVar(&azurecfg.ResourceGroupName, "resourcegroup", "", "Resource Group")
 			flags.StringVar(&azurecfg.Zone, "zone", "", "Zone")
 			flags.StringVar(&azurecfg.Region, "region", "", "Region")
@@ -101,10 +103,13 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.IntVar(&cfg.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
 			flags.IntVar(&cfg.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
 		})
+		defaultToEnv(&azurecfg.ClientId, "AZURE_CLIENT_ID")
+		defaultToEnv(&azurecfg.ClientSecret, "AZURE_CLIENT_SECRET")
+		defaultToEnv(&azurecfg.TenantId, "AZURE_TENANT_ID")
 
 	case "ibmcloud":
 		cmd.Parse("ibmcloud", os.Args[1:], func(flags *flag.FlagSet) {
-			flags.StringVar(&ibmcfg.ApiKey, "api-key", "", "IBM Cloud API key")
+			flags.StringVar(&ibmcfg.ApiKey, "api-key", "", "IBM Cloud API key, defaults to `IBMCLOUD_API_KEY`")
 			flags.StringVar(&ibmcfg.IamServiceURL, "iam-service-url", "https://iam.cloud.ibm.com/identity/token", "IBM Cloud IAM Service URL")
 			flags.StringVar(&ibmcfg.VpcServiceURL, "vpc-service-url", "https://jp-tok.iaas.cloud.ibm.com/v1", "IBM Cloud VPC Service URL")
 			flags.StringVar(&ibmcfg.ResourceGroupID, "resource-group-id", "", "Resource Group ID")
@@ -127,6 +132,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.IntVar(&cfg.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
 			flags.IntVar(&cfg.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
 		})
+		defaultToEnv(&ibmcfg.ApiKey, "IBMCLOUD_API_KEY")
 
 	case "libvirt":
 		cmd.Parse("libvirt", os.Args[1:], func(flags *flag.FlagSet) {
@@ -148,8 +154,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	case "vsphere":
 		cmd.Parse("vsphere", os.Args[1:], func(flags *flag.FlagSet) {
 			flags.StringVar(&vspherecfg.VcenterURL, "vcenter-url", "", "URL of vCenter instance to connect to")
-			flags.StringVar(&vspherecfg.UserName, "user-name", "", "Username")
-			flags.StringVar(&vspherecfg.Password, "password", "", "Password")
+			flags.StringVar(&vspherecfg.UserName, "user-name", "", "Username, defaults to `GOVC_USERNAME`")
+			flags.StringVar(&vspherecfg.Password, "password", "", "Password, defaults to `GOVC_PASSWORD`")
 			flag.BoolVar(&vspherecfg.Insecure, "insecure", true, "Disable certificate verification")
 
 			flags.StringVar(&vspherecfg.Template, "template", "podvm-template", "vCenter template to deploy")
@@ -174,6 +180,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.IntVar(&cfg.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
 			flags.IntVar(&cfg.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
 		})
+		defaultToEnv(&vspherecfg.UserName, "GOVC_USERNAME")
+		defaultToEnv(&vspherecfg.Password, "GOVC_PASSWORD")
 
 	default:
 		os.Exit(1)
@@ -196,6 +204,12 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	}
 
 	return cmd.NewStarter(hypervisorServer), nil
+}
+
+func defaultToEnv(field *string, env string) {
+	if *field == "" {
+		*field = os.Getenv(env)
+	}
 }
 
 var config cmd.Config = &daemonConfig{}
