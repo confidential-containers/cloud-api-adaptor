@@ -4,7 +4,6 @@ import (
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -64,7 +63,7 @@ func defaultContainerResourceRequirements() corev1.ResourceRequirements {
 		podVmExtResource = POD_VM_EXTENDED_RESOURCE_DEFAULT
 	}
 
-	requirements.Requests[v1.ResourceName(podVmExtResource)] = resource.MustParse("1")
-	requirements.Limits[v1.ResourceName(podVmExtResource)] = resource.MustParse("1")
+	requirements.Requests[corev1.ResourceName(podVmExtResource)] = resource.MustParse("1")
+	requirements.Limits[corev1.ResourceName(podVmExtResource)] = resource.MustParse("1")
 	return requirements
 }
