@@ -77,7 +77,7 @@ $(IMAGE_FILE): $(BINARIES) $(FILES)
 		-var tenant_id=${TENANT_ID} \
 		-var location=${LOCATION} \
 		-var vm_size=${VM_SIZE} \
-		-var resource_group_name=${RESOURCE_GROUP_NAME} \
+		-var resource_group=${RESOURCE_GROUP} \
 		-var az_image_name=peer-pods-ami-${UUID} .
 	rm -fr toupload
 
