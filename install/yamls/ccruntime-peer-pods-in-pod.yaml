@@ -1,12 +1,11 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
-  name: cloud-api-adaptor-deployment
+  name: cloud-api-adaptor-daemonset
   namespace: confidential-containers-system
   labels:
     app: cloud-api-adaptor
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: cloud-api-adaptor
@@ -15,6 +14,8 @@ spec:
       labels:
         app: cloud-api-adaptor
     spec:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
       hostNetwork: true
       containers:
       - name: cloud-api-adaptor-con
@@ -50,7 +51,7 @@ spec:
       - name: netns
         #readOnly: true
         hostPath:
-         path: /run/netns
+          path: /run/netns
 ---
 apiVersion: confidentialcontainers.org/v1beta1
 kind: CcRuntime
