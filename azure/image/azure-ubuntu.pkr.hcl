@@ -11,7 +11,7 @@ source "azure-arm" "ubuntu" {
   image_offer                       = "0001-com-ubuntu-minimal-jammy"
   image_sku                         = "minimal-22_04-lts"
   managed_image_name                = "${var.az_image_name}"
-  managed_image_resource_group_name = "${var.resource_group_name}"
+  managed_image_resource_group_name = "${var.resource_group}"
 
 }
 
