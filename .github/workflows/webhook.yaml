@@ -1,0 +1,35 @@
+# Copyright Confidential Containers Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Run end-to-end tests if any webhook source files changed.
+---
+name: webhook
+on:
+  pull_request:
+    paths:
+      - 'webhook/**'
+jobs:
+  test-e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: webhook
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@v3
+      - name: Setup Golang version 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Install kind
+        run: |
+          go install sigs.k8s.io/kind@v0.16.0
+      - name: Install bats
+        run: |
+          git clone https://github.com/bats-core/bats-core.git
+          cd bats-core
+          ./install.sh ~/.local
+      - name: Run end-to-end tests
+        run: |
+          make test-e2e
