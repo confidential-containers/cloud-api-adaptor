@@ -111,11 +111,11 @@ $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
 $(UMOCI): $(UMOCI_SRC)/umoci
 	install -D --compare "$(UMOCI_SRC)/umoci" "$@"
 
-$(PAUSE_SRC):
-	$(SKOPEO) --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
+$(PAUSE_SRC): $(SKOPEO_SRC)/bin/skopeo
+	$(SKOPEO_SRC)/bin/skopeo --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
 
-$(PAUSE): | $(PAUSE_SRC)
-	$(UMOCI) unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
+$(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
+	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
 
 clean:
 	rm -f "$(IMAGE_FILE)" "$(UBUNTU_IMAGE_FILE)" $(BINARIES)
