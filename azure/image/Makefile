@@ -9,7 +9,6 @@ SKOPEO_VERSION     = 1.5.0
 UMOCI_VERSION      = 0.4.7
 
 IMAGE_PREFIX := podvm
-UUID = $(shell cat /proc/sys/kernel/random/uuid | cut -c 1-4)
 
 ARCH := $(subst x86_64,amd64,$(shell uname -m))
 
@@ -78,7 +77,7 @@ $(IMAGE_FILE): $(BINARIES) $(FILES)
 		-var location=${LOCATION} \
 		-var vm_size=${VM_SIZE} \
 		-var resource_group=${RESOURCE_GROUP} \
-		-var az_image_name=peer-pods-ami-${UUID} .
+		-var az_image_name=${IMAGE_NAME} .
 	rm -fr toupload
 
 $(AGENT_PROTOCOL_FORWARDER): force
