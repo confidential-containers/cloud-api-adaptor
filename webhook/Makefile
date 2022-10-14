@@ -4,6 +4,8 @@ IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.24.2
 
+KIND_CLUSTER_NAME ?= webhook
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -94,8 +96,12 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 .PHONY: kind-cluster
 kind-cluster: ## create a kind cluster for testing 
-	kind create cluster --name webhook 
+	kind create cluster --name "$(KIND_CLUSTER_NAME)"
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.yaml
+
+.PHONY: kind-delete
+kind-delete: ## delete the kind test cluster
+	kind delete cluster --name "$(KIND_CLUSTER_NAME)"
 
 .PHONY: kind-load
 kind-load: ## load the image in the local kind cluster
