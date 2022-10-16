@@ -25,3 +25,8 @@ webhooks:
     resources:
     - pods
   sideEffects: None
+  namespaceSelector:
+    matchExpressions:
+      - key: peerpods
+        operator: In
+        values:  ["true"]
