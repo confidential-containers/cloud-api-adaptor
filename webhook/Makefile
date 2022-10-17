@@ -61,6 +61,10 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
+.PHONY: test-e2e
+test-e2e: ## Run the end-to-end tests on a local kind cluster.
+	bash ./tests/e2e/run-local.sh
+
 ##@ Build
 
 .PHONY: build

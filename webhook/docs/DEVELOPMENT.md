@@ -48,6 +48,8 @@ make undeploy IMG=<some-registry>/<user>/peer-pods-webhook:<tag>
 ```
 
 ### Testing
+You can manually test your changes by following the steps:
+
 1. Create the runtimeclass
 ```sh
 kubectl apply -f hack/rc.yaml
@@ -87,3 +89,10 @@ and peer pod vm limit added.
      kata.peerpods.io/vm: "1"
 ```
 
+However, before opening a pull request with your changes, it is recommended that you run
+the end-to-end tests locally. Ensure that you have [bats](https://bats-core.readthedocs.io),
+docker (or podman-docker), and [kind](https://kind.sigs.k8s.io/) installed in your system;
+and then run:
+```sh
+make test-e2e
+```
