@@ -1,7 +1,7 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
-  name: cloud-api-adaptor-deployment
+  name: cloud-api-adaptor-daemonset
   namespace: confidential-containers-system
   labels:
     app: cloud-api-adaptor
