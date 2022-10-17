@@ -96,7 +96,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 .PHONY: kind-cluster
 kind-cluster: ## create a kind cluster for testing 
-	kind create cluster --name "$(KIND_CLUSTER_NAME)"
+	kind create cluster --wait 120s --name "$(KIND_CLUSTER_NAME)"
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.yaml
 
 .PHONY: kind-delete
