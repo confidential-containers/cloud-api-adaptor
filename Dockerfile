@@ -13,4 +13,4 @@ ENV CLOUD_PROVIDER=${CLOUD_PROVIDER}
 RUN if [ "$CLOUD_PROVIDER" = "libvirt" ] ; then dnf install -y libvirt-libs genisoimage /usr/bin/ssh && dnf clean all; fi
 COPY --from=builder /go/cloud-api-adaptor/cloud-api-adaptor /usr/local/bin/cloud-api-adaptor-$CLOUD_PROVIDER
 COPY --from=builder /go/cloud-api-adaptor/entrypoint.sh /usr/local/bin/entrypoint.sh
-CMD entrypoint.sh
+CMD ["entrypoint.sh"]

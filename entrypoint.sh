@@ -32,7 +32,7 @@ else
 	optionals+="-subnetid ${AWS_SUBNET_ID} "
 fi
 
-cloud-api-adaptor-aws aws \
+exec cloud-api-adaptor-aws aws \
 	-aws-access-key-id "${AWS_ACCESS_KEY_ID}" \
 	-aws-secret-key "${AWS_SECRET_ACCESS_KEY}" \
 	-aws-region "${AWS_REGION}" \
@@ -44,7 +44,7 @@ cloud-api-adaptor-aws aws \
 azure() {
 set -x
 
-cloud-api-adaptor-azure azure \
+exec cloud-api-adaptor-azure azure \
   -subscriptionid "${AZURE_SUBSCRIPTION_ID}" \
   -clientid "${AZURE_CLIENT_ID}" \
   -secret "${AZURE_SECRET}" \
@@ -60,7 +60,7 @@ cloud-api-adaptor-azure azure \
 
 ibmcloud() {
 set -x
-cloud-api-adaptor-ibmcloud ibmcloud \
+exec cloud-api-adaptor-ibmcloud ibmcloud \
         -api-key "${IBMCLOUD_API_KEY}" \
         -iam-service-url "${IBMCLOUD_IAM_ENDPOINT}" \
         -vpc-service-url  "${IBMCLOUD_VPC_ENDPOINT}" \
@@ -80,7 +80,7 @@ cloud-api-adaptor-ibmcloud ibmcloud \
 libvirt() {
 test_vars LIBVIRT_URI
 set -x
-cloud-api-adaptor-libvirt libvirt \
+exec cloud-api-adaptor-libvirt libvirt \
 	-uri "${LIBVIRT_URI}" \
 	-data-dir /opt/data-dir \
 	-pods-dir /run/peerpod/pods \
@@ -117,7 +117,7 @@ if [[ "${GOVC_FOLDER}" ]]; then
     optionals+="-deploy-folder ${GOVC_FOLDER} "
 fi
 
-cloud-api-adaptor-vsphere vsphere \
+exec cloud-api-adaptor-vsphere vsphere \
 	-vcenter-url ${GOVC_URL}  \
 	-user-name ${GOVC_USERNAME} \
 	-password ${GOVC_PASSWORD} \
