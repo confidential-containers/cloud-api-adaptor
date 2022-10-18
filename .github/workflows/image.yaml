@@ -1,0 +1,49 @@
+# (C) Copyright Confidential Containers Contributors 2022.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build and push container images for each cloud provider.
+---
+name: image
+on:
+  push:
+    branches:
+      - 'staging'
+jobs:
+  build_push_job:
+    name: build and push
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        provider:
+          # Please keep this list in alphabetical order.
+          - aws
+          - azure
+          - ibmcloud
+          - libvirt
+          - vsphere
+        runner:
+          - ubuntu-latest
+        go_version:
+          - 1.18
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v3
+      - name: Setup Golang version ${{ matrix.go_version }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go_version }}
+      - name: Install build dependencies
+        if: ${{ matrix.provider == 'libvirt' }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libvirt-dev
+      - name: Login to quay Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+      - name: Build and push image
+        run: |
+          make CLOUD_PROVIDER=${{ matrix.provider }} image
