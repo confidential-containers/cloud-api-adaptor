@@ -25,6 +25,7 @@ test_vars() {
 }
 
 aws() {
+test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 set -x
 
 if [[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]]; then
@@ -38,8 +39,6 @@ else
 fi
 
 exec cloud-api-adaptor-aws aws \
-	-aws-access-key-id "${AWS_ACCESS_KEY_ID}" \
-	-aws-secret-key "${AWS_SECRET_ACCESS_KEY}" \
 	-aws-region "${AWS_REGION}" \
 	-pods-dir /run/peerpod/pods \
 	${optionals} \
@@ -47,13 +46,11 @@ exec cloud-api-adaptor-aws aws \
 }
 
 azure() {
+test_vars AZURE_CLIENT_ID AZURE_SECRET AZURE_TENANT_ID
 set -x
 
 exec cloud-api-adaptor-azure azure \
   -subscriptionid "${AZURE_SUBSCRIPTION_ID}" \
-  -clientid "${AZURE_CLIENT_ID}" \
-  -secret "${AZURE_SECRET}" \
-  -tenantid "${AZURE_TENANT_ID}" \
   -region "${AZURE_REGION}" \
   -instance-size "${AZURE_INSTANCE_SIZE}" \
   -resourcegroup "${AZURE_RESOURCE_GROUP}" \
@@ -64,9 +61,9 @@ exec cloud-api-adaptor-azure azure \
 }
 
 ibmcloud() {
+test_vars IBMCLOUD_API_KEY
 set -x
 exec cloud-api-adaptor-ibmcloud ibmcloud \
-        -api-key "${IBMCLOUD_API_KEY}" \
         -iam-service-url "${IBMCLOUD_IAM_ENDPOINT}" \
         -vpc-service-url  "${IBMCLOUD_VPC_ENDPOINT}" \
         -resource-group-id "${IBMCLOUD_RESOURCE_GROUP_ID}" \
@@ -96,6 +93,8 @@ exec cloud-api-adaptor-libvirt libvirt \
 }
 
 vsphere() {
+test_vars GOVC_USERNAME GOVC_PASSWORD
+
 set -x
 
 if [[ "${GOVC_TEMPLATE}" ]]; then
@@ -124,8 +123,6 @@ fi
 
 exec cloud-api-adaptor-vsphere vsphere \
 	-vcenter-url ${GOVC_URL}  \
-	-user-name ${GOVC_USERNAME} \
-	-password ${GOVC_PASSWORD} \
 	${optionals} \
 	-socket /run/peerpod/hypervisor.sock
 }
