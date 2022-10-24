@@ -26,18 +26,19 @@ test_vars() {
 
 aws() {
 test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
-set -x
 
 if [[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]]; then
 	optionals+="-use-lt -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME} "
 else
 	optionals+="-imageid ${PODVM_AMI_ID} "
 	optionals+="-instance-type ${PODVM_INSTANCE_TYPE:-t3.small} "
-	optionals+="-securitygroupid ${AWS_SG_ID} "
-	optionals+="-keyname ${SSH_KP_NAME} "
-	optionals+="-subnetid ${AWS_SUBNET_ID} "
+	[[ "${AWS_SG_ID}" ]] && optionals+="-securitygroupid ${AWS_SG_ID} " # if not set retrieved from IMDS
+	[[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} " # if not retrieved from IMDS
+	[[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} " # if not set retrieved from IMDS
 fi
+[[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} " # if not set retrieved from IMDS
 
+set -x
 exec cloud-api-adaptor-aws aws \
 	-aws-region "${AWS_REGION}" \
 	-pods-dir /run/peerpod/pods \

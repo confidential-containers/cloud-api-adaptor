@@ -35,6 +35,9 @@ type server struct {
 func NewServer(cfg hypervisor.Config, cloudCfg Config, workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
 
 	logger.Printf("hypervisor config %v", cfg)
+	if err := retrieveMissingConfig(&cloudCfg); err != nil {
+		logger.Printf("Failed to retrieve configuration, some fields may still be missing: %v", err)
+	}
 	logger.Printf("cloud config %v", cloudCfg.Redact())
 	ec2Client, err := NewEC2Client(cloudCfg)
 	if err != nil {
