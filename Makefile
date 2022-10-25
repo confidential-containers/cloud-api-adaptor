@@ -41,6 +41,16 @@ endif
 
 ##@ Development
 
+.PHONY: escapes
+escapes: ## golang memeory escapes check
+ifeq ($(CLOUD_PROVIDER),libvirt)
+	go build $(GOFLAGS) -gcflags="-m -l" -o cloud-api-adaptor cmd/cloud-api-adaptor/main.go | grep "escapes to heap" || true
+	go build $(GOFLAGS) -gcflags="-m -l" -o agent-protocol-forwarder cmd/agent-protocol-forwarder/main.go | grep "escapes to heap" || true
+else
+	CGO_ENABLED=0 go build -gcflags="-m -l" $(GOFLAGS) -o cloud-api-adaptor cmd/cloud-api-adaptor/main.go | grep "escapes to heap" || true
+	CGO_ENABLED=0 go build -gcflags="-m -l" $(GOFLAGS) -o agent-protocol-forwarder cmd/agent-protocol-forwarder/main.go | grep "escapes to heap" || true
+endif
+
 .PHONY: test
 test: ## Run tests.
 	# Note: sending stderr to stdout so that tools like go-junit-report can
@@ -52,11 +62,11 @@ check: fmt vet ## Run go vet and go vet against the code.
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
-	find $(SOURCEDIRS) -name '*.go' -print0 | xargs -0 gofmt -l -d
+	find $(SOURCEDIRS) -name '*.go' -print0 | xargs -0 gofmt -l -s -w
 
 .PHONY: vet
 vet: ## Run go vet against code.
-	go vet $(PACKAGES)
+	go vet $(GOFLAGS) $(PACKAGES)
 
 .PHONY: clean
 clean: ## Remove binaries.
@@ -78,5 +88,3 @@ deploy: ## Deploy cloud-api-adaptor using the operator, according to install/ove
 .PHONY: delete
 delete: ## Delete cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
 	kubectl delete -k install/overlays/$(CLOUD_PROVIDER)
-
-
