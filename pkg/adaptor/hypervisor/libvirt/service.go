@@ -175,7 +175,8 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-	vmName := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
+	// TODO: Specify the maximum instance name length in Libvirt
+	vmName := hvutil.CreateInstanceName(sandbox.pod, string(sandbox.id), 0)
 	vm := &vmConfig{name: vmName, userData: userData}
 	result, err := CreateInstance(ctx, s.libvirtClient, vm)
 	if err != nil {
