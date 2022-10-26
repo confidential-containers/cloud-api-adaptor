@@ -39,14 +39,23 @@ func sanitize(input string) string {
 	return output
 }
 
-func CreateInstanceName(nodeName, podNamespace, podName, sandboxID string) string {
+var podvmNamePrefix = "podvm"
 
-	nodeName = sanitize(nodeName)
-	podNamespace = sanitize(podNamespace)
+func CreateInstanceName(podName, sandboxID string, podvmNameMax int) string {
+
 	podName = sanitize(podName)
 	sandboxID = sanitize(sandboxID)
 
-	vmName := fmt.Sprintf("podvm-%s-%s-%s-%.8s", nodeName, podNamespace, podName, sandboxID)
+	podNameLen := len(podName)
+	if podvmNameMax > 0 && len(podvmNamePrefix)+podNameLen+10 > podvmNameMax {
+		podNameLen = podvmNameMax - len(podvmNamePrefix) - 10
+		if podNameLen < 0 {
+			panic(fmt.Errorf("podvmNameMax is too small: %d", podvmNameMax))
+		}
+		fmt.Printf("podNameLen: %d", podNameLen)
+	}
+
+	vmName := fmt.Sprintf("%s-%.*s-%.8s", podvmNamePrefix, podNameLen, podName, sandboxID)
 
 	return vmName
 }

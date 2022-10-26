@@ -136,7 +136,8 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 
 	s.sandboxes[sid] = sandbox
 
-	vmname := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
+	// TODO: Specify the maximum instance name length in vSphere
+	vmname := hvutil.CreateInstanceName(sandbox.pod, string(sandbox.id), 0)
 
 	logger.Printf("create a sandbox %s for pod %s in namespace %s (netns: %s)", req.Id, pod, namespace, sandbox.netNSPath)
 
@@ -154,7 +155,8 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-	vmname := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
+	// TODO: Specify the maximum instance name length in vSphere
+	vmname := hvutil.CreateInstanceName(sandbox.pod, string(sandbox.id), 0)
 	logger.Printf("StartVM %s", vmname)
 
 	daemonConfig := daemon.Config{
@@ -271,7 +273,8 @@ func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (
 		return nil, err
 	}
 
-	vmname := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
+	// TODO: Specify the maximum instance name length in vSphere
+	vmname := hvutil.CreateInstanceName(sandbox.pod, string(sandbox.id), 0)
 
 	logger.Printf("StopVM %s", vmname)
 

@@ -184,7 +184,8 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 	//Convert userData to base64
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 
-	vmName := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
+	// TODO: Specify the maximum instance name length in Azure
+	vmName := hvutil.CreateInstanceName(sandbox.pod, string(sandbox.id), 0)
 	diskName := fmt.Sprintf("%s-disk", vmName)
 	nicName := fmt.Sprintf("%s-net", vmName)
 

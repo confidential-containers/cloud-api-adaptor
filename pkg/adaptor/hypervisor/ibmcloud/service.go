@@ -147,6 +147,8 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 	return &pb.CreateVMResponse{AgentSocketPath: socketPath}, nil
 }
 
+const maxInstanceNameLen = 63
+
 func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest) (*pb.StartVMResponse, error) {
 
 	sandbox, err := s.getSandbox(req.Id)
@@ -154,7 +156,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		return nil, err
 	}
 
-	vmName := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
+	vmName := hvutil.CreateInstanceName(sandbox.pod, string(sandbox.id), maxInstanceNameLen)
 
 	logger.Printf("StartVM: vmName: %q", vmName)
 

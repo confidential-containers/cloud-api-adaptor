@@ -214,7 +214,8 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 
 	logger.Printf("created an instance %s for sandbox %s", *result.Instances[0].PublicDnsName, req.Id)
 
-	vmName := hvutil.CreateInstanceName(s.nodeName, sandbox.namespace, sandbox.pod, string(sandbox.id))
+	// TODO: Specify the maximum instance name length in AWS
+	vmName := hvutil.CreateInstanceName(sandbox.pod, string(sandbox.id), 0)
 	tagInput := &ec2.CreateTagsInput{
 		Resources: []string{*result.Instances[0].InstanceId},
 		Tags: []types.Tag{
