@@ -19,10 +19,11 @@ configMapGenerator:
   #- PODVM_LAUNCHTEMPLATE_NAME="" # Uncomment and set if you want to use launch template
   # Comment out all the following variables if using launch template
   - PODVM_AMI_ID="" #set
-  - PODVM_INSTANCE_TYPE="t3.small" #set
   - AWS_SG_ID="" #set
-  - SSH_KP_NAME="" #set
-  - AWS_SUBNET_ID="" #set
+  #- PODVM_INSTANCE_TYPE="t3.small" # caa defaults to t3.small
+  #- AWS_REGION="" # if not set retrieved from IMDS
+  #- SSH_KP_NAME="" # if not set retrieved from IMDS
+  #- AWS_SUBNET_ID="" # if not set retrieved from IMDS
 
 secretGenerator:
 - name: peer-pods-secret
@@ -30,7 +31,6 @@ secretGenerator:
   literals:
   - AWS_ACCESS_KEY_ID="" # set
   - AWS_SECRET_ACCESS_KEY="" # set
-  - AWS_REGION="" #set
 
 patchesStrategicMerge:
   #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)

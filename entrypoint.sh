@@ -27,15 +27,12 @@ test_vars() {
 aws() {
 test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 
-if [[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]]; then
-	optionals+="-use-lt -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME} "
-else
-	optionals+="-imageid ${PODVM_AMI_ID} "
-	optionals+="-instance-type ${PODVM_INSTANCE_TYPE:-t3.small} "
-	[[ "${AWS_SG_ID}" ]] && optionals+="-securitygroupid ${AWS_SG_ID} " # if not set retrieved from IMDS
-	[[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} " # if not retrieved from IMDS
-	[[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} " # if not set retrieved from IMDS
-fi
+[[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]] && optionals+="-use-lt -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME} " # has precedence if set
+[[ "${AWS_SG_ID}" ]] && optionals+="-securitygroupid ${AWS_SG_ID} " # MUST if template is not used
+[[ "${PODVM_AMI_ID}" ]] && optionals+="-imageid ${PODVM_AMI_ID} " # MUST if template is not used
+[[ "${PODVM_INSTANCE_TYPE}" ]] && optionals+="-instance-type ${PODVM_INSTANCE_TYPE} " # default t3.small
+[[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} " # if not retrieved from IMDS
+[[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} " # if not set retrieved from IMDS
 [[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} " # if not set retrieved from IMDS
 
 set -x
