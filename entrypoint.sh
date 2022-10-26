@@ -9,13 +9,8 @@ optionals+=""
 # following is the correct method: optionals+="-option val "
 # following is the incorrect method: optionals+="-option val"
 
-if [[ -S ${CRI_RUNTIME_ENDPOINT} ]]; then # will skip if socket isn't exist in the container
-	optionals+="-cri-runtime-endpoint ${CRI_RUNTIME_ENDPOINT} "
-fi
-
-if [[ "${PAUSE_IMAGE}" ]]; then
-	optionals+="-pause-image ${PAUSE_IMAGE} "
-fi
+[[ -S ${CRI_RUNTIME_ENDPOINT} ]] && optionals+="-cri-runtime-endpoint ${CRI_RUNTIME_ENDPOINT} "
+[[ "${PAUSE_IMAGE}" ]] && optionals+="-pause-image ${PAUSE_IMAGE} "
 
 test_vars() {
         for i in "$@"; do
@@ -45,8 +40,8 @@ exec cloud-api-adaptor-aws aws \
 
 azure() {
 test_vars AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID
-set -x
 
+set -x
 exec cloud-api-adaptor-azure azure \
   -subscriptionid "${AZURE_SUBSCRIPTION_ID}" \
   -region "${AZURE_REGION}" \
@@ -60,6 +55,7 @@ exec cloud-api-adaptor-azure azure \
 
 ibmcloud() {
 test_vars IBMCLOUD_API_KEY
+
 set -x
 exec cloud-api-adaptor-ibmcloud ibmcloud \
         -iam-service-url "${IBMCLOUD_IAM_ENDPOINT}" \
@@ -79,6 +75,7 @@ exec cloud-api-adaptor-ibmcloud ibmcloud \
 
 libvirt() {
 test_vars LIBVIRT_URI
+
 set -x
 exec cloud-api-adaptor-libvirt libvirt \
 	-uri "${LIBVIRT_URI}" \
@@ -93,32 +90,14 @@ exec cloud-api-adaptor-libvirt libvirt \
 vsphere() {
 test_vars GOVC_USERNAME GOVC_PASSWORD
 
+[[ "${GOVC_TEMPLATE}" ]] && optionals+="-template ${GOVC_TEMPLATE} "
+[[ "${GOVC_DATACENTER}" ]] && optionals+="-data-center ${GOVC_DATACENTER} "
+[[ "${GOVC_VCLUSTER}" ]] && optionals+="-vcluster ${GOVC_VCLUSTER} "
+[[ "${GOVC_DATASTORE}" ]] && optionals+="-data-store ${GOVC_DATASTORE} "
+[[ "${GOVC_RESOURCE_POOL}" ]] && optionals+="-resource-pool ${GOVC_RESOURCE_POOL} "
+[[ "${GOVC_FOLDER}" ]] && optionals+="-deploy-folder ${GOVC_FOLDER} "
+
 set -x
-
-if [[ "${GOVC_TEMPLATE}" ]]; then
-    optionals+="-template ${GOVC_TEMPLATE} "
-fi
-
-if [[ "${GOVC_DATACENTER}" ]]; then
-    optionals+="-data-center ${GOVC_DATACENTER} "
-fi
-
-if [[ "${GOVC_VCLUSTER}" ]]; then
-    optionals+="-vcluster ${GOVC_VCLUSTER} "
-fi
-
-if [[ "${GOVC_DATASTORE}" ]]; then
-    optionals+="-data-store ${GOVC_DATASTORE} "
-fi
-
-if [[ "${GOVC_RESOURCE_POOL}" ]]; then
-    optionals+="-resource-pool ${GOVC_RESOURCE_POOL} "
-fi
-
-if [[ "${GOVC_FOLDER}" ]]; then
-    optionals+="-deploy-folder ${GOVC_FOLDER} "
-fi
-
 exec cloud-api-adaptor-vsphere vsphere \
 	-vcenter-url ${GOVC_URL}  \
 	${optionals} \
