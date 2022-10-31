@@ -24,7 +24,7 @@ type server struct {
 	ttRpc   *ttrpc.Server
 	service pb.HypervisorService
 
-	client *govmomi.Client
+	gclient *govmomi.Client
 
 	workerNode podnetwork.WorkerNode
 
@@ -46,7 +46,7 @@ func NewServer(cfg hypervisor.Config, vmcfg Config, workerNode podnetwork.Worker
 	return &server{
 		socketPath: cfg.SocketPath,
 		service:    newService(govmomiClient, &vmcfg, &cfg, workerNode, cfg.PodsDir, daemonPort),
-		client:     govmomiClient,
+		gclient:    govmomiClient,
 		workerNode: workerNode,
 		readyCh:    make(chan struct{}),
 		stopCh:     make(chan struct{}),
@@ -99,7 +99,7 @@ func (s *server) Start(ctx context.Context) (err error) {
 
 func (s *server) Shutdown() error {
 
-	DeleteGovmomiClient(s.client)
+	DeleteGovmomiClient(s.gclient)
 
 	s.stopOnce.Do(func() {
 		close(s.stopCh)
