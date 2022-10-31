@@ -148,7 +148,11 @@ func (s *hypervisorService) CreateVM(ctx context.Context, req *pb.CreateVMReques
 
 func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest) (*pb.StartVMResponse, error) {
 
-	// TODO: Do we need to check session and reauthenticate since we have keep alive?
+	err := CheckSessionWithRestore(ctx, s.serviceConfig, s.govmomiClient)
+	if err != nil {
+		logger.Printf("StartVM cannot find or create a new vcenter session")
+		return nil, err
+	}
 
 	sandbox, err := s.getSandbox(req.Id)
 	if err != nil {
@@ -267,6 +271,12 @@ func (s *hypervisorService) deleteInstance(ctx context.Context, id string, vmnam
 }
 
 func (s *hypervisorService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.StopVMResponse, error) {
+
+	err := CheckSessionWithRestore(ctx, s.serviceConfig, s.govmomiClient)
+	if err != nil {
+		logger.Printf("StopVM cannot find or create a new vcenter session")
+		return nil, err
+	}
 
 	sandbox, err := s.getSandbox(req.Id)
 	if err != nil {
