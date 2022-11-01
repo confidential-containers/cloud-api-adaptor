@@ -8,6 +8,8 @@ UBUNTU_RELEASE     = focal
 SKOPEO_VERSION     = 1.5.0
 UMOCI_VERSION      = 0.4.7
 
+PROJECT_DIR        = $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/../../)
+
 IMAGE_PREFIX := podvm
 ARCH := $(subst x86_64,amd64,$(shell uname -m))
 
@@ -120,6 +122,19 @@ $(PAUSE_SRC): $(SKOPEO_SRC)/bin/skopeo
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
 
+docker-build:
+	docker build -t caa-libvirt-ubuntu-podvm-builder \
+	-f Dockerfile_ubuntu.podvm_builder .
+	docker run --rm \
+		-v $(PROJECT_DIR):/src/cloud-api-adaptor \
+		-v $(abspath $(PROJECT_DIR)/../kata-containers):/src/kata-containers \
+		-e UID=$(shell id -u) \
+		-e GID=$(shell id -g) \
+		caa-libvirt-ubuntu-podvm-builder \
+		bash -c 'trap "chown -R -f "$$UID:$$GID" output staticlib $(SKOPEO_SRC) \
+		$(UMOCI_SRC) $(PAUSE_SRC) $(FILES_DIR)/$(PAUSE_BUNDLE) $(FILES_DIR)/usr \
+		../../agent-protocol-forwarder || true" EXIT; \
+		source ~/.cargo/env && CLOUD_PROVIDER=libvirt make build'
 clean:
 	rm -f "$(IMAGE_FILE)" "$(UBUNTU_IMAGE_FILE)" $(BINARIES)
 	rm -fr "$(SKOPEO_SRC)" "$(UMOCI_SRC)" "$(PAUSE_SRC)" "$(FILES_DIR)/$(PAUSE_BUNDLE)"
