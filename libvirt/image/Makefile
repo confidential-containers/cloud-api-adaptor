@@ -70,6 +70,9 @@ STATIC_LIB_BUILDER = ../../../kata-containers/ci/install_libseccomp.sh
 STATIC_LIB_DIR     = $(abspath staticlib)
 STATIC_LIB         = $(STATIC_LIB_DIR)/kata-libseccomp/lib/libseccomp.a
 
+LIBVIRT_POOL     := default
+LIBVIRT_VOL_NAME := podvm-base.qcow2
+
 build: $(IMAGE_FILE)
 
 $(IMAGE_FILE): $(BINARIES) $(FILES)
@@ -141,3 +144,17 @@ clean:
 
 .PHONY: force
 force:
+
+.PHONY: push
+push:
+	@ if ! virsh -c qemu:///system vol-list --pool "$(LIBVIRT_POOL)" | \
+		grep -q "$(LIBVIRT_VOL_NAME)"; then \
+		virsh -c qemu:///system vol-create-as \
+			--pool $(LIBVIRT_POOL) \
+			--name "$(LIBVIRT_VOL_NAME)" \
+			--capacity 20G --allocation 2G --prealloc-metadata \
+			--format qcow2; \
+	fi
+	virsh -c qemu:///system vol-upload \
+		--vol podvm-base.qcow2 output/$(IMAGE_FILE) \
+		--pool $(LIBVIRT_POOL) --sparse
