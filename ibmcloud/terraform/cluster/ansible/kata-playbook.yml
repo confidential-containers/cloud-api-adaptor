@@ -80,7 +80,7 @@
       args:
         executable: /bin/bash
         creates: /usr/local/bin/containerd
-    
+
     - name: Ensure /etc/containerd directory exists
       file:
         path: /etc/containerd
@@ -238,6 +238,7 @@
           enable_debug = true
           [hypervisor.remote]
           remote_hypervisor_socket = "/run/peerpod/hypervisor.sock"
+          remote_hypervisor_timeout = 600
           [agent.kata]
           [image]
           service_offload = true
