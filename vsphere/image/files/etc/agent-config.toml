@@ -1,0 +1,45 @@
+
+# This disables signature verification which now defaults to true.
+# We should consider a better solution. See #331 for more info
+enable_signature_verification=false
+
+# When using the agent-config.toml the KATA_AGENT_SERVER_ADDR env var seems to be ignored, so set it here
+server_addr="unix:///run/kata-containers/agent.sock"
+
+# temp workaround for kata-containers/kata-containers#5590
+[endpoints]
+allowed = [
+"AddARPNeighborsRequest",
+"AddSwapRequest",
+"CloseStdinRequest",
+"CopyFileRequest",
+"CreateContainerRequest",
+"CreateSandboxRequest",
+"DestroySandboxRequest",
+"ExecProcessRequest",
+"GetMetricsRequest",
+"GetOOMEventRequest",
+"GuestDetailsRequest",
+"ListInterfacesRequest",
+"ListRoutesRequest",
+"MemHotplugByProbeRequest",
+"OnlineCPUMemRequest",
+"PauseContainerRequest",
+"PullImageRequest",
+"ReadStreamRequest",
+"RemoveContainerRequest",
+"ReseedRandomDevRequest",
+"ResumeContainerRequest",
+"SetGuestDateTimeRequest",
+"SignalProcessRequest",
+"StartContainerRequest",
+"StartTracingRequest",
+"StatsContainerRequest",
+"StopTracingRequest",
+"TtyWinResizeRequest",
+"UpdateContainerRequest",
+"UpdateInterfaceRequest",
+"UpdateRoutesRequest",
+"WaitProcessRequest",
+"WriteStreamRequest"
+]

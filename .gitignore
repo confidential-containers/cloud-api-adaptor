@@ -14,3 +14,7 @@ skopeo
 
 # IDEs
 .vscode
+
+# Files
+vcenter.auto.pkrvars.hcl
+settings.auto.pkrvars.hcl
