@@ -1,0 +1,6 @@
+# This disables signature verification which now defaults to true.
+# We should consider a better solution. See #331 for more info
+enable_signature_verification=false
+
+# When using the agent-config.toml the KATA_AGENT_SERVER_ADDR env var seems to be ignored, so set it here
+server_addr="unix:///run/kata-containers/agent.sock"
