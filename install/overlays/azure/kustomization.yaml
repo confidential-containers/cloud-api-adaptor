@@ -15,7 +15,6 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="azure"
-  - CRI_RUNTIME_ENDPOINT="/run/containerd/containerd.sock" #set
   - AZURE_SUBSCRIPTION_ID="" #set
   - AZURE_REGION="eastus" #set
   - AZURE_INSTANCE_SIZE="Standard_D8as_v5" #set
