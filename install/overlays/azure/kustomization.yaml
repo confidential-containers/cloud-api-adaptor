@@ -28,7 +28,7 @@ secretGenerator:
   namespace: confidential-containers-system
   literals:
   - AZURE_CLIENT_ID="" # set
-  - AZURE_SECRET="" # set
+  - AZURE_CLIENT_SECRET="" # set
   - AZURE_TENANT_ID="" #set
 - name: ssh-key-secret
   namespace: confidential-containers-system

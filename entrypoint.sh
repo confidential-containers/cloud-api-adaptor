@@ -46,7 +46,7 @@ exec cloud-api-adaptor-aws aws \
 }
 
 azure() {
-test_vars AZURE_CLIENT_ID AZURE_SECRET AZURE_TENANT_ID
+test_vars AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID
 set -x
 
 exec cloud-api-adaptor-azure azure \
