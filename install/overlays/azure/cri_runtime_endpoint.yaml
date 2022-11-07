@@ -11,7 +11,7 @@ spec:
       containers:
       - name: cloud-api-adaptor-con
         volumeMounts:
-        - mountPath: /run/peerpod/cri-runtime.sock # in-container default
+        - mountPath: /run/peerpod/cri-runtime.sock # in-container CRI_RUNTIME_ENDPOINT default
           name: cri-runtime-endpoint
       volumes:
       - name: cri-runtime-endpoint
