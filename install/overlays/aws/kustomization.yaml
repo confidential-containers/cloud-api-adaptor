@@ -19,8 +19,8 @@ configMapGenerator:
   #- PODVM_LAUNCHTEMPLATE_NAME="" # Uncomment and set if you want to use launch template
   # Comment out all the following variables if using launch template
   - PODVM_AMI_ID="" #set
-  - AWS_SG_ID="" #set
   #- PODVM_INSTANCE_TYPE="t3.small" # caa defaults to t3.small
+  #- AWS_SG_IDS="" # comma separated, if not set all SGs will be retrieved from IMDS
   #- AWS_REGION="" # if not set retrieved from IMDS
   #- SSH_KP_NAME="" # if not set retrieved from IMDS
   #- AWS_SUBNET_ID="" # if not set retrieved from IMDS

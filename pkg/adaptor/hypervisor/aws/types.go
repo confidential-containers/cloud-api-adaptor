@@ -1,6 +1,20 @@
 package aws
 
-import "github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+import (
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+	"strings"
+)
+
+type securityGroupIds []string
+
+func (i *securityGroupIds) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *securityGroupIds) Set(value string) error {
+	*i = append(*i, strings.Split(value, ",")...)
+	return nil
+}
 
 type Config struct {
 	AccessKeyId        string
@@ -10,7 +24,7 @@ type Config struct {
 	LaunchTemplateName string
 	ImageId            string
 	InstanceType       string
-	SecurityGroupId    string
+	SecurityGroupIds   securityGroupIds
 	KeyName            string
 	SubnetId           string
 	UseLaunchTemplate  bool

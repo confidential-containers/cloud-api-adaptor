@@ -63,7 +63,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.BoolVar(&awscfg.UseLaunchTemplate, "use-lt", false, "Use EC2 Launch Template for the Pod VMs")
 			flags.StringVar(&awscfg.ImageId, "imageid", "", "Pod VM ami id")
 			flags.StringVar(&awscfg.InstanceType, "instance-type", "t3.small", "Pod VM instance type")
-			flags.StringVar(&awscfg.SecurityGroupId, "securitygroupid", "", "Security Group Id to be used for the Pod VM")
+			flags.Var(&awscfg.SecurityGroupIds, "securitygroupids", "Security Group Ids to be used for the Pod VM, comma separated")
 			flags.StringVar(&awscfg.KeyName, "keyname", "", "SSH Keypair name to be used with the Pod VM")
 			flags.StringVar(&awscfg.SubnetId, "subnetid", "", "Subnet ID to be used for the Pod VMs")
 			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")

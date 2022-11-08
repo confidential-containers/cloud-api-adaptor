@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"io"
+	"strings"
 )
 
 type MetadataRetriever struct {
@@ -77,6 +78,16 @@ func retrieveMissingConfig(cfg *Config) error {
 			cfg.KeyName = keyName
 			logger.Printf("\"%s\" KeyName retrieved from IMDS", keyName)
 		}
+	}
+	if len(cfg.SecurityGroupIds) < 1 {
+		logger.Printf("SecurityGroupIds was not provided, trying to fetch it from IMDS")
+		securityGroupIdsPath := fmt.Sprintf("network/interfaces/macs/%s/security-group-ids", mdr.mac)
+		securityGroupIds, err := mdr.get(securityGroupIdsPath)
+		if err != nil {
+			return err
+		}
+		cfg.SecurityGroupIds = strings.Fields(securityGroupIds)
+		logger.Printf("\"%s\" SecurityGroupIds retrieved from IMDS", &cfg.SecurityGroupIds)
 	}
 	return nil
 }
