@@ -198,7 +198,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 			MaxCount:         aws.Int32(1),
 			ImageId:          aws.String(s.serviceConfig.ImageId),
 			InstanceType:     types.InstanceType(s.serviceConfig.InstanceType),
-			SecurityGroupIds: []string{s.serviceConfig.SecurityGroupId},
+			SecurityGroupIds: s.serviceConfig.SecurityGroupIds,
 			KeyName:          aws.String(s.serviceConfig.KeyName),
 			SubnetId:         aws.String(s.serviceConfig.SubnetId),
 			UserData:         &userDataEnc,

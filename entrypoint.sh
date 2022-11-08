@@ -28,7 +28,7 @@ aws() {
 test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 
 [[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]] && optionals+="-use-lt -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME} " # has precedence if set
-[[ "${AWS_SG_ID}" ]] && optionals+="-securitygroupid ${AWS_SG_ID} " # MUST if template is not used
+[[ "${AWS_SG_IDS}" ]] && optionals+="-securitygroupids ${AWS_SG_IDS} " # MUST if template is not used
 [[ "${PODVM_AMI_ID}" ]] && optionals+="-imageid ${PODVM_AMI_ID} " # MUST if template is not used
 [[ "${PODVM_INSTANCE_TYPE}" ]] && optionals+="-instance-type ${PODVM_INSTANCE_TYPE} " # default t3.small
 [[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} " # if not retrieved from IMDS
