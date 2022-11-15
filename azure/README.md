@@ -102,20 +102,6 @@ az ad sp create-for-rbac \
   --query "{ clientid: appId, secret: password, tenantid: tenant }"
 ```
 
-Use the output from the previous command as values for the next one, viz. for flags `-clientid`, `-secret` and `-tenantid`.
+- Update [kustomization.yaml](../install/overlays/azure/kustomization.yaml) with the required values.
 
-- Replace the following values by going to the https://portal.azure.com/ :
-
-```bash
-./cloud-api-adaptor azure \
-  -subscriptionid $SUBSCRIPTION_ID \
-  -clientid <> \
-  -secret "<>" \
-  -tenantid <> \
-  -resourcegroup $RESOURCE_GROUP \
-  -region $LOCATION \
-  -subnetid "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Network/virtualNetworks/${VM_NAME}VNET/subnets/${VM_NAME}Subnet" \
-  -securitygroupid "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Network/networkSecurityGroups/${VM_NAME}NSG" \
-  -imageid "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Compute/images/${PEER_POD_NAME}" \
-  -instance-size <> \
-```
+- Deploy Cloud API Adaptor by following the [install](../install/README.md) guide.

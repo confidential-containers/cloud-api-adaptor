@@ -26,12 +26,7 @@ CLOUD_PROVIDER=aws make build
 
 # Running cloud-api-adaptor
 
-```
-cloud-api-adaptor-aws aws \
-    -aws-access-key-id ${AWS_ACCESS_KEY_ID} \
-    -aws-secret-key ${AWS_SECRET_ACCESS_KEY} \
-    -aws-region ${AWS_REGION} \
-    -pods-dir /run/peerpod/pods \
-    -socket /run/peerpod/hypervisor.sock
-```
+- Update [kustomization.yaml](../install/overlays/aws/kustomization.yaml) with the required values.
+
+- Deploy Cloud API Adaptor by following the [install](../install/README.md) guide.
 
