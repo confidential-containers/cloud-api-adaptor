@@ -1,10 +1,10 @@
 [Unit]
-Description=Mount unit for /run/kata-containers
+Description=Mount unit for /run/image
 Before=kata-agent.service
 
 [Mount]
-What=/kata-containers
-Where=/run/kata-containers
+What=/image
+Where=/run/image
 Type=none
 Options=bind
 
