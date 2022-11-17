@@ -89,8 +89,10 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		return nil, fmt.Errorf("failed to get IP address on %s (netns: %s): %w", hostInterface, hostNS.Path, err)
 	}
 	if len(addrs) != 1 {
-		return nil, fmt.Errorf("more than one IP address assigned on %s (netns: %s)", hostInterface, hostNS.Path)
+		logger.Printf("more than one IP address (%v) assigned on %s (netns: %s)", addrs, hostInterface, hostNS.Path)
 	}
+	// Use the first IP as the workerNodeIP
+	// TBD: Might be faster to retrieve using K8s downward API
 	config.WorkerNodeIP = addrs[0].String()
 
 	podNS, err := netops.NewNSFromPath(nsPath)
