@@ -68,7 +68,9 @@ for host in "${hosts[@]}"; do
         trap stop 0
 
         ssh "${opts[@]}" -o ExitOnForwardFailure=yes -S "$ssh_ctl_sock" -L "$port:$host:22" -M -f -N -l root "$bastion"
-        ssh-copy-id "${opts[@]}" -i "$key.pub" -p "$port" root@localhost
+        [[ $(uname) = "Darwin" ]] && force_option="-f"
+        ssh-copy-id ${force_option:-} "${opts[@]}" -i "$key.pub" -p "$port" root@localhost
+        
         ssh-keygen -R "[localhost]:$port" -f "$ssh_known_hosts"
     )
 done
