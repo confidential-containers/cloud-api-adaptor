@@ -47,6 +47,7 @@ exec cloud-api-adaptor-azure azure \
   -region "${AZURE_REGION}" \
   -instance-size "${AZURE_INSTANCE_SIZE}" \
   -resourcegroup "${AZURE_RESOURCE_GROUP}" \
+  -vxlan-port 8472 \
   -subnetid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Network/virtualNetworks/${AZURE_VM_NAME}VNET/subnets/${AZURE_VM_NAME}Subnet" \
   -securitygroupid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Network/networkSecurityGroups/${AZURE_VM_NAME}NSG" \
   -imageid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Compute/images/${AZURE_IMAGE}" \

@@ -51,46 +51,7 @@ PEER_POD_NAME="OUTPUT_FROM_ABOVE"
 
 # Running cloud-api-adaptor
 
-You need to create a routing table and add that table to your VNET subnet.
-
-- Find your private IP of the k8s host
-
-```bash
-PRIVATE_IP=$(az vm list-ip-addresses --resource-group "${RESOURCE_GROUP}" --name "${VM_NAME}" --query '[0].virtualMachine.network.privateIpAddresses[0]' -o tsv)
-```
-
-- Find CIDR on the k8s host
-
-```bash
-kubectl get -o jsonpath='{.items[0].spec.cidr}' blockaffinities && echo
-```
-
-- Create routing table and route
-
-```bash
-export CIDR="REPLACE_ME" # From the output above
-
-ROUTE_TABLE="calico-routes"
-
-az network route-table create -g "${RESOURCE_GROUP}" -n "${ROUTE_TABLE}"
-
-az network route-table route create -g "${RESOURCE_GROUP}" \
-  --route-table-name "${ROUTE_TABLE}" \
-  -n master-route \
-  --next-hop-type VirtualAppliance \
-  --address-prefix "${CIDR}" \
-  --next-hop-ip-address "${PRIVATE_IP}"
-```
-
-- Update VNET's subnet with the routing table
-
-```bash
-az network vnet subnet update -g "${RESOURCE_GROUP}" \
-  -n "${VM_NAME}"Subnet \
-  --vnet-name "${VM_NAME}"VNET \
-  --network-security-group "${VM_NAME}"NSG \
-  --route-table "${route_table_name}"
-```
+- If using Calico CNI, [configure](https://projectcalico.docs.tigera.io/networking/vxlan-ipip#configure-vxlan-encapsulation-for-all-inter-workload-traffic) VXLAN encapsulation for all inter workload traffic.
 
 - Create Service Principal for the CAA
 
