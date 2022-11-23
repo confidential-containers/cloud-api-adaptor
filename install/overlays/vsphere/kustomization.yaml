@@ -16,7 +16,8 @@ configMapGenerator:
   literals:
   - CLOUD_PROVIDER="vsphere"
   - GOVC_URL="" # set
-  #- PAUSE_IMAGE=" # Uncomment and set if you want to use a specific pause image
+  #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
 
 secretGenerator:
 - name: peer-pods-secret
