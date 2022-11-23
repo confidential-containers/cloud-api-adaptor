@@ -21,6 +21,8 @@ configMapGenerator:
   - AZURE_RESOURCE_GROUP="" #set
   - AZURE_VM_NAME="" #set
   - AZURE_IMAGE="" #set
+  #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
 
 secretGenerator:
 - name: peer-pods-secret
