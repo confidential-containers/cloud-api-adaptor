@@ -18,7 +18,8 @@ configMapGenerator:
   - LIBVIRT_URI="qemu+ssh://root@192.168.122.1/system?no_verify=1" #set
   - LIBVIRT_NET="default" # set
   - LIBVIRT_POOL="default" # set
-  #- PAUSE_IMAGE=" # Uncomment and set if you want to use a specific pause image
+  #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
 
 secretGenerator:
 - name: ssh-key-secret
