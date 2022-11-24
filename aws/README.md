@@ -1,32 +1,38 @@
 # Setup instructions
+## Prerequisites
+
+- Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for AWS cli access
 
 - Install packer by following the instructions in the following [link](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli)
-	- Install packer's Amazon plugin `packer plugins install github.com/hashicorp/amazon`
+        - Install packer's Amazon plugin `packer plugins install github.com/hashicorp/amazon`
 
-- Create a VPC with public internet access
-Note down the VPC ID, Subnet ID, Region
+## Image Build
 
 - Set environment variables
 ```
 export AWS_ACCOUNT_ID="REPLACE_ME"
-export VPC_ID="REPLACE_ME"
-export SUBNET_ID="REPLACE_ME"
 export AWS_REGION="REPLACE_ME"
 ```
 
-- Create a custom AMI based on Ubuntu 20.04 having kata-agent and other dependencies.
+- Either make sure default VPC is enabled: `aws ec2 create-default-vpc --region ${AWS_REGION}` or
+create create new VPC with public internet access and set also the following environment variables
+```
+export VPC_ID="REPLACE_ME"
+export SUBNET_ID="REPLACE_ME"
+```
+
+- Create a custom AMI based on Ubuntu 20.04 having kata-agent and other dependencies
+        - **NOTE:** If authentication against container image registries is required copy your JSON format credentials
+        file to [image/files/](./image/files/)auth.json and add also `USE_SKOPEO=true` before `make build`
 ```
 cd image
 CLOUD_PROVIDER=aws make build
 ```
 
-- Create an EC2 launch template named "kata" using the newly created AMI
+- Note down your newly created AMI_ID
 
+## Running cloud-api-adaptor
 
+- Update [kustomization.yaml](../install/overlays/aws/kustomization.yaml) with your AMI_ID
 
-# Running cloud-api-adaptor
-
-- Update [kustomization.yaml](../install/overlays/aws/kustomization.yaml) with the required values.
-
-- Deploy Cloud API Adaptor by following the [install](../install/README.md) guide.
-
+- Deploy Cloud API Adaptor by following the [install](../install/README.md) guide
