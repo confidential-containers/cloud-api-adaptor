@@ -59,6 +59,10 @@ test: ## Run tests.
 	# parse build errors.
 	go test -v $(GOFLAGS) -cover $(PACKAGES) 2>&1
 
+.PHONY: test-e2e
+test-e2e: ## Run end-to-end tests.
+	go test -v $(GOFLAGS) -count=1 ./test/e2e
+
 .PHONY: check
 check: fmt vet ## Run go vet and go vet against the code.
 
