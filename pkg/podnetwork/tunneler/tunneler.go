@@ -15,6 +15,7 @@ type Tunneler interface {
 
 type Config struct {
 	PodIP         string
+	PodHwAddr     string   `json:"pod-hw-addr"`
 	Routes        []*Route `json:"routes"`
 	InterfaceName string   `json:"interface"`
 	MTU           int      `json:"mtu"`

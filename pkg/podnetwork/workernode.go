@@ -114,7 +114,14 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	config.PodIP = podIP
+	config.PodHwAddr, err = podNS.GetHardwareAddr(podInterface)
+	if err != nil {
+		logger.Printf("failed to get Mac address of the Pod interface")
+		return nil, fmt.Errorf("failed to get Mac address for Pod interface %s: %w", podInterface, err)
+	}
+
 	config.InterfaceName = podInterface
 
 	mtu, err := podNS.GetMTU(podInterface)
