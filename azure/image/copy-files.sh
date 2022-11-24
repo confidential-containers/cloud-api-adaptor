@@ -8,3 +8,8 @@ sudo mkdir -p /usr/local/bin
 sudo cp -a /tmp/files/usr/* /usr/
 
 sudo cp -a /tmp/files/pause_bundle /
+
+if [ -e /tmp/files/auth.json ]; then
+       sudo mkdir -p /root/.config/containers/
+       sudo cp -a /tmp/files/auth.json /root/.config/containers/auth.json
+fi
