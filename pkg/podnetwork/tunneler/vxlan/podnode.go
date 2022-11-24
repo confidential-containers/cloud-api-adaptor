@@ -62,6 +62,10 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		return fmt.Errorf("failed to move vxlan interface %s to netns %s: %w", podVxlanInterface, podNS.Path, err)
 	}
 
+	if err := podNS.SetHardwareAddr(podVxlanInterface, config.PodHwAddr); err != nil {
+		return fmt.Errorf("failed to set pod Mac %s on %s: %w", config.PodHwAddr, podVxlanInterface, err)
+	}
+
 	mtu := int(config.MTU)
 	if mtu > maxMTU {
 		mtu = maxMTU
