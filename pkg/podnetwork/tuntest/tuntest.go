@@ -17,6 +17,7 @@ import (
 
 type testPod struct {
 	podAddr                       string
+	podHwAddr                     string
 	podNodePrimaryAddr            string
 	podNodeSecondaryAddr          string
 	workerPodNS, podNS, podNodeNS *netops.NS
@@ -48,8 +49,8 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 	)
 
 	pods := []*testPod{
-		{podAddr: "10.128.0.2/24", podNodePrimaryAddr: "10.10.1.2/16", podNodeSecondaryAddr: "192.168.0.2/24"},
-		{podAddr: "10.128.0.3/24", podNodePrimaryAddr: "10.10.1.3/16", podNodeSecondaryAddr: "192.168.0.3/24"},
+		{podAddr: "10.128.0.2/24", podHwAddr: "0a:58:0a:84:03:ce", podNodePrimaryAddr: "10.10.1.2/16", podNodeSecondaryAddr: "192.168.0.2/24"},
+		{podAddr: "10.128.0.3/24", podHwAddr: "0a:58:0a:84:03:cf", podNodePrimaryAddr: "10.10.1.3/16", podNodeSecondaryAddr: "192.168.0.3/24"},
 	}
 
 	bridgeNS := NewNamedNS(t, "test-bridge")
@@ -102,6 +103,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 		LinkSetMaster(t, workerNS, veth, "cni0")
 
 		AddrAdd(t, pod.workerPodNS, "eth0", pod.podAddr)
+		HwAddrAdd(t, pod.workerPodNS, "eth0", pod.podHwAddr)
 		RouteAdd(t, pod.workerPodNS, "", gatewayIP, "eth0")
 
 		pod.podNodeNS = NewNamedNS(t, fmt.Sprintf("test-podvm%d", i))
@@ -125,6 +127,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 
 		pod.config = &tunneler.Config{
 			PodIP:         pod.podAddr,
+			PodHwAddr:     pod.podHwAddr,
 			Routes:        []*tunneler.Route{{Dst: "", GW: "10.128.0.1", Dev: ""}},
 			InterfaceName: "eth0",
 			MTU:           1500,
