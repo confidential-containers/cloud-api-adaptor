@@ -104,6 +104,14 @@ func AddrAdd(t *testing.T, ns *netops.NS, name, addr string) {
 	}
 }
 
+func HwAddrAdd(t *testing.T, ns *netops.NS, name, hwAddr string) {
+	t.Helper()
+
+	if err := ns.SetHardwareAddr(name, hwAddr); err != nil {
+		t.Fatalf("failed to add %s to %s: %v", hwAddr, name, err)
+	}
+}
+
 func RouteAdd(t *testing.T, ns *netops.NS, dest, gw, dev string) {
 	t.Helper()
 
