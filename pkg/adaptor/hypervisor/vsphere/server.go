@@ -36,7 +36,7 @@ type server struct {
 func NewServer(cfg hypervisor.Config, vmcfg Config, workerNode podnetwork.WorkerNode, daemonPort string) hypervisor.Server {
 
 	logger.Printf("hypervisor config %v", cfg)
-	logger.Printf("cloud config %v", vmcfg)
+	logger.Printf("cloud config %v", vmcfg.Redact())
 
 	govmomiClient, err := NewGovmomiClient(vmcfg)
 	if err != nil {
