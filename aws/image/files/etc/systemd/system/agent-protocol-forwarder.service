@@ -1,6 +1,8 @@
 [Unit]
 Description=Agent Protocol Forwarder
-After=network.target
+After=cloud-init.target
+Wants=cloud-init.target
+DefaultDependencies=no
 
 [Service]
 ExecStart=/usr/local/bin/agent-protocol-forwarder -kata-agent-namespace /run/netns/podns -kata-agent-socket /run/kata-containers/agent.sock
