@@ -77,6 +77,18 @@ ifeq ($(PODVM_DISTRO),ubuntu)
 	$(eval OPTS := -var qemu_image_name=${IMAGE_FILE} \
 	-var cloud_image_url=${UBUNTU_IMAGE_URL} \
 	-var cloud_image_checksum=${UBUNTU_IMAGE_CHECKSUM} ubuntu)
+else ifeq ($(PODVM_DISTRO),rhel)
+ifndef RHEL_IMAGE_URL
+	$(error "RHEL_IMAGE_URL is not defined")
+endif
+ifndef RHEL_IMAGE_CHECKSUM
+	$(error "RHEL_IMAGE_CHECKSUM is not defined")
+endif
+	$(eval OPTS := -var qemu_image_name=${IMAGE_FILE} \
+	-var cloud_image_url=${RHEL_IMAGE_URL} \
+	-var disk_size=11144 \
+	-var ssh_username=cloud-user \
+	-var cloud_image_checksum=${RHEL_IMAGE_CHECKSUM} rhel)
 else
 	$(error PODVM_DISTRO is invalid or not defined)
 endif

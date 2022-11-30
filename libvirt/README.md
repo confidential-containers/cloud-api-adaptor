@@ -19,6 +19,13 @@
 cd image
 CLOUD_PROVIDER=libvirt make build
 ```
+- The default image uses an Ubuntu cloud image base. If instead, you would like to create a rhel based podvm image, you can
+set PODVM_DISTRO when invoking build as such:
+```
+export RHEL_IMAGE_URL="" <- either a local path or an url
+export RHEL_IMAGE_CHECKSUM="" <- the checksum of the aforementioned image
+CLOUD_PROVIDER=libvirt PODVM_DISTRO=rhel make build
+```
 
 The image will be available under the `output` directory
 
