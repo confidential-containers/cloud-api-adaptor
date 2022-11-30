@@ -67,18 +67,26 @@ PAUSE_BUNDLE  = pause_bundle
 STATIC_LIB_BUILDER = ../../../kata-containers/ci/install_libseccomp.sh
 STATIC_LIB_DIR     = $(abspath staticlib)
 STATIC_LIB         = $(STATIC_LIB_DIR)/kata-libseccomp/lib/libseccomp.a
+PODVM_DISTRO       = ubuntu
 
 build: $(IMAGE_FILE)
 
-$(IMAGE_FILE): $(BINARIES) $(FILES)
-	echo ${UBUNTU_IMAGE_CHECKSUM}
+setopts:
+ifeq ($(PODVM_DISTRO),ubuntu)
+	@echo defined
+	$(eval OPTS := -var qemu_image_name=${IMAGE_FILE} \
+	-var cloud_image_url=${UBUNTU_IMAGE_URL} \
+	-var cloud_image_checksum=${UBUNTU_IMAGE_CHECKSUM} ubuntu)
+else
+	$(error PODVM_DISTRO is invalid or not defined)
+endif
+
+$(IMAGE_FILE): $(BINARIES) $(FILES) setopts
 	rm -fr output
 	rm -f cloud-init.img
 	cloud-localds cloud-init.img userdata.cfg
 	mkdir -p toupload
-	packer build -var qemu_image_name=${IMAGE_FILE} \
-		-var cloud_image_url=${UBUNTU_IMAGE_URL} \
-		-var cloud_image_checksum=${UBUNTU_IMAGE_CHECKSUM} .
+	packer build ${OPTS}
 	rm -fr toupload
 	rm -f cloud-init.img
 
