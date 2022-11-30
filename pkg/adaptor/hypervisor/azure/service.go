@@ -176,6 +176,20 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 		},
 	}
 
+	if authJSON, err := os.ReadFile(cloudinit.DefaultAuthfileSrcPath); err == nil {
+		if json.Valid(authJSON) && (len(authJSON) < cloudinit.DefaultAuthfileLimit) {
+			cloudConfig.WriteFiles = append(cloudConfig.WriteFiles,
+				cloudinit.WriteFile{
+					Path:    cloudinit.DefaultAuthfileDstPath,
+					Content: string(authJSON),
+				})
+		} else if len(authJSON) >= cloudinit.DefaultAuthfileLimit {
+			logger.Printf("Credentials file size (%d) is too large to use as userdata, ignored", len(authJSON))
+		} else {
+			logger.Printf("Credentials file is not in a valid Json format, ignored")
+		}
+	}
+
 	userData, err := cloudConfig.Generate()
 	if err != nil {
 		return nil, err

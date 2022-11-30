@@ -28,6 +28,10 @@ configMapGenerator:
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
 
 secretGenerator:
+- name: auth-json-secret
+  namespace: confidential-containers-system
+  files:
+  #- auth.json # set - path to auth.json pull credentials file
 - name: peer-pods-secret
   namespace: confidential-containers-system
   literals:

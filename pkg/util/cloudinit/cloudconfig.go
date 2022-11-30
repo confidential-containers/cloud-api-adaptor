@@ -10,6 +10,12 @@ import (
 	"text/template"
 )
 
+const (
+	DefaultAuthfileSrcPath = "/root/containers/auth.json"
+	DefaultAuthfileDstPath = "/root/.config/containers/auth.json" // skopeo fixed path for support at the agent
+	DefaultAuthfileLimit = 12288 // TODO: use a whole userdata limit mechanism instead of limiting authfile
+)
+
 // https://cloudinit.readthedocs.io/en/latest/topics/format.html#cloud-config-data
 
 type CloudConfig struct {
