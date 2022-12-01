@@ -113,7 +113,7 @@ vpc_name = "<vpc name>"
 >     ```
 >     If command `ibmcloud account users` displays multiple user IDs, choose the user ID whose state is `ACTIVE`.
 > - `cluster_name` is a name of a Kubernetes cluster. This name is used for the prefix of the names of control plane and worker node virtual server instances.
-> - `ssh_key_name` is the name of your SSH key registered in IBM Cloud or the name of a new SSH key if a public key is also provided using the optional the optional `ssh_pub_key` parameter. You can add your SSH key at [https://cloud.ibm.com/vpc-ext/compute/sshKeys](https://cloud.ibm.com/vpc-ext/compute/sshKeys). For more information about SSH keys see [managing SSH Keys](https://cloud.ibm.com/docs/vpc?topic=vpc-ssh-keys). The SSH key will be installed on the Kubernetes control plane and worker nodes and is used to access them from your `development machine`.
+> - `ssh_key_name` is the name of your SSH key registered in IBM Cloud or the name of a new SSH key if a public key is also provided using the optional `ssh_pub_key` parameter. You can add your SSH key at [https://cloud.ibm.com/vpc-ext/compute/sshKeys](https://cloud.ibm.com/vpc-ext/compute/sshKeys). For more information about SSH keys see [managing SSH Keys](https://cloud.ibm.com/docs/vpc?topic=vpc-ssh-keys). The SSH key will be installed on the Kubernetes control plane and worker nodes and is used to access them from your `development machine`.
 > - `podvm_image_name` is the name of the VPC infrastructure custom image for the peer pod VM that the Kubernetes worker will build. This name will have `-amd64` or `-s390x` appended to it to name the image that eventually gets imported to VPC infrastructure custom images, depending on if the `image_name` parameter for the instance the peer pod VM image is built on uses the amd64 or s390x CPU architecture
 > - `cos_bucket_name` is the name of the COS bucket that will store the peer pod .vsi image. This bucket name must be unique across all IBM Cloud accounts.
 > - `cos_bucket_region` (optional) is the name of the region that the COS bucket will be in, this can be regional (e.g. jp-tok) or cross-regional (e.g. eu). If not provided will be the region specified by `region_name`.
@@ -166,7 +166,7 @@ On a cluster using `instance_profile_name = "bz2-2x8"` and `image_name = "ibm-ub
 
 ## Create and test the demo environment on IBM Cloud for peer pod VMs - advanced usage
 
-The individual modules this Terraform configuration calls can also be ran as stand-alone Terraform configurations. This is recommended for experienced users to users who want to try to set up the demo environment on pre-existing infrastructure.
+The individual modules this Terraform configuration calls can also be ran as stand-alone Terraform configurations. This is recommended for experienced users who want to try to set up the demo environment on pre-existing infrastructure.
 
 ### Create a VPC
 
@@ -190,7 +190,7 @@ $ terraform apply
 
 ### Create a Kubernetes cluster
 
-Another Terraform configuration is available at [ibmcloud/terraform/cluster](./terraform/cluster) to create a Kubernetes cluster on the VPC you just created, or a on pre-existing VPC. This configuration is called as a Terraform module by the end-to-end configuration, but it can be ran as a stand-alone Terraform configuration.
+Another Terraform configuration is available at [ibmcloud/terraform/cluster](./terraform/cluster) to create a Kubernetes cluster on the VPC you just created, or on a pre-existing VPC. This configuration is called as a Terraform module by the end-to-end configuration, but it can be ran as a stand-alone Terraform configuration.
 
 > **Tip:** You can create multiple clusters by using different cluster names.
 
@@ -224,7 +224,10 @@ containerd_branch = "CC-main"
 ```
 
 > **Hint:** In order to create the cluster based on a different type of VSI image you can overwrite more parameters here e.g. to create a **s390x** based cluster add follow two lines to the `terraform.tfvars` file.
-
+>
+>     instance_profile_name = "bz2-2x8"
+>     image_name = "ibm-ubuntu-18-04-1-minimal-s390x-3"
+>
 > **Notes:**
 > - Some resources can be specified using their name or ID. For example, the subnet can be specified using the `primary_subnet_name` or `primary_subnet_id` variables. Where this option exists the `..._name` and `..._id` variables are mutually exclusive.
 > - Resources that can be specified using either their name or ID must exist when the Terraform configuration is planned or applied.
@@ -479,7 +482,7 @@ Deploying the demo workload will create a new configMap, secret, nginx Pod and N
 > ```bash
 > $ kubectl exec nginx -- uname -a
 > ```
-> while logged into to Kubernetes worker node. If you are using a `s390x` based image as the pod VM image, the output looks like this.
+> While logged into to Kubernetes worker node. If you are using a `s390x` based image as the pod VM image, the output looks like this.
 > ```
 > Linux nginx 5.4.0-109-generic #123-Ubuntu SMP [Date] s390x GNU/Linux
 > ```
