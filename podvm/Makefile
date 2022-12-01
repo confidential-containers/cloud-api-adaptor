@@ -6,9 +6,9 @@ include Makefile.inc
 
 .PHONY: image clean
 
-UBUNTU_IMAGE_URL  ?= https://cloud-images.ubuntu.com/$(UBUNTU_RELEASE)/current/$(UBUNTU_RELEASE)-server-cloudimg-$(ARCH).img
+UBUNTU_IMAGE_URL  ?= https://cloud-images.ubuntu.com/$(UBUNTU_RELEASE)/current/$(UBUNTU_RELEASE)-server-cloudimg-$(DEB_ARCH).img
 UBUNTU_IMAGE_CHECKSUM ?= $(shell curl -LO  https://cloud-images.ubuntu.com/"$(UBUNTU_RELEASE)"/current/SHA256SUMS && \
-				grep "$(UBUNTU_RELEASE)"-server-cloudimg-"$(ARCH)".img SHA256SUMS | awk '{print $$1}' && \
+				grep "$(UBUNTU_RELEASE)"-server-cloudimg-"$(DEB_ARCH)".img SHA256SUMS | awk '{print $$1}' && \
 				rm -f SHA256SUMS)
 
 IMAGE_SUFFIX := .qcow2

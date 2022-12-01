@@ -8,11 +8,13 @@ ifndef CLOUD_PROVIDER
 $(error CLOUD_PROVIDER is not set)
 endif
 
-GOFLAGS    ?= -tags=$(CLOUD_PROVIDER)
-BINARIES   := cloud-api-adaptor agent-protocol-forwarder
-SOURCEDIRS := ./cmd ./pkg
-PACKAGES   := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
-SOURCES    := $(shell find $(SOURCEDIRS) -name '*.go' -print)
+ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
+GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH)
+GOFLAGS     ?= -tags=$(CLOUD_PROVIDER)
+BINARIES    := cloud-api-adaptor agent-protocol-forwarder
+SOURCEDIRS  := ./cmd ./pkg
+PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
+SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 
 all: build
 build: $(BINARIES)
@@ -34,9 +36,9 @@ help: ## Display this help.
 
 $(BINARIES): $(SOURCES)
 ifeq ($(CLOUD_PROVIDER),libvirt)
-	go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
+	$(GOOPTIONS) go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
 else
-	CGO_ENABLED=0 go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
+	$(GOOPTIONS) CGO_ENABLED=0 go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
 endif
 
 ##@ Development
