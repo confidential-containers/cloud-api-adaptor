@@ -13,7 +13,19 @@ UMOCI_VERSION      = 0.4.7
 
 IMAGE_PREFIX := podvm
 
-ARCH := $(subst x86_64,amd64,$(shell uname -m))
+HOST_ARCH   := $(shell uname -m)
+ARCH        ?= $(HOST_ARCH)
+DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
+LIBC        := $(if $(findstring s390x,$(ARCH)),gnu,musl)
+RUST_TARGET := $(ARCH)-unknown-linux-$(LIBC)
+
+ifneq ($(HOST_ARCH),$(ARCH))
+    ifeq ($(CC),cc)
+		CC := $(ARCH)-linux-$(LIBC)-gcc
+        $(warning A foreign ARCH was passed, but no CC alternative. Using $(CC) as best guess)
+	endif
+RUST_FLAGS := CC=$(CC) ARCH=$(ARCH)
+endif
 
 FILES_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/files
 
@@ -26,14 +38,11 @@ COMMIT := $(shell	commit=$$(git describe --match '' --dirty --always) && \
 ifndef COMMIT
 $(error Failed to derive an image name. Explicitly define IMAGE_NAME)
 endif
-IMAGE_NAME := $(IMAGE_PREFIX)-$(COMMIT)-$(ARCH)
+IMAGE_NAME := $(IMAGE_PREFIX)-$(COMMIT)-$(DEB_ARCH)
 endif
 
-IMAGE_SUFFIX ?= 
+IMAGE_SUFFIX ?=
 IMAGE_FILE = $(IMAGE_NAME)$(IMAGE_SUFFIX)
-
-LIBC_ARCH := $(shell uname -m)
-LIBC ?= $(if $(findstring s390x,$(LIBC_ARCH)),gnu,musl)
 
 AGENT_PROTOCOL_FORWARDER = $(FILES_DIR)/usr/local/bin/agent-protocol-forwarder
 KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
@@ -78,33 +87,32 @@ ATTESTATION_AGENT_REPO = https://github.com/confidential-containers/attestation-
 binaries: $(BINARIES)
 
 $(AGENT_PROTOCOL_FORWARDER): force
-	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && $(MAKE) agent-protocol-forwarder
+	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && ARCH=$(DEB_ARCH) $(MAKE) agent-protocol-forwarder
 	install -D --compare "$(AGENT_PROTOCOL_FORWARDER_SRC)/agent-protocol-forwarder" "$@"
 
 $(KATA_AGENT): force $(STATIC_LIBSECCOMP)
-	cd "$(KATA_AGENT_SRC)/../libs" && $(MAKE) LIBC=$(LIBC) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
-	cd "$(KATA_AGENT_SRC)" && $(MAKE) LIBC=$(LIBC) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
-	install -D --compare "$(KATA_AGENT_SRC)/target/$(shell uname -m)-unknown-linux-$(LIBC)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
+	cd "$(KATA_AGENT_SRC)" && $(RUST_FLAGS) $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
+	install -D --compare "$(KATA_AGENT_SRC)/target/$(RUST_TARGET)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
 
 $(STATIC_LIBSECCOMP):
-	$(STATIC_LIBSECCOMP_BUILDER) $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp $(STATIC_LIBSECCOMP_DIR)/kata-gperf
+	$(RUST_FLAGS) $(STATIC_LIBSECCOMP_BUILDER) $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp $(STATIC_LIBSECCOMP_DIR)/kata-gperf
 
 # Skoepo package packages are available in RHEL/CentOS 8 or later and Ubuntu 20.10 or later
 $(SKOPEO_SRC):
 	git clone -b "v$(SKOPEO_VERSION)" "$(SKOPEO_REPO)" "$(SKOPEO_SRC)"
 
 $(SKOPEO_SRC)/bin/skopeo: $(SKOPEO_SRC)
-	cd "$(SKOPEO_SRC)" && make bin/skopeo
+	cd "$(SKOPEO_SRC)" && CC= $(MAKE) bin/skopeo
 
 # The umoci release page only publishes amd64 binaries. https://github.com/opencontainers/umoci/releases
 $(UMOCI_SRC):
 	git clone -b "v$(UMOCI_VERSION)" "$(UMOCI_REPO)" "$(UMOCI_SRC)"
 
 $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
-	cd "$(UMOCI_SRC)" && make
+	cd "$(UMOCI_SRC)" && CC= $(MAKE)
 
 $(PAUSE_SRC): $(SKOPEO_SRC)/bin/skopeo
-	$(SKOPEO_SRC)/bin/skopeo --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
+	$(SKOPEO_SRC)/bin/skopeo --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
 
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
@@ -113,6 +121,6 @@ $(ATTESTATION_AGENT_SRC):
 	git clone "$(ATTESTATION_AGENT_REPO)" "$(ATTESTATION_AGENT_SRC)"
 
 $(ATTESTATION_AGENT): $(ATTESTATION_AGENT_SRC)
-	cd "$(ATTESTATION_AGENT_SRC)" && make KBC="$(AA_KBC)" LIBC="$(LIBC)"
+	cd "$(ATTESTATION_AGENT_SRC)" && $(RUST_FLAGS) $(MAKE) KBC="$(AA_KBC)" LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
-	install --compare "$(ATTESTATION_AGENT_SRC)/app/target/$(LIBC_ARCH)-unknown-linux-$(LIBC)/release/attestation-agent" "$@"
+	install --compare "$(ATTESTATION_AGENT_SRC)/app/target/$(RUST_TARGET)/release/attestation-agent" "$@"
