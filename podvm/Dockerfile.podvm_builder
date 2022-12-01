@@ -1,0 +1,57 @@
+# Copyright Confidential Containers Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Creates a builder container image that should be used to build the Pod VM
+# disk inside a container.
+#
+FROM ubuntu:20.04
+
+ARG GO_VERSION="1.18.7"
+ARG PROTOC_VERSION="3.11.4"
+ARG RUST_VERSION="1.62.0"
+
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update -y && \
+    apt-get install -y build-essential cloud-image-utils curl git gnupg \
+        libdevmapper-dev libgpgme-dev lsb-release pkg-config qemu-kvm \
+        musl-tools unzip wget git && \
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - && \
+    echo "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee -a /etc/apt/sources.list && \
+    apt-get update && apt-get install -y packer && \
+    curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
+    rm -f go${GO_VERSION}.linux-amd64.tar.gz
+
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VERSION}"
+
+ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
+
+RUN echo $PATH
+
+RUN rustup target add x86_64-unknown-linux-musl && ln -sf /usr/bin/g++ /bin/musl-g++
+    
+
+RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
+    unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
+
+WORKDIR /src
+
+ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
+ARG CAA_SRC_BRANCH="staging"
+
+ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
+ARG KATA_SRC_BRANCH="CCv0"
+
+RUN echo $CAA_SRC
+
+RUN echo $CAA_SRC_BRANCH
+
+RUN git clone ${CAA_SRC} -b ${CAA_SRC_BRANCH}
+RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH}
+
+
+ENV GOPATH /src
