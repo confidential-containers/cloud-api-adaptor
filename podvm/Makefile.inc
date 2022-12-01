@@ -69,6 +69,8 @@ STATIC_LIBSECCOMP_BUILDER = ../../../kata-containers/ci/install_libseccomp.sh
 STATIC_LIBSECCOMP_DIR     = $(abspath staticlib)
 STATIC_LIBSECCOMP         = $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp/lib/libseccomp.a
 
+binaries: $(BINARIES)
+
 $(AGENT_PROTOCOL_FORWARDER): force
 	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && $(MAKE) agent-protocol-forwarder
 	install -D --compare "$(AGENT_PROTOCOL_FORWARDER_SRC)/agent-protocol-forwarder" "$@"
