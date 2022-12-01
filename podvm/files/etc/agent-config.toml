@@ -5,6 +5,10 @@ enable_signature_verification=false
 # When using the agent-config.toml the KATA_AGENT_SERVER_ADDR env var seems to be ignored, so set it here
 server_addr="unix:///run/kata-containers/agent.sock"
 
+# This field sets up the KBC that attestation agent uses
+# This is replaced in the makefile steps so do not set it manually
+aa_kbc_params = ""
+
 # temp workaround for kata-containers/kata-containers#5590
 [endpoints]
 allowed = [
