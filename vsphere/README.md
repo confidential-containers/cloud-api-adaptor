@@ -13,6 +13,12 @@
 ```
 cd vsphere/image && make
 ```
+
+For a rhel podvm image, try:
+```
+cd vsphere/image && PODVM_DISTRO=rhel make
+```
+
 If successful, you can find the image on your vcenter deployment
 
 ## File structure
