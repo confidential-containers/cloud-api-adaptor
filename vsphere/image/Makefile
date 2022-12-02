@@ -50,6 +50,7 @@ STATIC_LIB         = $(STATIC_LIB_DIR)/kata-libseccomp/lib/libseccomp.a
 GUESTCONFIG = settings.auto.pkrvars.hcl
 VCENTERCONFIG = vcenter.auto.pkrvars.hcl
 OVERWRITE =
+PODVM_DISTRO = ubuntu
 
 check:
 ifeq (, $(shell which packer))
@@ -62,18 +63,29 @@ endif
 ifeq ($(FORCE),1)
 	$(eval OVERWRITE := -force)
 endif
+ifeq ($(PODVM_DISTRO),ubuntu)
+	$(eval OPTS := ${OPTS} ubuntu)
+else
+	$(error PODVM_DISTRO is invalid or not defined)
+endif
 
 cleanconfig:
-	rm -rf $(VCENTERCONFIG) $(GUESTCONFIG)
+ifeq ($(PODVM_DISTRO),ubuntu)
+	$(eval OPTS := ubuntu)
+else
+	$(error PODVM_DISTRO is invalid or not defined)
+endif
+	rm -rf ${OPTS}/$(VCENTERCONFIG) ${OPTS}/$(GUESTCONFIG)
+
 
 config: | check
-	./scripts/createconfig.sh "guest" "$(GUESTCONFIG)"
-	./scripts/createconfig.sh "vcenter" "$(VCENTERCONFIG)"
+	./${OPTS}/scripts/createconfig.sh "guest" "${OPTS}/$(GUESTCONFIG)"
+	./${OPTS}/scripts/createconfig.sh "vcenter" "${OPTS}/$(VCENTERCONFIG)"
 
 build: | config $(BINARIES) $(FILES)
 	rm -rf files.tar
 	cd files && tar cf ../files.tar *
-	packer build ${OVERWRITE} .
+	packer build ${OVERWRITE} ${OPTS}
 
 $(AGENT_PROTOCOL_FORWARDER): force
 	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && CLOUD_PROVIDER=vsphere $(MAKE) agent-protocol-forwarder
