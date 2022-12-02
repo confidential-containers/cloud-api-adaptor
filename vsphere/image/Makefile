@@ -49,6 +49,7 @@ STATIC_LIB         = $(STATIC_LIB_DIR)/kata-libseccomp/lib/libseccomp.a
 
 GUESTCONFIG = settings.auto.pkrvars.hcl
 VCENTERCONFIG = vcenter.auto.pkrvars.hcl
+OVERWRITE =
 
 check:
 ifeq (, $(shell which packer))
@@ -58,6 +59,9 @@ ifeq (, $(shell which go))
 	$(error "go executable is not found, I looked here: $(PATH)")
 endif
 	$(if $(strip $(GOPATH)),,$(error "GOPATH is unset, try "export GOPATH=/path/to/go""))
+ifeq ($(FORCE),1)
+	$(eval OVERWRITE := -force)
+endif
 
 cleanconfig:
 	rm -rf $(VCENTERCONFIG) $(GUESTCONFIG)
@@ -69,7 +73,7 @@ config: | check
 build: | config $(BINARIES) $(FILES)
 	rm -rf files.tar
 	cd files && tar cf ../files.tar *
-	packer build .
+	packer build ${OVERWRITE} .
 
 $(AGENT_PROTOCOL_FORWARDER): force
 	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && CLOUD_PROVIDER=vsphere $(MAKE) agent-protocol-forwarder
