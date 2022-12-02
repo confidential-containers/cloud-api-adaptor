@@ -16,8 +16,8 @@
 	- **NOTE:** If authentication against container image registries is required copy your JSON format credentials
         file to [image/files/](./image/files/)auth.json and add also `USE_SKOPEO=true` before `make build`
 ```
-cd image
-CLOUD_PROVIDER=libvirt make build
+cd ../podvm
+CLOUD_PROVIDER=libvirt make image
 ```
 - The default image uses an Ubuntu cloud image base. If instead, you would like to create a rhel based podvm image, you can
 set PODVM_DISTRO when invoking build as such:
