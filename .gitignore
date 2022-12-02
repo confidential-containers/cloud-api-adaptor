@@ -6,11 +6,11 @@ staticlib
 pause
 umoci
 skopeo
-
+files/usr
 
 # Binaries
-./agent-protocol-forwarder
-./cloud-api-adaptor
+agent-protocol-forwarder
+cloud-api-adaptor
 
 # IDEs
 .vscode
