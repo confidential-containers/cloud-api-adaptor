@@ -50,7 +50,9 @@ STATIC_LIB         = $(STATIC_LIB_DIR)/kata-libseccomp/lib/libseccomp.a
 GUESTCONFIG = settings.auto.pkrvars.hcl
 VCENTERCONFIG = vcenter.auto.pkrvars.hcl
 OVERWRITE =
+ifndef PODVM_DISTRO
 PODVM_DISTRO = ubuntu
+endif
 
 check:
 ifeq (, $(shell which packer))
@@ -64,7 +66,9 @@ ifeq ($(FORCE),1)
 	$(eval OVERWRITE := -force)
 endif
 ifeq ($(PODVM_DISTRO),ubuntu)
-	$(eval OPTS := ${OPTS} ubuntu)
+	$(eval OPTS := ubuntu)
+else ifeq ($(PODVM_DISTRO),rhel)
+	$(eval OPTS := rhel)
 else
 	$(error PODVM_DISTRO is invalid or not defined)
 endif
@@ -72,6 +76,8 @@ endif
 cleanconfig:
 ifeq ($(PODVM_DISTRO),ubuntu)
 	$(eval OPTS := ubuntu)
+else ifeq ($(PODVM_DISTRO),rhel)
+	$(eval OPTS := rhel)
 else
 	$(error PODVM_DISTRO is invalid or not defined)
 endif
