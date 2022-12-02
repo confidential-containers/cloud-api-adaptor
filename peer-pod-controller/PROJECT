@@ -1,0 +1,18 @@
+domain: confidentialcontainers.org
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: peer-pod-controller
+repo: github.com/jensfr/peer-pod-controller
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: confidentialcontainers.org
+  kind: PeerPodConfig
+  path: github.com/jensfr/peer-pod-controller/api/v1alpha1
+  version: v1alpha1
+version: "3"

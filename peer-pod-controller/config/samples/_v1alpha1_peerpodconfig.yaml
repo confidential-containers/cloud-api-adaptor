@@ -1,0 +1,10 @@
+apiVersion: confidentialcontainers.org/v1alpha1
+kind: PeerPodConfig
+metadata:
+  name: peerpodconfig-sample
+spec:
+  cloudSecretName: "peer-pods-secret"
+  limit: "20"
+  nodeSelector:
+    matchLabels:
+       custom-kata1: test
