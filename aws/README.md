@@ -23,10 +23,10 @@ export SUBNET_ID="REPLACE_ME"
 
 - Create a custom AMI based on Ubuntu 20.04 having kata-agent and other dependencies
         - **NOTE:** If authentication against container image registries is required copy your JSON format credentials
-        file to [image/files/](./image/files/)auth.json and add also `USE_SKOPEO=true` before `make build`
+        file to [podvm/files/](../podvm/files/)auth.json and add also `USE_SKOPEO=true` before `make image`
 ```
 cd image
-CLOUD_PROVIDER=aws make build
+CLOUD_PROVIDER=aws make image
 ```
 
 - Note down your newly created AMI_ID
