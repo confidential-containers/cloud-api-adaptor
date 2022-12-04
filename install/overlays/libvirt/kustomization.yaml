@@ -32,4 +32,3 @@ secretGenerator:
 
 patchesStrategicMerge:
   #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
-  - ssh_mount.yaml # mounts the ssh-key-secret from above as a ssh key (this is optional - no need to comment)
