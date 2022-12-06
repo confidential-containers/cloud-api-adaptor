@@ -22,6 +22,7 @@
           - kpartx
           - protobuf-compiler
           - musl-tools
+          - cryptsetup
 
     - name: Install deb packages for Ubuntu 20.04 or later
       apt:

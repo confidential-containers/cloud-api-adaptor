@@ -37,12 +37,14 @@ case "$image" in
     *)       echo "$0: image for unknown architecture: $image" 1>&2; exit 1 ;;
 esac
 
+[ "${SE_BOOT:-0}" = "1" ] && profile=bz2e-2x8
+
 name=$(printf "imagetest-%.8s-%s" "$(uuidgen)" "$image")
 
 export IBMCLOUD_HOME=$(pwd -P)
 ./login.sh
 
-echo "Create an instance of $image"
+echo "Create an instance of $image with profle $profile"
 
 id=$(ibmcloud is instance-create "$name" "$vpc" "$zone" "$profile" "$subnet" --image "$image" --output json | jq -r .id)
 
