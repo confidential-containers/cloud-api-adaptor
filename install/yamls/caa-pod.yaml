@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: cloud-api-adaptor
+  name: cloud-api-adaptor-daemonset
+  namespace: confidential-containers-system
+spec:
+  selector:
+    matchLabels:
+      app: cloud-api-adaptor
+  template:
+    metadata:
+      labels:
+        app: cloud-api-adaptor
+    spec:
+      containers:
+      - command:
+        - /usr/local/bin/entrypoint.sh
+        envFrom:
+        - secretRef:
+            name: peer-pods-secret
+        - configMapRef:
+            name: peer-pods-cm
+        image: kustomize.this/cloud-api-adaptor/image:url
+        imagePullPolicy: Always
+        name: cloud-api-adaptor-con
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            - SYS_ADMIN
+        volumeMounts:
+        - mountPath: /root/.ssh/
+          name: ssh
+          readOnly: true
+        - mountPath: /run/peerpod
+          name: pods-dir
+        - mountPath: /run/netns
+          mountPropagation: HostToContainer
+          name: netns
+      hostNetwork: true
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      volumes:
+      - name: ssh
+        secret:
+          defaultMode: 384
+          optional: true
+          secretName: ssh-key-secret
+      - hostPath:
+          path: /run/peerpod
+        name: pods-dir
+      - hostPath:
+          path: /run/netns
+        name: netns
