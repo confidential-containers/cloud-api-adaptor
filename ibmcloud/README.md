@@ -359,6 +359,44 @@ $ terraform apply
 >    $ ibmcloud is images --visibility=private
 >    ```
 
+### Enabling Attestation agent and Authenticated Registry
+> **Prerequisites:**
+> - An ibmcloud worker node using the cloud-api-adaptor
+> - A `auth.json` file with your credentials in, based off: (containers-auth.json.5.md)[https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md]
+> - SSH'd into the worker node: `ssh root@floating-ip-of-worker-node`
+
+**Setting up the attestation agent:**
+- `cd ~/cloud-api-adaptor/podvm/files/etc`
+- Base64 your `auth.json`, this can be done by doing `cat auth.json | base64 -w 0`
+- Export the base64 encoded file `export AUTHFILE=<base64-encoded-auth.json>`
+- Create and Add the base64 encoded auth file into the `aa-offline_fs_kbc-resources.json` like so:
+```
+cat <<EOF | tee aa-offline_fs_kbc-resources.json
+{
+  "Credential": "${AUTHFILE}"
+} 
+EOF
+```
+
+**Building the image:**
+- `cd ~/cloud-api-adaptor/ibmcloud/image`
+- Export these variables:
+```
+export CLOUD_PROVIDER=ibmcloud
+export IMAGE_NAME=<An image name with arch included e.g. image-amd64>
+export IBMCLOUD_COS_REGION=<the region your IKS cluster and zVSI is running on>
+export IBMCLOUD_VPC_REGION=$IBMCLOUD_COS_REGION
+export IBMCLOUD_VPC_NAME=<your generated vpc name from the terraform>
+export IBMCLOUD_VPC_SUBNET_NAME=<the linked subnet name to the above vpc>
+export IBMCLOUD_COS_SERVICE_ENDPOINT="https://s3.${IBMCLOUD_COS_REGION}.cloud-object-storage.appdomain.cloud"
+export IBMCLOUD_COS_SERVICE_INSTANCE=<your cos instance>
+export IBMCLOUD_COS_BUCKET=<your cos bucket in the region your cluster runs in>
+export IBMCLOUD_API_KEY=<your ibmcloud apikey>
+export IBMCLOUD_API_ENDPOINT="https://cloud.ibm.com"
+export GOPATH=/root/go
+```
+- run `AA_KBC="offline_fs_kbc" make push` 
+> **Note:** The image ID can be found at the end of the logs when the make steps have completed. This can then be substituted for the image id in the start cloud api adaptor steps below.
 
 ## Install custom Kata shim
 
