@@ -1,2 +1,14 @@
 resources:
-    - ccruntime-peer-pods-in-pod.yaml
+    - ccruntime-peer-pods.yaml
+    - caa-pod.yaml
+
+# remove host-install configuration from ccruntime-peer-pods.yaml
+patchesJSON6902:
+- target:
+    kind: CcRuntime
+    name: ccruntime-sample
+  patch: |-
+    - op: remove
+      path: /spec/config/preInstall
+    - op: remove
+      path: /spec/config/postUninstall
