@@ -80,7 +80,6 @@ STATIC_LIBSECCOMP         = $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp/lib/libsecc
 
 ATTESTATION_AGENT_SRC = ../../../attestation-agent
 ATTESTATION_AGENT_REPO = https://github.com/confidential-containers/attestation-agent
-ATTESTATION_AGENT_BRANCH = main
 
 binaries: $(BINARIES)
 
@@ -123,7 +122,7 @@ $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
 
 $(ATTESTATION_AGENT_SRC):
-	git clone "$(ATTESTATION_AGENT_REPO)" -b "$(ATTESTATION_AGENT_BRANCH)" "$(ATTESTATION_AGENT_SRC)"
+	git clone "$(ATTESTATION_AGENT_REPO)" "$(ATTESTATION_AGENT_SRC)"
 
 $(ATTESTATION_AGENT): $(ATTESTATION_AGENT_SRC)
 	cd "$(ATTESTATION_AGENT_SRC)" && make KBC="$(AA_KBC)" LIBC="$(LIBC)"
