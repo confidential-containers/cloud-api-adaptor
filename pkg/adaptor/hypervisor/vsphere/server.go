@@ -40,6 +40,7 @@ func NewServer(cfg hypervisor.Config, vmcfg Config, workerNode podnetwork.Worker
 
 	govmomiClient, err := NewGovmomiClient(vmcfg)
 	if err != nil {
+		logger.Printf("Error creating vcenter session for new server:  %s", err)
 		return nil
 	}
 
