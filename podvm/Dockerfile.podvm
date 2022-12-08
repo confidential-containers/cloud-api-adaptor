@@ -9,6 +9,13 @@ ARG BUILDER_IMG="quay.io/confidential-containers/cloud-api-adaptor-podvm-builder
 FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG CLOUD_PROVIDER=libvirt
+ARG PODVM_DISTRO=ubuntu
+
+# If these are not provided as build args then the
+# default values assigned in the Makefile will get used
+ARG UBUNTU_IMAGE_URL
+ARG UBUNTU_IMAGE_CHECKSUM
+
 
 # Building binaries separately allows for reuse in case of error
 # with image building step
@@ -16,7 +23,7 @@ RUN cd cloud-api-adaptor/podvm && \
      CLOUD_PROVIDER=$CLOUD_PROVIDER make binaries
 
 RUN cd cloud-api-adaptor/podvm && \
-     CLOUD_PROVIDER=$CLOUD_PROVIDER make image
+     CLOUD_PROVIDER=$CLOUD_PROVIDER PODVM_DISTRO=$PODVM_DISTRO make image
 
 FROM scratch
 COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 / 
