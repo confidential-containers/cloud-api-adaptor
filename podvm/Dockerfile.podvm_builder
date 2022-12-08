@@ -50,8 +50,8 @@ RUN echo $CAA_SRC
 
 RUN echo $CAA_SRC_BRANCH
 
-RUN git clone ${CAA_SRC} -b ${CAA_SRC_BRANCH}
-RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH}
+RUN git clone ${CAA_SRC} -b ${CAA_SRC_BRANCH} cloud-api-adaptor
+RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH} cloud-api-adaptor
 
 
 ENV GOPATH /src
