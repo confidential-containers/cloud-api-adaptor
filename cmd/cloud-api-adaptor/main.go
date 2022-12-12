@@ -182,6 +182,10 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		})
 		defaultToEnv(&vspherecfg.UserName, "GOVC_USERNAME")
 		defaultToEnv(&vspherecfg.Password, "GOVC_PASSWORD")
+		err := validateArgs("vsphere", vspherecfg)
+		if err != nil {
+			return nil, err
+		}
 
 	default:
 		os.Exit(1)
@@ -204,6 +208,36 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	}
 
 	return cmd.NewStarter(hypervisorServer), nil
+}
+
+func validateArgs(hypProvider string, vspherecfg vsphere.Config) (err error) {
+
+	var missing string = ""
+
+	if hypProvider == "vsphere" {
+		if vspherecfg.VcenterURL == "" {
+			missing += "GOVC_URL "
+		}
+		if vspherecfg.UserName == "" {
+			missing += "GOVC_USERNAME "
+		}
+		if vspherecfg.Password == "" {
+			missing += "GOVC_PASSWORD "
+		}
+		if vspherecfg.Datastore == "" {
+			missing += "GOVC_DATASTORE "
+		}
+		if vspherecfg.Datacenter == "" {
+			missing += "GOVC_DATACENTER "
+		}
+	}
+
+	if missing != "" {
+		err := fmt.Errorf("Error: The following required command line arguments are missing: %s", missing)
+		return err
+	}
+
+	return nil
 }
 
 func defaultToEnv(field *string, env string) {
