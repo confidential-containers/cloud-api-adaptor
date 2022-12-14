@@ -1,0 +1,31 @@
+spec:
+  template:
+    spec:
+      containers:
+        - name: csi-controller-wrapper
+          args:
+            - --v=5
+            - --endpoint=/csi/csi-controller-wrapper.sock
+            - --target-endpoint=/csi/csi.sock
+            - --namespace=kube-system
+          image: docker.io/library/csi-controller-wrapper:local
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+
+        - name: csi-attacher
+          args:
+            - --v=5
+            - --csi-address=/csi/csi-controller-wrapper.sock
+            - --timeout=900s
+
+        - name: csi-provisioner
+          env:
+            - name: ADDRESS
+              value: /csi/csi-controller-wrapper.sock
+
+        - name: csi-resizer
+          env:
+            - name: ADDRESS
+              value: /csi/csi-controller-wrapper.sock
