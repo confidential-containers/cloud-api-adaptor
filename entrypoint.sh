@@ -90,18 +90,18 @@ exec cloud-api-adaptor-libvirt libvirt \
 }
 
 vsphere() {
-test_vars GOVC_USERNAME GOVC_PASSWORD
+test_vars GOVC_USERNAME GOVC_PASSWORD GOVC_URL GOVC_DATACENTER GOVC_DATASTORE
 
 [[ "${GOVC_TEMPLATE}" ]] && optionals+="-template ${GOVC_TEMPLATE} "
-[[ "${GOVC_DATACENTER}" ]] && optionals+="-data-center ${GOVC_DATACENTER} "
 [[ "${GOVC_VCLUSTER}" ]] && optionals+="-vcluster ${GOVC_VCLUSTER} "
-[[ "${GOVC_DATASTORE}" ]] && optionals+="-data-store ${GOVC_DATASTORE} "
 [[ "${GOVC_RESOURCE_POOL}" ]] && optionals+="-resource-pool ${GOVC_RESOURCE_POOL} "
 [[ "${GOVC_FOLDER}" ]] && optionals+="-deploy-folder ${GOVC_FOLDER} "
 
 set -x
 exec cloud-api-adaptor-vsphere vsphere \
 	-vcenter-url ${GOVC_URL}  \
+	-data-center ${GOVC_DATACENTER} \
+	-data-store ${GOVC_DATASTORE} \
 	${optionals} \
 	-socket /run/peerpod/hypervisor.sock
 }
