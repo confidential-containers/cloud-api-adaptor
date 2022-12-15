@@ -22,8 +22,8 @@ For an operator-sdk generated operator it could be as simple as:
 ```go
     import (
         ...
-        peerpodcontrollers "github.com/jensfr/peer-pod-controller/controllers"
-        peerpodconfig "github.com/jensfr/peer-pod-controller/api/v1alpha1"
+        peerpodcontrollers "github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/controllers"
+        peerpodconfig "github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/api/v1alpha1"
         ...
     )
 
