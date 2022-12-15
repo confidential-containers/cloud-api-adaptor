@@ -40,7 +40,7 @@ import (
 	"strconv"
 	"strings"
 
-	ccv1alpha1 "github.com/jensfr/peer-pod-controller/api/v1alpha1"
+	ccv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/api/v1alpha1"
 )
 
 // PeerPodConfigReconciler reconciles a PeerPodConfig object

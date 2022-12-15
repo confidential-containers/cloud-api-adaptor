@@ -30,8 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	confidentialcontainersorgv1alpha1 "github.com/jensfr/peer-pod-controller/api/v1alpha1"
-	"github.com/jensfr/peer-pod-controller/controllers"
+	confidentialcontainersorgv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/api/v1alpha1"
+	"github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
