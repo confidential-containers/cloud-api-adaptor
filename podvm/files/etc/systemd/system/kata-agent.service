@@ -8,6 +8,7 @@ ExecStartPre=-umount /sys/fs/cgroup/misc
 ExecStartPre=ip netns add podns
 ExecStartPre=ip netns exec podns ip link set lo up
 ExecStopPost=ip netns delete podns
+ExecStopPost=/usr/local/bin/kata-agent-clean --config /etc/agent-config.toml
 # Now specified in the agent-config.toml Environment="KATA_AGENT_SERVER_ADDR=unix:///run/kata-containers/agent.sock"
 SyslogIdentifier=kata-agent
 

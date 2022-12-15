@@ -1,0 +1,36 @@
+#!/bin/bash
+# Removes any parts of the kata-agent configuration that
+# maybe left over after shutdown/restarts.
+# List of items currently handled by this are:
+# - ttrpc server sock (e.g. /run/kata-containers/agent.sock)
+#
+
+function usage() {
+    echo "Usage: $0 --config <config path>"
+}
+
+while (( "$#" )); do
+    case "$1" in
+        --config) config_path=$2 ;;
+        --help) usage; exit 0 ;;
+        *)      usage 1>&2; exit 1;;
+    esac
+    shift 2
+done
+
+if [[ -z "${config_path-}" ]]; then
+    usage 1>&2
+    exit 1
+fi
+
+# ttrpc server sock removal
+server_addr_regex='server_addr="unix://([^"]+)"'
+server_addr_line=$(grep "server_addr" "${config_path}")
+[[ $server_addr_line =~ $server_addr_regex ]]
+server_addr="${BASH_REMATCH[1]}"
+if [ -S "$server_addr" ]; then
+    echo "Removing $server_addr"
+    rm -f "$server_addr"
+else
+    echo "Can't remove $server_addr as it doesn't exist"
+fi
