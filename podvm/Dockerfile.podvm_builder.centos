@@ -1,0 +1,57 @@
+# Copyright Confidential Containers Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Creates a builder container image that should be used to build the Pod VM
+# disk inside a container.
+#
+FROM quay.io/centos/centos:stream8
+
+ARG GO_VERSION="1.18.7"
+ARG PROTOC_VERSION="3.11.4"
+ARG RUST_VERSION="1.62.0"
+
+
+RUN dnf config-manager --set-enabled powertools && \
+    dnf install -y epel-release epel-next-release && dnf update -y && \
+    dnf groupinstall -y 'Development Tools' && \
+    dnf install -y yum-utils gnupg git curl pkg-config libseccomp-devel gpgme-devel \
+        device-mapper-devel qemu-kvm unzip wget libassuan-devel golang-github-cpuguy83-md2man \
+	genisoimage cloud-utils-growpart cloud-init && \
+    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
+    dnf install -y packer && \
+    curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
+    rm -f go${GO_VERSION}.linux-amd64.tar.gz
+
+
+# cloud-utils package is not available for centos.
+RUN git clone https://github.com/canonical/cloud-utils
+RUN cd cloud-utils && make install
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VERSION}"
+
+ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
+
+RUN echo $PATH
+
+
+RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
+    unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
+
+WORKDIR /src
+
+ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
+ARG CAA_SRC_BRANCH="staging"
+
+ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
+ARG KATA_SRC_BRANCH="CCv0"
+
+RUN echo $CAA_SRC
+
+RUN echo $CAA_SRC_BRANCH
+
+RUN git clone ${CAA_SRC} -b ${CAA_SRC_BRANCH} cloud-api-adaptor
+RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH} kata-containers
+
+ENV GOPATH /src

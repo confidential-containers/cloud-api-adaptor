@@ -37,6 +37,18 @@ endif
 	-var disk_size=11144 \
 	-var ssh_username=cloud-user \
 	-var cloud_image_checksum=${RHEL_IMAGE_CHECKSUM} qcow2/rhel)
+
+else ifeq ($(PODVM_DISTRO),centos)
+ifndef CENTOS_IMAGE_URL
+	$(error "CENTOS_IMAGE_URL is not defined")
+endif
+ifndef CENTOS_IMAGE_CHECKSUM
+	$(error "CENTOS_IMAGE_CHECKSUM is not defined")
+endif
+	$(eval OPTS := -var qemu_image_name=${IMAGE_FILE} \
+	-var cloud_image_url=${CENTOS_IMAGE_URL} \
+	-var cloud_image_checksum=${CENTOS_IMAGE_CHECKSUM} qcow2/centos)
+
 else
 	$(error PODVM_DISTRO is invalid or not defined)
 endif
