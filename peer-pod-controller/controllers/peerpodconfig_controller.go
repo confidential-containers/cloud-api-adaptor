@@ -169,7 +169,7 @@ func (r *PeerPodConfigReconciler) createCcaDaemonset(cloudProviderName string) *
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dsName,
-			Namespace: os.Getenv("PEERPOD_NAMESPACE"),
+			Namespace: os.Getenv("PEERPODS_NAMESPACE"),
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
