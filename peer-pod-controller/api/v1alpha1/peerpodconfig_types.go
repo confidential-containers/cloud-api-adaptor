@@ -36,6 +36,7 @@ type PeerPodConfigSpec struct {
 
 	// NodeSelector selects the nodes to which the cca pods, the RuntimeClass and the MachineConfigs we use
 	// to deploy the full peer pod solution.
+	// +optional
 	NodeSelector *metav1.LabelSelector `json:"nodeSelector"`
 
 	// ConfigMapName is the name of the configmap that holds cloud provider specific environment Variables
