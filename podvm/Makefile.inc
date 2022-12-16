@@ -33,7 +33,7 @@ IMAGE_SUFFIX ?=
 IMAGE_FILE = $(IMAGE_NAME)$(IMAGE_SUFFIX)
 
 LIBC_ARCH := $(shell uname -m)
-LIBC := $(if $(findstring s390x,$(LIBC_ARCH)),gnu,musl)
+LIBC ?= $(if $(findstring s390x,$(LIBC_ARCH)),gnu,musl)
 
 AGENT_PROTOCOL_FORWARDER = $(FILES_DIR)/usr/local/bin/agent-protocol-forwarder
 KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
@@ -88,9 +88,9 @@ $(AGENT_PROTOCOL_FORWARDER): force
 	install -D --compare "$(AGENT_PROTOCOL_FORWARDER_SRC)/agent-protocol-forwarder" "$@"
 
 $(KATA_AGENT): force $(STATIC_LIBSECCOMP)
-	cd "$(KATA_AGENT_SRC)/../libs" && $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
-	cd "$(KATA_AGENT_SRC)" && $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
-	install -D --compare "$(KATA_AGENT_SRC)/target/$(shell uname -m)-unknown-linux-$(if $(findstring s390x,$(shell uname -m)),gnu,musl)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
+	cd "$(KATA_AGENT_SRC)/../libs" && $(MAKE) LIBC=$(LIBC) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
+	cd "$(KATA_AGENT_SRC)" && $(MAKE) LIBC=$(LIBC) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
+	install -D --compare "$(KATA_AGENT_SRC)/target/$(shell uname -m)-unknown-linux-$(LIBC)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
 
 $(STATIC_LIBSECCOMP):
 	$(STATIC_LIBSECCOMP_BUILDER) $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp $(STATIC_LIBSECCOMP_DIR)/kata-gperf

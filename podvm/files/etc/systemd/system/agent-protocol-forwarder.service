@@ -7,6 +7,8 @@ DefaultDependencies=no
 
 [Service]
 ExecStart=/usr/local/bin/agent-protocol-forwarder -kata-agent-namespace /run/netns/podns -kata-agent-socket /run/kata-containers/agent.sock
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target

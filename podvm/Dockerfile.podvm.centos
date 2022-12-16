@@ -1,0 +1,32 @@
+# Copyright Confidential Containers Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Builds pod vm image inside container
+#
+ARG BUILDER_IMG="quay.io/confidential-containers/cloud-api-adaptor-podvm-builder"
+
+FROM ${BUILDER_IMG} AS podvm_builder
+
+ARG CLOUD_PROVIDER=libvirt
+ARG PODVM_DISTRO=centos
+
+# Default to CentOS 8-stream x86_64 image. These variables can be overriden as needed
+ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20200113.0.x86_64.qcow2
+ARG CENTOS_IMAGE_CHECKSUM=b80ca9ccad8715aa1aeee582906096d3190b91cebe05fcb3ac7cb197fd68a7fe
+
+
+# Building binaries separately allows for reuse in case of error
+# with image building step
+RUN cd cloud-api-adaptor/podvm && \
+     CLOUD_PROVIDER=$CLOUD_PROVIDER LIBC=gnu make binaries
+
+# workaround to ensure hashicorp packer is called instead 
+# of cracklib packer which is installed by default
+ENV PATH="/usr/bin:${PATH}"
+
+RUN cd cloud-api-adaptor/podvm && \
+     CLOUD_PROVIDER=$CLOUD_PROVIDER PODVM_DISTRO=$PODVM_DISTRO LIBC=gnu make image
+
+FROM scratch
+COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 /

@@ -40,7 +40,7 @@ variable "ssh_password" {
 
 variable "ssh_username" {
   type    = string
-  default = "ubuntu"
+  default = "peerpod"
 }
 
 variable "qemu_image_name" {

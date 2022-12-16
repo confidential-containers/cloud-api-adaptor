@@ -15,17 +15,18 @@ variable "cpus" {
 
 variable "disk_size" {
   type    = string
-  default = "6144"
+  # This is the default virtual size of CentOS cloud image (qcow2)
+  default = "10240"
 }
 
 variable "cloud_image_checksum" {
   type    = string
-  default = "d96622d77bcbab5526fd42e7d933ee851d239327946992a018b0bfc9fad777e7"
+  default = "b80ca9ccad8715aa1aeee582906096d3190b91cebe05fcb3ac7cb197fd68a7fe"
 }
 
 variable "cloud_image_url" {
   type    = string
-  default = "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
+  default = "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20200113.0.x86_64.qcow2"
 }
 
 variable "memory" {

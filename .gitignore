@@ -6,11 +6,11 @@ staticlib
 pause
 umoci
 skopeo
-files/usr
 
 # Binaries
 agent-protocol-forwarder
 cloud-api-adaptor
+kata-agent
 
 # IDEs
 .vscode
@@ -18,3 +18,5 @@ cloud-api-adaptor
 # Files
 vcenter.auto.pkrvars.hcl
 settings.auto.pkrvars.hcl
+*.qcow2
+
