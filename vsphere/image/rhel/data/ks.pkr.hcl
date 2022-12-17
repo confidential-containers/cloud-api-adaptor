@@ -20,7 +20,7 @@ keyboard ${vm_guest_os_keyboard}
 network --bootproto=dhcp --onboot=yes --hostname=${vm_guest_hostname}
 
 ### user with sudo privileges
-user --name=${build_username} --iscrypted --password=${build_password_encrypted} --groups=wheel
+user --name=${build_username} --plaintext --password=${build_password} --groups=wheel
 
 ### firewall is disabled
 firewall --disabled

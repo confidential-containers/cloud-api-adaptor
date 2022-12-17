@@ -27,6 +27,10 @@ vm_interface_name         = "vmxnet3"
 vm_network_name           = "VM Network"
 vm_hostname		  = "podvm"
 
+// Login
+vm_username = "peerpod"
+vm_password = "peerp0d"
+
 // Removable Media Settings
 iso_url            = "RHEL-9.0.0-20220420.0-x86_64-dvd1.iso"
 iso_checksum_value = "a387f3230acf87ee38707ee90d3c88f44d7bf579e6325492f562f0f1f9449e89"
