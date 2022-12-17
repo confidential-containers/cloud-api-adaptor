@@ -156,3 +156,15 @@ variable "vm_hostname" {
   description = "name of the podvm guest, by default time is suffixed"
   default = "podvm"
 }
+
+variable "vm_username" {
+  type        = string
+  description = "podvm username"
+  default = "peerpod"
+}
+
+variable "vm_password" {
+  type        = string
+  description = "podvm password"
+  default = "peerp0d"
+}

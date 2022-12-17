@@ -7,9 +7,8 @@
 locals {
   data_source_content = {
    "/ks.cfg" = templatefile("${abspath(path.root)}/data/ks.pkr.hcl", {
-      build_username           = "peerpod"
-      build_password           = "peerp0d"
-      build_password_encrypted = "$y$j9T$ifwkDEP8Rb9c47stpEGuF1$wT/v1.7ci8lEnD7rLmEqkzFmXuHwpHqhvjg3HQp7hm8"
+      build_username           = "${var.vm_username}"
+      build_password           = "${var.vm_password}"
       vm_guest_os_language     = "${var.vm_guest_os_language}"
       vm_guest_os_keyboard     = "${var.vm_guest_os_keyboard}"
       vm_guest_os_timezone     = "${var.vm_guest_os_timezone}"
@@ -35,8 +34,8 @@ source "vsphere-iso" "rhel" {
   convert_to_template     = "${var.convert_to_template}"
 
 // ssh user/pass to the guest, same as cloudinit data
-  ssh_username            = "peerpod"
-  ssh_password            = "peerp0d"
+  ssh_username            = "${var.vm_username}"
+  ssh_password            = "${var.vm_password}"
   ssh_timeout  		  = "${var.ssh_timeout}"
 
 // VM resources
