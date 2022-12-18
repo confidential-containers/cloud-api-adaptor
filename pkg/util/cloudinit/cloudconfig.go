@@ -5,6 +5,7 @@ package cloudinit
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"text/template"
@@ -12,8 +13,10 @@ import (
 
 const (
 	DefaultAuthfileSrcPath = "/root/containers/auth.json"
-	DefaultAuthfileDstPath = "/root/.config/containers/auth.json" // skopeo fixed path for support at the agent
-	DefaultAuthfileLimit = 12288 // TODO: use a whole userdata limit mechanism instead of limiting authfile
+	// image-rs fixed dst path for support at the agent, we convert it explictly to the resources file format
+	// e.g. https://github.com/confidential-containers/attestation-agent/blob/main/src/kbc_modules/offline_fs_kbc/aa-offline_fs_kbc-resources.json
+	DefaultAuthfileDstPath = "/etc/aa-offline_fs_kbc-resources.json"
+	DefaultAuthfileLimit   = 12288 // TODO: use a whole userdata limit mechanism instead of limiting authfile
 )
 
 // https://cloudinit.readthedocs.io/en/latest/topics/format.html#cloud-config-data
@@ -90,4 +93,13 @@ func (config *CloudConfig) Generate() (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+func AuthJSONToResourcesJSON(text string) string {
+	var buf bytes.Buffer
+	tpl := template.Must(template.New("cerdTpl").Parse("{\"Credential\":\"{{.EncodedAuth}}\"}"))
+	if err := tpl.Execute(&buf, struct{ EncodedAuth string }{base64.StdEncoding.EncodeToString([]byte(text))}); err != nil {
+		return ""
+	}
+	return buf.String()
 }

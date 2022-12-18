@@ -190,7 +190,7 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 			cloudConfig.WriteFiles = append(cloudConfig.WriteFiles,
 				cloudinit.WriteFile{
 					Path:    cloudinit.DefaultAuthfileDstPath,
-					Content: string(authJSON),
+					Content: cloudinit.AuthJSONToResourcesJSON(string(authJSON)),
 				})
 		} else if len(authJSON) >= cloudinit.DefaultAuthfileLimit {
 			logger.Printf("Credentials file size (%d) is too large to use as userdata, ignored", len(authJSON))
