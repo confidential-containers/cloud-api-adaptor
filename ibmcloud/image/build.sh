@@ -95,6 +95,8 @@ function cleanup () {
 
 trap 'cleanup "image creation failed"' 0
 
+modprobe nbd
+
 rm -f "$src_img_path" "$tmp_img_path"
 echo "Cleanuping build env"
 cleanup ""
@@ -113,7 +115,6 @@ printf "\nCopying partitions from the base image $src_img_path\n"
 qemu-img create -f qcow2 -b "$base_img_path" "$src_img_path" $disksize
 qemu-img create -f qcow2 "$tmp_img_path" $disksize
 
-modprobe nbd
 qemu-nbd --connect="$src_nbd" "$src_img_path"
 qemu-nbd --connect="$tmp_nbd" "$tmp_img_path"
 
