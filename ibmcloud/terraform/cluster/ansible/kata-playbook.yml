@@ -240,6 +240,7 @@
           [hypervisor.remote]
           remote_hypervisor_socket = "/run/peerpod/hypervisor.sock"
           remote_hypervisor_timeout = 600
+          disable_guest_selinux = true
           [agent.kata]
           [image]
           service_offload = true
