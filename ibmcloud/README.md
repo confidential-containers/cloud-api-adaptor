@@ -360,23 +360,12 @@ $ terraform apply
 >    ```
 
 ### Enabling Attestation agent and Authenticated Registry
-> **Prerequisites:**
-> - An ibmcloud worker node using the cloud-api-adaptor
-> - A `auth.json` file with your credentials in, based off: (containers-auth.json.5.md)[https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md]
-> - SSH'd into the worker node: `ssh root@floating-ip-of-worker-node`
+**Prerequisites:**
+- An ibmcloud worker node using the cloud-api-adaptor
+- A [auth.json](https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md] file with your credentials)
+- SSH'd into the worker node: `ssh root@floating-ip-of-worker-node`
 
-**Setting up the attestation agent:**
-- `cd ~/cloud-api-adaptor/podvm/files/etc`
-- Base64 your `auth.json`, this can be done by doing `cat auth.json | base64 -w 0`
-- Export the base64 encoded file `export AUTHFILE=<base64-encoded-auth.json>`
-- Create and Add the base64 encoded auth file into the `aa-offline_fs_kbc-resources.json` like so:
-```
-cat <<EOF | tee aa-offline_fs_kbc-resources.json
-{
-  "Credential": "${AUTHFILE}"
-} 
-EOF
-```
+Once you have the prerequisites use [static registries authentication setup](../docs/registries-authentication.md#statically-embed-authentication-file-in-podvm-image)
 
 **Building the image:**
 - `cd ~/cloud-api-adaptor/ibmcloud/image`

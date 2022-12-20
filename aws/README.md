@@ -22,18 +22,7 @@ export SUBNET_ID="REPLACE_ME"
 ```
    
 - Create a custom AMI based on Ubuntu 20.04 having kata-agent and other dependencies
-- **Setting up authenticated registry support:** 
-  - If authentication against container image registries is required base64 encode your JSON format credentials file (`auth.json`): `cat auth.json | base64 -w 0`
-  - Then export the base64 encoded version of the file: `export AUTHFILE=<base64 encoded auth.json file>`
-  - Create the necessary resource JSON using the above exported variable in the [podvm/files/etc/](../podvm/files/etc/) directory: 
-  ```
-  cat <<EOF | tee aa-offline_fs_kbc-resources.json
-  {
-    "Credential": "${AUTHFILE}"
-  } 
-  EOF
-  ```
-  - Add `AA_KBC="offline_fs_kbc"` prior to the make image step.
+	- [setting up authenticated registry support](../docs/registries-authentication.md)
 ```
 cd image
 CLOUD_PROVIDER=aws make image
