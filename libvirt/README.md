@@ -13,8 +13,7 @@
 - Install packer on the VM by following the instructions in the following [link](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli)
 
 - Create qcow2 image by executing the following command
-	- **NOTE:** If authentication against container image registries is required copy your JSON format credentials
-        file to [image/files/](./image/files/)auth.json and add also `USE_SKOPEO=true` before `make build`
+	- [setting up authenticated registry support](../docs/registries-authentication.md)
 ```
 cd ../podvm
 CLOUD_PROVIDER=libvirt make image

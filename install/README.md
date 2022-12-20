@@ -37,8 +37,9 @@
     ```
 
 * `make deploy` deploys operator, runtime and cloud-api-adaptor pod in the configured cluster
-    * configure install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml with your own settings
     * validate kubectl is available in your `$PATH` and `$KUBECONFIG` is set
+    * configure install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml with your own settings
+	* [setting up authenticated registry support](../docs/registries-authentication.md)
 
 * `make delete` deletes the daemonset from the configured cluster
 

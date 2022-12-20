@@ -33,9 +33,7 @@ export TENANT_ID="REPLACE_ME"
 ```
 
 - Create a custom Azure VM image based on Ubuntu 20.04 having kata-agent and other dependencies.
-	- **NOTE:** If authentication against container image registries is required copy your JSON format credentials
-	file to [image/files/](./image/files/)auth.json and add also `USE_SKOPEO=true` before `make build`
-
+	[setting up authenticated registry support](../docs/registries-authentication.md)
 ```bash
 export VM_SIZE="REPLACE_ME"
 cd image

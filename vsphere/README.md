@@ -8,8 +8,7 @@
 ## Creating the vsphere template:
 - Install packer on your system by following the instructions in the following [link](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli)
 - Create the vsphere template
-	- **NOTE:** If authentication against container image registries is required copy your JSON format credentials
-	file to [image/files/](./image/files/)root/.config/containers/auth.json and add `USE_SKOPEO=true` before `make`
+	- [setting up authenticated registry support](../docs/registries-authentication.md)
 ```
 cd vsphere/image && make
 ```
