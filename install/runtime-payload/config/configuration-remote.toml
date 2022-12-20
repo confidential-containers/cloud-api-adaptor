@@ -372,6 +372,16 @@ valid_entropy_sources = ["/dev/urandom","/dev/random",""]
 # be default_memory.
 #enable_guest_swap = true
 
+# disable applying SELinux on the VMM process (default false)
+disable_selinux=false
+
+# disable applying SELinux on the container process
+# If set to false, the type `container_t` is applied to the container process by default.
+# Note: To enable guest SELinux, the guest rootfs must be CentOS that is created and built
+# with `SELINUX=yes`.
+# (default: true)
+disable_guest_selinux=true
+
 [factory]
 # VM templating support. Once enabled, new VMs are created from template
 # using vm cloning. They will share the same initial kernel, initramfs and
@@ -503,6 +513,15 @@ internetworking_model="none"
 # within the guest
 # (default: true)
 disable_guest_seccomp=true
+
+
+# Apply a custom SELinux security policy to the container process inside the VM.
+# This is used when you want to apply a type other than the default `container_t`,
+# so general users should not uncomment and apply it.
+# (format: "user:role:type")
+# Note: You cannot specify MCS policy with the label because the sensitivity levels and
+# categories are determined automatically by high-level container runtimes such as containerd.
+#guest_selinux_label="system_u:system_r:container_t"
 
 # If enabled, the runtime will create opentracing.io traces and spans.
 # (See https://www.jaegertracing.io/docs/getting-started).
