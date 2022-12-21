@@ -72,33 +72,7 @@ func TestParseHelp(t *testing.T) {
 	if e, a := "", opt; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
-	if e, a := "Usage of command:\n  -option string\n    \tan option\n  -version\n    \tShow version information\n", output; e != a {
-		t.Fatalf("Expect %q, got %q", e, a)
-	}
-	if e, a := true, exited; e != a {
-		t.Fatalf("Expect %v, got %v", e, a)
-	}
-	if e, a := 0, exitCode; e != a {
-		t.Fatalf("Expect %v, got %v", e, a)
-	}
-}
-
-func TestParseVersion(t *testing.T) {
-
-	args := []string{"command", "-version"}
-
-	var opt string
-
-	output, exited, exitCode := capture(func() {
-		Parse(args[0], args, func(flags *flag.FlagSet) {
-			flags.StringVar(&opt, "option", "", "an option")
-		})
-	})
-
-	if e, a := "", opt; e != a {
-		t.Fatalf("Expect %q, got %q", e, a)
-	}
-	if e, a := "", output; e != a {
+	if e, a := "Usage of command:\n  -option string\n    \tan option\n", output; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
 	if e, a := true, exited; e != a {
@@ -124,7 +98,7 @@ func TestParseError(t *testing.T) {
 	if e, a := "", opt; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
-	if e, a := "flag provided but not defined: -undef\nUsage of command:\n  -option string\n    \tan option\n  -version\n    \tShow version information\n", output; e != a {
+	if e, a := "flag provided but not defined: -undef\nUsage of command:\n  -option string\n    \tan option\n", output; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
 	if e, a := true, exited; e != a {

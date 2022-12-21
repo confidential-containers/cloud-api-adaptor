@@ -35,8 +35,13 @@ type networkConfig struct {
 func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 	if len(os.Args) < 2 {
-		fmt.Printf("%s aws|azure|ibmcloud|libvirt|vsphere <options>\n", os.Args[0])
+		fmt.Printf("%s \n<aws|azure|ibmcloud|libvirt|version> [options]\n", os.Args[0])
 		cmd.Exit(1)
+	}
+
+	if os.Args[1] == "version" {
+		cmd.ShowVersion(programName)
+		cmd.Exit(0)
 	}
 
 	//TODO: transition to better CLI library
