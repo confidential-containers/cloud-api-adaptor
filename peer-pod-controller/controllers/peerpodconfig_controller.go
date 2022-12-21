@@ -149,10 +149,11 @@ func MountProgagationRef(mode corev1.MountPropagationMode) *corev1.MountPropagat
 */
 func (r *PeerPodConfigReconciler) createCcaDaemonset(cloudProviderName string) *appsv1.DaemonSet {
 	var (
-		runPrivileged           = true
-		runAsUser         int64 = 0
-		defaultMode       int32 = 0600
-		sshSecretOptional       = true
+		runPrivileged                = true
+		runAsUser              int64 = 0
+		defaultMode            int32 = 0600
+		sshSecretOptional            = true
+		authJsonSecretOptional       = true
 	)
 
 	dsName := "peer-pod-controller-cca-daemon"
@@ -222,6 +223,10 @@ func (r *PeerPodConfigReconciler) createCcaDaemonset(cloudProviderName string) *
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
+									Name:      "auth-json-volume",
+									MountPath: "/root/containers/",
+									ReadOnly:  true,
+								}, {
 									Name:      "ssh",
 									MountPath: "/root/.ssh",
 									ReadOnly:  true,
@@ -240,6 +245,15 @@ func (r *PeerPodConfigReconciler) createCcaDaemonset(cloudProviderName string) *
 					},
 					Volumes: []corev1.Volume{
 						{
+							Name: "auth-json-volume",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  "auth-json-secret",
+									DefaultMode: &defaultMode,
+									Optional:    &authJsonSecretOptional,
+								},
+							},
+						}, {
 							Name: "ssh",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
