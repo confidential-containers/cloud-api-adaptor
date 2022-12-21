@@ -6,20 +6,12 @@ package cmd
 import (
 	"fmt"
 	"runtime"
-)
 
-var (
-	version   = "unknown"
-	gitCommit = ""
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 )
 
 func ShowVersion(programName string) {
-
-	fmt.Printf("%s version %s\n", programName, version)
-
-	if gitCommit != "" {
-		fmt.Printf("commit: %s\n", gitCommit)
-	}
+	fmt.Printf("%s, version: %s, commit: %v\n", programName, util.VERSION, util.COMMIT)
 
 	fmt.Printf("go: %s\n", runtime.Version())
 }

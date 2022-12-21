@@ -10,6 +10,8 @@ import (
 	"os"
 	"runtime"
 	"testing"
+
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 )
 
 func captureStdout(t *testing.T, fn func()) string {
@@ -42,25 +44,19 @@ func TestShowVersion(t *testing.T) {
 
 	programName := "test"
 
-	version = "1.2.3"
-	gitCommit = "12345"
-
 	output := captureStdout(t, func() {
 		ShowVersion(programName)
 	})
 
-	if e, a := fmt.Sprintf("test version 1.2.3\ncommit: 12345\ngo: %s\n", runtime.Version()), output; e != a {
+	if e, a := fmt.Sprintf("test, version: %s, commit: %s\ngo: %s\n", util.VERSION, util.COMMIT, runtime.Version()), output; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
-
-	version = "1.2.3"
-	gitCommit = ""
 
 	output = captureStdout(t, func() {
 		ShowVersion(programName)
 	})
 
-	if e, a := fmt.Sprintf("test version 1.2.3\ngo: %s\n", runtime.Version()), output; e != a {
+	if e, a := fmt.Sprintf("test, version: %s, commit: %s\ngo: %s\n", util.VERSION, util.COMMIT, runtime.Version()), output; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
 }

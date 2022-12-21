@@ -11,6 +11,7 @@ endif
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
 GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH)
 GOFLAGS     ?= -tags=$(CLOUD_PROVIDER)
+GENERATED_FILES := ./pkg/util/version.go
 BINARIES    := cloud-api-adaptor agent-protocol-forwarder
 SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
@@ -34,7 +35,23 @@ build: $(BINARIES)
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-$(BINARIES): $(SOURCES)
+# Targets that depend on .gits-commit can use $(shell cat .git-commit) to get a
+# git revision string.  They will only be rebuilt if the revision string
+# actually changes.
+.PHONY: .git-commit.tmp
+.git-commit: .git-commit.tmp
+	@cmp $< $@ >/dev/null 2>&1 || cp $< $@
+.git-commit.tmp:
+	@printf "$$(git rev-parse HEAD 2>/dev/null)" >$@
+	@test -n "$$(git status --porcelain --untracked-files=no)" && echo -dirty >>$@ || true
+
+# TODO When a release is created change these steps to use: git describe --abbrev=0 --tags to pull the latest release tag on a specific branch.
+$(GENERATED_FILES): %: %.in .git-commit
+	sed -e "s|@COMMIT@|$(shell cat .git-commit)|g" \
+	-e "s|@VERSION@|$(shell echo "unknown" )|g" \
+	$< > $@
+
+$(BINARIES): $(GENERATED_FILES) $(SOURCES)
 ifeq ($(CLOUD_PROVIDER),libvirt)
 	$(GOOPTIONS) go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
 else
@@ -76,7 +93,9 @@ vet: ## Run go vet against code.
 
 .PHONY: clean
 clean: ## Remove binaries.
-	rm -fr $(BINARIES)
+	rm -fr $(BINARIES) \
+		$(GENERATED_FILES) \
+		.git-commit .git-commit.tmp
 
 ##@ Build
 
