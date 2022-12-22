@@ -26,7 +26,6 @@ var logger = log.New(log.Writer(), "[adaptor] ", log.LstdFlags|log.Lmsgprefix)
 const (
 	DefaultSocketPath = "/run/peerpod/hypervisor.sock"
 	DefaultPodsDir    = "/run/peerpod/pods"
-	DefaultPauseImage = "k8s.gcr.io/pause:3.7"
 )
 
 type ServerConfig struct {
