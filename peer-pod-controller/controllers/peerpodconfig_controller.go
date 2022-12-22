@@ -100,7 +100,7 @@ func (r *PeerPodConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Create the cloud-api-adapter DaemonSet
-	ds := r.createCcaDaemonset(ppCloudProviderName)
+	ds := r.createCaaDaemonset(ppCloudProviderName)
 	if err := controllerutil.SetControllerReference(r.peerPodConfig, ds, r.Scheme); err != nil {
 		r.Log.Error(err, "Failed setting ControllerReference for cloud-api-adaptor DS")
 		return ctrl.Result{}, err
@@ -147,7 +147,7 @@ func MountProgagationRef(mode corev1.MountPropagationMode) *corev1.MountPropagat
 /*
   cloudProviderName needs to be verified against validCloudProviders by caller
 */
-func (r *PeerPodConfigReconciler) createCcaDaemonset(cloudProviderName string) *appsv1.DaemonSet {
+func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *appsv1.DaemonSet {
 	var (
 		runPrivileged                = true
 		runAsUser              int64 = 0
@@ -156,7 +156,7 @@ func (r *PeerPodConfigReconciler) createCcaDaemonset(cloudProviderName string) *
 		authJsonSecretOptional       = true
 	)
 
-	dsName := "peer-pod-controller-cca-daemon"
+	dsName := "peer-pod-controller-caa-daemon"
 	dsLabelSelectors := map[string]string{
 		"name": dsName,
 	}
