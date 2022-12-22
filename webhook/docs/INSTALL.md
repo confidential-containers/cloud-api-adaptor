@@ -64,13 +64,3 @@ kubectl set env deployment/peer-pods-webhook-controller-manager -n peer-pods-web
 ```
 
 The default Pod VM instance type is `t2.small` and can be changed by modifying the `POD_VM_INSTANCE_TYPE` environment variable.
-
-### Label namespace for mutation
-
-The mutation needs to be opt-in to avoid any errors or conflicts with critical control-plane pods. 
-For any namespace where you want to create peer pods, add the following label `peerpods: true`
-
-```
-export NAMESPACE="REPLACE_ME"
-kubectl label ns $NAMESPACE peerpods=true
-```
