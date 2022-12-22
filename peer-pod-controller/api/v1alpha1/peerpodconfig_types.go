@@ -32,6 +32,7 @@ type PeerPodConfigSpec struct {
 	Limit string `json:"limit,omitempty"`
 
 	// CloudSecretName is the name of the secret that holds the credentials for the cloud provider
+	// +kubebuilder:default:=peer-pods-secret
 	CloudSecretName string `json:"cloudSecretName"`
 
 	// NodeSelector selects the nodes to which the cca pods, the RuntimeClass and the MachineConfigs we use
@@ -39,6 +40,7 @@ type PeerPodConfigSpec struct {
 	NodeSelector *metav1.LabelSelector `json:"nodeSelector"`
 
 	// ConfigMapName is the name of the configmap that holds cloud provider specific environment Variables
+	// +kubebuilder:default:=peer-pods-cm
 	ConfigMapName string `json:"configMapName"`
 }
 
