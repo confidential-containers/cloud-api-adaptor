@@ -24,9 +24,12 @@ webhooks:
     - UPDATE
     resources:
     - pods
+    scope: Namespaced
   sideEffects: None
   namespaceSelector:
     matchExpressions:
-      - key: peerpods
-        operator: In
-        values:  ["true"]
+      - key: kubernetes.io/metadata.name
+        operator: NotIn
+        values:
+        - peer-pods-webhook-system
+        - kube-system
