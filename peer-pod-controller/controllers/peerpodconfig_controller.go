@@ -154,15 +154,22 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 		defaultMode            int32 = 0600
 		sshSecretOptional            = true
 		authJsonSecretOptional       = true
+		nodeSelector                 = metav1.LabelSelector{}
 	)
 
 	dsName := "peer-pod-controller-caa-daemon"
 	dsLabelSelectors := map[string]string{
 		"name": dsName,
 	}
-	nodeSelector := map[string]string{
+
+	nodeSelector.MatchLabels = map[string]string{
 		"node-role.kubernetes.io/worker": "",
 	}
+
+	if r.peerPodConfig.Spec.LabelSelector != nil {
+		nodeSelector = *r.peerPodConfig.Spec.LabelSelector
+	}
+
 	return &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -191,7 +198,7 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: "default",
-					NodeSelector:       nodeSelector,
+					NodeSelector:       nodeSelector.MatchLabels,
 					HostNetwork:        true,
 					Containers: []corev1.Container{
 						{
