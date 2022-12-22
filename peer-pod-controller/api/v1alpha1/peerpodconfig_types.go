@@ -35,9 +35,10 @@ type PeerPodConfigSpec struct {
 	// +kubebuilder:default:=peer-pods-secret
 	CloudSecretName string `json:"cloudSecretName"`
 
-	// NodeSelector selects the nodes to which the cca pods, the RuntimeClass and the MachineConfigs we use
+	// LabelSelector selects the nodes to which the caa pods, the RuntimeClass and the MachineConfigs we use
 	// to deploy the full peer pod solution.
-	NodeSelector *metav1.LabelSelector `json:"nodeSelector"`
+	// +optional
+	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
 
 	// ConfigMapName is the name of the configmap that holds cloud provider specific environment Variables
 	// +kubebuilder:default:=peer-pods-cm
