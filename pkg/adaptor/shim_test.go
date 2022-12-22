@@ -1,10 +1,7 @@
 // (C) Copyright IBM Corp. 2022.
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ibmcloud
-// +build ibmcloud
-
-package ibmcloud
+package adaptor
 
 import (
 	"context"
@@ -20,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
@@ -90,13 +86,14 @@ func TestShim(t *testing.T) {
 		workerNode = podnetwork.NewWorkerNode(t, "", 0, 0)
 	}
 
-	cfg := hypervisor.Config{
-		SocketPath:  helperSocketPath,
-		PodsDir:     podsDir,
-		HypProvider: "ibmcloud",
+	serverConfig := &ServerConfig{
+		SocketPath:    helperSocketPath,
+		PodsDir:       podsDir,
+		ForwarderPort: port,
 	}
-	srv := NewServer(cfg, Config{}, workerNode, port)
-	srv.(*server).service.(*hypervisorService).vpcV1 = &mockVpcV1{primaryIP: primaryIP, secondaryIP: secondaryIP}
+
+	provider := &mockProvider{primaryIP: primaryIP, secondaryIP: secondaryIP}
+	srv := NewServer(provider, serverConfig, workerNode)
 
 	serverDone := make(chan struct{})
 	go func() {

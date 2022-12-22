@@ -1,3 +1,6 @@
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package ibmcloud
 
 import "github.com/confidential-containers/cloud-api-adaptor/pkg/util"
