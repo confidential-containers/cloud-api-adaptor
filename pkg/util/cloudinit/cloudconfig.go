@@ -21,6 +21,10 @@ const (
 
 // https://cloudinit.readthedocs.io/en/latest/topics/format.html#cloud-config-data
 
+type CloudConfigGenerator interface {
+	Generate() (string, error)
+}
+
 type CloudConfig struct {
 	WriteFiles []WriteFile `yaml:"write_files"`
 }
