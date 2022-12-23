@@ -10,15 +10,19 @@
 - Create the vsphere template
 	- [setting up authenticated registry support](../docs/registries-authentication.md)
 ```
-cd vsphere/image && make
+cd vsphere/image && CLOUD_PROVIDER=vsphere make build
 ```
 
 For a rhel podvm image, try:
 ```
-cd vsphere/image && PODVM_DISTRO=rhel make
+cd vsphere/image && PODVM_DISTRO=rhel CLOUD_PROVIDER=vsphere make build
 ```
 
-If successful, you can find the image on your vcenter deployment
+To force a build even if a template already exists, try:
+```
+FORCE=1 CLOUD_PROVIDER=vsphere make build
+```
+If successful, you can find the image on your vcenter deployment.
 
 ## File structure
 - **vcenter.auto.pkrvars.hcl** - The main template.
