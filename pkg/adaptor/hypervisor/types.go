@@ -13,7 +13,6 @@ type Server interface {
 const (
 	DefaultSocketPath = "/run/peerpod/hypervisor.sock"
 	DefaultPodsDir    = "/run/peerpod/pods"
-	DefaultPauseImage = "k8s.gcr.io/pause:3.7"
 )
 
 type Config struct {
