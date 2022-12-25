@@ -23,6 +23,8 @@ type proxyService struct {
 	pauseImage string
 }
 
+const defaultPauseImage = "k8s.gcr.io/pause:3.7"
+
 func newProxyService(dialer func(context.Context) (net.Conn, error), criClient *criClient, pauseImage string) *proxyService {
 
 	redirector := agentproto.NewRedirector(dialer)
@@ -56,23 +58,31 @@ func (s *proxyService) getImageFromDigest(ctx context.Context, digest string) (s
 }
 
 func (s *proxyService) getImageName(annotations map[string]string) (string, error) {
+	annotImage := ""
+	for _, a := range []string{cri.ImageName, crio.ImageName} {
+		if image, ok := annotations[a]; ok {
+			annotImage = image
+		}
+	}
 
-	logger.Printf("getImageName: check if its a sandbox type container")
 	for containerType, containerTypeSandbox := range map[string]string{
 		cri.ContainerType:  cri.ContainerTypeSandbox,
 		crio.ContainerType: crio.ContainerTypeSandbox,
 	} {
 		if annotations[containerType] == containerTypeSandbox {
-			logger.Printf("getImageName: pause image: %s", s.pauseImage)
-			return s.pauseImage, nil
+			if s.pauseImage != "" {
+				logger.Printf("getImageName: user's pause image: %s", s.pauseImage)
+				return s.pauseImage, nil
+			} else if s.pauseImage == "" && annotImage == "" {
+				logger.Printf("getImageName: no pause image specified uses default pause image: %s", defaultPauseImage)
+				return defaultPauseImage, nil
+			}
 		}
 	}
 
-	for _, a := range []string{cri.ImageName, crio.ImageName} {
-		if image, ok := annotations[a]; ok {
-			logger.Printf("getImageName: image: %s", image)
-			return image, nil
-		}
+	if annotImage != "" {
+		logger.Printf("getImageName: got image from annotations: %s", annotImage)
+		return annotImage, nil
 	}
 
 	return "", fmt.Errorf("container image name is not specified in annotations: %#v", annotations)
