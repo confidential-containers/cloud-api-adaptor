@@ -121,21 +121,37 @@ func (r *PeerPodConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{}, nil
 }
 
-// Check if "peer-pods-secret" exists and has valid cloud provider name set in CLOUD_PROVIDER
+// Check if "peer-pods-secret" or "peer-pods-cm" exists and has valid cloud provider name set in CLOUD_PROVIDER
+// logic allows a valid CLOUD_PROVIDER value to be set only in one of the objects, if was set in both, value must be
+// equal and valid
 func (r *PeerPodConfigReconciler) peerpodCloudProviderIsValid() error {
 	peerpodscm := corev1.ConfigMap{}
+	peerpodssecret := corev1.Secret{}
+
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: "peer-pods-cm", Namespace: os.Getenv("PEERPODS_NAMESPACE")}, &peerpodscm)
-	if err != nil && k8serrors.IsNotFound(err) {
+	if err != nil {
 		return err
-	} else if err != nil {
-		// Error reading the object - requeue the request.
+	}
+	cmCloudProviderName, ok := peerpodscm.Data["CLOUD_PROVIDER"]
+	if ok && !contains(validCloudProviderNames, cmCloudProviderName) {
+		return errors.New("configMap CLOUD_PROVIDER was set to invalid value, found CLOUD_PROVIDER=" + cmCloudProviderName)
+	} // else either valid or unset
+
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: "peer-pods-secret", Namespace: os.Getenv("PEERPODS_NAMESPACE")}, &peerpodssecret)
+	if err != nil {
 		return err
-	} else {
-		ppCloudProviderName = peerpodscm.Data["CLOUD_PROVIDER"]
-		if ppCloudProviderName == "" || !contains(validCloudProviderNames, ppCloudProviderName) {
-			r.Log.Info("CLOUD_PROVIDER=", "ppCloudProviderName", ppCloudProviderName)
-			return errors.New("set CLOUD_PROVIDER name to one supported in cloud-api-provider, found CLOUD_PROVIDER=" + ppCloudProviderName)
-		}
+	}
+	tmpStr, ok := peerpodssecret.Data["CLOUD_PROVIDER"]
+	secretCloudProviderName := string(tmpStr)
+
+	if ok && !contains(validCloudProviderNames, string(secretCloudProviderName)) {
+		return errors.New("secret CLOUD_PROVIDER was set to invalid value, found CLOUD_PROVIDER=" + secretCloudProviderName)
+	} // else either valid or unset
+
+	if secretCloudProviderName != "" && cmCloudProviderName != "" && cmCloudProviderName != secretCloudProviderName {
+		return errors.New("both secret and configMap CLOUD_PROVIDER were set but values confilicts")
+	} else if secretCloudProviderName == "" && cmCloudProviderName == "" {
+		return errors.New("CLOUD_PROVIDER values was unset or empty")
 	}
 	return nil
 }
