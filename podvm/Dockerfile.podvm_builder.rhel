@@ -5,26 +5,29 @@
 # Creates a builder container image that should be used to build the Pod VM
 # disk inside a container.
 #
-FROM ubuntu:20.04
+FROM registry.access.redhat.com/ubi8/ubi:8.7
 
 ARG GO_VERSION="1.18.7"
 ARG PROTOC_VERSION="3.11.4"
-ARG RUST_VERSION="1.66.0"
+ARG RUST_VERSION="1.62.0"
 
+# This must be running on subscribed RHEL host !!!
+# If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
 
-ENV DEBIAN_FRONTEND noninteractive
-
-RUN apt-get update -y && \
-    apt-get install -y build-essential cloud-image-utils curl git gnupg \
-        libdevmapper-dev libgpgme-dev lsb-release pkg-config qemu-kvm \
-        musl-tools unzip wget git && \
-    curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - && \
-    echo "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee -a /etc/apt/sources.list && \
-    apt-get update && apt-get install -y packer && \
+RUN dnf groupinstall -y 'Development Tools' && \
+    dnf install -y yum-utils gnupg git curl pkg-config libseccomp-devel gpgme-devel \
+        device-mapper-devel qemu-kvm unzip wget libassuan-devel \
+	genisoimage cloud-utils-growpart cloud-init && \
+    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
+    dnf install -y packer && \
     curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -f go${GO_VERSION}.linux-amd64.tar.gz
 
+
+# cloud-utils package is not available for rhel.
+RUN git clone https://github.com/canonical/cloud-utils
+RUN cd cloud-utils && make install
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VERSION}"
 
@@ -32,8 +35,6 @@ ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
 RUN echo $PATH
 
-RUN rustup target add x86_64-unknown-linux-musl && ln -sf /usr/bin/g++ /bin/musl-g++
-    
 
 RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
     unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
@@ -52,6 +53,5 @@ RUN echo $CAA_SRC_BRANCH
 
 RUN git clone ${CAA_SRC} -b ${CAA_SRC_BRANCH} cloud-api-adaptor
 RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH} kata-containers
-
 
 ENV GOPATH /src
