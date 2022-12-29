@@ -35,7 +35,6 @@ endif
 	$(eval OPTS := -var qemu_image_name=${IMAGE_FILE} \
 	-var cloud_image_url=${RHEL_IMAGE_URL} \
 	-var disk_size=11144 \
-	-var ssh_username=cloud-user \
 	-var cloud_image_checksum=${RHEL_IMAGE_CHECKSUM} qcow2/rhel)
 
 else ifeq ($(PODVM_DISTRO),centos)
