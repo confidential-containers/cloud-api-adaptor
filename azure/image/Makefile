@@ -33,14 +33,8 @@ IMAGE_FILE := $(IMAGE_NAME)
 AGENT_PROTOCOL_FORWARDER = $(FILES_DIR)/usr/local/bin/agent-protocol-forwarder
 KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
 PAUSE         = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/pause
-SKOPEO    = $(FILES_DIR)/usr/bin/skopeo
-UMOCI     = $(FILES_DIR)/usr/local/bin/umoci
 
 BINARIES = $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE)
-
-ifdef USE_SKOPEO
-BINARIES += $(SKOPEO) $(UMOCI)
-endif
 
 AGENT_PROTOCOL_FORWARDER_SRC = ../..
 
@@ -99,18 +93,12 @@ $(SKOPEO_SRC):
 $(SKOPEO_SRC)/bin/skopeo: $(SKOPEO_SRC)
 	cd "$(SKOPEO_SRC)" && make bin/skopeo
 
-$(SKOPEO): $(SKOPEO_SRC)/bin/skopeo
-	install -D --compare "$(SKOPEO_SRC)/bin/skopeo" "$@"
-
 # The umoci release page only publishes amd64 binaries. https://github.com/opencontainers/umoci/releases
 $(UMOCI_SRC):
 	git clone -b "v$(UMOCI_VERSION)" "$(UMOCI_REPO)" "$(UMOCI_SRC)"
 
 $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
 	cd "$(UMOCI_SRC)" && make
-
-$(UMOCI): $(UMOCI_SRC)/umoci
-	install -D --compare "$(UMOCI_SRC)/umoci" "$@"
 
 $(PAUSE_SRC): $(SKOPEO_SRC)/bin/skopeo
 	$(SKOPEO_SRC)/bin/skopeo --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"

@@ -281,8 +281,6 @@ You need to build a pod VM image for peer pod VMs. A pod VM image contains the f
 
 * Kata agent
 * Agent protocol forwarder
-* skopeo
-* umoci
 
 The build scripts are located in [ibmcloud/image](./image). The prerequisite software to build a pod VM image is already installed in the worker node by [the Ansible playbook](terraform/cluster/ansible/playbook.yml) for convenience.
 
