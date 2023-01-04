@@ -94,6 +94,8 @@ build {
       "cd /etc/cloud/cloud.cfg.d && sudo rm -rf 99-installer.cfg && sudo rm -rf 90_dpkg.cfg",
       "cd /tmp && sudo tar xf files.tar -C /",
       "rm /tmp/files.tar"
+      "mv /etc/systemd/system/run-kata-containers.mount /etc/systemd/system/run-kata\\x2dcontainers.mount"
+      "mv /etc/systemd/system/multi-user.target.wants/run-kata-containers.mount /etc/systemd/system/multi-user.target.wants/run-kata\\x2dcontainers.mount"
    ]
   }
 

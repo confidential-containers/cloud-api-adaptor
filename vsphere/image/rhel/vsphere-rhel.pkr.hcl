@@ -90,6 +90,8 @@ build {
     inline = [
       "cd /tmp && sudo tar xf files.tar -C /",
       "rm /tmp/files.tar",
+      "mv /etc/systemd/system/run-kata-containers.mount /etc/systemd/system/run-kata\\x2dcontainers.mount"
+      "mv /etc/systemd/system/multi-user.target.wants/run-kata-containers.mount /etc/systemd/system/multi-user.target.wants/run-kata\\x2dcontainers.mount"
       "sudo bash ~/misc-settings.sh",
       "sudo rm -rf /etc/cloud/cloud-init.disabled"
    ]

@@ -259,6 +259,8 @@ chroot "$src_mnt" apt-get clean
 chroot "$src_mnt" bash -c 'rm -rf /var/lib/apt/lists/*'
 
 cp -a "$files_dir"/* "$src_mnt"
+mv "$src_mnt/etc/systemd/system/run-kata-containers.mount" "$src_mnt/etc/systemd/system/run-kata\\x2dcontainers.mount"
+mv "$src_mnt/etc/systemd/system/multi-user.target.wants/run-kata-containers.mount" "$src_mnt/etc/systemd/system/multi-user.target.wants/run-kata\\x2dcontainers.mount"
 
 mkdir -p "$src_mnt/var/lib/kubelet"
 
