@@ -362,7 +362,7 @@ $ terraform apply
 ### Enabling Attestation agent and Authenticated Registry
 **Prerequisites:**
 - An ibmcloud worker node using the cloud-api-adaptor
-- A [auth.json](https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md] file with your credentials)
+- An [auth.json](https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md) file with your credentials
 - SSH'd into the worker node: `ssh root@floating-ip-of-worker-node`
 
 Once you have the prerequisites use [static registries authentication setup](../docs/registries-authentication.md#statically-embed-authentication-file-in-podvm-image)
