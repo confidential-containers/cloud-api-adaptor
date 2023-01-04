@@ -9,7 +9,7 @@ FROM registry.access.redhat.com/ubi8/ubi:8.7
 
 ARG GO_VERSION="1.18.7"
 ARG PROTOC_VERSION="3.11.4"
-ARG RUST_VERSION="1.62.0"
+ARG RUST_VERSION="1.66.0"
 
 # This must be running on subscribed RHEL host !!!
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
