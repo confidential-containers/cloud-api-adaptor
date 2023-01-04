@@ -31,7 +31,11 @@ pre_checks() {
 
 create_bucket() {
 	echo "Create s3 Bucket"
-	aws s3api create-bucket  --bucket ${BUCKET_NAME} --region ${REGION}
+	if [[ ${REGION} == us-east-1 ]]; then
+		aws s3api create-bucket  --bucket ${BUCKET_NAME} --region ${REGION}
+	else
+		aws s3api create-bucket  --bucket ${BUCKET_NAME} --region ${REGION} --create-bucket-configuration LocationConstraint=${REGION}
+	fi
 }
 
 set_bucket_policies() {
