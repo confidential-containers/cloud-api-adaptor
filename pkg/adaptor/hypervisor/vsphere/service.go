@@ -44,7 +44,7 @@ type hypervisorService struct {
 }
 
 func newService(govmomiClient *govmomi.Client, config *Config, hypervisorConfig *hypervisor.Config, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) pb.HypervisorService {
-	logger.Printf("service config %v", config)
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		panic(fmt.Errorf("failed to get hostname: %w", err))
