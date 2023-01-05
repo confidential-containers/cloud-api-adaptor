@@ -134,7 +134,8 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 		logger.Printf("CreateContainer: calling PullImage for %q before CreateContainer (cid: %q)", imageName, req.ContainerId)
 
 		pullImageReq := &pb.PullImageRequest{
-			Image: imageName,
+			Image:       imageName,
+			ContainerId: req.ContainerId,
 		}
 
 		pullImageRes, pullImageErr := s.Redirector.PullImage(ctx, pullImageReq)
