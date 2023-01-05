@@ -15,6 +15,8 @@ IMAGE_PREFIX := podvm
 
 HOST_ARCH   := $(shell uname -m)
 ARCH        ?= $(HOST_ARCH)
+# Normalise x86_64 / amd64 for input ARCH
+ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
 LIBC        ?= $(if $(findstring s390x,$(ARCH)),gnu,musl)
 RUST_TARGET := $(ARCH)-unknown-linux-$(LIBC)
@@ -121,6 +123,6 @@ $(ATTESTATION_AGENT_SRC):
 	git clone "$(ATTESTATION_AGENT_REPO)" "$(ATTESTATION_AGENT_SRC)"
 
 $(ATTESTATION_AGENT): $(ATTESTATION_AGENT_SRC)
-	cd "$(ATTESTATION_AGENT_SRC)" && $(RUST_FLAGS) $(MAKE) KBC="$(AA_KBC)" LIBC="$(LIBC)"
+	cd "$(ATTESTATION_AGENT_SRC)" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
 	install --compare "$(ATTESTATION_AGENT_SRC)/app/target/$(RUST_TARGET)/release/attestation-agent" "$@"

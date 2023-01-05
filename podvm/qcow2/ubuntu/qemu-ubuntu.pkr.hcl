@@ -7,14 +7,17 @@ source "qemu" "ubuntu" {
   headless          = true
   iso_checksum      = "${var.cloud_image_checksum}"
   iso_url           = "${var.cloud_image_url}"
-  output_directory  = "output"
-  qemuargs          = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"]]
+  output_directory  = "${var.output_directory}"
+  qemuargs          = [["-device", "virtio-blk,drive=virtio-drive,id=virtio-disk0,bootindex=1"], ["-drive", "file=${var.output_directory}/${var.qemu_image_name},if=none,cache=writeback,discard=ignore,format=qcow2,id=virtio-drive"], ["-device", "virtio-scsi"], ["-drive", "file=${var.cloud_init_image},format=raw,if=none,id=c1"], ["-device", "scsi-cd,drive=c1"], ["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-serial", "mon:stdio"]]
   ssh_password      = "${var.ssh_password}"
   ssh_port          = 22
   ssh_username      = "${var.ssh_username}"
   ssh_wait_timeout  = "300s"
+  boot_wait         = "${var.boot_wait}"
   vm_name           = "${var.qemu_image_name}"
-  shutdown_command  = "sudo shutdown -h now" 
+  shutdown_command  = "sudo shutdown -h now"
+  qemu_binary       = "${var.qemu_binary}"
+  machine_type      = "${var.machine_type}"
 }
 
 build {
