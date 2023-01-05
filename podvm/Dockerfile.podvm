@@ -11,10 +11,16 @@ FROM ${BUILDER_IMG} AS podvm_builder
 ARG CLOUD_PROVIDER=libvirt
 ARG PODVM_DISTRO=ubuntu
 ARG AA_KBC=offline_fs_kbc
+# If not provided, uses system architecture
+ARG ARCH
 
 ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
 ENV PODVM_DISTRO ${PODVM_DISTRO}
 ENV AA_KBC ${AA_KBC}
+ENV ARCH ${ARCH}
+
+# Installs add-ons for foreign target, if required
+RUN ./cloud-api-adaptor/podvm/hack/cross-build-extras.sh
 
 # Default to Ubuntu Focal amd64 release image. These variables can be overriden as needed
 ARG UBUNTU_IMAGE_URL=https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-amd64.img
