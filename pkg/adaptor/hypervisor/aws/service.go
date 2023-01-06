@@ -213,9 +213,11 @@ func (s *hypervisorService) StartVM(ctx context.Context, req *pb.StartVMRequest)
 			ImageId:          aws.String(s.serviceConfig.ImageId),
 			InstanceType:     types.InstanceType(s.serviceConfig.InstanceType),
 			SecurityGroupIds: s.serviceConfig.SecurityGroupIds,
-			KeyName:          aws.String(s.serviceConfig.KeyName),
 			SubnetId:         aws.String(s.serviceConfig.SubnetId),
 			UserData:         &userDataEnc,
+		}
+		if s.serviceConfig.KeyName != "" {
+			input.KeyName = aws.String(s.serviceConfig.KeyName)
 		}
 	}
 
