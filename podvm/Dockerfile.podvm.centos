@@ -12,8 +12,8 @@ ARG CLOUD_PROVIDER=libvirt
 ARG PODVM_DISTRO=centos
 
 # Default to CentOS 8-stream x86_64 image. These variables can be overriden as needed
-ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20200113.0.x86_64.qcow2
-ARG CENTOS_IMAGE_CHECKSUM=b80ca9ccad8715aa1aeee582906096d3190b91cebe05fcb3ac7cb197fd68a7fe
+ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
+ARG CENTOS_IMAGE_CHECKSUM=8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c
 
 
 # Building binaries separately allows for reuse in case of error
