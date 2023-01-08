@@ -15,7 +15,7 @@ source "qemu" "rhel" {
   ssh_wait_timeout  = "300s"
   vm_name           = "${var.qemu_image_name}"
   shutdown_command  = "sudo shutdown -h now"
-  qemu_binary       = "qemu-kvm"
+  qemu_binary       = "/usr/libexec/qemu-kvm"
 }
 
 build {
