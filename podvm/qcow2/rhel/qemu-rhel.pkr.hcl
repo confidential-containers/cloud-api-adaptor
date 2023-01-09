@@ -69,6 +69,8 @@ build {
   provisioner "shell" {
     remote_folder = "~"
     inline = [
+    # requires subscription
+      "sudo dnf -y install open-vm-tools || exit 0",
       "sudo bash ~/selinux_relabel.sh"
     ]
   }

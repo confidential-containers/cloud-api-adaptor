@@ -69,6 +69,7 @@ build {
   provisioner "shell" {
     remote_folder = "~"
     inline = [
+      "sudo dnf -y install open-vm-tools || exit 0",
       "sudo bash ~/misc-settings.sh"
     ]
   }
