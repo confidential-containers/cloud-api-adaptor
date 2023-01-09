@@ -11,6 +11,10 @@ ARG GO_VERSION="1.18.7"
 ARG PROTOC_VERSION="3.11.4"
 ARG RUST_VERSION="1.66.0"
 
+# Without setting ENV gh-action is failing to use the correct values
+ENV GO_VERSION ${GO_VERSION}
+ENV RUST_VERSION ${RUST_VERSION}
+ENV PROTOC_VERSION ${PROTOC_VERSION}
 
 RUN dnf config-manager --set-enabled powertools && \
     dnf install -y epel-release epel-next-release && dnf update -y && \
@@ -29,7 +33,7 @@ RUN dnf config-manager --set-enabled powertools && \
 RUN git clone https://github.com/canonical/cloud-utils
 RUN cd cloud-utils && make install
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VERSION}"
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${RUST_VERSION}
 
 ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
