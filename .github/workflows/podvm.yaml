@@ -1,0 +1,63 @@
+name: Create Pod VM Image
+on:
+  workflow_run:
+    workflows: ["Create Pod VM Builder Image"]
+    types: 
+      - completed
+
+jobs:
+  build:
+    name: Create pod vm image
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          # Please keep this list in alphabetical order.
+          - centos
+          - ubuntu
+        provider:
+          # Please keep this list in alphabetical order.
+          - aws
+          - azure
+          - ibmcloud
+          - libvirt
+          - vsphere
+        include:
+          - os: centos
+            dockerfile: Dockerfile.podvm.centos
+          - os: ubuntu
+            dockerfile: Dockerfile.podvm
+        runner:
+          - ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    #- name: Set up QEMU
+    #  uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Quay container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: quay.io
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v3
+      with:
+        tags: |
+          quay.io/confidential-containers/podvm-${{ matrix.provider }}-${{ matrix.os }}:latest
+          quay.io/confidential-containers/podvm-${{ matrix.provider }}-${{ matrix.os }}:${{ github.sha }}
+        push: true
+        context: podvm
+        platforms: linux/amd64
+        file: |
+          podvm/${{ matrix.dockerfile }}
+        build-args: |
+          "CLOUD_PROVIDER=${{ matrix.provider }}"
