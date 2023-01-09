@@ -1,0 +1,59 @@
+name: Create Pod VM Builder Image
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    name: Create pod vm builder image
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          # Please keep this list in alphabetical order.
+          - centos
+          - ubuntu
+        include:
+          - os: centos
+            dockerfile: Dockerfile.podvm_builder.centos
+          - os: ubuntu
+            dockerfile: Dockerfile.podvm_builder
+        runner:
+          - ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    #- name: Set up QEMU
+    #  uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Quay container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: quay.io
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v3
+      with:
+        tags: |
+          quay.io/confidential-containers/podvm-builder-${{ matrix.os }}:latest
+          quay.io/confidential-containers/podvm-builder-${{ matrix.os }}:${{ github.sha }}
+        push: true
+        context: podvm
+        platforms: linux/amd64
+        file: |
+          podvm/${{ matrix.dockerfile }}
+        build-args: |
+          "GO_VERSION=1.18.7"
+          "PROTOC_VERSION=3.11.4"
+          "RUST_VERSION=1.66.0"
+          "CAA_SRC=https://github.com/confidential-containers/cloud-api-adaptor"
+          "CAA_SRC_BRANCH=staging"
+          "KATA_SRC=https://github.com/kata-containers/kata-containers"
+          "KATA_SRC_BRANCH=CCv0"
