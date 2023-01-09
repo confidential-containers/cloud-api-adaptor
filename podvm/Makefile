@@ -4,7 +4,7 @@
 
 include Makefile.inc
 
-.PHONY: image clean
+.PHONY: image clean clean_sources
 
 # Check for set but empty or unset URL and CHECKSUM
 UBUNTU_IMAGE_URL := $(or $(UBUNTU_IMAGE_URL),https://cloud-images.ubuntu.com/$(UBUNTU_RELEASE)/current/$(UBUNTU_RELEASE)-server-cloudimg-$(DEB_ARCH).img)
