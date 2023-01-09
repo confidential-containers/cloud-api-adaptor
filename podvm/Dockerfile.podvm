@@ -4,17 +4,22 @@
 #
 # Builds pod vm image inside container
 #
-ARG BUILDER_IMG="quay.io/confidential-containers/cloud-api-adaptor-podvm-builder"
+ARG BUILDER_IMG="quay.io/confidential-containers/podvm-builder-ubuntu"
 
 FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG CLOUD_PROVIDER=libvirt
 ARG PODVM_DISTRO=ubuntu
 
-# If these are not provided as build args then the
-# default values assigned in the Makefile will get used
-ARG UBUNTU_IMAGE_URL
-ARG UBUNTU_IMAGE_CHECKSUM
+ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
+ENV PODVM_DISTRO ${PODVM_DISTRO}
+
+# Default to Ubuntu Focal amd64 image. These variables can be overriden as needed
+ARG UBUNTU_IMAGE_URL=https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img
+ARG UBUNTU_IMAGE_CHECKSUM=3895e38566e5c2c019f5c6f825ab7570ee34dac6b9142fab0c7e5a78084c4280
+
+ENV UBUNTU_IMAGE_URL ${UBUNTU_IMAGE_URL}
+ENV UBUNTU_IMAGE_CHECKSUM ${UBUNTU_IMAGE_CHECKSUM}
 
 
 # Building binaries separately allows for reuse in case of error

@@ -4,17 +4,22 @@
 #
 # Builds pod vm image inside container
 #
-ARG BUILDER_IMG="quay.io/confidential-containers/cloud-api-adaptor-podvm-builder"
+ARG BUILDER_IMG="quay.io/confidential-containers/podvm-builder-centos"
 
 FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG CLOUD_PROVIDER=libvirt
 ARG PODVM_DISTRO=centos
 
+ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
+ENV PODVM_DISTRO ${PODVM_DISTRO}
+
 # Default to CentOS 8-stream x86_64 image. These variables can be overriden as needed
 ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
 ARG CENTOS_IMAGE_CHECKSUM=8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c
 
+ENV CENTOS_IMAGE_URL ${CENTOS_IMAGE_URL}
+ENV CENTOS_IMAGE_CHECKSUM ${CENTOS_IMAGE_CHECKSUM}
 
 # Building binaries separately allows for reuse in case of error
 # with image building step
