@@ -14,8 +14,8 @@ ARG PODVM_DISTRO=ubuntu
 ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
 ENV PODVM_DISTRO ${PODVM_DISTRO}
 
-# Default to Ubuntu Focal amd64 image. These variables can be overriden as needed
-ARG UBUNTU_IMAGE_URL=https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img
+# Default to Ubuntu Focal amd64 release image. These variables can be overriden as needed
+ARG UBUNTU_IMAGE_URL=https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-amd64.img
 ARG UBUNTU_IMAGE_CHECKSUM=3895e38566e5c2c019f5c6f825ab7570ee34dac6b9142fab0c7e5a78084c4280
 
 ENV UBUNTU_IMAGE_URL ${UBUNTU_IMAGE_URL}
