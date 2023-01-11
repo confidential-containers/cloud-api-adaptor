@@ -15,17 +15,23 @@ ARG AA_KBC="offline_fs_kbc"
 ARG RHEL_IMAGE_URL="/tmp/rhel.qcow2"
 ARG RHEL_IMAGE_CHECKSUM
 
+ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
+ENV PODVM_DISTRO ${PODVM_DISTRO}
+ENV AA_KBC ${AA_KBC}
+ENV RHEL_IMAGE_URL ${RHEL_IMAGE_URL}
+ENV RHEL_IMAGE_CHECKSUM ${RHEL_IMAGE_CHECKSUM}
+
 # Building binaries separately allows for reuse in case of error
 # with image building step
 RUN cd cloud-api-adaptor/podvm && \
-     CLOUD_PROVIDER=$CLOUD_PROVIDER LIBC=gnu make binaries
+     LIBC=gnu make binaries
 
 # workaround to ensure hashicorp packer is called instead
 # of cracklib packer which is installed by default
 ENV PATH="/usr/bin:${PATH}"
 
 RUN cd cloud-api-adaptor/podvm && \
-     AA_KBC=$AA_KBC CLOUD_PROVIDER=$CLOUD_PROVIDER PODVM_DISTRO=$PODVM_DISTRO LIBC=gnu make image
+     LIBC=gnu make image
 
 FROM scratch
 COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 /
