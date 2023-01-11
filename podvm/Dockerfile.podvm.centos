@@ -10,9 +10,11 @@ FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG CLOUD_PROVIDER=libvirt
 ARG PODVM_DISTRO=centos
+ARG AA_KBC=offline_fs_kbc
 
 ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
 ENV PODVM_DISTRO ${PODVM_DISTRO}
+ENV AA_KBC ${AA_KBC}
 
 # Default to CentOS 8-stream x86_64 image. These variables can be overriden as needed
 ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
