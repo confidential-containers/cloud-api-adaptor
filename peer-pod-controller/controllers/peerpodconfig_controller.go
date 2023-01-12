@@ -51,7 +51,6 @@ type PeerPodConfigReconciler struct {
 	peerPodConfig *ccv1alpha1.PeerPodConfig
 }
 
-var ppCloudProviderName string
 var validCloudProviderNames = []string{"aws", "libvirt", "ibmcloud", "vsphere", "azure"}
 
 //Adding sideEffects=none as a workaround for https://github.com/kubernetes-sigs/kubebuilder/issues/1917
@@ -74,6 +73,7 @@ var validCloudProviderNames = []string{"aws", "libvirt", "ibmcloud", "vsphere", 
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
 func (r *PeerPodConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log = log.FromContext(ctx)
+	var ppCloudProviderName string
 	_ = r.Log.WithValues("peerpod-controller", req.NamespacedName)
 	r.Log.Info("Reconciling PeerPodConfig in Kubernetes Cluster")
 
@@ -90,8 +90,7 @@ func (r *PeerPodConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
-
-	if err := r.peerpodCloudProviderIsValid(); err != nil {
+	if ppCloudProviderName, err = r.getPpCloudProvider(); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -124,36 +123,38 @@ func (r *PeerPodConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // Check if "peer-pods-secret" or "peer-pods-cm" exists and has valid cloud provider name set in CLOUD_PROVIDER
 // logic allows a valid CLOUD_PROVIDER value to be set only in one of the objects, if was set in both, value must be
 // equal and valid
-func (r *PeerPodConfigReconciler) peerpodCloudProviderIsValid() error {
+func (r *PeerPodConfigReconciler) getPpCloudProvider() (string, error) {
 	peerpodscm := corev1.ConfigMap{}
 	peerpodssecret := corev1.Secret{}
 
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: "peer-pods-cm", Namespace: os.Getenv("PEERPODS_NAMESPACE")}, &peerpodscm)
 	if err != nil {
-		return err
+		return "", err
 	}
 	cmCloudProviderName, ok := peerpodscm.Data["CLOUD_PROVIDER"]
 	if ok && !contains(validCloudProviderNames, cmCloudProviderName) {
-		return errors.New("configMap CLOUD_PROVIDER was set to invalid value, found CLOUD_PROVIDER=" + cmCloudProviderName)
+		return "", errors.New("configMap CLOUD_PROVIDER was set to invalid value, found CLOUD_PROVIDER=" + cmCloudProviderName)
 	} // else either valid or unset
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: "peer-pods-secret", Namespace: os.Getenv("PEERPODS_NAMESPACE")}, &peerpodssecret)
 	if err != nil {
-		return err
+		return "", err
 	}
 	tmpStr, ok := peerpodssecret.Data["CLOUD_PROVIDER"]
 	secretCloudProviderName := string(tmpStr)
 
 	if ok && !contains(validCloudProviderNames, string(secretCloudProviderName)) {
-		return errors.New("secret CLOUD_PROVIDER was set to invalid value, found CLOUD_PROVIDER=" + secretCloudProviderName)
+		return "", errors.New("secret CLOUD_PROVIDER was set to invalid value, found CLOUD_PROVIDER=" + secretCloudProviderName)
 	} // else either valid or unset
 
 	if secretCloudProviderName != "" && cmCloudProviderName != "" && cmCloudProviderName != secretCloudProviderName {
-		return errors.New("both secret and configMap CLOUD_PROVIDER were set but values confilicts")
+		return "", errors.New("both secret and configMap CLOUD_PROVIDER were set but values confilicts")
 	} else if secretCloudProviderName == "" && cmCloudProviderName == "" {
-		return errors.New("CLOUD_PROVIDER values was unset or empty")
+		return "", errors.New("CLOUD_PROVIDER values was unset or empty")
+	} else if cmCloudProviderName != "" {
+		return cmCloudProviderName, nil
 	}
-	return nil
+	return secretCloudProviderName, nil
 }
 
 func MountProgagationRef(mode corev1.MountPropagationMode) *corev1.MountPropagationMode {
