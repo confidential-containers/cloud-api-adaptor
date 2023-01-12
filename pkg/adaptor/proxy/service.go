@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/agentproto"
 	cri "github.com/containerd/containerd/pkg/cri/annotations"
 	crio "github.com/containers/podman/v4/pkg/annotations"
@@ -138,14 +139,22 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 			ContainerId: req.ContainerId,
 		}
 
-		pullImageRes, pullImageErr := s.Redirector.PullImage(ctx, pullImageReq)
+		err = retry.Do(
+			func() error {
+				pullImageRes, pullImageErr := s.Redirector.PullImage(ctx, pullImageReq)
+				if pullImageErr != nil {
+					logger.Printf("CreateContainer: failed to call PullImage, probably because the image has already been pulled. ignored: %v", pullImageErr)
+					return pullImageErr
+				}
+				logger.Printf("CreateContainer: successfully pulled image %q", pullImageRes.ImageRef)
+				return nil
+			},
+		)
 
-		if pullImageErr != nil {
-			logger.Printf("CreateContainer: failed to call PullImage, probably because the image has already been pulled. ignored: %v", pullImageErr)
-		} else {
-			logger.Printf("CreateContainer: successfully pulled image %q", pullImageRes.ImageRef)
+		if err != nil {
+			logger.Printf("PullImage fails: %v", err)
+			return nil, err
 		}
-
 		// kata-agent uses this annotation to fix the image bundle path
 		// https://github.com/kata-containers/kata-containers/blob/8ad86e2ec9d26d2ef07f3bf794352a3fda7597e5/src/agent/src/rpc.rs#L694-L696
 		req.OCI.Annotations[cri.ImageName] = imageName

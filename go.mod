@@ -21,7 +21,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20211214071223-8958f93039ab
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/vishvananda/netlink v1.1.1-0.20220115184804-dd687eb2f2d4
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
 	github.com/vmware/govmomi v0.29.0
@@ -34,6 +34,7 @@ require (
 )
 
 require (
+	github.com/avast/retry-go/v4 v4.3.2
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20220913141151-9b49a6ddc6fd
 )
