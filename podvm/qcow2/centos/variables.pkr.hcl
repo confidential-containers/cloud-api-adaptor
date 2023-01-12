@@ -48,3 +48,13 @@ variable "qemu_image_name" {
   type    = string
   default = "peer-pod"
 }
+
+variable "podvm_distro" {
+  type    = string
+  default = env("PODVM_DISTRO")
+}
+
+variable "cloud_provider" {
+  type    = string
+  default = env("CLOUD_PROVIDER")
+}
