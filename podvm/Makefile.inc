@@ -16,7 +16,7 @@ IMAGE_PREFIX := podvm
 HOST_ARCH   := $(shell uname -m)
 ARCH        ?= $(HOST_ARCH)
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
-LIBC        := $(if $(findstring s390x,$(ARCH)),gnu,musl)
+LIBC        ?= $(if $(findstring s390x,$(ARCH)),gnu,musl)
 RUST_TARGET := $(ARCH)-unknown-linux-$(LIBC)
 
 ifneq ($(HOST_ARCH),$(ARCH))
