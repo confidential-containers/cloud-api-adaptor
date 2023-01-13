@@ -97,7 +97,7 @@
    make image
    ```
 
-## Building custom runtime and pre-install images
+## Building custom runtime payload and pre-install images
 
    These instructions should help you build your own images for development and testing.
 
@@ -111,13 +111,22 @@
     export registry=<namespace>/<image_name>
     ```
 
-* Build the container image and push it to `$registry`
+* Build the multi arch runtime payload images and push them to `$registry`
     ```
     cd runtime-payload
     make binaries
     make build
     ```
-
+    When I set `registry=liudali/pp-payload` the output looks like:
+    ```
+    ...
+    s390x-2023011605591673848771: digest: sha256:3a00b9b754f687179f26bf32a27d381f4d2b900d976d6941dc89f217113a6ab9 size: 2002
+    Created manifest list docker.io/liudali/pp-payload:2023011605591673848771
+    Created manifest list docker.io/liudali/pp-payload:latest
+    sha256:d58315740fa7f32aa55f5b58ccc628e4961fce3ccbbba2aa0ed76a278e776e37
+    sha256:d58315740fa7f32aa55f5b58ccc628e4961fce3ccbbba2aa0ed76a278e776e37
+    ~/cloud-api-adaptor/install/runtime-payload
+    ```
 
 ### Building Pre-Install Payload Image
 
