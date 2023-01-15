@@ -24,16 +24,17 @@ ENV CENTOS_IMAGE_URL ${CENTOS_IMAGE_URL}
 ENV CENTOS_IMAGE_CHECKSUM ${CENTOS_IMAGE_CHECKSUM}
 
 # Building binaries separately allows for reuse in case of error
-# with image building step
-RUN cd cloud-api-adaptor/podvm && \
-     LIBC=gnu make binaries
+# with image building step OTOH it may increase layers size
+#RUN cd cloud-api-adaptor/podvm && \
+#     LIBC=gnu make binaries
 
 # workaround to ensure hashicorp packer is called instead 
 # of cracklib packer which is installed by default
 ENV PATH="/usr/bin:${PATH}"
 
 RUN cd cloud-api-adaptor/podvm && \
-     LIBC=gnu make image
+     LIBC=gnu make image && \
+     (make clean_sources; go clean --cache --modcache; rustup self uninstall -y; rm -rf /root/.cache/packer/; true)
 
 FROM scratch
 COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 /
