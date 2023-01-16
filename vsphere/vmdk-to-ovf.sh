@@ -7,8 +7,8 @@ NOCOLOR='\033[0m'
 [ "$DEBUG" == 'true' ] && set -x
 
 ARGC=$#
-if [ $ARGC -ne 7 ]; then
-    echo "USAGE: $(basename $0) <vCenter Server> <vCenter Username> <vCenter Password> <vCenter Cluster> <vCenter Datastore> <Template Name> <Path to VMDK>"
+if [ $ARGC -lt 7 ] || [ "$7" = "-disableefi" ]; then
+    echo "USAGE: $(basename $0) <vCenter Server> <vCenter Username> <vCenter Password> <vCenter Cluster> <vCenter Datastore> <Template Name> <Path to VMDK> <-disableefi>(Optional)"
     exit 1
 fi
 
@@ -30,6 +30,12 @@ TEMPLATE_NAME=$6
 
 # Path to the vmdk to convert to a template
 VMDK_PATH=$7
+
+# Legacy bios or EFI
+LEGACY_BIOS=${8:--notset}
+LEGACYBIOS=0
+[ "$LEGACY_BIOS" = "-disableefi" ] && LEGACYBIOS=1
+
 
 TMPDIR=$(mktemp -d)
 IMAGE_NAME="$(basename -- ${VMDK_PATH})"
@@ -53,7 +59,7 @@ pre_checks() {
 # Convert the VM into a template
 create_ps1script() {
     cat > ${TMPDIR}/config.ps1 << EOF
-param(\$Server, \$User, \$Password, \$Cluster, \$Datastore, \$VMDKPath, \$TemplateName, \$IgnoreSSL, \$Force)
+param(\$Server, \$User, \$Password, \$Cluster, \$Datastore, \$VMDKPath, \$TemplateName, \$IgnoreSSL, \$Force, \$LegacyBIOS)
 
 Write-Host "Connecting to \$Server"
 if (\$IgnoreSSL -eq 1) {
@@ -85,13 +91,25 @@ Copy-DatastoreItem -Item \$VMDKPath -Destination ds:\podvm\podvm-base.vmdk
 Write-Host "Creating new VM..."
 New-VM -Name \$TemplateName -ResourcePool \$Cluster  -NumCPU 2 -MemoryGB 4 -NetworkName "VM Network" -Datastore \$datastore -GuestID rhel8_64Guest -DiskPath "[\$datastore] podvm/podvm-base.vmdk"
 
+if (\$LegacyBIOS -eq 1) {
+   Write-Host "Using legacy BIOS for creating template \$TemplateName"
+   \$VM = Get-VM \$TemplateName
+   \$spec = New-Object VMware.Vim.VirtualMachineConfigSpec
+   \$spec.Firmware = [VMware.Vim.GuestOsDescriptorFirmwareType]::bios
+   \$boot = New-Object VMware.Vim.VirtualMachineBootOptions
+   \$boot.EfiSecureBootEnabled = \$false
+   \$spec.BootOptions = \$boot
+   \$VM.ExtensionData.ReconfigVM(\$spec)
+}
+
+
 Write-Host "Converting to template"
 Get-VM -Name \$TemplateName | Set-VM -ToTemplate -Confirm:\$false
 EOF
 }
 
 create_template() {
-    pwsh ${TMPDIR}/config.ps1 -Server $VCENTER_SERVER -User $VCENTER_USERNAME -Password $VCENTER_PASSWORD -Cluster $VCENTER_CLUSTER -VMDKPath $VMDK_PATH -TemplateName $TEMPLATE_NAME -IgnoreSSL $IGNORE_SSL -Datastore $VCENTER_DATASTORE  -Force $FORCE_INSTALL
+    pwsh ${TMPDIR}/config.ps1 -Server $VCENTER_SERVER -User $VCENTER_USERNAME -Password $VCENTER_PASSWORD -Cluster $VCENTER_CLUSTER -VMDKPath $VMDK_PATH -TemplateName $TEMPLATE_NAME -IgnoreSSL $IGNORE_SSL -Datastore $VCENTER_DATASTORE  -Force $FORCE_INSTALL -LegacyBIOS $LEGACYBIOS
 }
 
 clean_up() {
