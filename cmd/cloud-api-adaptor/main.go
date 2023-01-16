@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/confidential-containers/cloud-api-adaptor/cmd"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
@@ -24,6 +25,8 @@ import (
 )
 
 const programName = "cloud-api-adaptor"
+
+var supportedProviders = []string{"aws", "azure", "ibmcloud", "libvirt", "vsphere"}
 
 type daemonConfig struct {
 	helperDaemonRoot  string
@@ -45,8 +48,8 @@ var hypcfg hypervisor.Config
 
 func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
-	if len(os.Args) < 2 {
-		fmt.Printf("%s aws|azure|ibmcloud|libvirt <options>\n", os.Args[0])
+	if len(os.Args) < 2 || !contains(os.Args[1], supportedProviders) {
+		fmt.Printf("Invalid or no cloud provider passed.\n%s %s <options>\n", os.Args[0], strings.Join(supportedProviders, "|"))
 		cmd.Exit(1)
 	}
 
@@ -204,6 +207,15 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	}
 
 	return cmd.NewStarter(hypervisorServer), nil
+}
+
+func contains(str string, list []string) bool {
+	for _, v := range list {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
 
 func defaultToEnv(field *string, env string) {
