@@ -20,6 +20,7 @@ RUN dnf groupinstall -y 'Development Tools' && \
 	genisoimage cloud-utils-growpart cloud-init && \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     dnf install -y packer && \
+    dnf clean all && \
     curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -f go${GO_VERSION}.linux-amd64.tar.gz
