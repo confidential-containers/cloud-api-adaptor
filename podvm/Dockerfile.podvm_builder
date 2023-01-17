@@ -19,12 +19,13 @@ ENV PROTOC_VERSION ${PROTOC_VERSION}
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update -y && \
-    apt-get install -y build-essential cloud-image-utils curl git gnupg \
+    apt-get install --no-install-recommends -y build-essential cloud-image-utils curl git gnupg \
         libdevmapper-dev libgpgme-dev lsb-release pkg-config qemu-kvm \
         musl-tools unzip wget git && \
     curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - && \
     echo "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee -a /etc/apt/sources.list && \
-    apt-get update && apt-get install -y packer && \
+    apt-get update && apt-get install --no-install-recommends -y packer && \
+    apt-get clean && \
     curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -f go${GO_VERSION}.linux-amd64.tar.gz
