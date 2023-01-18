@@ -37,7 +37,7 @@ export TENANT_ID="REPLACE_ME"
 ```bash
 export VM_SIZE="REPLACE_ME"
 cd image
-CLOUD_PROVIDER=azure make build && cd -
+CLOUD_PROVIDER=azure make image && cd -
 ```
 
 The output image id will be used while running the cloud-api-adaptor, which get's uploaded to your Azure portal using Packer.
