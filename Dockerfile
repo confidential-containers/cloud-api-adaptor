@@ -1,13 +1,14 @@
-FROM golang:1.18 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.18 AS builder
+ARG TARGETARCH
 ARG CLOUD_PROVIDER
 ENV CLOUD_PROVIDER=${CLOUD_PROVIDER}
 COPY . cloud-api-adaptor
 RUN git clone -b CCv0 https://github.com/kata-containers/kata-containers
 WORKDIR cloud-api-adaptor
 RUN if [ "$CLOUD_PROVIDER" = "libvirt" ] ; then apt-get update -y && apt-get install -y libvirt-dev; fi
-RUN make
+RUN ARCH=$TARGETARCH make
 
-FROM fedora:36
+FROM --platform=$TARGETPLATFORM fedora:36
 ARG CLOUD_PROVIDER
 ENV CLOUD_PROVIDER=${CLOUD_PROVIDER}
 RUN if [ "$CLOUD_PROVIDER" = "libvirt" ] ; then dnf install -y libvirt-libs genisoimage /usr/bin/ssh && dnf clean all; fi
