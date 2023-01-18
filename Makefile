@@ -8,13 +8,15 @@ ifndef CLOUD_PROVIDER
 $(error CLOUD_PROVIDER is not set)
 endif
 
-ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
-GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH)
-GOFLAGS     ?= -tags=$(CLOUD_PROVIDER)
-BINARIES    := cloud-api-adaptor agent-protocol-forwarder
-SOURCEDIRS  := ./cmd ./pkg
-PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
-SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
+ARCH         ?= $(subst x86_64,amd64,$(shell uname -m))
+SUPPORTARCHS := amd64 s390x
+GOOPTIONS    ?= GOOS=linux GOARCH=$(ARCH)
+GOFLAGS      ?= -tags=$(CLOUD_PROVIDER)
+BINARIES     := cloud-api-adaptor agent-protocol-forwarder
+MBINARIES    := cloud-api-adaptor-* agent-protocol-forwarder-*
+SOURCEDIRS   := ./cmd ./pkg
+PACKAGES     := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
+SOURCES      := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 
 all: build
 build: $(BINARIES)
@@ -36,10 +38,12 @@ help: ## Display this help.
 
 $(BINARIES): $(SOURCES)
 ifeq ($(CLOUD_PROVIDER),libvirt)
-	$(GOOPTIONS) go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
+	$(foreach arch, $(SUPPORTARCHS), $(shell GOOS=linux GOARCH=$(arch) go build $(GOFLAGS) -o "$@-$(subst amd64,x86_64,$(arch))" "cmd/$@/main.go"))
 else
-	$(GOOPTIONS) CGO_ENABLED=0 go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
+	$(foreach arch, $(SUPPORTARCHS), $(shell GOOS=linux GOARCH=$(arch) CGO_ENABLED=0 go build $(GOFLAGS) -o "$@-$(subst amd64,x86_64,$(arch))" "cmd/$@/main.go"))
 endif
+	@echo "Built out multi-arch binaries for $@"
+	@ls -alh $@-*
 
 ##@ Development
 
@@ -72,12 +76,12 @@ vet: ## Run go vet against code.
 
 .PHONY: clean
 clean: ## Remove binaries.
-	rm -fr $(BINARIES)
+	rm -fr $(MBINARIES)
 
-##@ Build
+##@ Image
 
 .PHONY: image
-image: ## Build and push docker image to $registry
+image: cloud-api-adaptor ## Build and push docker image to $registry
 	hack/build.sh
 
 ##@ Deployment

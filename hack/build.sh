@@ -10,12 +10,16 @@ registry="${registry:-quay.io/confidential-containers/cloud-api-adaptor-${CLOUD_
 
 supported_arches=(
 	"linux/amd64"
+	"linux/s390x"
 )
 
 function setup_env_for_arch() {
 	case "$1" in
 		"linux/amd64")
 			kernel_arch="x86_64"
+			;;
+		"linux/s390x")
+			kernel_arch="s390x"
 			;;
 		(*) echo "$1 is not supported" && exit 1
 	esac
@@ -43,13 +47,15 @@ function build_caa_payload() {
 
 	docker manifest create \
 		${registry}:${tag} \
-		--amend ${registry}:x86_64-${tag}
+		${registry}:x86_64-${tag} \
+		${registry}:s390x-${tag}
 
 	docker manifest create \
 		${registry}:latest \
-		--amend ${registry}:x86_64-${tag}
+		${registry}:x86_64-${tag} \
+		${registry}:s390x-${tag}
 
-	docker manifest push ${registry}:${tag}
+	docker manifest push --purge ${registry}:${tag}
 	docker manifest push --purge ${registry}:latest
 
 	popd
