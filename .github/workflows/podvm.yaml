@@ -71,16 +71,3 @@ jobs:
           "ARCH=${{ matrix.arch }}"
           "UBUNTU_IMAGE_URL="
           "UBUNTU_IMAGE_CHECKSUM="
-
-    - name: Extract Asset
-      run: |
-        UUID=$(cat /proc/sys/kernel/random/uuid | cut -c 1-8)
-        CONTAINER_NAME=temp-container-${UUID}
-        CID=$(docker create --name $CONTAINER_NAME quay.io/confidential-containers/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ github.sha }} /bin/sh)
-        podvm=$(docker export $CID | tar t | grep podvm)
-        docker cp $CONTAINER_NAME:/$podvm podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}-${{ github.sha }}.qcow2
-        docker rm -f $CONTAINER_NAME
-    - name: Upload Asset
-      uses: softprops/action-gh-release@v1
-      with:
-        files: podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}-${{ github.sha }}.qcow2
