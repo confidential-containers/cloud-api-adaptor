@@ -1,2 +1,2 @@
-build: 
+image:
 	hack/build.sh
