@@ -8,7 +8,7 @@ ARG BUILDER_IMG="quay.io/confidential-containers/podvm-builder-ubuntu"
 
 FROM ${BUILDER_IMG} AS podvm_builder
 
-ARG CLOUD_PROVIDER=libvirt
+ARG CLOUD_PROVIDER
 ARG PODVM_DISTRO=ubuntu
 ARG AA_KBC=offline_fs_kbc
 # If not provided, uses system architecture
