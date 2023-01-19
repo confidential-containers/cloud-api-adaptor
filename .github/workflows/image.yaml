@@ -8,10 +8,13 @@ on:
   push:
     branches:
       - 'staging'
+env:
+  go_version: 1.18
+
 jobs:
   build_push_job:
     name: build and push
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -19,20 +22,20 @@ jobs:
           # Please keep this list in alphabetical order.
           - aws
           - azure
-          - ibmcloud
           - libvirt
           - vsphere
-        runner:
-          - ubuntu-latest
-        go_version:
-          - 1.18
+        arches:
+          - linux/amd64
+        include:
+          - provider: ibmcloud
+            arches: linux/amd64,linux/s390x
     steps:
       - name: Checkout the code
         uses: actions/checkout@v3
-      - name: Setup Golang version ${{ matrix.go_version }}
+      - name: Setup Golang version ${{ env.go_version }}
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ matrix.go_version }}
+          go-version: ${{ env.go_version }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Install build dependencies
@@ -48,4 +51,4 @@ jobs:
           password: ${{ secrets.QUAY_PASSWORD }}
       - name: Build and push image
         run: |
-          make CLOUD_PROVIDER=${{ matrix.provider }} image
+          ARCHES=${{matrix.arches}} make CLOUD_PROVIDER=${{ matrix.provider }} image
