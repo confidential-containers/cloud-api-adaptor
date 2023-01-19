@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-.PHONY: binaries build
+.PHONY: binaries image
 
 .PHONY: binaries
 binaries:
 	hack/binaries.sh
 
 .PHONY: image
-build: 
+image: 
 	hack/build.sh
 
