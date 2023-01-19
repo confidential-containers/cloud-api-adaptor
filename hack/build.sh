@@ -10,7 +10,7 @@ registry="${registry:-quay.io/confidential-containers}"
 name="cloud-api-adaptor-${CLOUD_PROVIDER}"
 tag=$(date +%Y%m%d%H%M%s)
 
-supported_arches="linux/amd64,linux/s390x"
+supported_arches=${ARCHES:-"linux/amd64,linux/s390x"}
 
 function build_caa_payload() {
 	pushd "${script_dir}/.."
