@@ -155,6 +155,7 @@ func CreateInstance(ctx context.Context, vim25Client *vim25.Client, vmcfg *Confi
 	// TODO for DRS ResourcePoolOrDefault()
 	pool, err := finder.DefaultResourcePool(ctx)
 	if err != nil {
+		logger.Printf("Cannot find default resource pool error: %s", err)
 		return nil, err
 	}
 	poolref := types.NewReference(pool.Reference())
