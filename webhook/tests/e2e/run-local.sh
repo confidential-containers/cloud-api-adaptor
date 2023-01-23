@@ -93,8 +93,8 @@ main() {
 
 	pushd "$webhook_dir" >/dev/null
 
-	echo "INFO: build the webhook"
-	make docker-build
+	echo "INFO: build the webhook and load into docker"
+	make docker-load
 
 	echo "INFO: load the $IMG image into the cluster"
 	make kind-load

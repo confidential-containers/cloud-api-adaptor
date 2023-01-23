@@ -19,6 +19,9 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+# Currently supported architectures are amd64/x86_64 and s390x
+ARCHES ?= amd64,s390x
+
 .PHONY: all
 all: build
 
@@ -76,12 +79,16 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 .PHONY: docker-build
-docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+docker-build: test ## Build multi-arch docker image with the manager.
+	docker buildx build --platform $(ARCHES) -t ${IMG} .
+
+.PHONY: docker-load
+docker-load: ## Load the docker image of current platform only
+	docker buildx build -t ${IMG} --load .
 
 .PHONY: docker-push
-docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+docker-push: ## Push multi-arch docker image with the manager.
+	docker buildx build --platform $(ARCHES) -t ${IMG} --push .
 
 ##@ Deployment
 
