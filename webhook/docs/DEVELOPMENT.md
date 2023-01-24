@@ -30,10 +30,10 @@ kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.9
 ```
 
 ### Running on the cluster
-1. Build and push your image to the location specified by `IMG`:
+1. Build and push an image for your current architecture to the location specified by `IMG`:
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/<user>/peer-pods-webhook:<tag>
+make docker-load docker-push IMG=<some-registry>/<user>/peer-pods-webhook:<tag>
 ```
 
 2. Deploy the controller to the cluster with the image specified by `IMG`:
