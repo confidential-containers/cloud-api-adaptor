@@ -39,8 +39,8 @@ secretGenerator:
   - AZURE_TENANT_ID="" #set
 - name: ssh-key-secret
   namespace: confidential-containers-system
-  files: # key generation example: ssh-keygen -f ./id_rsa -N "" && sudo cat id_rsa.pub >> /root/.ssh/authorized_keys
-  #- id_rsa # set - path to private key
+  files: # key generation example: ssh-keygen -f ./id_rsa -N ""
+  #- id_rsa.pub # set - path to public key
 
 patchesStrategicMerge:
   #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
