@@ -10,7 +10,7 @@ registry="${registry:-quay.io/confidential-containers}"
 name="cloud-api-adaptor-${CLOUD_PROVIDER}"
 tag=$(date +%Y%m%d%H%M%s)
 
-supported_arches=${ARCHES:-"linux/amd64,linux/s390x"}
+supported_arches=${ARCHES:-"linux/amd64"}
 
 function build_caa_payload() {
 	pushd "${script_dir}/.."
@@ -19,6 +19,7 @@ function build_caa_payload() {
 		--build-arg CLOUD_PROVIDER="${CLOUD_PROVIDER}" \
 		-f Dockerfile \
 		-t "${registry}/${name}:${tag}" \
+		-t "${registry}/${name}:latest" \
 		--push \
 		.
 
