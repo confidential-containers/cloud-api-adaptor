@@ -29,11 +29,13 @@ ifeq ($(PODVM_DISTRO),ubuntu)
 	-var cloud_image_url=${UBUNTU_IMAGE_URL} \
 	-var cloud_image_checksum=${UBUNTU_IMAGE_CHECKSUM})
 ifneq ($(HOST_ARCH),$(ARCH))
-	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH} \
-	-var machine_type=${QEMU_MACHINE_TYPE_${ARCH}} \
+	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}} \
 	-var boot_wait=300s)
+ifndef QEMU_BINARY
+	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
 endif
-	$(eval OPTS +=  qcow2/ubuntu)
+
+endif
 else ifeq ($(PODVM_DISTRO),rhel)
 ifndef RHEL_IMAGE_URL
 	$(error "RHEL_IMAGE_URL is not defined")
@@ -44,7 +46,7 @@ endif
 	$(eval OPTS := -var qemu_image_name=${IMAGE_FILE} \
 	-var cloud_image_url=${RHEL_IMAGE_URL} \
 	-var disk_size=11144 \
-	-var cloud_image_checksum=${RHEL_IMAGE_CHECKSUM} qcow2/rhel)
+	-var cloud_image_checksum=${RHEL_IMAGE_CHECKSUM})
 
 else ifeq ($(PODVM_DISTRO),centos)
 ifndef CENTOS_IMAGE_URL
@@ -55,10 +57,14 @@ ifndef CENTOS_IMAGE_CHECKSUM
 endif
 	$(eval OPTS := -var qemu_image_name=${IMAGE_FILE} \
 	-var cloud_image_url=${CENTOS_IMAGE_URL} \
-	-var cloud_image_checksum=${CENTOS_IMAGE_CHECKSUM} qcow2/centos)
+	-var cloud_image_checksum=${CENTOS_IMAGE_CHECKSUM})
 
 else
 	$(error PODVM_DISTRO is invalid or not defined)
+endif
+
+ifdef QEMU_BINARY
+	$(eval OPTS += -var qemu_binary=${QEMU_BINARY} )
 endif
 
 $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
@@ -66,7 +72,7 @@ $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
 	rm -f cloud-init.img
 	cloud-localds cloud-init.img qcow2/userdata.cfg
 	mkdir -p toupload
-	packer build ${OPTS}
+	packer build ${OPTS} qcow2/$(PODVM_DISTRO)
 	rm -fr toupload
 	rm -f cloud-init.img
 
