@@ -29,6 +29,8 @@ RUN dnf config-manager --set-enabled powertools && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -f go${GO_VERSION}.linux-amd64.tar.gz
 
+# set a correspond qemu-system-* named link to qemu-kvm
+RUN ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-$(uname -m)
 
 # cloud-utils package is not available for centos.
 RUN git clone https://github.com/canonical/cloud-utils
