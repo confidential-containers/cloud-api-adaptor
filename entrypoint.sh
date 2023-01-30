@@ -40,7 +40,7 @@ exec cloud-api-adaptor-aws aws \
 }
 
 azure() {
-test_vars AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID
+test_vars AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID AZURE_VNET_NAME AZURE_SUBNET_NAME AZURE_NSG_NAME
 
 set -x
 exec cloud-api-adaptor-azure azure \
@@ -49,8 +49,8 @@ exec cloud-api-adaptor-azure azure \
   -instance-size "${AZURE_INSTANCE_SIZE}" \
   -resourcegroup "${AZURE_RESOURCE_GROUP}" \
   -vxlan-port 8472 \
-  -subnetid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Network/virtualNetworks/${AZURE_VM_NAME}VNET/subnets/${AZURE_VM_NAME}Subnet" \
-  -securitygroupid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Network/networkSecurityGroups/${AZURE_VM_NAME}NSG" \
+  -subnetid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Network/virtualNetworks/${AZURE_VNET_NAME}VNET/subnets/${AZURE_SUBNET_NAME}Subnet" \
+  -securitygroupid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Network/networkSecurityGroups/${AZURE_NSG_NAME}NSG" \
   -imageid "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Compute/images/${AZURE_IMAGE}" \
   ${optionals}
 }
