@@ -33,13 +33,17 @@ func NewGovmomiClient(vmcfg Config) (*govmomi.Client, error) {
 		return nil, err
 	}
 
-	// TODO make credentials secure
 	urlinfo.User = url.UserPassword(vmcfg.UserName, vmcfg.Password)
 
-	soapClient := soap.NewClient(urlinfo, vmcfg.Insecure)
+	insecure := vmcfg.Thumbprint == ""
+	soapClient := soap.NewClient(urlinfo, insecure)
+	if !insecure {
+		soapClient.SetThumbprint(urlinfo.Host, vmcfg.Thumbprint)
+	}
 
 	vim25Client, err := vim25.NewClient(ctx, soapClient)
 	if err != nil {
+		logger.Printf("Error creating vcenter session for user %s: error %s", vmcfg.UserName, err)
 		return nil, err
 	}
 
@@ -48,6 +52,7 @@ func NewGovmomiClient(vmcfg Config) (*govmomi.Client, error) {
 	manager := session.NewManager(vim25Client)
 	err = manager.Login(ctx, urlinfo.User)
 	if err != nil {
+		logger.Printf("Error logging in user %s: error %s", vmcfg.UserName, err)
 		return nil, err
 	}
 

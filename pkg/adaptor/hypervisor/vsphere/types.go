@@ -10,7 +10,7 @@ type Config struct {
 	VcenterURL   string
 	UserName     string
 	Password     string
-	Insecure     bool
+	Thumbprint   string
 	Datacenter   string
 	Vcluster     string
 	Datastore    string
@@ -25,5 +25,5 @@ type createInstanceOutput struct {
 }
 
 func (c Config) Redact() Config {
-	return *util.RedactStruct(&c, "UserName", "Password").(*Config)
+	return *util.RedactStruct(&c, "UserName", "Password", "Thumbprint").(*Config)
 }

@@ -159,7 +159,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&vspherecfg.VcenterURL, "vcenter-url", "", "URL of vCenter instance to connect to")
 			flags.StringVar(&vspherecfg.UserName, "user-name", "", "Username, defaults to `GOVC_USERNAME`")
 			flags.StringVar(&vspherecfg.Password, "password", "", "Password, defaults to `GOVC_PASSWORD`")
-			flag.BoolVar(&vspherecfg.Insecure, "insecure", true, "Disable certificate verification")
+			// GOVC_THUMBPRINT
+			flags.StringVar(&vspherecfg.Thumbprint, "thumbprint", "", "SHA1 thumbprint of the vcenter certificate. Enable verification of certificate chain and host name.")
 
 			flags.StringVar(&vspherecfg.Template, "template", "podvm-template", "vCenter template to deploy")
 			// GOVC_DATACENTER
@@ -185,6 +186,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		})
 		defaultToEnv(&vspherecfg.UserName, "GOVC_USERNAME")
 		defaultToEnv(&vspherecfg.Password, "GOVC_PASSWORD")
+		defaultToEnv(&vspherecfg.Thumbprint, "GOVC_THUMBPRINT")
 
 	default:
 		os.Exit(1)
