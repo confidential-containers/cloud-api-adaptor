@@ -421,10 +421,13 @@ func (s *hypervisorService) createNetworkInterface(ctx context.Context, nicName 
 					},
 				},
 			},
-			NetworkSecurityGroup: &armnetwork.SecurityGroup{
-				ID: to.Ptr(s.serviceConfig.SecurityGroupId),
-			},
 		},
+	}
+
+	if s.serviceConfig.SecurityGroupId != "" {
+		parameters.Properties.NetworkSecurityGroup = &armnetwork.SecurityGroup{
+			ID: to.Ptr(s.serviceConfig.SecurityGroupId),
+		}
 	}
 
 	pollerResponse, err := nicClient.BeginCreateOrUpdate(ctx, s.serviceConfig.ResourceGroupName, nicName, parameters, nil)

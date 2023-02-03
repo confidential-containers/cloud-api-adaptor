@@ -19,10 +19,15 @@ configMapGenerator:
   - AZURE_REGION="eastus" #set
   - AZURE_INSTANCE_SIZE="Standard_D8as_v5" #set
   - AZURE_RESOURCE_GROUP="" #set
-  - AZURE_VNET_NAME="" #set
-  - AZURE_SUBNET_NAME="" #set
-  - AZURE_NSG_NAME="" #set
-  - AZURE_IMAGE="" #set
+
+  # /subscriptions/<AZURE_SUBSCRIPTION_ID>/resourceGroups/<AZURE_RESOURCE_GROUP>/providers/Microsoft.Network/virtualNetworks/<AZURE_VNET_NAME>/subnets/<AZURE_SUBNET_NAME>
+  - AZURE_SUBNET_ID="" #set
+
+  # /subscriptions/<AZURE_SUBSCRIPTION_ID>/resourceGroups/<AZURE_RESOURCE_GROUP>/providers/Microsoft.Network/networkSecurityGroups/<AZURE_NSG_NAME>
+  - AZURE_NSG_ID="" #set
+
+  # /subscriptions/<AZURE_SUBSCRIPTION_ID>/resourceGroups/<AZURE_RESOURCE_GROUP>/providers/Microsoft.Compute/images/<AZURE_IMAGE>
+  - AZURE_IMAGE_ID="" #set
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
 
