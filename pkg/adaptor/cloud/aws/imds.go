@@ -1,13 +1,15 @@
-//go:build aws
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
 
 package aws
 
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"io"
 	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 )
 
 type MetadataRetriever struct {
