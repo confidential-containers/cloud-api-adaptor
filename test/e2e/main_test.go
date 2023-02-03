@@ -82,7 +82,18 @@ func TestMain(m *testing.M) {
 
 	// Run *once* after the tests.
 	testEnv.Finish(func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-		// TODO: implement me.
+		if shouldProvisionCluster {
+			if err = provisioner.DeleteCluster(ctx, cfg); err != nil {
+				return ctx, err
+			}
+
+			if err = provisioner.DeleteVPC(ctx, cfg); err != nil {
+				return ctx, nil
+			}
+		} else {
+			// TODO: if cluster is not provisioned then we should remove the CAA installation.
+		}
+
 		return ctx, nil
 	})
 
