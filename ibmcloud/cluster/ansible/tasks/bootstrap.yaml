@@ -1,0 +1,18 @@
+#
+# (C) Copyright IBM Corp. 2023.
+# SPDX-License-Identifier: Apache-2.0
+#
+
+---
+- name: "Install required packages on Ubuntu"
+  apt:
+    update_cache: true
+    name: "{{ item }}"
+    state: latest
+  with_items:
+      - unzip
+      - tar
+      - apt-transport-https
+      - libbtrfs-dev
+      - libseccomp2
+      - util-linux
