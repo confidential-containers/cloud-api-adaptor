@@ -1,8 +1,12 @@
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package aws
 
 import (
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 	"strings"
+
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 )
 
 type securityGroupIds []string
