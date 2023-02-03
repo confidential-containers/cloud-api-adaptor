@@ -1,0 +1,29 @@
+#
+# (C) Copyright IBM Corp. 2023.
+# SPDX-License-Identifier: Apache-2.0
+#
+
+---
+- name: "Add gpg key "
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: "Add kubernetes source list "
+  apt_repository:
+    repo: "deb http://packages.cloud.google.com/apt/ kubernetes-xenial main"
+    state: present
+    filename: "kubernetes"
+
+- name: "Update the repository cache "
+  apt:
+    update_cache: yes
+
+- name: "Install kubelet, kubeadm, kubectl "
+  apt: name={{item}} state=present
+  with_items:
+    - kubelet
+    - kubeadm
+    - kubectl
+    - kubernetes-cni
+    - cri-tools
