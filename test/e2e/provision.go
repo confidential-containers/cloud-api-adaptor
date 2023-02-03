@@ -22,6 +22,8 @@ import (
 type CloudProvision interface {
 	CreateCluster(ctx context.Context, cfg *envconf.Config) error
 	CreateVPC(ctx context.Context, cfg *envconf.Config) error
+	DeleteCluster(ctx context.Context, cfg *envconf.Config) error
+	DeleteVPC(ctx context.Context, cfg *envconf.Config) error
 }
 
 type PeerPods struct {

@@ -76,6 +76,26 @@ func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config)
 	return nil
 }
 
+func (l *LibvirtProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
+	cmd := exec.Command("/bin/bash", "-c", "./kcli_cluster.sh delete")
+	cmd.Dir = l.wd
+	cmd.Stdout = os.Stdout
+	// TODO: better handle stderr. Messages getting out of order.
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
+	// TODO: delete the resources created on CreateVPC() that currently only checks
+	// the Libvirt's storage and network exist.
+	return nil
+}
+
 func GetCloudProvisioner() (CloudProvision, error) {
 	return NewLibvirtProvisioner("default", "default")
 }
