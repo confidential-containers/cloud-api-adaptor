@@ -20,6 +20,12 @@ You can instruct the tool to provision a test environment though, as shown below
 $ TEST_E2E_PROVISION=yes CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
+The `TEST_E2E_PODVM_IMAGE` is an optional variable which specifies the path to the podvm qcow2 image. If it is set then the image should be uploaded to the VPC storage. The following command, as an example, instructs the tool to upload `path/to/podvm-base.qcow2` after the provisioning of the test environment:
+
+```
+$ TEST_E2E_PROVISION=yes TEST_E2E_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
+```
+
 # Adding support for a new cloud provider
 
 In order to add a test pipeline for a new cloud provider, you will need to implement some

@@ -38,14 +38,21 @@ func TestMain(m *testing.M) {
 		shouldProvisionCluster = true
 	}
 
-	if shouldProvisionCluster {
+	// The TEST_E2E_PODVM_IMAGE is an option variable which specifies the path
+	// to the podvm qcow2 image. If it set then the image should be uploaded to
+	// the VPC images storage.
+	podvmImage := os.Getenv("TEST_E2E_PODVM_IMAGE")
+
+	if shouldProvisionCluster || podvmImage != "" {
 		// Get an provisioner instance for the cloud provider.
 		provisioner, err = GetCloudProvisioner()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-	} else {
+	}
+
+	if !shouldProvisionCluster {
 		// Look for a suitable kubeconfig file in the sequence: --kubeconfig flag,
 		// or KUBECONFIG variable, or $HOME/.kube/config.
 		kubeconfigPath := kconf.ResolveKubeConfigFile()
@@ -63,11 +70,18 @@ func TestMain(m *testing.M) {
 		var err error
 
 		if shouldProvisionCluster {
+			fmt.Println("Cluster provisioning")
 			if err = provisioner.CreateVPC(ctx, cfg); err != nil {
 				return ctx, err
 			}
 
 			if err = provisioner.CreateCluster(ctx, cfg); err != nil {
+				return ctx, err
+			}
+		}
+
+		if podvmImage != "" {
+			if err = provisioner.UploadPodvm(podvmImage, ctx, cfg); err != nil {
 				return ctx, err
 			}
 		}
