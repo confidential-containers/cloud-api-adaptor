@@ -16,7 +16,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/azure"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/libvirt"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/registry"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/vsphere"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
 
@@ -37,7 +36,6 @@ type networkConfig struct {
 	VXLANMinID    int
 }
 
-var vspherecfg vsphere.Config
 var azurecfg azure.Config
 var libvirtcfg libvirt.Config
 var hypcfg hypervisor.Config
@@ -135,40 +133,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.IntVar(&cfg.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
 		})
 
-	case "vsphere":
-		cmd.Parse("vsphere", os.Args[1:], func(flags *flag.FlagSet) {
-			flags.StringVar(&vspherecfg.VcenterURL, "vcenter-url", "", "URL of vCenter instance to connect to")
-			flags.StringVar(&vspherecfg.UserName, "user-name", "", "Username, defaults to `GOVC_USERNAME`")
-			flags.StringVar(&vspherecfg.Password, "password", "", "Password, defaults to `GOVC_PASSWORD`")
-			// GOVC_THUMBPRINT
-			flags.StringVar(&vspherecfg.Thumbprint, "thumbprint", "", "SHA1 thumbprint of the vcenter certificate. Enable verification of certificate chain and host name.")
-
-			flags.StringVar(&vspherecfg.Template, "template", "podvm-template", "vCenter template to deploy")
-			// GOVC_DATACENTER
-			flags.StringVar(&vspherecfg.Datacenter, "data-center", "", "vCenter desination datacenter name")
-			// GOVC_CLUSTER
-			flags.StringVar(&vspherecfg.Vcluster, "vcluster-name", "", "vCenter desination cluster name for DRS placement")
-			// GOVC_DATASTORE
-			flags.StringVar(&vspherecfg.Datastore, "data-store", "", "vCenter datastore")
-			// GOVC_RESOURCE_POOL
-			flags.StringVar(&vspherecfg.Resourcepool, "resource-pool", "", "vCenter desination resource pool")
-			// GOVC_FOLDER
-			flags.StringVar(&vspherecfg.Deployfolder, "deploy-folder", "", "vCenter vm desintation folder relative to the vm inventory path (your-data-center/vm). \nExample '-deploy-folder peerods' will create or use the existing folder peerpods as the \ndeploy-folder in /datacenter/vm/peerpods")
-
-			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
-			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
-			flags.StringVar(&hypcfg.HypProvider, "provider", "vsphere", "Hypervisor provider")
-			flags.StringVar(&hypcfg.CriSocketPath, "cri-runtime-endpoint", "", "cri runtime uds endpoint")
-			flags.StringVar(&hypcfg.PauseImage, "pause-image", "", "pause image to be used for the pods")
-			flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
-			flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
-			flags.IntVar(&cfg.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
-			flags.IntVar(&cfg.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
-		})
-		defaultToEnv(&vspherecfg.UserName, "GOVC_USERNAME")
-		defaultToEnv(&vspherecfg.Password, "GOVC_PASSWORD")
-		defaultToEnv(&vspherecfg.Thumbprint, "GOVC_THUMBPRINT")
-
 	default:
 		os.Exit(1)
 	}
@@ -181,8 +145,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		hypervisorServer = registry.NewServer(hypcfg, libvirtcfg, workerNode, daemon.DefaultListenPort)
 	} else if hypcfg.HypProvider == "azure" {
 		hypervisorServer = registry.NewServer(hypcfg, azurecfg, workerNode, daemon.DefaultListenPort)
-	} else if hypcfg.HypProvider == "vsphere" {
-		hypervisorServer = registry.NewServer(hypcfg, vspherecfg, workerNode, daemon.DefaultListenPort)
 	}
 
 	return cmd.NewStarter(hypervisorServer), nil

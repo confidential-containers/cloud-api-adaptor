@@ -1,8 +1,9 @@
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package vsphere
 
 import (
-	"net"
-
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 )
 
@@ -16,12 +17,7 @@ type Config struct {
 	Datastore    string
 	Resourcepool string
 	Deployfolder string
-	Template     string // template will be hardcoded podvm-template for now
-}
-
-type createInstanceOutput struct {
-	uuid string
-	ips  []net.IP
+	Template     string
 }
 
 func (c Config) Redact() Config {
