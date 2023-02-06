@@ -24,6 +24,7 @@ type CloudProvision interface {
 	CreateVPC(ctx context.Context, cfg *envconf.Config) error
 	DeleteCluster(ctx context.Context, cfg *envconf.Config) error
 	DeleteVPC(ctx context.Context, cfg *envconf.Config) error
+	UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error
 }
 
 type PeerPods struct {
