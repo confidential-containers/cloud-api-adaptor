@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CLOUD_PROVIDER=${1:-$CLOUD_PROVIDER}
-CRI_RUNTIME_ENDPOINT=${CRI_RUNTIME_ENDPOINT:-/run/peerpod/cri-runtime.sock}
+CRI_RUNTIME_ENDPOINT=${CRI_RUNTIME_ENDPOINT:-/run/cri-runtime.sock}
 optionals+=""
 
 # Ensure you add a space before the closing quote (") when updating the optionals
