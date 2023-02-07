@@ -3,13 +3,13 @@
 [ "$DEBUG" == 'true' ] && set -x
 
 ARGC=$#
-if [ $ARGC -ne 3 ]; then
-    echo "USAGE: $(basename $0) <Image Path> <S3 Bucket Name> <Region>"
+if [ $ARGC -ne 3 ] && [ $ARGC -ne 2 ]; then
+    echo "USAGE: $(basename $0) <Image Path> <S3 Bucket Name> [Region]"
     exit 1
 fi
 IMAGE_FILE_PATH=$1
 BUCKET_NAME=$2
-REGION=$3
+REGION=${3:-$AWS_REGION}
 
 IMAGE_NAME="$(basename -- ${IMAGE_FILE_PATH})"
 AMI_NAME="${IMAGE_NAME%.*}"
@@ -23,6 +23,7 @@ ROLE_POLICY_JSON_FILE="${TMPDIR}/role-policy.json"
 BUCKET_POLICY_JSON_FILE="${TMPDIR}/bucket-policy.json"
 
 pre_checks() {
+	[[ $REGION ]] || { echo "Region not found, either add as argument to the command or set AWS_REGION" 1>&2 ; exit 1; }
 	[[ -x "$(command -v jq)" ]] || { echo "jq is not installed" 1>&2 ; exit 1; }
 	[[ -x "$(command -v aws)" ]] || { echo "aws is not installed" 1>&2 ; exit 1; }
 	[[ "$FORMAT" == "raw"  ]] || { echo "image must be \"raw\", convert with: \"qemu-img convert ${IMAGE_NAME} ${AMI_NAME}.raw\"" 1>&2 ; exit 1; }
@@ -54,7 +55,7 @@ set_bucket_policies() {
 }
 EOF
 
-	aws iam create-role --role-name vmimport --assume-role-policy-document "file://${TRUST_POLICY_JSON_FILE}"
+	aws iam create-role --role-name vmimport --assume-role-policy-document "file://${TRUST_POLICY_JSON_FILE}" --region ${REGION}
 
 	cat <<EOF > "${ROLE_POLICY_JSON_FILE}"
 {
@@ -74,7 +75,7 @@ EOF
 }
 EOF
 
-	aws iam put-role-policy --role-name vmimport --policy-name vmimport --policy-document "file://${ROLE_POLICY_JSON_FILE}"
+	aws iam put-role-policy --role-name vmimport --policy-name vmimport --policy-document "file://${ROLE_POLICY_JSON_FILE}" --region ${REGION}
 
 	cat <<EOF > "${BUCKET_POLICY_JSON_FILE}"
 {
@@ -89,7 +90,7 @@ EOF
 }
 EOF
 
-	aws s3api put-bucket-policy --bucket ${BUCKET_NAME} --policy "file://${BUCKET_POLICY_JSON_FILE}"
+	aws s3api put-bucket-policy --bucket ${BUCKET_NAME} --policy "file://${BUCKET_POLICY_JSON_FILE}" --region ${REGION}
 
 }
 
@@ -114,14 +115,14 @@ import_snapshot_n_wait() {
 }
 EOF
 
-	IMPORT_TASK_ID=$(aws ec2 import-snapshot --disk-container "file://${IMAGE_IMPORT_JSON_FILE}" --output json | jq -r '.ImportTaskId')
+	IMPORT_TASK_ID=$(aws ec2 import-snapshot --disk-container "file://${IMAGE_IMPORT_JSON_FILE}" --output json --region ${REGION} | jq -r '.ImportTaskId')
 
-	IMPORT_STATUS=$(aws ec2 describe-import-snapshot-tasks --import-task-ids $IMPORT_TASK_ID --output json | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.Status')
+	IMPORT_STATUS=$(aws ec2 describe-import-snapshot-tasks --import-task-ids $IMPORT_TASK_ID --output json --region ${REGION} | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.Status')
 	x=0
 	while [ "$IMPORT_STATUS" = "active" ] && [ $x -lt 120 ]
 	do
-		IMPORT_STATUS=$(aws ec2 describe-import-snapshot-tasks --import-task-ids $IMPORT_TASK_ID --output json | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.Status')
-		IMPORT_STATUS_MSG=$(aws ec2 describe-import-snapshot-tasks --import-task-ids $IMPORT_TASK_ID --output json | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.StatusMessage')
+		IMPORT_STATUS=$(aws ec2 describe-import-snapshot-tasks --import-task-ids $IMPORT_TASK_ID --output json --region ${REGION} | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.Status')
+		IMPORT_STATUS_MSG=$(aws ec2 describe-import-snapshot-tasks --import-task-ids $IMPORT_TASK_ID --output json --region ${REGION} | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.StatusMessage')
 		echo "Import Status: ${IMPORT_STATUS} / ${IMPORT_STATUS_MSG}"
 		x=$(( $x + 1 ))
 		sleep 15
@@ -134,9 +135,9 @@ EOF
 		echo "Import Failed, exiting"; exit 2;
 	fi
 
-	SNAPSHOT_ID=$(aws ec2 describe-import-snapshot-tasks --import-task-ids $IMPORT_TASK_ID --output json | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.SnapshotId')
+	SNAPSHOT_ID=$(aws ec2 describe-import-snapshot-tasks --import-task-ids $IMPORT_TASK_ID --output json --region ${REGION} | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.SnapshotId')
 
-	aws ec2 wait snapshot-completed --snapshot-ids $SNAPSHOT_ID || exit $?
+	aws ec2 wait snapshot-completed --snapshot-ids $SNAPSHOT_ID --region ${REGION} || exit $?
 }
 
 register_image() {
@@ -161,7 +162,7 @@ register_image() {
 }
 EOF
 
-	AMI_ID=$(aws ec2 register-image --name ${AMI_NAME} --cli-input-json="file://${AMI_REGISTER_JSON_FILE}" --output json | jq -r '.ImageId')
+	AMI_ID=$(aws ec2 register-image --name ${AMI_NAME} --cli-input-json="file://${AMI_REGISTER_JSON_FILE}" --output json --region ${REGION} | jq -r '.ImageId')
 	echo "AMI name: ${AMI_NAME}"
 	echo "AMI ID: ${AMI_ID}"
 }
