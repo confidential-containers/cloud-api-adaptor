@@ -51,7 +51,7 @@ exec cloud-api-adaptor-azure azure \
   -vxlan-port 8472 \
   -subnetid "${AZURE_SUBNET_ID}" \
   -securitygroupid "${AZURE_NSG_ID}" \
-  -imageid "${AZURE_IMAGE_ID} \
+  -imageid "${AZURE_IMAGE_ID}" \
   ${optionals}
 }
 
