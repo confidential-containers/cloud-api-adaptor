@@ -26,6 +26,8 @@ The `TEST_E2E_PODVM_IMAGE` is an optional variable which specifies the path to t
 $ TEST_E2E_PROVISION=yes TEST_E2E_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
+By default it is given 20 minutes for the entire e2e execution to complete, otherwise the process is preempted. If you need to extend that timeout then export the `TEST_E2E_TIMEOUT` variable. For example, `TEST_E2E_TIMEOUT=30m` set the timeout to 30 minutes. See `-timeout` in [go test flags](https://pkg.go.dev/cmd/go#hdr-Testing_flags) for the values accepted.
+
 # Adding support for a new cloud provider
 
 In order to add a test pipeline for a new cloud provider, you will need to implement some
