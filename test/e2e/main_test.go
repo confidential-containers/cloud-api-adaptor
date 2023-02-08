@@ -15,6 +15,7 @@ var (
 	testEnv       env.Environment
 	cloudProvider string
 	provisioner   CloudProvision
+	peerPods      *PeerPods
 )
 
 func TestMain(m *testing.M) {
@@ -87,7 +88,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		peerPods := NewPeerPods(cloudProvider)
+		peerPods = NewPeerPods(cloudProvider)
 		fmt.Println("Deploy Peer Pods")
 		if err = peerPods.Deploy(ctx, cfg); err != nil {
 			return ctx, err
@@ -106,8 +107,10 @@ func TestMain(m *testing.M) {
 				return ctx, nil
 			}
 		} else {
-			// TODO: if cluster is not provisioned then we should remove the CAA installation.
-			fmt.Println("Remove CAA installation manually")
+			fmt.Println("Delete the peer pods installation")
+			if err = peerPods.Delete(ctx, cfg); err != nil {
+				return ctx, err
+			}
 		}
 
 		return ctx, nil

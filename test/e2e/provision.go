@@ -37,23 +37,70 @@ type PeerPods struct {
 	cloudProvider        string               // Cloud provider
 	controllerDeployment *appsv1.Deployment   // Represents the controller manager deployment
 	namespace            string               // The CoCo namespace
+	kustomizeHelper      *KustomizeHelper     // Pointer to the kustomize helper
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
 }
 
 func NewPeerPods(provider string) (p *PeerPods) {
 	namespace := "confidential-containers-system"
+	overlayDir := path.Join("../../install/overlays", provider)
+
 	return &PeerPods{
 		caaDaemonSet:         &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset-" + provider, Namespace: namespace}},
 		ccDaemonSet:          &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-daemon-install", Namespace: namespace}},
 		cloudProvider:        provider,
 		controllerDeployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-controller-manager", Namespace: namespace}},
 		namespace:            namespace,
+		kustomizeHelper:      &KustomizeHelper{configDir: overlayDir},
 		runtimeClass:         &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata", Namespace: ""}},
 	}
 }
 
+// Deletes the peer pods installation including the controller manager.
 func (p *PeerPods) Delete(ctx context.Context, cfg *envconf.Config) error {
-	// TODO: implement me.
+	client, err := cfg.NewClient()
+	if err != nil {
+		return err
+	}
+	resources := client.Resources(p.namespace)
+
+	ccPods, err := GetDaemonSetOwnedPods(ctx, cfg, p.ccDaemonSet)
+	if err != nil {
+		return err
+	}
+	caaPods, err := GetDaemonSetOwnedPods(ctx, cfg, p.caaDaemonSet)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Uninstall CoCo and cloud-api-adaptor")
+	if err = p.kustomizeHelper.Delete(ctx, cfg); err != nil {
+		return err
+	}
+
+	for _, pods := range []*corev1.PodList{ccPods, caaPods} {
+		if err != nil {
+			return err
+		}
+		if err = wait.For(conditions.New(resources).ResourcesDeleted(pods), wait.WithTimeout(time.Minute*5)); err != nil {
+			return err
+		}
+	}
+
+	deployments := &appsv1.DeploymentList{Items: []appsv1.Deployment{*p.controllerDeployment}}
+
+	fmt.Println("Uninstall the controller manager")
+	err = decoder.DecodeEachFile(ctx, os.DirFS("../../install/yamls"), "deploy.yaml", decoder.DeleteHandler(resources))
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Wait for the %s deployment be deleted\n", p.controllerDeployment.GetName())
+	if err = wait.For(conditions.New(resources).ResourcesDeleted(deployments),
+		wait.WithTimeout(time.Minute*1)); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -78,9 +125,7 @@ func (p *PeerPods) Deploy(ctx context.Context, cfg *envconf.Config) error {
 	}
 
 	fmt.Println("Install CoCo and cloud-api-adaptor")
-	overlayDir := path.Join("../../install/overlays", p.cloudProvider)
-	kustomizeHelper := &KustomizeHelper{configDir: overlayDir}
-	if err := kustomizeHelper.Apply(ctx, cfg); err != nil {
+	if err := p.kustomizeHelper.Apply(ctx, cfg); err != nil {
 		return err
 	}
 
