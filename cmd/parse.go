@@ -14,12 +14,12 @@ func Parse(programName string, args []string, fn func(flags *flag.FlagSet)) {
 
 	fn(flags)
 
-	if len(args) == 0 {
+	if len(args) == 1 {
 		flags.PrintDefaults()
 		Exit(1)
 	}
 
-	if err := flags.Parse(args); err != nil {
+	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			Exit(0)
 		} else {

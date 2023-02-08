@@ -10,8 +10,6 @@ import (
 	"os"
 	"runtime"
 	"testing"
-
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 )
 
 func captureStdout(t *testing.T, fn func()) string {
@@ -48,7 +46,7 @@ func TestShowVersion(t *testing.T) {
 		ShowVersion(programName)
 	})
 
-	if e, a := fmt.Sprintf("test, version: %s, commit: %s\ngo: %s\n", util.VERSION, util.COMMIT, runtime.Version()), output; e != a {
+	if e, a := fmt.Sprintf("test, version: %s, commit: %s\ngo: %s\n", VERSION, COMMIT, runtime.Version()), output; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
 
@@ -56,7 +54,7 @@ func TestShowVersion(t *testing.T) {
 		ShowVersion(programName)
 	})
 
-	if e, a := fmt.Sprintf("test, version: %s, commit: %s\ngo: %s\n", util.VERSION, util.COMMIT, runtime.Version()), output; e != a {
+	if e, a := fmt.Sprintf("test, version: %s, commit: %s\ngo: %s\n", VERSION, COMMIT, runtime.Version()), output; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
 }
