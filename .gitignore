@@ -25,4 +25,3 @@ settings.auto.pkrvars.hcl
 *.qcow2
 .git-commit
 .git-commit.tmp
-pkg/util/version.go
