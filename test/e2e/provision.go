@@ -141,7 +141,8 @@ func (p *PeerPods) Deploy(ctx context.Context, cfg *envconf.Config) error {
 
 		if err = wait.For(conditions.New(resources).ResourceMatch(ds, func(object k8s.Object) bool {
 			ds = object.(*appsv1.DaemonSet)
-			return ds.Status.NumberAvailable > 0
+
+			return ds.Status.CurrentNumberScheduled > 0
 		}), wait.WithTimeout(time.Second*20)); err != nil {
 			return err
 		}
