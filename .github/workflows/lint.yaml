@@ -23,6 +23,10 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go_version }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libvirt-dev
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
