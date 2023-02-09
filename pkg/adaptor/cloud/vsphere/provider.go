@@ -293,3 +293,7 @@ func (p *vsphereProvider) DeleteInstance(ctx context.Context, instanceID string)
 
 	return nil
 }
+
+func (p *vsphereProvider) Teardown() error {
+	return nil
+}

@@ -37,6 +37,10 @@ func (p *mockProvider) DeleteInstance(ctx context.Context, instanceID string) er
 	return nil
 }
 
+func (p *mockProvider) Teardown() error {
+	return nil
+}
+
 type mockProxy struct {
 	socketPath string
 	readyCh    chan struct{}

@@ -264,3 +264,7 @@ func (p *azureProvider) DeleteInstance(ctx context.Context, instanceID string) e
 
 	return nil
 }
+
+func (p *azureProvider) Teardown() error {
+	return nil
+}

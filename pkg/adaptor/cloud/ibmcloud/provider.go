@@ -206,3 +206,7 @@ func (p *ibmcloudProvider) DeleteInstance(ctx context.Context, instanceID string
 	logger.Printf("deleted an instance %s", instanceID)
 	return nil
 }
+
+func (p *ibmcloudProvider) Teardown() error {
+	return nil
+}

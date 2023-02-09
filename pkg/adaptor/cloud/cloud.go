@@ -35,6 +35,7 @@ var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgpre
 type Provider interface {
 	CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator) (instance *Instance, err error)
 	DeleteInstance(ctx context.Context, instanceID string) error
+	Teardown() error
 }
 
 type Instance struct {
@@ -46,6 +47,7 @@ type Instance struct {
 type Service interface {
 	pb.HypervisorService
 	GetInstanceID(ctx context.Context, podNamespace, podName string, wait bool) (string, error)
+	Teardown() error
 }
 
 type cloudService struct {
@@ -124,6 +126,10 @@ func NewService(provider Provider, proxyFactory proxy.Factory, workerNode podnet
 	s.cond = sync.NewCond(&s.mutex)
 
 	return s
+}
+
+func (s *cloudService) Teardown() error {
+	return s.provider.Teardown()
 }
 
 func (s *cloudService) setInstance(sid sandboxID, instanceID, instanceName string) error {

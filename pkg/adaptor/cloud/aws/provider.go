@@ -169,3 +169,7 @@ func (p *awsProvider) DeleteInstance(ctx context.Context, instanceID string) err
 	return nil
 
 }
+
+func (p *awsProvider) Teardown() error {
+	return nil
+}
