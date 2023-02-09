@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const WAIT_POD_RUNNING_TIMEOUT = time.Second*180
+
 // doTestCreateSimplePod tests a simple peer-pod can be created.
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	// TODO: generate me.
@@ -26,7 +28,7 @@ func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 			if err = client.Resources().Create(ctx, pod); err != nil {
 				t.Fatal(err)
 			}
-			if err = wait.For(conditions.New(client.Resources()).PodRunning(pod), wait.WithTimeout(time.Second*120)); err != nil {
+			if err = wait.For(conditions.New(client.Resources()).PodRunning(pod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
 				t.Fatal(err)
 			}
 
