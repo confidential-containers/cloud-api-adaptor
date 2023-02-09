@@ -32,6 +32,12 @@ func TestMain(m *testing.M) {
 	// unless it is running with an in-cluster configuration.
 	testEnv = env.New()
 
+	// TEST_E2E_TEARDOWN is an option variable which specifies whether the teardown code path
+	// should run or not.
+	shouldTeardown := true
+	if os.Getenv("TEST_E2E_TEARDOWN") == "no" {
+		shouldTeardown = false
+	}
 	// In case TEST_E2E_PROVISION is exported then it will try to provision the test environment
 	// in the cloud provider. Otherwise, assume the developer did setup the environment and it will
 	// look for a suitable kubeconfig file.
@@ -98,6 +104,9 @@ func TestMain(m *testing.M) {
 
 	// Run *once* after the tests.
 	testEnv.Finish(func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+		if !shouldTeardown {
+			return ctx, nil
+		}
 		if shouldProvisionCluster {
 			if err = provisioner.DeleteCluster(ctx, cfg); err != nil {
 				return ctx, err
