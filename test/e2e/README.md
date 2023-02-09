@@ -28,6 +28,8 @@ $ TEST_E2E_PROVISION=yes TEST_E2E_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_P
 
 By default it is given 20 minutes for the entire e2e execution to complete, otherwise the process is preempted. If you need to extend that timeout then export the `TEST_E2E_TIMEOUT` variable. For example, `TEST_E2E_TIMEOUT=30m` set the timeout to 30 minutes. See `-timeout` in [go test flags](https://pkg.go.dev/cmd/go#hdr-Testing_flags) for the values accepted.
 
+To leave the cluster untouched by the execution finish you should export `TEST_E2E_TEARDOWN=no`, otherwise the framework will attempt to wipe out any resources created. For example, if `TEST_E2E_PROVISION=yes` is used to create a VPC and cluster for testing and `TEST_E2E_TEARDOWN=no` not specified, then at the end of the test the provisioned cluster and VPC, will both be deleted.
+
 # Adding support for a new cloud provider
 
 In order to add a test pipeline for a new cloud provider, you will need to implement some
