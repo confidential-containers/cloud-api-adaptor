@@ -93,3 +93,7 @@ func (p *libvirtProvider) DeleteInstance(ctx context.Context, instanceID string)
 	return nil
 
 }
+
+func (p *libvirtProvider) Teardown() error {
+	return nil
+}

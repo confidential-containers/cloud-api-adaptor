@@ -232,3 +232,7 @@ func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID st
 func (p *mockProvider) DeleteInstance(ctx context.Context, instanceID string) error {
 	return nil
 }
+
+func (p *mockProvider) Teardown() error {
+	return nil
+}

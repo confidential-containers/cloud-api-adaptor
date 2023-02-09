@@ -129,7 +129,8 @@ func (s *server) Shutdown() error {
 	s.stopOnce.Do(func() {
 		close(s.stopCh)
 	})
-	return nil
+
+	return s.cloudService.Teardown()
 }
 
 func (s *server) Ready() chan struct{} {
