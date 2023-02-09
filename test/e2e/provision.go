@@ -3,19 +3,20 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"time"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	nodev1 "k8s.io/api/node/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os"
-	"path"
 	"sigs.k8s.io/e2e-framework/klient/decoder"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
-	"time"
 )
 
 // CloudProvision defines operations to provision the environment on cloud providers.
@@ -91,10 +92,10 @@ func (p *PeerPods) Deploy(ctx context.Context, cfg *envconf.Config) error {
 		// be ready.
 
 		if err = wait.For(conditions.New(resources).ResourceMatch(ds, func(object k8s.Object) bool {
-			ds := object.(*appsv1.DaemonSet)
+			ds = object.(*appsv1.DaemonSet)
 			return ds.Status.NumberAvailable > 0
 		}), wait.WithTimeout(time.Second*20)); err != nil {
-
+			return err
 		}
 		pods, err := GetDaemonSetOwnedPods(ctx, cfg, ds)
 		if err != nil {
@@ -153,7 +154,7 @@ func GetDaemonSetOwnedPods(ctx context.Context, cfg *envconf.Config, daemonset *
 	resources := client.Resources(daemonset.GetNamespace())
 	pods, retPods := &corev1.PodList{}, &corev1.PodList{}
 
-	err = resources.List(context.TODO(), pods)
+	_ = resources.List(context.TODO(), pods)
 	for _, pod := range pods.Items {
 		for _, owner := range pod.OwnerReferences {
 			if owner.Kind == "DaemonSet" && owner.Name == daemonset.Name {

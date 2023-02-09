@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 )
 
-//TODO: Use IAM role
+// TODO: Use IAM role
 func NewEC2Client(cloudCfg Config) (*ec2.Client, error) {
 
 	var cfg aws.Config
