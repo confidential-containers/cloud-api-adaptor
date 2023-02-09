@@ -1,5 +1,7 @@
 //go:build libvirt
-// +build libvirt
+
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
 
 package libvirt
 
@@ -10,11 +12,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	libvirt "libvirt.org/go/libvirt"
-	libvirtxml "libvirt.org/go/libvirtxml"
 	"strconv"
 	"strings"
 	"time"
+
+	libvirt "libvirt.org/go/libvirt"
+	libvirtxml "libvirt.org/go/libvirtxml"
 )
 
 // ErrVolumeNotFound is returned when a domain is not found

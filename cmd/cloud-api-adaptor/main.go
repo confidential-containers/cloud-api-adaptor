@@ -12,9 +12,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/cmd"
 	"github.com/confidential-containers/cloud-api-adaptor/cmd/cloud-api-adaptor/cloudmgr"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/libvirt"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/hypervisor/registry"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
 
@@ -35,13 +32,10 @@ type networkConfig struct {
 	VXLANMinID    int
 }
 
-var libvirtcfg libvirt.Config
-var hypcfg hypervisor.Config
-
 func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 	if len(os.Args) < 2 {
-		fmt.Printf("%s aws|azure|ibmcloud|libvirt <options>\n", os.Args[0])
+		fmt.Printf("%s aws|azure|ibmcloud|libvirt|vsphere <options>\n", os.Args[0])
 		cmd.Exit(1)
 	}
 
@@ -83,46 +77,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		return cmd.NewStarter(server), nil
 	}
 
-	// TODO: following lines will be removed when refactoring is done
-
-	switch os.Args[1] {
-
-	case "libvirt":
-		cmd.Parse("libvirt", os.Args[1:], func(flags *flag.FlagSet) {
-			flags.StringVar(&libvirtcfg.URI, "uri", "qemu:///system", "libvirt URI")
-			flags.StringVar(&libvirtcfg.PoolName, "pool-name", "default", "libvirt storage pool")
-			flags.StringVar(&libvirtcfg.NetworkName, "network-name", "default", "libvirt network pool")
-			flags.StringVar(&libvirtcfg.DataDir, "data-dir", "/var/lib/libvirt/images", "libvirt storage dir")
-			flags.StringVar(&hypcfg.SocketPath, "socket", hypervisor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
-			flags.StringVar(&hypcfg.PodsDir, "pods-dir", hypervisor.DefaultPodsDir, "base directory for pod directories")
-			flags.StringVar(&hypcfg.HypProvider, "provider", "libvirt", "Hypervisor provider")
-			flags.StringVar(&hypcfg.CriSocketPath, "cri-runtime-endpoint", "", "cri runtime uds endpoint")
-			flags.StringVar(&hypcfg.PauseImage, "pause-image", "", "pause image to be used for the pods")
-			flags.StringVar(&cfg.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
-			flags.StringVar(&cfg.HostInterface, "host-interface", "", "Host Interface")
-			flags.IntVar(&cfg.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
-			flags.IntVar(&cfg.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
-		})
-
-	default:
-		os.Exit(1)
-	}
-
-	workerNode := podnetwork.NewWorkerNode(cfg.TunnelType, cfg.HostInterface, cfg.VXLANPort, cfg.VXLANMinID)
-
-	var hypervisorServer hypervisor.Server
-
-	if hypcfg.HypProvider == "libvirt" {
-		hypervisorServer = registry.NewServer(hypcfg, libvirtcfg, workerNode, daemon.DefaultListenPort)
-	}
-
-	return cmd.NewStarter(hypervisorServer), nil
-}
-
-func defaultToEnv(field *string, env string) {
-	if *field == "" {
-		*field = os.Getenv(env)
-	}
+	return nil, fmt.Errorf("Unsupported cloud provider: %s", cloudName)
 }
 
 var config cmd.Config = &daemonConfig{}

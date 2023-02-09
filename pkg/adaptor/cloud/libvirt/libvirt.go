@@ -1,5 +1,7 @@
 //go:build libvirt
-// +build libvirt
+
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
 
 package libvirt
 
@@ -7,29 +9,16 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	libvirt "libvirt.org/go/libvirt"
-	libvirtxml "libvirt.org/go/libvirtxml"
 	"log"
 	"net"
 	"os"
 	"os/exec"
 	"strconv"
 	"time"
+
+	libvirt "libvirt.org/go/libvirt"
+	libvirtxml "libvirt.org/go/libvirtxml"
 )
-
-type libvirtClient struct {
-	connection *libvirt.Connect
-
-	// storage pool that holds all volumes
-	pool *libvirt.StoragePool
-	// cache pool's name so we don't have to call failable GetName() method on pool all the time.
-	poolName string
-
-	// libvirt network name
-	networkName string
-
-	dataDir string
-}
 
 // Create a base volume
 // Create qcow2 image with prerequisites
@@ -78,7 +67,7 @@ func createCloudInitISO(v *vmConfig, libvirtClient *libvirtClient) string {
 	return cloudInitIso
 }
 
-func checkInstanceExistsByName(name string, libvirtClient *libvirtClient) (exist bool, err error) {
+func checkDomainExistsByName(name string, libvirtClient *libvirtClient) (exist bool, err error) {
 
 	logger.Printf("Checking if instance (%s) exists", name)
 	domain, err := libvirtClient.connection.LookupDomainByName(name)
@@ -94,7 +83,7 @@ func checkInstanceExistsByName(name string, libvirtClient *libvirtClient) (exist
 
 }
 
-func checkInstanceExistsById(id uint32, libvirtClient *libvirtClient) (exist bool, err error) {
+func checkDomainExistsById(id uint32, libvirtClient *libvirtClient) (exist bool, err error) {
 
 	logger.Printf("Checking if instance (%d) exists", id)
 	domain, err := libvirtClient.connection.LookupDomainById(id)
@@ -133,19 +122,19 @@ func uploadIso(isoFile string, isoVolName string, libvirtClient *libvirtClient) 
 
 }
 
-func CreateInstance(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig) (result *createInstanceOutput, err error) {
+func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig) (result *createDomainOutput, err error) {
 
 	v.cpu = uint(2)
 	v.mem = uint(8)
 	v.rootDiskSize = uint64(10)
 
-	exists, err := checkInstanceExistsByName(v.name, libvirtClient)
+	exists, err := checkDomainExistsByName(v.name, libvirtClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error in checking instance: %s", err)
 	}
 	if exists {
 		logger.Printf("Instance already exists ")
-		return &createInstanceOutput{
+		return &createDomainOutput{
 			instance: v,
 		}, nil
 	}
@@ -284,17 +273,17 @@ func CreateInstance(ctx context.Context, libvirtClient *libvirtClient, v *vmConf
 	}
 
 	logger.Printf("Instance created successfully")
-	return &createInstanceOutput{
+	return &createDomainOutput{
 		instance: v,
 	}, nil
 }
 
-func DeleteInstance(ctx context.Context, libvirtClient *libvirtClient, id string) (err error) {
+func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, id string) (err error) {
 
 	logger.Printf("Deleting instance (%s)", id)
 	idUint, _ := strconv.ParseUint(id, 10, 64)
 	// libvirt API takes uint32
-	exists, err := checkInstanceExistsById(uint32(idUint), libvirtClient)
+	exists, err := checkDomainExistsById(uint32(idUint), libvirtClient)
 	if err != nil {
 		logger.Printf("Unable to check instance (%s)", id)
 		return err
