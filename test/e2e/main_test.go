@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"testing"
+
 	kconf "sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
-	"testing"
 )
 
 var (
@@ -106,6 +107,7 @@ func TestMain(m *testing.M) {
 			}
 		} else {
 			// TODO: if cluster is not provisioned then we should remove the CAA installation.
+			fmt.Println("Remove CAA installation manually")
 		}
 
 		return ctx, nil
