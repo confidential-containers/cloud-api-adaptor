@@ -278,13 +278,7 @@ issues:
     - 'declaration of "(err|ctx)" shadows declaration at'
 
   # Excluding configuration per-path, per-linter, per-text and per-source
-  exclude-rules:
-    - path: pkg/adaptor/hypervisor/registry/aws.go
-      text: 'other declaration of newServer'
-    - path: pkg/adaptor/hypervisor/registry/ibmcloud.go
-      text: '`newServer` redeclared in this block'
-    - path: pkg/adaptor/hypervisor/registry/libvirt.go
-      text: '`newServer` redeclared in this block'
+  #exclude-rules:
     # Exclude some linters from running on tests files.
     #- path: _test\.go
     #  linters:
