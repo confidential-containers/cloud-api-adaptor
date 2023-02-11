@@ -95,35 +95,16 @@ peer-pods-worker-0   Ready    worker                 2m47s   v1.25.3
 
 ## Prepare the Pod VM volume
 
-In order to build the Pod VM without installing the build tools, you can use the Dockerfiles hosted on [../podvm](../podvm) directory to run the entire process inside a container.
-
-To build a Ubuntu VM image, run:
-
-```
-$ cd ../podvm
-$ docker build --no-cache -t podvm_builder -f Dockerfile.podvm_builder .
-$ docker build --no-cache -t podvm_libvirt --build-arg BUILDER_IMG=podvm_builder:latest \
-	--build-arg CLOUD_PROVIDER=libvirt -f Dockerfile.podvm .
-```
-
-The qcow2 image file will be created inside the `podvm_libvirt` image and can be extracted as shown below:
-
-```
-$ podvm_container=$(docker create podvm_libvirt:latest /bin/bash)
-$ file_name=$(docker export ${podvm_container} | tar -t | grep podvm)
-$ docker cp ${podvm_container}:${file_name} podvm.qcow2
-$ docker rm ${podvm_container}
-```
+In order to build the Pod VM without installing the build tools, you can use the Dockerfiles hosted on [../podvm](../podvm) directory to run the entire process inside a container. Refer to [podvm/README.md](../podvm/README.md) for further details. Alternatively you can consume pre-built podvm images as explained [here](../docs/consuming-prebuilt-podvm-images.md).
 
 Next you will need to create a volume on libvirt's system storage and upload the image content. That volume is used by
-the cloud-api-adaptor program to instantiate a new Pod VM. Still on the `image` directory, you should run the following
-commands:
+the cloud-api-adaptor program to instantiate a new Pod VM. Run the following commands:
 
 ```
 $ export IMAGE=<full-path-to-qcow2>
 
-$ virsh vol-create-as --pool default --name podvm-base.qcow2 --capacity 20G --allocation 2G --prealloc-metadata --format qcow2
-$ virsh vol-upload --vol podvm-base.qcow2 $IMAGE --pool default --sparse
+$ virsh -c qemu:///system vol-create-as --pool default --name podvm-base.qcow2 --capacity 20G --allocation 2G --prealloc-metadata --format qcow2
+$ virsh -c qemu:///system vol-upload --vol podvm-base.qcow2 $IMAGE --pool default --sparse
 ```
 
 You should see that the `podvm-base.qcow2` volume was properly created:
