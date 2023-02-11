@@ -47,6 +47,7 @@ WORKDIR /src
 
 ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
 ARG CAA_SRC_BRANCH="staging"
+ARG CAA_SRC_REF=""
 
 ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
 ARG KATA_SRC_BRANCH="CCv0"
@@ -55,7 +56,15 @@ RUN echo $CAA_SRC
 
 RUN echo $CAA_SRC_BRANCH
 
-RUN git clone ${CAA_SRC} -b ${CAA_SRC_BRANCH} cloud-api-adaptor
+RUN echo $CAA_SRC_REF
+
+RUN if [ -z "${CAA_SRC_REF}" ]; then \
+      git clone ${CAA_SRC} -b ${CAA_SRC_BRANCH} cloud-api-adaptor ;\
+    else \
+      git clone ${CAA_SRC} cloud-api-adaptor && cd cloud-api-adaptor && \
+      git fetch origin ${CAA_SRC_REF} && \
+      git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
+    fi
 RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH} kata-containers
 
 
