@@ -62,6 +62,7 @@ ifeq ($(CLOUD_PROVIDER),libvirt)
 else
 	CGO_ENABLED=0 go build -gcflags="-m -l" $(GOFLAGS) -o cloud-api-adaptor ./cmd/cloud-api-adaptor/./... | grep "escapes to heap" || true
 	CGO_ENABLED=0 go build -gcflags="-m -l" $(GOFLAGS) -o agent-protocol-forwarder ./cmd/agent-protocol-forwarder/./... | grep "escapes to heap" || true
+	CGO_ENABLED=0 go build -gcflags="-m -l" $(GOFLAGS) ./... | grep "escapes to heap" || true
 endif
 
 .PHONY: test
