@@ -31,7 +31,7 @@ type CloudProvision interface {
 	UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error
 }
 
-type PeerPods struct {
+type CloudAPIAdaptor struct {
 	caaDaemonSet         *appsv1.DaemonSet    // Represents the cloud-api-adaptor daemonset
 	ccDaemonSet          *appsv1.DaemonSet    // Represents the CoCo installer daemonset
 	cloudProvider        string               // Cloud provider
@@ -41,11 +41,11 @@ type PeerPods struct {
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
 }
 
-func NewPeerPods(provider string) (p *PeerPods) {
+func NewCloudAPIAdaptor(provider string) (p *CloudAPIAdaptor) {
 	namespace := "confidential-containers-system"
 	overlayDir := path.Join("../../install/overlays", provider)
 
-	return &PeerPods{
+	return &CloudAPIAdaptor{
 		caaDaemonSet:         &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset-" + provider, Namespace: namespace}},
 		ccDaemonSet:          &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-daemon-install", Namespace: namespace}},
 		cloudProvider:        provider,
@@ -57,7 +57,7 @@ func NewPeerPods(provider string) (p *PeerPods) {
 }
 
 // Deletes the peer pods installation including the controller manager.
-func (p *PeerPods) Delete(ctx context.Context, cfg *envconf.Config) error {
+func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error {
 	client, err := cfg.NewClient()
 	if err != nil {
 		return err
@@ -105,7 +105,7 @@ func (p *PeerPods) Delete(ctx context.Context, cfg *envconf.Config) error {
 }
 
 // Deploy installs Peer Pods on the cluster.
-func (p *PeerPods) Deploy(ctx context.Context, cfg *envconf.Config) error {
+func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config) error {
 	client, err := cfg.NewClient()
 	if err != nil {
 		return err
@@ -167,7 +167,7 @@ func (p *PeerPods) Deploy(ctx context.Context, cfg *envconf.Config) error {
 	return nil
 }
 
-func (p *PeerPods) DoKustomize(ctx context.Context, cfg *envconf.Config) {
+func (p *CloudAPIAdaptor) DoKustomize(ctx context.Context, cfg *envconf.Config) {
 }
 
 // TODO: convert this into a klient/wait/conditions

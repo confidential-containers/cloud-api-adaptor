@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	testEnv       env.Environment
-	cloudProvider string
-	provisioner   CloudProvision
-	peerPods      *PeerPods
+	testEnv         env.Environment
+	cloudProvider   string
+	provisioner     CloudProvision
+	cloudAPIAdaptor *CloudAPIAdaptor
 )
 
 func TestMain(m *testing.M) {
@@ -94,9 +94,9 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		peerPods = NewPeerPods(cloudProvider)
-		fmt.Println("Deploy Peer Pods")
-		if err = peerPods.Deploy(ctx, cfg); err != nil {
+		cloudAPIAdaptor = NewCloudAPIAdaptor(cloudProvider)
+		fmt.Println("Deploy the Cloud API Adaptor")
+		if err = cloudAPIAdaptor.Deploy(ctx, cfg); err != nil {
 			return ctx, err
 		}
 		return ctx, nil
@@ -116,8 +116,8 @@ func TestMain(m *testing.M) {
 				return ctx, nil
 			}
 		} else {
-			fmt.Println("Delete the peer pods installation")
-			if err = peerPods.Delete(ctx, cfg); err != nil {
+			fmt.Println("Delete the Cloud API Adaptor installation")
+			if err = cloudAPIAdaptor.Delete(ctx, cfg); err != nil {
 				return ctx, err
 			}
 		}
