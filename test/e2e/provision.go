@@ -158,8 +158,9 @@ func (p *PeerPods) Deploy(ctx context.Context, cfg *envconf.Config) error {
 		}
 	}
 
-	fmt.Printf("Check the %s runtimeclass exists\n", p.runtimeClass.GetName())
-	if err = resources.Get(context.TODO(), p.runtimeClass.GetName(), p.runtimeClass.GetNamespace(), p.runtimeClass); err != nil {
+	fmt.Printf("Wait for the %s runtimeclass be created\n", p.runtimeClass.GetName())
+	if err = wait.For(conditions.New(resources).ResourcesFound(&nodev1.RuntimeClassList{Items: []nodev1.RuntimeClass{*p.runtimeClass}}),
+		wait.WithTimeout(time.Second*20)); err != nil {
 		return err
 	}
 
