@@ -75,7 +75,7 @@ func soapKeepAliveHandler(ctx context.Context, c *vim25.Client) func() error {
 	}
 }
 
-func DeleteGovmomiClient(gclient *govmomi.Client) {
+func DeleteGovmomiClient(gclient *govmomi.Client) error {
 
 	glock.Lock()
 
@@ -85,6 +85,8 @@ func DeleteGovmomiClient(gclient *govmomi.Client) {
 	if err != nil {
 		logger.Printf("Vcenter logout failed error: %s", err)
 	}
+
+	return err
 }
 
 func CheckSessionWithRestore(ctx context.Context, vmcfg *Config, gclient *govmomi.Client) error {
