@@ -13,12 +13,23 @@ ARG PODVM_DISTRO=ubuntu
 ARG AA_KBC=offline_fs_kbc
 # If not provided, uses system architecture
 ARG ARCH=x86_64
+ARG CAA_SRC=""
+ARG CAA_SRC_REF=""
 
 ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
 ENV PODVM_DISTRO ${PODVM_DISTRO}
 ENV AA_KBC ${AA_KBC}
 ENV ARCH ${ARCH}
 
+RUN if [ -n "${CAA_SRC}" ]; then \
+      rm -rf cloud-api-adaptor && \
+      git clone ${CAA_SRC} cloud-api-adaptor;\
+    fi && \
+    if [ -n "${CAA_SRC_REF}" ]; then \
+      cd cloud-api-adaptor && \
+      git fetch origin ${CAA_SRC_REF} && \
+      git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
+    fi
 # Installs add-ons for foreign target, if required
 RUN ./cloud-api-adaptor/podvm/hack/cross-build-extras.sh
 

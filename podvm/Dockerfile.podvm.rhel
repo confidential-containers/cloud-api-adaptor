@@ -11,6 +11,8 @@ FROM ${BUILDER_IMG} AS podvm_builder
 ARG CLOUD_PROVIDER
 ARG PODVM_DISTRO=rhel
 ARG AA_KBC="offline_fs_kbc"
+ARG CAA_SRC=""
+ARG CAA_SRC_REF=""
 
 ARG RHEL_IMAGE_URL="/tmp/rhel.qcow2"
 ARG RHEL_IMAGE_CHECKSUM
@@ -29,6 +31,16 @@ ENV RHEL_IMAGE_CHECKSUM ${RHEL_IMAGE_CHECKSUM}
 # workaround to ensure hashicorp packer is called instead
 # of cracklib packer which is installed by default
 ENV PATH="/usr/bin:${PATH}"
+
+RUN if [ -n "${CAA_SRC}" ]; then \
+       rm -rf cloud-api-adaptor && \
+       git clone ${CAA_SRC} cloud-api-adaptor;\
+     fi && \
+     if [ -n "${CAA_SRC_REF}" ]; then \
+       cd cloud-api-adaptor && \
+       git fetch origin ${CAA_SRC_REF} && \
+       git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
+     fi
 
 RUN cd cloud-api-adaptor/podvm && \
      LIBC=gnu make image && \
