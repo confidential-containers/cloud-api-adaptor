@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"regexp"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
@@ -24,6 +25,7 @@ import (
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/azure] ", log.LstdFlags|log.Lmsgprefix)
 var errNotReady = errors.New("address not ready")
+var errNotFound = errors.New("VM name not found")
 
 const (
 	maxInstanceNameLen = 63
@@ -251,7 +253,17 @@ func (p *azureProvider) DeleteInstance(ctx context.Context, instanceID string) e
 		return fmt.Errorf("creating VM client: %w", err)
 	}
 
-	pollerResponse, err := vmClient.BeginDelete(ctx, p.serviceConfig.ResourceGroupName, instanceID, nil)
+	// instanceID in the form of /subscriptions/<subID>/resourceGroups/<resource_name>/providers/Microsoft.Compute/virtualMachines/<VM_Name>.
+	re := regexp.MustCompile(`^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Compute/virtualMachines/(.*)$`)
+	match := re.FindStringSubmatch(instanceID)
+	if len(match) < 1 {
+		logger.Print("finding VM name using regexp:", match)
+		return errNotFound
+	}
+
+	vmName := match[1]
+
+	pollerResponse, err := vmClient.BeginDelete(ctx, p.serviceConfig.ResourceGroupName, vmName, nil)
 	if err != nil {
 		return fmt.Errorf("beginning VM deletion: %w", err)
 	}
@@ -260,7 +272,63 @@ func (p *azureProvider) DeleteInstance(ctx context.Context, instanceID string) e
 		return fmt.Errorf("waiting for the VM deletion: %w", err)
 	}
 
-	logger.Printf("deleted VM successfully: %s", instanceID)
+	logger.Printf("deleted VM successfully: %s", vmName)
+
+	diskName := fmt.Sprintf("%s-disk", vmName)
+	if err := p.deleteDisk(ctx, diskName); err != nil {
+		err = fmt.Errorf("deleting disk: %w", err)
+		logger.Print(err)
+		return err
+	}
+
+	nicName := fmt.Sprintf("%s-net", vmName)
+	if err := p.deleteNetworkInterface(ctx, nicName); err != nil {
+		err = fmt.Errorf("deleting network interface: %w", err)
+		logger.Print(err)
+		return err
+	}
+
+	return nil
+}
+
+func (p *azureProvider) deleteDisk(ctx context.Context, diskName string) error {
+	diskClient, err := armcompute.NewDisksClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating disk client: %w", err)
+	}
+
+	pollerResponse, err := diskClient.BeginDelete(ctx, p.serviceConfig.ResourceGroupName, diskName, nil)
+	if err != nil {
+		return fmt.Errorf("beginning disk deletion: %w", err)
+	}
+
+	_, err = pollerResponse.PollUntilDone(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("waiting for the disk deletion: %w", err)
+	}
+
+	logger.Printf("deleted disk successfully: %s", diskName)
+
+	return nil
+}
+
+func (p *azureProvider) deleteNetworkInterface(ctx context.Context, nicName string) error {
+	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating network interface client: %w", err)
+	}
+
+	pollerResponse, err := nicClient.BeginDelete(ctx, p.serviceConfig.ResourceGroupName, nicName, nil)
+	if err != nil {
+		return fmt.Errorf("beginning network interface deletion: %w", err)
+	}
+
+	_, err = pollerResponse.PollUntilDone(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("waiting for network interface deletion: %w", err)
+	}
+
+	logger.Printf("deleted network interface successfully: %s", nicName)
 
 	return nil
 }
