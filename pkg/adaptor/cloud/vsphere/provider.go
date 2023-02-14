@@ -295,5 +295,6 @@ func (p *vsphereProvider) DeleteInstance(ctx context.Context, instanceID string)
 }
 
 func (p *vsphereProvider) Teardown() error {
-	return nil
+	logger.Printf("Logout user %s", p.serviceConfig.UserName)
+	return DeleteGovmomiClient(p.gclient)
 }
