@@ -19,6 +19,8 @@ ENV AA_KBC ${AA_KBC}
 # Default to CentOS 8-stream x86_64 image. These variables can be overriden as needed
 ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
 ARG CENTOS_IMAGE_CHECKSUM=8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c
+ARG CAA_SRC=""
+ARG CAA_SRC_REF=""
 
 ENV CENTOS_IMAGE_URL ${CENTOS_IMAGE_URL}
 ENV CENTOS_IMAGE_CHECKSUM ${CENTOS_IMAGE_CHECKSUM}
@@ -31,6 +33,16 @@ ENV CENTOS_IMAGE_CHECKSUM ${CENTOS_IMAGE_CHECKSUM}
 # workaround to ensure hashicorp packer is called instead 
 # of cracklib packer which is installed by default
 ENV PATH="/usr/bin:${PATH}"
+
+RUN if [ -n "${CAA_SRC}" ]; then \
+       rm -rf cloud-api-adaptor && \
+       git clone ${CAA_SRC} cloud-api-adaptor;\
+     fi && \
+     if [ -n "${CAA_SRC_REF}" ]; then \
+       cd cloud-api-adaptor && \
+       git fetch origin ${CAA_SRC_REF} && \
+       git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
+     fi
 
 RUN cd cloud-api-adaptor/podvm && \
      LIBC=gnu make image && \
