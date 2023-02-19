@@ -50,7 +50,6 @@ jobs:
         with:
           go-version: 1.18
       - name: Install build dependencies
-        if: ${{ matrix.provider == 'libvirt' }}
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libvirt-dev
