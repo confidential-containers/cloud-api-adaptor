@@ -30,7 +30,6 @@ jobs:
         with:
           go-version: ${{ matrix.go_version }}
       - name: Install build dependencies
-        if: ${{ matrix.provider == 'libvirt' }}
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libvirt-dev
