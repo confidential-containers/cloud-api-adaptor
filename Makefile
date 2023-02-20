@@ -57,11 +57,9 @@ endif
 .PHONY: escapes
 escapes: ## golang memeory escapes check
 ifeq ($(CLOUD_PROVIDER),libvirt)
-	go build $(GOFLAGS) -gcflags="-m -l" -o cloud-api-adaptor cmd/cloud-api-adaptor/main.go | grep "escapes to heap" || true
-	go build $(GOFLAGS) -gcflags="-m -l" -o agent-protocol-forwarder cmd/agent-protocol-forwarder/main.go | grep "escapes to heap" || true
+	go build $(GOFLAGS) -gcflags="-m -l" ./... 2>&1 | grep "escapes to heap" 1>&2 || true
 else
-	CGO_ENABLED=0 go build -gcflags="-m -l" $(GOFLAGS) -o cloud-api-adaptor cmd/cloud-api-adaptor/main.go | grep "escapes to heap" || true
-	CGO_ENABLED=0 go build -gcflags="-m -l" $(GOFLAGS) -o agent-protocol-forwarder cmd/agent-protocol-forwarder/main.go | grep "escapes to heap" || true
+	CGO_ENABLED=0 go build $(GOFLAGS) -gcflags="-m -l" ./... 2>&1 | grep "escapes to heap" 1>&2 || true
 endif
 
 .PHONY: test
