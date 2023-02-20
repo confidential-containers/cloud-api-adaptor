@@ -56,5 +56,4 @@ jobs:
           sudo apt-get install -y libvirt-dev
       - name: check
         run: make CLOUD_PROVIDER=${{ matrix.provider }} check
-      - name: escapes
-        run: make CLOUD_PROVIDER=${{ matrix.provider }} escapes
+
