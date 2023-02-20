@@ -45,22 +45,17 @@ help: ## Display this help.
 	@printf "$$(git rev-parse HEAD 2>/dev/null)" >$@
 	@test -n "$$(git status --porcelain --untracked-files=no)" && echo -dirty >>$@ || true
 
-$(BINARIES): .git-commit $(SOURCES)
-ifeq ($(CLOUD_PROVIDER),libvirt)
-	$(GOOPTIONS) go build $(GOFLAGS) -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(shell echo "unknown")' -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(shell cat .git-commit)'" -o "$@" "cmd/$@/main.go"
-else
+agent-protocol-forwarder: .git-commit $(SOURCES)
 	$(GOOPTIONS) CGO_ENABLED=0 go build $(GOFLAGS) -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(shell echo "unknown")' -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(shell cat .git-commit)'" -o "$@" "cmd/$@/main.go"
-endif
+
+cloud-api-adaptor: .git-commit $(SOURCES)
+	$(GOOPTIONS) go build $(GOFLAGS) -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(shell echo "unknown")' -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(shell cat .git-commit)'" -o "$@" "cmd/$@/main.go"
 
 ##@ Development
 
 .PHONY: escapes
 escapes: ## golang memeory escapes check
-ifeq ($(CLOUD_PROVIDER),libvirt)
 	go build $(GOFLAGS) -gcflags="-m -l" ./... 2>&1 | grep "escapes to heap" 1>&2 || true
-else
-	CGO_ENABLED=0 go build $(GOFLAGS) -gcflags="-m -l" ./... 2>&1 | grep "escapes to heap" 1>&2 || true
-endif
 
 .PHONY: test
 test: ## Run tests.
