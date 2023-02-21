@@ -73,7 +73,7 @@ UMOCI_REPO  = https://github.com/opencontainers/umoci
 # Embed the pause container image
 # https://github.com/arronwy/kata-containers/commit/75b9f3fa3caaae62f49b4733f65cbab0cc87dbee
 PAUSE_SRC     = pause
-PAUSE_REPO    = docker://k8s.gcr.io/pause
+PAUSE_REPO    = docker://registry.k8s.io/pause
 PAUSE_VERSION = 3.6
 PAUSE_BUNDLE  = pause_bundle
 

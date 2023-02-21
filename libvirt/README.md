@@ -124,7 +124,7 @@ cc-operator-controller-manager-5df7584679-5dbmr   2/2     Running   0          3
 cloud-api-adaptor-daemonset-libvirt-vgj2s         1/1     Running   0          3m57s
 $ kubectl logs pod/cloud-api-adaptor-daemonset-libvirt-vgj2s -n confidential-containers-system
 + exec cloud-api-adaptor-libvirt libvirt -uri 'qemu+ssh://wmoschet@192.168.122.1/system?no_verify=1' -data-dir /opt/data-dir -pods-dir /run/peerpod/pods -network-name default -pool-name default -socket /run/peerpod/hypervisor.sock
-2022/11/09 18:18:00 [helper/hypervisor] hypervisor config {/run/peerpod/hypervisor.sock  k8s.gcr.io/pause:3.7 /run/peerpod/pods libvirt}
+2022/11/09 18:18:00 [helper/hypervisor] hypervisor config {/run/peerpod/hypervisor.sock  registry.k8s.io/pause:3.7 /run/peerpod/pods libvirt}
 2022/11/09 18:18:00 [helper/hypervisor] cloud config {qemu+ssh://wmoschet@192.168.122.1/system?no_verify=1 default default /opt/data-dir}
 2022/11/09 18:18:00 [helper/hypervisor] service config &{qemu+ssh://wmoschet@192.168.122.1/system?no_verify=1 default default /opt/data-dir}
 ```
