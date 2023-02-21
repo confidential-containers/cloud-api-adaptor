@@ -24,7 +24,7 @@ type proxyService struct {
 	pauseImage string
 }
 
-const defaultPauseImage = "k8s.gcr.io/pause:3.7"
+const defaultPauseImage = "registry.k8s.io/pause:3.7"
 
 func newProxyService(dialer func(context.Context) (net.Conn, error), criClient *criClient, pauseImage string) *proxyService {
 

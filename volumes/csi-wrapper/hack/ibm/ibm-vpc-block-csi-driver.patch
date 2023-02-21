@@ -36,13 +36,13 @@ index 1d9fd58..cc5a29e 100644
 --- a/deploy/kubernetes/driver/kubernetes/overlays/stage/controller-server-images.yaml
 +++ b/deploy/kubernetes/driver/kubernetes/overlays/stage/controller-server-images.yaml
 @@ -14,6 +14,6 @@ spec:
-           image: k8s.gcr.io/sig-storage/livenessprobe:v2.3.0
+           image: registry.k8s.io/sig-storage/livenessprobe:v2.3.0
          - name: iks-vpc-block-driver
            imagePullPolicy: Always
 -          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master
 +          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v4.3.1
          - name: csi-resizer
-           image: k8s.gcr.io/sig-storage/csi-resizer:v1.2.0
+           image: registry.k8s.io/sig-storage/csi-resizer:v1.2.0
 diff --git a/deploy/kubernetes/driver/kubernetes/overlays/stage/node-server-images.yaml b/deploy/kubernetes/driver/kubernetes/overlays/stage/node-server-images.yaml
 index 8900848..a29a012 100644
 --- a/deploy/kubernetes/driver/kubernetes/overlays/stage/node-server-images.yaml
@@ -54,7 +54,7 @@ index 8900848..a29a012 100644
 -          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master
 +          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v4.3.1
          - name: csi-driver-registrar
-           image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.2.0
+           image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.2.0
          - name: liveness-probe
 diff --git a/scripts/apply-required-setup.sh b/scripts/apply-required-setup.sh
 index 674739e..9e39f0c 100644
