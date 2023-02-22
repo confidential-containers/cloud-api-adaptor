@@ -32,7 +32,7 @@ test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 [[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} " # if not set retrieved from IMDS
 
 set -x
-exec cloud-api-adaptor-aws aws \
+exec cloud-api-adaptor aws \
 	-aws-region "${AWS_REGION}" \
 	-pods-dir /run/peerpod/pods \
 	${optionals} \
@@ -43,7 +43,7 @@ azure() {
 test_vars AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_SUBNET_ID AZURE_IMAGE_ID
 
 set -x
-exec cloud-api-adaptor-azure azure \
+exec cloud-api-adaptor azure \
   -subscriptionid "${AZURE_SUBSCRIPTION_ID}" \
   -region "${AZURE_REGION}" \
   -instance-size "${AZURE_INSTANCE_SIZE}" \
@@ -59,7 +59,7 @@ ibmcloud() {
 test_vars IBMCLOUD_API_KEY
 
 set -x
-exec cloud-api-adaptor-ibmcloud ibmcloud \
+exec cloud-api-adaptor ibmcloud \
         -iam-service-url "${IBMCLOUD_IAM_ENDPOINT}" \
         -vpc-service-url  "${IBMCLOUD_VPC_ENDPOINT}" \
         -resource-group-id "${IBMCLOUD_RESOURCE_GROUP_ID}" \
@@ -79,7 +79,7 @@ libvirt() {
 test_vars LIBVIRT_URI
 
 set -x
-exec cloud-api-adaptor-libvirt libvirt \
+exec cloud-api-adaptor libvirt \
 	-uri "${LIBVIRT_URI}" \
 	-data-dir /opt/data-dir \
 	-pods-dir /run/peerpod/pods \
@@ -98,7 +98,7 @@ test_vars GOVC_USERNAME GOVC_PASSWORD GOVC_URL GOVC_DATACENTER GOVC_DATASTORE
 [[ "${GOVC_FOLDER}" ]] && optionals+="-deploy-folder ${GOVC_FOLDER} "
 
 set -x
-exec cloud-api-adaptor-vsphere vsphere \
+exec cloud-api-adaptor vsphere \
 	-vcenter-url ${GOVC_URL}  \
 	-data-center ${GOVC_DATACENTER} \
 	-data-store ${GOVC_DATASTORE} \

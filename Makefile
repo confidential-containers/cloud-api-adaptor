@@ -1,20 +1,28 @@
-#
-# (C) Copyright IBM Corp. 2022.
+# (C) Copyright Confidential Containers Contributors
 # SPDX-License-Identifier: Apache-2.0
-#
 
 .PHONY: all build check fmt vet clean image deploy delete
-ifndef CLOUD_PROVIDER
-$(error CLOUD_PROVIDER is not set)
-endif
+
 
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
+# Default is dev build. To create release build set RELEASE_BUILD=true
+RELEASE_BUILD ?= false
+CLOUD_PROVIDER ?=
 GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH)
-GOFLAGS     ?= -tags=$(CLOUD_PROVIDER)
 BINARIES    := cloud-api-adaptor agent-protocol-forwarder
 SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
+
+ifeq ($(RELEASE_BUILD),true)
+	# Force static build since libvirt provider is not part of the providers to be built. 
+	GOFLAGS ?= -tags=aws,azure,ibmcloud,vsphere
+	# FIXME: this results in agent-protocol-forwarder having <... CGO_ENABLED=0 CGO_ENABLED=0 ...>
+	# Harmless but still needs a better fix
+	GOOPTIONS += CGO_ENABLED=0
+else
+	GOFLAGS ?= -tags=aws,azure,ibmcloud,vsphere,libvirt
+endif
 
 all: build
 build: $(BINARIES)
@@ -54,7 +62,7 @@ cloud-api-adaptor: .git-commit $(SOURCES)
 ##@ Development
 
 .PHONY: escapes
-escapes: ## golang memeory escapes check
+escapes: ## golang memory escapes check
 	go build $(GOFLAGS) -gcflags="-m -l" ./... 2>&1 | grep "escapes to heap" 1>&2 || true
 
 .PHONY: test
@@ -93,9 +101,17 @@ image: ## Build and push docker image to $registry
 
 .PHONY: deploy 
 deploy: ## Deploy cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
+ifneq ($(CLOUD_PROVIDER),)
 	kubectl apply -f install/yamls/deploy.yaml
 	kubectl apply -k install/overlays/$(CLOUD_PROVIDER)
+else
+	$(error CLOUD_PROVIDER is not set)
+endif
 
 .PHONY: delete
 delete: ## Delete cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
+ifneq ($(CLOUD_PROVIDER),)
 	kubectl delete -k install/overlays/$(CLOUD_PROVIDER)
+else
+	$(error CLOUD_PROVIDER is not set)
+endif

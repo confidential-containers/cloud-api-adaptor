@@ -13,24 +13,54 @@ git clone https://github.com/confidential-containers/cloud-api-adaptor.git
 cd cloud-api-adaptor
 ```
 
-## Build the binary
+## Building the binaries
 
-Set `CLOUD_PROVIDER` variable to either `aws|azure|ibmcloud|libvirt` depending on your requirement.
+Running `make` builds two binaries.
+- cloud-api-adaptor: This is the main program responsibile for Pod VM lifecycle management. 
+By default this is built as a dynamically linked binary with support for libvirt provider.
 
-```
-export CLOUD_PROVIDER=aws
-make
-```
+- agent-protocol-forwarder: This is the program which runs inside the Pod VM to forward the
+kata-agent protocol over TCP. This is a statically linked binary and is common for all the providers.
 
-Note that libvirt go library uses `cgo` and hence there is no static build.
+### Release and Dev builds
 
-Consequently you'll need to run the binary on the same OS/version where you have
-built it.
+This is controlled by the variable `RELEASE_BUILD`. By default this is set to `false` and builds 
+all the providers into the cloud-api-adaptor binary.
+
+Further, note that the dev build is a dynamically linked binary as it includes the `libvirt` provider.
+
+The libvirt go library uses `cgo` and hence when `libvirt` provider is included there is no statically linked
+binary.
+
+Consequently you'll need to run the binary on the same OS/version where you have built it.
+
 You'll also need to install the libvirt dev packages before running the build.
 
 Example, if you are using Ubuntu then run the following command
 ```
 sudo apt-get install -y libvirt-dev
+```
+The resultant `cloud-api-adaptor` binary will include support for all the providers including `libvirt`.
+
+To create release build which doesn't include the `libvirt` provider and creates a statically linked
+binary, run the following command:
+```
+RELEASE_BUILD=true make
+```
+The resultant `cloud-api-adaptor` binary will include support for all the providers excluding `libvirt`.
+
+### Build only specific providers
+
+You can also build specific providers as per your requirement.
+
+For example, run the following command to build only the `aws` provider:
+```
+GOFLAGS="-tags=aws" make
+```
+
+For example, run the following command to build the `aws`, `azure` and `ibmcloud` providers:
+```
+GOFLAGS="-tags=aws,azure,ibmcloud" make
 ```
 
 ## Build Kata runtime and agent
