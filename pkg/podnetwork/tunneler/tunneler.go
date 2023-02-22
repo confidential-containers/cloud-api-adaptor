@@ -14,17 +14,17 @@ type Tunneler interface {
 }
 
 type Config struct {
-	PodIP         string
+	PodIP         string   `json:"podip"`
 	PodHwAddr     string   `json:"pod-hw-addr"`
-	Routes        []*Route `json:"routes"`
 	InterfaceName string   `json:"interface"`
-	MTU           int      `json:"mtu"`
 	WorkerNodeIP  string   `json:"worker-node-ip"`
 	TunnelType    string   `json:"tunnel-type"`
-	Dedicated     bool     `json:"dedicated"`
+	Routes        []*Route `json:"routes"`
+	MTU           int      `json:"mtu"`
 	Index         int      `json:"index"`
 	VXLANPort     int      `json:"vxlan-port,omitempty"`
 	VXLANID       int      `json:"vxlan-id,omitempty"`
+	Dedicated     bool     `json:"dedicated"`
 }
 
 type Route struct {

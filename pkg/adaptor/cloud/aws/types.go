@@ -28,9 +28,9 @@ type Config struct {
 	LaunchTemplateName string
 	ImageId            string
 	InstanceType       string
-	SecurityGroupIds   securityGroupIds
 	KeyName            string
 	SubnetId           string
+	SecurityGroupIds   securityGroupIds
 	UseLaunchTemplate  bool
 }
 

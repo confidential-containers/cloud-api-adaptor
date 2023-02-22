@@ -16,15 +16,17 @@ import (
 )
 
 type testPod struct {
-	podAddr                       string
-	podHwAddr                     string
-	podNodePrimaryAddr            string
-	podNodeSecondaryAddr          string
-	workerPodNS, podNS, podNodeNS *netops.NS
-	config                        *tunneler.Config
-	hostInterface                 string
-	workerNodeTunneler            tunneler.Tunneler
-	podNodeTunneler               tunneler.Tunneler
+	workerNodeTunneler   tunneler.Tunneler
+	podNodeTunneler      tunneler.Tunneler
+	workerPodNS          *netops.NS
+	podNS                *netops.NS
+	podNodeNS            *netops.NS
+	config               *tunneler.Config
+	podAddr              string
+	podHwAddr            string
+	podNodePrimaryAddr   string
+	podNodeSecondaryAddr string
+	hostInterface        string
 }
 
 func getIP(t *testing.T, addr string) string {
