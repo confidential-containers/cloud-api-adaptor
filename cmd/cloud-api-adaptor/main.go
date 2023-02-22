@@ -35,7 +35,8 @@ type networkConfig struct {
 func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 	if len(os.Args) < 2 {
-		fmt.Printf("%s \n<aws|azure|ibmcloud|libvirt|vsphere|version> [options]\n", os.Args[0])
+		fmt.Printf("%s <provider_name> [options] | version\n", os.Args[0])
+		fmt.Printf("   The <provider_name> should be one of aws|azure|ibmcloud|libvirt|vsphere>\n")
 		cmd.Exit(1)
 	}
 
