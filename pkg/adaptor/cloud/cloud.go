@@ -53,26 +53,26 @@ type Service interface {
 type cloudService struct {
 	provider     Provider
 	proxyFactory proxy.Factory
+	workerNode   podnetwork.WorkerNode
 	sandboxes    map[sandboxID]*sandbox
+	cond         *sync.Cond
 	podsDir      string
 	daemonPort   string
-	workerNode   podnetwork.WorkerNode
 	mutex        sync.Mutex
-	cond         *sync.Cond
 }
 
 type sandboxID string
 
 type sandbox struct {
-	id           sandboxID
-	podName      string
-	podNamespace string
-	instanceName string // set by StartVM
-	instanceID   string // set by StartVM
-	netNSPath    string
 	agentProxy   proxy.AgentProxy
 	podNetwork   *tunneler.Config
 	cloudConfig  *cloudinit.CloudConfig
+	id           sandboxID
+	podName      string
+	podNamespace string
+	instanceName string
+	instanceID   string
+	netNSPath    string
 }
 
 func (s *cloudService) addSandbox(sid sandboxID, sandbox *sandbox) error {

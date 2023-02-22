@@ -269,8 +269,8 @@ func runMockShim(t *testing.T, ctx context.Context, helperSocketPath string) str
 type containerID string
 
 type container struct {
-	readCount int64
 	done      chan struct{}
+	readCount int64
 	once      sync.Once
 }
 

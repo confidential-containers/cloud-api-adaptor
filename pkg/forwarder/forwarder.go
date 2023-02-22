@@ -33,9 +33,9 @@ const (
 )
 
 type Config struct {
+	PodNetwork   *tunneler.Config `json:"pod-network"`
 	PodNamespace string           `json:"pod-namespace"`
 	PodName      string           `json:"pod-name"`
-	PodNetwork   *tunneler.Config `json:"pod-network"`
 }
 
 type Daemon interface {
@@ -45,13 +45,12 @@ type Daemon interface {
 }
 
 type daemon struct {
-	listenAddr  string
 	interceptor interceptor.Interceptor
 	podNode     podnetwork.PodNode
-
-	readyCh  chan struct{}
-	stopCh   chan struct{}
-	stopOnce sync.Once
+	readyCh     chan struct{}
+	stopCh      chan struct{}
+	listenAddr  string
+	stopOnce    sync.Once
 }
 
 func NewDaemon(spec *Config, listenAddr string, interceptor interceptor.Interceptor, podNode podnetwork.PodNode) Daemon {

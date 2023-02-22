@@ -42,9 +42,9 @@ func (p *mockProvider) Teardown() error {
 }
 
 type mockProxy struct {
-	socketPath string
 	readyCh    chan struct{}
 	stopCh     chan struct{}
+	socketPath string
 }
 
 func (p *mockProxy) Start(ctx context.Context, serverURL *url.URL) error {

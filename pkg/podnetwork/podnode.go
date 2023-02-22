@@ -18,9 +18,9 @@ type PodNode interface {
 }
 
 type podNode struct {
+	config        *tunneler.Config
 	nsPath        string
 	hostInterface string
-	config        *tunneler.Config
 }
 
 func NewPodNode(nsPath string, hostInterface string, config *tunneler.Config) PodNode {

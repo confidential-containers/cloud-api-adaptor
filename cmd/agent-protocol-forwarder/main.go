@@ -19,13 +19,12 @@ import (
 const programName = "agent-protocol-forwarder"
 
 type Config struct {
+	daemonConfig        daemon.Config
 	configPath          string
 	listenAddr          string
 	kataAgentSocketPath string
 	kataAgentNamespace  string
 	HostInterface       string
-
-	daemonConfig daemon.Config
 }
 
 func load(path string, obj interface{}) error {

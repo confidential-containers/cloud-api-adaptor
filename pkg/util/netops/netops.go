@@ -24,10 +24,10 @@ var logger = log.New(log.Writer(), "[util/netops] ", log.LstdFlags|log.Lmsgprefi
 
 // NS represents a network namespace
 type NS struct {
+	handle   *netlink.Handle
 	Name     string
 	Path     string
 	nsHandle netns.NsHandle
-	handle   *netlink.Handle
 }
 
 // NewNSFromPath returns an NS specified by a namespace path
@@ -558,8 +558,8 @@ func (ns *NS) RouteDel(table int, dest *net.IPNet, gw net.IP, dev string) error 
 
 type Route struct {
 	Dst *net.IPNet
-	GW  net.IP
 	Dev string
+	GW  net.IP
 }
 
 // GetRoutes gets a list of routes on the main table

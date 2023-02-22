@@ -44,12 +44,12 @@ type AgentProxy interface {
 type agentProxy struct {
 	readyCh       chan struct{}
 	stopCh        chan struct{}
-	stopOnce      sync.Once
 	socketPath    string
 	criSocketPath string
+	pauseImage    string
 	maxRetries    int
 	retryInterval time.Duration
-	pauseImage    string
+	stopOnce      sync.Once
 }
 
 func NewAgentProxy(socketPath, criSocketPath string, pauseImage string) AgentProxy {

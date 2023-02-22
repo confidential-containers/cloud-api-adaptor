@@ -43,17 +43,14 @@ type Server interface {
 }
 
 type server struct {
-	socketPath string
-
-	ttRpc         *ttrpc.Server
 	cloudService  cloud.Service
 	vmInfoService pbPodVMInfo.PodVMInfoService
-
-	workerNode podnetwork.WorkerNode
-
-	readyCh  chan struct{}
-	stopCh   chan struct{}
-	stopOnce sync.Once
+	workerNode    podnetwork.WorkerNode
+	ttRpc         *ttrpc.Server
+	readyCh       chan struct{}
+	stopCh        chan struct{}
+	socketPath    string
+	stopOnce      sync.Once
 }
 
 func NewServer(provider cloud.Provider, cfg *ServerConfig, workerNode podnetwork.WorkerNode) Server {
