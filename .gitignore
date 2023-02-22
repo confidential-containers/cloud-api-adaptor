@@ -9,6 +9,7 @@ skopeo
 
 # Binaries
 agent-protocol-forwarder
+attestation-agent
 # The code files under cmd/agent-protocol-forwarder are not ignored
 !/cmd/agent-protocol-forwarder
 cloud-api-adaptor
