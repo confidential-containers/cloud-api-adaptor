@@ -73,25 +73,27 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 
 	finder.SetDatacenter(dc)
 
-	// TODO change to tpl, err := template.FindTemplate(ctx, ctx.VSphereVM.Spec.Template)
-	// "github.com/vmware/govmomi/template"
-
 	vm, err := finder.VirtualMachine(ctx, p.serviceConfig.Template)
 	if err != nil {
 		logger.Printf("Cannot find VM template %s error: %s", p.serviceConfig.Template, err)
 		return nil, err
 	}
 
-	// TODO for DRS ResourcePoolOrDefault()
-	pool, err := finder.DefaultResourcePool(ctx)
+	template, err := vm.IsTemplate(ctx)
 	if err != nil {
-		logger.Printf("Cannot find default resource pool error: %s", err)
+		logger.Printf("VM template %s error: %s", p.serviceConfig.Template, err)
 		return nil, err
 	}
-	poolref := types.NewReference(pool.Reference())
+	if !template {
+		err = fmt.Errorf("template not valid")
+		logger.Printf("VM template %s error: %s", p.serviceConfig.Template, err)
+		return nil, err
+	}
 
-	// Logical ( not physical ) vm folder placement. If no folder exists it
-	// will be created in the current inventory path ie /your-current-datacenter/vm/newfolder/
+	// vm path for indicated destination datacenter
+	// Logical ( not physical ) vm destination folder placement.
+	// /p.serviceConfig.Datacenter/vm/p.serviceConfig.Deployfolder. If no folder exists it
+	// will be created in the p.serviceConfig.Datacenter inventory path ie /p.serviceConfig.Datacenter/vm/
 
 	inventory_path := path.Join(dc.InventoryPath, "vm")
 
@@ -122,9 +124,109 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 
 	vmfolderref := vmfolder.Reference()
 
-	relocateSpec := types.VirtualMachineRelocateSpec{
-		Folder: &vmfolderref,
-		Pool:   poolref,
+	var relocateSpec types.VirtualMachineRelocateSpec
+
+	relocateSpec.Folder = &vmfolderref
+
+	cloneSpec := &types.VirtualMachineCloneSpec{
+		PowerOn:  true,
+		Template: false,
+	}
+
+	var poolref *types.ManagedObjectReference
+
+	if strings.EqualFold(p.serviceConfig.DRS, "true") {
+
+		// For this implementation we are supporting DRS for automation=manual configured
+		// Vcenter clusters only. This means that the user must provide the DRS cluster name.
+		// DRS will suggest the best host and datastore on the cluster which we will use in our
+		// clone placement. The user does not need to indicate a host or datastore and those
+		// inputs will be ignored if present.
+
+		if p.serviceConfig.Cluster == "" {
+			return nil, fmt.Errorf("DRS requires a cluster name")
+		}
+
+		logger.Printf("Looking for cluster %s DRS recommendations", p.serviceConfig.Cluster)
+
+		cluster, err := finder.ClusterComputeResourceOrDefault(ctx, p.serviceConfig.Cluster)
+		if err != nil {
+			logger.Printf("Cluster %s compute resource error: %s", p.serviceConfig.Cluster, err)
+			return nil, err
+		}
+
+		vmref := vm.Reference()
+		spec := types.PlacementSpec{
+			PlacementType: string(types.PlacementSpecPlacementTypeClone),
+			CloneName:     vmname,
+			CloneSpec:     cloneSpec,
+			RelocateSpec:  &relocateSpec,
+			Vm:            &vmref,
+		}
+
+		result, err := cluster.PlaceVm(ctx, spec)
+		if err != nil {
+			logger.Printf("Cluster %s placement error: %s", p.serviceConfig.Cluster, err)
+			return nil, err
+		}
+
+		recs := result.Recommendations
+		if len(recs) == 0 {
+			return nil, fmt.Errorf("Vcenter has no cluster recommendations for cluster %s", p.serviceConfig.Cluster)
+		}
+
+		rspec := *recs[0].Action[0].(*types.PlacementAction).RelocateSpec
+		relocateSpec.Datastore = rspec.Datastore
+		relocateSpec.Host = rspec.Host
+		relocateSpec.Pool = rspec.Pool
+
+	} else if p.serviceConfig.Host != "" {
+
+		// Since we are not asking for DRS placement suggestions here the user must supply a host configured
+		// with a datastore. If the host is part of a cluster then the cluster name must also be supplied.
+		// DRS configured clusters are treated the same as non DRS clusters when DRS services are not requested.
+
+		var hostpath string
+
+		// The vCenter inventory paths for hosts are as such:
+		// A host not part of a cluster /myDatacenter/host/myhost@lab.eng.mycompany.com
+		// A host that is part of a cluster /myDatacenter/host/my_vcenter-cluster/myhost@lab.eng.mycompany.com
+
+		if p.serviceConfig.Cluster != "" {
+			hostpath = fmt.Sprintf("/%s/host/%s/%s", p.serviceConfig.Datacenter, p.serviceConfig.Cluster, p.serviceConfig.Host)
+		} else {
+			hostpath = fmt.Sprintf("/%s/host/%s", p.serviceConfig.Datacenter, p.serviceConfig.Host)
+		}
+
+		host, err := finder.HostSystem(ctx, hostpath)
+		if err != nil {
+			return nil, err
+		}
+		hostref := types.NewReference(host.Reference())
+		relocateSpec.Host = hostref
+
+		pool, err := host.ResourcePool(ctx)
+		if err != nil {
+			logger.Printf("Host %s Resource Pool error: %s", p.serviceConfig.Host, err)
+			return nil, err
+		}
+		poolref = types.NewReference(pool.Reference())
+		relocateSpec.Pool = poolref
+
+		// A host's datastore must be supplied
+
+		if p.serviceConfig.Datastore != "" {
+			datastorepath := fmt.Sprintf("/%s/datastore/%s", p.serviceConfig.Datacenter, p.serviceConfig.Datastore)
+			datastore, err := finder.Datastore(ctx, datastorepath)
+			if err != nil {
+				logger.Printf("Datastore %s error: %s", p.serviceConfig.Datastore, err)
+				return nil, err
+			}
+			datastoreref := types.NewReference(datastore.Reference())
+			relocateSpec.Datastore = datastoreref
+		} else {
+			return nil, fmt.Errorf("No Datastore selected")
+		}
 	}
 
 	userData, err := cloudConfig.Generate()
@@ -153,22 +255,8 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		ExtraConfig: extraconfig,
 	}
 
-	if p.serviceConfig.Datastore != "" {
-		datastorepath := fmt.Sprintf("/%s/datastore/%s", p.serviceConfig.Datacenter, p.serviceConfig.Datastore)
-		datastore, err := finder.Datastore(ctx, datastorepath)
-		if err != nil {
-			return nil, err
-		}
-		datastoreref := types.NewReference(datastore.Reference())
-		relocateSpec.Datastore = datastoreref
-	}
-
-	cloneSpec := &types.VirtualMachineCloneSpec{
-		Location: relocateSpec,
-		PowerOn:  true,
-		Template: false,
-		Config:   &configSpec,
-	}
+	cloneSpec.Location = relocateSpec
+	cloneSpec.Config = &configSpec
 
 	task, err := vm.Clone(ctx, vmfolder, vmname, *cloneSpec)
 	if err != nil {
@@ -189,8 +277,6 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	}
 
 	logger.Printf("VM %s, UUID %s created", name, clone.UUID(ctx))
-
-	//uuid := strings.Replace(mvm.Config.Uuid, "-", "", -1)
 
 	ips, err := getIPs(clone) // TODO Fix to get all ips
 	if err != nil {
@@ -231,6 +317,10 @@ func getIPs(vm *object.VirtualMachine) ([]net.IP, error) { // TODO Fix to get al
 }
 
 func (p *vsphereProvider) DeleteInstance(ctx context.Context, instanceID string) error {
+
+	if instanceID == "" {
+		return fmt.Errorf("DeleteInstance no VM UUID available")
+	}
 
 	instanceID = strings.ToLower(strings.TrimSpace(instanceID))
 
