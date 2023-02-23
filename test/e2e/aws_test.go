@@ -6,7 +6,14 @@ import (
 	"testing"
 )
 
-func TestAws(t *testing.T) {
-	//
-	testEnv.Test(t)
+// AWSAssert implements the CloudAssert interface.
+type AWSAssert struct {
+}
+
+func (aa AWSAssert) HasPodVM(t *testing.T, id string) {
+
+}
+
+func TestAWSCreateSimplePod(t *testing.T) {
+
 }

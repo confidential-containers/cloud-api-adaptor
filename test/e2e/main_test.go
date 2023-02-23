@@ -111,6 +111,7 @@ func TestMain(m *testing.M) {
 		}
 
 		if podvmImage != "" {
+			log.Info("Podvm uploading")
 			if err = provisioner.UploadPodvm(podvmImage, ctx, cfg); err != nil {
 				return ctx, err
 			}
