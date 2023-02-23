@@ -13,11 +13,12 @@ type Config struct {
 	Password     string
 	Thumbprint   string
 	Datacenter   string
-	Vcluster     string
+	Cluster      string
 	Datastore    string
-	Resourcepool string
+	DRS          string
 	Deployfolder string
 	Template     string
+	Host         string
 }
 
 func (c Config) Redact() Config {
