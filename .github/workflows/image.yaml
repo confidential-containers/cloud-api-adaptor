@@ -18,13 +18,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        type:
-          - dev
-          - release  
-        arches:
-          - linux/amd64
         include:
-          - provider: release
+          - type: dev
+            arches: linux/amd64
+          - type: release
             arches: linux/amd64,linux/s390x
     steps:
       - name: Checkout the code
@@ -52,3 +49,4 @@ jobs:
             ARCHES=${{matrix.arches}} RELEASE_BUILD=true make image
           else
             ARCHES=${{matrix.arches}} RELEASE_BUILD=false make image
+          fi
