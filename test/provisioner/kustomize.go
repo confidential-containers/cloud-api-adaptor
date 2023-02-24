@@ -10,12 +10,12 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
-type KustomizeHelper struct {
+type KustomizeOverlay struct {
 	configDir string // path to configuration directory. For example, an overlay directory.
 }
 
 // Apply builds the configuration directory and deploy the resulted manifest.
-func (kh *KustomizeHelper) Apply(ctx context.Context, cfg *envconf.Config) error {
+func (kh *KustomizeOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
 	reader, err := kh.BuildAsYaml()
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func (kh *KustomizeHelper) Apply(ctx context.Context, cfg *envconf.Config) error
 }
 
 // BuildAsYaml only build the overlay directory and returns the manifest as the YAML representation.
-func (kh *KustomizeHelper) BuildAsYaml() (io.Reader, error) {
+func (kh *KustomizeOverlay) BuildAsYaml() (io.Reader, error) {
 	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
 	fsys := filesys.MakeFsOnDisk()
 	resourcesMap, err := k.Run(fsys, kh.configDir)
@@ -48,7 +48,7 @@ func (kh *KustomizeHelper) BuildAsYaml() (io.Reader, error) {
 }
 
 // Delete builds the overlay directory and delete the resulted resources.
-func (kh *KustomizeHelper) Delete(ctx context.Context, cfg *envconf.Config) error {
+func (kh *KustomizeOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
 	reader, err := kh.BuildAsYaml()
 	if err != nil {
 		return err

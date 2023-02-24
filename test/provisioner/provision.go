@@ -42,7 +42,7 @@ type CloudAPIAdaptor struct {
 	cloudProvider        string               // Cloud provider
 	controllerDeployment *appsv1.Deployment   // Represents the controller manager deployment
 	namespace            string               // The CoCo namespace
-	kustomizeHelper      *KustomizeHelper     // Pointer to the kustomize helper
+	installOverlay       *KustomizeOverlay    // Pointer to the kustomize overlay
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
 }
 
@@ -56,7 +56,7 @@ func NewCloudAPIAdaptor(provider string) (p *CloudAPIAdaptor) {
 		cloudProvider:        provider,
 		controllerDeployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-controller-manager", Namespace: namespace}},
 		namespace:            namespace,
-		kustomizeHelper:      &KustomizeHelper{configDir: overlayDir},
+		installOverlay:       &KustomizeOverlay{configDir: overlayDir},
 		runtimeClass:         &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata", Namespace: ""}},
 	}
 }
@@ -101,7 +101,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	}
 
 	fmt.Println("Uninstall CoCo and cloud-api-adaptor")
-	if err = p.kustomizeHelper.Delete(ctx, cfg); err != nil {
+	if err = p.installOverlay.Delete(ctx, cfg); err != nil {
 		return err
 	}
 
@@ -152,7 +152,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config) error
 	}
 
 	fmt.Println("Install CoCo and cloud-api-adaptor")
-	if err := p.kustomizeHelper.Apply(ctx, cfg); err != nil {
+	if err := p.installOverlay.Apply(ctx, cfg); err != nil {
 		return err
 	}
 
