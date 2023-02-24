@@ -246,6 +246,8 @@
           service_offload = true
 
     - name: Install cloud-api-adaptor
+      environment:
+        RELEASE_BUILD: "true"
       shell: |
         set -o errexit
         cd /root/cloud-api-adaptor
