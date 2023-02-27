@@ -19,10 +19,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 )
 
-var (
-	group *resources.Group
-)
-
 func initResourceGroup() (*resources.Group, error) {
 	/*
 		Set following environment variables to verify identity.
