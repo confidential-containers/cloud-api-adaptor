@@ -37,6 +37,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v66.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.27
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
+	github.com/BurntSushi/toml v1.2.0
 	github.com/avast/retry-go/v4 v4.3.2
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20220913141151-9b49a6ddc6fd

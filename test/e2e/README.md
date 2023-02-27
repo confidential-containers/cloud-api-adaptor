@@ -20,6 +20,20 @@ You can instruct the tool to provision a test environment though, as shown below
 $ TEST_E2E_PROVISION=yes CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
+Each provider must have a provisioner implementation so that the framework is able to perform operations on the cluster. The provisioner will likely to need additional information (e.g. login credentials), and those are passed via a properties file with the following format:
+
+```
+key1 = "value1"
+key2 = "value2"
+...
+```
+
+You should use the `TEST_E2E_PROVISION_FILE` variable to specify the properties file path, as shown below:
+
+```
+$ TEST_E2E_PROVISION=yes TEST_E2E_PROVISION_FILE=/path/to/libvirt.properties CLOUD_PROVIDER=libvirt make test-e2e
+```
+
 The `TEST_E2E_PODVM_IMAGE` is an optional variable which specifies the path to the podvm qcow2 image. If it is set then the image should be uploaded to the VPC storage. The following command, as an example, instructs the tool to upload `path/to/podvm-base.qcow2` after the provisioning of the test environment:
 
 ```

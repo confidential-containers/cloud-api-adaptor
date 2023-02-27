@@ -6,20 +6,20 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
-	"time"
-
+	"github.com/BurntSushi/toml"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	nodev1 "k8s.io/api/node/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"os"
+	"path"
 	"sigs.k8s.io/e2e-framework/klient/decoder"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
+	"time"
 )
 
 // CloudProvision defines operations to provision the environment on cloud providers.
@@ -57,17 +57,29 @@ func NewCloudAPIAdaptor(provider string) (p *CloudAPIAdaptor) {
 }
 
 //GetCloudProvisioner returns a CloudProvision implementation
-func GetCloudProvisioner(provider string) (CloudProvision, error) {
+func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision, error) {
 	var (
 		err         error
+		properties  map[string]string
 		provisioner CloudProvision
 	)
+
+	properties = make(map[string]string)
+	if propertiesFile != "" {
+		f, err := os.ReadFile(propertiesFile)
+		if err != nil {
+			return nil, err
+		}
+		if err = toml.Unmarshal(f, &properties); err != nil {
+			return nil, err
+		}
+	}
 
 	switch provider {
 	case "azure":
 		provisioner, err = NewAzureCloudProvisioner("default", "default")
 	case "libvirt":
-		provisioner, err = NewLibvirtProvisioner("default", "default")
+		provisioner, err = NewLibvirtProvisioner(properties)
 	case "ibmcloud":
 		provisioner, err = NewIBMCloudProvisioner("default", "default")
 	default:

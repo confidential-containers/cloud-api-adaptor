@@ -26,10 +26,20 @@ type LibvirtProvisioner struct {
 	volumeName string           // Podvm volume name
 }
 
-func NewLibvirtProvisioner(network string, storage string) (*LibvirtProvisioner, error) {
+func NewLibvirtProvisioner(properties map[string]string) (*LibvirtProvisioner, error) {
 	wd, err := filepath.Abs(path.Join("..", "..", "libvirt"))
 	if err != nil {
 		return nil, err
+	}
+
+	network := "default"
+	if properties["libvirt_network"] != "" {
+		network = properties["libvirt_network"]
+	}
+
+	storage := "default"
+	if properties["libvirt_storage"] != "" {
+		storage = properties["libvirt_storage"]
 	}
 
 	// TODO: accept a different URI.
