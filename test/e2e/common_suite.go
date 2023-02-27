@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const WAIT_POD_RUNNING_TIMEOUT = time.Second*180
+const WAIT_POD_RUNNING_TIMEOUT = time.Second * 180
 
 // doTestCreateSimplePod tests a simple peer-pod can be created.
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {

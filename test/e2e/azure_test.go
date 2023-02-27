@@ -6,17 +6,17 @@
 package e2e
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
-	"context"
-	"net/http"
 
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/resources"
-    	"github.com/Azure/go-autorest/autorest"
-    	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/compute/mgmt/compute"
+	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/resources"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 )
 
 var (
@@ -43,7 +43,7 @@ func initResourceGroup() (*resources.Group, error) {
 		return nil, errors.New("RESOURCE_GROUP was not set")
 	}
 
-	if ((len(os.Getenv("AZURE_CLIENT_ID")) <= 0) || (len(os.Getenv("AZURE_CLIENT_SECRET")) <= 0) || (len(os.Getenv("AZURE_TENANT_ID")) <= 0))  {
+	if (len(os.Getenv("AZURE_CLIENT_ID")) <= 0) || (len(os.Getenv("AZURE_CLIENT_SECRET")) <= 0) || (len(os.Getenv("AZURE_TENANT_ID")) <= 0) {
 		return nil, errors.New("Please set all the env variables mentioned")
 	}
 
@@ -98,10 +98,10 @@ func (c AzureCloudAssert) HasPodVM(t *testing.T, id string) {
 	vm, err := vmClient.Get(context.Background(), *c.group.Name, id, "")
 	if err != nil {
 		if vmNotFound, ok := err.(autorest.DetailedError); ok && vmNotFound.StatusCode == http.StatusNotFound {
-            		fmt.Printf("Virtual machine '%s' not found in resource group '\n", id)
-        	} else {
-            		t.Fatal(err)
-        	}
+			fmt.Printf("Virtual machine '%s' not found in resource group '\n", id)
+		} else {
+			t.Fatal(err)
+		}
 	}
 
 	fmt.Printf("VM name: %s\n", *vm.Name)

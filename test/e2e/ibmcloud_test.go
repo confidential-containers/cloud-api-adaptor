@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	mu sync.Mutex
+	mu  sync.Mutex
 	vpc *vpcv1.VpcV1
 )
 
