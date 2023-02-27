@@ -101,7 +101,9 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		cloudAPIAdaptor = pv.NewCloudAPIAdaptor(cloudProvider)
+		if cloudAPIAdaptor, err = pv.NewCloudAPIAdaptor(cloudProvider); err != nil {
+			return ctx, err
+		}
 		fmt.Println("Deploy the Cloud API Adaptor")
 		if err = cloudAPIAdaptor.Deploy(ctx, cfg); err != nil {
 			return ctx, err
