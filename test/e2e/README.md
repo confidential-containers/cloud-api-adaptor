@@ -42,7 +42,7 @@ Create a new Go file (.go) named `provision_<CLOUD_PROVIDER>`.go (e.g., `provisi
 that should be tagged with `//go:build <CLOUD_PROVIDER>`. That file should have the implementation
 of the `CloudProvision` interface (see its definition in [provision.go](./provision.go)).
 
-Apart from that, it should implement the `func GetCloudProvisioner() (CloudProvision, error)` factory function.
+Apart from that, it should be added an entry to the `GetCloudProvisioner()` factory function in [provision.go](./provision.go).
 
 ## Create the test suite
 

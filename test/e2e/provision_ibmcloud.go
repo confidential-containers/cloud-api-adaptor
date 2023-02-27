@@ -37,8 +37,3 @@ func (l *IBMCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config
 func (l *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	return nil
 }
-
-//nolint:typecheck
-func GetCloudProvisioner() (CloudProvision, error) {
-	return NewIBMCloudProvisioner("default", "default")
-}

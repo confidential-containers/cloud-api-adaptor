@@ -53,7 +53,7 @@ func TestMain(m *testing.M) {
 
 	if shouldProvisionCluster || podvmImage != "" {
 		// Get an provisioner instance for the cloud provider.
-		provisioner, err = GetCloudProvisioner()
+		provisioner, err = GetCloudProvisioner(cloudProvider)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
