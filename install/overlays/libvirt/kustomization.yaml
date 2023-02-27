@@ -3,8 +3,8 @@ bases:
 nameSuffix: -libvirt
 
 images:
-- name: kustomize.this/cloud-api-adaptor/image:url
-  newName: quay.io/confidential-containers/cloud-api-adaptor-libvirt # change image if needed
+- name: cloud-api-adaptor
+  newName: quay.io/confidential-containers/cloud-api-adaptor # change image if needed
   newTag: latest
 
 generatorOptions:

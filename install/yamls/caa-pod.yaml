@@ -22,7 +22,7 @@ spec:
             name: peer-pods-secret
         - configMapRef:
             name: peer-pods-cm
-        image: kustomize.this/cloud-api-adaptor/image:url
+        image: cloud-api-adaptor
         imagePullPolicy: Always
         name: cloud-api-adaptor-con
         securityContext:
