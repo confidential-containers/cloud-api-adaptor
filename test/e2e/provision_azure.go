@@ -37,8 +37,3 @@ func (l *AzureCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Conf
 func (l *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	return nil
 }
-
-//nolint:typecheck
-func GetCloudProvisioner() (CloudProvision, error) {
-	return NewAzureCloudProvisioner("default", "default")
-}

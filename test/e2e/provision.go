@@ -56,6 +56,27 @@ func NewCloudAPIAdaptor(provider string) (p *CloudAPIAdaptor) {
 	}
 }
 
+//GetCloudProvisioner returns a CloudProvision implementation
+func GetCloudProvisioner(provider string) (CloudProvision, error) {
+	var (
+		err         error
+		provisioner CloudProvision
+	)
+
+	switch provider {
+	case "azure":
+		provisioner, err = NewAzureCloudProvisioner("default", "default")
+	case "libvirt":
+		provisioner, err = NewLibvirtProvisioner("default", "default")
+	case "ibmcloud":
+		provisioner, err = NewIBMCloudProvisioner("default", "default")
+	default:
+		return nil, fmt.Errorf("Not implemented provisioner for %s\n", provider)
+	}
+
+	return provisioner, err
+}
+
 // Deletes the peer pods installation including the controller manager.
 func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error {
 	client, err := cfg.NewClient()

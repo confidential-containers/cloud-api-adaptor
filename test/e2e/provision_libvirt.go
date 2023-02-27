@@ -175,8 +175,3 @@ func (l *LibvirtProvisioner) GetStoragePool() (*libvirt.StoragePool, error) {
 
 	return sp, nil
 }
-
-//nolint:typecheck
-func GetCloudProvisioner() (CloudProvision, error) {
-	return NewLibvirtProvisioner("default", "default")
-}
