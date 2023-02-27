@@ -46,9 +46,14 @@ type CloudAPIAdaptor struct {
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
 }
 
-func NewCloudAPIAdaptor(provider string) (p *CloudAPIAdaptor) {
+func NewCloudAPIAdaptor(provider string) (*CloudAPIAdaptor, error) {
 	namespace := "confidential-containers-system"
+
 	overlayDir := path.Join("../../install/overlays", provider)
+	overlay, err := NewKustomizeOverlay(overlayDir)
+	if err != nil {
+		return nil, err
+	}
 
 	return &CloudAPIAdaptor{
 		caaDaemonSet:         &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset-" + provider, Namespace: namespace}},
@@ -56,9 +61,9 @@ func NewCloudAPIAdaptor(provider string) (p *CloudAPIAdaptor) {
 		cloudProvider:        provider,
 		controllerDeployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-controller-manager", Namespace: namespace}},
 		namespace:            namespace,
-		installOverlay:       &KustomizeOverlay{configDir: overlayDir},
+		installOverlay:       overlay,
 		runtimeClass:         &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata", Namespace: ""}},
-	}
+	}, nil
 }
 
 // GetCloudProvisioner returns a CloudProvisioner implementation
