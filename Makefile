@@ -97,7 +97,7 @@ clean: ## Remove binaries.
 
 .PHONY: image
 image: ## Build and push docker image to $registry
-	hack/build.sh
+	hack/build.sh $(shell cat .git-commit)
 
 ##@ Deployment
 
