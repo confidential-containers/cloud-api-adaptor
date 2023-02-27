@@ -51,9 +51,16 @@ func TestMain(m *testing.M) {
 	// the VPC images storage.
 	podvmImage := os.Getenv("TEST_E2E_PODVM_IMAGE")
 
+	// The TEST_E2E_PROVISION_FILE is an optional variable which specifies the path
+	// to the provision properties file. The file must have the format:
+	//
+	//  key1 = "value1"
+	//  key2 = "value2"
+	provisionPropsFile := os.Getenv("TEST_E2E_PROVISION_FILE")
+
 	if shouldProvisionCluster || podvmImage != "" {
 		// Get an provisioner instance for the cloud provider.
-		provisioner, err = GetCloudProvisioner(cloudProvider)
+		provisioner, err = GetCloudProvisioner(cloudProvider, provisionPropsFile)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
