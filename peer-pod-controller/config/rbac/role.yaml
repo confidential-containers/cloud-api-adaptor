@@ -32,6 +32,30 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  - machineconfiguration.openshift.io
+  resources:
+  - configmaps
+  - containerruntimeconfigs
+  - endpoints
+  - events
+  - machineconfigpools
+  - machineconfigs
+  - nodes
+  - persistentvolumeclaims
+  - pods
+  - secrets
+  - services
+  - services/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - confidentialcontainers.org
   resources:
   - peerpodconfigs

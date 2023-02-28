@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.8.0
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: peerpodconfigs.confidentialcontainers.org
 spec:
@@ -36,19 +36,21 @@ spec:
             description: PeerPodConfigSpec defines the desired state of PeerPodConfig
             properties:
               cloudSecretName:
+                default: peer-pods-secret
                 description: CloudSecretName is the name of the secret that holds
                   the credentials for the cloud provider
+                type: string
+              configMapName:
+                default: peer-pods-cm
+                description: ConfigMapName is the name of the configmap that holds
+                  cloud provider specific environment Variables
                 type: string
               instanceType:
                 description: InstanceType describes the name of the instance type
                   of the chosen cloud provider
                 type: string
-              limit:
-                description: Limit is the max number of peer pods. This is exposed
-                  as expended resource on nodes
-                type: string
-              nodeSelector:
-                description: NodeSelector selects the nodes to which the cca pods,
+              labelSelector:
+                description: LabelSelector selects the nodes to which the caa pods,
                   the RuntimeClass and the MachineConfigs we use to deploy the full
                   peer pod solution.
                 properties:
@@ -93,9 +95,14 @@ spec:
                       are ANDed.
                     type: object
                 type: object
+                x-kubernetes-map-type: atomic
+              limit:
+                description: Limit is the max number of peer pods. This is exposed
+                  as expended resource on nodes
+                type: string
             required:
             - cloudSecretName
-            - nodeSelector
+            - configMapName
             type: object
           status:
             description: PeerPodConfigStatus defines the observed state of PeerPodConfig
@@ -110,9 +117,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
