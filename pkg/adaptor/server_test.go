@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -82,7 +81,7 @@ func TestCreateStartAndStop(t *testing.T) {
 }
 
 func testServerStart(t *testing.T, ctx context.Context) (Server, string, string, pb.HypervisorService, chan error) {
-	dir, err := ioutil.TempDir("", "helper")
+	dir, err := os.MkdirTemp("", "helper")
 	if err != nil {
 		t.Fatal(err)
 	}

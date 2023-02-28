@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -169,7 +168,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	sshPublicKeyPath := os.ExpandEnv(p.serviceConfig.SSHKeyPath)
 	var sshBytes []byte
 	if _, err := os.Stat(sshPublicKeyPath); err == nil {
-		sshBytes, err = ioutil.ReadFile(sshPublicKeyPath)
+		sshBytes, err = os.ReadFile(sshPublicKeyPath)
 		if err != nil {
 			err = fmt.Errorf("reading ssh public key file: %w", err)
 			logger.Printf("%v", err)
