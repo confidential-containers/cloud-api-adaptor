@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         go_version:
-          - 1.18
+          - 1.19
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v3
@@ -31,7 +31,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: v1.47.3
+          version: v1.51.1
 
   go_check:
     strategy:
@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@main
       - uses: actions/setup-go@main
         with:
-          go-version: 1.18
+          go-version: 1.19
       - name: Install build dependencies
         run: |
           sudo apt-get update -y

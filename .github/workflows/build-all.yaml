@@ -18,7 +18,7 @@ jobs:
         runner:
           - ubuntu-latest
         go_version:
-          - 1.18
+          - 1.19
 
     steps:
       - name: Checkout the pull request code

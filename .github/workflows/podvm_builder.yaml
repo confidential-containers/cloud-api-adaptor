@@ -50,7 +50,7 @@ jobs:
         file: |
           podvm/${{ matrix.dockerfile }}
         build-args: |
-          "GO_VERSION=1.18.7"
+          "GO_VERSION=1.19.6"
           "PROTOC_VERSION=3.11.4"
           "RUST_VERSION=1.66.0"
           "CAA_SRC=https://github.com/confidential-containers/cloud-api-adaptor"
