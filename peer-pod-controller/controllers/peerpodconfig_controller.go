@@ -20,6 +20,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path"
+	"strconv"
+	"strings"
+
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,14 +36,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	k8sclient "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
-	"os"
-	"path"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"strconv"
-	"strings"
 
 	ccv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/api/v1alpha1"
 )
@@ -161,9 +162,7 @@ func MountProgagationRef(mode corev1.MountPropagationMode) *corev1.MountPropagat
 	return &mode
 }
 
-/*
-  cloudProviderName needs to be verified against validCloudProviders by caller
-*/
+// cloudProviderName needs to be verified against validCloudProviders by caller
 func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *appsv1.DaemonSet {
 	var (
 		runPrivileged                = true
@@ -317,7 +316,7 @@ func (r *PeerPodConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *PeerPodConfigReconciler) getNodesWithLabels(nodeLabels map[string]string) (error, *corev1.NodeList) {
+func (r *PeerPodConfigReconciler) getNodesWithLabels(nodeLabels map[string]string) (*corev1.NodeList, error) {
 	nodes := &corev1.NodeList{}
 	labelSelector := labels.SelectorFromSet(nodeLabels)
 	listOpts := []client.ListOption{
@@ -326,9 +325,9 @@ func (r *PeerPodConfigReconciler) getNodesWithLabels(nodeLabels map[string]strin
 
 	if err := r.Client.List(context.TODO(), nodes, listOpts...); err != nil {
 		r.Log.Error(err, "Getting list of nodes having specified labels failed")
-		return err, &corev1.NodeList{}
+		return &corev1.NodeList{}, err
 	}
-	return nil, nodes
+	return nodes, nil
 }
 
 func (r *PeerPodConfigReconciler) advertiseExtendedResources() error {
