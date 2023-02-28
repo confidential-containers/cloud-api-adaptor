@@ -11,7 +11,7 @@ spec:
       node-role.kubernetes.io/worker: ""
   config:
     installType: bundle
-    payloadImage: quay.io/confidential-containers/peer-pods-runtime-payload:2022091512521663246365
+    payloadImage: quay.io/confidential-containers/peer-pods-runtime-payload:latest
     installDoneLabel:
       katacontainers.io/kata-runtime: "true"
     uninstallDoneLabel:
