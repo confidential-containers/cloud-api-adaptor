@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -236,7 +236,7 @@ func ConnectToHTTPServer(t *testing.T, ns *netops.NS, addr, localAddr string) {
 		if err != nil {
 			return fmt.Errorf("failed to get an http response at %s from http://%s : %v", ns.Name, addr, err)
 		}
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			return fmt.Errorf("failed to read an http response at %s from http://%s:: %v", ns.Name, addr, err)
 		}
