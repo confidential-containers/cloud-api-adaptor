@@ -9,7 +9,7 @@ on:
     branches:
       - 'staging'
 env:
-  go_version: 1.18
+  go_version: 1.19
 
 jobs:
   build_push_job:
