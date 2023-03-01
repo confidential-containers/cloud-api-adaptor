@@ -666,6 +666,10 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	return nil
 }
 
+func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
+	return make(map[string]string)
+}
+
 //func (p *IBMCloudProvisioner) DoKustomize(ctx context.Context, cfg *envconf.Config) error {
 //	overlayFile := "../../install/overlays/ibmcloud/kustomization.yaml"
 //	overlayFileBak := "../../install/overlays/ibmcloud/kustomization.yaml.bak"

@@ -34,3 +34,7 @@ func (p *SelfManagedClusterProvisioner) DeleteVPC(ctx context.Context, cfg *envc
 func (p *SelfManagedClusterProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	return nil
 }
+
+func (p *SelfManagedClusterProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
+	return make(map[string]string)
+}
