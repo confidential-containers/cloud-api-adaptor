@@ -37,7 +37,7 @@ jobs:
       - name: Build
         run: |
           # Build each provider separately
-          make GOFLAGS="-tags=${{ matrix.provider }}" build
+          make BUILTIN_CLOUD_PROVIDERS="${{ matrix.provider }}" build
       - name: Test
         run: |
           go install github.com/jstemmer/go-junit-report@v1.0.0
