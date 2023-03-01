@@ -105,7 +105,7 @@ func TestMain(m *testing.M) {
 			return ctx, err
 		}
 		fmt.Println("Deploy the Cloud API Adaptor")
-		if err = cloudAPIAdaptor.Deploy(ctx, cfg, make(map[string]string)); err != nil {
+		if err = cloudAPIAdaptor.Deploy(ctx, cfg, provisioner.GetProperties(ctx, cfg)); err != nil {
 			return ctx, err
 		}
 		return ctx, nil

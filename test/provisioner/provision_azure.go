@@ -45,6 +45,10 @@ func (l *AzureCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Conf
 	return nil
 }
 
+func (l *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
+	return make(map[string]string)
+}
+
 func (l *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	return nil
 }

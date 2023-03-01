@@ -154,6 +154,14 @@ func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config)
 	return nil
 }
 
+func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
+	return map[string]string{
+		"network":      l.network,
+		"storage":      l.storage,
+		"podvm_volume": l.volumeName,
+	}
+}
+
 func (l *LibvirtProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	// TODO: convert to use the libvirt.org/go/libvirt API.
 	//sPool, err := l.GetStoragePool()
