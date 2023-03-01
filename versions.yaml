@@ -1,0 +1,31 @@
+---
+# Sources for a base cloud os images
+cloudimg:
+  ubuntu:
+    focal:
+      amd64:
+        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-amd64.img
+        checksum: "sha256:3895e38566e5c2c019f5c6f825ab7570ee34dac6b9142fab0c7e5a78084c4280"
+      s390x:
+        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-s390x.img
+        checksum: "sha256:24673aa86785573d3a92e15166ff81beff88cbb0abc01938f156eb1332e87cd3"
+  centos:
+    stream-8:
+      amd64:
+        url: https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20200113.0.x86_64.qcow2
+        checksum: "sha256:b80ca9ccad8715aa1aeee582906096d3190b91cebe05fcb3ac7cb197fd68a7fe"
+tools:
+  golang: 1.19.6
+  rust: 1.66.0
+  protoc: 3.11.4
+# Referenced Git repositories
+git:
+  attestation-agent:
+    url: https://github.com/confidential-containers/attestation-agent
+    reference: v0.5.0
+  kata-containers:
+    url: https://github.com/kata-containers/kata-containers
+    reference: CCv0
+  cloud-api-adaptor:
+    url: https://github.com/confidential-containers/cloud-api-adaptor
+    reference: staging
