@@ -13,10 +13,16 @@ import (
 
 func init() {
 	newProvisionerFunctions["azure"] = NewAzureCloudProvisioner
+	newInstallOverlayFunctions["azure"] = NewAzureInstallOverlay
 }
 
 // AzureCloudProvisioner implements the CloudProvisioner interface for Azure.
 type AzureCloudProvisioner struct {
+}
+
+// AzureInstallOverlay implements the InstallOverlay interface
+type AzureInstallOverlay struct {
+	overlay *KustomizeOverlay
 }
 
 func NewAzureCloudProvisioner(properties map[string]string) (CloudProvisioner, error) {
@@ -40,5 +46,28 @@ func (l *AzureCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Conf
 }
 
 func (l *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
+	return nil
+}
+
+func NewAzureInstallOverlay() (InstallOverlay, error) {
+	overlay, err := NewKustomizeOverlay("../../install/overlays/azure")
+	if err != nil {
+		return nil, err
+	}
+
+	return &AzureInstallOverlay{
+		overlay: overlay,
+	}, nil
+}
+
+func (lio *AzureInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
+	return lio.overlay.Apply(ctx, cfg)
+}
+
+func (lio *AzureInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
+	return lio.overlay.Delete(ctx, cfg)
+}
+
+func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
 	return nil
 }
