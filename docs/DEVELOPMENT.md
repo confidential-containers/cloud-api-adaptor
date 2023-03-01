@@ -55,12 +55,12 @@ You can also build specific providers as per your requirement.
 
 For example, run the following command to build only the `aws` provider:
 ```
-GOFLAGS="-tags=aws" make
+BUILTIN_CLOUD_PROVIDERS="aws" make
 ```
 
 For example, run the following command to build the `aws`, `azure` and `ibmcloud` providers:
 ```
-GOFLAGS="-tags=aws,azure,ibmcloud" make
+BUILTIN_CLOUD_PROVIDERS="aws azure ibmcloud" make
 ```
 
 ## Build Kata runtime and agent

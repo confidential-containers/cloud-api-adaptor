@@ -8,7 +8,8 @@ ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
 # Default is dev build. To create release build set RELEASE_BUILD=true
 RELEASE_BUILD ?= false
 CLOUD_PROVIDER ?=
-GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH)
+GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
+GOFLAGS     ?=
 BINARIES    := cloud-api-adaptor agent-protocol-forwarder
 SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
@@ -17,13 +18,9 @@ SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 TEST_E2E_TIMEOUT ?= 20m
 
 ifeq ($(RELEASE_BUILD),true)
-	# Force static build since libvirt provider is not part of the providers to be built. 
-	GOFLAGS ?= -tags=aws,azure,ibmcloud,vsphere
-	# FIXME: this results in agent-protocol-forwarder having <... CGO_ENABLED=0 CGO_ENABLED=0 ...>
-	# Harmless but still needs a better fix
-	GOOPTIONS += CGO_ENABLED=0
+	BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere
 else
-	GOFLAGS ?= -tags=aws,azure,ibmcloud,vsphere,libvirt
+	BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere libvirt
 endif
 
 all: build
@@ -55,11 +52,21 @@ help: ## Display this help.
 	@printf "$$(git rev-parse HEAD 2>/dev/null)" >$@
 	@test -n "$$(git status --porcelain --untracked-files=no)" && echo -dirty >>$@ || true
 
-agent-protocol-forwarder: .git-commit $(SOURCES)
-	$(GOOPTIONS) CGO_ENABLED=0 go build $(GOFLAGS) -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(shell echo "unknown")' -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(shell cat .git-commit)'" -o "$@" "cmd/$@/main.go"
+GOFLAGS += -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(shell echo "unknown")' \
+                     -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(shell cat .git-commit)'"
 
-cloud-api-adaptor: .git-commit $(SOURCES)
-	$(GOOPTIONS) go build $(GOFLAGS) -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(shell echo "unknown")' -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(shell cat .git-commit)'" -o "$@" "cmd/$@/main.go"
+# Build tags required to build cloud-api-adaptor are derived from BUILTIN_CLOUD_PROVIDERS.
+# When libvirt is specified, CGO_ENABLED is set to 1.
+space := $() $()
+comma := ,
+GOFLAGS += -tags=$(subst $(space),$(comma),$(strip $(BUILTIN_CLOUD_PROVIDERS)))
+
+ifneq (,$(filter libvirt,$(BUILTIN_CLOUD_PROVIDERS)))
+cloud-api-adaptor: GOOPTIONS := $(subst CGO_ENABLED=0,CGO_ENABLED=1,$(GOOPTIONS))
+endif
+
+$(BINARIES): .git-commit $(SOURCES)
+	$(GOOPTIONS) go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
 
 ##@ Development
 
