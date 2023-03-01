@@ -12,10 +12,10 @@ error(){
 script_dir=$(dirname "$0")
 
 function usage() {
-    echo "Usage: $0 <docker-image> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint>]"
+    echo "Usage: $0 <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint>]"
 }
 
-image=$1
+image_file=$1
 region=$2
 bucket=
 bucket_region=$region
@@ -37,7 +37,7 @@ while (( "$#" )); do
     shift 2
 done
 
-if [[ -z "${image-}" || -z "${region-}"  ]]; then
+if [[ -z "${image_file-}" || -z "${region-}"  ]]; then
     usage 1>&2
     exit 1
 fi
@@ -58,7 +58,7 @@ if [[ -z "$current_crn" || ! "$current_crn" = "$instance_crn" ]]; then
     ibmcloud cos config crn --crn "$instance_crn" --force
 fi
 
-[ -n "$endpoint" ] && ibmcloud cos config endpoint-url --url "$cos_service_endpoint" >/dev/null
+[ -n "$endpoint" ] && ibmcloud cos config endpoint-url --url "$endpoint" >/dev/null
 
 if ! ibmcloud cos buckets --output JSON | jq -r '.Buckets[].Name'; then
     error "Can't find any buckets in $instance"
@@ -70,9 +70,15 @@ fi
 
 ibmcloud cos bucket-head --bucket "$bucket" || error "Bucket $bucket not found"
 
-# Download image
-file=$($script_dir/../../podvm/hack/download-image.sh $image $script_dir) || error "Unable to download $image"
-echo "$file"
+if [ -f ${image_file} ]; then
+    file=${image_file}
+else
+    # Download image
+    echo "Downloading file from image ${image_file}"
+    file=$($script_dir/../../podvm/hack/download-image.sh ${image_file} $script_dir) || error "Unable to download ${image_file}"
+fi
+
+echo "Uploading file ${file}"
 # Upload to cos bucket
 $script_dir/multipart_upload.sh --file "$file" --bucket "$bucket"
 
