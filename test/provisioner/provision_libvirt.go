@@ -20,6 +20,7 @@ import (
 
 func init() {
 	newProvisionerFunctions["libvirt"] = NewLibvirtProvisioner
+	newInstallOverlayFunctions["libvirt"] = NewLibvirtInstallOverlay
 }
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
@@ -29,6 +30,11 @@ type LibvirtProvisioner struct {
 	storage    string           // Storage pool name
 	wd         string           // libvirt's directory path on this repository
 	volumeName string           // Podvm volume name
+}
+
+// LibvirtInstallOverlay implements the InstallOverlay interface
+type LibvirtInstallOverlay struct {
+	overlay *KustomizeOverlay
 }
 
 func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, error) {
@@ -189,4 +195,27 @@ func (l *LibvirtProvisioner) GetStoragePool() (*libvirt.StoragePool, error) {
 	}
 
 	return sp, nil
+}
+
+func NewLibvirtInstallOverlay() (InstallOverlay, error) {
+	overlay, err := NewKustomizeOverlay("../../install/overlays/libvirt")
+	if err != nil {
+		return nil, err
+	}
+
+	return &LibvirtInstallOverlay{
+		overlay: overlay,
+	}, nil
+}
+
+func (lio *LibvirtInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
+	return lio.overlay.Apply(ctx, cfg)
+}
+
+func (lio *LibvirtInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
+	return lio.overlay.Delete(ctx, cfg)
+}
+
+func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
+	return nil
 }

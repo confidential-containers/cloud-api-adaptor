@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -42,15 +41,28 @@ type CloudAPIAdaptor struct {
 	cloudProvider        string               // Cloud provider
 	controllerDeployment *appsv1.Deployment   // Represents the controller manager deployment
 	namespace            string               // The CoCo namespace
-	installOverlay       *KustomizeOverlay    // Pointer to the kustomize overlay
+	installOverlay       InstallOverlay       // Pointer to the kustomize overlay
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
+}
+
+type newInstallOverlayFunc func() (InstallOverlay, error)
+
+var newInstallOverlayFunctions = make(map[string]newInstallOverlayFunc)
+
+// InstallOverlay defines common operations to an install overlay (install/overlays/*)
+type InstallOverlay interface {
+	// Apply applies the overlay. Equivalent to the `kubectl apply -k` command
+	Apply(ctx context.Context, cfg *envconf.Config) error
+	// Delete deletes the overlay. Equivalent to the `kubectl delete -k` command
+	Delete(ctx context.Context, cfg *envconf.Config) error
+	// Edit changes overlay files
+	Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
 }
 
 func NewCloudAPIAdaptor(provider string) (*CloudAPIAdaptor, error) {
 	namespace := "confidential-containers-system"
 
-	overlayDir := path.Join("../../install/overlays", provider)
-	overlay, err := NewKustomizeOverlay(overlayDir)
+	overlay, err := GetInstallOverlay(provider)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +98,17 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 	}
 
 	return newProvisioner(properties)
+}
+
+// GetInstallOverlay returns the InstallOverlay implementation for the provider
+func GetInstallOverlay(provider string) (InstallOverlay, error) {
+
+	overlayFunc, ok := newInstallOverlayFunctions[provider]
+	if !ok {
+		return nil, fmt.Errorf("Not implemented install overlay for %s\n", provider)
+	}
+
+	return overlayFunc()
 }
 
 // Deletes the peer pods installation including the controller manager.
@@ -137,7 +160,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 }
 
 // Deploy installs Peer Pods on the cluster.
-func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config) error {
+func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
 	client, err := cfg.NewClient()
 	if err != nil {
 		return err
@@ -157,6 +180,9 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config) error
 	}
 
 	fmt.Println("Install CoCo and cloud-api-adaptor")
+	if err := p.installOverlay.Edit(ctx, cfg, props); err != nil {
+		return err
+	}
 	if err := p.installOverlay.Apply(ctx, cfg); err != nil {
 		return err
 	}
