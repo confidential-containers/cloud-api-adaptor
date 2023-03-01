@@ -44,9 +44,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20220913141151-9b49a6ddc6fd
 	github.com/sirupsen/logrus v1.9.0
+	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	k8s.io/api v0.24.1
 	k8s.io/apimachinery v0.24.1
 	sigs.k8s.io/e2e-framework v0.0.8
+	sigs.k8s.io/kustomize v2.0.3+incompatible
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 )

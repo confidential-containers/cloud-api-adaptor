@@ -3,10 +3,17 @@ package provisioner
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"golang.org/x/exp/slices"
+	"os"
 	"sigs.k8s.io/e2e-framework/klient/decoder"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+	"sigs.k8s.io/kustomize/pkg/commands/kustfile"
+	"sigs.k8s.io/kustomize/pkg/fs"
+	ktypes "sigs.k8s.io/kustomize/pkg/types"
+	"strings"
 )
 
 type KustomizeOverlay struct {
@@ -75,6 +82,124 @@ func (kh *KustomizeOverlay) YamlReload() error {
 		return err
 	}
 	kh.yaml = yml
+
+	return nil
+}
+
+// SetKustomizeConfigMapGeneratorLiteral updates the kustomization YAML by setting `value` to `key` on the
+// `cmgName` ConfigMapGenerator literals. If `key` does not exist then a new entry is added.
+func (kh *KustomizeOverlay) SetKustomizeConfigMapGeneratorLiteral(cmgName string, key string, value string) (err error) {
+	// Unfortunately NewKustomizationFile() needs the work directory (wd) be the overlay directory,
+	// otherwise it won't find the kustomize yaml. So let's save the current wd then switch back when
+	// we are done.
+	oldwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	if err = os.Chdir(kh.configDir); err != nil {
+		return err
+	}
+	defer func() {
+		err = os.Chdir(oldwd)
+	}()
+
+	// Unfortunately (2) the kustomizationFile struct is not exported by the package so reading operation
+	// cannot be refactored in a separate function.
+	kf, err := kustfile.NewKustomizationFile(fs.MakeRealFS())
+	if err != nil {
+		return err
+	}
+
+	m, err := kf.Read()
+	if err != nil {
+		return err
+	}
+
+	if err = setConfigMapGeneratorLiteral(m, cmgName, key, value); err != nil {
+		return err
+	}
+
+	if err = kf.Write(m); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetKustomizeSecretGeneratorFile updates the kustomization YAML by adding the `file` on the
+// `sgName` SecretGenerator files.
+func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorFile(sgName string, file string) (err error) {
+	oldwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	if err = os.Chdir(kh.configDir); err != nil {
+		return err
+	}
+	defer func() {
+		err = os.Chdir(oldwd)
+	}()
+
+	kf, err := kustfile.NewKustomizationFile(fs.MakeRealFS())
+	if err != nil {
+		return err
+	}
+
+	m, err := kf.Read()
+	if err != nil {
+		return err
+	}
+
+	if len(m.SecretGenerator) == 0 {
+		return fmt.Errorf("None SecretGenerator found")
+	}
+
+	i := slices.IndexFunc(m.SecretGenerator, func(sa ktypes.SecretArgs) bool { return sa.Name == sgName })
+	if i == -1 {
+		return fmt.Errorf("SecretGenerator %s not found\n", sgName)
+	}
+	gs := &m.SecretGenerator[i]
+
+	newFiles := gs.GeneratorArgs.DataSources.FileSources
+	newFiles = append(newFiles, file)
+	gs.GeneratorArgs.DataSources.FileSources = newFiles
+
+	if err = kf.Write(m); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setLiteral(literals []string, key string, value string) []string {
+	newLiterals := literals
+	newVal := fmt.Sprintf("%s=\"%s\"", key, value)
+
+	// Find and replace the literal...
+	var i int
+	if i = slices.IndexFunc(newLiterals,
+		func(l string) bool { return strings.HasPrefix(l, key+"=") }); i != -1 {
+		newLiterals[i] = newVal
+		return newLiterals
+	} else {
+		// ...or add a new literal
+		return append(newLiterals, newVal)
+	}
+}
+
+func setConfigMapGeneratorLiteral(k *ktypes.Kustomization, cmgName string, key string, value string) error {
+	if len(k.ConfigMapGenerator) == 0 {
+		return fmt.Errorf("None ConfigMapGenerator found")
+	}
+
+	i := slices.IndexFunc(k.ConfigMapGenerator, func(cma ktypes.ConfigMapArgs) bool { return cma.Name == cmgName })
+	if i == -1 {
+		return fmt.Errorf("ConfigMapGenerator %s not found\n", cmgName)
+	}
+	cmg := &k.ConfigMapGenerator[i]
+
+	newLiterals := setLiteral(cmg.GeneratorArgs.DataSources.LiteralSources, key, value)
+	cmg.GeneratorArgs.DataSources.LiteralSources = newLiterals
 
 	return nil
 }
