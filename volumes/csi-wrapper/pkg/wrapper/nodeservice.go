@@ -12,12 +12,12 @@ import (
 	"strings"
 
 	"github.com/confidential-containers/cloud-api-adaptor/proto/podvminfo"
-	"github.com/containerd/ttrpc"
 	"github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolumeV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolume "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/containerd/ttrpc"
 	volume "github.com/kata-containers/kata-containers/src/runtime/pkg/direct-volume"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
@@ -26,9 +26,9 @@ import (
 )
 
 const (
-	DefaultKubeletLibDir = "/var/lib/kubelet"
+	DefaultKubeletLibDir  = "/var/lib/kubelet"
 	DefaultKubeletDataDir = "/var/data/kubelet"
-	DefaultMountInfo = "{\"Device\": \"/dev/zero\", \"fstype\": \"ext4\"}"
+	DefaultMountInfo      = "{\"Device\": \"/dev/zero\", \"fstype\": \"ext4\"}"
 )
 
 type NodeService struct {

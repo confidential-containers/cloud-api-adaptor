@@ -7,11 +7,11 @@ import (
 	"context"
 	"flag"
 
-	"github.com/golang/glog"
 	"github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/config"
 	peerpodvolumeV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned"
 	"github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/peerpodvolume"
 	"github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/wrapper"
+	"github.com/golang/glog"
 	"k8s.io/client-go/tools/clientcmd"
 )
 

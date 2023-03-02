@@ -8,12 +8,12 @@ import (
 	"flag"
 	"os"
 
-	"github.com/golang/glog"
 	"github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	"github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/config"
 	peerpodvolumeV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned"
 	"github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/peerpodvolume"
 	"github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/wrapper"
+	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/clientcmd"
