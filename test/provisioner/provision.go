@@ -22,8 +22,8 @@ import (
 	"time"
 )
 
-// CloudProvision defines operations to provision the environment on cloud providers.
-type CloudProvision interface {
+// CloudProvisioner defines operations to provision the environment on cloud providers.
+type CloudProvisioner interface {
 	CreateCluster(ctx context.Context, cfg *envconf.Config) error
 	CreateVPC(ctx context.Context, cfg *envconf.Config) error
 	DeleteCluster(ctx context.Context, cfg *envconf.Config) error
@@ -56,12 +56,12 @@ func NewCloudAPIAdaptor(provider string) (p *CloudAPIAdaptor) {
 	}
 }
 
-// GetCloudProvisioner returns a CloudProvision implementation
-func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision, error) {
+// GetCloudProvisioner returns a CloudProvisioner implementation
+func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvisioner, error) {
 	var (
 		err         error
 		properties  map[string]string
-		provisioner CloudProvision
+		provisioner CloudProvisioner
 	)
 
 	properties = make(map[string]string)

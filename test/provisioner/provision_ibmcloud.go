@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-// IBMCloudProvisioner implements the CloudProvision interface for ibmcloud.
+// IBMCloudProvisioner implements the CloudProvisioner interface for ibmcloud.
 type IBMCloudProvisioner struct {
 }
 
