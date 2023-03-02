@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-// LibvirtProvisioner implements the CloudProvision interface for Libvirt.
+// LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
 	conn       *libvirt.Connect // Libvirt connection
 	network    string           // Network name

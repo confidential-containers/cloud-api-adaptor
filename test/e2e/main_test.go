@@ -16,7 +16,7 @@ import (
 var (
 	testEnv         env.Environment
 	cloudProvider   string
-	provisioner     pv.CloudProvision
+	provisioner     pv.CloudProvisioner
 	cloudAPIAdaptor *pv.CloudAPIAdaptor
 )
 

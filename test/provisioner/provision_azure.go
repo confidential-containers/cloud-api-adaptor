@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-// AzureCloudProvisioner implements the CloudProvision interface for ibmcloud.
+// AzureCloudProvisioner implements the CloudProvisioner interface for ibmcloud.
 type AzureCloudProvisioner struct {
 }
 
