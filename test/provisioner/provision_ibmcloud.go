@@ -3,7 +3,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package e2e
+package provisioner
 
 import (
 	"context"
