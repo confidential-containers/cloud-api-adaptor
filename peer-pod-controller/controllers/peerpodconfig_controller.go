@@ -333,7 +333,7 @@ func (r *PeerPodConfigReconciler) getNodesWithLabels(nodeLabels map[string]strin
 func (r *PeerPodConfigReconciler) advertiseExtendedResources() error {
 
 	r.Log.Info("set up extended resources")
-	err, nodesList := r.getNodesWithLabels(map[string]string{"node-role.kubernetes.io/worker": ""})
+	nodesList, err := r.getNodesWithLabels(map[string]string{"node-role.kubernetes.io/worker": ""})
 	if err != nil {
 		r.Log.Info("getting node list failed when trying to update nodes with extended resources")
 		return err
