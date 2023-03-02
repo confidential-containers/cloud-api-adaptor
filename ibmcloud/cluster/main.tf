@@ -9,6 +9,10 @@ module "vpc" {
   zone         = var.zone
 }
 
+data "ibm_resource_group" "default_group" {
+  is_default = "true"
+}
+
 data "ibm_is_image" "node_image" {
   name = var.node_image
 }
