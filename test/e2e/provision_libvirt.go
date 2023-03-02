@@ -1,5 +1,3 @@
-//go:build libvirt
-
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
