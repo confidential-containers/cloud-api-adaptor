@@ -44,6 +44,23 @@ By default it is given 20 minutes for the entire e2e execution to complete, othe
 
 To leave the cluster untouched by the execution finish you should export `TEST_E2E_TEARDOWN=no`, otherwise the framework will attempt to wipe out any resources created. For example, if `TEST_E2E_PROVISION=yes` is used to create a VPC and cluster for testing and `TEST_E2E_TEARDOWN=no` not specified, then at the end of the test the provisioned cluster and VPC, will both be deleted.
 
+## Provision file specifics
+
+As mentioned on the previous section, a properties file can be passed to the cloud provisioner that will be used to controll the provisioning operations. The properties are specific of each cloud provider though, see on the sections below.
+
+### Libvirt provision properties
+
+Use the properties on the table below for Libvirt:
+
+|Property|Description|Default|
+|---|---|---|
+|libvirt_network|Libvirt Network|"default"|
+|libvirt_storage|Libvirt storage pool|"default"|
+|libvirt_url|Libvirt connection URI|"qemu+ssh://root@192.168.122.1/system?no_verify=1"|
+|libvirt_ssh_key_file|Path to SSH private key||
+|pause_image|k8s pause image||
+|vxlan_port| VXLAN port number||
+
 # Adding support for a new cloud provider
 
 In order to add a test pipeline for a new cloud provider, you will need to implement some

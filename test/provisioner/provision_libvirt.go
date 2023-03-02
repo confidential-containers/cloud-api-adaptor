@@ -25,11 +25,13 @@ func init() {
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
-	conn       *libvirt.Connect // Libvirt connection
-	network    string           // Network name
-	storage    string           // Storage pool name
-	wd         string           // libvirt's directory path on this repository
-	volumeName string           // Podvm volume name
+	conn         *libvirt.Connect // Libvirt connection
+	network      string           // Network name
+	ssh_key_file string           // SSH key file used to connect to Libvirt
+	storage      string           // Storage pool name
+	uri          string           // Libvirt URI
+	wd           string           // libvirt's directory path on this repository
+	volumeName   string           // Podvm volume name
 }
 
 // LibvirtInstallOverlay implements the InstallOverlay interface
@@ -48,9 +50,19 @@ func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, erro
 		network = properties["libvirt_network"]
 	}
 
+	ssh_key_file := ""
+	if properties["libvirt_ssh_key_file"] != "" {
+		ssh_key_file = properties["libvirt_ssh_key_file"]
+	}
+
 	storage := "default"
 	if properties["libvirt_storage"] != "" {
 		storage = properties["libvirt_storage"]
+	}
+
+	uri := "qemu+ssh://root@192.168.122.1/system?no_verify=1"
+	if properties["libvirt_uri"] != "" {
+		uri = properties["libvirt_uri"]
 	}
 
 	// TODO: accept a different URI.
@@ -61,11 +73,13 @@ func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, erro
 
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
-		conn:       conn,
-		network:    network,
-		storage:    storage,
-		wd:         wd,
-		volumeName: "podvm-base.qcow2",
+		conn:         conn,
+		network:      network,
+		ssh_key_file: ssh_key_file,
+		storage:      storage,
+		uri:          uri,
+		wd:           wd,
+		volumeName:   "podvm-base.qcow2",
 	}, nil
 }
 
@@ -157,8 +171,10 @@ func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config)
 func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
 		"network":      l.network,
-		"storage":      l.storage,
 		"podvm_volume": l.volumeName,
+		"ssh_key_file": l.ssh_key_file,
+		"storage":      l.storage,
+		"uri":          l.uri,
 	}
 }
 
@@ -224,6 +240,38 @@ func (lio *LibvirtInstallOverlay) Delete(ctx context.Context, cfg *envconf.Confi
 	return lio.overlay.Delete(ctx, cfg)
 }
 
+// Update install/overlays/libvirt/kustomization.yaml
 func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
+	var err error
+
+	// Mapping the internal properties to ConfigMapGenerator properties and their default values.
+	mapProps := map[string][2]string{
+		"network":     {"default", "LIBVIRT_NET"},
+		"storage":     {"default", "LIBVIRT_POOL"},
+		"pause_image": {"", "PAUSE_IMAGE"},
+		"uri":         {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
+		"vxlan_port":  {"", "VXLAN_PORT"},
+	}
+
+	for k, v := range mapProps {
+		if properties[k] != v[0] {
+			if err = lio.overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm",
+				v[1], properties[k]); err != nil {
+				return err
+			}
+		}
+	}
+
+	if properties["ssh_key_file"] != "" {
+		if err = lio.overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret",
+			properties["ssh_key_file"]); err != nil {
+			return err
+		}
+	}
+
+	if err = lio.overlay.YamlReload(); err != nil {
+		return err
+	}
+
 	return nil
 }
