@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 
+	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
+
 	kconf "sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -14,8 +16,8 @@ import (
 var (
 	testEnv         env.Environment
 	cloudProvider   string
-	provisioner     CloudProvision
-	cloudAPIAdaptor *CloudAPIAdaptor
+	provisioner     pv.CloudProvision
+	cloudAPIAdaptor *pv.CloudAPIAdaptor
 )
 
 func TestMain(m *testing.M) {
@@ -60,7 +62,7 @@ func TestMain(m *testing.M) {
 
 	if shouldProvisionCluster || podvmImage != "" {
 		// Get an provisioner instance for the cloud provider.
-		provisioner, err = GetCloudProvisioner(cloudProvider, provisionPropsFile)
+		provisioner, err = pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -101,7 +103,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		cloudAPIAdaptor = NewCloudAPIAdaptor(cloudProvider)
+		cloudAPIAdaptor = pv.NewCloudAPIAdaptor(cloudProvider)
 		fmt.Println("Deploy the Cloud API Adaptor")
 		if err = cloudAPIAdaptor.Deploy(ctx, cfg); err != nil {
 			return ctx, err

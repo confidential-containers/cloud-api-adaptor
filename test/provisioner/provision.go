@@ -1,7 +1,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package e2e
+package provisioner
 
 import (
 	"context"
@@ -56,7 +56,7 @@ func NewCloudAPIAdaptor(provider string) (p *CloudAPIAdaptor) {
 	}
 }
 
-//GetCloudProvisioner returns a CloudProvision implementation
+// GetCloudProvisioner returns a CloudProvision implementation
 func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision, error) {
 	var (
 		err         error
