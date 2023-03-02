@@ -151,7 +151,7 @@ linters-settings:
   gosimple:
     # Select the Go version to target.
     # Default: 1.13
-    go: "1.18"
+    go: "1.19"
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
 
@@ -190,14 +190,9 @@ linters-settings:
   staticcheck:
     # Select the Go version to target.
     # Default: 1.13
-    go: "1.18"
+    go: "1.19"
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
-
-  varcheck:
-    # Check usage of exported fields and variables.
-    # Default: false
-    #exported-fields: true
 
   # The custom section can be used to define linter plugins to be loaded at runtime.
   # See README documentation for more info.
@@ -223,7 +218,6 @@ linters:
   # https://golangci-lint.run/usage/linters/#enabled-by-default-linters
   enable:
     # Explicitly listing the linters that would be enabled by default.
-    - deadcode
     - errcheck
     - gosimple
     - govet
@@ -231,7 +225,6 @@ linters:
     - staticcheck
     - typecheck
     - unused
-    - varcheck
     # Additional linters.
     - gofmt
 
