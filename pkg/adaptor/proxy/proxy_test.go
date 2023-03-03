@@ -227,11 +227,9 @@ func TestDialerFailure(t *testing.T) {
 
 func TestNullCriEndpoint(t *testing.T) {
 	p := &agentProxy{
-		maxRetries:    5,
-		retryInterval: 100 * time.Millisecond,
+		criTimeout:    100 * time.Millisecond,
 		criSocketPath: "/dev/null",
 	}
-
 	_, err := p.initCriClient(context.Background())
 	if err == nil {
 		t.Fatal("expect error, got nil")
@@ -255,8 +253,7 @@ func TestCriEndpointDial(t *testing.T) {
 	go server.Serve(listener) //nolint:errcheck // no need to check exit error for test
 
 	p := &agentProxy{
-		maxRetries:    5,
-		retryInterval: 100 * time.Millisecond,
+		criTimeout:    100 * time.Millisecond,
 		criSocketPath: sockAddr,
 	}
 	_, err = p.initCriClient(context.Background())
