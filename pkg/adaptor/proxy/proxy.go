@@ -105,26 +105,27 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 	return conn, nil
 }
 
-func initCriClient(ctx context.Context, target string) (*criClient, error) {
-	if target != "" {
-		conn, err := grpc.DialContext(ctx, target, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(),
+func (p *agentProxy) initCriClient(ctx context.Context) (*criClient, error) {
+	if p.criSocketPath != "" {
+		timeout, cancel := context.WithTimeout(ctx, p.retryInterval)
+		defer cancel()
+		conn, err := grpc.DialContext(timeout, p.criSocketPath, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(),
 			grpc.WithContextDialer(func(ctx context.Context, target string) (net.Conn, error) {
 				return (&net.Dialer{}).DialContext(ctx, "unix", target)
 			}),
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to established cri uds connection to %s", p.criSocketPath)
 		}
 
 		criClient := &criClient{
 			ImageServiceClient: criapi.NewImageServiceClient(conn),
 		}
-
-		logger.Printf("established cri uds connection to %s", target)
-		return criClient, nil
+		logger.Printf("established cri uds connection to %s", p.criSocketPath)
+		return criClient, err
 	}
 
-	return nil, fmt.Errorf("cri runtime endpoint is not specified, it is used to get the image name from image digest.")
+	return nil, fmt.Errorf("cri runtime endpoint is not specified, it is used to get the image name from image digest")
 }
 
 func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
@@ -147,7 +148,7 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 		return p.dial(ctx, serverURL.Host)
 	}
 
-	criClient, err := initCriClient(ctx, p.criSocketPath)
+	criClient, err := p.initCriClient(ctx)
 	if err != nil {
 		// cri client is optional currently, we ignore any errors here
 		logger.Printf("failed to init cri client, the err: %v", err)
