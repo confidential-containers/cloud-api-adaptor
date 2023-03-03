@@ -149,6 +149,8 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
+##@ Binaries
+
 LOCAL_BIN ?= $(shell pwd)/bin
 $(LOCAL_BIN):
 	mkdir -p $(LOCAL_BIN)
@@ -167,6 +169,23 @@ ENVTEST = $(LOCAL_BIN)/setup-envtest
 .PHONY: envtest
 envtest: $(LOCAL_BIN) ## Download envtest-setup locally if necessary.
 	command -v $(LOCAL_BIN)/envtest || GOBIN=$(LOCAL_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+##@ Verify
+
+.PHONY: verify-modules
+verify-modules: ## Verify go modules are up to date
+	go mod tidy
+	@if !(git diff --quiet HEAD -- go.sum go.mod); then \
+		git diff; \
+		echo "go module files are out of date"; exit 1; \
+	fi
+
+.PHONY: verify-gen
+verify-gen: generate ## Verfiy go generated files are up to date
+	@if !(git diff --quiet HEAD); then \
+		git diff; \
+		echo "generated files are out of date, run make generate"; exit 1; \
+	fi
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
