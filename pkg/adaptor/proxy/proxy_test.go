@@ -252,7 +252,7 @@ func TestCriEndpointDial(t *testing.T) {
 	}
 	server := grpc.NewServer()
 	defer server.Stop()
-	go server.Serve(listener)
+	go server.Serve(listener) //nolint:errcheck // no need to check exit error for test
 
 	p := &agentProxy{
 		maxRetries:    5,
