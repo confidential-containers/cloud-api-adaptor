@@ -82,7 +82,7 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 	case "libvirt":
 		provisioner, err = NewLibvirtProvisioner(properties)
 	case "ibmcloud":
-		provisioner, err = NewIBMCloudProvisioner("default", "default")
+		provisioner, err = NewIBMCloudProvisioner(properties)
 	default:
 		return nil, fmt.Errorf("Not implemented provisioner for %s\n", provider)
 	}
