@@ -1,4 +1,4 @@
-//go:build libvirt
+//go:build libvirt && cgo
 
 package e2e
 
