@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
+	"google.golang.org/grpc"
 )
 
 func TestNewAgentProxy(t *testing.T) {
@@ -220,6 +222,46 @@ func TestDialerFailure(t *testing.T) {
 
 	if e, a := "reaches max retry count", err.Error(); !strings.Contains(a, e) {
 		t.Fatalf("expect %q, got %q", e, a)
+	}
+}
+
+func TestNullCriEndpoint(t *testing.T) {
+	p := &agentProxy{
+		maxRetries:    5,
+		retryInterval: 100 * time.Millisecond,
+		criSocketPath: "/dev/null",
+	}
+
+	_, err := p.initCriClient(context.Background())
+	if err == nil {
+		t.Fatal("expect error, got nil")
+	}
+}
+
+func TestCriEndpointDial(t *testing.T) {
+	protocol := "unix"
+	sockAddr := "/tmp/grpc.sock"
+	if _, err := os.Stat(sockAddr); !os.IsNotExist(err) {
+		if err := os.RemoveAll(sockAddr); err != nil {
+			t.Fatal(err)
+		}
+	}
+	listener, err := net.Listen(protocol, sockAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := grpc.NewServer()
+	defer server.Stop()
+	go server.Serve(listener)
+
+	p := &agentProxy{
+		maxRetries:    5,
+		retryInterval: 100 * time.Millisecond,
+		criSocketPath: sockAddr,
+	}
+	_, err = p.initCriClient(context.Background())
+	if err != nil {
+		t.Fatalf("expect no error, got %q\n", err)
 	}
 }
 
