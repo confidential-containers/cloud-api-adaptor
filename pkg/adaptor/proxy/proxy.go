@@ -27,6 +27,7 @@ const (
 
 	defaultMaxRetries    = 20
 	defaultRetryInterval = 10 * time.Second
+	defaultCriTimeout    = 1 * time.Second
 )
 
 var logger = log.New(log.Writer(), "[adaptor/proxy] ", log.LstdFlags|log.Lmsgprefix)
@@ -49,6 +50,7 @@ type agentProxy struct {
 	pauseImage    string
 	maxRetries    int
 	retryInterval time.Duration
+	criTimeout    time.Duration
 	stopOnce      sync.Once
 }
 
@@ -61,6 +63,7 @@ func NewAgentProxy(socketPath, criSocketPath string, pauseImage string) AgentPro
 		stopCh:        make(chan struct{}),
 		maxRetries:    defaultMaxRetries,
 		retryInterval: defaultRetryInterval,
+		criTimeout:    defaultCriTimeout,
 		pauseImage:    pauseImage,
 	}
 }
@@ -107,15 +110,18 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 
 func (p *agentProxy) initCriClient(ctx context.Context) (*criClient, error) {
 	if p.criSocketPath != "" {
-		timeout, cancel := context.WithTimeout(ctx, p.retryInterval)
+		timeout, cancel := context.WithTimeout(ctx, p.criTimeout)
 		defer cancel()
-		conn, err := grpc.DialContext(timeout, p.criSocketPath, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(),
+		conn, err := grpc.DialContext(timeout, p.criSocketPath,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithBlock(),
 			grpc.WithContextDialer(func(ctx context.Context, target string) (net.Conn, error) {
 				return (&net.Dialer{}).DialContext(ctx, "unix", target)
 			}),
+			grpc.FailOnNonTempDialError(true),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to established cri uds connection to %s", p.criSocketPath)
+			return nil, fmt.Errorf("failed to established cri uds connection to %s: %v", p.criSocketPath, err)
 		}
 
 		criClient := &criClient{
