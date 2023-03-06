@@ -143,7 +143,7 @@ func (s *cloudService) setInstance(sid sandboxID, instanceID, instanceName strin
 	}
 
 	sandbox.instanceID = instanceID
-	sandbox.instanceName = instanceID
+	sandbox.instanceName = instanceName
 
 	s.cond.Broadcast()
 
