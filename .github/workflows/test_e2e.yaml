@@ -144,4 +144,37 @@ jobs:
         context: .
         platforms: ${{ matrix.arches }}
         file: Dockerfile
+  test:
+    needs: [podvm, caa-build-dev]
+    env:
+      go_version: 1.18
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        provider:
+          - libvirt
+        include:
+          - provider: libvirt
+            runner: ubuntu-latest
+            os: ubuntu
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@v3
 
+    - name: Setup Golang version ${{ env.go_version }}
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ env.go_version }}
+
+    - name: Update the CAA image
+      run: |
+        # install kustomize
+        # kustomize -e cloud-api-adaptor
+        # quay.io/confidential-containers/cloud-api-adaptor
+        #ghcr.io/${{ github.repository_owner }}/ci-cloud-api-adaptor-dev:pr${{ github.event.number  }}
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+        pushd install/overlays/${{ matrix.provider }}
+        ../../../kustomize edit set image cloud-api-adaptor=ghcr.io/${{ github.repository_owner }}/ci-cloud-api-adaptor-dev:pr${{ github.event.number  }}
+        cat kustomization.yaml
+        popd
