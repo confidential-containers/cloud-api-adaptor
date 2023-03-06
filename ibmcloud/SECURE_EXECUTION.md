@@ -8,7 +8,7 @@ To support Secure Execution for Peer Pods on IBM Cloud VPC, we need build a Secu
 
 ## Set up a demo environment without Secure Execution on your development machine
 
-Follow the [README.md](./README.md) to setup a demo environment on IBM Cloud VPC. We need create a **s390x** architecture based cluster, so please include the following two lines in the `terraform.tfvars` file:
+Follow the [terraform README.md](./terraform/README.md) to setup a demo environment on IBM Cloud VPC. We need create a **s390x** architecture based cluster, so please include the following two lines in the `terraform.tfvars` file:
 ```
 instance_profile_name = "bz2-2x8"
 image_name = "ibm-ubuntu-18-04-1-minimal-s390x-3"
