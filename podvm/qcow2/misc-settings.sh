@@ -38,4 +38,17 @@ then
 # else if...
 #
 fi
+
+if [ -e /etc/certificates/tls.crt ] && [ -e /etc/certificates/tls.key ] && [ -e /etc/certificates/ca.crt ]; then
+    # Update systemd service file to add additional options
+    cat <<END >> /etc/default/agent-protocol-forwarder
+TLS_OPTIONS=-cert-file /etc/certificates/tls.crt -cert-key /etc/certificates/tls.key -ca-cert-file /etc/certificates/ca.crt
+END
+elif [ -e /etc/certificates/tls.crt ] && [ -e /etc/certificates/tls.key ] && [ ! -e /etc/certificates/ca.crt ]; then
+    # Update systemd service file to add additional options
+    cat <<END >> /etc/default/agent-protocol-forwarder
+TLS_OPTIONS=-cert-file /etc/certificates/tls.crt -cert-key /etc/certificates/tls.key
+END
+fi
+
 exit 0
