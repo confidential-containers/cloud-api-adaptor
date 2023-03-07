@@ -20,6 +20,7 @@ import (
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
+	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	"github.com/gogo/protobuf/types"
@@ -161,7 +162,9 @@ func startDaemon(t *testing.T, ctx context.Context, agentSocketPath string, port
 	nsPath := os.Getenv("AGENT_PROTOCOL_FORWARDER_NAMESPACE")
 	interceptor := interceptor.NewInterceptor(agentSocketPath, nsPath)
 
-	d := daemon.NewDaemon(config, "127.0.0.1:0", interceptor, &mockPodNode{})
+	tlsConfig := tlsutil.TLSConfig{}
+
+	d := daemon.NewDaemon(config, "127.0.0.1:0", &tlsConfig, interceptor, &mockPodNode{})
 
 	daemonErr := make(chan error)
 	go func() {

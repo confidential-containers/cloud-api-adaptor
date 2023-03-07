@@ -18,6 +18,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/vminfo"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
+	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
 	pbPodVMInfo "github.com/confidential-containers/cloud-api-adaptor/proto/podvminfo"
 )
 
@@ -29,6 +30,7 @@ const (
 )
 
 type ServerConfig struct {
+	TLSConfig     tlsutil.TLSConfig
 	SocketPath    string
 	CriSocketPath string
 	PauseImage    string
@@ -57,7 +59,7 @@ func NewServer(provider cloud.Provider, cfg *ServerConfig, workerNode podnetwork
 
 	logger.Printf("server config: %#v", cfg)
 
-	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.CriSocketPath)
+	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.CriSocketPath, &cfg.TLSConfig)
 	cloudService := cloud.NewService(provider, agentFactory, workerNode, cfg.PodsDir, cfg.ForwarderPort)
 	vmInfoService := vminfo.NewService(cloudService)
 
