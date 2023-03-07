@@ -1,5 +1,3 @@
-//go:build ibmcloud
-
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,6 +5,7 @@ package provisioner
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -22,6 +21,7 @@ type IBMCloudProperties struct {
 	ApiKey          string
 	Bucket          string
 	ClusterName     string
+	CosApiKey       string
 	CosInstanceID   string
 	CosServiceURL   string
 	SecurityGroupID string
@@ -45,6 +45,7 @@ type IBMCloudProperties struct {
 	IsSelfManaged   bool
 	IsProvNewVPC    bool
 	IsProvNewSubnet bool
+	IsDebug         bool
 
 	VPC        *vpcv1.VpcV1
 	ClusterAPI containerv2.Clusters
@@ -57,6 +58,7 @@ func initProperties(properties map[string]string) error {
 		ApiKey:        properties["APIKEY"],
 		Bucket:        properties["COS_BUCKET"],
 		ClusterName:   properties["CLUSTER_NAME"],
+		CosApiKey:     properties["COS_APIKEY"],
 		CosInstanceID: properties["COS_INSTANCE_ID"],
 		CosServiceURL: properties["COS_SERVICE_URL"],
 		IamServiceURL: properties["IAM_SERVICE_URL"],
@@ -80,15 +82,15 @@ func initProperties(properties map[string]string) error {
 	}
 
 	if len(IBMCloudProps.ClusterName) <= 0 {
-		IBMCloudProps.ClusterName = "e2e_test_cluster"
+		IBMCloudProps.ClusterName = "e2e-test-cluster"
 	}
 	if len(IBMCloudProps.VpcName) <= 0 && len(IBMCloudProps.VpcID) <= 0 {
 		IBMCloudProps.IsProvNewVPC = true
-		IBMCloudProps.VpcName = IBMCloudProps.ClusterName + "_vpc"
+		IBMCloudProps.VpcName = IBMCloudProps.ClusterName + "-vpc"
 	}
 	if len(IBMCloudProps.SubnetName) <= 0 && len(IBMCloudProps.SubnetID) <= 0 {
 		IBMCloudProps.IsProvNewSubnet = true
-		IBMCloudProps.SubnetName = IBMCloudProps.ClusterName + "_subnet"
+		IBMCloudProps.SubnetName = IBMCloudProps.VpcName + "-subnet"
 	}
 	if len(IBMCloudProps.InstanceProfile) <= 0 {
 		IBMCloudProps.InstanceProfile = "bx2-2x8"
@@ -111,6 +113,14 @@ func initProperties(properties map[string]string) error {
 	selfManagedStr := properties["IS_SELF_MANAGED_CLUSTER"]
 	if strings.EqualFold(selfManagedStr, "yes") || strings.EqualFold(selfManagedStr, "true") {
 		IBMCloudProps.IsSelfManaged = true
+	}
+
+	debugStr := os.Getenv("DEBUG")
+	if strings.EqualFold(debugStr, "yes") || strings.EqualFold(debugStr, "true") {
+		IBMCloudProps.IsDebug = true
+	}
+	if IBMCloudProps.IsDebug {
+		fmt.Printf("%+v\n", IBMCloudProps)
 	}
 
 	if len(IBMCloudProps.ApiKey) <= 0 {
@@ -145,6 +155,9 @@ func initProperties(properties map[string]string) error {
 
 	podvmImage := os.Getenv("TEST_E2E_PODVM_IMAGE")
 	if len(podvmImage) >= 0 {
+		if len(IBMCloudProps.CosApiKey) <= 0 {
+			return errors.New("COS_APIKEY was not set.")
+		}
 		if len(IBMCloudProps.CosInstanceID) <= 0 {
 			return errors.New("COS_INSTANCE_ID was not set.")
 		}
@@ -164,6 +177,8 @@ func initProperties(properties map[string]string) error {
 }
 
 func initVpcV1() error {
+	ibmcloudTrace("initVpcV1()")
+
 	if IBMCloudProps.VPC != nil {
 		return nil
 	}
@@ -179,10 +194,13 @@ func initVpcV1() error {
 		return err
 	}
 	IBMCloudProps.VPC = vpcService
+
 	return nil
 }
 
 func initClustersAPI() error {
+	ibmcloudTrace("initClustersAPI()")
+
 	cfg := &bx.Config{
 		BluemixAPIKey: IBMCloudProps.ApiKey,
 		Region:        IBMCloudProps.Region,
@@ -196,5 +214,6 @@ func initClustersAPI() error {
 		return err
 	}
 	IBMCloudProps.ClusterAPI = clusterClient.Clusters()
+
 	return nil
 }

@@ -6,10 +6,12 @@ package provisioner
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"strings"
+	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/test/utils"
 
@@ -21,28 +23,125 @@ import (
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 )
 
+func ibmcloudTrace(str string) {
+	if IBMCloudProps.IsDebug {
+		fmt.Println(str)
+	}
+}
+
+// https://cloud.ibm.com/docs/vpc?topic=vpc-configuring-address-prefixes
+func getCidrBlock(region, zone string) string {
+	switch region {
+	case "us-south":
+		switch zone {
+		case region + "-1":
+			return "10.240.0.0/18"
+		case region + "-2":
+			return "10.240.64.0/18"
+		case region + "-3":
+			return "10.240.128.0/18"
+		}
+	case "us-east":
+		switch zone {
+		case region + "-1":
+			return "10.241.0.0/18"
+		case region + "-2":
+			return "10.241.64.0/18"
+		case region + "-3":
+			return "10.241.128.0/18"
+		}
+	case "eu-gb":
+		switch zone {
+		case region + "-1":
+			return "10.242.0.0/18"
+		case region + "-2":
+			return "10.242.64.0/18"
+		case region + "-3":
+			return "10.242.128.0/18"
+		}
+	case "eu-de":
+		switch zone {
+		case region + "-1":
+			return "10.243.0.0/18"
+		case region + "-2":
+			return "10.243.64.0/18"
+		case region + "-3":
+			return "10.243.128.0/18"
+		}
+	case "jp-tok":
+		switch zone {
+		case region + "-1":
+			return "10.244.0.0/18"
+		case region + "-2":
+			return "10.244.64.0/18"
+		case region + "-3":
+			return "10.244.128.0/18"
+		}
+	case "au-syd":
+		switch zone {
+		case region + "-1":
+			return "10.245.0.0/18"
+		case region + "-2":
+			return "10.245.64.0/18"
+		case region + "-3":
+			return "10.245.128.0/18"
+		}
+	case "jp-osa":
+		switch zone {
+		case region + "-1":
+			return "10.248.0.0/18"
+		case region + "-2":
+			return "10.248.64.0/18"
+		case region + "-3":
+			return "10.248.128.0/18"
+		}
+	case "ca-tor":
+		switch zone {
+		case region + "-1":
+			return "10.249.0.0/18"
+		case region + "-2":
+			return "10.249.64.0/18"
+		case region + "-3":
+			return "10.249.128.0/18"
+		}
+	case "br-sao":
+		switch zone {
+		case region + "-1":
+			return "10.250.0.0/18"
+		case region + "-2":
+			return "10.250.64.0/18"
+		case region + "-3":
+			return "10.250.128.0/18"
+		}
+	}
+	return ""
+}
+
 func createVPC() error {
 	if !IBMCloudProps.IsProvNewSubnet {
+		fmt.Printf("Using existing VPC: %s\n", IBMCloudProps.VpcID)
 		return nil
 	}
 
 	classicAccess := false
-	manual := "manual"
+	//manual := "manual"
 
 	options := &vpcv1.CreateVPCOptions{
 		ResourceGroup: &vpcv1.ResourceGroupIdentity{
 			ID: &IBMCloudProps.ResourceGroupID,
 		},
-		Name:                    &[]string{IBMCloudProps.VpcName}[0],
-		ClassicAccess:           &classicAccess,
-		AddressPrefixManagement: &manual,
+		Name:          &[]string{IBMCloudProps.VpcName}[0],
+		ClassicAccess: &classicAccess,
+		//AddressPrefixManagement: &manual,
 	}
+	ibmcloudTrace(fmt.Sprintf("Creating VPC %s in ResourceGroupID %s.\n", IBMCloudProps.VpcName, IBMCloudProps.ResourceGroupID))
 	vpcInstance, _, err := IBMCloudProps.VPC.CreateVPC(options)
 	if err != nil {
 		return err
 	}
 
 	IBMCloudProps.VpcID = *vpcInstance.ID
+	ibmcloudTrace(fmt.Sprintf("Created VPC with ID %s in ResourceGroupID %s.\n", IBMCloudProps.VpcID, IBMCloudProps.ResourceGroupID))
 
 	if len(IBMCloudProps.VpcID) <= 0 {
 		return errors.New("VpcID is empty, unknown error happened when create VPC.")
@@ -56,12 +155,14 @@ func createVPC() error {
 	}
 
 	IBMCloudProps.SecurityGroupID = *defaultSG.ID
+	ibmcloudTrace(fmt.Sprintf("Got VPC default SecurityGroupID %s.\n", IBMCloudProps.SecurityGroupID))
 
 	return nil
 }
 
 func deleteVPC() error {
 	if !IBMCloudProps.IsProvNewVPC {
+		fmt.Printf("Do not delete because using existing VPC: %s\n", IBMCloudProps.VpcID)
 		return nil
 	}
 
@@ -77,12 +178,19 @@ func deleteVPC() error {
 
 func createSubnet() error {
 	if !IBMCloudProps.IsProvNewSubnet {
+		fmt.Printf("Using existing Subnet: %s\n", IBMCloudProps.SubnetID)
 		return nil
 	}
 
-	cidrBlock := "10.0.1.0/24"
+	cidrBlock := getCidrBlock(IBMCloudProps.Region, IBMCloudProps.Zone)
+	if cidrBlock == "" {
+		return errors.New("Can not calculate cidrBlock from Region and Zone.")
+	}
 	options := &vpcv1.CreateSubnetOptions{}
 	options.SetSubnetPrototype(&vpcv1.SubnetPrototype{
+		ResourceGroup: &vpcv1.ResourceGroupIdentity{
+			ID: &IBMCloudProps.ResourceGroupID,
+		},
 		Ipv4CIDRBlock: &cidrBlock,
 		Name:          &[]string{IBMCloudProps.SubnetName}[0],
 		VPC: &vpcv1.VPCIdentity{
@@ -92,11 +200,13 @@ func createSubnet() error {
 			Name: &IBMCloudProps.Zone,
 		},
 	})
+	ibmcloudTrace(fmt.Sprintf("Creating subnet %s in VPC %s in Zone %s.\n", IBMCloudProps.SubnetName, IBMCloudProps.VpcID, IBMCloudProps.Zone))
 	subnet, _, err := IBMCloudProps.VPC.CreateSubnet(options)
 	if err != nil {
 		return err
 	}
 	IBMCloudProps.SubnetID = *subnet.ID
+	ibmcloudTrace(fmt.Sprintf("Created subnet with ID %s.\n", IBMCloudProps.SubnetID))
 
 	if len(IBMCloudProps.SubnetID) <= 0 {
 		return errors.New("SubnetID is empty, unknown error happened when create Subnet.")
@@ -107,6 +217,7 @@ func createSubnet() error {
 
 func deleteSubnet() error {
 	if !IBMCloudProps.IsProvNewSubnet {
+		fmt.Printf("Do not delete because using existing Subnet: %s\n", IBMCloudProps.SubnetID)
 		return nil
 	}
 
@@ -125,6 +236,9 @@ func createVpcImpl() error {
 	if err != nil {
 		return err
 	}
+	ibmcloudTrace("waiting vpc ready before create subnet")
+	// wait vpc ready before create subnet
+	time.Sleep(60 * time.Second)
 	return createSubnet()
 }
 
@@ -154,6 +268,8 @@ func NewIBMCloudProvisioner(properties map[string]string) (CloudProvisioner, err
 // IBMCloudProvisioner
 
 func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
+	ibmcloudTrace("CreateCluster()")
+
 	clusterInfo := containerv2.ClusterCreateRequest{
 		DisablePublicServiceEndpoint: true,
 		Name:                         IBMCloudProps.ClusterName,
@@ -174,19 +290,24 @@ func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Co
 		},
 	}
 	target := containerv2.ClusterTargetHeader{}
+	ibmcloudTrace(fmt.Sprintf("Creating cluster %s.\n", IBMCloudProps.ClusterName))
 	_, err := IBMCloudProps.ClusterAPI.Create(clusterInfo, target)
 	if err != nil {
 		return err
 	}
 
+	// TODO, wait cluter ready, it takes long time
 	return nil
 }
 
 func (p *IBMCloudProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) error {
+	ibmcloudTrace("CreateVPC()")
 	return createVpcImpl()
 }
 
 func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
+	ibmcloudTrace("DeleteCluster()")
+
 	target := containerv2.ClusterTargetHeader{}
 	err := IBMCloudProps.ClusterAPI.Delete(IBMCloudProps.ClusterName, target)
 	if err != nil {
@@ -197,10 +318,13 @@ func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Co
 }
 
 func (p *IBMCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
+	ibmcloudTrace("DeleteVPC()")
 	return deleteVpcImpl()
 }
 
 func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
+	ibmcloudTrace("UploadPodvm()")
+
 	filePath, err := filepath.Abs(imagePath)
 	if err != nil {
 		return err
@@ -209,10 +333,11 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	conf := aws.NewConfig().
 		WithEndpoint(IBMCloudProps.CosServiceURL).
 		WithCredentials(ibmiam.NewStaticCredentials(aws.NewConfig(),
-			IBMCloudProps.IamServiceURL, IBMCloudProps.ApiKey, IBMCloudProps.CosInstanceID)).
+			IBMCloudProps.IamServiceURL, IBMCloudProps.CosApiKey, IBMCloudProps.CosInstanceID)).
 		WithS3ForcePathStyle(true)
 
 	sess := cosession.Must(cosession.NewSession(conf))
+	ibmcloudTrace("session initialized.")
 
 	file, err := os.Open(imagePath)
 	if err != nil {
@@ -222,6 +347,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	if err != nil {
 		return err
 	}
+	ibmcloudTrace(fmt.Sprintf("qcow2 image file %s validated.\n", imagePath))
 
 	reader := &utils.CustomReader{
 		Fp:      file,
@@ -243,6 +369,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	if err != nil {
 		return err
 	}
+	ibmcloudTrace(fmt.Sprintf("File %s uploaded to bucket.\n", key))
 
 	var osNames []string
 	if strings.EqualFold("s390x", IBMCloudProps.PodvmImageArch) {
@@ -256,7 +383,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	}
 
 	cosID := "cos://" + IBMCloudProps.Region + "/" + IBMCloudProps.Bucket + "/" + key
-	imageName := key
+	imageName := strings.TrimSuffix(key, filepath.Ext(key))
 	options := &vpcv1.CreateImageOptions{}
 	options.SetImagePrototype(&vpcv1.ImagePrototype{
 		Name: &imageName,
@@ -265,11 +392,13 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 		},
 		OperatingSystem: operatingSystemIdentityModel,
 	})
+	ibmcloudTrace(fmt.Sprintf("cosID %s, imageName %s.\n", cosID, imageName))
 	image, _, err := IBMCloudProps.VPC.CreateImage(options)
 	if err != nil {
 		return err
 	}
 	IBMCloudProps.PodvmImageID = *image.ID
+	ibmcloudTrace(fmt.Sprintf("Image %s with PodvmImageID %s created from the bucket.\n", key, IBMCloudProps.PodvmImageID))
 
 	return nil
 }
