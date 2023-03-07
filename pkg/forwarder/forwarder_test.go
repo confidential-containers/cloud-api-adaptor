@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/agentproto"
+	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
 )
 
 type mockConn struct{}
@@ -30,8 +31,9 @@ func dummyDialer(ctx context.Context) (net.Conn, error) {
 func TestNew(t *testing.T) {
 
 	config := &Config{}
+	tlsConfig := tlsutil.TLSConfig{}
 
-	ret := NewDaemon(config, DefaultListenAddr, agentproto.NewRedirector(dummyDialer), &mockPodNode{})
+	ret := NewDaemon(config, DefaultListenAddr, &tlsConfig, agentproto.NewRedirector(dummyDialer), &mockPodNode{})
 	if ret == nil {
 		t.Fatal("Expect non nil, got nil")
 	}

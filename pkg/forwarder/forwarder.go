@@ -5,10 +5,12 @@ package forwarder
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log"
 	"net"
+	"reflect"
 	"sync"
 
 	"github.com/containerd/ttrpc"
@@ -17,6 +19,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
+	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
 )
 
 var logger = log.New(log.Writer(), "[forwarder] ", log.LstdFlags|log.Lmsgprefix)
@@ -45,6 +48,7 @@ type Daemon interface {
 }
 
 type daemon struct {
+	tlsConfig   *tlsutil.TLSConfig
 	interceptor interceptor.Interceptor
 	podNode     podnetwork.PodNode
 	readyCh     chan struct{}
@@ -53,10 +57,11 @@ type daemon struct {
 	stopOnce    sync.Once
 }
 
-func NewDaemon(spec *Config, listenAddr string, interceptor interceptor.Interceptor, podNode podnetwork.PodNode) Daemon {
+func NewDaemon(spec *Config, listenAddr string, tlsConfig *tlsutil.TLSConfig, interceptor interceptor.Interceptor, podNode podnetwork.PodNode) Daemon {
 
 	daemon := &daemon{
 		listenAddr:  listenAddr,
+		tlsConfig:   tlsConfig,
 		interceptor: interceptor,
 		podNode:     podNode,
 		readyCh:     make(chan struct{}),
@@ -81,10 +86,33 @@ func (d *daemon) Start(ctx context.Context) error {
 
 	// Set up agent protocol interceptor
 
-	listener, err := net.Listen("tcp", d.listenAddr)
-	if err != nil {
-		return err
+	var listener net.Listener
+
+	logger.Printf("Starting agent-protocol-forwarder listener on address %v", d.listenAddr)
+	if d.tlsConfig != nil && !reflect.DeepEqual(tlsutil.TLSConfig{}, *d.tlsConfig) {
+		logger.Printf("TLS is configured. Configure TLS listener")
+
+		// Create a TLS configuration object
+		tlsConfig, err := tlsutil.GetTLSConfigFor(d.tlsConfig)
+		if err != nil {
+			return fmt.Errorf("Failed to create tls config: %v", err)
+		}
+
+		listener, err = tls.Listen("tcp", d.listenAddr, tlsConfig)
+		if err != nil {
+			logger.Printf("failed to create tls agent-protocol-forwarder listener: %v", err)
+			return err
+		}
+	} else {
+		var err error
+
+		listener, err = net.Listen("tcp", d.listenAddr)
+		if err != nil {
+			logger.Printf("failed to create agent-protocol-forwarder listener: %v", err)
+			return err
+		}
 	}
+
 	d.listenAddr = listener.Addr().String()
 
 	ttrpcServer, err := ttrpc.NewServer()
