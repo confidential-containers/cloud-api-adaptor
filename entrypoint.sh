@@ -12,6 +12,9 @@ optionals+=""
 [[ -S ${CRI_RUNTIME_ENDPOINT} ]] && optionals+="-cri-runtime-endpoint ${CRI_RUNTIME_ENDPOINT} "
 [[ "${PAUSE_IMAGE}" ]] && optionals+="-pause-image ${PAUSE_IMAGE} "
 [[ "${VXLAN_PORT}" ]] && optionals+="-vxlan-port ${VXLAN_PORT} "
+[[ "${CACERT_FILE}" ]] && optionals+="-ca-cert-file ${CACERT_FILE} "
+[[ "${CERT_FILE}" ]] && [[ "${CERT_KEY}" ]] && optionals+="-cert-file ${CERT_FILE} -cert-key ${CERT_KEY} "
+[[ "${INSECURE}" ]] && optionals+="-insecure "
 
 test_vars() {
         for i in "$@"; do
