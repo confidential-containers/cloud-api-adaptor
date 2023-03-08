@@ -17,9 +17,33 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="vsphere"
-  - GOVC_URL="" # set
-  #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
-  #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
+  - GOVC_URL=""        # Setting the vCenter URL is required.
+  - GOVC_DATACENTER="" # Setting the vCenter datacenter is required.
+
+  #- GOVC_TEMPLATE=""  # Uncomment and set if you want to clone the peerpod VM from an existing
+                       # GOVC_DATACENTER template other than the default name podvm-template.
+
+  #- GOVC_DRS=""       # Uncomment and set to true if you want vCenter DRS to determine the peerpod VM placement.
+                       # A DRS Automation=Manual configured GOVC_VCLUSTER in your GOVC_DATACENTER must be indicated as well.
+
+  #- GOVC_VCLUSTER=""  # Uncomment and set to place your peerpod VM on an existing vCenter cluster in your GOVC_DATACENTER.
+                       # If GOVC_DRS is selected a DRS cluster is required.
+
+  #- GOVC_HOST=""      # Uncomment and set to place your peerpod VM on an existing host in your GOVC_DATACENTER.
+                       # If not using DRS a host name is required.
+                       # If using DRS the host name is ignored.
+
+  #- GOVC_DATASTORE="" # Uncomment and set to place your peerpod VM on your GOVC_HOST datastore in your GOVC_DATACENTER.
+                       # If not using DRS a datastore name is required.
+                       # If using DRS the datastore name is ignored.
+
+  #- GOVC_FOLDER=""    # Uncomment to place your peerpod VM in an existing desintation folder
+                       # or create a new one if it does not exist in the VM inventory path
+                       # (GOVC_DATACENTER/vm/GOVC_FOLDER).
+
+  #- PAUSE_IMAGE=""    # Uncomment and set if you want to use a specific pause image
+  #- VXLAN_PORT=""     # Uncomment and set to use "9000" or change if you want to use a specific vxlan port.
+                       # Defaults to 4789.
 ##TLS_SETTINGS
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS
@@ -35,8 +59,12 @@ secretGenerator:
 - name: peer-pods-secret
   namespace: confidential-containers-system
   literals:
-  - GOVC_USERNAME="" # set
-  - GOVC_PASSWORD="" # set
+  - GOVC_USERNAME=""    # Setting the vCenter username is required.
+
+  - GOVC_PASSWORD=""    # Setting the vCenter password is required.
+
+  #- GOVC_THUMBPRINT="" # Uncomment and set if you want secure mode with this vCenter.
+                        # GOVC_THUMBPRINT contains the SHA1 thumbprint of the vCenter certificate.
 ##TLS_SETTINGS
 #- name: certs-for-tls
 #  namespace: confidential-containers-system

@@ -35,10 +35,14 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 
 	logger.Printf("vsphere config: %#v", config.Redact())
 
+	err := checkConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
 	govmomiClient, err := NewGovmomiClient(*config)
 	if err != nil {
-		logger.Printf("Error creating vcenter session for cloud provider:  %s", err)
-		return nil, err
+		return nil, fmt.Errorf("Error creating vcenter session for cloud provider: %s", err)
 	}
 
 	provider := &vsphereProvider{
@@ -47,6 +51,27 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 	}
 
 	return provider, nil
+}
+
+func checkConfig(config *Config) error {
+
+	// Do some initial checks of the optional input values
+
+	if config.DRS == "true" {
+		if config.Cluster == "" {
+			return fmt.Errorf("Error: A cluster name is required with DRS")
+		}
+		return nil
+	}
+
+	// Hosts and Datastores are required when not using DRS
+	// We cannot check for a cluster as hosts do not have to be part of a cluster.
+
+	if config.Host == "" || config.Datastore == "" {
+		return fmt.Errorf("Error: A host and datastore name are required")
+	}
+
+	return nil
 }
 
 type VmConfig []types.BaseOptionValue
@@ -143,10 +168,6 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		// clone placement. The user does not need to indicate a host or datastore and those
 		// inputs will be ignored if present.
 
-		if p.serviceConfig.Cluster == "" {
-			return nil, fmt.Errorf("DRS requires a cluster name")
-		}
-
 		logger.Printf("Looking for cluster %s DRS recommendations", p.serviceConfig.Cluster)
 
 		cluster, err := finder.ClusterComputeResourceOrDefault(ctx, p.serviceConfig.Cluster)
@@ -180,10 +201,11 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		relocateSpec.Host = rspec.Host
 		relocateSpec.Pool = rspec.Pool
 
-	} else if p.serviceConfig.Host != "" {
+	} else {
 
 		// Since we are not asking for DRS placement suggestions here the user must supply a host configured
-		// with a datastore. If the host is part of a cluster then the cluster name must also be supplied.
+		// with a datastore. checkConfig() would have failed if no host and datastore. If the host is part
+		// of a cluster then the cluster name must also be supplied.
 		// DRS configured clusters are treated the same as non DRS clusters when DRS services are not requested.
 
 		var hostpath string
@@ -213,20 +235,16 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		poolref = types.NewReference(pool.Reference())
 		relocateSpec.Pool = poolref
 
-		// A host's datastore must be supplied
+		// The host's datastore
 
-		if p.serviceConfig.Datastore != "" {
-			datastorepath := fmt.Sprintf("/%s/datastore/%s", p.serviceConfig.Datacenter, p.serviceConfig.Datastore)
-			datastore, err := finder.Datastore(ctx, datastorepath)
-			if err != nil {
-				logger.Printf("Datastore %s error: %s", p.serviceConfig.Datastore, err)
-				return nil, err
-			}
-			datastoreref := types.NewReference(datastore.Reference())
-			relocateSpec.Datastore = datastoreref
-		} else {
-			return nil, fmt.Errorf("No Datastore selected")
+		datastorepath := fmt.Sprintf("/%s/datastore/%s", p.serviceConfig.Datacenter, p.serviceConfig.Datastore)
+		datastore, err := finder.Datastore(ctx, datastorepath)
+		if err != nil {
+			logger.Printf("Datastore %s error: %s", p.serviceConfig.Datastore, err)
+			return nil, err
 		}
+		datastoreref := types.NewReference(datastore.Reference())
+		relocateSpec.Datastore = datastoreref
 	}
 
 	userData, err := cloudConfig.Generate()
