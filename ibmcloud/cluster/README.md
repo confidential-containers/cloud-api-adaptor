@@ -61,8 +61,8 @@ ssh_key_name = "<name of your IBM Cloud create SSH key>"
 There are also a number of optional fields:
 ```
 cluster_name = "<name of your cluster>
-region_name = "<name of an IBM Cloud region>"
-zone_name = "<name of a zone in your IBM Cloud zone region>"
+region = "<name of an IBM Cloud region>"
+zone = "<name of a zone in your IBM Cloud zone region>"
 ssh_pub_key = "<your SSH public key - this results in the ssh_key being created on IBM Cloud>"
 node_image = "<name of the image to use for the Kubernetes nodes"
 node_profile = "<name of the instance profile to use for the Kubernetes nodes>"
