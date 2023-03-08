@@ -7,6 +7,7 @@
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
 # Default is dev build. To create release build set RELEASE_BUILD=true
 RELEASE_BUILD ?= false
+# CLOUD_PROVIDER is used for runtime -- which provider should be run against the binary/code. 
 CLOUD_PROVIDER ?=
 GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
 GOFLAGS     ?=
@@ -17,6 +18,7 @@ SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 # End-to-end tests overall run timeout.
 TEST_E2E_TIMEOUT ?= 20m
 
+# BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
 	BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere
 else
@@ -81,8 +83,12 @@ test: ## Run tests.
 	go test -v $(GOFLAGS) -cover $(PACKAGES) 2>&1
 
 .PHONY: test-e2e
-test-e2e: ## Run end-to-end tests.
-	go test -v $(GOFLAGS) -timeout $(TEST_E2E_TIMEOUT) -count=1 ./test/e2e
+test-e2e: ## Run end-to-end tests for single provider.
+ifneq ($(CLOUD_PROVIDER),)
+	go test -v -tags=$(CLOUD_PROVIDER) -timeout $(TEST_E2E_TIMEOUT) -count=1 ./test/e2e
+else
+	$(error CLOUD_PROVIDER is not set)
+endif
 
 .PHONY: check
 check: fmt vet ## Run go vet and go vet against the code.
