@@ -3,7 +3,6 @@ ARG TARGETARCH
 ARG RELEASE_BUILD
 ENV RELEASE_BUILD=${RELEASE_BUILD}
 COPY . cloud-api-adaptor
-RUN git clone -b CCv0 https://github.com/kata-containers/kata-containers
 WORKDIR cloud-api-adaptor
 # Install additional packages required to build libvirt provider
 # Need to use the [] syntax as default shell is /bin/sh
