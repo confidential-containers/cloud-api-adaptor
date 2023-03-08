@@ -168,11 +168,13 @@ func deleteVPC() error {
 
 	deleteVpcOptions := &vpcv1.DeleteVPCOptions{}
 	deleteVpcOptions.SetID(IBMCloudProps.VpcID)
+	ibmcloudTrace(fmt.Sprintf("Deleting VPC with ID %s.\n", IBMCloudProps.VpcID))
 	_, err := IBMCloudProps.VPC.DeleteVPC(deleteVpcOptions)
 
 	if err != nil {
 		return err
 	}
+	ibmcloudTrace(fmt.Sprintf("Deleted VPC with ID %s.\n", IBMCloudProps.VpcID))
 	return nil
 }
 
@@ -223,11 +225,13 @@ func deleteSubnet() error {
 
 	options := &vpcv1.DeleteSubnetOptions{}
 	options.SetID(IBMCloudProps.SubnetID)
+	ibmcloudTrace(fmt.Sprintf("Deleting subnet with ID %s.\n", IBMCloudProps.SubnetID))
 	_, err := IBMCloudProps.VPC.DeleteSubnet(options)
 
 	if err != nil {
 		return err
 	}
+	ibmcloudTrace(fmt.Sprintf("Deleted subnet with ID %s.\n", IBMCloudProps.SubnetID))
 	return nil
 }
 
@@ -309,11 +313,13 @@ func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Co
 	ibmcloudTrace("DeleteCluster()")
 
 	target := containerv2.ClusterTargetHeader{}
+	ibmcloudTrace(fmt.Sprintf("Deleting Cluster %s.\n", IBMCloudProps.ClusterName))
 	err := IBMCloudProps.ClusterAPI.Delete(IBMCloudProps.ClusterName, target)
 	if err != nil {
 		return err
 	}
 
+	ibmcloudTrace(fmt.Sprintf("Deleted Cluster %s.\n", IBMCloudProps.ClusterName))
 	return nil
 }
 
