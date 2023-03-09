@@ -1,3 +1,5 @@
+//go:build azure
+
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -5,14 +7,19 @@ package provisioner
 
 import (
 	"context"
+
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-// AzureCloudProvisioner implements the CloudProvisioner interface for ibmcloud.
+func init() {
+	newProvisionerFunctions["azure"] = NewAzureCloudProvisioner
+}
+
+// AzureCloudProvisioner implements the CloudProvisioner interface for Azure.
 type AzureCloudProvisioner struct {
 }
 
-func NewAzureCloudProvisioner(network string, storage string) (*AzureCloudProvisioner, error) {
+func NewAzureCloudProvisioner(properties map[string]string) (CloudProvisioner, error) {
 	return &AzureCloudProvisioner{}, nil
 }
 

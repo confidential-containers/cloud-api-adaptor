@@ -1,4 +1,4 @@
-//go:build cgo
+//go:build libvirt && cgo
 
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
@@ -8,14 +8,19 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"libvirt.org/go/libvirt"
-	"libvirt.org/go/libvirtxml"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+
+	"libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirtxml"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
+
+func init() {
+	newProvisionerFunctions["libvirt"] = NewLibvirtProvisioner
+}
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
@@ -26,7 +31,7 @@ type LibvirtProvisioner struct {
 	volumeName string           // Podvm volume name
 }
 
-func NewLibvirtProvisioner(properties map[string]string) (*LibvirtProvisioner, error) {
+func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, error) {
 	wd, err := filepath.Abs(path.Join("..", "..", "libvirt"))
 	if err != nil {
 		return nil, err
