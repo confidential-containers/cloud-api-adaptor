@@ -168,7 +168,7 @@ func initProperties(properties map[string]string) error {
 	}
 
 	podvmImage := os.Getenv("TEST_E2E_PODVM_IMAGE")
-	if len(podvmImage) >= 0 {
+	if len(podvmImage) > 0 {
 		if len(IBMCloudProps.CosApiKey) <= 0 {
 			return errors.New("COS_APIKEY was not set.")
 		}
