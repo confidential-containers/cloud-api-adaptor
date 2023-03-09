@@ -1,3 +1,5 @@
+//go:build ibmcloud
+
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -9,9 +11,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"strings"
 	"time"
+
+	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	"github.com/confidential-containers/cloud-api-adaptor/test/utils"
 
@@ -23,6 +26,10 @@ import (
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	newProvisionerFunctions["ibmcloud"] = NewIBMCloudProvisioner
+}
 
 // https://cloud.ibm.com/docs/vpc?topic=vpc-configuring-address-prefixes
 func getCidrBlock(region, zone string) string {
