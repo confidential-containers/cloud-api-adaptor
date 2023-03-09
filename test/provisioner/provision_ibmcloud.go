@@ -21,13 +21,8 @@ import (
 	cosession "github.com/IBM/ibm-cos-sdk-go/aws/session"
 	"github.com/IBM/ibm-cos-sdk-go/service/s3/s3manager"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
+	log "github.com/sirupsen/logrus"
 )
-
-func ibmcloudTrace(str string) {
-	if IBMCloudProps.IsDebug {
-		fmt.Println(str)
-	}
-}
 
 // https://cloud.ibm.com/docs/vpc?topic=vpc-configuring-address-prefixes
 func getCidrBlock(region, zone string) string {
@@ -134,14 +129,14 @@ func createVPC() error {
 		ClassicAccess: &classicAccess,
 		//AddressPrefixManagement: &manual,
 	}
-	ibmcloudTrace(fmt.Sprintf("Creating VPC %s in ResourceGroupID %s.\n", IBMCloudProps.VpcName, IBMCloudProps.ResourceGroupID))
+	log.Infof("Creating VPC %s in ResourceGroupID %s.\n", IBMCloudProps.VpcName, IBMCloudProps.ResourceGroupID)
 	vpcInstance, _, err := IBMCloudProps.VPC.CreateVPC(options)
 	if err != nil {
 		return err
 	}
 
 	IBMCloudProps.VpcID = *vpcInstance.ID
-	ibmcloudTrace(fmt.Sprintf("Created VPC with ID %s in ResourceGroupID %s.\n", IBMCloudProps.VpcID, IBMCloudProps.ResourceGroupID))
+	log.Infof("Created VPC with ID %s in ResourceGroupID %s.\n", IBMCloudProps.VpcID, IBMCloudProps.ResourceGroupID)
 
 	if len(IBMCloudProps.VpcID) <= 0 {
 		return errors.New("VpcID is empty, unknown error happened when create VPC.")
@@ -155,7 +150,7 @@ func createVPC() error {
 	}
 
 	IBMCloudProps.SecurityGroupID = *defaultSG.ID
-	ibmcloudTrace(fmt.Sprintf("Got VPC default SecurityGroupID %s.\n", IBMCloudProps.SecurityGroupID))
+	log.Infof("Got VPC default SecurityGroupID %s.\n", IBMCloudProps.SecurityGroupID)
 
 	return nil
 }
@@ -168,13 +163,13 @@ func deleteVPC() error {
 
 	deleteVpcOptions := &vpcv1.DeleteVPCOptions{}
 	deleteVpcOptions.SetID(IBMCloudProps.VpcID)
-	ibmcloudTrace(fmt.Sprintf("Deleting VPC with ID %s.\n", IBMCloudProps.VpcID))
+	log.Infof("Deleting VPC with ID %s.\n", IBMCloudProps.VpcID)
 	_, err := IBMCloudProps.VPC.DeleteVPC(deleteVpcOptions)
 
 	if err != nil {
 		return err
 	}
-	ibmcloudTrace(fmt.Sprintf("Deleted VPC with ID %s.\n", IBMCloudProps.VpcID))
+	log.Infof("Deleted VPC with ID %s.\n", IBMCloudProps.VpcID)
 	return nil
 }
 
@@ -202,13 +197,13 @@ func createSubnet() error {
 			Name: &IBMCloudProps.Zone,
 		},
 	})
-	ibmcloudTrace(fmt.Sprintf("Creating subnet %s in VPC %s in Zone %s.\n", IBMCloudProps.SubnetName, IBMCloudProps.VpcID, IBMCloudProps.Zone))
+	log.Infof("Creating subnet %s in VPC %s in Zone %s.\n", IBMCloudProps.SubnetName, IBMCloudProps.VpcID, IBMCloudProps.Zone)
 	subnet, _, err := IBMCloudProps.VPC.CreateSubnet(options)
 	if err != nil {
 		return err
 	}
 	IBMCloudProps.SubnetID = *subnet.ID
-	ibmcloudTrace(fmt.Sprintf("Created subnet with ID %s.\n", IBMCloudProps.SubnetID))
+	log.Infof("Created subnet with ID %s.\n", IBMCloudProps.SubnetID)
 
 	if len(IBMCloudProps.SubnetID) <= 0 {
 		return errors.New("SubnetID is empty, unknown error happened when create Subnet.")
@@ -225,13 +220,13 @@ func deleteSubnet() error {
 
 	options := &vpcv1.DeleteSubnetOptions{}
 	options.SetID(IBMCloudProps.SubnetID)
-	ibmcloudTrace(fmt.Sprintf("Deleting subnet with ID %s.\n", IBMCloudProps.SubnetID))
+	log.Infof("Deleting subnet with ID %s.\n", IBMCloudProps.SubnetID)
 	_, err := IBMCloudProps.VPC.DeleteSubnet(options)
 
 	if err != nil {
 		return err
 	}
-	ibmcloudTrace(fmt.Sprintf("Deleted subnet with ID %s.\n", IBMCloudProps.SubnetID))
+	log.Infof("Deleted subnet with ID %s.\n", IBMCloudProps.SubnetID)
 	return nil
 }
 
@@ -240,7 +235,7 @@ func createVpcImpl() error {
 	if err != nil {
 		return err
 	}
-	ibmcloudTrace("waiting for the VPC to be available before creating subnet...")
+	log.Info("waiting for the VPC to be available before creating subnet...")
 	// wait vpc ready before create subnet
 	time.Sleep(60 * time.Second)
 	return createSubnet()
@@ -252,6 +247,38 @@ func deleteVpcImpl() error {
 		return err
 	}
 	return deleteVPC()
+}
+
+func isClusterReady(clrName string) (bool, error) {
+	target := containerv2.ClusterTargetHeader{
+		Provider: "vpc-gen2",
+	}
+	clusters, err := IBMCloudProps.ClusterAPI.List(target)
+	if err != nil {
+		return false, err
+	}
+	for _, cluster := range clusters {
+		if cluster.Name == clrName && strings.EqualFold(cluster.State, "normal") {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func foundCluster(clrName string) (bool, error) {
+	target := containerv2.ClusterTargetHeader{
+		Provider: "vpc-gen2",
+	}
+	clusters, err := IBMCloudProps.ClusterAPI.List(target)
+	if err != nil {
+		return false, err
+	}
+	for _, cluster := range clusters {
+		if cluster.Name == clrName {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // IBMCloudProvisioner implements the CloudProvisioner interface for ibmcloud.
@@ -272,7 +299,7 @@ func NewIBMCloudProvisioner(properties map[string]string) (CloudProvisioner, err
 // IBMCloudProvisioner
 
 func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
-	ibmcloudTrace("CreateCluster()")
+	log.Info("CreateCluster()")
 
 	clusterInfo := containerv2.ClusterCreateRequest{
 		DisablePublicServiceEndpoint: true,
@@ -294,43 +321,83 @@ func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Co
 		},
 	}
 	target := containerv2.ClusterTargetHeader{}
-	ibmcloudTrace(fmt.Sprintf("Creating cluster %s.\n", IBMCloudProps.ClusterName))
+	log.Infof("Creating cluster %s.\n", IBMCloudProps.ClusterName)
 	_, err := IBMCloudProps.ClusterAPI.Create(clusterInfo, target)
 	if err != nil {
 		return err
 	}
 
-	// TODO, wait cluter ready, it takes long time
+	clusterReady := false
+	waitMinutes := 50
+	log.Infof("Waiting for cluster %s to be available.\n", IBMCloudProps.ClusterName)
+	for i := 0; i <= waitMinutes; i++ {
+		ready, err := isClusterReady(IBMCloudProps.ClusterName)
+		if err != nil {
+			log.Infof("Err %s happened when retrieve cluster, try again...\n", err)
+			continue
+		}
+		if ready {
+			log.Infof("Cluster %s is available.\n", IBMCloudProps.ClusterName)
+			clusterReady = true
+			break
+		}
+		log.Infof("Waited %d minutes...\n", i)
+
+		time.Sleep(60 * time.Second)
+	}
+
+	if !clusterReady {
+		return fmt.Errorf("Cluster %s was created but not ready in %d minutes.\n", IBMCloudProps.ClusterName, waitMinutes)
+	}
 	return nil
 }
 
 func (p *IBMCloudProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) error {
-	ibmcloudTrace("CreateVPC()")
+	log.Info("CreateVPC()")
 	return createVpcImpl()
 }
 
 func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
-	ibmcloudTrace("DeleteCluster()")
+	log.Info("DeleteCluster()")
 
 	target := containerv2.ClusterTargetHeader{}
-	ibmcloudTrace(fmt.Sprintf("Deleting Cluster %s.\n", IBMCloudProps.ClusterName))
+	log.Infof("Deleting Cluster %s.\n", IBMCloudProps.ClusterName)
 	err := IBMCloudProps.ClusterAPI.Delete(IBMCloudProps.ClusterName, target)
 	if err != nil {
 		return err
 	}
 
-	// TODO, wait cluter delete completely, it takes long time, delete vpc and subnet fails otherwise
-	ibmcloudTrace(fmt.Sprintf("Deleted Cluster %s.\n", IBMCloudProps.ClusterName))
+	clusterRemoved := false
+	waitMinutes := 50
+	log.Infof("Waiting for cluster %s to be removed...\n", IBMCloudProps.ClusterName)
+	for i := 0; i <= waitMinutes; i++ {
+		found, err := foundCluster(IBMCloudProps.ClusterName)
+		if err != nil {
+			log.Infof("Err %s happened when retrieve cluster, try again...\n", err)
+			continue
+		}
+		if !found {
+			log.Infof("Cluster %s is removed.\n", IBMCloudProps.ClusterName)
+			clusterRemoved = true
+			break
+		}
+		log.Infof("Waited %d minutes...\n", i)
+		time.Sleep(60 * time.Second)
+	}
+
+	if !clusterRemoved {
+		return fmt.Errorf("Cluster %s was not removed completely in %d minutes.\n", IBMCloudProps.ClusterName, waitMinutes)
+	}
 	return nil
 }
 
 func (p *IBMCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
-	ibmcloudTrace("DeleteVPC()")
+	log.Info("DeleteVPC()")
 	return deleteVpcImpl()
 }
 
 func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
-	ibmcloudTrace("UploadPodvm()")
+	log.Info("UploadPodvm()")
 
 	filePath, err := filepath.Abs(imagePath)
 	if err != nil {
@@ -344,7 +411,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 		WithS3ForcePathStyle(true)
 
 	sess := cosession.Must(cosession.NewSession(conf))
-	ibmcloudTrace("session initialized.")
+	log.Info("session initialized.")
 
 	file, err := os.Open(imagePath)
 	if err != nil {
@@ -354,7 +421,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	if err != nil {
 		return err
 	}
-	ibmcloudTrace(fmt.Sprintf("qcow2 image file %s validated.\n", imagePath))
+	log.Infof("qcow2 image file %s validated.\n", imagePath)
 
 	reader := &utils.CustomReader{
 		Fp:      file,
@@ -376,7 +443,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	if err != nil {
 		return err
 	}
-	ibmcloudTrace(fmt.Sprintf("\nFile %s uploaded to bucket.\n", key))
+	log.Infof("\nFile %s uploaded to bucket.\n", key)
 
 	var osNames []string
 	if strings.EqualFold("s390x", IBMCloudProps.PodvmImageArch) {
@@ -399,13 +466,13 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 		},
 		OperatingSystem: operatingSystemIdentityModel,
 	})
-	ibmcloudTrace(fmt.Sprintf("cosID %s, imageName %s.\n", cosID, imageName))
+	log.Infof("cosID %s, imageName %s.\n", cosID, imageName)
 	image, _, err := IBMCloudProps.VPC.CreateImage(options)
 	if err != nil {
 		return err
 	}
 	IBMCloudProps.PodvmImageID = *image.ID
-	ibmcloudTrace(fmt.Sprintf("Image %s with PodvmImageID %s created from the bucket.\n", key, IBMCloudProps.PodvmImageID))
+	log.Infof("Image %s with PodvmImageID %s created from the bucket.\n", key, IBMCloudProps.PodvmImageID)
 
 	return nil
 }

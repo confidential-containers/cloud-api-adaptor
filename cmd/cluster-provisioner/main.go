@@ -17,7 +17,7 @@ import (
 // export TEST_E2E_PROVISION_FILE="/root/provision_ibmcloud.properties"
 // export TEST_E2E_PODVM_IMAGE="/root/e2e-test-image-amd64-20230308.qcow2
 // export TEST_E2E_PROVISION="yes"
-// ./cluster-provisioner -action=provision | uploadimage
+// ./cluster-provisioner -action=provision | deprovision | uploadimage
 func main() {
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
 	provisionPropsFile := os.Getenv("TEST_E2E_PROVISION_FILE")
@@ -43,21 +43,22 @@ func main() {
 		}
 	}
 
+	// TODO
 	// The design is when cluster/vpc/subnet name provided, we'll create them and then delete them after e2e test.
 	// While if only vpc/subnet ID provided, it means the e2e test is using exiting one, we should not delete them after the test.
 	// Looks the algorithm does not align with the cluster-provisioner CLI.
-	//if *action == "deprovision" {
-	//	if err := provisioner.DeleteCluster(context.TODO(), nil); err != nil {
-	//		fmt.Println(err)
-	//		os.Exit(1)
-	//	}
-	//
-	//	if err := provisioner.DeleteVPC(context.TODO(), nil); err != nil {
-	//		fmt.Println(err)
-	//		os.Exit(1)
-	//	}
-	//
-	//}
+	if *action == "deprovision" {
+		if err := provisioner.DeleteCluster(context.TODO(), nil); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		//if err := provisioner.DeleteVPC(context.TODO(), nil); err != nil {
+		//	fmt.Println(err)
+		//	os.Exit(1)
+		//}
+
+	}
 
 	if *action == "uploadimage" {
 		podvmImage := os.Getenv("TEST_E2E_PODVM_IMAGE")

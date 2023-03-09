@@ -5,7 +5,6 @@ package provisioner
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	bxsession "github.com/IBM-Cloud/bluemix-go/session"
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
+	log "github.com/sirupsen/logrus"
 )
 
 type IBMCloudProperties struct {
@@ -44,7 +44,6 @@ type IBMCloudProperties struct {
 	IsSelfManaged   bool
 	IsProvNewVPC    bool
 	IsProvNewSubnet bool
-	IsDebug         bool
 
 	VPC        *vpcv1.VpcV1
 	ClusterAPI containerv2.Clusters
@@ -113,13 +112,7 @@ func initProperties(properties map[string]string) error {
 		IBMCloudProps.IsSelfManaged = true
 	}
 
-	debugStr := os.Getenv("DEBUG")
-	if strings.EqualFold(debugStr, "yes") || strings.EqualFold(debugStr, "true") {
-		IBMCloudProps.IsDebug = true
-	}
-	if IBMCloudProps.IsDebug {
-		fmt.Printf("%+v\n", IBMCloudProps)
-	}
+	log.Infof("%+v", IBMCloudProps)
 
 	if len(IBMCloudProps.ApiKey) <= 0 {
 		return errors.New("APIKEY was not set.")
@@ -172,7 +165,7 @@ func initProperties(properties map[string]string) error {
 }
 
 func initVpcV1() error {
-	ibmcloudTrace("initVpcV1()")
+	log.Info("initVpcV1()")
 
 	if IBMCloudProps.VPC != nil {
 		return nil
@@ -194,7 +187,7 @@ func initVpcV1() error {
 }
 
 func initClustersAPI() error {
-	ibmcloudTrace("initClustersAPI()")
+	log.Info("initClustersAPI()")
 
 	cfg := &bx.Config{
 		BluemixAPIKey: IBMCloudProps.ApiKey,
