@@ -240,7 +240,7 @@ func createVpcImpl() error {
 	if err != nil {
 		return err
 	}
-	ibmcloudTrace("waiting vpc ready before create subnet")
+	ibmcloudTrace("waiting for the VPC to be available before creating subnet...")
 	// wait vpc ready before create subnet
 	time.Sleep(60 * time.Second)
 	return createSubnet()
@@ -319,6 +319,7 @@ func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Co
 		return err
 	}
 
+	// TODO, wait cluter delete completely, it takes long time, delete vpc and subnet fails otherwise
 	ibmcloudTrace(fmt.Sprintf("Deleted Cluster %s.\n", IBMCloudProps.ClusterName))
 	return nil
 }
@@ -375,7 +376,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	if err != nil {
 		return err
 	}
-	ibmcloudTrace(fmt.Sprintf("File %s uploaded to bucket.\n", key))
+	ibmcloudTrace(fmt.Sprintf("\nFile %s uploaded to bucket.\n", key))
 
 	var osNames []string
 	if strings.EqualFold("s390x", IBMCloudProps.PodvmImageArch) {
