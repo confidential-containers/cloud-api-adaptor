@@ -26,7 +26,6 @@ type IBMCloudProperties struct {
 	CosServiceURL   string
 	SecurityGroupID string
 	IamServiceURL   string
-	IksVersion      string
 	InstanceProfile string
 	PodvmImageID    string
 	PodvmImageArch  string
@@ -62,7 +61,6 @@ func initProperties(properties map[string]string) error {
 		CosInstanceID: properties["COS_INSTANCE_ID"],
 		CosServiceURL: properties["COS_SERVICE_URL"],
 		IamServiceURL: properties["IAM_SERVICE_URL"],
-		IksVersion:    properties["IKS_VERSION"],
 		// IsSelfManaged    : properties["IS_SELF_MANAGED_CLUSTER"]
 		InstanceProfile: properties["INSTANCE_PROFILE_NAME"],
 		PodvmImageID:    properties["PODVM_IMAGE_ID"],
@@ -143,9 +141,6 @@ func initProperties(properties map[string]string) error {
 		}
 		if len(IBMCloudProps.Zone) <= 0 {
 			return errors.New("ZONE was not set.")
-		}
-		if len(IBMCloudProps.IksVersion) <= 0 {
-			return errors.New("IKS_VERSION was not set.")
 		}
 
 		if err := initClustersAPI(); err != nil {
