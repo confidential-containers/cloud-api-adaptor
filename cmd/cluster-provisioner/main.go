@@ -12,7 +12,7 @@ import (
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 )
 
-// export DEBUG="true"
+// export LOG_LEVEL="trace|debug"
 // export CLOUD_PROVIDER="ibmcloud"
 // export TEST_E2E_PROVISION_FILE="/root/provision_ibmcloud.properties"
 // export TEST_E2E_PODVM_IMAGE="/root/e2e-test-image-amd64-20230308.qcow2

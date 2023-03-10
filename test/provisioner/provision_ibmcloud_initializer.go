@@ -51,6 +51,32 @@ type IBMCloudProperties struct {
 
 var IBMCloudProps = &IBMCloudProperties{}
 
+func init() {
+	initLogger()
+}
+
+func initLogger() {
+	level := os.Getenv("LOG_LEVEL")
+	switch level {
+	case "trace":
+		log.SetLevel(log.TraceLevel)
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	case "fatal":
+		log.SetLevel(log.FatalLevel)
+	case "panic":
+		log.SetLevel(log.PanicLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
+	}
+}
+
 func initProperties(properties map[string]string) error {
 	IBMCloudProps = &IBMCloudProperties{
 		ApiKey:        properties["APIKEY"],
@@ -112,7 +138,7 @@ func initProperties(properties map[string]string) error {
 		IBMCloudProps.IsSelfManaged = true
 	}
 
-	log.Infof("%+v", IBMCloudProps)
+	log.Debugf("%+v", IBMCloudProps)
 
 	if len(IBMCloudProps.ApiKey) <= 0 {
 		return errors.New("APIKEY was not set.")
@@ -165,7 +191,7 @@ func initProperties(properties map[string]string) error {
 }
 
 func initVpcV1() error {
-	log.Info("initVpcV1()")
+	log.Trace("initVpcV1()")
 
 	if IBMCloudProps.VPC != nil {
 		return nil
@@ -187,7 +213,7 @@ func initVpcV1() error {
 }
 
 func initClustersAPI() error {
-	log.Info("initClustersAPI()")
+	log.Trace("initClustersAPI()")
 
 	cfg := &bx.Config{
 		BluemixAPIKey: IBMCloudProps.ApiKey,
