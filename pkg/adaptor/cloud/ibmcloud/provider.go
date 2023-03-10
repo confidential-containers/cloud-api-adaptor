@@ -118,7 +118,10 @@ func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]n
 
 	for i, nic := range interfaces {
 
-		addr := nic.PrimaryIpv4Address
+		if nic.PrimaryIP == nil {
+			return nil, errNotReady
+		}
+		addr := nic.PrimaryIP.Address
 		if addr == nil || *addr == "" || *addr == "0.0.0.0" {
 			return nil, errNotReady
 		}

@@ -42,10 +42,8 @@ type IBMCloudProperties struct {
 	WorkerFlavor    string
 	Zone            string
 
-	WorkerCount     int
-	IsSelfManaged   bool
-	IsProvNewVPC    bool
-	IsProvNewSubnet bool
+	WorkerCount   int
+	IsSelfManaged bool
 
 	VPC        *vpcv1.VpcV1
 	ClusterAPI containerv2.Clusters
@@ -94,12 +92,9 @@ func initProperties(properties map[string]string) error {
 		PodvmImageArch:  properties["PODVM_IMAGE_ARCH"],
 		Region:          properties["REGION"],
 		ResourceGroupID: properties["RESOURCE_GROUP_ID"],
-		SecurityGroupID: properties["SECURITY_GROUP_ID"],
 		SshKeyID:        properties["SSH_KEY_ID"],
 		SubnetName:      properties["VPC_SUBNET_NAME"],
-		SubnetID:        properties["VPC_SUBNET_ID"],
 		VpcName:         properties["VPC_NAME"],
-		VpcID:           properties["VPC_ID"],
 		VpcServiceURL:   properties["VPC_SERVICE_URL"],
 		WorkerFlavor:    properties["WORKER_FLAVOR"],
 		// WorkerCount   : properties["WORKERS_COUNT"]
@@ -110,11 +105,9 @@ func initProperties(properties map[string]string) error {
 		IBMCloudProps.ClusterName = "e2e-test-cluster"
 	}
 	if len(IBMCloudProps.VpcName) <= 0 && len(IBMCloudProps.VpcID) <= 0 {
-		IBMCloudProps.IsProvNewVPC = true
 		IBMCloudProps.VpcName = IBMCloudProps.ClusterName + "-vpc"
 	}
 	if len(IBMCloudProps.SubnetName) <= 0 && len(IBMCloudProps.SubnetID) <= 0 {
-		IBMCloudProps.IsProvNewSubnet = true
 		IBMCloudProps.SubnetName = IBMCloudProps.VpcName + "-subnet"
 	}
 	if len(IBMCloudProps.InstanceProfile) <= 0 {

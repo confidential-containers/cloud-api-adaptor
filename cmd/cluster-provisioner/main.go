@@ -43,20 +43,16 @@ func main() {
 		}
 	}
 
-	// TODO
-	// The design is when cluster/vpc/subnet name provided, we'll create them and then delete them after e2e test.
-	// While if only vpc/subnet ID provided, it means the e2e test is using exiting one, we should not delete them after the test.
-	// Looks the algorithm does not align with the cluster-provisioner CLI.
 	if *action == "deprovision" {
 		if err := provisioner.DeleteCluster(context.TODO(), nil); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		//if err := provisioner.DeleteVPC(context.TODO(), nil); err != nil {
-		//	fmt.Println(err)
-		//	os.Exit(1)
-		//}
+		if err := provisioner.DeleteVPC(context.TODO(), nil); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 
 	}
 
