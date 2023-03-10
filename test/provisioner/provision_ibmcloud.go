@@ -120,33 +120,37 @@ func getCidrBlock(region, zone string) string {
 }
 
 func createVPC() error {
-	if !IBMCloudProps.IsProvNewSubnet {
-		fmt.Printf("Using existing VPC: %s\n", IBMCloudProps.VpcID)
-		return nil
-	}
-
-	classicAccess := false
-	//manual := "manual"
-
-	options := &vpcv1.CreateVPCOptions{
-		ResourceGroup: &vpcv1.ResourceGroupIdentity{
-			ID: &IBMCloudProps.ResourceGroupID,
-		},
-		Name:          &[]string{IBMCloudProps.VpcName}[0],
-		ClassicAccess: &classicAccess,
-		//AddressPrefixManagement: &manual,
-	}
-	log.Infof("Creating VPC %s in ResourceGroupID %s.\n", IBMCloudProps.VpcName, IBMCloudProps.ResourceGroupID)
-	vpcInstance, _, err := IBMCloudProps.VPC.CreateVPC(options)
+	foundVPC, err := findVPC(IBMCloudProps.VpcName)
 	if err != nil {
 		return err
 	}
+	if foundVPC != nil {
+		IBMCloudProps.VpcID = *foundVPC.ID
+		log.Infof("VPC %s with ID %s exists alread", IBMCloudProps.VpcName, IBMCloudProps.VpcID)
+	} else {
+		classicAccess := false
+		//manual := "manual"
 
-	IBMCloudProps.VpcID = *vpcInstance.ID
-	log.Infof("Created VPC with ID %s in ResourceGroupID %s.\n", IBMCloudProps.VpcID, IBMCloudProps.ResourceGroupID)
+		options := &vpcv1.CreateVPCOptions{
+			ResourceGroup: &vpcv1.ResourceGroupIdentity{
+				ID: &IBMCloudProps.ResourceGroupID,
+			},
+			Name:          &[]string{IBMCloudProps.VpcName}[0],
+			ClassicAccess: &classicAccess,
+			//AddressPrefixManagement: &manual,
+		}
+		log.Infof("Creating VPC %s in ResourceGroupID %s.\n", IBMCloudProps.VpcName, IBMCloudProps.ResourceGroupID)
+		vpcInstance, _, err := IBMCloudProps.VPC.CreateVPC(options)
+		if err != nil {
+			return err
+		}
 
-	if len(IBMCloudProps.VpcID) <= 0 {
-		return errors.New("VpcID is empty, unknown error happened when create VPC.")
+		IBMCloudProps.VpcID = *vpcInstance.ID
+		log.Infof("Created VPC with ID %s in ResourceGroupID %s.\n", IBMCloudProps.VpcID, IBMCloudProps.ResourceGroupID)
+
+		if len(IBMCloudProps.VpcID) <= 0 {
+			return errors.New("VpcID is empty, unknown error happened when create VPC.")
+		}
 	}
 
 	sgoptions := &vpcv1.GetVPCDefaultSecurityGroupOptions{}
@@ -163,15 +167,22 @@ func createVPC() error {
 }
 
 func deleteVPC() error {
-	if !IBMCloudProps.IsProvNewVPC {
-		fmt.Printf("Do not delete because using existing VPC: %s\n", IBMCloudProps.VpcID)
+	foundVPC, err := findVPC(IBMCloudProps.VpcName)
+	if err != nil {
+		return err
+	}
+	if foundVPC == nil {
+		log.Infof("VPC %s does not exist.", IBMCloudProps.VpcName)
 		return nil
 	}
+
+	IBMCloudProps.VpcID = *foundVPC.ID
+	log.Infof("Found VPC %s with ID %s.", IBMCloudProps.VpcName, IBMCloudProps.VpcID)
 
 	deleteVpcOptions := &vpcv1.DeleteVPCOptions{}
 	deleteVpcOptions.SetID(IBMCloudProps.VpcID)
 	log.Infof("Deleting VPC with ID %s.\n", IBMCloudProps.VpcID)
-	_, err := IBMCloudProps.VPC.DeleteVPC(deleteVpcOptions)
+	_, err = IBMCloudProps.VPC.DeleteVPC(deleteVpcOptions)
 
 	if err != nil {
 		return err
@@ -181,8 +192,14 @@ func deleteVPC() error {
 }
 
 func createSubnet() error {
-	if !IBMCloudProps.IsProvNewSubnet {
-		fmt.Printf("Using existing Subnet: %s\n", IBMCloudProps.SubnetID)
+	log.Trace("createSubnet()")
+	foundSubnet, err := findSubnet(IBMCloudProps.SubnetName)
+	if err != nil {
+		return err
+	}
+	if foundSubnet != nil {
+		IBMCloudProps.SubnetID = *foundSubnet.ID
+		log.Infof("Subnet %s with ID %s exists already.", IBMCloudProps.SubnetName, IBMCloudProps.SubnetID)
 		return nil
 	}
 
@@ -220,15 +237,22 @@ func createSubnet() error {
 }
 
 func deleteSubnet() error {
-	if !IBMCloudProps.IsProvNewSubnet {
-		fmt.Printf("Do not delete because using existing Subnet: %s\n", IBMCloudProps.SubnetID)
+	foundSubnet, err := findSubnet(IBMCloudProps.SubnetName)
+	if err != nil {
+		return err
+	}
+	if foundSubnet == nil {
+		log.Infof("Subnet %s does not exist.", IBMCloudProps.SubnetName)
 		return nil
 	}
+
+	IBMCloudProps.SubnetID = *foundSubnet.ID
+	log.Infof("Found subnet %s with ID %s.", IBMCloudProps.SubnetName, IBMCloudProps.SubnetID)
 
 	options := &vpcv1.DeleteSubnetOptions{}
 	options.SetID(IBMCloudProps.SubnetID)
 	log.Infof("Deleting subnet with ID %s.\n", IBMCloudProps.SubnetID)
-	_, err := IBMCloudProps.VPC.DeleteSubnet(options)
+	_, err = IBMCloudProps.VPC.DeleteSubnet(options)
 
 	if err != nil {
 		return err
@@ -242,9 +266,8 @@ func createVpcImpl() error {
 	if err != nil {
 		return err
 	}
-	log.Info("waiting for the VPC to be available before creating subnet...")
-	// wait vpc ready before create subnet
-	time.Sleep(60 * time.Second)
+	log.Trace("Waiting for the VPC to be available before creating subnet...")
+
 	return createSubnet()
 }
 
@@ -272,20 +295,73 @@ func isClusterReady(clrName string) (bool, error) {
 	return false, nil
 }
 
-func foundCluster(clrName string) (bool, error) {
+// TODO, nice to have rety if SDK client did not do that for well known http errors
+func findCluster(clrName string) (*containerv2.ClusterInfo, error) {
 	target := containerv2.ClusterTargetHeader{
 		Provider: "vpc-gen2",
 	}
 	clusters, err := IBMCloudProps.ClusterAPI.List(target)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	for _, cluster := range clusters {
 		if cluster.Name == clrName {
-			return true, nil
+			return &cluster, nil
 		}
 	}
-	return false, nil
+	return nil, nil
+}
+
+// TODO, nice to have rety if SDK client did not do that for well known http errors
+func findVPC(vpcName string) (*vpcv1.VPC, error) {
+	listVpcsOptions := &vpcv1.ListVpcsOptions{}
+
+	pager, err := IBMCloudProps.VPC.NewVpcsPager(listVpcsOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	var allResults []vpcv1.VPC
+	for pager.HasNext() {
+		nextPage, err := pager.GetNext()
+		if err != nil {
+			return nil, err
+		}
+		allResults = append(allResults, nextPage...)
+	}
+	for _, vpc := range allResults {
+		log.Tracef("Checking vpc %s.", *vpc.Name)
+		if *vpc.Name == vpcName {
+			return &vpc, nil
+		}
+	}
+	return nil, nil
+}
+
+// TODO, nice to have rety if SDK client did not do that for well known http errors
+func findSubnet(subnetName string) (*vpcv1.Subnet, error) {
+	listSubnetsOptions := &vpcv1.ListSubnetsOptions{}
+
+	pager, err := IBMCloudProps.VPC.NewSubnetsPager(listSubnetsOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	var allResults []vpcv1.Subnet
+	for pager.HasNext() {
+		nextPage, err := pager.GetNext()
+		if err != nil {
+			return nil, err
+		}
+		allResults = append(allResults, nextPage...)
+	}
+	for _, subnet := range allResults {
+		log.Tracef("Checking subnet %s.", *subnet.Name)
+		if *subnet.Name == subnetName {
+			return &subnet, nil
+		}
+	}
+	return nil, nil
 }
 
 // IBMCloudProvisioner implements the CloudProvisioner interface for ibmcloud.
@@ -308,30 +384,38 @@ func NewIBMCloudProvisioner(properties map[string]string) (CloudProvisioner, err
 func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("CreateCluster()")
 
-	clusterInfo := containerv2.ClusterCreateRequest{
-		DisablePublicServiceEndpoint: true,
-		Name:                         IBMCloudProps.ClusterName,
-		Provider:                     "vpc-gen2",
-		WorkerPools: containerv2.WorkerPoolConfig{
-			CommonWorkerPoolConfig: containerv2.CommonWorkerPoolConfig{
-				DiskEncryption: true,
-				Flavor:         IBMCloudProps.WorkerFlavor,
-				VpcID:          IBMCloudProps.VpcID,
-				WorkerCount:    IBMCloudProps.WorkerCount,
-				Zones: []containerv2.Zone{
-					{
-						ID:       IBMCloudProps.Zone,
-						SubnetID: IBMCloudProps.SubnetID,
+	foundClr, err := findCluster(IBMCloudProps.ClusterName)
+	if err != nil {
+		return err
+	}
+	if foundClr != nil {
+		log.Infof("Cluster %s. exists already.\n", IBMCloudProps.ClusterName)
+	} else {
+		clusterInfo := containerv2.ClusterCreateRequest{
+			DisablePublicServiceEndpoint: true,
+			Name:                         IBMCloudProps.ClusterName,
+			Provider:                     "vpc-gen2",
+			WorkerPools: containerv2.WorkerPoolConfig{
+				CommonWorkerPoolConfig: containerv2.CommonWorkerPoolConfig{
+					DiskEncryption: true,
+					Flavor:         IBMCloudProps.WorkerFlavor,
+					VpcID:          IBMCloudProps.VpcID,
+					WorkerCount:    IBMCloudProps.WorkerCount,
+					Zones: []containerv2.Zone{
+						{
+							ID:       IBMCloudProps.Zone,
+							SubnetID: IBMCloudProps.SubnetID,
+						},
 					},
 				},
 			},
-		},
-	}
-	target := containerv2.ClusterTargetHeader{}
-	log.Infof("Creating cluster %s.\n", IBMCloudProps.ClusterName)
-	_, err := IBMCloudProps.ClusterAPI.Create(clusterInfo, target)
-	if err != nil {
-		return err
+		}
+		target := containerv2.ClusterTargetHeader{}
+		log.Infof("Creating cluster %s.\n", IBMCloudProps.ClusterName)
+		_, err := IBMCloudProps.ClusterAPI.Create(clusterInfo, target)
+		if err != nil {
+			return err
+		}
 	}
 
 	clusterReady := false
@@ -367,9 +451,18 @@ func (p *IBMCloudProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config
 func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("DeleteCluster()")
 
+	foundClr, err := findCluster(IBMCloudProps.ClusterName)
+	if err != nil {
+		return err
+	}
+	if foundClr == nil {
+		log.Infof("Cluster %s. does not exist.\n", IBMCloudProps.ClusterName)
+		return nil
+	}
+
 	target := containerv2.ClusterTargetHeader{}
 	log.Infof("Deleting Cluster %s.\n", IBMCloudProps.ClusterName)
-	err := IBMCloudProps.ClusterAPI.Delete(IBMCloudProps.ClusterName, target)
+	err = IBMCloudProps.ClusterAPI.Delete(IBMCloudProps.ClusterName, target)
 	if err != nil {
 		return err
 	}
@@ -378,12 +471,12 @@ func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Co
 	waitMinutes := 50
 	log.Infof("Waiting for cluster %s to be removed...\n", IBMCloudProps.ClusterName)
 	for i := 0; i <= waitMinutes; i++ {
-		found, err := foundCluster(IBMCloudProps.ClusterName)
+		foundClr, err := findCluster(IBMCloudProps.ClusterName)
 		if err != nil {
 			log.Warnf("Err %s happened when retrieve cluster, try again...\n", err)
 			continue
 		}
-		if !found {
+		if foundClr == nil {
 			log.Infof("Cluster %s is removed.\n", IBMCloudProps.ClusterName)
 			clusterRemoved = true
 			break

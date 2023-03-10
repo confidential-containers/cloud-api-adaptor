@@ -28,8 +28,14 @@ func (v *mockVPC) CreateInstanceWithContext(ctx context.Context, opt *vpcv1.Crea
 	instance := &vpcv1.Instance{
 		ID: ptr("123"),
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfaceInstanceContextReference{
-			ID:                 ptr("111"),
-			PrimaryIpv4Address: ptr("0.0.0.0"),
+			ID: ptr("111"),
+			PrimaryIP: &vpcv1.ReservedIPReference{
+				Address:      ptr("0.0.0.0"),
+				Href:         ptr("href"),
+				ID:           ptr("id"),
+				Name:         ptr("name"),
+				ResourceType: ptr("resource type"),
+			},
 		},
 	}
 	return instance, nil, nil
@@ -40,17 +46,35 @@ func (v *mockVPC) GetInstanceWithContext(ctx context.Context, opt *vpcv1.GetInst
 	instance := &vpcv1.Instance{
 		ID: ptr("123"),
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfaceInstanceContextReference{
-			ID:                 ptr("111"),
-			PrimaryIpv4Address: ptr("192.0.1.1"),
+			ID: ptr("111"),
+			PrimaryIP: &vpcv1.ReservedIPReference{
+				Address:      ptr("192.0.1.1"),
+				Href:         ptr("href"),
+				ID:           ptr("id"),
+				Name:         ptr("name"),
+				ResourceType: ptr("resource type"),
+			},
 		},
 		NetworkInterfaces: []vpcv1.NetworkInterfaceInstanceContextReference{
 			{
-				ID:                 ptr("111"),
-				PrimaryIpv4Address: ptr("192.0.1.1"),
+				ID: ptr("111"),
+				PrimaryIP: &vpcv1.ReservedIPReference{
+					Address:      ptr("192.0.1.1"),
+					Href:         ptr("href"),
+					ID:           ptr("id1"),
+					Name:         ptr("name"),
+					ResourceType: ptr("resource type"),
+				},
 			},
 			{
-				ID:                 ptr("222"),
-				PrimaryIpv4Address: ptr("192.0.2.1"),
+				ID: ptr("222"),
+				PrimaryIP: &vpcv1.ReservedIPReference{
+					Address:      ptr("192.0.2.1"),
+					Href:         ptr("href"),
+					ID:           ptr("id2"),
+					Name:         ptr("name"),
+					ResourceType: ptr("resource type"),
+				},
 			},
 		},
 	}
