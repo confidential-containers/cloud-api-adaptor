@@ -6,13 +6,33 @@ package provisioner
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/compute/mgmt/compute"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/containerservice/mgmt/containerservice"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/network/mgmt/network"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/resources"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	initAzureLogger()
+}
+
+func initAzureLogger() {
+	levelStr := os.Getenv("LOG_LEVEL")
+	if levelStr == "" {
+		levelStr = "info"
+	}
+
+	level, err := log.ParseLevel(levelStr)
+	if err != nil {
+		level = log.InfoLevel
+	}
+
+	log.SetLevel(level)
+}
 
 type AzureProperties struct {
 	ResourceGroup     *resources.Group
@@ -44,6 +64,7 @@ type AzureProperties struct {
 var AzureProps = &AzureProperties{}
 
 func initAzureProperties(properties map[string]string) error {
+	log.Trace("initazureProperties()")
 	AzureProps = &AzureProperties{
 		SubscriptionID:    properties["AZURE_SUBSCRIPTION_ID"],
 		ClientID:          properties["AZURE_CLIENT_ID"],
@@ -56,39 +77,39 @@ func initAzureProperties(properties map[string]string) error {
 		CloudProvider:     properties["CLOUD_PROVIDER"],
 	}
 
-	if len(AzureProps.SubscriptionID) <= 0 {
-		return errors.New("AZURE_SUBSCRIPTION_ID was not set.")
-	}
-	if len(AzureProps.ClientID) <= 0 {
-		return errors.New("AZURE_CLIENT_ID was not set.")
-	}
-	if len(AzureProps.ClientSecret) <= 0 {
-		return errors.New("AZURE_CLIENT_SECRET was not set")
-	}
-	if len(AzureProps.TenantID) <= 0 {
-		return errors.New("AZURE_TENANT_ID was not set")
-	}
-	if len(AzureProps.Location) <= 0 {
-		return errors.New("LOCATION was not set.")
-	}
-	if len(AzureProps.CloudProvider) <= 0 {
-		return errors.New("CLOUD_PROVIDER was not set.")
-	}
-	if len(AzureProps.SshPrivateKey) <= 0 {
-		return errors.New("SSH_KEY_ID was not set.")
-	}
-	if len(AzureProps.ClusterName) <= 0 {
-		AzureProps.ClusterName = "e2e_test_cluster"
-	}
-	if len(AzureProps.ResourceGroupName) <= 0 {
-		AzureProps.ResourceGroupName = AzureProps.ClusterName + "_rg"
-	}
-
 	AzureProps.VnetName = AzureProps.ClusterName + "_vnet"
 	AzureProps.SubnetName = AzureProps.ClusterName + "_subnet"
 	AzureProps.InstanceSize = "Standard_D2as_v5"
 	AzureProps.NodeName = "caaaks"
 	AzureProps.OsType = "Ubuntu"
+
+	if AzureProps.SubscriptionID == "" {
+		return errors.New("AZURE_SUBSCRIPTION_ID was not set.")
+	}
+	if AzureProps.ClientID == "" {
+		return errors.New("AZURE_CLIENT_ID was not set.")
+	}
+	if AzureProps.ClientSecret == "" {
+		return errors.New("AZURE_CLIENT_SECRET was not set")
+	}
+	if AzureProps.TenantID == "" {
+		return errors.New("AZURE_TENANT_ID was not set")
+	}
+	if AzureProps.Location == "" {
+		return errors.New("LOCATION was not set.")
+	}
+	if AzureProps.CloudProvider == "" {
+		return errors.New("CLOUD_PROVIDER was not set.")
+	}
+	if AzureProps.SshPrivateKey == "" {
+		return errors.New("SSH_KEY_ID was not set.")
+	}
+	if AzureProps.ClusterName == "" {
+		AzureProps.ClusterName = "e2e_test_cluster"
+	}
+	if AzureProps.ResourceGroupName == "" {
+		AzureProps.ResourceGroupName = AzureProps.ClusterName + "_rg"
+	}
 
 	err := initManagedClients()
 	if err != nil {
@@ -99,6 +120,7 @@ func initAzureProperties(properties map[string]string) error {
 }
 
 func initManagedClients() error {
+	log.Trace("initManagedClients()")
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return err
