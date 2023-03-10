@@ -262,7 +262,12 @@ func deleteSubnet() error {
 }
 
 func createVpcImpl() error {
-	err := createVPC()
+	err := createSshKey()
+	if err != nil {
+		return err
+	}
+
+	err = createVPC()
 	if err != nil {
 		return err
 	}
@@ -272,11 +277,63 @@ func createVpcImpl() error {
 }
 
 func deleteVpcImpl() error {
-	err := deleteSubnet()
+	err := deleteSshKey()
+	if err != nil {
+		return err
+	}
+
+	err = deleteSubnet()
 	if err != nil {
 		return err
 	}
 	return deleteVPC()
+}
+
+func createSshKey() error {
+	key, err := findSshKey(IBMCloudProps.SshKeyName)
+	if err != nil {
+		return err
+	}
+	if key != nil {
+		IBMCloudProps.SshKeyID = *key.ID
+		log.Infof("SSH Key %s with ID %s exists already, we can just use it.", IBMCloudProps.SshKeyName, IBMCloudProps.SshKeyID)
+		return nil
+	}
+
+	options := &vpcv1.CreateKeyOptions{}
+	options.SetName(IBMCloudProps.SshKeyName)
+	options.SetPublicKey(IBMCloudProps.SshKeyContent)
+	key, _, err = IBMCloudProps.VPC.CreateKey(options)
+
+	if err != nil {
+		return err
+	}
+
+	IBMCloudProps.SshKeyID = *key.ID
+	log.Infof("SSH Key %s with ID %s is created.", IBMCloudProps.SshKeyName, IBMCloudProps.SshKeyID)
+	return nil
+}
+
+func deleteSshKey() error {
+	key, err := findSshKey(IBMCloudProps.SshKeyName)
+	if err != nil {
+		return err
+	}
+	if key == nil {
+		log.Infof("SSH Key %s does not exist.", IBMCloudProps.SshKeyName)
+		return nil
+	}
+
+	IBMCloudProps.SshKeyID = *key.ID
+
+	deleteKeyOptions := &vpcv1.DeleteKeyOptions{}
+	deleteKeyOptions.SetID(IBMCloudProps.SshKeyID)
+	_, err = IBMCloudProps.VPC.DeleteKey(deleteKeyOptions)
+	if err != nil {
+		return err
+	}
+	log.Infof("SSH Key %s with ID %s is deleted.", IBMCloudProps.SshKeyName, IBMCloudProps.SshKeyID)
+	return nil
 }
 
 func isClusterReady(clrName string) (bool, error) {
@@ -359,6 +416,31 @@ func findSubnet(subnetName string) (*vpcv1.Subnet, error) {
 		log.Tracef("Checking subnet %s.", *subnet.Name)
 		if *subnet.Name == subnetName {
 			return &subnet, nil
+		}
+	}
+	return nil, nil
+}
+
+func findSshKey(keyName string) (*vpcv1.Key, error) {
+	listKeysOptions := &vpcv1.ListKeysOptions{}
+
+	pager, err := IBMCloudProps.VPC.NewKeysPager(listKeysOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	var allResults []vpcv1.Key
+	for pager.HasNext() {
+		nextPage, err := pager.GetNext()
+		if err != nil {
+			return nil, err
+		}
+		allResults = append(allResults, nextPage...)
+	}
+	for _, key := range allResults {
+		log.Tracef("Checking SSH Key %s.", *key.Name)
+		if *key.Name == keyName {
+			return &key, nil
 		}
 	}
 	return nil, nil

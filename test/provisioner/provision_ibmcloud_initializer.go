@@ -33,7 +33,9 @@ type IBMCloudProperties struct {
 	PodvmImageArch  string
 	Region          string
 	ResourceGroupID string
+	SshKeyContent   string
 	SshKeyID        string
+	SshKeyName      string
 	SubnetName      string
 	SubnetID        string
 	VpcName         string
@@ -92,7 +94,8 @@ func initProperties(properties map[string]string) error {
 		PodvmImageArch:  properties["PODVM_IMAGE_ARCH"],
 		Region:          properties["REGION"],
 		ResourceGroupID: properties["RESOURCE_GROUP_ID"],
-		SshKeyID:        properties["SSH_KEY_ID"],
+		SshKeyName:      properties["SSH_KEY_NAME"],
+		SshKeyContent:   properties["SSH_PUBLIC_KEY_CONTENT"],
 		SubnetName:      properties["VPC_SUBNET_NAME"],
 		VpcName:         properties["VPC_NAME"],
 		VpcServiceURL:   properties["VPC_SERVICE_URL"],
