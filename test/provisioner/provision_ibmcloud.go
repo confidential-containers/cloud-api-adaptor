@@ -295,7 +295,7 @@ func isClusterReady(clrName string) (bool, error) {
 	return false, nil
 }
 
-// TODO, nice to have rety if SDK client did not do that for well known http errors
+// TODO, nice to have retry if SDK client did not do that for well known http errors
 func findCluster(clrName string) (*containerv2.ClusterInfo, error) {
 	target := containerv2.ClusterTargetHeader{
 		Provider: "vpc-gen2",
@@ -312,7 +312,7 @@ func findCluster(clrName string) (*containerv2.ClusterInfo, error) {
 	return nil, nil
 }
 
-// TODO, nice to have rety if SDK client did not do that for well known http errors
+// TODO, nice to have retry if SDK client did not do that for well known http errors
 func findVPC(vpcName string) (*vpcv1.VPC, error) {
 	listVpcsOptions := &vpcv1.ListVpcsOptions{}
 
@@ -338,7 +338,7 @@ func findVPC(vpcName string) (*vpcv1.VPC, error) {
 	return nil, nil
 }
 
-// TODO, nice to have rety if SDK client did not do that for well known http errors
+// TODO, nice to have retry if SDK client did not do that for well known http errors
 func findSubnet(subnetName string) (*vpcv1.Subnet, error) {
 	listSubnetsOptions := &vpcv1.ListSubnetsOptions{}
 
