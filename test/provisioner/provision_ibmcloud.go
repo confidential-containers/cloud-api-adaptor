@@ -299,7 +299,7 @@ func NewIBMCloudProvisioner(properties map[string]string) (CloudProvisioner, err
 // IBMCloudProvisioner
 
 func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
-	log.Info("CreateCluster()")
+	log.Trace("CreateCluster()")
 
 	clusterInfo := containerv2.ClusterCreateRequest{
 		DisablePublicServiceEndpoint: true,
@@ -333,7 +333,7 @@ func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Co
 	for i := 0; i <= waitMinutes; i++ {
 		ready, err := isClusterReady(IBMCloudProps.ClusterName)
 		if err != nil {
-			log.Infof("Err %s happened when retrieve cluster, try again...\n", err)
+			log.Warnf("Err %s happened when retrieve cluster, try again...\n", err)
 			continue
 		}
 		if ready {
@@ -353,12 +353,12 @@ func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Co
 }
 
 func (p *IBMCloudProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) error {
-	log.Info("CreateVPC()")
+	log.Trace("CreateVPC()")
 	return createVpcImpl()
 }
 
 func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
-	log.Info("DeleteCluster()")
+	log.Trace("DeleteCluster()")
 
 	target := containerv2.ClusterTargetHeader{}
 	log.Infof("Deleting Cluster %s.\n", IBMCloudProps.ClusterName)
@@ -373,7 +373,7 @@ func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Co
 	for i := 0; i <= waitMinutes; i++ {
 		found, err := foundCluster(IBMCloudProps.ClusterName)
 		if err != nil {
-			log.Infof("Err %s happened when retrieve cluster, try again...\n", err)
+			log.Warnf("Err %s happened when retrieve cluster, try again...\n", err)
 			continue
 		}
 		if !found {
@@ -392,12 +392,12 @@ func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Co
 }
 
 func (p *IBMCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
-	log.Info("DeleteVPC()")
+	log.Trace("DeleteVPC()")
 	return deleteVpcImpl()
 }
 
 func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
-	log.Info("UploadPodvm()")
+	log.Trace("UploadPodvm()")
 
 	filePath, err := filepath.Abs(imagePath)
 	if err != nil {
