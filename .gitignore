@@ -16,6 +16,7 @@ cloud-api-adaptor
 # The code files under cmd/cloud-api-adaptor are not ignored
 !/cmd/cloud-api-adaptor
 kata-agent
+cluster-provisioner
 
 # Ignore the contents of the certificates directory
 podvm/files/etc/certificates/*

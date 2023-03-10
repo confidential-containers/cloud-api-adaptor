@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/resources"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -34,18 +35,21 @@ func createResourceGroup() error {
 		Location: &AzureProps.Location,
 	}
 
+	log.Infof("Creating Resource group %s.\n", AzureProps.ResourceGroupName)
 	resourceGroup, err := AzureProps.ResourceGroupClient.CreateOrUpdate(context.Background(), AzureProps.ResourceGroupName, newRG)
 	if err != nil {
-		fmt.Println("Failed to create resource group:", err)
+		log.Infof("Failed to create resource group: %s:%v.\n", AzureProps.ResourceGroupName, err)
 		return fmt.Errorf("creating resource group: %w", err)
 	}
 
 	AzureProps.ResourceGroup = &resourceGroup
 
+	log.Infof("Successfully Created Resource group %s.\n", AzureProps.ResourceGroupName)
 	return nil
 }
 
 func deleteResourceGroup() error {
+	log.Infof("Deleting Resource group %s.\n", AzureProps.ResourceGroupName)
 	_, err := AzureProps.ResourceGroupClient.Delete(context.Background(), AzureProps.ResourceGroupName)
 	if err != nil {
 		if typedError, ok := err.(autorest.DetailedError); ok {
@@ -54,9 +58,11 @@ func deleteResourceGroup() error {
 			}
 		}
 
-		fmt.Println("Failed to delete resource group:", err)
+		log.Infof("Failed to delete resource group %s:%v.\n", AzureProps.ResourceGroupName, err)
 		return fmt.Errorf("deleting resource group: %w", err)
 	}
+
+	log.Infof("Successfully Deleted Resource group %s.\n", AzureProps.ResourceGroupName)
 
 	return nil
 }
@@ -83,6 +89,7 @@ func createVnetSubnet() error {
 	}
 
 	// Create the virtual network
+	log.Infof("Creating  vnet %s in resource group %s with addressPrefix %s subnetAddressPrefix %s.\n", AzureProps.VnetName, AzureProps.ResourceGroupName, addressPrefix, subnetAddressPrefix)
 	_, err := AzureProps.ManagedVnetClient.CreateOrUpdate(context.Background(), AzureProps.ResourceGroupName, AzureProps.VnetName, vnetParams)
 	if err != nil {
 		return fmt.Errorf("creating vnet: %w", err)
@@ -98,6 +105,9 @@ func createVnetSubnet() error {
 	}
 
 	AzureProps.SubnetID = *subnet.ID
+
+	log.Infof("Successfully Created vnet %s in resource group %s.\n", AzureProps.VnetName, AzureProps.ResourceGroupName)
+
 	return nil
 }
 
@@ -106,6 +116,11 @@ func createResourceImpl() error {
 	if err != nil {
 		return fmt.Errorf("creating resource group: %w", err)
 	}
+
+	// rg creation takes few seconds to complete keeping it as 60 second to be on safe side.
+	const sleeptime = time.Duration(60) * time.Second
+	log.Info("waiting for the Resource group to be available before creating vnet...")
+	time.Sleep(sleeptime)
 	return createVnetSubnet()
 }
 
@@ -114,8 +129,10 @@ func deleteResourceImpl() error {
 }
 
 func isAzureClusterReady(resourceGroupName string, clusterName string) (bool, error) {
+	log.Debug("isAzureClusterReady()")
 	cluster, err := AzureProps.ManagedAksClient.Get(context.Background(), resourceGroupName, clusterName)
 	if err != nil {
+		log.Errorf("failed to get cluster: %v", err)
 		return false, fmt.Errorf("failed to get cluster: %w", err)
 	}
 
@@ -126,7 +143,8 @@ func isAzureClusterReady(resourceGroupName string, clusterName string) (bool, er
 	return true, nil
 }
 
-func isclusterDeleted(resourceGroupName string, clusterName string) (bool, error) {
+func isClusterDeleted(resourceGroupName string, clusterName string) (bool, error) {
+	log.Debug("isClusterDeleted()")
 	_, err := AzureProps.ManagedAksClient.Get(context.Background(), resourceGroupName, clusterName)
 	if err != nil {
 		if typedError, ok := err.(autorest.DetailedError); ok {
@@ -134,7 +152,7 @@ func isclusterDeleted(resourceGroupName string, clusterName string) (bool, error
 				return true, nil
 			}
 		}
-
+		log.Errorf("failed to get cluster: %v", err)
 		return false, fmt.Errorf("failed to get cluster: %w", err)
 	}
 
@@ -200,14 +218,17 @@ func NewAzureCloudProvisioner(properties map[string]string) (CloudProvisioner, e
 }
 
 func (p *AzureCloudProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) error {
+	log.Trace("CreateVPC()")
 	return createResourceImpl()
 }
 
 func (p *AzureCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
+	log.Trace("DeleteVPC()")
 	return deleteResourceImpl()
 }
 
 func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
+	log.Trace("CreateCluster()")
 	agentPoolProperties := []containerservice.ManagedClusterAgentPoolProfile{
 		{
 			Name:               &AzureProps.NodeName,
@@ -227,7 +248,7 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 
 	ManagedClusterProperties := &containerservice.ManagedClusterProperties{
 		ServicePrincipalProfile: servicePrincipalProfile,
-		DNSPrefix:               to.StringPtr("dnsprefix"),
+		DNSPrefix:               to.StringPtr("caa"),
 		AgentPoolProfiles: &[]containerservice.ManagedClusterAgentPoolProfile{
 			agentPoolProperties[0],
 		},
@@ -239,19 +260,23 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 	}
 
 	// Create the cluster
+	log.Infof("Creating cluster %s.\n", AzureProps.ClusterName)
 	_, err := AzureProps.ManagedAksClient.CreateOrUpdate(context.Background(), AzureProps.ResourceGroupName, AzureProps.ClusterName, *ManagedCluster)
 	if err != nil {
-		return err
+		log.Errorf("Failed to created cluster %s: %v.\n", AzureProps.ClusterName, err)
+		return fmt.Errorf("Failed to created cluster: %w", err)
 	}
 
 	// check if cluster is ready after creation
 	waitDuration := time.Duration(10) * time.Minute
 	retryInterval := time.Duration(60) * time.Second
+	log.Infof("Waiting for cluster %s to be available.\n", AzureProps.ClusterName)
 	err = WaitForCondition(func() (bool, error) {
 		return isAzureClusterReady(AzureProps.ResourceGroupName, AzureProps.ClusterName)
 	}, waitDuration, retryInterval)
 
 	if err != nil {
+		log.Errorf("Failed waiting  cluster %s to be ready: %v.\n", AzureProps.ClusterName, err)
 		return fmt.Errorf("waiting for cluster to be ready %w", err)
 	}
 
@@ -264,6 +289,7 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 	kubeconfigFilename := "config"
 	kubeconfigPath := path.Join(home, ".kube", kubeconfigFilename)
 
+	log.Infof("Sync cluster kubeconfig with current config context")
 	if err = syncKubeconfig(kubeconfigdirpath, kubeconfigPath); err != nil {
 		return fmt.Errorf("Failed to sync kubeconfig to %s: %w", kubeconfigPath, err)
 	}
@@ -275,16 +301,19 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 }
 
 func (p *AzureCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
+	log.Trace("DeleteCluster()")
+	log.Infof("Deleting Cluster %s.\n", AzureProps.ClusterName)
 	_, err := AzureProps.ManagedAksClient.Delete(context.Background(), AzureProps.ResourceGroupName, AzureProps.ClusterName)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed deleting cluster %s: %w", AzureProps.ResourceGroupName, err)
 	}
 
 	// check if cluster is ready after creation
 	waitDuration := time.Duration(10) * time.Minute
 	retryInterval := time.Duration(60) * time.Second
+	log.Infof("Waiting for cluster %s to be removed...\n", AzureProps.ClusterName)
 	err = WaitForCondition(func() (bool, error) {
-		return isclusterDeleted(AzureProps.ResourceGroupName, AzureProps.ClusterName)
+		return isClusterDeleted(AzureProps.ResourceGroupName, AzureProps.ClusterName)
 	}, waitDuration, retryInterval)
 
 	if err != nil {
@@ -299,6 +328,8 @@ func (l *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.
 }
 
 func (p *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
+	log.Trace("UploadPodvm()")
+	log.Trace("Image is uploaded via packer in case of azure")
 	return nil
 }
 
