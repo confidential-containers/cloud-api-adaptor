@@ -14,7 +14,7 @@ import (
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
-	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 )
 
 const programName = "agent-protocol-forwarder"

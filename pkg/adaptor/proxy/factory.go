@@ -3,7 +3,7 @@
 
 package proxy
 
-import "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
+import "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 
 type Factory interface {
 	New(sandboxID string) AgentProxy
@@ -12,10 +12,10 @@ type Factory interface {
 type factory struct {
 	PauseImage    string
 	CriSocketPath string
-	TLSConfig     *tls.TLSConfig
+	TLSConfig     *tlsutil.TLSConfig
 }
 
-func NewFactory(pauseImage, criSocketPath string, tlsConfig *tls.TLSConfig) Factory {
+func NewFactory(pauseImage, criSocketPath string, tlsConfig *tlsutil.TLSConfig) Factory {
 	return &factory{
 		PauseImage:    pauseImage,
 		CriSocketPath: criSocketPath,

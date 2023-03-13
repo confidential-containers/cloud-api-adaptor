@@ -1,7 +1,7 @@
 // Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 // This code is adapted from https://github.com/kubernetes/client-go/blob/kubernetes-1.22.17/transport/transport.go
-package tls
+package tlsutil
 
 import (
 	"crypto/tls"

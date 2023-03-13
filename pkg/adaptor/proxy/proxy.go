@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 	"github.com/containerd/ttrpc"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	"google.golang.org/grpc"

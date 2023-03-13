@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 	"github.com/containerd/ttrpc"
 	"github.com/gogo/protobuf/types"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
