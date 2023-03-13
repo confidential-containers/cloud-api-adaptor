@@ -1,6 +1,7 @@
 resources:
     - ccruntime-peer-pods.yaml
     - caa-pod.yaml
+    - ../rbac
 
 # remove host-install configuration from ccruntime-peer-pods.yaml
 patchesJSON6902:
