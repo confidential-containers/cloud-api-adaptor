@@ -32,6 +32,10 @@ type CloudProvisioner interface {
 	UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error
 }
 
+type newProvisionerFunc func(properties map[string]string) (CloudProvisioner, error)
+
+var newProvisionerFunctions = make(map[string]newProvisionerFunc)
+
 type CloudAPIAdaptor struct {
 	caaDaemonSet         *appsv1.DaemonSet    // Represents the cloud-api-adaptor daemonset
 	ccDaemonSet          *appsv1.DaemonSet    // Represents the CoCo installer daemonset
@@ -59,13 +63,8 @@ func NewCloudAPIAdaptor(provider string) (p *CloudAPIAdaptor) {
 
 // GetCloudProvisioner returns a CloudProvisioner implementation
 func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvisioner, error) {
-	var (
-		err         error
-		properties  map[string]string
-		provisioner CloudProvisioner
-	)
 
-	properties = make(map[string]string)
+	properties := make(map[string]string)
 	if propertiesFile != "" {
 		f, err := os.ReadFile(propertiesFile)
 		if err != nil {
@@ -76,18 +75,12 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 		}
 	}
 
-	switch provider {
-	case "azure":
-		provisioner, err = NewAzureCloudProvisioner("default", "default")
-	case "libvirt":
-		provisioner, err = NewLibvirtProvisioner(properties)
-	case "ibmcloud":
-		provisioner, err = NewIBMCloudProvisioner(properties)
-	default:
+	newProvisioner, ok := newProvisionerFunctions[provider]
+	if !ok {
 		return nil, fmt.Errorf("Not implemented provisioner for %s\n", provider)
 	}
 
-	return provisioner, err
+	return newProvisioner(properties)
 }
 
 // Deletes the peer pods installation including the controller manager.

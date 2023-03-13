@@ -60,13 +60,11 @@ func TestMain(m *testing.M) {
 	//  key2 = "value2"
 	provisionPropsFile := os.Getenv("TEST_E2E_PROVISION_FILE")
 
-	if shouldProvisionCluster || podvmImage != "" {
-		// Get an provisioner instance for the cloud provider.
-		provisioner, err = pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	// Get an provisioner instance for the cloud provider.
+	provisioner, err = pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	if !shouldProvisionCluster {

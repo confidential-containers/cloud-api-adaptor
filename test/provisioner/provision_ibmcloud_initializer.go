@@ -1,3 +1,5 @@
+//go:build ibmcloud
+
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -5,7 +7,6 @@ package provisioner
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	bxsession "github.com/IBM-Cloud/bluemix-go/session"
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
+	log "github.com/sirupsen/logrus"
 )
 
 type IBMCloudProperties struct {
@@ -31,7 +33,9 @@ type IBMCloudProperties struct {
 	PodvmImageArch  string
 	Region          string
 	ResourceGroupID string
+	SshKeyContent   string
 	SshKeyID        string
+	SshKeyName      string
 	SubnetName      string
 	SubnetID        string
 	VpcName         string
@@ -40,17 +44,40 @@ type IBMCloudProperties struct {
 	WorkerFlavor    string
 	Zone            string
 
-	WorkerCount     int
-	IsSelfManaged   bool
-	IsProvNewVPC    bool
-	IsProvNewSubnet bool
-	IsDebug         bool
+	WorkerCount   int
+	IsSelfManaged bool
 
 	VPC        *vpcv1.VpcV1
 	ClusterAPI containerv2.Clusters
 }
 
 var IBMCloudProps = &IBMCloudProperties{}
+
+func init() {
+	initLogger()
+}
+
+func initLogger() {
+	level := os.Getenv("LOG_LEVEL")
+	switch level {
+	case "trace":
+		log.SetLevel(log.TraceLevel)
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	case "fatal":
+		log.SetLevel(log.FatalLevel)
+	case "panic":
+		log.SetLevel(log.PanicLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
+	}
+}
 
 func initProperties(properties map[string]string) error {
 	IBMCloudProps = &IBMCloudProperties{
@@ -67,12 +94,10 @@ func initProperties(properties map[string]string) error {
 		PodvmImageArch:  properties["PODVM_IMAGE_ARCH"],
 		Region:          properties["REGION"],
 		ResourceGroupID: properties["RESOURCE_GROUP_ID"],
-		SecurityGroupID: properties["SECURITY_GROUP_ID"],
-		SshKeyID:        properties["SSH_KEY_ID"],
+		SshKeyName:      properties["SSH_KEY_NAME"],
+		SshKeyContent:   properties["SSH_PUBLIC_KEY_CONTENT"],
 		SubnetName:      properties["VPC_SUBNET_NAME"],
-		SubnetID:        properties["VPC_SUBNET_ID"],
 		VpcName:         properties["VPC_NAME"],
-		VpcID:           properties["VPC_ID"],
 		VpcServiceURL:   properties["VPC_SERVICE_URL"],
 		WorkerFlavor:    properties["WORKER_FLAVOR"],
 		// WorkerCount   : properties["WORKERS_COUNT"]
@@ -83,11 +108,9 @@ func initProperties(properties map[string]string) error {
 		IBMCloudProps.ClusterName = "e2e-test-cluster"
 	}
 	if len(IBMCloudProps.VpcName) <= 0 && len(IBMCloudProps.VpcID) <= 0 {
-		IBMCloudProps.IsProvNewVPC = true
 		IBMCloudProps.VpcName = IBMCloudProps.ClusterName + "-vpc"
 	}
 	if len(IBMCloudProps.SubnetName) <= 0 && len(IBMCloudProps.SubnetID) <= 0 {
-		IBMCloudProps.IsProvNewSubnet = true
 		IBMCloudProps.SubnetName = IBMCloudProps.VpcName + "-subnet"
 	}
 	if len(IBMCloudProps.InstanceProfile) <= 0 {
@@ -113,31 +136,31 @@ func initProperties(properties map[string]string) error {
 		IBMCloudProps.IsSelfManaged = true
 	}
 
-	debugStr := os.Getenv("DEBUG")
-	if strings.EqualFold(debugStr, "yes") || strings.EqualFold(debugStr, "true") {
-		IBMCloudProps.IsDebug = true
-	}
-	if IBMCloudProps.IsDebug {
-		fmt.Printf("%+v\n", IBMCloudProps)
-	}
+	log.Debugf("%+v", IBMCloudProps)
 
 	if len(IBMCloudProps.ApiKey) <= 0 {
 		return errors.New("APIKEY was not set.")
 	}
+	if len(IBMCloudProps.Region) <= 0 {
+		return errors.New("REGION was not set.")
+	}
+
+	// IAM_SERVICE_URL can overwrite default IamServiceURL, for example: IAM_SERVICE_URL="https://iam.test.cloud.ibm.com/identity/token"
 	if len(IBMCloudProps.IamServiceURL) <= 0 {
-		return errors.New("IAM_SERVICE_URL was not set, example: https://iam.cloud.ibm.com/identity/token")
+		IBMCloudProps.IamServiceURL = "https://iam.cloud.ibm.com/identity/token"
 	}
+	log.Infof("IamServiceURL is: %s.", IBMCloudProps.IamServiceURL)
+
+	// VPC_SERVICE_URL can overwrite default VpcServiceURL https://{REGION}.iaas.cloud.ibm.com/v1, for example: VPC_SERVICE_URL="https://jp-tok.iaas.test.cloud.ibm.com/v1"
 	if len(IBMCloudProps.VpcServiceURL) <= 0 {
-		return errors.New("VPC_SERVICE_URL was not set, example: https://us-south.iaas.cloud.ibm.com/v1")
+		IBMCloudProps.VpcServiceURL = "https://" + IBMCloudProps.Region + ".iaas.cloud.ibm.com/v1"
 	}
+	log.Infof("VpcServiceURL is: %s.", IBMCloudProps.VpcServiceURL)
 
 	needProvisionStr := os.Getenv("TEST_E2E_PROVISION")
 	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") {
 		if len(IBMCloudProps.ResourceGroupID) <= 0 {
 			return errors.New("RESOURCE_GROUP_ID was not set.")
-		}
-		if len(IBMCloudProps.Region) <= 0 {
-			return errors.New("REGION was not set.")
 		}
 		if len(IBMCloudProps.Zone) <= 0 {
 			return errors.New("ZONE was not set.")
@@ -149,7 +172,7 @@ func initProperties(properties map[string]string) error {
 	}
 
 	podvmImage := os.Getenv("TEST_E2E_PODVM_IMAGE")
-	if len(podvmImage) >= 0 {
+	if len(podvmImage) > 0 {
 		if len(IBMCloudProps.CosApiKey) <= 0 {
 			return errors.New("COS_APIKEY was not set.")
 		}
@@ -172,7 +195,7 @@ func initProperties(properties map[string]string) error {
 }
 
 func initVpcV1() error {
-	ibmcloudTrace("initVpcV1()")
+	log.Trace("initVpcV1()")
 
 	if IBMCloudProps.VPC != nil {
 		return nil
@@ -194,7 +217,7 @@ func initVpcV1() error {
 }
 
 func initClustersAPI() error {
-	ibmcloudTrace("initClustersAPI()")
+	log.Trace("initClustersAPI()")
 
 	cfg := &bx.Config{
 		BluemixAPIKey: IBMCloudProps.ApiKey,

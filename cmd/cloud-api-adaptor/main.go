@@ -60,6 +60,10 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&cfg.serverConfig.CriSocketPath, "cri-runtime-endpoint", "", "cri runtime uds endpoint")
 			flags.StringVar(&cfg.serverConfig.PauseImage, "pause-image", "", "pause image to be used for the pods")
 			flags.StringVar(&cfg.serverConfig.ForwarderPort, "forwarder-port", daemon.DefaultListenPort, "port number of agent protocol forwarder")
+			flags.StringVar(&cfg.serverConfig.TLSConfig.CAFile, "ca-cert-file", "", "CA cert file")
+			flags.StringVar(&cfg.serverConfig.TLSConfig.CertFile, "cert-file", "", "cert file")
+			flags.StringVar(&cfg.serverConfig.TLSConfig.KeyFile, "cert-key", "", "cert key")
+			flags.BoolVar(&cfg.serverConfig.TLSConfig.Insecure, "insecure", false, "Enable insecure TLS - use it only for testing")
 
 			flags.StringVar(&cfg.networkConfig.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
 			flags.StringVar(&cfg.networkConfig.HostInterface, "host-interface", "", "Host Interface")

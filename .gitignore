@@ -17,6 +17,9 @@ cloud-api-adaptor
 !/cmd/cloud-api-adaptor
 kata-agent
 
+# Ignore the contents of the certificates directory
+podvm/files/etc/certificates/*
+
 # IDEs
 .vscode
 

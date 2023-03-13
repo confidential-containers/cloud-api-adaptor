@@ -5,6 +5,7 @@ package proxy
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log"
@@ -12,9 +13,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync"
 	"time"
 
+	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
 	"github.com/containerd/ttrpc"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	"google.golang.org/grpc"
@@ -28,6 +31,10 @@ const (
 	defaultMaxRetries    = 20
 	defaultRetryInterval = 10 * time.Second
 	defaultCriTimeout    = 1 * time.Second
+
+	// The server TLS certificate must have this as SAN
+	// TODO: Avoid hard coding of server name
+	podvmServername = "podvm-server"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/proxy] ", log.LstdFlags|log.Lmsgprefix)
@@ -43,6 +50,7 @@ type AgentProxy interface {
 }
 
 type agentProxy struct {
+	tlsConfig     *tlsutil.TLSConfig
 	readyCh       chan struct{}
 	stopCh        chan struct{}
 	socketPath    string
@@ -54,7 +62,7 @@ type agentProxy struct {
 	stopOnce      sync.Once
 }
 
-func NewAgentProxy(socketPath, criSocketPath string, pauseImage string) AgentProxy {
+func NewAgentProxy(socketPath, criSocketPath string, pauseImage string, tlsConfig *tlsutil.TLSConfig) AgentProxy {
 
 	return &agentProxy{
 		socketPath:    socketPath,
@@ -65,12 +73,38 @@ func NewAgentProxy(socketPath, criSocketPath string, pauseImage string) AgentPro
 		retryInterval: defaultRetryInterval,
 		criTimeout:    defaultCriTimeout,
 		pauseImage:    pauseImage,
+		tlsConfig:     tlsConfig,
 	}
 }
 
 func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error) {
 
 	var conn net.Conn
+
+	var dialer interface {
+		DialContext(ctx context.Context, network, address string) (net.Conn, error)
+	}
+
+	if p.tlsConfig != nil && !reflect.DeepEqual(tlsutil.TLSConfig{}, *p.tlsConfig) {
+
+		// Create a TLS configuration object
+		config, err := tlsutil.GetTLSConfigFor(p.tlsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create tls config: %v", err)
+		}
+		// This is important otherwise you'll hit the following error
+		// cannot validate certificate for <IP> because it doesn't contain any IP SAN
+		// Since it's not possible to know the IP address of the pod VM apriori,
+		// we are using a well-defined hostname here. Other option is to create
+		// certificates with IP SAN having all the IPs in the network range
+		config.ServerName = podvmServername
+
+		dialer = &tls.Dialer{
+			Config: config,
+		}
+	} else {
+		dialer = &net.Dialer{}
+	}
 
 	maxRetries := defaultMaxRetries
 	count := 1
@@ -81,8 +115,7 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 			ctx, cancel := context.WithTimeout(ctx, p.retryInterval)
 			defer cancel()
 
-			// TODO: Support TLS
-			conn, err = (&net.Dialer{}).DialContext(ctx, "tcp", address)
+			conn, err = dialer.DialContext(ctx, "tcp", address)
 
 			if err == nil || count == maxRetries {
 				return

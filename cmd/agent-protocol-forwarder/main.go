@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package main
@@ -14,11 +14,13 @@ import (
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
+	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
 )
 
 const programName = "agent-protocol-forwarder"
 
 type Config struct {
+	tlsConfig           tlsutil.TLSConfig
 	daemonConfig        daemon.Config
 	configPath          string
 	listenAddr          string
@@ -49,6 +51,10 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		flags.StringVar(&cfg.kataAgentSocketPath, "kata-agent-socket", daemon.DefaultKataAgentSocketPath, "Path to a kata agent socket")
 		flags.StringVar(&cfg.kataAgentNamespace, "kata-agent-namespace", daemon.DefaultKataAgentNamespace, "Path to the network namespace where kata agent runs")
 		flags.StringVar(&cfg.HostInterface, "host-interface", "", "network interface name that is used for network tunnel traffic")
+		flags.StringVar(&cfg.tlsConfig.CAFile, "ca-cert-file", "", "CA cert file")
+		flags.StringVar(&cfg.tlsConfig.CertFile, "cert-file", "", "cert file")
+		flags.StringVar(&cfg.tlsConfig.KeyFile, "cert-key", "", "cert key")
+		flags.BoolVar(&cfg.tlsConfig.Insecure, "insecure", false, "Enable insecure TLS - use it only for testing")
 	})
 
 	for path, obj := range map[string]interface{}{
@@ -63,7 +69,7 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 
 	podNode := podnetwork.NewPodNode(cfg.kataAgentNamespace, cfg.HostInterface, cfg.daemonConfig.PodNetwork)
 
-	daemon := daemon.NewDaemon(&cfg.daemonConfig, cfg.listenAddr, interceptor, podNode)
+	daemon := daemon.NewDaemon(&cfg.daemonConfig, cfg.listenAddr, &cfg.tlsConfig, interceptor, podNode)
 
 	return cmd.NewStarter(daemon), nil
 }
