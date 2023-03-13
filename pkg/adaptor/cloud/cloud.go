@@ -18,6 +18,7 @@ import (
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
@@ -59,6 +60,7 @@ type cloudService struct {
 	podsDir      string
 	daemonPort   string
 	mutex        sync.Mutex
+	ppService    *k8sops.PeerPodService
 }
 
 type sandboxID string
@@ -114,6 +116,7 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) Service {
+	var err error
 
 	s := &cloudService{
 		provider:     provider,
@@ -124,6 +127,10 @@ func NewService(provider Provider, proxyFactory proxy.Factory, workerNode podnet
 		workerNode:   workerNode,
 	}
 	s.cond = sync.NewCond(&s.mutex)
+	s.ppService, err = k8sops.NewPeerPodService()
+	if err != nil {
+		logger.Printf("failed to create PeerPodService, runtime failure may result in dangling resources %s", err)
+	}
 
 	return s
 }
@@ -314,6 +321,12 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 		return nil, fmt.Errorf("creating an instance : %w", err)
 	}
 
+	if s.ppService != nil {
+		if err := s.ppService.OwnPeerPod(sandbox.podName, sandbox.podNamespace, instance.ID); err != nil {
+			logger.Printf("failed to create PeerPod: %s", err.Error())
+		}
+	}
+
 	if err := s.setInstance(sid, instance.ID, instance.Name); err != nil {
 		return nil, fmt.Errorf("setting instance: %w", err)
 	}
@@ -369,7 +382,11 @@ func (s *cloudService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.S
 	}
 
 	if err := s.provider.DeleteInstance(ctx, sandbox.instanceID); err != nil {
-		logger.Printf("deleting an instance %s: %v", sandbox.instanceID, err)
+		logger.Printf("Error deleting an instance %s: %v", sandbox.instanceID, err)
+	} else if s.ppService != nil {
+		if err := s.ppService.ReleasePeerPod(sandbox.podName, sandbox.podNamespace, sandbox.instanceID); err != nil {
+			logger.Printf("failed to release PeerPod %v", err)
+		}
 	}
 
 	if err := s.workerNode.Teardown(sandbox.netNSPath, sandbox.podNetwork); err != nil {
