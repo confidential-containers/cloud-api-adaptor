@@ -141,20 +141,26 @@ func initProperties(properties map[string]string) error {
 	if len(IBMCloudProps.ApiKey) <= 0 {
 		return errors.New("APIKEY was not set.")
 	}
+	if len(IBMCloudProps.Region) <= 0 {
+		return errors.New("REGION was not set.")
+	}
+
+	// IAM_SERVICE_URL can overwrite default IamServiceURL, for example: IAM_SERVICE_URL="https://iam.test.cloud.ibm.com/identity/token"
 	if len(IBMCloudProps.IamServiceURL) <= 0 {
-		return errors.New("IAM_SERVICE_URL was not set, example: https://iam.cloud.ibm.com/identity/token")
+		IBMCloudProps.IamServiceURL = "https://iam.cloud.ibm.com/identity/token"
 	}
+	log.Infof("IamServiceURL is: %s.", IBMCloudProps.IamServiceURL)
+
+	// VPC_SERVICE_URL can overwrite default VpcServiceURL https://{REGION}.iaas.cloud.ibm.com/v1, for example: VPC_SERVICE_URL="https://jp-tok.iaas.test.cloud.ibm.com/v1"
 	if len(IBMCloudProps.VpcServiceURL) <= 0 {
-		return errors.New("VPC_SERVICE_URL was not set, example: https://us-south.iaas.cloud.ibm.com/v1")
+		IBMCloudProps.VpcServiceURL = "https://" + IBMCloudProps.Region + ".iaas.cloud.ibm.com/v1"
 	}
+	log.Infof("VpcServiceURL is: %s.", IBMCloudProps.VpcServiceURL)
 
 	needProvisionStr := os.Getenv("TEST_E2E_PROVISION")
 	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") {
 		if len(IBMCloudProps.ResourceGroupID) <= 0 {
 			return errors.New("RESOURCE_GROUP_ID was not set.")
-		}
-		if len(IBMCloudProps.Region) <= 0 {
-			return errors.New("REGION was not set.")
 		}
 		if len(IBMCloudProps.Zone) <= 0 {
 			return errors.New("ZONE was not set.")
