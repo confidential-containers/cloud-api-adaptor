@@ -1,0 +1,51 @@
+# when owner reference is both object must be on the same namespace, hence,
+# caa should have cluster-wide permissions to support any pod namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-api-adaptor
+  namespace: confidential-containers-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pod-viewer
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pod-viewer
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: confidential-containers-system
+roleRef:
+  kind: ClusterRole
+  name: pod-viewer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: peerpod-editor
+rules:
+- apiGroups: ["confidentialcontainers.org"]
+  resources: ["peerpods"]
+  verbs: ["create", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: peerpod-editor
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: confidential-containers-system
+roleRef:
+  kind: ClusterRole
+  name: peerpod-editor
+  apiGroup: rbac.authorization.k8s.io
