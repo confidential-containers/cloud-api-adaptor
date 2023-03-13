@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/agentproto"
-	tlsutil "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tls"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 )
 
 type mockConn struct{}
