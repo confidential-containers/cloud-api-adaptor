@@ -3,7 +3,6 @@ kind: Kustomization
 
 bases:
 - ../../yamls
-nameSuffix: -aws
 
 images:
 - name: cloud-api-adaptor
