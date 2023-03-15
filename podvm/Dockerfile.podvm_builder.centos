@@ -16,7 +16,7 @@ ENV GO_VERSION ${GO_VERSION}
 ENV RUST_VERSION ${RUST_VERSION}
 ENV PROTOC_VERSION ${PROTOC_VERSION}
 
-RUN dnf config-manager --set-enabled powertools && \
+RUN dnf install -y 'dnf-command(config-manager)' && dnf config-manager --set-enabled powertools && \
     dnf install -y epel-release epel-next-release && dnf update -y && \
     dnf groupinstall -y 'Development Tools' && \
     dnf install -y yum-utils gnupg git curl pkg-config libseccomp-devel gpgme-devel \
