@@ -20,7 +20,7 @@ import (
 const programName = "agent-protocol-forwarder"
 
 type Config struct {
-	tlsConfig           tlsutil.TLSConfig
+	tlsConfig           *tlsutil.TLSConfig
 	daemonConfig        daemon.Config
 	configPath          string
 	listenAddr          string
@@ -45,17 +45,27 @@ func load(path string, obj interface{}) error {
 
 func (cfg *Config) Setup() (cmd.Starter, error) {
 
+	var (
+		disableTLS bool
+		tlsConfig  tlsutil.TLSConfig
+	)
+
 	cmd.Parse(programName, os.Args, func(flags *flag.FlagSet) {
 		flags.StringVar(&cfg.configPath, "config", daemon.DefaultConfigPath, "Path to a deamon config file")
 		flags.StringVar(&cfg.listenAddr, "listen", daemon.DefaultListenAddr, "Listen address")
 		flags.StringVar(&cfg.kataAgentSocketPath, "kata-agent-socket", daemon.DefaultKataAgentSocketPath, "Path to a kata agent socket")
 		flags.StringVar(&cfg.kataAgentNamespace, "kata-agent-namespace", daemon.DefaultKataAgentNamespace, "Path to the network namespace where kata agent runs")
 		flags.StringVar(&cfg.HostInterface, "host-interface", "", "network interface name that is used for network tunnel traffic")
-		flags.StringVar(&cfg.tlsConfig.CAFile, "ca-cert-file", "", "CA cert file")
-		flags.StringVar(&cfg.tlsConfig.CertFile, "cert-file", "", "cert file")
-		flags.StringVar(&cfg.tlsConfig.KeyFile, "cert-key", "", "cert key")
-		flags.BoolVar(&cfg.tlsConfig.Insecure, "insecure", false, "Enable insecure TLS - use it only for testing")
+		flags.StringVar(&tlsConfig.CAFile, "ca-cert-file", "", "CA cert file")
+		flags.StringVar(&tlsConfig.CertFile, "cert-file", "", "cert file")
+		flags.StringVar(&tlsConfig.KeyFile, "cert-key", "", "cert key")
+		flags.BoolVar(&tlsConfig.SkipVerify, "tls-skip-verify", false, "Skip TLS certificate verification - use it only for testing")
+		flags.BoolVar(&disableTLS, "disable-tls", false, "Disable TLS encryption - use it only for testing")
 	})
+
+	if !disableTLS {
+		cfg.tlsConfig = &tlsConfig
+	}
 
 	for path, obj := range map[string]interface{}{
 		cfg.configPath: &cfg.daemonConfig,
@@ -69,7 +79,7 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 
 	podNode := podnetwork.NewPodNode(cfg.kataAgentNamespace, cfg.HostInterface, cfg.daemonConfig.PodNetwork)
 
-	daemon := daemon.NewDaemon(&cfg.daemonConfig, cfg.listenAddr, &cfg.tlsConfig, interceptor, podNode)
+	daemon := daemon.NewDaemon(&cfg.daemonConfig, cfg.listenAddr, cfg.tlsConfig, interceptor, podNode)
 
 	return cmd.NewStarter(daemon), nil
 }

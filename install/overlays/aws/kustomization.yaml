@@ -31,7 +31,7 @@ configMapGenerator:
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS
   #- CERT_KEY="/etc/certificates/client.key" # for TLS
-  #- INSECURE="" # for testing only
+  #- TLS_SKIP_VERIFY="" # for testing only
 ##TLS_SETTINGS
 
 secretGenerator:

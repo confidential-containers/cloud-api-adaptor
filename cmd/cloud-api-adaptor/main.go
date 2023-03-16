@@ -14,6 +14,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 )
@@ -53,6 +54,11 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 		fmt.Printf("%s: starting Cloud API Adaptor daemon for %q\n", programName, cloudName)
 
+		var (
+			disableTLS bool
+			tlsConfig  tlsutil.TLSConfig
+		)
+
 		cmd.Parse(programName, os.Args[1:], func(flags *flag.FlagSet) {
 
 			flags.StringVar(&cfg.serverConfig.SocketPath, "socket", adaptor.DefaultSocketPath, "Unix domain socket path of remote hypervisor service")
@@ -60,10 +66,11 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&cfg.serverConfig.CriSocketPath, "cri-runtime-endpoint", "", "cri runtime uds endpoint")
 			flags.StringVar(&cfg.serverConfig.PauseImage, "pause-image", "", "pause image to be used for the pods")
 			flags.StringVar(&cfg.serverConfig.ForwarderPort, "forwarder-port", daemon.DefaultListenPort, "port number of agent protocol forwarder")
-			flags.StringVar(&cfg.serverConfig.TLSConfig.CAFile, "ca-cert-file", "", "CA cert file")
-			flags.StringVar(&cfg.serverConfig.TLSConfig.CertFile, "cert-file", "", "cert file")
-			flags.StringVar(&cfg.serverConfig.TLSConfig.KeyFile, "cert-key", "", "cert key")
-			flags.BoolVar(&cfg.serverConfig.TLSConfig.Insecure, "insecure", false, "Enable insecure TLS - use it only for testing")
+			flags.StringVar(&tlsConfig.CAFile, "ca-cert-file", "", "CA cert file")
+			flags.StringVar(&tlsConfig.CertFile, "cert-file", "", "cert file")
+			flags.StringVar(&tlsConfig.KeyFile, "cert-key", "", "cert key")
+			flags.BoolVar(&tlsConfig.SkipVerify, "tls-skip-verify", false, "Skip TLS certificate verification - use it only for testing")
+			flags.BoolVar(&disableTLS, "disable-tls", false, "Disable TLS encryption - use it only for testing")
 
 			flags.StringVar(&cfg.networkConfig.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
 			flags.StringVar(&cfg.networkConfig.HostInterface, "host-interface", "", "Host Interface")
@@ -72,6 +79,10 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 			cloud.ParseCmd(flags)
 		})
+
+		if !disableTLS {
+			cfg.serverConfig.TLSConfig = &tlsConfig
+		}
 
 		cloud.LoadEnv()
 
