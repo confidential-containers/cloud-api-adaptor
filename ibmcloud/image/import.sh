@@ -12,7 +12,7 @@ error(){
 script_dir=$(dirname "$0")
 
 function usage() {
-    echo "Usage: $0 <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint>]"
+    echo "Usage: $0 <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint> --os <operating-system>]"
 }
 
 image_file=$1
@@ -22,6 +22,7 @@ bucket_region=$region
 instance=
 endpoint=
 api=https://cloud.ibm.com
+operating_system=
 
 shift 2
 while (( "$#" )); do
@@ -30,6 +31,7 @@ while (( "$#" )); do
         --instance) instance=$2 ;;
         --endpoint) endpoint=$2 ;;
         --region) bucket_region=$2 ;;
+        --os) operating_system=$2 ;;
         --api) api=$2 ;;
         --help) usage; exit 0 ;;
         *)      usage 1>&2; exit 1;;
@@ -94,9 +96,13 @@ location=$bucket_region
 
 image_name="${file%.*}"
 image_ref="cos://$location/$bucket/$file"
-image_arch="${image_name##*-}"
-image_os="ubuntu-20-04-${image_arch/x86_64/amd64}"
-image_json=$(ibmcloud is image-create "$image_name" --os-name "$image_os" --file "$image_ref" --output JSON) || error "Unable to create vpc image $image_name"
+# If OS isn't specified infer from file name
+if [ -z "$operating_system" ]; then
+    image_arch="${image_name##*-}"
+    operating_system="ubuntu-20-04-${image_arch/x86_64/amd64}"
+fi
+image_name="$(echo ${image_name,,} | sed 's/\./-/g' | sed 's/_/-/g')"
+image_json=$(ibmcloud is image-create "$image_name" --os-name "$operating_system" --file "$image_ref" --output JSON) || error "Unable to create vpc image $image_name"
 image_id=$(echo "$image_json" | jq -r '.id')
 
 echo "Created image $image_name with id $image_id"
