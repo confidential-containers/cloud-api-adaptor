@@ -32,6 +32,9 @@ The later options:
 - `instance`: the cos instance name. Required if the cli has not been configured with the cos instance before
 - `bucket`: name of the bucket to use. Will use an available bucket if not specified
 - `region`: name of the region the bucket is in. Only required if that region is different from the VPC region
+- `os`: name of the operating-system for the image, will default to `ubuntu-20-04-<< image-suffix >>` e.g. `ubuntu-20-04-s390x`. The HyperProtect OS is `hyper-protect-1-0-s390x`.
+
+The script will sanitise `.` and `_` into `-` and lowercase the image name. Only lowercase alphanumeric characters and hyphens only (without spaces) are allowed for image names. If your image file name contains other special characters please rename it before attempting to import.
 
 ### Examples
 
@@ -43,4 +46,6 @@ The later options:
 
 `./import.sh podvm.qcow2 ca-tor --instance jt-cos-instance --bucket podvm-image-cos-bucket-jt --region jp-tok`
 
+- Uploading a SE qcow2 file directly:
 
+`./import.sh se-image-2.qcow2 eu-gb --os hyper-protect-1-0-s390x`
