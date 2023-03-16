@@ -6,24 +6,49 @@ package proxy
 import "github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 
 type Factory interface {
-	New(sandboxID string) AgentProxy
+	New(serverName, socketPath string) AgentProxy
 }
 
 type factory struct {
-	PauseImage    string
-	CriSocketPath string
-	TLSConfig     *tlsutil.TLSConfig
+	pauseImage    string
+	criSocketPath string
+	tlsConfig     *tlsutil.TLSConfig
+	caService     tlsutil.CAService
 }
 
 func NewFactory(pauseImage, criSocketPath string, tlsConfig *tlsutil.TLSConfig) Factory {
+
+	if !tlsConfig.HasCertAuth() {
+
+		certPEM, keyPEM, err := tlsutil.NewClientCertificate("cloud-api-adaptor")
+		if err != nil {
+			panic(err)
+		}
+		tlsConfig.CertData = certPEM
+		tlsConfig.KeyData = keyPEM
+	}
+
+	var caService tlsutil.CAService
+
+	if !tlsConfig.HasCA() {
+
+		s, err := tlsutil.NewCAService("agent-protocol-forwarder")
+		if err != nil {
+			panic(err)
+		}
+		caService = s
+		tlsConfig.CAData = caService.RootCertificate()
+	}
+
 	return &factory{
-		PauseImage:    pauseImage,
-		CriSocketPath: criSocketPath,
-		TLSConfig:     tlsConfig,
+		pauseImage:    pauseImage,
+		criSocketPath: criSocketPath,
+		tlsConfig:     tlsConfig,
+		caService:     caService,
 	}
 }
 
-func (f *factory) New(socketPath string) AgentProxy {
+func (f *factory) New(serverName, socketPath string) AgentProxy {
 
-	return NewAgentProxy(socketPath, f.CriSocketPath, f.PauseImage, f.TLSConfig)
+	return NewAgentProxy(serverName, socketPath, f.criSocketPath, f.pauseImage, f.tlsConfig, f.caService)
 }

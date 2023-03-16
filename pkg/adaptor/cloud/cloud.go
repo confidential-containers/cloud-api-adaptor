@@ -204,6 +204,9 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		return nil, fmt.Errorf("namespace name %s is missing in annotations", annotations.SandboxNamespace)
 	}
 
+	// TODO: server name is also generated in each cloud provider, and possibly inconsistent
+	serverName := util.GenerateInstanceName(pod, string(sid), 63)
+
 	netNSPath := req.NetworkNamespacePath
 
 	podNetworkConfig, err := s.workerNode.Inspect(netNSPath)
@@ -211,21 +214,38 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
 	}
 
+	podDir := filepath.Join(s.podsDir, string(sid))
+	if err := os.MkdirAll(podDir, os.ModePerm); err != nil {
+		return nil, fmt.Errorf("creating a pod directory: %s, %w", podDir, err)
+	}
+	socketPath := filepath.Join(podDir, proxy.SocketName)
+
+	agentProxy := s.proxyFactory.New(serverName, socketPath)
+
 	daemonConfig := forwarder.Config{
 		PodNamespace: namespace,
 		PodName:      pod,
 		PodNetwork:   podNetworkConfig,
+		TLSClientCA:  string(agentProxy.ClientCA()),
 	}
+
+	if caService := agentProxy.CAService(); caService != nil {
+
+		certPEM, keyPEM, err := caService.Issue(serverName)
+		if err != nil {
+			return nil, fmt.Errorf("creating TLS certificate for communication between worker node and peer pod VM")
+		}
+
+		daemonConfig.TLSServerCert = string(certPEM)
+		daemonConfig.TLSServerKey = string(keyPEM)
+	}
+
 	daemonJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
 	if err != nil {
 		return nil, fmt.Errorf("generating JSON data: %w", err)
 	}
 
 	// Store daemon.json in worker node for debugging
-	podDir := filepath.Join(s.podsDir, string(sid))
-	if err := os.MkdirAll(podDir, os.ModePerm); err != nil {
-		return nil, fmt.Errorf("creating a directory for daemon.json: %s, %w", podDir, err)
-	}
 	daemonJSONPath := filepath.Join(podDir, "daemon.json")
 	if err := os.WriteFile(daemonJSONPath, daemonJSON, 0666); err != nil {
 		return nil, fmt.Errorf("storing %s: %w", daemonJSONPath, err)
@@ -254,10 +274,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 			logger.Printf("Credentials file is not in a valid Json format, ignored")
 		}
 	}
-
-	socketPath := filepath.Join(podDir, proxy.SocketName)
-
-	agentProxy := s.proxyFactory.New(socketPath)
 
 	sandbox := &sandbox{
 		id:           sid,

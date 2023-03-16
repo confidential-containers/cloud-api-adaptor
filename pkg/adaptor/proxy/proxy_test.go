@@ -27,7 +27,7 @@ func TestNewAgentProxy(t *testing.T) {
 	socketPath := "/run/dummy.sock"
 
 	tlsConfig := tlsutil.TLSConfig{}
-	proxy := NewAgentProxy(socketPath, "", "", &tlsConfig)
+	proxy := NewAgentProxy("podvm", socketPath, "", "", &tlsConfig, nil)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
@@ -85,7 +85,7 @@ func TestStartStop(t *testing.T) {
 	}
 
 	tlsConfig := tlsutil.TLSConfig{}
-	proxy := NewAgentProxy(socketPath, "", "", &tlsConfig)
+	proxy := NewAgentProxy("podvm", socketPath, "", "", &tlsConfig, nil)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
