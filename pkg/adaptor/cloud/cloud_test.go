@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"path/filepath"
 	"testing"
 
 	cri "github.com/containerd/containerd/pkg/cri/annotations"
@@ -19,6 +18,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 )
 
 type mockProvider struct{}
@@ -62,13 +62,21 @@ func (p *mockProxy) Shutdown() error {
 	return nil
 }
 
+func (p *mockProxy) ClientCA() (certPEM []byte) {
+	return nil
+}
+
+func (p *mockProxy) CAService() tlsutil.CAService {
+	return nil
+}
+
 type mockProxyFactory struct {
 	podsDir string
 }
 
-func (f *mockProxyFactory) New(sandboxID string) proxy.AgentProxy {
+func (f *mockProxyFactory) New(serverName, socketPath string) proxy.AgentProxy {
 	return &mockProxy{
-		socketPath: filepath.Join(f.podsDir, sandboxID, proxy.SocketName),
+		socketPath: socketPath,
 		readyCh:    make(chan struct{}),
 		stopCh:     make(chan struct{}),
 	}

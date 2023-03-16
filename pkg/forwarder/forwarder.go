@@ -39,6 +39,10 @@ type Config struct {
 	PodNetwork   *tunneler.Config `json:"pod-network"`
 	PodNamespace string           `json:"pod-namespace"`
 	PodName      string           `json:"pod-name"`
+
+	TLSServerKey  string `json:"tls-server-key,omitempty"`
+	TLSServerCert string `json:"tls-server-cert,omitempty"`
+	TLSClientCA   string `json:"tls-client-ca,omitempty"`
 }
 
 type Daemon interface {
@@ -58,6 +62,15 @@ type daemon struct {
 }
 
 func NewDaemon(spec *Config, listenAddr string, tlsConfig *tlsutil.TLSConfig, interceptor interceptor.Interceptor, podNode podnetwork.PodNode) Daemon {
+
+	if !tlsConfig.HasCertAuth() {
+		tlsConfig.CertData = []byte(spec.TLSServerCert)
+		tlsConfig.KeyData = []byte(spec.TLSServerKey)
+	}
+
+	if !tlsConfig.HasCA() {
+		tlsConfig.CAData = []byte(spec.TLSClientCA)
+	}
 
 	daemon := &daemon{
 		listenAddr:  listenAddr,
