@@ -77,3 +77,18 @@ variable "cloud_provider" {
   type    = string
   default = env("CLOUD_PROVIDER")
 }
+
+variable "os_arch" {
+  type    = string
+  default = "x86_64"
+}
+
+variable "is_uefi" {
+  type        = bool
+  default     = false
+}
+
+variable "uefi_firmware" {
+  type    = string
+  default = "/usr/share/OVMF/OVMF_CODE.fd"
+}

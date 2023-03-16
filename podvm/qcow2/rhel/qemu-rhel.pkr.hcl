@@ -1,3 +1,9 @@
+locals {
+   machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
+   use_pflash = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
+   firmware = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}"  : ""
+}
+
 source "qemu" "rhel" {
   boot_command      = ["<enter>"]
   disk_compression  = true
@@ -15,6 +21,9 @@ source "qemu" "rhel" {
   ssh_wait_timeout  = "300s"
   vm_name           = "${var.qemu_image_name}"
   shutdown_command  = "sudo shutdown -h now"
+  machine_type      = "${local.machine_type}"
+  use_pflash        = "${local.use_pflash}"
+  firmware          = "${local.firmware}"
 }
 
 build {

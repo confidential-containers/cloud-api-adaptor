@@ -20,6 +20,9 @@ AGENT_PROTOCOL_FORWARDER_SRC := ../
 
 QEMU_MACHINE_TYPE_s390x := s390-ccw-virtio
 
+UEFI  ?= false
+UEFI_FIRMWARE_LOCATION ?=
+
 image: $(IMAGE_FILE)
 
 setopts:
@@ -66,6 +69,15 @@ endif
 ifdef QEMU_BINARY
 	$(eval OPTS += -var qemu_binary=${QEMU_BINARY} )
 endif
+
+# UEFI is enabled for x86_64 only
+ifeq ($(UEFI),true)
+	$(eval OPTS += -var is_uefi=true -var os_arch="x86_64" )
+ifdef UEFI_FIRMWARE_LOCATION
+	$(eval OPTS += -var uefi_firmware=${UEFI_FIRMWARE_LOCATION} )
+endif
+endif
+
 
 $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
 	rm -fr output
