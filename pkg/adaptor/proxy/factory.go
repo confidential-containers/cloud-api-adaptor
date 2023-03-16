@@ -18,7 +18,7 @@ type factory struct {
 
 func NewFactory(pauseImage, criSocketPath string, tlsConfig *tlsutil.TLSConfig) Factory {
 
-	if !tlsConfig.HasCertAuth() {
+	if tlsConfig != nil && !tlsConfig.HasCertAuth() {
 
 		certPEM, keyPEM, err := tlsutil.NewClientCertificate("cloud-api-adaptor")
 		if err != nil {
@@ -30,7 +30,7 @@ func NewFactory(pauseImage, criSocketPath string, tlsConfig *tlsutil.TLSConfig) 
 
 	var caService tlsutil.CAService
 
-	if !tlsConfig.HasCA() {
+	if tlsConfig != nil && !tlsConfig.HasCA() {
 
 		s, err := tlsutil.NewCAService("agent-protocol-forwarder")
 		if err != nil {

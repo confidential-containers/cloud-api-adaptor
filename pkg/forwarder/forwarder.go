@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"reflect"
 	"sync"
 
 	"github.com/containerd/ttrpc"
@@ -63,12 +62,12 @@ type daemon struct {
 
 func NewDaemon(spec *Config, listenAddr string, tlsConfig *tlsutil.TLSConfig, interceptor interceptor.Interceptor, podNode podnetwork.PodNode) Daemon {
 
-	if !tlsConfig.HasCertAuth() {
+	if tlsConfig != nil && !tlsConfig.HasCertAuth() {
 		tlsConfig.CertData = []byte(spec.TLSServerCert)
 		tlsConfig.KeyData = []byte(spec.TLSServerKey)
 	}
 
-	if !tlsConfig.HasCA() {
+	if tlsConfig != nil && !tlsConfig.HasCA() {
 		tlsConfig.CAData = []byte(spec.TLSClientCA)
 	}
 
@@ -102,7 +101,7 @@ func (d *daemon) Start(ctx context.Context) error {
 	var listener net.Listener
 
 	logger.Printf("Starting agent-protocol-forwarder listener on address %v", d.listenAddr)
-	if d.tlsConfig != nil && !reflect.DeepEqual(tlsutil.TLSConfig{}, *d.tlsConfig) {
+	if d.tlsConfig != nil {
 		logger.Printf("TLS is configured. Configure TLS listener")
 
 		// Create a TLS configuration object

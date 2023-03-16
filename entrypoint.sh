@@ -14,7 +14,7 @@ optionals+=""
 [[ "${VXLAN_PORT}" ]] && optionals+="-vxlan-port ${VXLAN_PORT} "
 [[ "${CACERT_FILE}" ]] && optionals+="-ca-cert-file ${CACERT_FILE} "
 [[ "${CERT_FILE}" ]] && [[ "${CERT_KEY}" ]] && optionals+="-cert-file ${CERT_FILE} -cert-key ${CERT_KEY} "
-[[ "${INSECURE}" ]] && optionals+="-insecure "
+[[ "${TLS_SKIP_VERIFY}" ]] && optionals+="-tls-skip-verify "
 
 test_vars() {
         for i in "$@"; do

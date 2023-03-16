@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sync"
 	"time"
 
@@ -91,7 +90,7 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		DialContext(ctx context.Context, network, address string) (net.Conn, error)
 	}
 
-	if p.tlsConfig != nil && !reflect.DeepEqual(tlsutil.TLSConfig{}, *p.tlsConfig) {
+	if p.tlsConfig != nil {
 
 		// Create a TLS configuration object
 		config, err := tlsutil.GetTLSConfigFor(p.tlsConfig)

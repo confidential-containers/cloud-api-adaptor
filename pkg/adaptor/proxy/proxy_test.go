@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 	"github.com/containerd/ttrpc"
 	"github.com/gogo/protobuf/types"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
@@ -26,8 +25,7 @@ func TestNewAgentProxy(t *testing.T) {
 
 	socketPath := "/run/dummy.sock"
 
-	tlsConfig := tlsutil.TLSConfig{}
-	proxy := NewAgentProxy("podvm", socketPath, "", "", &tlsConfig, nil)
+	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
@@ -84,8 +82,7 @@ func TestStartStop(t *testing.T) {
 		Host:   agentListener.Addr().String(),
 	}
 
-	tlsConfig := tlsutil.TLSConfig{}
-	proxy := NewAgentProxy("podvm", socketPath, "", "", &tlsConfig, nil)
+	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)

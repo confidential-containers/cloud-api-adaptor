@@ -13,10 +13,10 @@ import (
 
 // TLSConfig holds the information needed to set up a TLS transport.
 type TLSConfig struct {
-	CAFile   string // Path of the PEM-encoded server trusted root certificates.
-	CertFile string // Path of the PEM-encoded client certificate.
-	KeyFile  string // Path of the PEM-encoded client key.
-	Insecure bool   // Server should be accessed without verifying the certificate. For testing only.
+	CAFile     string // Path of the PEM-encoded server trusted root certificates.
+	CertFile   string // Path of the PEM-encoded client certificate.
+	KeyFile    string // Path of the PEM-encoded client key.
+	SkipVerify bool   // Server should be accessed without verifying the certificate. For testing only.
 
 	CAData   []byte // Bytes of the PEM-encoded server trusted root certificates. Supercedes CAFile.
 	CertData []byte // Bytes of the PEM-encoded client certificate. Supercedes CertFile.
@@ -113,10 +113,10 @@ func createErrorParsingCAData(pemCerts []byte) error {
 // GetTLSConfigFor returns a tls.Config that will provide the transport level security defined
 // by the provided Config. Will return nil if no transport level security is requested.
 func GetTLSConfigFor(t *TLSConfig) (*tls.Config, error) {
-	if !(t.HasCA() || t.HasCertAuth() || t.Insecure) {
+	if !(t.HasCA() || t.HasCertAuth() || t.SkipVerify) {
 		return nil, nil
 	}
-	if t.HasCA() && t.Insecure {
+	if t.HasCA() && t.SkipVerify {
 		return nil, fmt.Errorf("specifying a root certificates file with the insecure flag is not allowed")
 	}
 	if err := loadTLSFiles(t); err != nil {
@@ -128,7 +128,7 @@ func GetTLSConfigFor(t *TLSConfig) (*tls.Config, error) {
 		// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
 		// Can't use TLSv1.1 because of RC4 cipher usage
 		MinVersion:         tls.VersionTLS12,
-		InsecureSkipVerify: t.Insecure,
+		InsecureSkipVerify: t.SkipVerify,
 	}
 
 	if t.HasCA() {
