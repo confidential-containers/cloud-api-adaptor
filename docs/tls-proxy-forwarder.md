@@ -1,6 +1,33 @@
-## Enable TLS communication between proxy and agent-protocol-forwarder
+# TLS communication between `cloud-api-adaptor` and `agent-protocol-forwarder`
 
-To enable TLS, you'll need the following:
+`cloud-api-adaptor` running in a worker node communicates with `agent-protocol-forwarder` running in a peer pod VM using a mutual TLS connection. This mTLS connection is used to transfer TTRPC requests and responses of [agent protocol](https://github.com/kata-containers/kata-containers/blob/CCv0/src/libs/protocols/protos/agent.proto) between `kata-shim` and `kata-agent`.
+
+There are two options to configure mTLS connections.
+
+* Automatic configuration - `cloud-api-adaptor` automatically generates necessary keys and certificates
+* Manual configuration - Users need to prepare necessary keys and certificates, and correctly deploy them.
+
+Automatic configuration is a quick convenient option, but has some consideration points. If you want to fully control deployment of certificates and private keys, you can adopt the manual configuration option. You can also completely disable TLS encryption for testing purpose.
+
+## Automatic configuration
+
+Automatic TLS configuration is enabled by default. When command line options for TLS manual configuration are NOT specified, TLS certificates and keys are automatically generated and deployed appropriately.
+
+Mutual TLS configuration consists of server and client authentications.
+
+When the `-ca-cert-file` option of `cloud-api-adaptor` is NOT specified, a Certificate Authority (CA) service is enabled. The CA service issues a server certificate when `cloud-api-adaptor` creates a new peer pod VM. The generated certificate and private key are passed to the new pod VM as cloud-init data in a CreateInstance API call of cloud provider.
+
+When the `-cert-file` and `-cert-key` options of `cloud-api-adaptor` are NOT specified, `cloud-api-adaptor` generates a self-signed client certificate and its private key, and passes the client certificate to the new peer pod VM as cloud-init data in a CreateInstance API call of cloud provider.
+
+### Security consideration points
+
+Note that a server private key is passed to a peer pod VM as cloud-init data in an API call of cloud provider. This seems that there is a security risk here, but the security risk is considered small in practice. TLS session keys reside in memory of a worker node. This means that cloud administrators can access the session keys and possibly decrypt TLS traffics, unless the worker node is in a secure enclave. While cloud administrators can access TLS session keys, passing private keys via cloud API does not significantly increase security risks. One possible attack scenario is that a malicious cloud administrator injects a malformed private key, and the golang standard crypto library has a vulnerability when parsing such malformed key.
+
+In fact, this automatic TLS configuration increases attack surfaces. If you need automation of TLS certificate management while you want to minimize attack surface,  another possible option is to construct your own system based on the Kubernetes [cert-manager](https://cert-manager.io/) with the manual TLS configuration.
+
+## Manual configuration
+
+To enable TLS manually, you'll need the following:
 
 - Client certificate and key: This is for the proxy to use.
   The files must be named as `client.crt` and `client.key`.
@@ -71,3 +98,7 @@ openssl x509  -req -in tls.csr \
     -extfile <(printf "subjectAltName=DNS:podvm_client") \
     -CA ca.crt -CAkey ca.key -out client.crt -days 30 -sha256 -CAcreateserial
 ```
+
+## No TLS encryption
+
+You can completely disable TLS encryption of agent protocol communication between `cloud-api-adaptor` and `agent-protocol-forwarder` by specifying the `-disable-tls` option to both `cloud-api-adaptor` and `agent-protocol-forwarder`.
