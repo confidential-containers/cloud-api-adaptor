@@ -69,7 +69,7 @@ func NewCloudAPIAdaptor(provider string) (*CloudAPIAdaptor, error) {
 	}
 
 	return &CloudAPIAdaptor{
-		caaDaemonSet:         &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset-" + provider, Namespace: namespace}},
+		caaDaemonSet:         &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset", Namespace: namespace}},
 		ccDaemonSet:          &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-daemon-install", Namespace: namespace}},
 		cloudProvider:        provider,
 		controllerDeployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-controller-manager", Namespace: namespace}},
@@ -176,14 +176,15 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 
 	fmt.Printf("Wait for the %s deployment be available\n", p.controllerDeployment.GetName())
 	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(p.controllerDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
-		wait.WithTimeout(time.Minute*1)); err != nil {
+		wait.WithTimeout(time.Minute*10)); err != nil {
 		return err
 	}
 
-	fmt.Println("Install CoCo and cloud-api-adaptor")
+	fmt.Println("Customize the overlay yaml file")
 	if err := p.installOverlay.Edit(ctx, cfg, props); err != nil {
 		return err
 	}
+	fmt.Println("Install CoCo and cloud-api-adaptor")
 	if err := p.installOverlay.Apply(ctx, cfg); err != nil {
 		return err
 	}
@@ -191,18 +192,19 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	// Wait for the CoCo installer and CAA pods be ready
 	daemonSetList := map[*appsv1.DaemonSet]time.Duration{
 		p.ccDaemonSet:  time.Minute * 10,
-		p.caaDaemonSet: time.Minute * 2,
+		p.caaDaemonSet: time.Minute * 5,
 	}
 
 	for ds, timeout := range daemonSetList {
 		// Wait for the daemonset to have at least one pod running then wait for each pod
 		// be ready.
 
+		fmt.Printf("Wait for the %s DaemonSet be available\n", ds.GetName())
 		if err = wait.For(conditions.New(resources).ResourceMatch(ds, func(object k8s.Object) bool {
 			ds = object.(*appsv1.DaemonSet)
 
 			return ds.Status.CurrentNumberScheduled > 0
-		}), wait.WithTimeout(time.Second*20)); err != nil {
+		}), wait.WithTimeout(time.Second*60)); err != nil {
 			return err
 		}
 		pods, err := GetDaemonSetOwnedPods(ctx, cfg, ds)

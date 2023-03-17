@@ -29,8 +29,10 @@ type IBMCloudProperties struct {
 	SecurityGroupID string
 	IamServiceURL   string
 	InstanceProfile string
+	KubeVersion     string
 	PodvmImageID    string
 	PodvmImageArch  string
+	PublicGatewayID string
 	Region          string
 	ResourceGroupID string
 	SshKeyContent   string
@@ -42,6 +44,7 @@ type IBMCloudProperties struct {
 	VpcID           string
 	VpcServiceURL   string
 	WorkerFlavor    string
+	WorkerOS        string
 	Zone            string
 
 	WorkerCount   int
@@ -81,15 +84,15 @@ func initLogger() {
 
 func initProperties(properties map[string]string) error {
 	IBMCloudProps = &IBMCloudProperties{
-		ApiKey:        properties["APIKEY"],
-		Bucket:        properties["COS_BUCKET"],
-		ClusterName:   properties["CLUSTER_NAME"],
-		CosApiKey:     properties["COS_APIKEY"],
-		CosInstanceID: properties["COS_INSTANCE_ID"],
-		CosServiceURL: properties["COS_SERVICE_URL"],
-		IamServiceURL: properties["IAM_SERVICE_URL"],
-		// IsSelfManaged    : properties["IS_SELF_MANAGED_CLUSTER"]
+		ApiKey:          properties["APIKEY"],
+		Bucket:          properties["COS_BUCKET"],
+		ClusterName:     properties["CLUSTER_NAME"],
+		CosApiKey:       properties["COS_APIKEY"],
+		CosInstanceID:   properties["COS_INSTANCE_ID"],
+		CosServiceURL:   properties["COS_SERVICE_URL"],
+		IamServiceURL:   properties["IAM_SERVICE_URL"],
 		InstanceProfile: properties["INSTANCE_PROFILE_NAME"],
+		KubeVersion:     properties["KUBE_VERSION"],
 		PodvmImageID:    properties["PODVM_IMAGE_ID"],
 		PodvmImageArch:  properties["PODVM_IMAGE_ARCH"],
 		Region:          properties["REGION"],
@@ -100,8 +103,8 @@ func initProperties(properties map[string]string) error {
 		VpcName:         properties["VPC_NAME"],
 		VpcServiceURL:   properties["VPC_SERVICE_URL"],
 		WorkerFlavor:    properties["WORKER_FLAVOR"],
-		// WorkerCount   : properties["WORKERS_COUNT"]
-		Zone: properties["ZONE"],
+		WorkerOS:        properties["WORKER_OPERATION_SYSTEM"],
+		Zone:            properties["ZONE"],
 	}
 
 	if len(IBMCloudProps.ClusterName) <= 0 {
@@ -143,6 +146,12 @@ func initProperties(properties map[string]string) error {
 	}
 	if len(IBMCloudProps.Region) <= 0 {
 		return errors.New("REGION was not set.")
+	}
+	if len(IBMCloudProps.KubeVersion) <= 0 {
+		return errors.New("KUBE_VERSION was not set, get it via command: ibmcloud cs versions")
+	}
+	if len(IBMCloudProps.WorkerOS) <= 0 {
+		return errors.New("WORKER_OPERATION_SYSTEM was not set, set it like: UBUNTU_20_64, UBUNTU_18_S390X")
 	}
 
 	// IAM_SERVICE_URL can overwrite default IamServiceURL, for example: IAM_SERVICE_URL="https://iam.test.cloud.ibm.com/identity/token"
