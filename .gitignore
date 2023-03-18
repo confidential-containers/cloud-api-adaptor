@@ -10,13 +10,11 @@ skopeo
 # Binaries
 agent-protocol-forwarder
 attestation-agent
-# The code files under cmd/agent-protocol-forwarder are not ignored
-!/cmd/agent-protocol-forwarder
 cloud-api-adaptor
-# The code files under cmd/cloud-api-adaptor are not ignored
-!/cmd/cloud-api-adaptor
-kata-agent
 cluster-provisioner
+kata-agent
+# The code files under cmd are not ignored
+!/cmd/*
 
 # Ignore the contents of the certificates directory
 podvm/files/etc/certificates/*
