@@ -47,6 +47,7 @@ type Config struct {
 type Daemon interface {
 	Start(ctx context.Context) error
 	Shutdown() error
+	Ready() chan struct{}
 	Addr() string
 }
 
@@ -171,6 +172,10 @@ func (d *daemon) Shutdown() error {
 		close(d.stopCh)
 	})
 	return nil
+}
+
+func (d *daemon) Ready() chan struct{} {
+	return d.readyCh
 }
 
 func (d *daemon) Addr() string {
