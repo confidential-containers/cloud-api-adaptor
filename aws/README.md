@@ -10,22 +10,19 @@
 
 - Set environment variables
 ```
-export AWS_ACCOUNT_ID="REPLACE_ME"
-export AWS_REGION="REPLACE_ME"
+export AWS_REGION="us-east-1" # mandatory
+export PODVM_DISTRO=rhel # mandatory
+export INSTANCE_TYPE=t3.small # optional, default is t3.small
+export IMAGE_NAME=peer-pod-ami-image # optional
+export VPC_ID=vpc-01234567890abcdef # optional, otherwise, it creates and uses the default vpc in the specific region
+export SUBNET_ID=subnet-01234567890abcdef # must be set if VPC_ID is set
 ```
 
-- Either make sure default VPC is enabled: `aws ec2 create-default-vpc --region ${AWS_REGION}` or
-create create new VPC with public internet access and set also the following environment variables
-```
-export VPC_ID="REPLACE_ME"
-export SUBNET_ID="REPLACE_ME"
-```
-   
 - Create a custom AMI based on Ubuntu 20.04 having kata-agent and other dependencies
 	- [setting up authenticated registry support](../docs/registries-authentication.md)
 ```
 cd image
-CLOUD_PROVIDER=aws make image
+make image
 ```
 
 - Note down your newly created AMI_ID
