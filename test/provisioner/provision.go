@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	nodev1 "k8s.io/api/node/v1"
@@ -129,7 +130,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 		return err
 	}
 
-	fmt.Println("Uninstall CoCo and cloud-api-adaptor")
+	log.Info("Uninstall CoCo and cloud-api-adaptor")
 	if err = p.installOverlay.Delete(ctx, cfg); err != nil {
 		return err
 	}
@@ -145,13 +146,13 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 
 	deployments := &appsv1.DeploymentList{Items: []appsv1.Deployment{*p.controllerDeployment}}
 
-	fmt.Println("Uninstall the controller manager")
+	log.Info("Uninstall the controller manager")
 	err = decoder.DecodeEachFile(ctx, os.DirFS("../../install/yamls"), "deploy.yaml", decoder.DeleteHandler(resources))
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Wait for the %s deployment be deleted\n", p.controllerDeployment.GetName())
+	log.Infof("Wait for the %s deployment be deleted\n", p.controllerDeployment.GetName())
 	if err = wait.For(conditions.New(resources).ResourcesDeleted(deployments),
 		wait.WithTimeout(time.Minute*1)); err != nil {
 		return err
@@ -168,7 +169,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	}
 	resources := client.Resources(p.namespace)
 
-	fmt.Println("Install the controller manager")
+	log.Info("Install the controller manager")
 	err = decoder.DecodeEachFile(ctx, os.DirFS("../../install/yamls"), "deploy.yaml", decoder.CreateIgnoreAlreadyExists(resources))
 	if err != nil {
 		return err
@@ -180,11 +181,11 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		return err
 	}
 
-	fmt.Println("Customize the overlay yaml file")
+	log.Info("Customize the overlay yaml file")
 	if err := p.installOverlay.Edit(ctx, cfg, props); err != nil {
 		return err
 	}
-	fmt.Println("Install CoCo and cloud-api-adaptor")
+	log.Info("Install CoCo and cloud-api-adaptor")
 	if err := p.installOverlay.Apply(ctx, cfg); err != nil {
 		return err
 	}
