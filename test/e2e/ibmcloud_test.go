@@ -6,11 +6,11 @@
 package e2e
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 )
@@ -28,7 +28,7 @@ type IBMCloudAssert struct {
 }
 
 func (c IBMCloudAssert) HasPodVM(t *testing.T, id string) {
-	fmt.Println("PodVM name: ", id)
+	log.Infof("PodVM name: %s", id)
 	options := &vpcv1.ListInstancesOptions{}
 	instances, _, err := c.vpc.ListInstances(options)
 
@@ -38,7 +38,7 @@ func (c IBMCloudAssert) HasPodVM(t *testing.T, id string) {
 
 	for i, instance := range instances.Instances {
 		name := *instance.Name
-		fmt.Println("Instance number: ", i, " Instance id: ", *instance.ID, " Instance name: ", name)
+		log.Debugf("Instance number: %d, Instance id: %s, Instance name: %s", i, *instance.ID, name)
 		// TODO: PodVM name is podvm-POD_NAME-SANDBOX_ID, where SANDBOX_ID is truncated
 		// in the 8th word. Ideally we should match the exact name, not just podvm-POD_NAME.
 		if strings.HasPrefix(name, strings.Join([]string{"podvm", id, ""}, "-")) {

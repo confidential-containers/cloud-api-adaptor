@@ -10,6 +10,7 @@ import (
 	"os"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
+	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
@@ -29,7 +30,7 @@ func main() {
 
 	provisioner, err := pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		os.Exit(1)
 	}
 
@@ -37,63 +38,63 @@ func main() {
 	flag.Parse()
 
 	if *action == "provision" {
-		fmt.Println("Creating VPC...")
+		log.Info("Creating VPC...")
 		if err := provisioner.CreateVPC(context.TODO(), cfg); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		fmt.Println("Creating Cluster...")
+		log.Info("Creating Cluster...")
 		if err := provisioner.CreateCluster(context.TODO(), cfg); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
 		if podvmImage != "" {
-			fmt.Println("Uploading PodVM Image...")
+			log.Info("Uploading PodVM Image...")
 			if _, err := os.Stat(podvmImage); os.IsNotExist(err) {
-				fmt.Println(err)
+				log.Error(err)
 				os.Exit(1)
 			}
 			if err := provisioner.UploadPodvm(podvmImage, context.TODO(), cfg); err != nil {
-				fmt.Println(err)
+				log.Error(err)
 				os.Exit(1)
 			}
 		}
 
 		cloudAPIAdaptor, err := pv.NewCloudAPIAdaptor(cloudProvider)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			os.Exit(1)
 		}
 		if err := cloudAPIAdaptor.Deploy(context.TODO(), cfg, provisioner.GetProperties(context.TODO(), cfg)); err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			os.Exit(1)
 		}
 	}
 
 	if *action == "deprovision" {
-		fmt.Println("Deleting Cluster...")
+		log.Info("Deleting Cluster...")
 		if err := provisioner.DeleteCluster(context.TODO(), cfg); err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			os.Exit(1)
 		}
 
-		fmt.Println("Deleting VPC...")
+		log.Info("Deleting VPC...")
 		if err := provisioner.DeleteVPC(context.TODO(), cfg); err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			os.Exit(1)
 		}
 	}
 
 	if *action == "uploadimage" {
-		fmt.Println("Uploading PodVM Image...")
+		log.Info("Uploading PodVM Image...")
 		if _, err := os.Stat(podvmImage); os.IsNotExist(err) {
-			fmt.Println(err)
+			log.Error(err)
 			os.Exit(1)
 		}
 		if err := provisioner.UploadPodvm(podvmImage, context.TODO(), cfg); err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			os.Exit(1)
 		}
 	}

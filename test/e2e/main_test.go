@@ -2,11 +2,11 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
+	log "github.com/sirupsen/logrus"
 
 	kconf "sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/pkg/env"
@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 	// CLOUD_PROVIDER is required.
 	cloudProvider = os.Getenv("CLOUD_PROVIDER")
 	if cloudProvider == "" {
-		fmt.Println("CLOUD_PROVIDER should be exported in the environment")
+		log.Error("CLOUD_PROVIDER should be exported in the environment")
 		os.Exit(1)
 	}
 
@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 	// Get an provisioner instance for the cloud provider.
 	provisioner, err = pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		os.Exit(1)
 	}
 
@@ -72,7 +72,7 @@ func TestMain(m *testing.M) {
 		// or KUBECONFIG variable, or $HOME/.kube/config.
 		kubeconfigPath := kconf.ResolveKubeConfigFile()
 		if kubeconfigPath == "" {
-			fmt.Fprintln(os.Stderr, "Unabled to find a kubeconfig file")
+			log.Error("Unabled to find a kubeconfig file")
 			os.Exit(1)
 		}
 		cfg := envconf.NewWithKubeConfig(kubeconfigPath)
@@ -81,11 +81,11 @@ func TestMain(m *testing.M) {
 
 	// Run *once* before the tests.
 	testEnv.Setup(func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-		fmt.Println("Do setup")
+		log.Info("Do setup")
 		var err error
 
 		if shouldProvisionCluster {
-			fmt.Println("Cluster provisioning")
+			log.Info("Cluster provisioning")
 			if err = provisioner.CreateVPC(ctx, cfg); err != nil {
 				return ctx, err
 			}
@@ -104,7 +104,7 @@ func TestMain(m *testing.M) {
 		if cloudAPIAdaptor, err = pv.NewCloudAPIAdaptor(cloudProvider); err != nil {
 			return ctx, err
 		}
-		fmt.Println("Deploy the Cloud API Adaptor")
+		log.Info("Deploy the Cloud API Adaptor")
 		if err = cloudAPIAdaptor.Deploy(ctx, cfg, provisioner.GetProperties(ctx, cfg)); err != nil {
 			return ctx, err
 		}
@@ -125,7 +125,7 @@ func TestMain(m *testing.M) {
 				return ctx, nil
 			}
 		} else {
-			fmt.Println("Delete the Cloud API Adaptor installation")
+			log.Info("Delete the Cloud API Adaptor installation")
 			if err = cloudAPIAdaptor.Delete(ctx, cfg); err != nil {
 				return ctx, err
 			}
