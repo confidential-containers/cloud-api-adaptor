@@ -6,7 +6,6 @@ package provisioner
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/compute/mgmt/compute"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/containerservice/mgmt/containerservice"
@@ -15,24 +14,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	log "github.com/sirupsen/logrus"
 )
-
-func init() {
-	initAzureLogger()
-}
-
-func initAzureLogger() {
-	levelStr := os.Getenv("LOG_LEVEL")
-	if levelStr == "" {
-		levelStr = "info"
-	}
-
-	level, err := log.ParseLevel(levelStr)
-	if err != nil {
-		level = log.InfoLevel
-	}
-
-	log.SetLevel(level)
-}
 
 type AzureProperties struct {
 	ResourceGroup     *resources.Group
