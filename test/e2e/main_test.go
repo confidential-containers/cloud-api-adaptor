@@ -20,14 +20,31 @@ var (
 	cloudAPIAdaptor *pv.CloudAPIAdaptor
 )
 
+func init() {
+	initLogger()
+}
+
+func initLogger() {
+	levelStr := os.Getenv("LOG_LEVEL")
+	if levelStr == "" {
+		levelStr = "info"
+	}
+
+	level, err := log.ParseLevel(levelStr)
+	if err != nil {
+		level = log.InfoLevel
+	}
+
+	log.SetLevel(level)
+}
+
 func TestMain(m *testing.M) {
 	var err error
 
 	// CLOUD_PROVIDER is required.
 	cloudProvider = os.Getenv("CLOUD_PROVIDER")
 	if cloudProvider == "" {
-		log.Error("CLOUD_PROVIDER should be exported in the environment")
-		os.Exit(1)
+		log.Fatal("CLOUD_PROVIDER should be exported in the environment")
 	}
 
 	// Create an empty test environment. At this point the client cannot connect to the cluster
@@ -63,8 +80,7 @@ func TestMain(m *testing.M) {
 	// Get an provisioner instance for the cloud provider.
 	provisioner, err = pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
 	if err != nil {
-		log.Error(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	if !shouldProvisionCluster {
@@ -72,8 +88,7 @@ func TestMain(m *testing.M) {
 		// or KUBECONFIG variable, or $HOME/.kube/config.
 		kubeconfigPath := kconf.ResolveKubeConfigFile()
 		if kubeconfigPath == "" {
-			log.Error("Unabled to find a kubeconfig file")
-			os.Exit(1)
+			log.Fatal("Unabled to find a kubeconfig file")
 		}
 		cfg := envconf.NewWithKubeConfig(kubeconfigPath)
 		testEnv = env.NewWithConfig(cfg)

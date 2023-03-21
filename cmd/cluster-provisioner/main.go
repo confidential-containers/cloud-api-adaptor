@@ -6,13 +6,30 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
+
+func init() {
+	initLogger()
+}
+
+func initLogger() {
+	levelStr := os.Getenv("LOG_LEVEL")
+	if levelStr == "" {
+		levelStr = "info"
+	}
+
+	level, err := log.ParseLevel(levelStr)
+	if err != nil {
+		level = log.InfoLevel
+	}
+
+	log.SetLevel(level)
+}
 
 // export LOG_LEVEL="trace|debug"
 // export CLOUD_PROVIDER="ibmcloud"
@@ -30,8 +47,7 @@ func main() {
 
 	provisioner, err := pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
 	if err != nil {
-		log.Error(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	action := flag.String("action", "provision", "string")
@@ -40,62 +56,52 @@ func main() {
 	if *action == "provision" {
 		log.Info("Creating VPC...")
 		if err := provisioner.CreateVPC(context.TODO(), cfg); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		log.Info("Creating Cluster...")
 		if err := provisioner.CreateCluster(context.TODO(), cfg); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		if podvmImage != "" {
 			log.Info("Uploading PodVM Image...")
 			if _, err := os.Stat(podvmImage); os.IsNotExist(err) {
-				log.Error(err)
-				os.Exit(1)
+				log.Fatal(err)
 			}
 			if err := provisioner.UploadPodvm(podvmImage, context.TODO(), cfg); err != nil {
-				log.Error(err)
-				os.Exit(1)
+				log.Fatal(err)
 			}
 		}
 
 		cloudAPIAdaptor, err := pv.NewCloudAPIAdaptor(cloudProvider)
 		if err != nil {
-			log.Error(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 		if err := cloudAPIAdaptor.Deploy(context.TODO(), cfg, provisioner.GetProperties(context.TODO(), cfg)); err != nil {
-			log.Error(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 	}
 
 	if *action == "deprovision" {
 		log.Info("Deleting Cluster...")
 		if err := provisioner.DeleteCluster(context.TODO(), cfg); err != nil {
-			log.Error(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		log.Info("Deleting VPC...")
 		if err := provisioner.DeleteVPC(context.TODO(), cfg); err != nil {
-			log.Error(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 	}
 
 	if *action == "uploadimage" {
 		log.Info("Uploading PodVM Image...")
 		if _, err := os.Stat(podvmImage); os.IsNotExist(err) {
-			log.Error(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 		if err := provisioner.UploadPodvm(podvmImage, context.TODO(), cfg); err != nil {
-			log.Error(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 	}
 }
