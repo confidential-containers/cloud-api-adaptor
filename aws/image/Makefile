@@ -15,7 +15,7 @@ $(IMAGE_FILE): setopts $(BINARIES) $(FILES)
 	packer build ${OPTS} \
 		-var region=${AWS_REGION} \
 		-var instance_type=${INSTANCE_TYPE} \
-		-var ami_name=${IMAGE_NAME} .
+		-var ami_name=${IMAGE_NAME} ./ubuntu/
 	rm -fr toupload
 
 setopts:
