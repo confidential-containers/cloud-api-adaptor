@@ -61,4 +61,15 @@ build {
     ]
   }
 
+  provisioner "file" {
+    source      = "misc-settings.sh"
+    destination = "~/misc-settings.sh"
+  }
+
+  provisioner "shell" {
+    remote_folder = "~"
+    inline = [
+      "sudo bash ~/misc-settings.sh"
+    ]
+  }
 }
