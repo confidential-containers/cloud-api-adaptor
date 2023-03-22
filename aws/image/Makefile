@@ -15,10 +15,13 @@ $(IMAGE_FILE): setopts $(BINARIES) $(FILES)
 	packer build ${OPTS} \
 		-var region=${AWS_REGION} \
 		-var instance_type=${INSTANCE_TYPE} \
-		-var ami_name=${IMAGE_NAME} ./ubuntu/
+		-var ami_name=${IMAGE_NAME} ./${PODVM_DISTRO}/
 	rm -fr toupload
 
 setopts:
+ifeq ($(PODVM_DISTRO),)
+	$(error PODVM_DISTRO is not defined)
+endif
 ifeq ($(AWS_REGION),)
 	$(error AWS_REGION is not defined)
 endif
