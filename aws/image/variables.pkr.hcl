@@ -13,19 +13,16 @@ variable "instance_type" {
   default = "t3.small"
 }
 
-
 variable "region" {
   type    = string
 }
 
 variable "vpc_id" {
   type = string
+  default = null
 }
 
 variable "subnet_id" {
   type = string
-}
-
-variable "account_id" {
-  type    = string
+  default = null
 }

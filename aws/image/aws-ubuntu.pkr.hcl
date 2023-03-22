@@ -11,8 +11,8 @@ source "amazon-ebs" "ubuntu" {
   ami_name      = "${var.ami_name}"
   instance_type = "${var.instance_type}"
   region        = "${var.region}"
-  vpc_id    =  "${var.vpc_id}"
-  subnet_id = "${var.subnet_id}"
+  vpc_id        = "${var.vpc_id}"
+  subnet_id     = "${var.subnet_id}"
   source_ami_filter {
     filters = {
       name                = "ubuntu/images/*ubuntu*focal*"
@@ -22,7 +22,7 @@ source "amazon-ebs" "ubuntu" {
     }
 
     most_recent = true
-    owners      = ["${var.account_id}", "aws-marketplace", "amazon"]
+    owners      = ["self", "aws-marketplace", "amazon"]
   }
   ssh_username = "ubuntu"
 }
