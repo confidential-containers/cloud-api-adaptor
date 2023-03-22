@@ -30,7 +30,9 @@ func (_ *libvirtMgr) ParseCmd(flags *flag.FlagSet) {
 }
 
 func (_ *libvirtMgr) LoadEnv() {
-
+	defaultToEnv(&libvirtcfg.URI, "LIBVIRT_URI", "qemu:///system")
+	defaultToEnv(&libvirtcfg.PoolName, "LIBVIRT_POOL", "default")
+	defaultToEnv(&libvirtcfg.NetworkName, "LIBVIRT_NET", "default")
 }
 
 func (_ *libvirtMgr) NewProvider() (cloud.Provider, error) {
