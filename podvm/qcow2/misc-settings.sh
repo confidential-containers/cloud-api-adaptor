@@ -51,4 +51,24 @@ TLS_OPTIONS=-cert-file /etc/certificates/tls.crt -cert-key /etc/certificates/tls
 END
 fi
 
+# Disable unnecessary systemd services
+
+case $PODVM_DISTRO in
+       centos)
+             #fallthrough
+             ;&
+       rhel)
+            systemctl disable kdump.service
+            ;;
+       ubuntu)
+             systemctl disable apt-daily.service
+             systemctl disable apt-daily.timer
+             systemctl disable apt-daily-upgrade.timer
+             systemctl disable apt-daily-upgrade.service
+             systemctl disable snapd.service
+	     systemctl disable snapd.seeded.service
+	     systemctl disable snap.lxd.activate.service
+            ;;
+esac
+
 exit 0
