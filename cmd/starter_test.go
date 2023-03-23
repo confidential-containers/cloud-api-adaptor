@@ -9,6 +9,7 @@ import (
 	"errors"
 	"log"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,8 +17,10 @@ import (
 )
 
 type mockService struct {
-	stopCh chan struct{}
-	error  error
+	once    sync.Once
+	readyCh chan struct{}
+	stopCh  chan struct{}
+	error   error
 }
 
 func (m *mockService) Start(ctx context.Context) error {
@@ -32,21 +35,32 @@ func (m *mockService) Start(ctx context.Context) error {
 		return nil
 	}
 
+	close(m.Ready())
+
 	<-ctx.Done()
 
 	if err := ctx.Err(); err != context.Canceled {
 		return errors.New("service canceled")
 	}
-	log.Printf("Shutted down")
+	log.Printf("Shut down")
 
 	return nil
+}
+
+func (m *mockService) Ready() chan struct{} {
+	m.once.Do(func() {
+		m.readyCh = make(chan struct{})
+	})
+	return m.readyCh
 }
 
 func run(errCh chan error, exitCh chan struct{}, fn func() error) string {
 	defer close(errCh)
 
-	Exit = func(_ int) {
-		close(exitCh)
+	if exitCh != nil {
+		Exit = func(_ int) {
+			close(exitCh)
+		}
 	}
 
 	old := log.Writer()
@@ -109,7 +123,7 @@ func TestStarter(t *testing.T) {
 	if err := <-errCh; err != nil {
 		t.Fatalf("Expect no error, got %#v", err)
 	}
-	msg := "Signal interrupt received. Shutting down\nShutted down\nSignal interrupt received again. Force exiting\nKilled\n"
+	msg := "Signal interrupt received. Shutting down\nShut down\nSignal interrupt received again. Force exiting\nKilled\n"
 	if e, a := msg, output; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
@@ -151,7 +165,7 @@ func TestStarterWithError(t *testing.T) {
 	if e, a := serviceError, errors.Unwrap(err); e != a {
 		t.Fatalf("Expect %v, got %v", e, a)
 	}
-	if e, a := "Shutted down\n", output; e != a {
+	if e, a := "Shut down\n", output; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
 }
@@ -211,5 +225,48 @@ func TestStarterList(t *testing.T) {
 				t.Fatalf("Expect %v, got %v", e, a)
 			}
 		}
+	}
+}
+
+func TestStarterServiceReady(t *testing.T) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	service := &mockService{}
+
+	starter := NewStarter(service)
+
+	errCh := make(chan error, 1)
+	var output string
+
+	select {
+	case <-service.Ready():
+		t.Fatalf("becomes ready before started")
+	default:
+	}
+
+	go func() {
+		output = run(errCh, nil, func() error {
+			return starter.Start(ctx)
+		})
+	}()
+
+	select {
+	case <-ctx.Done():
+		t.Fatalf("completed before becoming ready")
+	case <-service.Ready():
+	}
+
+	cancel()
+
+	<-ctx.Done()
+
+	if err := <-errCh; err != nil {
+		t.Fatalf("Expect no error, got %v", err)
+	}
+	expected := "Shut down\n"
+	if expected != output {
+		t.Fatalf("Expect %q, got %q", expected, output)
 	}
 }

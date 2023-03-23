@@ -19,6 +19,7 @@ type Starter interface {
 }
 type Service interface {
 	Start(context.Context) error
+	Ready() chan struct{}
 }
 
 type Config interface {
@@ -31,6 +32,7 @@ type starter struct {
 type starterService struct {
 	Service
 	errorCh chan error
+	readyCh chan struct{}
 }
 
 func NewStarter(services ...Service) Starter {
@@ -80,6 +82,8 @@ func (s *starter) Start(ctx context.Context) error {
 				service.errorCh <- err
 			}
 		}()
+
+		service.readyCh = service.Ready()
 	}
 
 	<-ctx.Done()
