@@ -1,7 +1,7 @@
 # (C) Copyright Confidential Containers Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-.PHONY: all build check fmt vet clean image deploy delete provisioner-cli
+.PHONY: all build check fmt vet clean image deploy delete
 
 
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
@@ -89,10 +89,6 @@ ifneq ($(CLOUD_PROVIDER),)
 else
 	$(error CLOUD_PROVIDER is not set)
 endif
-
-.PHONY: provisioner-cli
-provisioner-cli: .git-commit ## build provisioner-cli for developer
-	GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=1 go build $(GOFLAGS) -o test/tools/caa-provisioner-cli "test/tools/provisioner-cli/main.go"
 
 .PHONY: check
 check: fmt vet ## Run go vet and go vet against the code.
