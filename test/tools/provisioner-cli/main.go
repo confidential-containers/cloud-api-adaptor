@@ -32,12 +32,12 @@ func initLogger() {
 }
 
 // export LOG_LEVEL="trace|debug"
-// export CLOUD_PROVIDER="ibmcloud"
+// export CLOUD_PROVIDER="ibmcloud|azure|libvirt"
 // export TEST_E2E_PROVISION_FILE="/root/provision_ibmcloud.properties"
 // export TEST_E2E_PODVM_IMAGE="/root/e2e-test-image-amd64-20230308.qcow2
 // export TEST_E2E_PROVISION="yes"
 // cd test/e2e
-// ../../cluster-provisioner -action=provision | deprovision | uploadimage
+// ./cluster-provisioner -action=provision | deprovision | uploadimage
 // TODO revise provisioner to enable run cluster-provisioner in any folder.
 func main() {
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")

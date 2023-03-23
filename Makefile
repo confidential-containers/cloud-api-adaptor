@@ -1,7 +1,7 @@
 # (C) Copyright Confidential Containers Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-.PHONY: all build check fmt vet clean image deploy delete
+.PHONY: all build check fmt vet clean image deploy delete provisioner-cli
 
 
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
@@ -11,7 +11,7 @@ RELEASE_BUILD ?= false
 CLOUD_PROVIDER ?=
 GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
 GOFLAGS     ?=
-BINARIES    := cloud-api-adaptor agent-protocol-forwarder cluster-provisioner
+BINARIES    := cloud-api-adaptor agent-protocol-forwarder
 SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
@@ -64,7 +64,7 @@ comma := ,
 GOFLAGS += -tags=$(subst $(space),$(comma),$(strip $(BUILTIN_CLOUD_PROVIDERS)))
 
 ifneq (,$(filter libvirt,$(BUILTIN_CLOUD_PROVIDERS)))
-cloud-api-adaptor cluster-provisioner: GOOPTIONS := $(subst CGO_ENABLED=0,CGO_ENABLED=1,$(GOOPTIONS))
+cloud-api-adaptor: GOOPTIONS := $(subst CGO_ENABLED=0,CGO_ENABLED=1,$(GOOPTIONS))
 endif
 
 $(BINARIES): .git-commit $(SOURCES)
@@ -89,6 +89,10 @@ ifneq ($(CLOUD_PROVIDER),)
 else
 	$(error CLOUD_PROVIDER is not set)
 endif
+
+.PHONY: provisioner-cli
+provisioner-cli: .git-commit ## build provisioner-cli for developer
+	GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=1 go build $(GOFLAGS) -o test/tools/caa-provisioner-cli "test/tools/provisioner-cli/main.go"
 
 .PHONY: check
 check: fmt vet ## Run go vet and go vet against the code.
