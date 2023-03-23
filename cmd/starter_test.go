@@ -8,11 +8,15 @@ import (
 	"context"
 	"errors"
 	"log"
+	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/coreos/go-systemd/daemon"
 	"golang.org/x/sys/unix"
 )
 
@@ -87,6 +91,18 @@ func kill(t *testing.T) {
 	if err := unix.Kill(unix.Getpid(), unix.SIGINT); err != nil {
 		t.Fatalf("Expect no error, got %#v", err)
 	}
+}
+
+func TestMain(m *testing.M) {
+
+	// Reset environment variables before running each test
+	for _, key := range []string{"NOTIFY_SOCKET"} {
+		old := os.Getenv(key)
+		os.Setenv(key, "")
+		defer os.Setenv(key, old)
+	}
+
+	os.Exit(m.Run())
 }
 
 func TestStarter(t *testing.T) {
@@ -267,6 +283,70 @@ func TestStarterServiceReady(t *testing.T) {
 	}
 	expected := "Shut down\n"
 	if expected != output {
+		t.Fatalf("Expect %q, got %q", expected, output)
+	}
+}
+
+func checkNotification(t *testing.T, conn *net.UnixConn, expected string) {
+	t.Helper()
+
+	if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		t.Fatalf("Expect no error, got %v", err)
+	}
+
+	buf := make([]byte, 256)
+	n, err := conn.Read(buf)
+	if err != nil {
+		t.Fatalf("Expect no error, got %#v", err)
+	}
+
+	actual := string(buf[0:n])
+	if expected != actual {
+		t.Fatalf("Expect %q, got %q", expected, actual)
+	}
+}
+
+func TestSDNotify(t *testing.T) {
+
+	socket := filepath.Join(t.TempDir(), "notify")
+
+	t.Setenv("NOTIFY_SOCKET", socket)
+
+	conn, err := net.ListenUnixgram("unixgram", &net.UnixAddr{Name: socket, Net: "unixgram"})
+	if err != nil {
+		t.Fatalf("Expect no error, got %v", err)
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			t.Fatalf("Expect no error, got %v", err)
+		}
+	}()
+
+	starter := NewStarter(&mockService{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	var output string
+
+	go func() {
+		output = run(errCh, nil, func() error {
+			return starter.Start(ctx)
+		})
+	}()
+
+	checkNotification(t, conn, daemon.SdNotifyReady)
+
+	cancel()
+
+	checkNotification(t, conn, daemon.SdNotifyStopping)
+
+	if err := <-errCh; err != nil {
+		t.Fatalf("Expect no error, got %v", err)
+	}
+
+	if expected := "Shut down\n"; expected != output {
 		t.Fatalf("Expect %q, got %q", expected, output)
 	}
 }

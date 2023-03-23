@@ -43,6 +43,7 @@ require (
 	github.com/IBM/ibm-cos-sdk-go v1.9.4
 	github.com/avast/retry-go/v4 v4.3.2
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
+	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20220913141151-9b49a6ddc6fd
 	github.com/sirupsen/logrus v1.9.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
