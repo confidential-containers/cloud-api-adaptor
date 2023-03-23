@@ -79,6 +79,10 @@ func initProperties(properties map[string]string) error {
 		WorkerFlavor:    properties["WORKER_FLAVOR"],
 		WorkerOS:        properties["WORKER_OPERATION_SYSTEM"],
 		Zone:            properties["ZONE"],
+		SshKeyID:        properties["SSH_KEY_ID"],
+		SubnetID:        properties["VPC_SUBNET_ID"],
+		SecurityGroupID: properties["VPC_SECURITY_GROUP_ID"],
+		VpcID:           properties["VPC_ID"],
 	}
 
 	if len(IBMCloudProps.ClusterName) <= 0 {
@@ -118,14 +122,11 @@ func initProperties(properties map[string]string) error {
 	if len(IBMCloudProps.ApiKey) <= 0 {
 		return errors.New("APIKEY was not set.")
 	}
-	if len(IBMCloudProps.Region) <= 0 {
-		return errors.New("REGION was not set.")
+	if len(IBMCloudProps.ResourceGroupID) <= 0 {
+		return errors.New("RESOURCE_GROUP_ID was not set.")
 	}
-	if len(IBMCloudProps.KubeVersion) <= 0 {
-		return errors.New("KUBE_VERSION was not set, get it via command: ibmcloud cs versions")
-	}
-	if len(IBMCloudProps.WorkerOS) <= 0 {
-		return errors.New("WORKER_OPERATION_SYSTEM was not set, set it like: UBUNTU_20_64, UBUNTU_18_S390X")
+	if len(IBMCloudProps.Zone) <= 0 {
+		return errors.New("ZONE was not set.")
 	}
 
 	// IAM_SERVICE_URL can overwrite default IamServiceURL, for example: IAM_SERVICE_URL="https://iam.test.cloud.ibm.com/identity/token"
@@ -142,15 +143,34 @@ func initProperties(properties map[string]string) error {
 
 	needProvisionStr := os.Getenv("TEST_E2E_PROVISION")
 	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") {
-		if len(IBMCloudProps.ResourceGroupID) <= 0 {
-			return errors.New("RESOURCE_GROUP_ID was not set.")
+		if len(IBMCloudProps.Region) <= 0 {
+			return errors.New("REGION was not set.")
 		}
-		if len(IBMCloudProps.Zone) <= 0 {
-			return errors.New("ZONE was not set.")
+		if len(IBMCloudProps.KubeVersion) <= 0 {
+			return errors.New("KUBE_VERSION was not set, get it via command: ibmcloud cs versions")
+		}
+		if len(IBMCloudProps.WorkerOS) <= 0 {
+			return errors.New("WORKER_OPERATION_SYSTEM was not set, set it like: UBUNTU_20_64, UBUNTU_18_S390X")
 		}
 
 		if err := initClustersAPI(); err != nil {
 			return err
+		}
+	} else {
+		if len(IBMCloudProps.PodvmImageID) <= 0 {
+			return errors.New("PODVM_IMAGE_ID was not set, set it with existing custom image id in VPC")
+		}
+		if len(IBMCloudProps.SshKeyID) <= 0 {
+			return errors.New("SSH_KEY_ID was not set, set it with existing SSH key id in VPC")
+		}
+		if len(IBMCloudProps.SubnetID) <= 0 {
+			return errors.New("VPC_SUBNET_ID was not set, set it with existing subnet id in VPC")
+		}
+		if len(IBMCloudProps.SecurityGroupID) <= 0 {
+			return errors.New("VPC_SECURITY_GROUP_ID was not set, set it with existing security group id in VPC")
+		}
+		if len(IBMCloudProps.VpcID) <= 0 {
+			return errors.New("VPC_ID was not set, set it with existing VPC id")
 		}
 	}
 
