@@ -14,4 +14,4 @@ provisioner-cli: ## Build provisioner-cli for developer
 
 .PHONY: clean
 clean: ## Remove binaries.
-	rm -fr $(BINARIES)
+	rm -f $(BINARIES)
