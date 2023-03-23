@@ -4,8 +4,7 @@
 .PHONY: clean provisioner-cli
 
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
-GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
-GOFLAGS     ?= -tags=$(aws azure ibmcloud vsphere libvirt)
+GOFLAGS     ?= "-tags=azure,ibmcloud,libvirt"
 BINARIES    := caa-provisioner-cli
 
 .PHONY: provisioner-cli
