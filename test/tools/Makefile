@@ -3,13 +3,23 @@
 
 .PHONY: clean provisioner-cli
 
-ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
-GOFLAGS     ?= "-tags=azure,ibmcloud,libvirt"
-BINARIES    := caa-provisioner-cli
+ARCH                    ?= $(subst x86_64,amd64,$(shell uname -m))
+BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere libvirt
+GOFLAGS                 ?=
+GOOPTIONS               ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
+BINARIES                := caa-provisioner-cli
+
+space := $() $()
+comma := ,
+GOFLAGS += -tags=$(subst $(space),$(comma),$(strip $(BUILTIN_CLOUD_PROVIDERS)))
+
+ifneq (,$(filter libvirt,$(BUILTIN_CLOUD_PROVIDERS)))
+GOOPTIONS := $(subst CGO_ENABLED=0,CGO_ENABLED=1,$(GOOPTIONS))
+endif
 
 .PHONY: provisioner-cli
 provisioner-cli: ## Build provisioner-cli for developer
-	GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=1 go build $(GOFLAGS) -o caa-provisioner-cli "provisioner-cli/main.go"
+	$(GOOPTIONS) go build $(GOFLAGS) -o caa-provisioner-cli "provisioner-cli/main.go"
 
 .PHONY: clean
 clean: ## Remove binaries.
