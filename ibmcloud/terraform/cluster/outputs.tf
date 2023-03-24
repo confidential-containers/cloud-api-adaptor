@@ -8,7 +8,7 @@ output "cluster_name" {
 }
 
 output "worker_ip" {
-  value = data.ibm_is_instance.provisioned_worker.primary_network_interface[0].primary_ipv4_address
+  value = data.ibm_is_instance.provisioned_worker.primary_network_interface[0].primary_ip[0].address
 }
 
 output "bastion_ip" {

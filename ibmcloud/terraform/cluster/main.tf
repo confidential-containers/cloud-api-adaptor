@@ -9,8 +9,8 @@ locals {
   controlplane_floating_ip_name = "${local.controlplane_name}-ip"
   worker_name = "${var.cluster_name}-worker"
   worker_floating_ip_name = "${local.worker_name}-ip"
-  controlplane_ip = resource.ibm_is_instance.controlplane.primary_network_interface[0].primary_ipv4_address
-  worker_ip = resource.ibm_is_instance.worker.primary_network_interface[0].primary_ipv4_address
+  controlplane_ip = resource.ibm_is_instance.controlplane.primary_network_interface[0].primary_ip[0].address
+  worker_ip = resource.ibm_is_instance.worker.primary_network_interface[0].primary_ip[0].address
   bastion_ip = resource.ibm_is_floating_ip.worker.address
   vpc_id = var.vpc_name != null ? data.ibm_is_vpc.vpc[0].id : var.vpc_id
   primary_security_group_id = var.primary_security_group_name != null ? data.ibm_is_security_group.primary[0].id : var.primary_security_group_id

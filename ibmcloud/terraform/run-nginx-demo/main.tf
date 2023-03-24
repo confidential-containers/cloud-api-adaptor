@@ -6,7 +6,7 @@
 locals {
   worker_name = var.cluster_name != null ? "${var.cluster_name}-worker" : null
   worker_floating_ip_name = local.worker_name != null ? "${local.worker_name}-ip" : null
-  worker_ip = local.worker_name != null ? data.ibm_is_instance.worker[0].primary_network_interface[0].primary_ipv4_address : var.worker_ip
+  worker_ip = local.worker_name != null ? data.ibm_is_instance.worker[0].primary_network_interface[0].primary_ip[0].address : var.worker_ip
   bastion_ip = local.worker_floating_ip_name != null ? data.ibm_is_floating_ip.worker[0].address : var.bastion_ip
   vpc_id = var.vpc_name != null ? data.ibm_is_vpc.vpc[0].id : var.vpc_id
   podvm_image_id = var.podvm_image_name != null ? data.ibm_is_image.podvm_image[0].id : var.podvm_image_id
