@@ -9,13 +9,13 @@ tools for development and testing.
 ### Build provisioner-cli
 In the root directory of `test/tools`, run command as below to build the cli program:
 ```bash
-make provisioner-cli
+make all
 ```
 
 Program is generated: `test/tools/caa-provisioner-cli`.
 Optionally, `BUILTIN_CLOUD_PROVIDERS` could also be used to build the CLI for specific providers, like:
 ```bash
-make BUILTIN_CLOUD_PROVIDERS="ibmcloud" provisioner-cli
+make BUILTIN_CLOUD_PROVIDERS="ibmcloud" all
 ```
 
 ### Use provisioner-cli
