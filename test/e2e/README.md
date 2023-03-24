@@ -17,7 +17,7 @@ The above command run tests on an existing cluster. It will look for the kubecon
 You can instruct the tool to provision a test environment though, as shown below:
 
 ```
-$ TEST_E2E_PROVISION=yes CLOUD_PROVIDER=libvirt make test-e2e
+$ TEST_PROVISION=yes CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
 Each provider must have a provisioner implementation so that the framework is able to perform operations on the cluster. The provisioner will likely to need additional information (e.g. login credentials), and those are passed via a properties file with the following format:
@@ -28,21 +28,21 @@ key2 = "value2"
 ...
 ```
 
-You should use the `TEST_E2E_PROVISION_FILE` variable to specify the properties file path, as shown below:
+You should use the `TEST_PROVISION_FILE` variable to specify the properties file path, as shown below:
 
 ```
-$ TEST_E2E_PROVISION=yes TEST_E2E_PROVISION_FILE=/path/to/libvirt.properties CLOUD_PROVIDER=libvirt make test-e2e
+$ TEST_PROVISION=yes TEST_PROVISION_FILE=/path/to/libvirt.properties CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
-The `TEST_E2E_PODVM_IMAGE` is an optional variable which specifies the path to the podvm qcow2 image. If it is set then the image should be uploaded to the VPC storage. The following command, as an example, instructs the tool to upload `path/to/podvm-base.qcow2` after the provisioning of the test environment:
+The `TEST_PODVM_IMAGE` is an optional variable which specifies the path to the podvm qcow2 image. If it is set then the image should be uploaded to the VPC storage. The following command, as an example, instructs the tool to upload `path/to/podvm-base.qcow2` after the provisioning of the test environment:
 
 ```
-$ TEST_E2E_PROVISION=yes TEST_E2E_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
+$ TEST_PROVISION=yes TEST_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
 By default it is given 20 minutes for the entire e2e execution to complete, otherwise the process is preempted. If you need to extend that timeout then export the `TEST_E2E_TIMEOUT` variable. For example, `TEST_E2E_TIMEOUT=30m` set the timeout to 30 minutes. See `-timeout` in [go test flags](https://pkg.go.dev/cmd/go#hdr-Testing_flags) for the values accepted.
 
-To leave the cluster untouched by the execution finish you should export `TEST_E2E_TEARDOWN=no`, otherwise the framework will attempt to wipe out any resources created. For example, if `TEST_E2E_PROVISION=yes` is used to create a VPC and cluster for testing and `TEST_E2E_TEARDOWN=no` not specified, then at the end of the test the provisioned cluster and VPC, will both be deleted.
+To leave the cluster untouched by the execution finish you should export `TEST_TEARDOWN=no`, otherwise the framework will attempt to wipe out any resources created. For example, if `TEST_PROVISION=yes` is used to create a VPC and cluster for testing and `TEST_TEARDOWN=no` not specified, then at the end of the test the provisioned cluster and VPC, will both be deleted.
 
 ## Provision file specifics
 
