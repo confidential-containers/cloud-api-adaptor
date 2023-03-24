@@ -12,16 +12,20 @@ In the root directory of `test/tools`, run command as below to build the cli pro
 make provisioner-cli
 ```
 
-Program is generated: `test/tools/caa-provisioner-cli`
+Program is generated: `test/tools/caa-provisioner-cli`.
+Optionally, `BUILTIN_CLOUD_PROVIDERS` could also be used to build the CLI for specific providers, like:
+```bash
+make BUILTIN_CLOUD_PROVIDERS="ibmcloud" provisioner-cli
+```
 
 ### Use provisioner-cli
 In directory `test/tools`, run commands like:
 ```bash
-export TEST_E2E_PODVM_IMAGE=${POD_IMAGE_FILE_PATH}
+export TEST_PODVM_IMAGE=${POD_IMAGE_FILE_PATH}
 export LOG_LEVEL=${LOG_LEVEL}
 export CLOUD_PROVIDER=${CLOUD_PROVIDER}
-export TEST_E2E_PROVISION_FILE=${PROPERTIES_FILE_PATH}
-export TEST_E2E_PROVISION="yes"
+export TEST_PROVISION_FILE=${PROPERTIES_FILE_PATH}
+export TEST_PROVISION="yes"
 ./caa-provisioner-cli -actions=${ACTION}
 ```
 `ACTION` supports `provision`, `deprovision` and `uploadimage`.

@@ -34,8 +34,8 @@ func initLogger() {
 // TODO revise provisioner to enable run cluster-provisioner in any folder.
 func main() {
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
-	provisionPropsFile := os.Getenv("TEST_E2E_PROVISION_FILE")
-	podvmImage := os.Getenv("TEST_E2E_PODVM_IMAGE")
+	provisionPropsFile := os.Getenv("TEST_PROVISION_FILE")
+	podvmImage := os.Getenv("TEST_PODVM_IMAGE")
 	cfg := envconf.New()
 
 	provisioner, err := pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)

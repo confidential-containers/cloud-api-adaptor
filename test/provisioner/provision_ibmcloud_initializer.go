@@ -141,7 +141,7 @@ func initProperties(properties map[string]string) error {
 	}
 	log.Infof("VpcServiceURL is: %s.", IBMCloudProps.VpcServiceURL)
 
-	needProvisionStr := os.Getenv("TEST_E2E_PROVISION")
+	needProvisionStr := os.Getenv("TEST_PROVISION")
 	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") {
 		if len(IBMCloudProps.Region) <= 0 {
 			return errors.New("REGION was not set.")
@@ -174,7 +174,7 @@ func initProperties(properties map[string]string) error {
 		}
 	}
 
-	podvmImage := os.Getenv("TEST_E2E_PODVM_IMAGE")
+	podvmImage := os.Getenv("TEST_PODVM_IMAGE")
 	if len(podvmImage) > 0 {
 		if len(IBMCloudProps.CosApiKey) <= 0 {
 			return errors.New("COS_APIKEY was not set.")

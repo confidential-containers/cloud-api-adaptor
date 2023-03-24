@@ -51,31 +51,31 @@ func TestMain(m *testing.M) {
 	// unless it is running with an in-cluster configuration.
 	testEnv = env.New()
 
-	// TEST_E2E_TEARDOWN is an option variable which specifies whether the teardown code path
+	// TEST_TEARDOWN is an option variable which specifies whether the teardown code path
 	// should run or not.
 	shouldTeardown := true
-	if os.Getenv("TEST_E2E_TEARDOWN") == "no" {
+	if os.Getenv("TEST_TEARDOWN") == "no" {
 		shouldTeardown = false
 	}
-	// In case TEST_E2E_PROVISION is exported then it will try to provision the test environment
+	// In case TEST_PROVISION is exported then it will try to provision the test environment
 	// in the cloud provider. Otherwise, assume the developer did setup the environment and it will
 	// look for a suitable kubeconfig file.
 	shouldProvisionCluster := false
-	if os.Getenv("TEST_E2E_PROVISION") == "yes" {
+	if os.Getenv("TEST_PROVISION") == "yes" {
 		shouldProvisionCluster = true
 	}
 
-	// The TEST_E2E_PODVM_IMAGE is an option variable which specifies the path
+	// The TEST_PODVM_IMAGE is an option variable which specifies the path
 	// to the podvm qcow2 image. If it set then the image should be uploaded to
 	// the VPC images storage.
-	podvmImage := os.Getenv("TEST_E2E_PODVM_IMAGE")
+	podvmImage := os.Getenv("TEST_PODVM_IMAGE")
 
-	// The TEST_E2E_PROVISION_FILE is an optional variable which specifies the path
+	// The TEST_PROVISION_FILE is an optional variable which specifies the path
 	// to the provision properties file. The file must have the format:
 	//
 	//  key1 = "value1"
 	//  key2 = "value2"
-	provisionPropsFile := os.Getenv("TEST_E2E_PROVISION_FILE")
+	provisionPropsFile := os.Getenv("TEST_PROVISION_FILE")
 
 	// Get an provisioner instance for the cloud provider.
 	provisioner, err = pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
