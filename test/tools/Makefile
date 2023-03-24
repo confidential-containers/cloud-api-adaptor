@@ -1,7 +1,7 @@
 # (C) Copyright Confidential Containers Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-.PHONY: clean provisioner-cli
+.PHONY: all clean force
 
 ARCH                    ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere libvirt
@@ -17,8 +17,12 @@ ifneq (,$(filter libvirt,$(BUILTIN_CLOUD_PROVIDERS)))
 GOOPTIONS := $(subst CGO_ENABLED=0,CGO_ENABLED=1,$(GOOPTIONS))
 endif
 
+all: $(BINARIES)
+
 .PHONY: provisioner-cli
-provisioner-cli: ## Build provisioner-cli for developer
+provisioner-cli: caa-provisioner-cli
+
+caa-provisioner-cli: force ## Build provisioner-cli for developer
 	$(GOOPTIONS) go build $(GOFLAGS) -o caa-provisioner-cli "provisioner-cli/main.go"
 
 .PHONY: clean
