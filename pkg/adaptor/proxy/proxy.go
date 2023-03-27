@@ -27,7 +27,6 @@ import (
 const (
 	SocketName = "agent.ttrpc"
 
-	defaultMaxRetries    = 20
 	defaultRetryInterval = 10 * time.Second
 	defaultCriTimeout    = 1 * time.Second
 
@@ -65,7 +64,7 @@ type agentProxy struct {
 	stopOnce      sync.Once
 }
 
-func NewAgentProxy(serverName, socketPath, criSocketPath string, pauseImage string, tlsConfig *tlsutil.TLSConfig, caService tlsutil.CAService) AgentProxy {
+func NewAgentProxy(serverName, socketPath, criSocketPath string, pauseImage string, tlsConfig *tlsutil.TLSConfig, caService tlsutil.CAService, proxyRetries int) AgentProxy {
 
 	return &agentProxy{
 		serverName:    serverName,
@@ -73,7 +72,7 @@ func NewAgentProxy(serverName, socketPath, criSocketPath string, pauseImage stri
 		criSocketPath: criSocketPath,
 		readyCh:       make(chan struct{}),
 		stopCh:        make(chan struct{}),
-		maxRetries:    defaultMaxRetries,
+		maxRetries:    proxyRetries,
 		retryInterval: defaultRetryInterval,
 		criTimeout:    defaultCriTimeout,
 		pauseImage:    pauseImage,
@@ -117,7 +116,7 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		dialer = &net.Dialer{}
 	}
 
-	maxRetries := defaultMaxRetries
+	maxRetries := p.maxRetries
 	count := 1
 	for {
 		var err error

@@ -36,6 +36,7 @@ type ServerConfig struct {
 	PauseImage    string
 	PodsDir       string
 	ForwarderPort string
+	ProxyRetries  int
 }
 
 type Server interface {
@@ -59,7 +60,7 @@ func NewServer(provider cloud.Provider, cfg *ServerConfig, workerNode podnetwork
 
 	logger.Printf("server config: %#v", cfg)
 
-	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.CriSocketPath, cfg.TLSConfig)
+	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.CriSocketPath, cfg.TLSConfig, cfg.ProxyRetries)
 	cloudService := cloud.NewService(provider, agentFactory, workerNode, cfg.PodsDir, cfg.ForwarderPort)
 	vmInfoService := vminfo.NewService(cloudService)
 

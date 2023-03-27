@@ -25,7 +25,7 @@ func TestNewAgentProxy(t *testing.T) {
 
 	socketPath := "/run/dummy.sock"
 
-	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil)
+	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil, 0)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
@@ -82,7 +82,7 @@ func TestStartStop(t *testing.T) {
 		Host:   agentListener.Addr().String(),
 	}
 
-	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil)
+	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil, 0)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)

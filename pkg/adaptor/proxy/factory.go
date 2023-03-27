@@ -14,9 +14,10 @@ type factory struct {
 	criSocketPath string
 	tlsConfig     *tlsutil.TLSConfig
 	caService     tlsutil.CAService
+	proxyRetries  int
 }
 
-func NewFactory(pauseImage, criSocketPath string, tlsConfig *tlsutil.TLSConfig) Factory {
+func NewFactory(pauseImage, criSocketPath string, tlsConfig *tlsutil.TLSConfig, proxyRetries int) Factory {
 
 	if tlsConfig != nil && !tlsConfig.HasCertAuth() {
 
@@ -45,10 +46,11 @@ func NewFactory(pauseImage, criSocketPath string, tlsConfig *tlsutil.TLSConfig) 
 		criSocketPath: criSocketPath,
 		tlsConfig:     tlsConfig,
 		caService:     caService,
+		proxyRetries:  proxyRetries,
 	}
 }
 
 func (f *factory) New(serverName, socketPath string) AgentProxy {
 
-	return NewAgentProxy(serverName, socketPath, f.criSocketPath, f.pauseImage, f.tlsConfig, f.caService)
+	return NewAgentProxy(serverName, socketPath, f.criSocketPath, f.pauseImage, f.tlsConfig, f.caService, f.proxyRetries)
 }

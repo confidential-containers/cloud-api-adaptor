@@ -71,6 +71,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 			flags.StringVar(&tlsConfig.KeyFile, "cert-key", "", "cert key")
 			flags.BoolVar(&tlsConfig.SkipVerify, "tls-skip-verify", false, "Skip TLS certificate verification - use it only for testing")
 			flags.BoolVar(&disableTLS, "disable-tls", false, "Disable TLS encryption - use it only for testing")
+			flags.IntVar(&cfg.serverConfig.ProxyRetries, "proxy-retries", 20, "Number of retries for establishing agent proxy connection")
 
 			flags.StringVar(&cfg.networkConfig.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
 			flags.StringVar(&cfg.networkConfig.HostInterface, "host-interface", "", "Host Interface")
