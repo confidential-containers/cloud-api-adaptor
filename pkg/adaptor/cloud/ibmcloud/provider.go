@@ -34,14 +34,14 @@ type vpcV1 interface {
 	DeleteInstanceWithContext(context.Context, *vpcv1.DeleteInstanceOptions) (*core.DetailedResponse, error)
 }
 
-type ibmcloudProvider struct {
+type ibmcloudVPCProvider struct {
 	vpc           vpcV1
 	serviceConfig *Config
 }
 
 func NewProvider(config *Config) (cloud.Provider, error) {
 
-	logger.Printf("ibmcloud config: %#v", config.Redact())
+	logger.Printf("ibmcloud-vpc config: %#v", config.Redact())
 
 	vpcV1, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{
 		Authenticator: &core.IamAuthenticator{
@@ -55,7 +55,7 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 		return nil, err
 	}
 
-	provider := &ibmcloudProvider{
+	provider := &ibmcloudVPCProvider{
 		vpc:           vpcV1,
 		serviceConfig: config,
 	}
@@ -63,7 +63,7 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 	return provider, nil
 }
 
-func (p *ibmcloudProvider) getInstancePrototype(instanceName, userData string) *vpcv1.InstancePrototype {
+func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData string) *vpcv1.InstancePrototype {
 
 	prototype := &vpcv1.InstancePrototype{
 		Name:     &instanceName,
@@ -142,7 +142,7 @@ func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]n
 	return ips, nil
 }
 
-func (p *ibmcloudProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator) (*cloud.Instance, error) {
+func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator) (*cloud.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -196,7 +196,7 @@ func (p *ibmcloudProvider) CreateInstance(ctx context.Context, podName, sandboxI
 	return instance, nil
 }
 
-func (p *ibmcloudProvider) DeleteInstance(ctx context.Context, instanceID string) error {
+func (p *ibmcloudVPCProvider) DeleteInstance(ctx context.Context, instanceID string) error {
 
 	options := &vpcv1.DeleteInstanceOptions{}
 	options.SetID(instanceID)
@@ -210,6 +210,6 @@ func (p *ibmcloudProvider) DeleteInstance(ctx context.Context, instanceID string
 	return nil
 }
 
-func (p *ibmcloudProvider) Teardown() error {
+func (p *ibmcloudVPCProvider) Teardown() error {
 	return nil
 }

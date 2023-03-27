@@ -100,7 +100,7 @@ func TestCreateInstance(t *testing.T) {
 
 	vpc := &mockVPC{}
 
-	provider := &ibmcloudProvider{
+	provider := &ibmcloudVPCProvider{
 		vpc:           vpc,
 		serviceConfig: &Config{},
 	}
@@ -123,7 +123,7 @@ func TestCreateInstance(t *testing.T) {
 
 func TestDeleteInstance(t *testing.T) {
 
-	provider := &ibmcloudProvider{
+	provider := &ibmcloudVPCProvider{
 		vpc:           &mockVPC{},
 		serviceConfig: &Config{},
 	}
