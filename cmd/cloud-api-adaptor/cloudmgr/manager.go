@@ -22,8 +22,11 @@ func Get(name string) Cloud {
 	return cloudTable[name]
 }
 
-func defaultToEnv(field *string, env string) {
+func defaultToEnv(field *string, env string, fallback ...string) {
 	if *field == "" {
 		*field = os.Getenv(env)
+		if *field == "" && len(fallback) > 0 {
+			*field = fallback[0]
+		}
 	}
 }
