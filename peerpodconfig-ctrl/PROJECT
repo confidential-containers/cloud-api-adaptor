@@ -4,8 +4,8 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: peer-pod-controller
-repo: github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller
+projectName: peerpodconfig-ctrl
+repo: github.com/confidential-containers/cloud-api-adaptor/peerpodconfig-ctrl
 resources:
 - api:
     crdVersion: v1
@@ -13,6 +13,6 @@ resources:
   controller: true
   domain: confidentialcontainers.org
   kind: PeerPodConfig
-  path: github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/api/v1alpha1
+  path: github.com/confidential-containers/cloud-api-adaptor/peerpodconfig-ctrl/api/v1alpha1
   version: v1alpha1
 version: "3"

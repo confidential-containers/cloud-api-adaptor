@@ -1,4 +1,4 @@
-module github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller
+module github.com/confidential-containers/cloud-api-adaptor/peerpodconfig-ctrl
 
 go 1.19
 

@@ -1,5 +1,5 @@
-# peer-pod-controller
-peer-pod-controller is a kubernetes controller which is responsible for
+# peerpodconfig-ctrl
+peerpodconfig-ctrl is a kubernetes controller which is responsible for
 watching the PeerPodConfig CRD object and manages the creation and deletion
 lifecycle of all required components to run peer pods.
 
@@ -14,7 +14,7 @@ The PeerPodConfig let's the user specify the number of peer pod vms that can be 
 It is spread as evenly as possible across the number of nodes.
 
 ## Integrate with your operator
-Running the peer-pod-controller as another controller embedded into an operator can be easily
+Running the peerpodconfig-ctrl as another controller embedded into an operator can be easily
 done. Import the controller into your operators main.go and start it.
 
 For an operator-sdk generated operator it could be as simple as:
@@ -22,8 +22,8 @@ For an operator-sdk generated operator it could be as simple as:
 ```go
     import (
         ...
-        peerpodcontrollers "github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/controllers"
-        peerpodconfig "github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/api/v1alpha1"
+        peerpodcontrollers "github.com/confidential-containers/cloud-api-adaptor/peerpodconfig-ctrl/controllers"
+        peerpodconfig "github.com/confidential-containers/cloud-api-adaptor/peerpodconfig-ctrl/api/v1alpha1"
         ...
     )
 
@@ -64,13 +64,13 @@ kubectl apply -f config/samples/
 2. Build and push your image to the location specified by `IMG`:
 	
 ```sh
-make docker-build docker-push IMG=<some-registry>/peer-pod-controller:tag
+make docker-build docker-push IMG=<some-registry>/peerpodconfig-ctrl:tag
 ```
 	
 3. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
-make deploy IMG=<some-registry>/peer-pod-controller:tag
+make deploy IMG=<some-registry>/peerpodconfig-ctrl:tag
 ```
 
 ### Uninstall CRDs
