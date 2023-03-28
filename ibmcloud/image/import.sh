@@ -21,7 +21,7 @@ bucket=
 bucket_region=$region
 instance=
 endpoint=
-api=https://cloud.ibm.com
+api=${IBMCLOUD_API_ENDPOINT-https://cloud.ibm.com}
 operating_system=
 
 shift 2
