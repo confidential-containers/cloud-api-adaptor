@@ -77,7 +77,8 @@ UMOCI_REPO  = https://github.com/opencontainers/umoci
 PAUSE_SRC     = pause
 PAUSE_REPO    = docker://registry.k8s.io/pause
 PAUSE_VERSION = 3.6
-PAUSE_BUNDLE  = pause_bundle
+# Allows to override
+PAUSE_BUNDLE  ?= pause_bundle
 
 # Static libseccomp is necessary for kata-agent
 # https://github.com/kata-containers/kata-containers/issues/5044#issuecomment-1239773921
