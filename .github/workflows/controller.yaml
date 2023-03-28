@@ -7,11 +7,11 @@ name: controller
 on: [pull_request]
 jobs:
   controller_job:
-    name: peer-pod-controller
+    name: peerpodconfig-ctrl
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: peer-pod-controller
+        working-directory: peerpodconfig-ctrl
     strategy:
       matrix:
         go_version:
