@@ -41,7 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	ccv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peer-pod-controller/api/v1alpha1"
+	ccv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peerpodconfig-ctrl/api/v1alpha1"
 )
 
 // PeerPodConfigReconciler reconciles a PeerPodConfig object
@@ -173,7 +173,7 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 		nodeSelector                 = metav1.LabelSelector{}
 	)
 
-	dsName := "peer-pod-controller-caa-daemon"
+	dsName := "peerpodconfig-ctrl-caa-daemon"
 	dsLabelSelectors := map[string]string{
 		"name": dsName,
 	}
