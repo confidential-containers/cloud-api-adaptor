@@ -23,6 +23,9 @@ QEMU_MACHINE_TYPE_s390x := s390-ccw-virtio
 UEFI  ?= false
 UEFI_FIRMWARE_LOCATION ?=
 
+# Env variable for default qemu builder options across distros/arch
+PACKER_DEFAULT_OPTS ?= -var boot_wait=300s
+
 image: $(IMAGE_FILE)
 
 setopts:
@@ -32,8 +35,7 @@ ifeq ($(PODVM_DISTRO),ubuntu)
 	-var cloud_image_url=${UBUNTU_IMAGE_URL} \
 	-var cloud_image_checksum=${UBUNTU_IMAGE_CHECKSUM})
 ifneq ($(HOST_ARCH),$(ARCH))
-	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}} \
-	-var boot_wait=300s)
+	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
 ifndef QEMU_BINARY
 	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
 endif
@@ -84,7 +86,7 @@ $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
 	rm -f cloud-init.img
 	cloud-localds cloud-init.img qcow2/userdata.cfg
 	mkdir -p toupload
-	packer build ${OPTS} qcow2/$(PODVM_DISTRO)
+	packer build ${PACKER_DEFAULT_OPTS} ${OPTS} qcow2/$(PODVM_DISTRO)
 	rm -fr toupload
 	rm -f cloud-init.img
 
