@@ -6,6 +6,11 @@
 ---
 - hosts: all
   become: true
+  vars:
+    binaries_architecture: {
+      "s390x": "s390x",
+      "x86_64": "amd64"
+    }
   tasks:
     - include_tasks: tasks/bootstrap.yaml
     - include_tasks: tasks/k8s.yaml
