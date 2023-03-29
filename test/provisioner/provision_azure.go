@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"time"
@@ -106,7 +107,7 @@ func createVnetSubnet() error {
 
 	AzureProps.SubnetID = *subnet.ID
 
-	log.Infof("Successfully Created vnet %s in resource group %s.\n", AzureProps.VnetName, AzureProps.ResourceGroupName)
+	log.Infof("Successfully Created vnet %s with Subnet %s in resource group %s.\n", AzureProps.VnetName, AzureProps.SubnetID, AzureProps.ResourceGroupName)
 
 	return nil
 }
@@ -294,8 +295,17 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 		return fmt.Errorf("Failed to sync kubeconfig to %s: %w", kubeconfigPath, err)
 	}
 
-	// as of now cluster provisioner cmd send nil cfg will uncomment it once that is fixed.
-	// cfg.WithKubeconfigFile(kubeconfigPath)
+	cfg.WithKubeconfigFile(kubeconfigPath)
+
+	// Use cli to label nodes until label is changed from "node-role.kubernetes.io/worker" to "node.kubernetes.io/worker"
+	cmd := exec.Command("kubectl", "label", "nodes", "--all", fmt.Sprintf("%s=%s", "node-role.kubernetes.io/worker", ""))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG="+kubeconfigPath))
+
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("labeling nodes: %w", err)
+	}
+	log.Info("Nodes labeled successfully.")
 
 	return nil
 }
@@ -323,14 +333,45 @@ func (p *AzureCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.
 	return nil
 }
 
-func (l *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
-	return make(map[string]string)
+func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
+	return map[string]string{
+		"CLOUD_PROVIDER":        "azure",
+		"AZURE_SUBSCRIPTION_ID": AzureProps.SubscriptionID,
+		"AZURE_CLIENT_ID":       AzureProps.ClientID,
+		"AZURE_CLIENT_SECRET":   AzureProps.ClientSecret,
+		"AZURE_TENANT_ID":       AzureProps.TenantID,
+		"AZURE_RESOURCE_GROUP":  AzureProps.ResourceGroupName,
+		"CLUSTER_NAME":          AzureProps.ClusterName,
+		"AZURE_REGION":          AzureProps.Location,
+		"SSH_KEY_ID":            AzureProps.SshPrivateKey,
+		"AZURE_IMAGE_ID":        AzureProps.ImageID,
+		"AZURE_SUBNET_ID":       AzureProps.SubnetID,
+		"AZURE_INSTANCE_SIZE":   AzureProps.InstanceSize,
+	}
 }
 
 func (p *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("UploadPodvm()")
 	log.Trace("Image is uploaded via packer in case of azure")
 	return nil
+}
+
+func isAzureKustomizeConfigMapKey(key string) bool {
+	switch key {
+	case "CLOUD_PROVIDER", "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID":
+		return true
+	default:
+		return false
+	}
+}
+
+func isAzureKustomizeSecretKey(key string) bool {
+	switch key {
+	case "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_TENANT_ID":
+		return true
+	default:
+		return false
+	}
 }
 
 func NewAzureInstallOverlay() (InstallOverlay, error) {
@@ -353,5 +394,31 @@ func (lio *AzureInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config)
 }
 
 func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
+	var err error
+	for k, v := range properties {
+		// configMapGenerator
+		if isAzureKustomizeConfigMapKey(k) {
+			if err = lio.overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm", k, v); err != nil {
+				return err
+			}
+		}
+		// secretGenerator
+		if isAzureKustomizeSecretKey(k) {
+			if err = lio.overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret", k, v); err != nil {
+				return err
+			}
+		}
+		// ssh key id
+		if k == "SSH_KEY_ID" {
+			if err = lio.overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret", v); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err = lio.overlay.YamlReload(); err != nil {
+		return err
+	}
+
 	return nil
 }

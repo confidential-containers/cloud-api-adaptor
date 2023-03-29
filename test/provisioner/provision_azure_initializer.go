@@ -56,6 +56,8 @@ func initAzureProperties(properties map[string]string) error {
 		Location:          properties["LOCATION"],
 		SshPrivateKey:     properties["SSH_KEY_ID"],
 		CloudProvider:     properties["CLOUD_PROVIDER"],
+		ImageID:           properties["AZURE_IMAGE_ID"],
+		SubnetID:          properties["AZURE_SUBNET_ID"],
 	}
 
 	AzureProps.VnetName = AzureProps.ClusterName + "_vnet"
@@ -84,6 +86,9 @@ func initAzureProperties(properties map[string]string) error {
 	}
 	if AzureProps.SshPrivateKey == "" {
 		return errors.New("SSH_KEY_ID was not set.")
+	}
+	if AzureProps.ImageID == "" {
+		return errors.New("AZURE_IMAGE_ID was not set.")
 	}
 	if AzureProps.ClusterName == "" {
 		AzureProps.ClusterName = "e2e_test_cluster"
