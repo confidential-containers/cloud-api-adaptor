@@ -5,32 +5,21 @@
 # Builds pod vm image inside container
 #
 ARG BUILDER_IMG
+ARG BINARIES_IMG
 
+FROM ${BINARIES_IMG} AS podvm_binaries
 FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG CLOUD_PROVIDER
 ARG PODVM_DISTRO=rhel
-ARG AA_KBC="offline_fs_kbc"
+# If not provided, uses system architecture
+ARG ARCH=x86_64
 ARG CAA_SRC=""
 ARG CAA_SRC_REF=""
 
-ARG RHEL_IMAGE_URL="/tmp/rhel.qcow2"
-ARG RHEL_IMAGE_CHECKSUM
-
 ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
 ENV PODVM_DISTRO ${PODVM_DISTRO}
-ENV AA_KBC ${AA_KBC}
-ENV RHEL_IMAGE_URL ${RHEL_IMAGE_URL}
-ENV RHEL_IMAGE_CHECKSUM ${RHEL_IMAGE_CHECKSUM}
-
-# Building binaries separately allows for reuse in case of error
-# with image building step OTOH it may increase layers size
-#RUN cd cloud-api-adaptor/podvm && \
-#     LIBC=gnu make binaries
-
-# workaround to ensure hashicorp packer is called instead
-# of cracklib packer which is installed by default
-ENV PATH="/usr/bin:${PATH}"
+ENV ARCH ${ARCH}
 
 RUN if [ -n "${CAA_SRC}" ]; then \
        rm -rf cloud-api-adaptor && \
@@ -42,9 +31,31 @@ RUN if [ -n "${CAA_SRC}" ]; then \
        git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
      fi
 
+ARG RHEL_IMAGE_URL="/tmp/rhel.qcow2"
+ARG RHEL_IMAGE_CHECKSUM
+
+ENV RHEL_IMAGE_URL ${RHEL_IMAGE_URL}
+ENV RHEL_IMAGE_CHECKSUM ${RHEL_IMAGE_CHECKSUM}
+
+# workaround to ensure hashicorp packer is called instead
+# of cracklib packer which is installed by default
+ENV PATH="/usr/bin:${PATH}"
+
+# Copy the binaries to podvm/files folder
+COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/cloud-api-adaptor/podvm/files
+
+# Copy the pause_bundle to podvm/files folder
+COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
+
 RUN cd cloud-api-adaptor/podvm && \
-     LIBC=gnu make image && \
-     (make clean_sources; go clean --cache --modcache; rustup self uninstall -y; rm -rf /root/.cache/packer/; true)
+     make BINARIES= PAUSE_BUNDLE= image
+
+# The below instructions can be used if you prefer to rebuild all the binaries
+#RUN cd cloud-api-adaptor/podvm && \
+#     make binaries
+#RUN  make image
 
 FROM scratch
 COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 /

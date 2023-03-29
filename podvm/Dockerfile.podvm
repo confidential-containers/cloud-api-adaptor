@@ -5,12 +5,13 @@
 # Builds pod vm image inside container
 #
 ARG BUILDER_IMG="quay.io/confidential-containers/podvm-builder-ubuntu"
+ARG BINARIES_IMG="quay.io/confidential-containers/podvm-binaries-ubuntu"
 
+FROM ${BINARIES_IMG} AS podvm_binaries
 FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG CLOUD_PROVIDER
 ARG PODVM_DISTRO=ubuntu
-ARG AA_KBC=offline_fs_kbc
 # If not provided, uses system architecture
 ARG ARCH=x86_64
 ARG CAA_SRC=""
@@ -18,7 +19,6 @@ ARG CAA_SRC_REF=""
 
 ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
 ENV PODVM_DISTRO ${PODVM_DISTRO}
-ENV AA_KBC ${AA_KBC}
 ENV ARCH ${ARCH}
 
 RUN if [ -n "${CAA_SRC}" ]; then \
@@ -33,22 +33,28 @@ RUN if [ -n "${CAA_SRC}" ]; then \
 # Installs add-ons for foreign target, if required
 RUN ./cloud-api-adaptor/podvm/hack/cross-build-extras.sh
 
-# Default to Ubuntu Focal amd64 release image. These variables can be overriden as needed
+# Defaults to Ubuntu Focal amd64 release image. These variables can be overriden as needed
 ARG UBUNTU_IMAGE_URL=https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-amd64.img
 ARG UBUNTU_IMAGE_CHECKSUM=3895e38566e5c2c019f5c6f825ab7570ee34dac6b9142fab0c7e5a78084c4280
 
 ENV UBUNTU_IMAGE_URL ${UBUNTU_IMAGE_URL}
 ENV UBUNTU_IMAGE_CHECKSUM ${UBUNTU_IMAGE_CHECKSUM}
 
+# Copy the binaries to podvm/files folder
+COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/cloud-api-adaptor/podvm/files
 
-# Building binaries separately allows for reuse in case of error
-# with image building step OTOH it may increase layers size
-#RUN cd cloud-api-adaptor/podvm && \
-#     make binaries
+# Copy the pause_bundle to podvm/files folder
+COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
 
 RUN cd cloud-api-adaptor/podvm && \
-     make image && \
-     (make clean_sources; go clean --cache --modcache; rustup self uninstall -y; rm -rf /root/.cache/packer/; true)
+     make BINARIES= PAUSE_BUNDLE= image
+
+# The below instructions can be used if you prefer to rebuild all the binaries
+#RUN cd cloud-api-adaptor/podvm && \
+#     make binaries
+#RUN  make image
 
 FROM scratch
-COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 / 
+COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 /
