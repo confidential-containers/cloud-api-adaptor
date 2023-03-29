@@ -19,6 +19,7 @@ source "qemu" "rhel" {
   ssh_port          = 22
   ssh_username      = "${var.ssh_username}"
   ssh_wait_timeout  = "300s"
+  boot_wait         = "${var.boot_wait}"
   vm_name           = "${var.qemu_image_name}"
   shutdown_command  = "sudo shutdown -h now"
   machine_type      = "${local.machine_type}"

@@ -77,3 +77,8 @@ variable "uefi_firmware" {
   type    = string
   default = "/usr/share/edk2/ovmf/OVMF_CODE.cc.fd"
 }
+
+variable "boot_wait" {
+  type = string
+  default = "10s"
+}
