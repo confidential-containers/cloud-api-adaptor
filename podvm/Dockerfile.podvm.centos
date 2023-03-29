@@ -5,34 +5,21 @@
 # Builds pod vm image inside container
 #
 ARG BUILDER_IMG="quay.io/confidential-containers/podvm-builder-centos"
+ARG BINARIES_IMG="quay.io/confidential-containers/podvm-binaries-centos"
 
+FROM ${BINARIES_IMG} AS podvm_binaries
 FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG CLOUD_PROVIDER
 ARG PODVM_DISTRO=centos
-ARG AA_KBC=offline_fs_kbc
-
-ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
-ENV PODVM_DISTRO ${PODVM_DISTRO}
-ENV AA_KBC ${AA_KBC}
-
-# Default to CentOS 8-stream x86_64 image. These variables can be overriden as needed
-ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
-ARG CENTOS_IMAGE_CHECKSUM=8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c
+# If not provided, uses system architecture
+ARG ARCH=x86_64
 ARG CAA_SRC=""
 ARG CAA_SRC_REF=""
 
-ENV CENTOS_IMAGE_URL ${CENTOS_IMAGE_URL}
-ENV CENTOS_IMAGE_CHECKSUM ${CENTOS_IMAGE_CHECKSUM}
-
-# Building binaries separately allows for reuse in case of error
-# with image building step OTOH it may increase layers size
-#RUN cd cloud-api-adaptor/podvm && \
-#     LIBC=gnu make binaries
-
-# workaround to ensure hashicorp packer is called instead 
-# of cracklib packer which is installed by default
-ENV PATH="/usr/bin:${PATH}"
+ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
+ENV PODVM_DISTRO ${PODVM_DISTRO}
+ENV ARCH ${ARCH}
 
 RUN if [ -n "${CAA_SRC}" ]; then \
        rm -rf cloud-api-adaptor && \
@@ -44,9 +31,32 @@ RUN if [ -n "${CAA_SRC}" ]; then \
        git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
      fi
 
+# Defaults to CentOS 8-stream x86_64 image. These variables can be overriden as needed
+ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
+ARG CENTOS_IMAGE_CHECKSUM=8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c
+
+ENV CENTOS_IMAGE_URL ${CENTOS_IMAGE_URL}
+ENV CENTOS_IMAGE_CHECKSUM ${CENTOS_IMAGE_CHECKSUM}
+
+# workaround to ensure hashicorp packer is called instead
+# of cracklib packer which is installed by default
+ENV PATH="/usr/bin:${PATH}"
+
+# Copy the binaries to podvm/files folder
+COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/cloud-api-adaptor/podvm/files
+
+# Copy the pause_bundle to podvm/files folder
+COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
+
 RUN cd cloud-api-adaptor/podvm && \
-     LIBC=gnu make image && \
-     (make clean_sources; go clean --cache --modcache; rustup self uninstall -y; rm -rf /root/.cache/packer/; true)
+     make BINARIES=  PAUSE_BUNDLE= image
+
+# The below instructions can be used if you prefer to rebuild all the binaries
+#RUN cd cloud-api-adaptor/podvm && \
+#     make binaries
+#RUN  make image
 
 FROM scratch
 COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 /
