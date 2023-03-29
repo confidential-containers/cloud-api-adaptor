@@ -52,7 +52,8 @@ KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
 PAUSE         = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/pause
 ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
 
-BINARIES = $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE)
+# Allow BINARIES to be overriden externally
+BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE)
 
 KBC_URI ?= "null"
 ifdef AA_KBC
