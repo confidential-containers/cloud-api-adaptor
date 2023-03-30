@@ -28,8 +28,9 @@ This directory contains dockerfiles to build the podvm image entirely within con
 In general it is needed to follow these steps:
 
 1. Build a builder container image for a given Linux distribution
-1. Build the podvm container image for a given cloud provider
-1. Extract the podvm image (qcow2 file) from the container image
+2. Build an image containing all the required podvm binaries for a given Linux distribution
+3. Build an image containing the podvm qcow2 image for a given cloud provider
+4. Extract the podvm image (qcow2 file) from the container image
 
 The next sections describe that process in details. Note that although the following examples use docker, it can be carried out with podman too.
 
@@ -44,7 +45,8 @@ dependent on the Linux distribution the image is built for. Therefore, in this d
 As an example, to build the builder image for Ubuntu, run:
 
 ```
-$ docker build -t podvm_builder -f Dockerfile.podvm_builder .
+$ docker build -t podvm_builder \
+         -f Dockerfile.podvm_builder .
 ```
 
 Use `--build-arg` to pass build arguments to docker to overwrite default values if needed. Following are the arguments
@@ -68,53 +70,100 @@ copying the local source tree, it will be using the upstream source. But if you 
 
 ```
 $ docker build -t podvm_builder \
-	--build-arg CAA_SRC=https://github.com/$USER/cloud-api-adaptor \
-	--build-arg CAA_SRC_BRANCH=my-changes-in-a-branch \
-	-f Dockerfile.podvm_builder .
+         --build-arg CAA_SRC=https://github.com/$USER/cloud-api-adaptor \
+         --build-arg CAA_SRC_BRANCH=my-changes-in-a-branch \
+         -f Dockerfile.podvm_builder .
+```
+
+## Building the image containing the podvm binaries
+
+In order to build the binaries you should be using the corresponding dockerfile
+of the Linux distro for which the builder image was built.
+For example, if the builder image was built with *Dockerfile.podvm_builder.DISTRO* then
+you should use the *Dockerfile.podvm_binaries.DISTRO* to build the image with podvm binaries.
+
+Assuming you have built the podvm_builder image for Ubuntu as explained in the previous step,
+running the following command will build the image with the podvm binaries.
+
+```
+$ docker build -t podvm_binaries \
+         --build-arg BUILDER_IMG=podvm_builder \
+         -f Dockerfile.podvm_binaries .
+
+```
+The build process can take significant time.
+
+The binaries can be built for other architectures than `x86_64` by passing the `ARCH` build
+argument to docker. Currently this is only supported for Ubuntu `s390x` as shown below:
+
+```
+$ docker build -t podvm_binaries_s390x \
+         --build-arg BUILDER_IMG=podvm_builder \
+         --build-arg ARCH=s390x \
+         -f Dockerfile.podvm_binaries .
 ```
 
 ## Building the podvm qcow2 image
 
-The process to build the podvm container image will effectively compile binaries and create the qcow2 file.
+In order to build the podvm image you should be using the corresponding
+dockerfile of the Linux distro for which the builder and binaries image were
+built.  For example, if the builder image was built with
+*Dockerfile.podvm_builder.DISTRO* then you should use the
+*Dockerfile.podvm.DISTRO* to build the podvm image.
 
-In order to build the podvm image you should be using the corresponding dockerfile of the Linux distro for which the builder image was built. For example, if the builder image was built with *Dockerfile.podvm_builder.DISTRO* then you should use the *Dockerfile.podvm.DISTRO* to build the podvm image.
+The builder image has to be indicated via `BUILDER_IMG` build argument and
+binaries image has to be indicated via `BINARIES_IMG` build argument to docker.
 
-The builder image has to be indicated via `BUILDER_IMG` build argument to docker. Apart from that, the `CLOUD_PROVIDER` argument is mandatory and specifies the cloud provider that binaries should be built for. Once again, one builder image can be used to build for multiple
-cloud providers and architectures.
-
-Below is shown how to build an Ubuntu image for libvirt:
-
-```
-$ docker build -t podvm_libvirt \
-	--build-arg BUILDER_IMG=podvm_builder:latest \
-	--build-arg CLOUD_PROVIDER=libvirt \
-	-f Dockerfile.podvm .
-```
-
-This step will take several minutes to complete, mostly because `packer` will use the QEMU builder in emulation mode when running within container. If you are using podman then you can speed up QEMU by enabling native virtualization, i.e., passing the `--device=/dev/kvm` argument to enable KVM inside the container.
-
-Also beware that the process consume a bunch of memory and disk from the host. As a tip, if the build fail at the point QEMU was launched but packer couldn't connect via ssh then it might indicate lack of memory (try to increase the amount of memory if running on VM).
-
-The podvm image can be built for other architectures than x86\_64 by passing the `ARCH` build argument to docker. Currently this is only supported for Ubuntu s390x as shown below:
+Below command will build the qcow2 image that can be used for all cloud providers
+based on Ubuntu distro.
 
 ```
-$ docker build -t podvm_libvirt_s390x \
-	--build-arg ARCH=s390x \
-	--build-arg BUILDER_IMG=podvm_builder:latest \
-	--build-arg CLOUD_PROVIDER=libvirt \
-	-f Dockerfile.podvm .
+$ docker build -t podvm \
+         --build-arg BUILDER_IMG=podvm_builder \
+         --build-arg BINARIES_IMG=podvm_binaries \
+         -f Dockerfile.podvm .
+```
+
+This step will take several minutes to complete, mostly because `packer` will
+use the QEMU builder in emulation mode when running within container.
+> **Tip:** If you are using podman then you can speed up QEMU by enabling native
+> virtualization, by passing the `--device=/dev/kvm` argument to enable KVM inside
+> the container.
+
+> **Note:** Beware that the process consume a bunch of memory and disk from the host.
+If the build fails at the point QEMU was launched but packer couldn't
+connect via ssh, with an error similar to:
+> ```
+> Build 'qemu.ubuntu' errored after 5 minutes 57 seconds: Timeout waiting for SSH.
+> ```
+> then it might indicate lack of memory, so try to increase the amount of memory if running on VM.
+
+The podvm image can be built for other architectures than `x86_64` by passing
+the `ARCH` build argument to docker. Currently this is only supported for
+Ubuntu `s390x` as shown below:
+
+```
+$ docker build -t podvm-s390x \
+         --build-arg ARCH=s390x \
+         --build-arg BUILDER_IMG=podvm_builder \
+         --build-arg BINARIES_IMG=podvm_binaries \
+         -f Dockerfile.podvm .
 ```
 
 ## Extracting the qcow2 image
 
-The final podvm image, i.e. the qcow2 file, is stored on the root of the podvm container image.
+The final podvm image, i.e. the qcow2 file, is stored on the root of the podvm
+container image.
 
-There are a couple of ways to extract files from a container image using docker or podman. However, to ease that task
-we have the [hack/download-image.sh](hack/download-image.sh) script, which copy the qcow2 file out of the podvm
-container image. Use it as shown below:
+There are a couple of ways to extract files from a container image using docker
+or podman. However, to ease that task we have the
+[hack/download-image.sh](hack/download-image.sh) script, which copy the qcow2
+file out of the podvm container image.
+
+Running the below command will extract the qcow2 image built in the previous step.
 
 ```
-$ ./hack/download-image.sh podvm_libvirt:latest . -o podvm.qcow2
+$ ./hack/download-image.sh podvm:latest . -o podvm.qcow2
 ```
 
 # How to add support for a new Linux distribution
@@ -126,8 +175,14 @@ Follow the steps below, replacing `DISTRO` with the name of the distribution bei
 1. Create the builder dockerfile by copying `Dockerfile.podvm_builder` to `Dockerfile.podvm_builder.DISTRO` and
    adjusting the file properly (e.g. replace `FROM ubuntu:20.04` with `FROM DISTRO`). Try to keep the same
    software versions (e.g. Golang, Rust) as much as possible.
-1. Create the podvm image dockerfile by copying `Dockerfile.podvm` to `Dockerfile.podvm.DISTRO` and adjusting the file
+2. Create the podvm image dockerfile by copying `Dockerfile.podvm` to `Dockerfile.podvm.DISTRO` and adjusting the file
    properly likewise. In particular, the *PODVM_DISTRO* and *BUILDER_IMG* arguments should be changed.
-1. Create the packer directory (`mkdir qcow2/DISTRO`) where the `qemu-DISTRO.pkr.hcl` and `variables.pkr.hcl` files should be placed. Also on this step you can also use an existing configuration (e.g. `qcow2/ubuntu`) as a template. Ensure that common scripts and files like the `qcow2/misc-settings.sh` are adjusted to support the DISTRO if needed.
-1. Define the base image URL and checksum in the `Makefile` file.
-1. Update this *README.md* properly in case that there are specific instructions and/or constraints for the DISTRO.
+3. Create the podvm binaries dockerfile by copying `Dockerfile.podvm_binaries`
+   to `Dockerfile.podvm_binaries.DISTRO` and adjusting the file as needed.
+4. Create the packer directory (`mkdir qcow2/DISTRO`) where the
+   `qemu-DISTRO.pkr.hcl` and `variables.pkr.hcl` files should be placed. Also on
+   this step you can also use an existing configuration (e.g. `qcow2/ubuntu`) as a
+   template. Ensure that common scripts and files like the
+   `qcow2/misc-settings.sh` are adjusted to support the DISTRO if needed.
+5. Define the base image URL and checksum in the `Makefile` file.
+6. Update this *README.md* properly in case that there are specific instructions and/or constraints for the DISTRO.
