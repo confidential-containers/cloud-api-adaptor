@@ -155,6 +155,7 @@ func newServer(t *testing.T, socketPath, podsDir string) Server {
 			SocketPath:    socketPath,
 			PodsDir:       podsDir,
 			ForwarderPort: port,
+			ProxyTimeout:  5 * time.Second,
 		}
 		srv := NewServer(provider, serverConfig, &mockWorkerNode{})
 		return srv

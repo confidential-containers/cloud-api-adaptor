@@ -25,7 +25,7 @@ func TestNewAgentProxy(t *testing.T) {
 
 	socketPath := "/run/dummy.sock"
 
-	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil)
+	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil, 0)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
@@ -82,7 +82,7 @@ func TestStartStop(t *testing.T) {
 		Host:   agentListener.Addr().String(),
 	}
 
-	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil)
+	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil, 5*time.Second)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
@@ -156,8 +156,7 @@ func TestStartStop(t *testing.T) {
 
 func TestDialerSuccess(t *testing.T) {
 	p := &agentProxy{
-		maxRetries:    20,
-		retryInterval: 100 * time.Millisecond,
+		proxyTimeout: 5 * time.Second,
 	}
 
 	for {
@@ -209,8 +208,7 @@ func TestDialerSuccess(t *testing.T) {
 
 func TestDialerFailure(t *testing.T) {
 	p := &agentProxy{
-		maxRetries:    5,
-		retryInterval: 100 * time.Millisecond,
+		proxyTimeout: 5 * time.Second,
 	}
 
 	address := "0.0.0.0:0"
@@ -220,7 +218,7 @@ func TestDialerFailure(t *testing.T) {
 		t.Fatal("expect error, got nil")
 	}
 
-	if e, a := "reaches max retry count", err.Error(); !strings.Contains(a, e) {
+	if e, a := "All attempts fail", err.Error(); !strings.Contains(a, e) {
 		t.Fatalf("expect %q, got %q", e, a)
 	}
 }

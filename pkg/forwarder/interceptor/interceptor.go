@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/gogo/protobuf/types"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -34,40 +35,26 @@ func dial(ctx context.Context, agentSocket string) (net.Conn, error) {
 
 	var conn net.Conn
 
-	maxRetries := 30
-	retryInterval := 5 * time.Second
+	ctx, cancel := context.WithTimeout(ctx, 150*time.Second)
+	defer cancel()
 
-	count := 1
-	for {
-		var err error
-
-		func() {
-			ctx, cancel := context.WithTimeout(ctx, retryInterval)
-			defer cancel()
-
+	logger.Printf("Trying to establish agent connection to %s", agentSocket)
+	err := retry.Do(
+		func() error {
+			var err error
 			conn, err = (&net.Dialer{}).DialContext(ctx, "unix", agentSocket)
+			return err
+		},
+		retry.Context(ctx),
+	)
 
-			if err == nil || count == maxRetries {
-				return
-			}
-			<-ctx.Done()
-		}()
-
-		if err == nil {
-			break
-		}
-		if count == maxRetries {
-			err := fmt.Errorf("reaches max retry count. gave up establishing agent connection to %s: %w", agentSocket, err)
-			logger.Print(err)
-			return nil, err
-		}
-		logger.Printf("failed to establish agent connection to %s: %v. (retrying... %d/%d)", agentSocket, err, count, maxRetries)
-
-		count++
+	if err != nil {
+		err = fmt.Errorf("failed to establish agent connection to %s: %w", agentSocket, err)
+		logger.Print(err)
+		return nil, err
 	}
 
 	logger.Printf("established agent connection to %s", agentSocket)
-
 	return conn, nil
 }
 
