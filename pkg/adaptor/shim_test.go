@@ -90,6 +90,7 @@ func TestShim(t *testing.T) {
 		SocketPath:    helperSocketPath,
 		PodsDir:       podsDir,
 		ForwarderPort: port,
+		ProxyTimeout:  5 * time.Second,
 	}
 
 	provider := &mockProvider{primaryIP: primaryIP, secondaryIP: secondaryIP}

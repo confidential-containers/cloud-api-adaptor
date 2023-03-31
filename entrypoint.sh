@@ -15,6 +15,7 @@ optionals+=""
 [[ "${CACERT_FILE}" ]] && optionals+="-ca-cert-file ${CACERT_FILE} "
 [[ "${CERT_FILE}" ]] && [[ "${CERT_KEY}" ]] && optionals+="-cert-file ${CERT_FILE} -cert-key ${CERT_KEY} "
 [[ "${TLS_SKIP_VERIFY}" ]] && optionals+="-tls-skip-verify "
+[[ "${PROXY_TIMEOUT}" ]] && optionals+="-proxy-timeout ${PROXY_TIMEOUT} "
 
 test_vars() {
         for i in "$@"; do

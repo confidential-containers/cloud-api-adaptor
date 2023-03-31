@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 	"github.com/containerd/ttrpc"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
@@ -25,11 +26,9 @@ import (
 )
 
 const (
-	SocketName = "agent.ttrpc"
-
-	defaultMaxRetries    = 20
-	defaultRetryInterval = 10 * time.Second
-	defaultCriTimeout    = 1 * time.Second
+	SocketName          = "agent.ttrpc"
+	defaultCriTimeout   = 1 * time.Second
+	DefaultProxyTimeout = 3 * time.Minute
 
 	// The server TLS certificate must have this as SAN
 	// TODO: Avoid hard coding of server name
@@ -59,13 +58,12 @@ type agentProxy struct {
 	socketPath    string
 	criSocketPath string
 	pauseImage    string
-	maxRetries    int
-	retryInterval time.Duration
+	proxyTimeout  time.Duration
 	criTimeout    time.Duration
 	stopOnce      sync.Once
 }
 
-func NewAgentProxy(serverName, socketPath, criSocketPath string, pauseImage string, tlsConfig *tlsutil.TLSConfig, caService tlsutil.CAService) AgentProxy {
+func NewAgentProxy(serverName, socketPath, criSocketPath string, pauseImage string, tlsConfig *tlsutil.TLSConfig, caService tlsutil.CAService, proxyTimeout time.Duration) AgentProxy {
 
 	return &agentProxy{
 		serverName:    serverName,
@@ -73,8 +71,7 @@ func NewAgentProxy(serverName, socketPath, criSocketPath string, pauseImage stri
 		criSocketPath: criSocketPath,
 		readyCh:       make(chan struct{}),
 		stopCh:        make(chan struct{}),
-		maxRetries:    defaultMaxRetries,
-		retryInterval: defaultRetryInterval,
+		proxyTimeout:  proxyTimeout,
 		criTimeout:    defaultCriTimeout,
 		pauseImage:    pauseImage,
 		tlsConfig:     tlsConfig,
@@ -117,38 +114,26 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		dialer = &net.Dialer{}
 	}
 
-	maxRetries := defaultMaxRetries
-	count := 1
-	for {
-		var err error
+	ctx, cancel := context.WithTimeout(ctx, p.proxyTimeout)
+	defer cancel()
 
-		func() {
-			ctx, cancel := context.WithTimeout(ctx, p.retryInterval)
-			defer cancel()
-
+	logger.Printf("Trying to establish agent proxy connection to %s", address)
+	err := retry.Do(
+		func() error {
+			var err error
 			conn, err = dialer.DialContext(ctx, "tcp", address)
+			return err
+		},
+		retry.Context(ctx),
+	)
 
-			if err == nil || count == maxRetries {
-				return
-			}
-			<-ctx.Done()
-		}()
-
-		if err == nil {
-			break
-		}
-		if count == maxRetries {
-			err := fmt.Errorf("reaches max retry count. gave up establishing agent proxy connection to %s: %w", address, err)
-			logger.Print(err)
-			return nil, err
-		}
-		logger.Printf("failed to establish agent proxy connection to %s: %v. (retrying... %d/%d)", address, err, count, p.maxRetries)
-
-		count++
+	if err != nil {
+		err = fmt.Errorf("failed to establish agent proxy connection to %s: %w", address, err)
+		logger.Print(err)
+		return nil, err
 	}
 
 	logger.Printf("established agent proxy connection to %s", address)
-
 	return conn, nil
 }
 
