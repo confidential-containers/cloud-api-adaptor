@@ -21,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	log "github.com/sirupsen/logrus"
+	kconf "sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
@@ -98,7 +99,13 @@ func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
 	}, nil
 }
 
-func (aws *AWSProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
+func (a *AWSProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
+	kubeconfigPath := kconf.ResolveKubeConfigFile()
+	if kubeconfigPath == "" {
+		return fmt.Errorf("Unabled to find a kubeconfig file")
+	}
+	*cfg = *envconf.NewWithKubeConfig(kubeconfigPath)
+
 	return nil
 }
 
