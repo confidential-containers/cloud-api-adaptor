@@ -1,0 +1,6 @@
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=ip netns add %I
+ExecStart=ip netns exec %I ip link set lo up
+ExecStop=ip netns del %I

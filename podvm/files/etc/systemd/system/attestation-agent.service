@@ -1,0 +1,13 @@
+[Unit]
+Description=Attestation Agent Service
+BindsTo=netns@podns.service
+After=network.target kata-agent.service netns@podns.service
+
+[Service]
+Type=simple
+NetworkNamespacePath=/run/netns/podns
+ExecStart=/usr/local/bin/attestation-agent --getresource_sock 127.0.0.1:50001
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

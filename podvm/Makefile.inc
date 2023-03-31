@@ -21,6 +21,8 @@ ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
 LIBC        ?= $(if $(findstring s390x,$(ARCH)),gnu,musl)
 RUST_TARGET := $(ARCH)-unknown-linux-$(LIBC)
+AA_KBC      ?= offline_fs_kbc
+KBC_URI     ?= null
 
 ifneq ($(HOST_ARCH),$(ARCH))
     ifeq ($(CC),cc)
@@ -55,11 +57,8 @@ ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
 # Allow BINARIES to be overriden externally
 BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE)
 
-KBC_URI ?= "null"
-ifdef AA_KBC
 BINARIES += $(ATTESTATION_AGENT)
 $(shell sed -i "s/\(aa_kbc_params = \)\"[^\"]*\"/\1\"${AA_KBC}::${KBC_URI}\"/g" $(FILES_DIR)/etc/agent-config.toml)
-endif
 
 AGENT_PROTOCOL_FORWARDER_SRC = ../..
 
