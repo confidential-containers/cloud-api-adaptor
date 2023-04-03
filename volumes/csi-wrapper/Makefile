@@ -11,7 +11,6 @@ all: build
 build: $(BINARIES)
 
 $(BINARIES): $(SOURCES)
-	go mod tidy -compat=1.18
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(GO_BLD_ARCH) go build  -o "$(BUILD_ROOT)/build/$@/$@" "cmd/$@/main.go"
 
 test:
