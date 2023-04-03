@@ -17,11 +17,11 @@ LIBVIRT_NET="${LIBVIRT_NET:-default}"
 LIBVIRT_POOL="${LIBVIRT_POOL:-default}"
 SSH_KEY_FILE="${SSH_KEY_FILE:-}"
 
-# Apply the 'node-role.kubernetes.io/worker' label on all worker nodes.
+# Apply the 'node.kubernetes.io/worker' label on all worker nodes.
 #
 label_workers() {
 	local workers
-	local label='node-role.kubernetes.io/worker'
+	local label='node.kubernetes.io/worker'
 
 	workers="$(kubectl get nodes --no-headers | grep '\<worker\>' | awk '{ print $1 }')"
 	for nodename in $workers; do

@@ -646,7 +646,7 @@ func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Co
 						},
 					},
 					Labels: map[string]string{
-						"node-role.kubernetes.io/worker": "",
+						"node.kubernetes.io/worker": "",
 					},
 				},
 			},
