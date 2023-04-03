@@ -22,6 +22,17 @@ func Get(name string) Cloud {
 	return cloudTable[name]
 }
 
+func List() []string {
+
+	var list []string
+
+	for name := range cloudTable {
+		list = append(list, name)
+	}
+
+	return list
+}
+
 func defaultToEnv(field *string, env string, fallback ...string) {
 	if *field == "" {
 		*field = os.Getenv(env)
