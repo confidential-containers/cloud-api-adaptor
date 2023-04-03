@@ -15,7 +15,7 @@ spec:
         app: ext-res-updater
     spec:
       nodeSelector:
-        node-role.kubernetes.io/worker: ""
+        node.kubernetes.io/worker: ""
       serviceAccountName: ext-res-updater
       containers:
       - image: curlimages/curl:8.1.1

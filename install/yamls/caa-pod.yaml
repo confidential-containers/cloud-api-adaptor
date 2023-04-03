@@ -50,7 +50,7 @@ spec:
           name: netns
       hostNetwork: true
       nodeSelector:
-        node-role.kubernetes.io/worker: ""
+        node.kubernetes.io/worker: ""
       volumes:
       - name: auth-json
         secret:

@@ -65,7 +65,7 @@ node/liudali-csi-amd64-node-1 patched
 > reboot
 > ```
 > After the worker node status changed to ready, please set the work role again:
-> `kubectl label node liudali-csi-amd64-node-1 node-role.kubernetes.io/worker=`
+> `kubectl label node liudali-csi-amd64-node-1 node.kubernetes.io/worker=`
 
 4. Add labels to worker node:
 ```bash

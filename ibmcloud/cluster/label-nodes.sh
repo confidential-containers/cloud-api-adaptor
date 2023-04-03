@@ -11,7 +11,7 @@ nodes=$(kubectl --kubeconfig config get nodes -o name)
 worker=
 for node in $nodes; do
     if [ -n "$worker" ]; then
-        kubectl --kubeconfig config label "$node" node-role.kubernetes.io/worker=
+        kubectl --kubeconfig config label "$node" node.kubernetes.io/worker=
     fi
     worker=true
     kubectl --kubeconfig config label "$node" "topology.kubernetes.io/region=$region"

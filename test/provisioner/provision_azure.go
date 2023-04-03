@@ -305,8 +305,8 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 
 	cfg.WithKubeconfigFile(kubeconfigPath)
 
-	// Use cli to label nodes until label is changed from "node-role.kubernetes.io/worker" to "node.kubernetes.io/worker"
-	cmd := exec.Command("kubectl", "label", "nodes", "--all", fmt.Sprintf("%s=%s", "node-role.kubernetes.io/worker", ""))
+	// Update this to use label while provisioning cluster
+	cmd := exec.Command("kubectl", "label", "nodes", "--all", fmt.Sprintf("%s=%s", "node.kubernetes.io/worker", ""))
 	cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG="+kubeconfigPath))
 
 	_, err = cmd.CombinedOutput()

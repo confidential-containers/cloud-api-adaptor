@@ -47,7 +47,7 @@ const (
 	// Name of env var containing the cloud-api-adaptor image name
 	CloudApiAdaptorImageEnvName = "RELATED_IMAGE_CAA"
 	DefaultCloudApiAdaptorImage = "quay.io/confidential-containers/cloud-api-adaptor"
-	defaultNodeSelectorLabel    = "node-role.kubernetes.io/worker"
+	defaultNodeSelectorLabel    = "node.kubernetes.io/worker"
 )
 
 // PeerPodConfigReconciler reconciles a PeerPodConfig object

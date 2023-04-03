@@ -320,7 +320,7 @@ az aks get-credentials \
 Label the nodes so that CAA can be deployed on it:
 
 ```bash
-kubectl label nodes --all node-role.kubernetes.io/worker=
+kubectl label nodes --all node.kubernetes.io/worker=
 ```
 
 ## Deploy Cloud API Adaptor

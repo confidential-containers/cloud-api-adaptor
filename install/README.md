@@ -22,7 +22,7 @@
    
     ```
     export NODENAME=<node-name>
-    kubectl label node $NODENAME node-role.kubernetes.io/worker=
+    kubectl label node $NODENAME node.kubernetes.io/worker=
     ```
 
 ## Deploy webhook
