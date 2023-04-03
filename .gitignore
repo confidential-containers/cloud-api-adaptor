@@ -6,6 +6,7 @@ staticlib
 pause
 umoci
 skopeo
+volumes/csi-wrapper/build
 
 # Binaries
 agent-protocol-forwarder
