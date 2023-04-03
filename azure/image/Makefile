@@ -16,7 +16,8 @@ $(IMAGE_FILE): $(BINARIES) $(FILES)
 		-var tenant_id=${TENANT_ID} \
 		-var vm_size=${VM_SIZE} \
 		-var resource_group=${RESOURCE_GROUP} \
-		-var az_image_name=${IMAGE_NAME} .
+		-var az_image_name=${IMAGE_NAME} \
+		-var ssh_username=${SSH_USERNAME} .
 	rm -fr toupload
 
 clean:

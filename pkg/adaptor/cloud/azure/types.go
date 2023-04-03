@@ -19,6 +19,7 @@ type Config struct {
 	Size              string
 	ImageId           string
 	SSHKeyPath        string
+	SSHUserName       string
 }
 
 func (c Config) Redact() Config {
