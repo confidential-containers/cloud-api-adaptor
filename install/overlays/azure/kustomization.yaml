@@ -30,6 +30,7 @@ configMapGenerator:
 
   # /subscriptions/<AZURE_SUBSCRIPTION_ID>/resourceGroups/<AZURE_RESOURCE_GROUP>/providers/Microsoft.Compute/images/<AZURE_IMAGE>
   - AZURE_IMAGE_ID="" #set
+  - SSH_USERNAME="" #set peer pod vm admin user name
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
 ##TLS_SETTINGS

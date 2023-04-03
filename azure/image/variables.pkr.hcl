@@ -39,3 +39,8 @@ variable "subscription_id" {
 variable "tenant_id" {
   type = string
 }
+
+variable "ssh_username" {
+  type = string
+  default = "peerpod"
+}

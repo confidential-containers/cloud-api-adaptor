@@ -28,7 +28,6 @@ var errNotFound = errors.New("VM name not found")
 
 const (
 	maxInstanceNameLen = 63
-	DefaultUserName    = "ubuntu"
 )
 
 type azureProvider struct {
@@ -200,7 +199,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 				},
 			},
 			OSProfile: &armcompute.OSProfile{
-				AdminUsername: to.Ptr(DefaultUserName),
+				AdminUsername: to.Ptr(p.serviceConfig.SSHUserName),
 				ComputerName:  to.Ptr(instanceName),
 				CustomData:    to.Ptr(userDataEnc),
 				LinuxConfiguration: &armcompute.LinuxConfiguration{
@@ -208,7 +207,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 					//TBD: replace with a suitable mechanism to use precreated SSH key
 					SSH: &armcompute.SSHConfiguration{
 						PublicKeys: []*armcompute.SSHPublicKey{{
-							Path:    to.Ptr(fmt.Sprintf("/home/%s/.ssh/authorized_keys", DefaultUserName)),
+							Path:    to.Ptr(fmt.Sprintf("/home/%s/.ssh/authorized_keys", p.serviceConfig.SSHUserName)),
 							KeyData: to.Ptr(string(sshBytes)),
 						}},
 					},
