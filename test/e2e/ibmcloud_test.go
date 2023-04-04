@@ -6,13 +6,11 @@
 package e2e
 
 import (
-	"strings"
-	"testing"
-
+	"github.com/IBM/vpc-go-sdk/vpcv1"
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/IBM/vpc-go-sdk/vpcv1"
+	"strings"
+	"testing"
 )
 
 func TestCreateSimplePod(t *testing.T) {
@@ -20,6 +18,20 @@ func TestCreateSimplePod(t *testing.T) {
 		vpc: pv.IBMCloudProps.VPC,
 	}
 	doTestCreateSimplePod(t, assert)
+}
+
+func TestCreatePodWithConfigMap(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestCreatePodWithConfigMap(t, assert)
+}
+
+func TestCreatePodWithSecret(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestCreatePodWithSecret(t, assert)
 }
 
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
@@ -45,7 +57,6 @@ func (c IBMCloudAssert) HasPodVM(t *testing.T, id string) {
 			return
 		}
 	}
-
 	// It didn't find the PodVM if it reached here.
 	t.Error("PodVM was not created")
 }
