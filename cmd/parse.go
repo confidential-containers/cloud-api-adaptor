@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package cmd
@@ -15,7 +15,7 @@ func Parse(programName string, args []string, fn func(flags *flag.FlagSet)) {
 	fn(flags)
 
 	if len(args) == 1 {
-		flags.PrintDefaults()
+		flags.Usage()
 		Exit(1)
 	}
 
