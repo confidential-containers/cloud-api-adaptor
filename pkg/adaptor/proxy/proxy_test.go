@@ -218,7 +218,7 @@ func TestDialerFailure(t *testing.T) {
 		t.Fatal("expect error, got nil")
 	}
 
-	if e, a := "All attempts fail", err.Error(); !strings.Contains(a, e) {
+	if e, a := "failed to establish agent proxy connection", err.Error(); !strings.Contains(a, e) {
 		t.Fatalf("expect %q, got %q", e, a)
 	}
 }
