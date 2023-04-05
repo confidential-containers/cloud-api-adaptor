@@ -28,7 +28,7 @@ import (
 const (
 	SocketName          = "agent.ttrpc"
 	defaultCriTimeout   = 1 * time.Second
-	DefaultProxyTimeout = 3 * time.Minute
+	DefaultProxyTimeout = 5 * time.Minute
 
 	// The server TLS certificate must have this as SAN
 	// TODO: Avoid hard coding of server name
@@ -124,6 +124,7 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 			conn, err = dialer.DialContext(ctx, "tcp", address)
 			return err
 		},
+		retry.Attempts(0),
 		retry.Context(ctx),
 	)
 

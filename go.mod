@@ -41,7 +41,7 @@ require (
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/BurntSushi/toml v1.2.0
 	github.com/IBM/ibm-cos-sdk-go v1.9.4
-	github.com/avast/retry-go/v4 v4.3.2
+	github.com/avast/retry-go/v4 v4.3.3
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
 	github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl v0.0.0-20230329054732-0d6eda047e81
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
