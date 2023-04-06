@@ -17,10 +17,12 @@ az group create --name "${RESOURCE_GROUP}" --location "${LOCATION}"
 SUBSCRIPTION_ID=$(az account show --query id --output tsv)
 
 az ad sp create-for-rbac \
-  --role Contributor \
-  --scopes "/subscriptions/$SUBSCRIPTION_ID" \
-  --query "{ client_id: appId, client_secret: password, tenant_id: tenant }"
+  --name "Packer Build"  \
+  --role "Contributor"   \
+  --scopes /subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP} \
+  --query "{ CLIENT_ID: appId, CLIENT_SECRET: password, TENANT_ID: tenant }"
 ```
+
 
 - Set environment variables
 
@@ -30,6 +32,15 @@ The env var `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID` can be copied from the out
 export CLIENT_ID="REPLACE_ME"
 export CLIENT_SECRET="REPLACE_ME"
 export TENANT_ID="REPLACE_ME"
+```
+
+- Create Role Assignment
+
+```bash
+az role assignment create \
+  --assignee ${CLIENT_ID} \
+  --role "Contributor"    \
+  --scope /subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}
 ```
 
 - Create a custom Azure VM image based on Ubuntu 20.04 having kata-agent and other dependencies.
