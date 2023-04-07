@@ -11,8 +11,8 @@ import (
 	"os"
 
 	"github.com/confidential-containers/cloud-api-adaptor/cmd"
-	"github.com/confidential-containers/cloud-api-adaptor/cmd/cloud-api-adaptor/cloudmgr"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/cloudmgr"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
