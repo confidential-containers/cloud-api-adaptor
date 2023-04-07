@@ -5,7 +5,6 @@ package cloudmgr
 
 import (
 	"flag"
-	"os"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 )
@@ -31,13 +30,4 @@ func List() []string {
 	}
 
 	return list
-}
-
-func defaultToEnv(field *string, env string, fallback ...string) {
-	if *field == "" {
-		*field = os.Getenv(env)
-		if *field == "" && len(fallback) > 0 {
-			*field = fallback[0]
-		}
-	}
 }
