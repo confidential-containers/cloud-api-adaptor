@@ -1,0 +1,63 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+- ../../yamls
+
+images:
+- name: cloud-api-adaptor
+  newName: quay.io/confidential-containers/cloud-api-adaptor # change image if needed
+  newTag: latest
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="ibmcloud-powervs"
+  - POWERVS_SERVICE_INSTANCE_ID="" #set
+  - POWERVS_NETWORK_ID="" #set
+  - POWERVS_SSH_KEY_NAME="" #set
+  - POWERVS_IMAGE_ID="" #set
+  - POWERVS_ZONE="" #set
+  - CRI_RUNTIME_ENDPOINT="/run/cri-runtime/containerd.sock"
+  #- POWERVS_MEMORY="" # Uncomment and set if you want to use a specific amount of memory
+  #- POWERVS_PROCESSORS="" # Uncomment and set if you want to use a specific number of CPUs
+  #- POWERVS_PROCESSOR_TYPE="" # Uncomment and set if you want to use a specific processor type
+  #- POWERVS_SYSTEM_TYPE="" # Uncomment and set if you want to use a specific system type
+  #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
+  #- PROXY_TIMEOUT="" # Uncomment and set if you want to pass a specific timeout. Defaults to 5m
+##TLS_SETTINGS
+  #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
+  #- CERT_FILE="/etc/certificates/client.crt" # for TLS
+  #- CERT_KEY="/etc/certificates/client.key" # for TLS
+  #- TLS_SKIP_VERIFY="" # for testing only
+##TLS_SETTINGS
+
+secretGenerator:
+- name: auth-json-secret
+  namespace: confidential-containers-system
+  files:
+  #- auth.json # set - path to auth.json pull credentials file
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  literals:
+  - IBMCLOUD_API_KEY="" # set
+
+##TLS_SETTINGS
+#- name: certs-for-tls
+#  namespace: confidential-containers-system
+#  files:
+#  - <path_to_ca.crt> # set - path to ca.crt
+#  - <path_to_client.crt> # set - path to client.crt
+#  - <path_to_client.key> # set - path to client.key
+##TLS_SETTINGS
+
+patchesStrategicMerge:
+  - cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
+##TLS_SETTINGS
+  #- tls_certs_volume_mount.yaml # set (for tls)
+##TLS_SETTINGS
