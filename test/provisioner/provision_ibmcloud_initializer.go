@@ -20,32 +20,33 @@ import (
 )
 
 type IBMCloudProperties struct {
-	ApiKey          string
-	Bucket          string
-	ClusterName     string
-	CosApiKey       string
-	CosInstanceID   string
-	CosServiceURL   string
-	SecurityGroupID string
-	IamServiceURL   string
-	InstanceProfile string
-	KubeVersion     string
-	PodvmImageID    string
-	PodvmImageArch  string
-	PublicGatewayID string
-	Region          string
-	ResourceGroupID string
-	SshKeyContent   string
-	SshKeyID        string
-	SshKeyName      string
-	SubnetName      string
-	SubnetID        string
-	VpcName         string
-	VpcID           string
-	VpcServiceURL   string
-	WorkerFlavor    string
-	WorkerOS        string
-	Zone            string
+	ApiKey            string
+	Bucket            string
+	ClusterName       string
+	CosApiKey         string
+	CosInstanceID     string
+	CosServiceURL     string
+	SecurityGroupID   string
+	IamServiceURL     string
+	InstanceProfile   string
+	KubeVersion       string
+	PodvmImageID      string
+	PodvmImageArch    string
+	PublicGatewayName string
+	PublicGatewayID   string
+	Region            string
+	ResourceGroupID   string
+	SshKeyContent     string
+	SshKeyID          string
+	SshKeyName        string
+	SubnetName        string
+	SubnetID          string
+	VpcName           string
+	VpcID             string
+	VpcServiceURL     string
+	WorkerFlavor      string
+	WorkerOS          string
+	Zone              string
 
 	WorkerCount   int
 	IsSelfManaged bool
@@ -58,31 +59,32 @@ var IBMCloudProps = &IBMCloudProperties{}
 
 func initProperties(properties map[string]string) error {
 	IBMCloudProps = &IBMCloudProperties{
-		ApiKey:          properties["APIKEY"],
-		Bucket:          properties["COS_BUCKET"],
-		ClusterName:     properties["CLUSTER_NAME"],
-		CosApiKey:       properties["COS_APIKEY"],
-		CosInstanceID:   properties["COS_INSTANCE_ID"],
-		CosServiceURL:   properties["COS_SERVICE_URL"],
-		IamServiceURL:   properties["IAM_SERVICE_URL"],
-		InstanceProfile: properties["INSTANCE_PROFILE_NAME"],
-		KubeVersion:     properties["KUBE_VERSION"],
-		PodvmImageID:    properties["PODVM_IMAGE_ID"],
-		PodvmImageArch:  properties["PODVM_IMAGE_ARCH"],
-		Region:          properties["REGION"],
-		ResourceGroupID: properties["RESOURCE_GROUP_ID"],
-		SshKeyName:      properties["SSH_KEY_NAME"],
-		SshKeyContent:   properties["SSH_PUBLIC_KEY_CONTENT"],
-		SubnetName:      properties["VPC_SUBNET_NAME"],
-		VpcName:         properties["VPC_NAME"],
-		VpcServiceURL:   properties["VPC_SERVICE_URL"],
-		WorkerFlavor:    properties["WORKER_FLAVOR"],
-		WorkerOS:        properties["WORKER_OPERATION_SYSTEM"],
-		Zone:            properties["ZONE"],
-		SshKeyID:        properties["SSH_KEY_ID"],
-		SubnetID:        properties["VPC_SUBNET_ID"],
-		SecurityGroupID: properties["VPC_SECURITY_GROUP_ID"],
-		VpcID:           properties["VPC_ID"],
+		ApiKey:            properties["APIKEY"],
+		Bucket:            properties["COS_BUCKET"],
+		ClusterName:       properties["CLUSTER_NAME"],
+		CosApiKey:         properties["COS_APIKEY"],
+		CosInstanceID:     properties["COS_INSTANCE_ID"],
+		CosServiceURL:     properties["COS_SERVICE_URL"],
+		IamServiceURL:     properties["IAM_SERVICE_URL"],
+		InstanceProfile:   properties["INSTANCE_PROFILE_NAME"],
+		KubeVersion:       properties["KUBE_VERSION"],
+		PodvmImageID:      properties["PODVM_IMAGE_ID"],
+		PodvmImageArch:    properties["PODVM_IMAGE_ARCH"],
+		PublicGatewayName: properties["PUBLIC_GATEWAY_NAME"],
+		Region:            properties["REGION"],
+		ResourceGroupID:   properties["RESOURCE_GROUP_ID"],
+		SshKeyName:        properties["SSH_KEY_NAME"],
+		SshKeyContent:     properties["SSH_PUBLIC_KEY_CONTENT"],
+		SubnetName:        properties["VPC_SUBNET_NAME"],
+		VpcName:           properties["VPC_NAME"],
+		VpcServiceURL:     properties["VPC_SERVICE_URL"],
+		WorkerFlavor:      properties["WORKER_FLAVOR"],
+		WorkerOS:          properties["WORKER_OPERATION_SYSTEM"],
+		Zone:              properties["ZONE"],
+		SshKeyID:          properties["SSH_KEY_ID"],
+		SubnetID:          properties["VPC_SUBNET_ID"],
+		SecurityGroupID:   properties["VPC_SECURITY_GROUP_ID"],
+		VpcID:             properties["VPC_ID"],
 	}
 
 	if len(IBMCloudProps.ClusterName) <= 0 {
@@ -93,6 +95,9 @@ func initProperties(properties map[string]string) error {
 	}
 	if len(IBMCloudProps.SubnetName) <= 0 && len(IBMCloudProps.SubnetID) <= 0 {
 		IBMCloudProps.SubnetName = IBMCloudProps.VpcName + "-subnet"
+	}
+	if len(IBMCloudProps.PublicGatewayName) <= 0 && len(IBMCloudProps.PublicGatewayID) <= 0 {
+		IBMCloudProps.PublicGatewayName = IBMCloudProps.VpcName + "-gateway"
 	}
 	if len(IBMCloudProps.InstanceProfile) <= 0 {
 		IBMCloudProps.InstanceProfile = "bx2-2x8"
