@@ -137,6 +137,7 @@ func TestMain(m *testing.M) {
 			}
 
 			if err = provisioner.DeleteVPC(ctx, cfg); err != nil {
+				log.Warnf("Failed to delete vpc resources, err: %s.", err)
 				return ctx, nil
 			}
 		} else {

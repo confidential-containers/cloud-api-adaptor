@@ -129,7 +129,7 @@ func createVPC() error {
 	}
 	if foundVPC != nil {
 		IBMCloudProps.VpcID = *foundVPC.ID
-		log.Infof("VPC %s with ID %s exists alread", IBMCloudProps.VpcName, IBMCloudProps.VpcID)
+		log.Infof("VPC %s with ID %s exists already", IBMCloudProps.VpcName, IBMCloudProps.VpcID)
 	} else {
 		classicAccess := false
 		//manual := "manual"
@@ -206,13 +206,14 @@ func createPublicGateway(subnetID, vpcID string) error {
 		vpcIDentityModel,
 		zoneIdentityModel,
 	)
-
+	createPublicGatewayOptions.SetName(IBMCloudProps.PublicGatewayName)
+	log.Infof("Creating Public Gateway %s.", IBMCloudProps.PublicGatewayName)
 	publicGateway, _, err := IBMCloudProps.VPC.CreatePublicGateway(createPublicGatewayOptions)
 	if err != nil {
 		return err
 	}
 	IBMCloudProps.PublicGatewayID = *publicGateway.ID
-	log.Infof("Public Gatwway %s was created.", IBMCloudProps.PublicGatewayID)
+	log.Infof("Created Public Gateway with ID %s.", IBMCloudProps.PublicGatewayID)
 
 	options := &vpcv1.SetSubnetPublicGatewayOptions{}
 	options.SetID(subnetID)
@@ -223,7 +224,7 @@ func createPublicGateway(subnetID, vpcID string) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Public Gatwway %s was attached to Subnet %s.", IBMCloudProps.PublicGatewayID, subnetID)
+	log.Infof("Attached Public Gateway %s to Subnet %s.", IBMCloudProps.PublicGatewayID, subnetID)
 	return nil
 }
 
@@ -236,7 +237,7 @@ func deletePublicGateway(subnetID, publicGatewayID string) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Public Gatwway %s was unattached from Subnet %s.", publicGatewayID, subnetID)
+	log.Infof("Public Gateway %s was unattached from Subnet %s.", publicGatewayID, subnetID)
 
 	deleteOptions := &vpcv1.DeletePublicGatewayOptions{}
 	deleteOptions.SetID(publicGatewayID)
@@ -244,7 +245,7 @@ func deletePublicGateway(subnetID, publicGatewayID string) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Public Gatwway %s was deleted.", publicGatewayID)
+	log.Infof("Public Gateway %s was deleted.", publicGatewayID)
 
 	return nil
 }
@@ -318,6 +319,35 @@ func createSubnet() error {
 	return nil
 }
 
+// TODO, nice to have retry if SDK client did not do that for well known http errors
+func findAttachedLoadBalancer(subnetName string) (*vpcv1.LoadBalancer, error) {
+	options := &vpcv1.ListLoadBalancersOptions{}
+
+	pager, err := IBMCloudProps.VPC.NewLoadBalancersPager(options)
+	if err != nil {
+		return nil, err
+	}
+
+	var allResults []vpcv1.LoadBalancer
+	for pager.HasNext() {
+		nextPage, err := pager.GetNext()
+		if err != nil {
+			return nil, err
+		}
+		allResults = append(allResults, nextPage...)
+	}
+
+	for _, loadBalancer := range allResults {
+		log.Tracef("Checking loadBalancer %s.", *loadBalancer.Name)
+		for _, subnet := range loadBalancer.Subnets {
+			if *subnet.Name == subnetName {
+				return &loadBalancer, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
 func deleteSubnet() error {
 	foundSubnet, err := findSubnet(IBMCloudProps.SubnetName)
 	if err != nil {
@@ -338,6 +368,20 @@ func deleteSubnet() error {
 			log.Warnf("Failed to delete PublicGateway %s.", *gateway.ID)
 			return err
 		}
+	}
+
+	// Waiting the attached Load Balancers to be removed
+	waitMinutes := 5
+	log.Infof("Waiting for attached LoadBalancers to be removed from %s ...", IBMCloudProps.SubnetName)
+	for i := 0; i <= waitMinutes; i++ {
+		foundlb, _ := findAttachedLoadBalancer(IBMCloudProps.SubnetName)
+		if foundlb == nil {
+			log.Infof("All attached LoadBalancers are removed from %s ...", IBMCloudProps.SubnetName)
+			break
+		}
+		log.Infof("Waiting for attached LoadBalancer %s to be removed.", *foundlb.Name)
+		log.Infof("Waited %d minutes...", i)
+		time.Sleep(60 * time.Second)
 	}
 
 	options := &vpcv1.DeleteSubnetOptions{}

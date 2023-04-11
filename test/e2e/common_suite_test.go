@@ -5,15 +5,16 @@ package e2e
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	envconf "sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
-	"testing"
-	"time"
 )
 
-const WAIT_POD_RUNNING_TIMEOUT = time.Second * 180
+const WAIT_POD_RUNNING_TIMEOUT = time.Second * 300
 
 // doTestCreateSimplePod tests a simple peer-pod can be created.
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
