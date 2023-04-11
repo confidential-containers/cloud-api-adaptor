@@ -82,6 +82,27 @@ exec cloud-api-adaptor ibmcloud \
         -socket /run/peerpod/hypervisor.sock
 }
 
+
+ibmcloud_powervs() {
+test_vars IBMCLOUD_API_KEY
+
+[[ "${POWERVS_MEMORY}" ]] && optionals+="-memory ${POWERVS_MEMORY} "
+[[ "${POWERVS_PROCESSORS}" ]] && optionals+="-cpu ${POWERVS_PROCESSORS} "
+[[ "${POWERVS_PROCESSOR_TYPE}" ]] && optionals+="-proc-type ${POWERVS_PROCESSOR_TYPE} "
+[[ "${POWERVS_SYSTEM_TYPE}" ]] && optionals+="-sys-type ${POWERVS_SYSTEM_TYPE} "
+
+set -x
+exec cloud-api-adaptor ibmcloud-powervs \
+        -service-instance-id ${POWERVS_SERVICE_INSTANCE_ID} \
+        -zone ${POWERVS_ZONE} \
+        -image-id ${POWERVS_IMAGE_ID} \
+        -network-id ${POWERVS_NETWORK_ID} \
+        -ssh-key ${POWERVS_SSH_KEY_NAME}
+        -pods-dir /run/peerpod/pods \
+ 	${optionals} \
+ 	-socket /run/peerpod/hypervisor.sock
+}
+
 libvirt() {
 test_vars LIBVIRT_URI
 
@@ -117,9 +138,9 @@ exec cloud-api-adaptor vsphere \
 help_msg() {
 	cat <<EOF
 Usage:
-	CLOUD_PROVIDER=aws|azure|ibmcloud|libvirt|vsphere $0
+	CLOUD_PROVIDER=aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere $0
 or
-	$0 aws|azure|ibmcloud|libvirt|vsphere
+	$0 aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
 EOF
@@ -131,6 +152,8 @@ elif [[ "$CLOUD_PROVIDER" == "azure" ]]; then
 	azure
 elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then
 	ibmcloud
+elif [[ "$CLOUD_PROVIDER" == "ibmcloud-powervs" ]]; then
+ 	ibmcloud_powervs
 elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
 	libvirt
 elif [[ "$CLOUD_PROVIDER" == "vsphere" ]]; then

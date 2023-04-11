@@ -22,7 +22,7 @@ jobs:
           - type: dev
             arches: linux/amd64
           - type: release
-            arches: linux/amd64,linux/s390x
+            arches: linux/amd64,linux/s390x,linux/ppc64le
     steps:
       - name: Checkout the code
         uses: actions/checkout@v3
