@@ -402,11 +402,15 @@ A minimum Kata shim configuration file at `/etc/kata-containers/configuration.to
 internetworking_model = "none"
 disable_new_netns = true
 disable_guest_seccomp = true
+static_sandbox_resource_mgmt = true
 enable_pprof = true
 enable_debug = true
 [hypervisor.remote]
 remote_hypervisor_socket = "/run/peerpod/hypervisor.sock"
+disable_guest_selinux = true
 [agent.kata]
+[image]
+service_offload = true
 ```
 
 ## Install Cloud API adaptor
