@@ -10,7 +10,7 @@
 UBUNTU_RELEASE     = focal
 SKOPEO_VERSION     = 1.5.0
 UMOCI_VERSION      = 0.4.7
-AA_VERSION         = v0.4.0
+AA_VERSION         = d7ace56f2f2c861669ab07b50598a3d3c22709af
 
 IMAGE_PREFIX := podvm
 
@@ -123,10 +123,11 @@ $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
 
 $(ATTESTATION_AGENT_SRC):
-	git clone -b "$(AA_VERSION)" "$(ATTESTATION_AGENT_REPO)" "$(ATTESTATION_AGENT_SRC)"
+	git clone --depth=1 "$(ATTESTATION_AGENT_REPO)" "$(ATTESTATION_AGENT_SRC)"
+	cd "$(ATTESTATION_AGENT_SRC)" && git fetch --depth=1 origin "$(AA_VERSION)"
 
 $(ATTESTATION_AGENT): $(ATTESTATION_AGENT_SRC)
-	cd "$(ATTESTATION_AGENT_SRC)" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" LIBC="$(LIBC)"
+	cd "$(ATTESTATION_AGENT_SRC)" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" ttrpc=true LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
 	install --compare "$(ATTESTATION_AGENT_SRC)/app/target/$(RUST_TARGET)/release/attestation-agent" "$@"
 
