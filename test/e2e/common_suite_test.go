@@ -201,3 +201,58 @@ func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 		}).Feature()
 	testEnv.Test(t, nginxPodFeature)
 }
+func doTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	podname := "busy-box-pod"
+	pod := newBusyboxPod(namespace, podname, "busybox", "kata")
+	PublicpodFeature := features.New("Peer Pod Container").
+		WithSetup("Create pod", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client, err := cfg.NewClient()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = client.Resources(namespace).Create(ctx, pod); err != nil {
+				t.Fatal(err)
+			}
+			if err = wait.For(conditions.New(client.Resources()).PodRunning(pod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+				t.Fatal(err)
+			}
+			return ctx
+		}).
+		Assess("Peer Pod Container Connected to External IP", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			var podlist v1.PodList
+			var pingstdout, pingstderr bytes.Buffer
+			if err := cfg.Client().Resources(namespace).List(ctx, &podlist); err != nil {
+				t.Fatal(err)
+			}
+			for _, i := range podlist.Items {
+				if i.ObjectMeta.Name == podname {
+					if err := cfg.Client().Resources(namespace).ExecInPod(ctx, namespace, podname, "busybox", []string{"ping", "-c", "1", "www.google.com"}, &pingstdout, &pingstderr); err != nil {
+						log.Println(pingstderr.String())
+						t.Fatal(err)
+					} else {
+						log.Println("Pinging www.google.com ...")
+					}
+				}
+			}
+			if pingstdout.String() != "" {
+				log.Printf("Output of ping command in busybox : %s", pingstdout.String())
+
+			} else {
+				t.Errorf("No output from ping command")
+			}
+			return ctx
+		}).
+		Teardown(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client, err := cfg.NewClient()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = client.Resources().Delete(ctx, pod); err != nil {
+				t.Fatal(err)
+			}
+
+			return ctx
+		}).Feature()
+	testEnv.Test(t, PublicpodFeature)
+}
