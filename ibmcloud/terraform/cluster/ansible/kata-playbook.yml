@@ -235,6 +235,7 @@
           internetworking_model = "none"
           disable_new_netns = true
           disable_guest_seccomp = true
+          static_sandbox_resource_mgmt = true
           enable_pprof = true
           enable_debug = true
           [hypervisor.remote]
