@@ -140,13 +140,16 @@ connect via ssh, with an error similar to:
 
 The podvm image can be built for other architectures than `x86_64` by passing
 the `ARCH` build argument to docker. Currently this is only supported for
-Ubuntu `s390x` as shown below:
+Ubuntu `s390x`, which also needs the `UBUNTU_IMAGE_URL` and
+`UBUNTU_IMAGE_CHECKSUM` to be overridden with build arguments as shown below:
 
 ```
 $ docker build -t podvm-s390x \
          --build-arg ARCH=s390x \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries \
+         --build-arg UBUNTU_IMAGE_URL="" \
+         --build-arg UBUNTU_IMAGE_CHECKSUM="" \
          -f Dockerfile.podvm .
 ```
 
