@@ -11,11 +11,12 @@ import (
 
 // CustomReader helps uplaod cos object
 type CustomReader struct {
-	Fp      *os.File
-	Size    int64
-	Reader  int64
-	SignMap map[int64]struct{}
-	Mux     sync.Mutex
+	Fp           *os.File
+	Size         int64
+	Reader       int64
+	SignMap      map[int64]struct{}
+	Mux          sync.Mutex
+	HideProgress string
 }
 
 func (r *CustomReader) Read(p []byte) (int, error) {
@@ -33,7 +34,10 @@ func (r *CustomReader) ReadAt(p []byte, off int64) (int, error) {
 	if _, ok := r.SignMap[off]; ok {
 		// Got the length have read( or means has uploaded), and you can construct your message
 		r.Reader += int64(n)
-		fmt.Printf("\rtotal read:%d    progress:%d%%", r.Reader, int(float32(r.Reader*100)/float32(r.Size)))
+		// DO NOT show the progress when HIDE_UPLOADER_PROGRESS env is set
+		if r.HideProgress == "" {
+			fmt.Printf("\rtotal read:%d    progress:%d%%", r.Reader, int(float32(r.Reader*100)/float32(r.Size)))
+		}
 	} else {
 		r.SignMap[off] = struct{}{}
 	}
