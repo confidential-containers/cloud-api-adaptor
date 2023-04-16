@@ -1,13 +1,13 @@
-name: Create Pod VM Image
+name: Create Pod VM Binaries Image
 on:
   workflow_run:
-    workflows: ["Create Pod VM Binaries Image"]
+    workflows: ["Create Pod VM Builder Image"]
     types:
       - completed
 
 jobs:
   build:
-    name: Create pod vm image
+    name: Create pod vm binaries image
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     strategy:
@@ -15,19 +15,14 @@ jobs:
       matrix:
         os: [centos, ubuntu]
         arch: [amd64, s390x]
-        provider: [generic, vsphere]
         include:
           - os: centos
-            dockerfile: Dockerfile.podvm.centos
+            dockerfile: Dockerfile.podvm_binaries.centos
           - os: ubuntu
-            dockerfile: Dockerfile.podvm
+            dockerfile: Dockerfile.podvm_binaries
         exclude:
           - os: centos
             arch: s390x
-          - provider: vsphere
-            arch: s390x
-          - provider: vsphere
-            os: centos
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -49,16 +44,14 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         tags: |
-          quay.io/confidential-containers/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:latest
-          quay.io/confidential-containers/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ github.sha }}
+          quay.io/confidential-containers/podvm-binaries-${{ matrix.os }}-${{ matrix.arch }}:latest
+          quay.io/confidential-containers/podvm-binaries-${{ matrix.os }}-${{ matrix.arch }}:${{ github.sha }}
         push: true
         context: podvm
         platforms: linux/amd64
         file: |
           podvm/${{ matrix.dockerfile }}
         build-args: |
-          "CLOUD_PROVIDER=${{ matrix.provider }}"
           "ARCH=${{ matrix.arch }}"
           "UBUNTU_IMAGE_URL="
           "UBUNTU_IMAGE_CHECKSUM="
-          "BINARIES_IMG=quay.io/confidential-containers/podvm-binaries-${{ matrix.os }}-${{ matrix.arch }}"
