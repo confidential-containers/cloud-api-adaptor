@@ -213,8 +213,8 @@ github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef h1:46PFijGL
 github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/ashanbrown/forbidigo v1.2.0/go.mod h1:vVW7PEdqEFqapJe95xHkTfB1+XvZXBFg8t0sG2FIxmI=
 github.com/ashanbrown/makezero v0.0.0-20210520155254-b6261585ddde/go.mod h1:oG9Dnez7/ESBqc4EdrdNlryeo7d0KcW1ftXHm7nU/UU=
-github.com/avast/retry-go/v4 v4.3.2 h1:x4sTEu3jSwr7zNjya8NTdIN+U88u/jtO/q3OupBoDtM=
-github.com/avast/retry-go/v4 v4.3.2/go.mod h1:rg6XFaiuFYII0Xu3RDbZQkxCofFwruZKW8oEF1jpWiU=
+github.com/avast/retry-go/v4 v4.3.3 h1:G56Bp6mU0b5HE1SkaoVjscZjlQb0oy4mezwY/cGH19w=
+github.com/avast/retry-go/v4 v4.3.3/go.mod h1:rg6XFaiuFYII0Xu3RDbZQkxCofFwruZKW8oEF1jpWiU=
 github.com/aws/aws-sdk-go v1.15.11/go.mod h1:mFuSZ37Z9YOHbQEwBWztmVzqXrEkub65tZoCYDt7FT0=
 github.com/aws/aws-sdk-go v1.23.20/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.25.37/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
@@ -326,12 +326,8 @@ github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/codahale/rfc6979 v0.0.0-20141003034818-6a90f24967eb/go.mod h1:ZjrT6AXHbDs86ZSdt/osfBi5qfexBrKUdONk989Wnk4=
-github.com/confidential-containers/cloud-api-adaptor v0.0.1-alpha h1:WzAprkbFO7DFlbGKfzQjOiB6AAaz5/qr6cRHYo16Fyo=
-github.com/confidential-containers/cloud-api-adaptor v0.0.1-alpha/go.mod h1:IX0JMi9pRm9aBQbxdt0v4xE+Bo+Q6GigyyMw6BGjEcg=
-github.com/confidential-containers/cloud-api-adaptor v0.0.1-alpha.0.20230329054600-4aee262d04f9 h1:09qwZjjE2zA0Yru0MDPuaCE3ffMX38/w2gyuPqtITrE=
-github.com/confidential-containers/cloud-api-adaptor v0.0.1-alpha.0.20230329054600-4aee262d04f9/go.mod h1:IX0JMi9pRm9aBQbxdt0v4xE+Bo+Q6GigyyMw6BGjEcg=
-github.com/confidential-containers/cloud-api-adaptor v0.0.1-alpha.0.20230329054732-0d6eda047e81 h1:CYhO7yfZYB4vM2kVgz2AYbM49qNAMYTDZYSEUVcW0+c=
-github.com/confidential-containers/cloud-api-adaptor v0.0.1-alpha.0.20230329054732-0d6eda047e81/go.mod h1:IX0JMi9pRm9aBQbxdt0v4xE+Bo+Q6GigyyMw6BGjEcg=
+github.com/confidential-containers/cloud-api-adaptor v0.5.0-alpha h1:ShEX+d01eLaLv6o9j5yxW/F2iGAZnefFf02yEMZH+IA=
+github.com/confidential-containers/cloud-api-adaptor v0.5.0-alpha/go.mod h1:4809SseMTdYou/4+m5IGaCwqG628e+VPfkEleKtbzr8=
 github.com/container-orchestrated-devices/container-device-interface v0.4.0/go.mod h1:E1zcucIkq9P3eyNmY+68dBQsTcsXJh9cgRo2IVNScKQ=
 github.com/containerd/aufs v0.0.0-20200908144142-dab0cbea06f4/go.mod h1:nukgQABAEopAHvB6j7cnP5zJ+/3aVcE7hCYqvIwAHyE=
 github.com/containerd/aufs v0.0.0-20201003224125-76a6863f2989/go.mod h1:AkGGQs9NM2vtYHaUen+NljV0/baGCAPELGm2q9ZXpWU=
