@@ -3,7 +3,7 @@ module github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl
 go 1.19
 
 require (
-	github.com/confidential-containers/cloud-api-adaptor v0.0.1-alpha.0.20230329054600-4aee262d04f9
+	github.com/confidential-containers/cloud-api-adaptor v0.5.0-alpha
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
 	k8s.io/apimachinery v0.25.0
@@ -30,7 +30,7 @@ require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef // indirect
-	github.com/avast/retry-go/v4 v4.3.2 // indirect
+	github.com/avast/retry-go/v4 v4.3.3 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.5 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.15.11 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.6 // indirect
