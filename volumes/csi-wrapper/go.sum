@@ -48,6 +48,8 @@ github.com/cncf/xds/go v0.0.0-20211001041855-01bcc9b48dfe/go.mod h1:eXthEFrGJvWH
 github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
 github.com/confidential-containers/cloud-api-adaptor v0.5.0-alpha h1:ShEX+d01eLaLv6o9j5yxW/F2iGAZnefFf02yEMZH+IA=
 github.com/confidential-containers/cloud-api-adaptor v0.5.0-alpha/go.mod h1:4809SseMTdYou/4+m5IGaCwqG628e+VPfkEleKtbzr8=
+github.com/confidential-containers/cloud-api-adaptor v0.5.0 h1:CwbGKUzu13s27N1NiYeeqD+Odb3kDJnVpHQGAdu9a2c=
+github.com/confidential-containers/cloud-api-adaptor v0.5.0/go.mod h1:4809SseMTdYou/4+m5IGaCwqG628e+VPfkEleKtbzr8=
 github.com/container-storage-interface/spec v1.8.0 h1:D0vhF3PLIZwlwZEf2eNbpujGCNwspwTYf2idJRJx4xI=
 github.com/container-storage-interface/spec v1.8.0/go.mod h1:ROLik+GhPslwwWRNFF1KasPzroNARibH2rfz1rkg4H0=
 github.com/containerd/ttrpc v1.1.0 h1:GbtyLRxb0gOLR0TYQWt3O6B0NvT8tMdorEHqIQo/lWI=

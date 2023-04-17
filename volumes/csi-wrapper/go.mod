@@ -3,7 +3,7 @@ module github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper
 go 1.19
 
 require (
-	github.com/confidential-containers/cloud-api-adaptor v0.5.0-alpha
+	github.com/confidential-containers/cloud-api-adaptor v0.5.0
 	github.com/container-storage-interface/spec v1.8.0
 	github.com/containerd/ttrpc v1.1.0
 	github.com/gofrs/uuid v4.4.0+incompatible
