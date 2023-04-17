@@ -30,6 +30,7 @@ type AzureProperties struct {
 	VnetName          string
 	SubnetID          string
 	ImageID           string
+	SshUserName       string
 
 	InstanceSize string
 	NodeName     string
@@ -58,6 +59,7 @@ func initAzureProperties(properties map[string]string) error {
 		CloudProvider:     properties["CLOUD_PROVIDER"],
 		ImageID:           properties["AZURE_IMAGE_ID"],
 		SubnetID:          properties["AZURE_SUBNET_ID"],
+		SshUserName:       properties["SSH_USERNAME"],
 	}
 
 	AzureProps.VnetName = AzureProps.ClusterName + "_vnet"
