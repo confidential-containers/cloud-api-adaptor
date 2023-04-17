@@ -20,7 +20,7 @@ Registry authentication file can be provided either statically or at runtime.
 ```
 cat <<EOF | tee aa-offline_fs_kbc-resources.json
 {
-  "Credential": "${AUTHFILE}"
+  "default/credential/test": "${AUTHFILE}"
 }
 EOF
 ```
