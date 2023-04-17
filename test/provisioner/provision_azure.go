@@ -344,6 +344,7 @@ func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.
 		"CLUSTER_NAME":          AzureProps.ClusterName,
 		"AZURE_REGION":          AzureProps.Location,
 		"SSH_KEY_ID":            AzureProps.SshPrivateKey,
+		"SSH_USERNAME":          AzureProps.SshUserName,
 		"AZURE_IMAGE_ID":        AzureProps.ImageID,
 		"AZURE_SUBNET_ID":       AzureProps.SubnetID,
 		"AZURE_INSTANCE_SIZE":   AzureProps.InstanceSize,
@@ -358,7 +359,7 @@ func (p *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Contex
 
 func isAzureKustomizeConfigMapKey(key string) bool {
 	switch key {
-	case "CLOUD_PROVIDER", "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID":
+	case "CLOUD_PROVIDER", "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID", "SSH_USERNAME":
 		return true
 	default:
 		return false
