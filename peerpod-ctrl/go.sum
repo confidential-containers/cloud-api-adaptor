@@ -328,6 +328,8 @@ github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u9
 github.com/codahale/rfc6979 v0.0.0-20141003034818-6a90f24967eb/go.mod h1:ZjrT6AXHbDs86ZSdt/osfBi5qfexBrKUdONk989Wnk4=
 github.com/confidential-containers/cloud-api-adaptor v0.5.0-alpha h1:ShEX+d01eLaLv6o9j5yxW/F2iGAZnefFf02yEMZH+IA=
 github.com/confidential-containers/cloud-api-adaptor v0.5.0-alpha/go.mod h1:4809SseMTdYou/4+m5IGaCwqG628e+VPfkEleKtbzr8=
+github.com/confidential-containers/cloud-api-adaptor v0.5.0 h1:CwbGKUzu13s27N1NiYeeqD+Odb3kDJnVpHQGAdu9a2c=
+github.com/confidential-containers/cloud-api-adaptor v0.5.0/go.mod h1:4809SseMTdYou/4+m5IGaCwqG628e+VPfkEleKtbzr8=
 github.com/container-orchestrated-devices/container-device-interface v0.4.0/go.mod h1:E1zcucIkq9P3eyNmY+68dBQsTcsXJh9cgRo2IVNScKQ=
 github.com/containerd/aufs v0.0.0-20200908144142-dab0cbea06f4/go.mod h1:nukgQABAEopAHvB6j7cnP5zJ+/3aVcE7hCYqvIwAHyE=
 github.com/containerd/aufs v0.0.0-20201003224125-76a6863f2989/go.mod h1:AkGGQs9NM2vtYHaUen+NljV0/baGCAPELGm2q9ZXpWU=
