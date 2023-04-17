@@ -101,7 +101,7 @@ func (config *CloudConfig) Generate() (string, error) {
 
 func AuthJSONToResourcesJSON(text string) string {
 	var buf bytes.Buffer
-	tpl := template.Must(template.New("cerdTpl").Parse("{\"Credential\":\"{{.EncodedAuth}}\"}"))
+	tpl := template.Must(template.New("cerdTpl").Parse("{\"default/credential/test\":\"{{.EncodedAuth}}\"}"))
 	if err := tpl.Execute(&buf, struct{ EncodedAuth string }{base64.StdEncoding.EncodeToString([]byte(text))}); err != nil {
 		return ""
 	}
