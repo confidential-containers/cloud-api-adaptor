@@ -44,6 +44,12 @@ import (
 	ccv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peerpodconfig-ctrl/api/v1alpha1"
 )
 
+const (
+	// Name of env var containing the cloud-api-adaptor image name
+	CloudApiAdaptorImageEnvName = "CAA_IMAGE"
+	DefaultCloudApiAdaptorImage = "quay.io/confidential-containers/cloud-api-adaptor"
+)
+
 // PeerPodConfigReconciler reconciles a PeerPodConfig object
 type PeerPodConfigReconciler struct {
 	client.Client
@@ -186,6 +192,12 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 		nodeSelector = *r.peerPodConfig.Spec.LabelSelector
 	}
 
+	imageString := os.Getenv(CloudApiAdaptorImageEnvName)
+	if imageString == "" {
+		imageString = DefaultCloudApiAdaptorImage
+	}
+	r.Log.Info("Using image (%s) for cloud-api-adaptor", imageString)
+
 	return &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -218,9 +230,8 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 					HostNetwork:        true,
 					Containers: []corev1.Container{
 						{
-							Name: "cc-runtime-install-pod",
-							// TODO make configurable via env var
-							Image:           "quay.io/confidential-containers/cloud-api-adaptor-" + cloudProviderName + ":latest",
+							Name:            "cc-runtime-install-pod",
+							Image:           imageString,
 							ImagePullPolicy: "Always",
 							SecurityContext: &corev1.SecurityContext{
 								// TODO - do we really need to run as root?
