@@ -3,7 +3,7 @@
 #
 # Build and push container images for each cloud provider.
 ---
-name: daily e2e test for ibmcloud (amd64)
+name: daily e2e tests for ibmcloud
 on:
   schedule:
     # Runs "at 05:00(UTC time) every day" (see https://crontab.guru)
@@ -13,22 +13,20 @@ on:
     branches:    
       - daily-e2e-ibmcloud
       - develop
-env:
-  go_version: 1.19
 
 jobs:
-  daily-e2e-amd64:
-    name: daily e2e test for ibmcloud with operator
+  daily-e2e-tests:
+    name: e2e tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      matrix:
+        include:
+          - type: amd64
+          - type: s390x
     steps:
       - name: Checkout the code
         uses: actions/checkout@v3
-      - name: Setup Golang version ${{ matrix.go_version }}
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ matrix.go_version }}
       - name: Install dependencies
         run: |
           sudo apt-get update -y
@@ -38,7 +36,7 @@ jobs:
           curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
           echo "Install COS Plugin"
           ibmcloud plugin install cloud-object-storage -f
-      - name: Config IBM E2E COS
+      - name: Config IBM COS
         run: |
           ibmcloud cos config crn --crn $crn --force | grep -v ^FAILED$ || exit 1
           ibmcloud cos config auth --method HMAC | grep -v ^FAILED$ || exit 1
@@ -50,19 +48,19 @@ jobs:
           endpoint: "https://s3.jp-tok.cloud-object-storage.appdomain.cloud"
           access_key_id: ${{ secrets.IBM_E2E_COS_ACCESS_KEY_ID }}
           secret_access_key: ${{ secrets.IBM_E2E_COS_SECRET_ACCESS_KEY }}
-      - name: Check ibmcloud e2e test result
+      - name: Check e2e test result
         run: |
           date_name=$(date +"%y%m%d")
           echo $date_name
-          log_name=$(ibmcloud cos objects --bucket $bucket_name |grep $date_name |grep amd64 | awk 'END { print $1 }')
+          log_name=$(ibmcloud cos objects --bucket $bucket_name |grep $date_name |grep ${{matrix.type}} | awk 'END { print $1 }')
           echo $log_name
           ibmcloud cos object-get --bucket daily-e2e-test-bucket --key=$log_name $log_name
           cat $log_name
           last_line=$(awk 'END {print}' $log_name)
           if [[ $last_line = "Finished: SUCCESS" ]]; then
-            echo "ibmcloud e2e test(amd64) is passed."
+            echo "ibmcloud e2e test (${{matrix.type}}) is passed."
           else
-            echo "ibmcloud e2e test(amd64) is failed."
+            echo "ibmcloud e2e test (${{matrix.type}}) is failed."
             exit 2
           fi
         env:
