@@ -196,7 +196,7 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 	if imageString == "" {
 		imageString = DefaultCloudApiAdaptorImage
 	}
-	r.Log.Info("Using image (%s) for cloud-api-adaptor", imageString)
+	r.Log.Info("cloud-api-adaptor container image was set", "CAA image", imageString)
 
 	return &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
