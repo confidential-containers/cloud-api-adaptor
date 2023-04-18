@@ -20,6 +20,7 @@ import (
 )
 
 type IBMCloudProperties struct {
+	IBMCloudProvider  string
 	ApiKey            string
 	Bucket            string
 	ClusterName       string
@@ -59,6 +60,7 @@ var IBMCloudProps = &IBMCloudProperties{}
 
 func initProperties(properties map[string]string) error {
 	IBMCloudProps = &IBMCloudProperties{
+		IBMCloudProvider:  properties["IBMCLOUD_PROVIDER"],
 		ApiKey:            properties["APIKEY"],
 		Bucket:            properties["COS_BUCKET"],
 		ClusterName:       properties["CLUSTER_NAME"],
@@ -87,6 +89,9 @@ func initProperties(properties map[string]string) error {
 		VpcID:             properties["VPC_ID"],
 	}
 
+	if len(IBMCloudProps.IBMCloudProvider) <= 0 {
+		IBMCloudProps.IBMCloudProvider = "ibmcloud"
+	}
 	if len(IBMCloudProps.ClusterName) <= 0 {
 		IBMCloudProps.ClusterName = "e2e-test-cluster"
 	}

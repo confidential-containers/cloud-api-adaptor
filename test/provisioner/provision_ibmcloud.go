@@ -920,7 +920,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 
 func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
-		"CLOUD_PROVIDER":                       "ibmcloud",
+		"CLOUD_PROVIDER":                       IBMCloudProps.IBMCloudProvider,
 		"IBMCLOUD_VPC_ENDPOINT":                IBMCloudProps.VpcServiceURL,
 		"IBMCLOUD_RESOURCE_GROUP_ID":           IBMCloudProps.ResourceGroupID,
 		"IBMCLOUD_SSH_KEY_ID":                  IBMCloudProps.SshKeyID,
