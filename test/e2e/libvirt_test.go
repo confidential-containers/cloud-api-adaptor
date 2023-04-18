@@ -13,6 +13,16 @@ func TestLibvirtCreateSimplePod(t *testing.T) {
 	doTestCreateSimplePod(t, assert)
 }
 
+func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
+	assert := LibvirtAssert{}
+	doTestCreatePodWithConfigMap(t, assert)
+}
+
+func TestLibvirtCreatePodWithSecret(t *testing.T) {
+	assert := LibvirtAssert{}
+	doTestCreatePodWithSecret(t, assert)
+}
+
 // LibvirtAssert implements the CloudAssert interface for Libvirt.
 type LibvirtAssert struct {
 	// TODO: create the connection once on the initializer.
