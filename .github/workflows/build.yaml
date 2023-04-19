@@ -1,7 +1,7 @@
 # (C) Copyright Confidential Containers Contributors
 # # SPDX-License-Identifier: Apache-2.0
 #
-# Build and run unit tests the project for each cloud provider.
+# Build binary and run unit tests
 ---
 name: build
 on: [pull_request]
@@ -12,17 +12,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        provider:
-          # Please keep this list in alphabetical order.
-          - aws
-          - azure
-          - ibmcloud
-          - libvirt
-          - vsphere
+        type:
+          - dev
+          - release
         runner:
           - ubuntu-latest
         go_version:
           - 1.19
+
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v3
@@ -31,25 +28,31 @@ jobs:
         with:
           go-version: ${{ matrix.go_version }}
       - name: Install build dependencies
+        if: matrix.type == 'dev'
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libvirt-dev
       - name: Build
         run: |
-          # Build each provider separately
-          make BUILTIN_CLOUD_PROVIDERS="${{ matrix.provider }}" build
+          # Build the binaries 
+          if [ ${{ matrix.type }} == "release" ]; then
+            RELEASE_BUILD=true make build
+          else
+            RELEASE_BUILD=false make build
+          fi
       - name: Test
+        if: matrix.type == 'dev'
         run: |
           go install github.com/jstemmer/go-junit-report@v1.0.0
           export CI="true"
-          sudo -E env PATH="$PATH" make CLOUD_PROVIDER=${{ matrix.provider }} test | tee tests_report.txt
+          sudo -E env PATH="$PATH" make test | tee tests_report.txt
           sudo chmod o+rw tests_report.txt
           cat tests_report.txt | $(go env GOPATH)/bin/go-junit-report -set-exit-code > tests_report_junit.xml
         shell: bash
       - name: Upload tests report
         uses: actions/upload-artifact@v3
-        if: always()
+        if: matrix.type == 'dev'
         with:
-          name: tests_report_junit-${{ matrix.provider }}_${{ matrix.runner }}_${{ matrix.go_version }}
+          name: tests_report_junit-${{ matrix.runner }}_${{ matrix.go_version }}
           path: ${{ github.workspace }}/tests_report_junit.xml
           retention-days: 1
