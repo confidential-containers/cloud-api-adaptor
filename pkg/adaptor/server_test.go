@@ -93,7 +93,9 @@ func testServerStart(t *testing.T, ctx context.Context) (Server, string, string,
 			serverErrCh <- err
 		}
 	}()
-	time.Sleep(1 * time.Millisecond)
+
+	<-s.Ready()
+
 	select {
 	case err := <-serverErrCh:
 		t.Fatal(err)
