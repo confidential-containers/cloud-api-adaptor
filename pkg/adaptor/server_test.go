@@ -1,16 +1,15 @@
-// (C) Copyright IBM Corp. 2022.
+// (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
+
 package adaptor
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -81,10 +80,9 @@ func TestCreateStartAndStop(t *testing.T) {
 }
 
 func testServerStart(t *testing.T, ctx context.Context) (Server, string, string, pb.HypervisorService, chan error) {
-	dir, err := os.MkdirTemp("", "helper")
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	dir := t.TempDir()
+
 	socketPath := filepath.Join(dir, "hypervisor.sock")
 	s := newServer(t, socketPath, filepath.Join(dir, "pods"))
 
@@ -147,22 +145,16 @@ func startAgentServer(t *testing.T) string {
 }
 
 func newServer(t *testing.T, socketPath, podsDir string) Server {
-	switch strings.ToLower(os.Getenv("USE_IBM_CLOUD")) {
-	case "", "no", "false", "0":
-		port := startAgentServer(t)
-		provider := &mockProvider{}
-		serverConfig := &ServerConfig{
-			SocketPath:    socketPath,
-			PodsDir:       podsDir,
-			ForwarderPort: port,
-			ProxyTimeout:  5 * time.Second,
-		}
-		srv := NewServer(provider, serverConfig, &mockWorkerNode{})
-		return srv
+
+	port := startAgentServer(t)
+	provider := &mockProvider{}
+	serverConfig := &ServerConfig{
+		SocketPath:    socketPath,
+		PodsDir:       podsDir,
+		ForwarderPort: port,
+		ProxyTimeout:  5 * time.Second,
 	}
-	log.Print("Using IBM Cloud...")
-	t.Fatal("Error: Server Test using IBM Cloud is not yet implemented")
-	return nil
+	return NewServer(provider, serverConfig, &mockWorkerNode{})
 }
 
 func testServerShutdown(t *testing.T, s Server, socketPath, dir string, serverErrCh chan error) {
