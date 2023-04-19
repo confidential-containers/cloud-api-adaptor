@@ -22,6 +22,20 @@ func TestCreateSimplePodAzure(t *testing.T) {
 	doTestCreateSimplePod(t, assert)
 }
 
+func TestCreatePodWithConfigMapAzure(t *testing.T) {
+	assert := AzureCloudAssert{
+		group: pv.AzureProps.ResourceGroup,
+	}
+	doTestCreatePodWithConfigMap(t, assert)
+}
+
+func TestCreatePodWithSecretAzure(t *testing.T) {
+	assert := AzureCloudAssert{
+		group: pv.AzureProps.ResourceGroup,
+	}
+	doTestCreatePodWithSecret(t, assert)
+}
+
 // AzureCloudAssert implements the CloudAssert interface for azure.
 type AzureCloudAssert struct {
 	group *resources.Group
