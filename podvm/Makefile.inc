@@ -124,7 +124,7 @@ $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 
 $(ATTESTATION_AGENT_SRC):
 	git clone --depth=1 "$(ATTESTATION_AGENT_REPO)" "$(ATTESTATION_AGENT_SRC)"
-	cd "$(ATTESTATION_AGENT_SRC)" && git fetch --depth=1 origin "$(AA_VERSION)"
+	cd "$(ATTESTATION_AGENT_SRC)" && git fetch --depth=1 origin "$(AA_VERSION)" && git checkout FETCH_HEAD
 
 $(ATTESTATION_AGENT): $(ATTESTATION_AGENT_SRC)
 	cd "$(ATTESTATION_AGENT_SRC)" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" ttrpc=true LIBC="$(LIBC)"
