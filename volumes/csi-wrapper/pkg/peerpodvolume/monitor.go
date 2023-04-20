@@ -2,7 +2,6 @@ package peerpodvolume
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
@@ -11,7 +10,7 @@ import (
 	informers "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/informers/externalversions"
 )
 
-var logger = log.New(log.Writer(), "[peerpodvolume/monitor] ", log.LstdFlags|log.Lmsgprefix)
+// var logger = log.New(log.Writer(), "[peerpodvolume/monitor] ", log.LstdFlags|log.Lmsgprefix)
 
 type CsiPodVolumeMonitor interface {
 	Start(context.Context) error
@@ -65,7 +64,7 @@ func (m *csiPodVolumeMonitor) Start(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		m.Shutdown()
+		_ = m.Shutdown() // TODO: error check
 	case <-m.stopCh:
 	}
 

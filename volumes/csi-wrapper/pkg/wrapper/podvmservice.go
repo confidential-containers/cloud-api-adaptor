@@ -16,6 +16,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/jsonpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,15 +35,15 @@ func NewPodVMNodeService(targetEndpoint, namespace string, peerpodvolumeClientSe
 }
 
 func (s *PodVMNodeService) redirect(ctx context.Context, req interface{}, fn func(context.Context, csi.NodeClient)) error {
-	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		glog.Error("failed to connect s.TargetEndpoint: %v, err:%v", s.TargetEndpoint, err)
+		glog.Errorf("failed to connect s.TargetEndpoint: %v, err:%v", s.TargetEndpoint, err)
 		return err
 	}
 	defer conn.Close()
 
 	client := csi.NewNodeClient(conn)
-	glog.Info("NewNodeClient client: %v", client)
+	glog.Infof("NewNodeClient client: %v", client)
 	fn(ctx, client)
 
 	return nil
@@ -133,7 +134,7 @@ func (s *PodVMNodeService) ReproduceNodeStageVolume(peerPodVolume *peerpodvolume
 	wrapperRequest := peerPodVolume.Spec.WrapperNodeStageVolumeReq
 	var modifiedRequest csi.NodeStageVolumeRequest
 	if err := (&jsonpb.Unmarshaler{}).Unmarshal(bytes.NewReader([]byte(wrapperRequest)), &modifiedRequest); err != nil {
-		glog.Error("Failed to convert to NodeStageVolumeRequest, err: %v", err.Error())
+		glog.Errorf("Failed to convert to NodeStageVolumeRequest, err: %v", err.Error())
 	} else {
 		modifiedRequest.PublishContext["device-path"] = peerPodVolume.Spec.DevicePath
 		glog.Infof("The modified NodeStageVolumeRequest is :%v", modifiedRequest)
@@ -141,19 +142,20 @@ func (s *PodVMNodeService) ReproduceNodeStageVolume(peerPodVolume *peerpodvolume
 		count := 0
 		reproduced := false
 		for {
-			glog.Info("start to Reproducing NodeStageVolumeRequest for peer pod (retrying... %d/%d)", count, 20)
-			s.redirect(ctx, modifiedRequest, func(ctx context.Context, client csi.NodeClient) {
+			glog.Infof("start to Reproducing NodeStageVolumeRequest for peer pod (retrying... %d/%d)", count, 20)
+			// TODO: error check
+			_ = s.redirect(ctx, modifiedRequest, func(ctx context.Context, client csi.NodeClient) {
 				response, err := client.NodeStageVolume(ctx, &modifiedRequest)
 				glog.Infof("The NodeStageVolumeResponse for peer pod is :%v", response)
 				if err != nil {
-					glog.Error("Failed to reproduce NodeStageVolume with modified NodeStageVolumeRequest, err: %v", err.Error())
+					glog.Errorf("Failed to reproduce NodeStageVolume with modified NodeStageVolumeRequest, err: %v", err.Error())
 				} else {
 					peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
 						State: v1alpha1.NodeStageVolumeApplied,
 					}
 					_, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 					if err != nil {
-						glog.Error("Error happens while Update PeerpodVolume status to NodeStageVolumeApplied, err: %v", err.Error())
+						glog.Errorf("Error happens while Update PeerpodVolume status to NodeStageVolumeApplied, err: %v", err.Error())
 					} else {
 						reproduced = true
 					}
@@ -166,7 +168,7 @@ func (s *PodVMNodeService) ReproduceNodeStageVolume(peerPodVolume *peerpodvolume
 			if reproduced {
 				break
 			}
-			glog.Info("failed to Reproducing NodeStageVolumeRequest for peer pod (retrying... %d/%d)", count, 20)
+			glog.Infof("failed to Reproducing NodeStageVolumeRequest for peer pod (retrying... %d/%d)", count, 20)
 			count++
 		}
 
@@ -178,26 +180,27 @@ func (s *PodVMNodeService) ReproduceNodePublishVolume(peerPodVolume *peerpodvolu
 	wrapperRequest := peerPodVolume.Spec.WrapperNodePublishVolumeReq
 	var nodePublishVolumeRequest csi.NodePublishVolumeRequest
 	if err := (&jsonpb.Unmarshaler{}).Unmarshal(bytes.NewReader([]byte(wrapperRequest)), &nodePublishVolumeRequest); err != nil {
-		glog.Error("Failed to convert to NodePublishVolumeRequest, err: %v", err.Error())
+		glog.Errorf("Failed to convert to NodePublishVolumeRequest, err: %v", err.Error())
 	} else {
 		glog.Infof("The NodePublishVolumeRequest is :%v", nodePublishVolumeRequest)
 		ctx := context.Background()
 		count := 0
 		reproduced := false
 		for {
-			glog.Info("start to Reproducing nodePublishVolumeRequest for peer pod (retrying... %d/%d)", count, 20)
-			s.redirect(ctx, nodePublishVolumeRequest, func(ctx context.Context, client csi.NodeClient) {
+			glog.Infof("start to Reproducing nodePublishVolumeRequest for peer pod (retrying... %d/%d)", count, 20)
+			// TODO: error check
+			_ = s.redirect(ctx, nodePublishVolumeRequest, func(ctx context.Context, client csi.NodeClient) {
 				response, err := client.NodePublishVolume(ctx, &nodePublishVolumeRequest)
 				glog.Infof("The NodePublishVolumeResponse for peer pod is :%v", response)
 				if err != nil {
-					glog.Error("Failed to reproduce NodePublishVolume with the NodePublishVolumeRequest, err: %v", err.Error())
+					glog.Errorf("Failed to reproduce NodePublishVolume with the NodePublishVolumeRequest, err: %v", err.Error())
 				} else {
 					peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
 						State: v1alpha1.NodePublishVolumeApplied,
 					}
 					_, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 					if err != nil {
-						glog.Error("Error happens while Update PeerpodVolume status to NodePublishVolumeApplied, err: %v", err.Error())
+						glog.Errorf("Error happens while Update PeerpodVolume status to NodePublishVolumeApplied, err: %v", err.Error())
 					} else {
 						reproduced = true
 					}
@@ -210,7 +213,7 @@ func (s *PodVMNodeService) ReproduceNodePublishVolume(peerPodVolume *peerpodvolu
 			if reproduced {
 				break
 			}
-			glog.Info("failed to Reproducing nodePublishVolumeRequest for peer pod (retrying... %d/%d)", count, 20)
+			glog.Infof("failed to Reproducing nodePublishVolumeRequest for peer pod (retrying... %d/%d)", count, 20)
 			count++
 		}
 	}
@@ -221,21 +224,22 @@ func (s *PodVMNodeService) ReproduceNodeUnpublishVolume(peerPodVolume *peerpodvo
 	wrapperRequest := peerPodVolume.Spec.WrapperNodeUnpublishVolumeReq
 	var nodeUnpublishVolumeRequest csi.NodeUnpublishVolumeRequest
 	if err := (&jsonpb.Unmarshaler{}).Unmarshal(bytes.NewReader([]byte(wrapperRequest)), &nodeUnpublishVolumeRequest); err != nil {
-		glog.Error("Failed to convert to NodeUnpublishVolumeRequest, err: %v", err.Error())
+		glog.Errorf("Failed to convert to NodeUnpublishVolumeRequest, err: %v", err.Error())
 	} else {
 		glog.Infof("The NodeUnpublishVolumeRequest is :%v", nodeUnpublishVolumeRequest)
 		ctx := context.Background()
-		s.redirect(ctx, nodeUnpublishVolumeRequest, func(ctx context.Context, client csi.NodeClient) {
+		// TODO: error check
+		_ = s.redirect(ctx, nodeUnpublishVolumeRequest, func(ctx context.Context, client csi.NodeClient) {
 			response, err := client.NodeUnpublishVolume(ctx, &nodeUnpublishVolumeRequest)
 			if err != nil {
-				glog.Error("Failed to reproduce NodeUnpublishVolume with the NodeUnpublishVolumeRequest, err: %v", err.Error())
+				glog.Errorf("Failed to reproduce NodeUnpublishVolume with the NodeUnpublishVolumeRequest, err: %v", err.Error())
 			} else {
 				peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
 					State: v1alpha1.NodeUnpublishVolumeApplied,
 				}
 				_, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 				if err != nil {
-					glog.Error("Error happens while Update PeerpodVolume status to NodeUnpublishVolumeApplied, err: %v", err.Error())
+					glog.Errorf("Error happens while Update PeerpodVolume status to NodeUnpublishVolumeApplied, err: %v", err.Error())
 				}
 				glog.Infof("The NodeUnpublishVolumeResponse for peer pod is :%v", response)
 			}
@@ -248,21 +252,22 @@ func (s *PodVMNodeService) ReproduceNodeUnstageVolume(peerPodVolume *peerpodvolu
 	wrapperRequest := peerPodVolume.Spec.WrapperNodeUnstageVolumeReq
 	var nodeUnstageVolumeRequest csi.NodeUnstageVolumeRequest
 	if err := (&jsonpb.Unmarshaler{}).Unmarshal(bytes.NewReader([]byte(wrapperRequest)), &nodeUnstageVolumeRequest); err != nil {
-		glog.Error("Failed to convert to NodeUnstageVolumeRequest, err: %v", err.Error())
+		glog.Errorf("Failed to convert to NodeUnstageVolumeRequest, err: %v", err.Error())
 	} else {
 		glog.Infof("The NodeUnstageVolumeRequest is :%v", nodeUnstageVolumeRequest)
 		ctx := context.Background()
-		s.redirect(ctx, nodeUnstageVolumeRequest, func(ctx context.Context, client csi.NodeClient) {
+		// TODO: error check
+		_ = s.redirect(ctx, nodeUnstageVolumeRequest, func(ctx context.Context, client csi.NodeClient) {
 			response, err := client.NodeUnstageVolume(ctx, &nodeUnstageVolumeRequest)
 			if err != nil {
-				glog.Error("Failed to reproduce NodeUnstageVolume with the NodeUnstageVolumeRequest, err: %v", err.Error())
+				glog.Errorf("Failed to reproduce NodeUnstageVolume with the NodeUnstageVolumeRequest, err: %v", err.Error())
 			} else {
 				peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
 					State: v1alpha1.NodeUnstageVolumeApplied,
 				}
 				_, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 				if err != nil {
-					glog.Error("Error happens while Update PeerpodVolume status to NodeUnstageVolumeApplied, err: %v", err.Error())
+					glog.Errorf("Error happens while Update PeerpodVolume status to NodeUnstageVolumeApplied, err: %v", err.Error())
 				}
 				glog.Infof("The NodeUnstageVolumeResponse for peer pod is :%v", response)
 			}

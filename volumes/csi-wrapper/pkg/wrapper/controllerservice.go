@@ -17,6 +17,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/jsonpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -55,7 +56,7 @@ func NewControllerService(targetEndpoint, namespace string, peerpodvolumeClientS
 }
 
 func (s *ControllerService) redirect(ctx context.Context, req interface{}, fn func(context.Context, csi.ControllerClient)) error {
-	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
@@ -99,7 +100,7 @@ func (s *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 			_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Create(context.Background(), newPeerpodvolume, metav1.CreateOptions{})
 			if err != nil {
-				glog.Error("Error happens while creating peerPodVolume with volumeID: %v, err: %v", volumeID, err.Error())
+				glog.Errorf("Error happens while creating peerPodVolume with volumeID: %v, err: %v", volumeID, err.Error())
 			} else {
 				glog.Infof("Peerpodvolume object is created")
 			}
@@ -122,7 +123,7 @@ func (s *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		} else {
 			ppErr := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Delete(context.Background(), volumeID, metav1.DeleteOptions{})
 			if ppErr != nil {
-				glog.Warning("Failed to delete to Peerpodvolume by volumeID: %v, err: %v", volumeID, ppErr.Error())
+				glog.Warningf("Failed to delete to Peerpodvolume by volumeID: %v, err: %v", volumeID, ppErr.Error())
 			} else {
 				glog.Infof("The peerPodVolume is deleted, volumeID: %v", volumeID)
 			}
@@ -179,7 +180,7 @@ func (s *ControllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		savedPeerpodvolume.Spec.WrapperControllerPublishVolumeRes = string(resJsonString)
 		savedPeerpodvolume, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while Update PeerpodVolume in ControllerPublishVolume, err: %v", err.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume in ControllerPublishVolume, err: %v", err.Error())
 			return
 		}
 		savedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
@@ -187,7 +188,7 @@ func (s *ControllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		}
 		_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while Update PeerpodVolume status to ControllerPublishVolumeCached, err: %v", err.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume status to ControllerPublishVolumeCached, err: %v", err.Error())
 		}
 	}
 	return
@@ -210,10 +211,11 @@ func (s *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *
 			req.NodeId = savedPeerpodvolume.Spec.VMID
 			glog.Infof("The modified ControllerUnpublishVolumeRequest is :%v", req)
 			ctx := context.Background()
-			s.redirect(ctx, req, func(ctx context.Context, client csi.ControllerClient) {
+			// TODO: error check
+			_ = s.redirect(ctx, req, func(ctx context.Context, client csi.ControllerClient) {
 				response, err := client.ControllerUnpublishVolume(ctx, req)
 				if err != nil {
-					glog.Error("Failed to run ControllerUnpublishVolume with modified ControllerUnpublishVolume, err: %v", err.Error())
+					glog.Errorf("Failed to run ControllerUnpublishVolume with modified ControllerUnpublishVolume, err: %v", err.Error())
 				} else {
 					glog.Infof("The ControllerUnpublishVolumeResponse for peer pod is :%v", response)
 				}
@@ -242,7 +244,7 @@ func (s *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		savedPeerpodvolume.Spec.WrapperNodeUnstageVolumeReq = ""
 		updatedSavedPeerpodvolume, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while clean PeerpodVolume specs, err: %v", err.Error())
+			glog.Errorf("Error happens while clean PeerpodVolume specs, err: %v", err.Error())
 		}
 
 		updatedSavedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
@@ -250,7 +252,7 @@ func (s *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		}
 		_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), updatedSavedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while Update PeerpodVolume status to ControllerUnpublishVolumeApplied, err: %v", err.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume status to ControllerUnpublishVolumeApplied, err: %v", err.Error())
 		}
 
 		res = &csi.ControllerUnpublishVolumeResponse{}
@@ -359,15 +361,16 @@ func (s *ControllerService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.Pee
 		wrapperRequest := peerPodVolume.Spec.WrapperControllerPublishVolumeReq
 		var modifiedRequest csi.ControllerPublishVolumeRequest
 		if err := (&jsonpb.Unmarshaler{}).Unmarshal(bytes.NewReader([]byte(wrapperRequest)), &modifiedRequest); err != nil {
-			glog.Error("Failed to convert to ControllerPublishVolumeRequest, err: %v", err.Error())
+			glog.Errorf("Failed to convert to ControllerPublishVolumeRequest, err: %v", err.Error())
 		} else {
 			modifiedRequest.NodeId = vsiID
 			glog.Infof("The modified ControllerPublishVolumeRequest is :%v", modifiedRequest)
 			ctx := context.Background()
-			s.redirect(ctx, modifiedRequest, func(ctx context.Context, client csi.ControllerClient) {
+			// TODO: error check
+			_ = s.redirect(ctx, modifiedRequest, func(ctx context.Context, client csi.ControllerClient) {
 				response, err := client.ControllerPublishVolume(ctx, &modifiedRequest)
 				if err != nil {
-					glog.Error("Failed to reproduce ControllerPublishVolume with modified ControllerPublishVolumeRequest, err: %v", err.Error())
+					glog.Errorf("Failed to reproduce ControllerPublishVolume with modified ControllerPublishVolumeRequest, err: %v", err.Error())
 				} else {
 					glog.Infof("The ControllerPublishVolumeResponse for peer pod is :%v", response)
 					var resBuf bytes.Buffer
@@ -382,7 +385,7 @@ func (s *ControllerService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.Pee
 					peerPodVolume.Spec.DevicePath = devicePath
 					updatedPeerPodVolume, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 					if err != nil {
-						glog.Error("Error happens while Update PeerpodVolume with ControllerPublishVolumeResponse for peer pod, err: %v", err.Error())
+						glog.Errorf("Error happens while Update PeerpodVolume with ControllerPublishVolumeResponse for peer pod, err: %v", err.Error())
 						return
 					}
 					updatedPeerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
@@ -390,7 +393,7 @@ func (s *ControllerService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.Pee
 					}
 					_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), updatedPeerPodVolume, metav1.UpdateOptions{})
 					if err != nil {
-						glog.Error("Error happens while Update PeerpodVolume status to ControllerPublishVolumeApplied, err: %v", err.Error())
+						glog.Errorf("Error happens while Update PeerpodVolume status to ControllerPublishVolumeApplied, err: %v", err.Error())
 					}
 				}
 			})
