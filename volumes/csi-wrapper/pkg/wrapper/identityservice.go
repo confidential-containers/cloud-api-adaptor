@@ -9,6 +9,7 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type IdentityService struct {
@@ -22,7 +23,7 @@ func NewIdentityService(targetEndpoint string) *IdentityService {
 }
 
 func (s *IdentityService) redirect(ctx context.Context, req interface{}, fn func(context.Context, csi.IdentityClient)) error {
-	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}

@@ -23,6 +23,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/jsonpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -42,14 +43,14 @@ type NodeService struct {
 func addKataDirectVolume(volumePath string) {
 	err := volume.Add(volumePath, DefaultMountInfo)
 	if err != nil {
-		glog.Warning("Failed to add kata direct volume: %v", err.Error())
+		glog.Warningf("Failed to add kata direct volume: %v", err.Error())
 	}
 }
 
 func removeKataDirectVolume(volumePath string) {
 	err := volume.Remove(volumePath)
 	if err != nil {
-		glog.Warning("Failed to remove kata direct volume: %v", err.Error())
+		glog.Warningf("Failed to remove kata direct volume: %v", err.Error())
 	}
 }
 
@@ -66,7 +67,7 @@ func NewNodeService(targetEndpoint, namespace string, peerpodvolumeClientSet *pe
 }
 
 func (s *NodeService) redirect(ctx context.Context, req interface{}, fn func(context.Context, csi.NodeClient)) error {
-	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
@@ -105,7 +106,7 @@ func (s *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		targetPath := req.GetTargetPath()
 		osErr := os.MkdirAll(targetPath, os.FileMode(0755))
 		if osErr != nil {
-			glog.Warning("Failed to create fake targetPath, err is: %v", osErr)
+			glog.Warningf("Failed to create fake targetPath, err is: %v", osErr)
 		}
 		glog.Infof("The stagingTargetPath is :%v", stagingTargetPath)
 		glog.Infof("The targetPath is :%v", targetPath)
@@ -130,16 +131,17 @@ func (s *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		savedPeerpodvolume.Spec.WrapperNodePublishVolumeReq = nodePublishVolumeRequest
 		_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while Update PeerpodVolume, err: %v", err.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume, err: %v", err.Error())
 			return
 		}
-		savedPeerpodvolume, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Get(context.Background(), volumeID, metav1.GetOptions{})
+		// TODO: error check
+		savedPeerpodvolume, _ = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Get(context.Background(), volumeID, metav1.GetOptions{})
 		savedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
 			State: v1alpha1.NodePublishVolumeCached,
 		}
 		_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while Update PeerpodVolume status to NodePublishVolumeCached, err: %v", err.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume status to NodePublishVolumeCached, err: %v", err.Error())
 			return
 		}
 
@@ -165,7 +167,7 @@ func (s *NodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		glog.Infof("The targetPath is :%v", targetPath)
 		osErr := os.RemoveAll(targetPath)
 		if osErr != nil {
-			glog.Warning("Failed to remove fake targetPath, err is: %v", osErr)
+			glog.Warningf("Failed to remove fake targetPath, err is: %v", osErr)
 		}
 
 		removeKataDirectVolume(targetPath)
@@ -180,7 +182,7 @@ func (s *NodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		savedPeerpodvolume.Spec.WrapperNodeUnpublishVolumeReq = nodeUnpublishVolumeRequest
 		updatedPeerpodvolume, upErr := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if upErr != nil {
-			glog.Error("Error happens while Update PeerpodVolume, err: %v", upErr.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume, err: %v", upErr.Error())
 			return nil, upErr
 		}
 		updatedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
@@ -188,7 +190,7 @@ func (s *NodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		}
 		_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while Update PeerpodVolume status to NodeUnpublishVolumeCached, err: %v", err.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume status to NodeUnpublishVolumeCached, err: %v", err.Error())
 			return
 		}
 
@@ -212,7 +214,7 @@ func (s *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		// Create empty dummy folders on worker node
 		publishContext := req.GetPublishContext()
 		stagingTargetPath := req.GetStagingTargetPath()
-		os.MkdirAll(stagingTargetPath, os.FileMode(0755))
+		_ = os.MkdirAll(stagingTargetPath, os.FileMode(0755)) // TODO: error check
 		glog.Infof("The stagingTargetPath for volume %v is :%v", volumeID, stagingTargetPath)
 		glog.Infof("The publishContext is :%v", publishContext)
 
@@ -226,16 +228,17 @@ func (s *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		savedPeerpodvolume.Spec.WrapperNodeStageVolumeReq = nodeStageVolumeRequest
 		_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while Update PeerpodVolume, err: %v", err.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume, err: %v", err.Error())
 			return
 		}
-		savedPeerpodvolume, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Get(context.Background(), volumeID, metav1.GetOptions{})
+		// TODO: error check
+		savedPeerpodvolume, _ = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Get(context.Background(), volumeID, metav1.GetOptions{})
 		savedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
 			State: v1alpha1.NodeStageVolumeCached,
 		}
 		_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while Update PeerpodVolume status to NodeStageVolumeCached, err: %v", err.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume status to NodeStageVolumeCached, err: %v", err.Error())
 			return
 		}
 
@@ -261,7 +264,7 @@ func (s *NodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 		glog.Infof("The stagingTargetPath for volume %v is :%v", volumeID, stagingTargetPath)
 		osErr := os.RemoveAll(stagingTargetPath)
 		if osErr != nil {
-			glog.Warning("Failed to remove fake stagingTargetPath for volume %v, err is: %v", volumeID, osErr)
+			glog.Warningf("Failed to remove fake stagingTargetPath for volume %v, err is: %v", volumeID, osErr)
 		}
 
 		var reqBuf bytes.Buffer
@@ -274,7 +277,7 @@ func (s *NodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 		savedPeerpodvolume.Spec.WrapperNodeUnstageVolumeReq = nodeUnstageVolumeRequest
 		updatedPeerpodvolume, upErr := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if upErr != nil {
-			glog.Error("Error happens while Update PeerpodVolume, err: %v", upErr.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume, err: %v", upErr.Error())
 			return nil, upErr
 		}
 		updatedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
@@ -282,7 +285,7 @@ func (s *NodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 		}
 		_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
-			glog.Error("Error happens while Update PeerpodVolume status to NodeUnstageVolumeCached, err: %v", err.Error())
+			glog.Errorf("Error happens while Update PeerpodVolume status to NodeUnstageVolumeCached, err: %v", err.Error())
 			return
 		}
 
@@ -348,17 +351,17 @@ func (s *NodeService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVo
 			PodNamespace: peerPodVolume.Spec.PodNamespace,
 			Wait:         false,
 		}
-		glog.Info("The get VM ID information request is: %v", req)
+		glog.Infof("The get VM ID information request is: %v", req)
 		conn, err := net.Dial("unix", s.VMIDInformationEndpoint)
 		if err != nil {
-			glog.Fatalf("Connect to vm id information service failed: %w", err)
+			glog.Fatalf("Connect to vm id information service failed: %v", err)
 		}
 		ttrpcClient := ttrpc.NewClient(conn)
 		defer ttrpcClient.Close()
 		podVMInfoClient := podvminfo.NewPodVMInfoClient(ttrpcClient)
 		res, err := podVMInfoClient.GetInfo(context.Background(), req)
 		if err != nil {
-			glog.Error("Error happens while get VM ID information, err: %v", err.Error())
+			glog.Errorf("Error happens while get VM ID information, err: %v", err.Error())
 		} else {
 			vmID := res.VMID
 			glog.Infof("Got the vm instance id from cloud-api-adaptor podVMInfoService vmID:%v", vmID)
@@ -366,14 +369,14 @@ func (s *NodeService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVo
 			peerPodVolume.Labels["vmID"] = vmID
 			updatedPeerPodVolume, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 			if err != nil {
-				glog.Error("Error happens while Update vmID to PeerpodVolume, err: %v", err.Error())
+				glog.Errorf("Error happens while Update vmID to PeerpodVolume, err: %v", err.Error())
 			}
 			updatedPeerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
 				State: v1alpha1.PeerPodVSIIDReady,
 			}
 			_, err = s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), updatedPeerPodVolume, metav1.UpdateOptions{})
 			if err != nil {
-				glog.Error("Error happens while Update PeerpodVolume status to PeerPodVSIIDReady, err: %v", err.Error())
+				glog.Errorf("Error happens while Update PeerpodVolume status to PeerPodVSIIDReady, err: %v", err.Error())
 			}
 			glog.Infof("The PeerpodVolume status updated to PeerPodVSIIDReady")
 		}

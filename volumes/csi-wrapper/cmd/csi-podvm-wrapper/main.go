@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	flag.Set("logtostderr", "true")
+	_ = flag.Set("logtostderr", "true") // TODO: error check
 }
 
 func main() {
@@ -46,7 +46,7 @@ func main() {
 
 	k8sconfig, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		glog.Fatalf("Build kubeconfig failed: %w", err)
+		glog.Fatalf("Build kubeconfig failed: %v", err)
 	}
 	peerPodVolumeClient := peerpodvolumeV1alpha1.NewForConfigOrDie(k8sconfig)
 
@@ -60,11 +60,11 @@ func main() {
 		podvmService.DeleteFunction,
 	)
 	if err != nil {
-		glog.Fatalf("Initialize peer pod Volume Node monitor failed: %w", err)
+		glog.Fatalf("Initialize peer pod Volume Node monitor failed: %v", err)
 	}
 	go func() {
 		if err := podVolumeMonitor.Start(context.Background()); err != nil {
-			glog.Fatalf("Running peer pod Volume Node monitor failed: %w", err)
+			glog.Fatalf("Running peer pod Volume Node monitor failed: %v", err)
 		}
 	}()
 
@@ -74,10 +74,10 @@ func main() {
 	}
 	peerpodVolumes, err := peerPodVolumeClient.PeerpodV1alpha1().PeerpodVolumes(cfg.Namespace).List(context.Background(), options)
 	if err != nil {
-		glog.Fatalf("Failed to get peerpodVolume crd object by podUid: %v, err: %w", podUid, err)
+		glog.Fatalf("Failed to get peerpodVolume crd object by podUid: %v, err: %v", podUid, err)
 	}
 	if len(peerpodVolumes.Items) != 1 {
-		glog.Fatalf("Only one peerpodVolume crd object is expected but got: %w", len(peerpodVolumes.Items))
+		glog.Fatalf("Only one peerpodVolume crd object is expected but got: %v", len(peerpodVolumes.Items))
 	}
 	savedPeerpodvolume := peerpodVolumes.Items[0]
 	savedPeerpodvolume.Spec.PodName = podName
