@@ -270,7 +270,7 @@ issues:
     - 'declaration of "(err|ctx)" shadows declaration at'
 
   # Excluding configuration per-path, per-linter, per-text and per-source
-  #exclude-rules:
+  exclude-rules:
     # Exclude some linters from running on tests files.
     #- path: _test\.go
     #  linters:
@@ -295,6 +295,12 @@ issues:
     #- linters:
     #    - lll
     #  source: "^//go:generate "
+
+    # "github.com/container-storage-interface/spec/lib/go/csi" still uses
+    # "github.com/golang/protobuf", which is the deprecated protobuf V1.
+    - path: ^volumes/csi-wrapper/pkg/wrapper/
+      linters: [staticcheck]
+      text: 'SA1019: "github.com/golang/protobuf/jsonpb" is deprecated: Use the "google.golang.org/protobuf/encoding/protojson" package instead.'
 
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.
