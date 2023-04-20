@@ -10,13 +10,15 @@ In order to build locally it requires the source trees and softwares mentioned i
 
 * On Ubuntu:
 
-  ```$ apt-get install -y qemu-kvm cloud-utils qemu-utils protobuf-compiler pkg-config libdevmapper-dev libgpgme-dev```
+  ```bash
+  $ apt-get install -y qemu-kvm cloud-utils qemu-utils protobuf-compiler pkg-config libdevmapper-dev libgpgme-dev
+  ```
 
 You may need to link the agent with the musl C library. In this case, you should install the musl-tools (Ubuntu) package and setup the Rust toolchain as explained [here](https://github.com/kata-containers/kata-containers/blob/CCv0/src/agent/README.md#build-with-musl).
 
 Finally run the following commands to build the qcow2 image:
 
-```
+```bash
 $ export CLOUD_PROVIDER=[aws|azure|ibmcloud|libvirt]
 $ make image
 ```
@@ -44,7 +46,7 @@ dependent on the Linux distribution the image is built for. Therefore, in this d
 
 As an example, to build the builder image for Ubuntu, run:
 
-```
+```bash
 $ docker build -t podvm_builder \
          -f Dockerfile.podvm_builder .
 ```
@@ -66,12 +68,12 @@ As it can be noted in the table above the cloud-api-adaptor repository is cloned
 copying the local source tree, it will be using the upstream source. But if you want to test local changes then you should:
 
 * Push the changes to your fork in github (e.g. https://github.com/$USER/cloud-api-adaptor/tree/my-changes-in-a-branch).
-* Overwrite the *CAA_SRC* and *CAA_SRC_BRANCH* arguments as shown below:
+* Overwrite the *CAA_SRC* and *CAA_SRC_REF* arguments as shown below:
 
-```
+```bash
 $ docker build -t podvm_builder \
          --build-arg CAA_SRC=https://github.com/$USER/cloud-api-adaptor \
-         --build-arg CAA_SRC_BRANCH=my-changes-in-a-branch \
+         --build-arg CAA_SRC_REF=my-changes-in-a-branch \
          -f Dockerfile.podvm_builder .
 ```
 
@@ -85,7 +87,7 @@ you should use the *Dockerfile.podvm_binaries.DISTRO* to build the image with po
 Assuming you have built the podvm_builder image for Ubuntu as explained in the previous step,
 running the following command will build the image with the podvm binaries.
 
-```
+```bash
 $ docker build -t podvm_binaries \
          --build-arg BUILDER_IMG=podvm_builder \
          -f Dockerfile.podvm_binaries .
@@ -96,7 +98,7 @@ The build process can take significant time.
 The binaries can be built for other architectures than `x86_64` by passing the `ARCH` build
 argument to docker. Currently this is only supported for Ubuntu `s390x` as shown below:
 
-```
+```bash
 $ docker build -t podvm_binaries_s390x \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg ARCH=s390x \
@@ -117,7 +119,7 @@ binaries image has to be indicated via `BINARIES_IMG` build argument to docker.
 Below command will build the qcow2 image that can be used for all cloud providers
 based on Ubuntu distro.
 
-```
+```bash
 $ docker build -t podvm \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries \
@@ -143,11 +145,31 @@ the `ARCH` build argument to docker. Currently this is only supported for
 Ubuntu `s390x`, which also needs the `UBUNTU_IMAGE_URL` and
 `UBUNTU_IMAGE_CHECKSUM` to be overridden with build arguments as shown below:
 
-```
-$ docker build -t podvm-s390x \
+```bash
+$ docker build -t podvm_s390x \
          --build-arg ARCH=s390x \
          --build-arg BUILDER_IMG=podvm_builder \
-         --build-arg BINARIES_IMG=podvm_binaries \
+         --build-arg BINARIES_IMG=podvm_binaries_s390x \
+         --build-arg UBUNTU_IMAGE_URL="" \
+         --build-arg UBUNTU_IMAGE_CHECKSUM="" \
+         -f Dockerfile.podvm .
+```
+
+The Secure Execution enabled podvm image can be built by passing the `SE_BOOT` build argument to docker. Currently this is only supported for Ubutu `s390x`, which also needs put the `HOST KEY documents` to the [files](files) folder, please follow the `Download host key document from Resource Link` section at [this document](../ibmcloud/SECURE_EXECUTION.md) to download `HOST KEY documents`.
+```bash
+$ tree -L 1 files
+files
+├── HKD-8562-1234567.crt
+├── etc
+└── usr
+```
+Running below command will build the Secure Execution enabled qcow2 image:
+```bash
+$ docker build -t se_podvm_s390x \
+         --build-arg ARCH=s390x \
+         --build-arg SE_BOOT=1 \
+         --build-arg BUILDER_IMG=podvm_builder \
+         --build-arg BINARIES_IMG=podvm_binaries_s390x \
          --build-arg UBUNTU_IMAGE_URL="" \
          --build-arg UBUNTU_IMAGE_CHECKSUM="" \
          -f Dockerfile.podvm .
@@ -178,8 +200,13 @@ file out of the podvm container image.
 
 Running the below command will extract the qcow2 image built in the previous step.
 
-```
+```bash
 $ ./hack/download-image.sh podvm:latest . -o podvm.qcow2
+```
+Running the below command will extract the Secure Execution enabled qcow2 image built in the previous step.
+
+```bash
+$ ./hack/download-image.sh se_podvm_s390x:latest . -o se_podvm.qcow2
 ```
 
 # How to add support for a new Linux distribution

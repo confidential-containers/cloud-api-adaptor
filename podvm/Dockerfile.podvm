@@ -13,6 +13,7 @@ FROM ${BINARIES_IMG} AS podvm_binaries
 FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG CLOUD_PROVIDER
+ARG SE_BOOT
 ARG PODVM_DISTRO=ubuntu
 ARG UEFI=false
 
@@ -25,6 +26,7 @@ ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
 ENV PODVM_DISTRO ${PODVM_DISTRO}
 ENV ARCH ${ARCH}
 ENV UEFI ${UEFI}
+ENV SE_BOOT ${SE_BOOT}
 
 RUN if [ -n "${CAA_SRC}" ]; then \
       rm -rf cloud-api-adaptor && \
@@ -52,6 +54,11 @@ RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/clo
 # Copy the pause_bundle to podvm/files folder
 COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files
 RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
+
+# Copy HOST KEY documents to podvm/files folder for Secure Execution
+# Use one .dummy file at here to avoid `COPY failed: no source files were specified` for non-SE build
+# https://forums.docker.com/t/copy-only-if-file-exist/3781
+COPY .dummy files/*.crt /src/cloud-api-adaptor/podvm/files/
 
 RUN cd cloud-api-adaptor/podvm && \
      make BINARIES= PAUSE_BUNDLE= image

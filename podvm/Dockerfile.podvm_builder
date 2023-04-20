@@ -46,16 +46,16 @@ RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC
 WORKDIR /src
 
 ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
-ARG CAA_SRC_BRANCH="staging"
+ARG CAA_SRC_REF="staging"
 
 ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
 ARG KATA_SRC_BRANCH="CCv0"
 
 RUN echo $CAA_SRC
 
-RUN echo $CAA_SRC_BRANCH
+RUN echo $CAA_SRC_REF
 
-RUN git clone ${CAA_SRC} -b ${CAA_SRC_BRANCH} cloud-api-adaptor
+RUN git clone ${CAA_SRC} -b ${CAA_SRC_REF} cloud-api-adaptor
 RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH} kata-containers
 
 
