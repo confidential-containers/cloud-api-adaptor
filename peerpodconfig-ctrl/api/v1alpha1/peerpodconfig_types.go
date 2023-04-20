@@ -28,17 +28,16 @@ type PeerPodConfigSpec struct {
 	// InstanceType describes the name of the instance type of the chosen cloud provider
 	InstanceType string `json:"instanceType,omitempty"`
 
-	// Limit is the max number of peer pods. This is exposed as expended resource on nodes
+	// Limit is the max number of peer pods. This is exposed as extended resource on nodes
 	Limit string `json:"limit,omitempty"`
 
 	// CloudSecretName is the name of the secret that holds the credentials for the cloud provider
 	// +kubebuilder:default:=peer-pods-secret
 	CloudSecretName string `json:"cloudSecretName"`
 
-	// LabelSelector selects the nodes to which the caa pods, the RuntimeClass and the MachineConfigs we use
-	// to deploy the full peer pod solution.
+	// NodeSelector selects the nodes on which to run the cloud-api-adaptor pods
 	// +optional
-	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
+	NodeSelector map[string]string `json:"nodeSelector"`
 
 	// ConfigMapName is the name of the configmap that holds cloud provider specific environment Variables
 	// +kubebuilder:default:=peer-pods-cm

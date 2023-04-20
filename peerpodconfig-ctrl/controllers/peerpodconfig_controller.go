@@ -176,7 +176,7 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 		defaultMode            int32 = 0600
 		sshSecretOptional            = true
 		authJsonSecretOptional       = true
-		nodeSelector                 = metav1.LabelSelector{}
+		nodeSelector                 = map[string]string{"node-role.kubernetes.io/worker": ""}
 	)
 
 	dsName := "peerpodconfig-ctrl-caa-daemon"
@@ -184,12 +184,8 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 		"name": dsName,
 	}
 
-	nodeSelector.MatchLabels = map[string]string{
-		"node-role.kubernetes.io/worker": "",
-	}
-
-	if r.peerPodConfig.Spec.LabelSelector != nil {
-		nodeSelector = *r.peerPodConfig.Spec.LabelSelector
+	if r.peerPodConfig.Spec.NodeSelector != nil {
+		nodeSelector = r.peerPodConfig.Spec.NodeSelector
 	}
 
 	imageString := os.Getenv(CloudApiAdaptorImageEnvName)
@@ -226,7 +222,7 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: "default",
-					NodeSelector:       nodeSelector.MatchLabels,
+					NodeSelector:       nodeSelector,
 					HostNetwork:        true,
 					Containers: []corev1.Container{
 						{
@@ -343,8 +339,16 @@ func (r *PeerPodConfigReconciler) getNodesWithLabels(nodeLabels map[string]strin
 
 func (r *PeerPodConfigReconciler) advertiseExtendedResources() error {
 
+	nodeSelector := map[string]string{
+		"node-role.kubernetes.io/worker": "",
+	}
+
+	if r.peerPodConfig.Spec.NodeSelector != nil {
+		nodeSelector = r.peerPodConfig.Spec.NodeSelector
+	}
+
 	r.Log.Info("set up extended resources")
-	nodesList, err := r.getNodesWithLabels(map[string]string{"node-role.kubernetes.io/worker": ""})
+	nodesList, err := r.getNodesWithLabels(nodeSelector)
 	if err != nil {
 		r.Log.Info("getting node list failed when trying to update nodes with extended resources")
 		return err
@@ -399,7 +403,7 @@ func NewJsonPatch(verb string, jsonpath string, key string, value string) JsonPa
 }
 
 // GetClient creates and returns a new clientset from given config
-func (r PeerPodConfigReconciler) GetClient() (*k8sclient.Clientset, error) {
+func (r *PeerPodConfigReconciler) GetClient() (*k8sclient.Clientset, error) {
 	Kubeconfig, err := restclient.InClusterConfig()
 	if err != nil {
 		return nil, err
