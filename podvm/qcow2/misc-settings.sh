@@ -19,21 +19,21 @@ if [ "$CLOUD_PROVIDER" == "vsphere" ]
 then
 # Add vsphere specific commands to execute on remote
     case $PODVM_DISTRO in
-	centos)
-	    #fallthrough
-	    ;&
-	rhel)
-	    (! dnf list --installed | grep open-vm-tools 2>&1 >/dev/null) && \
-		(! dnf -y install open-vm-tools) && \
-		     echo "$PODVM_DISTRO: Error installing package required for cloud provider: $CLOUD_PROVIDER" 1>&2 && exit 1
-	    ;;
-	ubuntu)
-	    (! dpkg -l | grep open-vm-tools 2>&1 > /dev/null) && apt-get update && \
-		(! apt-get -y install open-vm-tools 2>&1 > /dev/null) && \
-		     echo "$PODVM_DISTRO: Error installing package required for cloud provider: $CLOUD_PROVIDER" 1>&2  && exit 1
-	    ;;
-	*)
-	    ;;
+    centos)
+        #fallthrough
+        ;&
+    rhel)
+        (! dnf list --installed | grep open-vm-tools 2>&1 >/dev/null) && \
+        (! dnf -y install open-vm-tools) && \
+             echo "$PODVM_DISTRO: Error installing package required for cloud provider: $CLOUD_PROVIDER" 1>&2 && exit 1
+        ;;
+    ubuntu)
+        (! dpkg -l | grep open-vm-tools 2>&1 > /dev/null) && apt-get update && \
+        (! apt-get -y install open-vm-tools 2>&1 > /dev/null) && \
+             echo "$PODVM_DISTRO: Error installing package required for cloud provider: $CLOUD_PROVIDER" 1>&2  && exit 1
+        ;;
+    *)
+        ;;
     esac
 # else if...
 #
@@ -54,23 +54,23 @@ fi
 # Disable unnecessary systemd services
 
 case $PODVM_DISTRO in
-       centos)
-             #fallthrough
-             ;&
-       rhel)
-            systemctl disable kdump.service
-	    systemctl disable tuned.service
-	    systemctl disable firewalld.service
-            ;;
-       ubuntu)
-             systemctl disable apt-daily.service
-             systemctl disable apt-daily.timer
-             systemctl disable apt-daily-upgrade.timer
-             systemctl disable apt-daily-upgrade.service
-             systemctl disable snapd.service
-	     systemctl disable snapd.seeded.service
-	     systemctl disable snap.lxd.activate.service
-            ;;
+    centos)
+        #fallthrough
+        ;&
+    rhel)
+        systemctl disable kdump.service
+        systemctl disable tuned.service
+        systemctl disable firewalld.service
+        ;;
+    ubuntu)
+        systemctl disable apt-daily.service
+        systemctl disable apt-daily.timer
+        systemctl disable apt-daily-upgrade.timer
+        systemctl disable apt-daily-upgrade.service
+        systemctl disable snapd.service
+        systemctl disable snapd.seeded.service
+        systemctl disable snap.lxd.activate.service
+        ;;
 esac
 
 exit 0

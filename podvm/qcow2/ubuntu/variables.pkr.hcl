@@ -78,6 +78,16 @@ variable "cloud_provider" {
   default = env("CLOUD_PROVIDER")
 }
 
+variable "se_boot" {
+  type    = string
+  default = env("SE_BOOT")
+}
+
+variable "target_arch" {
+  type    = string
+  default = env("ARCH")
+}
+
 variable "os_arch" {
   type    = string
   default = "x86_64"
