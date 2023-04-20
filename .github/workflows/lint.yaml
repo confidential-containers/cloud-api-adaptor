@@ -1,5 +1,5 @@
-# (C) Copyright Red Hat 2022.
-# SPDX-License-Identifier: Apache-2.0
+# (C) Copyright Confidential Containers Contributors
+# # SPDX-License-Identifier: Apache-2.0
 #
 # Run linting tools on the sources of the project.
 ---
@@ -20,6 +20,7 @@ jobs:
           - .
           - peerpod-ctrl
           - peerpodconfig-ctrl
+          - volumes/csi-wrapper
           - webhook
     steps:
       - name: Checkout the pull request code
@@ -38,7 +39,7 @@ jobs:
           working-directory: ${{ matrix.workdir }}
           args: --path-prefix=${{ matrix.workdir }}
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: v1.51.1
+          version: v1.52.2
 
   go_check:
     runs-on: ubuntu-latest
