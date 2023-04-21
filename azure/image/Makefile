@@ -17,7 +17,7 @@ $(IMAGE_FILE): $(BINARIES) $(FILES)
 		-var vm_size=${VM_SIZE} \
 		-var resource_group=${RESOURCE_GROUP} \
 		-var az_image_name=${IMAGE_NAME} \
-		-var ssh_username=${SSH_USERNAME} .
+		-var ssh_username=${SSH_USERNAME} ./${PODVM_DISTRO}/
 	rm -fr toupload
 
 clean:
