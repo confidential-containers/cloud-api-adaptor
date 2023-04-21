@@ -44,3 +44,18 @@ variable "ssh_username" {
   type = string
   default = "peerpod"
 }
+
+variable "publisher" {
+  type = string
+  default = "Canonical"
+}
+
+variable "offer" {
+  type = string
+  default = "0001-com-ubuntu-minimal-jammy"
+}
+
+variable "sku" {
+  type = string
+  default = "minimal-22_04-lts"
+}

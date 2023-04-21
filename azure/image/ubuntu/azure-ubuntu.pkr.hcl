@@ -6,9 +6,9 @@ source "azure-arm" "ubuntu" {
 
   vm_size                           = "${var.vm_size}"
   os_type                           = "Linux"
-  image_publisher                   = "Canonical"
-  image_offer                       = "0001-com-ubuntu-minimal-jammy"
-  image_sku                         = "minimal-22_04-lts"
+  image_publisher                   = "${var.publisher}"
+  image_offer                       = "${var.offer}"
+  image_sku                         = "${var.sku}"
   managed_image_name                = "${var.az_image_name}"
   managed_image_resource_group_name = "${var.resource_group}"
   build_resource_group_name         = "${var.resource_group}"
