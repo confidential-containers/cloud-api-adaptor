@@ -56,3 +56,13 @@ variable "offer" {
 variable "sku" {
   type = string
 }
+
+variable "podvm_distro" {
+  type    = string
+  default = env("PODVM_DISTRO")
+}
+
+variable "cloud_provider" {
+  type    = string
+  default = env("CLOUD_PROVIDER")
+}
