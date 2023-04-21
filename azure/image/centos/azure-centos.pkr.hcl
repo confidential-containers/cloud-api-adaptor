@@ -54,6 +54,20 @@ build {
     ]
   }
 
+# relabel copied files right after copy-files.sh
+# to prevent other commands from failing
+  provisioner "file" {
+    source      = "selinux_relabel.sh"
+    destination = "~/selinux_relabel.sh"
+  }
+
+  provisioner "shell" {
+    remote_folder = "~"
+    inline = [
+      "sudo bash ~/selinux_relabel.sh"
+    ]
+  }
+
   provisioner "file" {
     source      = "misc-settings.sh"
     destination = "~/misc-settings.sh"
