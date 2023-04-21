@@ -59,3 +59,14 @@ variable "sku" {
   type = string
   default = "minimal-22_04-lts"
 }
+
+variable "podvm_distro" {
+  type    = string
+  default = env("PODVM_DISTRO")
+}
+
+variable "cloud_provider" {
+  type    = string
+  default = env("CLOUD_PROVIDER")
+}
+
