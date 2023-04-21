@@ -48,6 +48,7 @@ const (
 	// Name of env var containing the cloud-api-adaptor image name
 	CloudApiAdaptorImageEnvName = "CAA_IMAGE"
 	DefaultCloudApiAdaptorImage = "quay.io/confidential-containers/cloud-api-adaptor"
+	defaultNodeSelectorLabel    = "node-role.kubernetes.io/worker"
 )
 
 // PeerPodConfigReconciler reconciles a PeerPodConfig object
@@ -176,7 +177,7 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset(cloudProviderName string) *
 		defaultMode            int32 = 0600
 		sshSecretOptional            = true
 		authJsonSecretOptional       = true
-		nodeSelector                 = map[string]string{"node-role.kubernetes.io/worker": ""}
+		nodeSelector                 = map[string]string{defaultNodeSelectorLabel: ""}
 	)
 
 	dsName := "peerpodconfig-ctrl-caa-daemon"
@@ -340,7 +341,7 @@ func (r *PeerPodConfigReconciler) getNodesWithLabels(nodeLabels map[string]strin
 func (r *PeerPodConfigReconciler) advertiseExtendedResources() error {
 
 	nodeSelector := map[string]string{
-		"node-role.kubernetes.io/worker": "",
+		defaultNodeSelectorLabel: "",
 	}
 
 	if r.peerPodConfig.Spec.NodeSelector != nil {
