@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package cmd
@@ -14,7 +14,7 @@ var (
 )
 
 func ShowVersion(programName string) {
-	fmt.Printf("%s, version: %s, commit: %v\n", programName, VERSION, COMMIT)
-
-	fmt.Printf("go: %s\n", runtime.Version())
+	fmt.Printf("%s version %s\n", programName, VERSION)
+	fmt.Printf("  commit: %s\n", COMMIT)
+	fmt.Printf("  go: %s\n", runtime.Version())
 }
