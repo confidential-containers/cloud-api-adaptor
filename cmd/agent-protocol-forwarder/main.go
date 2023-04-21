@@ -46,11 +46,13 @@ func load(path string, obj interface{}) error {
 func (cfg *Config) Setup() (cmd.Starter, error) {
 
 	var (
-		disableTLS bool
-		tlsConfig  tlsutil.TLSConfig
+		showVersion bool
+		disableTLS  bool
+		tlsConfig   tlsutil.TLSConfig
 	)
 
 	cmd.Parse(programName, os.Args, func(flags *flag.FlagSet) {
+		flags.BoolVar(&showVersion, "version", false, "Show version")
 		flags.StringVar(&cfg.configPath, "config", daemon.DefaultConfigPath, "Path to a deamon config file")
 		flags.StringVar(&cfg.listenAddr, "listen", daemon.DefaultListenAddr, "Listen address")
 		flags.StringVar(&cfg.kataAgentSocketPath, "kata-agent-socket", daemon.DefaultKataAgentSocketPath, "Path to a kata agent socket")
@@ -65,6 +67,12 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 
 	if !disableTLS {
 		cfg.tlsConfig = &tlsConfig
+	}
+
+	cmd.ShowVersion(programName)
+
+	if showVersion {
+		cmd.Exit(0)
 	}
 
 	for path, obj := range map[string]interface{}{

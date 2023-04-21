@@ -114,6 +114,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		cloud.ParseCmd(flags)
 	})
 
+	cmd.ShowVersion(programName)
+
 	fmt.Printf("%s: starting Cloud API Adaptor daemon for %q\n", programName, cloudName)
 
 	if !disableTLS {

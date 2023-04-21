@@ -46,16 +46,18 @@ help: ## Display this help.
 # Targets that depend on .gits-commit can use $(shell cat .git-commit) to get a
 # git revision string.  They will only be rebuilt if the revision string
 # actually changes.
-# TODO When a release is created change these steps to use: git describe --abbrev=0 --tags to pull the latest release tag on a specific branch.
 .PHONY: .git-commit.tmp
 .git-commit: .git-commit.tmp
 	@cmp $< $@ >/dev/null 2>&1 || cp $< $@
 .git-commit.tmp:
-	@printf "$$(git rev-parse HEAD 2>/dev/null)" >$@
+	@printf "$$(git rev-parse HEAD 2>/dev/null || echo unknown)" >$@
 	@test -n "$$(git status --porcelain --untracked-files=no)" && echo -dirty >>$@ || true
 
-GOFLAGS += -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(shell echo "unknown")' \
-                     -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(shell cat .git-commit)'"
+version = $(shell git describe --match "v[0-9]*" --abbrev=0 --tags --dirty=-dev || echo unknown)
+commit  = $(shell cat .git-commit)
+
+GOFLAGS += -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(version)' \
+                     -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(commit)'"
 
 # Build tags required to build cloud-api-adaptor are derived from BUILTIN_CLOUD_PROVIDERS.
 # When libvirt is specified, CGO_ENABLED is set to 1.
