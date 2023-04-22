@@ -10,12 +10,12 @@ image: $(IMAGE_FILE)
 
 $(IMAGE_FILE): $(BINARIES) $(FILES)
 	mkdir -p toupload
-	packer build -var client_id=${CLIENT_ID} \
-		-var client_secret=${CLIENT_SECRET} \
-		-var subscription_id=${SUBSCRIPTION_ID} \
-		-var tenant_id=${TENANT_ID} \
+	packer build -var client_id=${AZURE_CLIENT_ID} \
+		-var client_secret=${AZURE_CLIENT_SECRET} \
+		-var subscription_id=${AZURE_SUBSCRIPTION_ID} \
+		-var tenant_id=${AZURE_TENANT_ID} \
 		-var vm_size=${VM_SIZE} \
-		-var resource_group=${RESOURCE_GROUP} \
+		-var resource_group=${AZURE_RESOURCE_GROUP} \
 		-var az_image_name=${IMAGE_NAME} \
 		-var ssh_username=${SSH_USERNAME} ./${PODVM_DISTRO}/
 	rm -fr toupload

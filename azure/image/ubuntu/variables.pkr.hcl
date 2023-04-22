@@ -5,7 +5,7 @@
 
 variable "az_image_name" {
   type    = string
-  default = "peer-pod-ami"
+  default = "peer-pod-vmimage"
 }
 
 // instance type
