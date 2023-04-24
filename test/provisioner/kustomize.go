@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 	"sigs.k8s.io/kustomize/pkg/commands/kustfile"
 	"sigs.k8s.io/kustomize/pkg/fs"
+	"sigs.k8s.io/kustomize/pkg/image"
 	ktypes "sigs.k8s.io/kustomize/pkg/types"
 	"strings"
 )
@@ -210,6 +211,78 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorFile(sgName string, file 
 	}
 
 	return nil
+}
+
+// SetKustomizeImage updates the kustomization YAML by setting `value` to `key` on the
+// `Image`. If `key` does not exist then a new entry is added.
+func (kh *KustomizeOverlay) SetKustomizeImage(imageName string, key string, value string) (err error) {
+	if !isValidImageKey(key) {
+		return fmt.Errorf("Not supported image key: %s\n", key)
+	}
+	// TODO
+	// Unfortunately NewKustomizationFile() needs the work directory (wd) be the overlay directory,
+	// otherwise it won't find the kustomize yaml. So let's save the current wd then switch back when
+	// we are done.
+	oldwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	if err = os.Chdir(kh.configDir); err != nil {
+		return err
+	}
+	defer func() {
+		err = os.Chdir(oldwd)
+	}()
+
+	// Unfortunately (2) the kustomizationFile struct is not exported by the package so reading operation
+	// cannot be refactored in a separate function.
+	kf, err := kustfile.NewKustomizationFile(fs.MakeRealFS())
+	if err != nil {
+		return err
+	}
+
+	m, err := kf.Read()
+	if err != nil {
+		return err
+	}
+
+	if len(m.Images) == 0 {
+		return fmt.Errorf("None Image found")
+	}
+	i := slices.IndexFunc(m.Images, func(im image.Image) bool { return im.Name == imageName })
+	if i == -1 {
+		return fmt.Errorf("Image %s not found\n", imageName)
+	}
+	image := &m.Images[i]
+
+	switch key {
+	case "newName":
+		image.NewName = value
+	case "newTag":
+		image.NewTag = value
+	case "digest":
+		image.Digest = value
+	default:
+	}
+
+	if err = kf.Write(m); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isValidImageKey(key string) bool {
+	switch key {
+	case "newName":
+		return true
+	case "newTag":
+		return true
+	case "digest":
+		return true
+	default:
+		return false
+	}
 }
 
 func setLiteral(literals []string, key string, value string) []string {
