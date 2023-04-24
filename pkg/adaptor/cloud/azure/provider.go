@@ -179,6 +179,31 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
+	var managedDiskParams *armcompute.ManagedDiskParameters
+	var securityProfile *armcompute.SecurityProfile
+	if !p.serviceConfig.DisableCVM {
+		managedDiskParams = &armcompute.ManagedDiskParameters{
+			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesStandardLRS),
+			SecurityProfile: &armcompute.VMDiskSecurityProfile{
+				SecurityEncryptionType: to.Ptr(armcompute.SecurityEncryptionTypesVMGuestStateOnly),
+			},
+		}
+
+		securityProfile = &armcompute.SecurityProfile{
+			SecurityType: to.Ptr(armcompute.SecurityTypesConfidentialVM),
+			UefiSettings: &armcompute.UefiSettings{
+				SecureBootEnabled: to.Ptr(true),
+				VTpmEnabled:       to.Ptr(true),
+			},
+		}
+	} else {
+		managedDiskParams = &armcompute.ManagedDiskParameters{
+			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesStandardLRS),
+		}
+
+		securityProfile = nil
+	}
+
 	vmParameters := armcompute.VirtualMachine{
 		Location: to.Ptr(p.serviceConfig.Region),
 		Properties: &armcompute.VirtualMachineProperties{
@@ -193,9 +218,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 					Name:         to.Ptr(diskName),
 					CreateOption: to.Ptr(armcompute.DiskCreateOptionTypesFromImage),
 					Caching:      to.Ptr(armcompute.CachingTypesReadWrite),
-					ManagedDisk: &armcompute.ManagedDiskParameters{
-						StorageAccountType: to.Ptr(armcompute.StorageAccountTypesStandardLRS),
-					},
+					ManagedDisk:  managedDiskParams,
 				},
 			},
 			OSProfile: &armcompute.OSProfile{
@@ -218,6 +241,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 					{ID: vmNIC.ID},
 				},
 			},
+			SecurityProfile: securityProfile,
 		},
 	}
 

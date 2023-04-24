@@ -40,9 +40,11 @@ COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/fil
 RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
 
 ARG AZURE_REGION=eastus
-ARG VM_SIZE=Standard_A2_v2
+ARG VM_SIZE=Standard_D2as_v5
 ARG AZURE_RESOURCE_GROUP
 ARG IMAGE_NAME=peer-pod-vmimage
+ARG GALLERY_NAME=caaubntcvmsGallery
+ARG GALLERY_IMAGE_DEF_NAME=cc-image
 ARG SSH_USERNAME=peerpod
 ARG PUBLISHER=Canonical
 ARG OFFER=0001-com-ubuntu-minimal-jammy
@@ -55,6 +57,8 @@ ENV AZURE_REGION ${AZURE_REGION}
 ENV AZURE_RESOURCE_GROUP ${AZURE_RESOURCE_GROUP}
 ENV VM_SIZE ${VM_SIZE}
 ENV IMAGE_NAME ${IMAGE_NAME}
+ENV GALLERY_NAME ${GALLERY_NAME}
+ENV GALLERY_IMAGE_DEF_NAME ${GALLERY_IMAGE_DEF_NAME}
 ENV PUBLISHER ${PUBLISHER}
 ENV OFFER ${OFFER}
 ENV SKU ${SKU}
@@ -77,6 +81,8 @@ RUN --mount=type=secret,id=AZURE_SUBSCRIPTION_ID \
     export PKR_VAR_resource_group=${AZURE_RESOURCE_GROUP} && \
     export PKR_VAR_location=${AZURE_LOCATION} && \
     export PKR_VAR_az_image_name=${IMAGE_NAME} && \
+    export PKR_VAR_az_gallery_name=${GALLERY_NAME} && \
+    export PKR_VAR_az_gallery_image_name=${GALLERY_IMAGE_DEF_NAME} && \
     export PKR_VAR_vm_size=${VM_SIZE} && \
     export PKR_VAR_ssh_username=${SSH_USERNAME} && \
     export PKR_VAR_publisher=${PUBLISHER} && \
@@ -86,4 +92,4 @@ RUN --mount=type=secret,id=AZURE_SUBSCRIPTION_ID \
     export PKR_VAR_plan_product=${PLAN_PRODUCT} && \
     export PKR_VAR_plan_publisher=${PLAN_PUBLISHER} && \
     cd cloud-api-adaptor/azure/image && \
-     BINARIES= PAUSE_BUNDLE= CLOUD_PROVIDER=azure PODVM_DISTRO=$PODVM_DISTRO make image
+    BINARIES= PAUSE_BUNDLE= CLOUD_PROVIDER=azure PODVM_DISTRO=$PODVM_DISTRO make image

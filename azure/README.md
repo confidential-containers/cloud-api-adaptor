@@ -48,6 +48,42 @@ export AZURE_CLIENT_SECRET="REPLACE_ME"
 export AZURE_TENANT_ID="REPLACE_ME"
 ```
 
+> **NOTE:** The following environment variables `GALLERY_NAME` and `GALLERY_IMAGE_DEF_NAME` should match with the packer input `az_gallery_name` and `az_gallery_image_name` respectively.
+
+### Shared Image Gallery
+Create shared image gallery to host the built pod vm image.
+```bash
+export GALLERY_NAME="caaubntcvmsGallery"
+export GALLERY_IMAGE_DEF_NAME="cc-image"
+```
+
+- Create shared image gallery by running the following commands:
+
+```bash
+az sig create \
+    --gallery-name "${GALLERY_NAME}" \
+    --resource-group "${AZURE_RESOURCE_GROUP}" \
+    --location "${AZURE_REGION}"
+```
+
+- Define the image definition by running the following command. Do note that the flag `--features SecurityType=ConfidentialVmSupported` allows us to upload custom image and boot it up as a CVM.
+
+```bash
+az sig image-definition create \
+    --resource-group "${AZURE_RESOURCE_GROUP}" \
+    --gallery-name "${GALLERY_NAME}" \
+    --gallery-image-definition "${GALLERY_IMAGE_DEF_NAME}" \
+    --publisher GreatPublisher \
+    --offer GreatOffer \
+    --sku GreatSku \
+    --os-type "Linux" \
+    --os-state "Generalized" \
+    --hyper-v-generation "V2" \
+    --location "${AZURE_REGION}" \
+    --architecture "x64" \
+    --features SecurityType=ConfidentialVmSupported
+```
+
 ## Build Pod VM Image
 
 - Install packer by following [these instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
@@ -69,15 +105,17 @@ export PKR_VAR_tenant_id="${AZURE_TENANT_ID}"
 # export PKR_VAR_az_image_name="REPLACE_ME"
 # export PKR_VAR_vm_size="REPLACE_ME"
 # export PKR_VAR_ssh_username="REPLACE_ME"
+# export PKR_VAR_az_gallery_name="${GALLERY_NAME}"
+# export PKR_VAR_az_gallery_image_name="${GALLERY_IMAGE_DEF_NAME}"
 
 export CLOUD_PROVIDER=azure
 PODVM_DISTRO=ubuntu make image && cd -
 ```
 
-Use the output of the above command to populate the following environment variable it will be used while deploying the cloud-api-adaptor:
+Use the `ManagedImageSharedImageGalleryId` field from output of the above command to populate the following environment variable it will be used while deploying the cloud-api-adaptor:
 
 ```bash
-# e.g. format: /subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/images/...
+# e.g. format: /subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/galleries/.../images/.../versions/..
 export AZURE_IMAGE_ID="REPLACE_ME"
 ```
 

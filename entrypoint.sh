@@ -47,6 +47,7 @@ azure() {
 test_vars AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_SUBNET_ID AZURE_IMAGE_ID
 
 [[ "${SSH_USERNAME}" ]] && optionals+="-ssh-username ${SSH_USERNAME} "
+[[ "${DISABLECVM}" ]] && optionals+="-disable-cvm "
 
 set -x
 exec cloud-api-adaptor azure \

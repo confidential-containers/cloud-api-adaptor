@@ -20,6 +20,7 @@ type Config struct {
 	ImageId           string
 	SSHKeyPath        string
 	SSHUserName       string
+	DisableCVM        bool
 }
 
 func (c Config) Redact() Config {

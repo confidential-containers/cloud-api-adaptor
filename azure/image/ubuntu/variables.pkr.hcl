@@ -8,15 +8,33 @@ variable "az_image_name" {
   default = "peer-pod-vmimage"
 }
 
+// shared gallery name
+variable "az_gallery_name" {
+  type    = string
+  default = "caaubntcvmsGallery"
+}
+
+// shared gallery image name
+variable "az_gallery_image_name" {
+  type    = string
+  default = "cc-image"
+}
+
+// shared gallery image version
+variable "az_gallery_image_version" {
+  type    = string
+  default = "0.0.1"
+}
+
 // instance type
 variable "vm_size" {
   type    = string
-  default = "Standard_A2_v2"
+  default = "Standard_D2as_v5"
 }
 
 // region
 variable "location" {
-  type = string
+  type    = string
   default = "eastus"
 }
 
@@ -41,23 +59,23 @@ variable "tenant_id" {
 }
 
 variable "ssh_username" {
-  type = string
+  type    = string
   default = "peerpod"
 }
 
 variable "publisher" {
-  type = string
+  type    = string
   default = "Canonical"
 }
 
 variable "offer" {
-  type = string
-  default = "0001-com-ubuntu-minimal-jammy"
+  type    = string
+  default = "0001-com-ubuntu-confidential-vm-jammy"
 }
 
 variable "sku" {
-  type = string
-  default = "minimal-22_04-lts"
+  type    = string
+  default = "22_04-lts-cvm"
 }
 
 variable "podvm_distro" {
