@@ -1,4 +1,11 @@
 source "azure-arm" "ubuntu" {
+
+  plan_info {
+    plan_name      = "${var.plan_name}"
+    plan_product   = "${var.plan_product}"
+    plan_publisher = "${var.plan_publisher}"
+  }
+
   client_id       = "${var.client_id}"
   client_secret   = "${var.client_secret}"
   subscription_id = "${var.subscription_id}"
