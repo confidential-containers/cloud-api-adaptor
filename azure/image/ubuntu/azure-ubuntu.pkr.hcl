@@ -1,11 +1,4 @@
 source "azure-arm" "ubuntu" {
-
-  plan_info {
-    plan_name      = "${var.plan_name}"
-    plan_product   = "${var.plan_product}"
-    plan_publisher = "${var.plan_publisher}"
-  }
-
   client_id       = "${var.client_id}"
   client_secret   = "${var.client_secret}"
   subscription_id = "${var.subscription_id}"
@@ -19,6 +12,15 @@ source "azure-arm" "ubuntu" {
   managed_image_name                = "${var.az_image_name}"
   managed_image_resource_group_name = "${var.resource_group}"
   build_resource_group_name         = "${var.resource_group}"
+
+  shared_image_gallery_destination {
+    subscription         = "${var.subscription_id}"
+    resource_group       = "${var.resource_group}"
+    gallery_name         = "${var.az_gallery_name}"
+    image_name           = "${var.az_gallery_image_name}"
+    image_version        = "${var.az_gallery_image_version}"
+    storage_account_type = "Standard_LRS"
+  }
 }
 
 build {
@@ -61,7 +63,7 @@ build {
     ]
   }
 
-   provisioner "file" {
+  provisioner "file" {
     source      = "misc-settings.sh"
     destination = "~/misc-settings.sh"
   }
@@ -69,9 +71,9 @@ build {
   provisioner "shell" {
     remote_folder = "~"
     environment_vars = [
-        "CLOUD_PROVIDER=${var.cloud_provider}",
-        "PODVM_DISTRO=${var.podvm_distro}",
-        ]
+      "CLOUD_PROVIDER=${var.cloud_provider}",
+      "PODVM_DISTRO=${var.podvm_distro}",
+    ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"
     ]
