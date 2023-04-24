@@ -52,6 +52,7 @@ build {
     inline = [
       "sudo useradd -m -s /bin/bash ${var.ssh_username}"
     ]
+    inline_shebang = "/bin/sh -x"
   }
 
   provisioner "shell" {
