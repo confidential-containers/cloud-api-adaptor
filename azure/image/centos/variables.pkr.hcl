@@ -66,3 +66,15 @@ variable "cloud_provider" {
   type    = string
   default = env("CLOUD_PROVIDER")
 }
+
+variable "plan_name" {
+  type = string
+}
+
+variable "plan_product" {
+  type = string
+}
+
+variable "plan_publisher" {
+  type = string
+}

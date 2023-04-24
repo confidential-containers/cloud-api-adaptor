@@ -17,7 +17,14 @@ $(IMAGE_FILE): $(BINARIES) $(FILES)
 		-var vm_size=${VM_SIZE} \
 		-var resource_group=${AZURE_RESOURCE_GROUP} \
 		-var az_image_name=${IMAGE_NAME} \
-		-var ssh_username=${SSH_USERNAME} ./${PODVM_DISTRO}/
+		-var ssh_username=${SSH_USERNAME} \
+		-var publisher=${PUBLISHER} \
+		-var offer=${OFFER} \
+		-var sku=${SKU} \
+		-var plan_name=${PLAN_NAME} \
+		-var plan_product=${PLAN_PRODUCT} \
+		-var plan_publisher=${PLAN_PUBLISHER} \
+		./${PODVM_DISTRO}/
 	rm -fr toupload
 
 clean:
