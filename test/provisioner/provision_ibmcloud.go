@@ -33,7 +33,6 @@ import (
 
 func init() {
 	newProvisionerFunctions["ibmcloud"] = NewIBMCloudProvisioner
-	newInstallOverlayFunctions["ibmcloud"] = NewIBMCloudInstallOverlay
 }
 
 // https://cloud.ibm.com/docs/vpc?topic=vpc-configuring-address-prefixes
@@ -604,11 +603,6 @@ func getKubeconfig(kubecfgDir string) (*containerv1.ClusterKeyInfo, error) {
 type IBMCloudProvisioner struct {
 }
 
-// IBMCloudInstallOverlay implements the InstallOverlay interface
-type IBMCloudInstallOverlay struct {
-	overlay *KustomizeOverlay
-}
-
 func NewIBMCloudProvisioner(properties map[string]string) (CloudProvisioner, error) {
 	if err := initProperties(properties); err != nil {
 		return nil, err
@@ -949,91 +943,4 @@ func (p *IBMCloudProvisioner) GetVPCDefaultSecurityGroupID(vpcID string) (string
 	}
 
 	return *defaultSG.ID, nil
-}
-
-func isKustomizeConfigMapKey(key string) bool {
-	switch key {
-	case "CLOUD_PROVIDER":
-		return true
-	case "IBMCLOUD_VPC_ENDPOINT":
-		return true
-	case "IBMCLOUD_RESOURCE_GROUP_ID":
-		return true
-	case "IBMCLOUD_SSH_KEY_ID":
-		return true
-	case "IBMCLOUD_PODVM_IMAGE_ID":
-		return true
-	case "IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME":
-		return true
-	case "IBMCLOUD_ZONE":
-		return true
-	case "IBMCLOUD_VPC_SUBNET_ID":
-		return true
-	case "IBMCLOUD_VPC_SG_ID":
-		return true
-	case "IBMCLOUD_VPC_ID":
-		return true
-	case "CRI_RUNTIME_ENDPOINT":
-		return true
-	default:
-		return false
-	}
-}
-
-func isKustomizeSecretKey(key string) bool {
-	switch key {
-	case "IBMCLOUD_API_KEY":
-		return true
-	case "IBMCLOUD_IAM_ENDPOINT":
-		return true
-	case "IBMCLOUD_ZONE":
-		return true
-	default:
-		return false
-	}
-}
-
-func NewIBMCloudInstallOverlay() (InstallOverlay, error) {
-	overlay, err := NewKustomizeOverlay("../../install/overlays/ibmcloud")
-	if err != nil {
-		return nil, err
-	}
-
-	return &IBMCloudInstallOverlay{
-		overlay: overlay,
-	}, nil
-}
-
-func (lio *IBMCloudInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Apply(ctx, cfg)
-}
-
-func (lio *IBMCloudInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Delete(ctx, cfg)
-}
-
-// Update install/overlays/ibmcloud/kustomization.yaml
-func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
-	log.Debugf("%+v", properties)
-	var err error
-	for k, v := range properties {
-		// configMapGenerator
-		if isKustomizeConfigMapKey(k) {
-			if err = lio.overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm", k, v); err != nil {
-				return err
-			}
-		}
-		// secretGenerator
-		if isKustomizeSecretKey(k) {
-			if err = lio.overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret", k, v); err != nil {
-				return err
-			}
-		}
-	}
-
-	if err = lio.overlay.YamlReload(); err != nil {
-		return err
-	}
-
-	return nil
 }

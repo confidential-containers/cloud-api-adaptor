@@ -23,6 +23,7 @@ type IBMCloudProperties struct {
 	IBMCloudProvider  string
 	ApiKey            string
 	Bucket            string
+	CaaImageTag       string
 	ClusterName       string
 	CosApiKey         string
 	CosInstanceID     string
@@ -63,6 +64,7 @@ func initProperties(properties map[string]string) error {
 		IBMCloudProvider:  properties["IBMCLOUD_PROVIDER"],
 		ApiKey:            properties["APIKEY"],
 		Bucket:            properties["COS_BUCKET"],
+		CaaImageTag:       properties["CAA_IMAGE_TAG"],
 		ClusterName:       properties["CLUSTER_NAME"],
 		CosApiKey:         properties["COS_APIKEY"],
 		CosInstanceID:     properties["COS_INSTANCE_ID"],
