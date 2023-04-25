@@ -7,12 +7,11 @@ package provisioner
 
 import (
 	"context"
-	"os"
-	"path"
-	"path/filepath"
+	"encoding/json"
+	"io"
+	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/src-d/go-git.v4"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
@@ -23,6 +22,19 @@ func init() {
 // IBMCloudInstallOverlay implements the InstallOverlay interface
 type IBMCloudInstallOverlay struct {
 	overlay *KustomizeOverlay
+}
+
+type QuayTagsResponse struct {
+	Tags []struct {
+		Name       string `json:"name"`
+		StartTime  string `json:"start_ts"`
+		ModifiedAt string `json:"last_modified"`
+		Digest     string `json:"manifest_digest"`
+		Size       string `json:"size"`
+		Manifest   bool   `json:"is_manifest_list"`
+		Reversion  bool   `json:"reversion"`
+	} `json:"tags"`
+	Others map[string]interface{} `json:"-"`
 }
 
 func isKustomizeConfigMapKey(key string) bool {
@@ -68,45 +80,29 @@ func isKustomizeSecretKey(key string) bool {
 }
 
 func getCaaNewTagFromCommit() string {
-	dir, err := os.Getwd()
+	resp, err := http.Get("https://quay.io/api/v1/repository/confidential-containers/cloud-api-adaptor/tag/")
 	if err != nil {
 		log.Errorf(err.Error())
-		return ""
 	}
-	repoDir, err := filepath.Abs(path.Join(dir, "../../"))
-	if err != nil {
-		log.Errorf(err.Error())
-		return ""
-	}
-	log.Infof("getCaaNewTagFromCommit running in dir: %s", repoDir)
-	repo, err := git.PlainOpen(repoDir)
-	if err != nil {
-		log.Errorf(err.Error())
-		return ""
-	}
-	log.Infof("getCaaNewTagFromCommit opened repository in dir: %s", repoDir)
-	ref, err := repo.Head()
-	if err != nil {
-		log.Errorf(err.Error())
-		return ""
-	}
-	log.Infof("getCaaNewTagFromCommit read head successfully.")
+	defer resp.Body.Close()
 
-	branch := ref.Name()
-	log.Infof("Branch name: %s", branch)
-	if branch == "refs/heads/staging" {
-		cIter, err := repo.Log(&git.LogOptions{From: ref.Hash()})
-		if err != nil {
-			log.Errorf(err.Error())
-			return ""
-		}
-		commit, _ := cIter.Next()
-		if commit != nil {
-			cStr := commit.Hash.String()
-			log.Infof("Latest commit hash is: %s", cStr)
-			return cStr
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf(err.Error())
+	}
+
+	var result QuayTagsResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		log.Errorf(err.Error())
+		return ""
+	}
+
+	for _, tag := range result.Tags {
+		if tag.Manifest && len(tag.Name) == 40 { // the latest git commit hash tag
+			return tag.Name
 		}
 	}
+
 	return ""
 }
 
