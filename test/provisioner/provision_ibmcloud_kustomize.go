@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -27,12 +28,12 @@ type IBMCloudInstallOverlay struct {
 type QuayTagsResponse struct {
 	Tags []struct {
 		Name       string `json:"name"`
-		StartTime  string `json:"start_ts"`
 		ModifiedAt string `json:"last_modified"`
 		Digest     string `json:"manifest_digest"`
 		Size       string `json:"size"`
 		Manifest   bool   `json:"is_manifest_list"`
 		Reversion  bool   `json:"reversion"`
+		StartTime  int    `json:"start_ts"`
 	} `json:"tags"`
 	Others map[string]interface{} `json:"-"`
 }
@@ -79,7 +80,17 @@ func isKustomizeSecretKey(key string) bool {
 	}
 }
 
-func getCaaNewTagFromCommit() string {
+func isWorkerS390xFlavors() bool {
+	if strings.HasPrefix(IBMCloudProps.WorkerFlavor, "bz") ||
+		strings.HasPrefix(IBMCloudProps.WorkerFlavor, "cz") ||
+		strings.HasPrefix(IBMCloudProps.WorkerFlavor, "mz") {
+		return true
+	}
+
+	return false
+}
+
+func getCaaLatestCommitTag() string {
 	resp, err := http.Get("https://quay.io/api/v1/repository/confidential-containers/cloud-api-adaptor/tag/")
 	if err != nil {
 		log.Errorf(err.Error())
@@ -134,8 +145,8 @@ func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config
 	var newTag string
 	if IBMCloudProps.CaaImageTag != "" {
 		newTag = IBMCloudProps.CaaImageTag
-	} else {
-		newTag = getCaaNewTagFromCommit()
+	} else if isWorkerS390xFlavors() {
+		newTag = getCaaLatestCommitTag()
 	}
 	if newTag != "" {
 		log.Infof("Updating caa image tag with %s", newTag)
