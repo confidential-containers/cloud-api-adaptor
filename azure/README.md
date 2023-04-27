@@ -1,32 +1,46 @@
-# Setup instructions
+# Cloud API Adaptor on Azure
 
-- Install packer by using the [following](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli) instructions.
+This documentation will walk you through setting up Cloud API Adaptor (CAA) on
+Azure Kubernetes Service (AKS). We will build the pod vm image, CAA's
+application image, deploy one worker AKS, deploy CAA on that Kubernetes cluster
+and finally deploy a sample application that will run as a pod backed by CAA
+pod VM.
 
-- Create a Resource Group
+
+## Pre-requisites
+
+### Resource Group
+
+We will use this resource group for all of our deployments.
+Create an Azure resource group by running the following command:
+
 
 ```bash
 export AZURE_RESOURCE_GROUP="REPLACE_ME"
 export AZURE_REGION="REPLACE_ME"
 
-az group create --name "${AZURE_RESOURCE_GROUP}" --location "${AZURE_REGION}"
+az group create --name "${AZURE_RESOURCE_GROUP}" \
+    --location "${AZURE_REGION}"
 ```
 
-- Create Service Principal to build image
+### Service Principal
+
+Create a service principal that will be used for building image and its
+credentials will be provided when deploying Cloud API Adaptor daemonset:
+
 
 ```bash
 export AZURE_SUBSCRIPTION_ID=$(az account show --query id --output tsv)
 
 az ad sp create-for-rbac \
-  --name "Packer Build"  \
+  --name "caa-${AZURE_RESOURCE_GROUP}"  \
   --role "Contributor"   \
   --scopes /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP} \
   --query "{ AZURE_CLIENT_ID: appId, AZURE_CLIENT_SECRET: password, AZURE_TENANT_ID: tenant }"
 ```
 
-
-- Set environment variables
-
-The env var `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` can be copied from the output of the last command:
+Set the environment variables by copying the env vars `AZURE_CLIENT_ID`,
+`AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` from the output of the last command:
 
 ```bash
 export AZURE_CLIENT_ID="REPLACE_ME"
@@ -34,24 +48,39 @@ export AZURE_CLIENT_SECRET="REPLACE_ME"
 export AZURE_TENANT_ID="REPLACE_ME"
 ```
 
-- Create Role Assignment
+## Build Pod VM Image
+
+- Install packer by following [these instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
+
+> **NOTE**: For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
+
+- Create a custom Azure VM image based on Ubuntu 22.04 having kata-agent, agent-protocol-forwarder and other dependencies.
 
 ```bash
-az role assignment create \
-  --assignee ${AZURE_CLIENT_ID} \
-  --role "Contributor"    \
-  --scope /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}
-```
-
-- Create a custom Azure VM image based on Ubuntu having kata-agent and other dependencies.
-	[setting up authenticated registry support](../docs/registries-authentication.md)
-```bash
-export VM_SIZE="REPLACE_ME"
 cd image
-CLOUD_PROVIDER=azure PODVM_DISTRO=ubuntu make image && cd -
+export PKR_VAR_resource_group="${AZURE_RESOURCE_GROUP}"
+export PKR_VAR_location="${AZURE_REGION}"
+export PKR_VAR_subscription_id="${AZURE_SUBSCRIPTION_ID}"
+export PKR_VAR_client_id="${AZURE_CLIENT_ID}"
+export PKR_VAR_client_secret="${AZURE_CLIENT_SECRET}"
+export PKR_VAR_tenant_id="${AZURE_TENANT_ID}"
+
+# Optional
+# export PKR_VAR_az_image_name="REPLACE_ME"
+# export PKR_VAR_vm_size="REPLACE_ME"
+# export PKR_VAR_ssh_username="REPLACE_ME"
+
+export CLOUD_PROVIDER=azure
+PODVM_DISTRO=ubuntu make image && cd -
 ```
 
-The output image id will be used while running the cloud-api-adaptor, which get's uploaded to your Azure portal using Packer.
+Use the output of the above command to populate the following environment variable it will be used while deploying the cloud-api-adaptor:
+
+```bash
+# e.g. format: /subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/images/...
+export AZURE_IMAGE_ID="REPLACE_ME"
+```
+
 
 You can also build the image using docker
 ```bash
@@ -118,21 +147,230 @@ docker build -t azure \
 -f Dockerfile .
 ```
 
-# Running cloud-api-adaptor
+## Deploy Kubernetes using AKS
 
-- If using Calico CNI, [configure](https://projectcalico.docs.tigera.io/networking/vxlan-ipip#configure-vxlan-encapsulation-for-all-inter-workload-traffic) VXLAN encapsulation for all inter workload traffic.
+Make changes to the following environment variable as you see fit:
 
-- Create Service Principal for the CAA
+```bash
+export CLUSTER_NAME="REPLACE_ME"
+export AKS_WORKER_USER_NAME="azuser"
+export SSH_KEY=~/.ssh/id_rsa.pub
+export AKS_RG="${AZURE_RESOURCE_GROUP}-aks"
+```
+
+Deploy AKS with single worker node to the same resource group we created earlier:
+
+```bash
+az aks create \
+    --resource-group "${AZURE_RESOURCE_GROUP}" \
+    --node-resource-group "${AKS_RG}" \
+    --name "${CLUSTER_NAME}" \
+    --location "${AZURE_REGION}" \
+    --node-count 1 \
+    --node-vm-size Standard_F4s_v2 \
+    --ssh-key-value "${SSH_KEY}" \
+    --admin-username "${AKS_WORKER_USER_NAME}" \
+    --os-sku Ubuntu
+```
+
+Download kubeconfig locally to access the cluster using `kubectl`:
+
+```bash
+az aks get-credentials \
+    --resource-group "${AZURE_RESOURCE_GROUP}" \
+    --name "${CLUSTER_NAME}"
+```
+
+Label the nodes so that CAA can be deployed on it:
+
+```bash
+kubectl label nodes --all node-role.kubernetes.io/worker=
+```
+
+## Deploy Cloud API Adaptor
+
+> **NOTE**: If you are using Calico CNI on a different Kubernetes cluster,
+> then,
+> [configure](https://projectcalico.docs.tigera.io/networking/vxlan-ipip#configure-vxlan-encapsulation-for-all-inter-workload-traffic)
+> VXLAN encapsulation for all inter workload traffic.
+
+### AKS Resource Group permissions
+
+AKS deploys the actual resources like the worker nodes in another resource
+group named in environment variable `AKS_RG`. For the CAA to be able to create
+pod VM in the same subnet as the worker nodes of the AKS cluster, run the
+following command:
 
 ```bash
 az ad sp create-for-rbac \
-  -n peer-pod-vm-creator \
-  --role Contributor \
-  --scopes "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$AZURE_RESOURCE_GROUP" \
-  --query "{ clientid: appId, secret: password, tenantid: tenant }"
+    -n "caa-${AZURE_RESOURCE_GROUP}" \
+    --role Contributor \
+    --scopes "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AKS_RG}" \
+    --query "password"
 ```
 
-- Update [kustomization.yaml](../install/overlays/azure/kustomization.yaml) with the required values.
+From the output of the above command populate the environment variable below:
 
-- Deploy Cloud API Adaptor by following the [install](../install/README.md) guide.
+```bash
+export AZURE_CAA_CLIENT_SECRET="REPLACE_ME"
+```
+
+### AKS Subnet ID
+
+Fetch the VNET name of that AKS created automatically:
+
+```bash
+export AZURE_VNET_NAME=$(az network vnet list \
+  --resource-group "${AKS_RG}" \
+  --query "[0].name" \
+  --output tsv)
+```
+
+Export the subnet ID to be used for CAA daemonset deployment:
+
+```bash
+export AZURE_SUBNET_ID=$(az network vnet subnet list \
+  --resource-group "${AKS_RG}" \
+  --vnet-name "${AZURE_VNET_NAME}" \
+  --query "[0].id" \
+  --output tsv)
+```
+
+### Populate the `kustomization.yaml` File
+
+Replace the values as needed for the following environment variables:
+
+```bash
+# For regular VMs use something like: Standard_D2as_v5, for CVMs use something like Standard_DC2as_v5.
+export AZURE_INSTANCE_SIZE="REPLACE_ME"
+```
+
+Run the following command to update the [`kustomization.yaml`](../install/overlays/azure/kustomization.yaml) file:
+
+```bash
+cat <<EOF > install/overlays/azure/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+bases:
+- ../../yamls
+images:
+- name: cloud-api-adaptor
+  newName: "${registry}/cloud-api-adaptor"
+  newTag: latest
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="azure"
+  - AZURE_SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
+  - AZURE_REGION="${AZURE_REGION}"
+  - AZURE_INSTANCE_SIZE="${AZURE_INSTANCE_SIZE}"
+  - AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP}"
+  - AZURE_SUBNET_ID="${AZURE_SUBNET_ID}"
+  - AZURE_IMAGE_ID="${AZURE_IMAGE_ID}"
+secretGenerator:
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  literals:
+  - AZURE_CLIENT_ID="${AZURE_CLIENT_ID}"
+  - AZURE_CLIENT_SECRET="${AZURE_CAA_CLIENT_SECRET}"
+  - AZURE_TENANT_ID="${AZURE_TENANT_ID}"
+- name: ssh-key-secret
+  namespace: confidential-containers-system
+  files:
+  - id_rsa.pub
+EOF
+```
+
+The ssh public key should be accessible to the kustomization file:
+
+```bash
+cp $SSH_KEY install/overlays/azure/id_rsa.pub
+```
+
+### Deploy CAA on the Kubernetes cluster
+
+Run the following command to deploy CAA:
+
+```bash
+make deploy
+```
+
+Generic CAA deployment instructions are also described [here](../install/README.md).
+
+## Run Sample Application
+
+### Ensure Runtimeclass is present
+
+Verify that the runtime class is created after deploying CAA:
+
+```bash
+kubectl get runtimeclass
+```
+
+Once you can find a runtimeclass named `kata` then you can be sure that the deployment was successful. Successful deployment will look like this:
+
+```console
+$ kubectl get runtimeclass
+NAME        HANDLER     AGE
+kata        kata        7s
+kata-clh    kata-clh    7s
+kata-qemu   kata-qemu   7s
+```
+
+### Deploy Workload
+
+Create an nginx deployment:
+
+```yaml
+echo '
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      runtimeClassName: kata
+      containers:
+      - name: nginx
+        image: bitnami/nginx:1.14
+        ports:
+        - containerPort: 80
+        imagePullPolicy: Always
+' | kubectl apply -f -
+```
+
+Ensure that the pod is up and running:
+```bash
+kubectl get pods -n default
+```
+
+You can verify that the pod vm was created by running the following command:
+```bash
+az vm list \
+  --resource-group "${AZURE_RESOURCE_GROUP}" \
+  --output table
+```
+
+Here you should see the vm associated with the pod `nginx`.
+
+## Cleanup
+
+If you wish to clean up the whole set up, you can delete the resource group by running the following command:
+```bash
+az group delete \
+  --name "${AZURE_RESOURCE_GROUP}" \
+  --yes --no-wait
+```
 
