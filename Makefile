@@ -3,6 +3,7 @@
 
 .PHONY: all build check fmt vet clean image deploy delete
 
+SHELL = bash -o pipefail
 
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
 # Default is dev build. To create release build set RELEASE_BUILD=true
@@ -51,13 +52,13 @@ help: ## Display this help.
 	@cmp $< $@ >/dev/null 2>&1 || cp $< $@
 .git-commit.tmp:
 	@printf "$$(git rev-parse HEAD 2>/dev/null || echo unknown)" >$@
-	@test -n "$$(git status --porcelain --untracked-files=no)" && echo -dirty >>$@ || true
+	@test -n "$$(git status --porcelain --untracked-files=no 2> /dev/null)" && echo -dirty >>$@ || true
 
-version = $(shell git describe --match "v[0-9]*" --tags 2> /dev/null | sed -E 's/-[0-9]+-g[0-9a-f]+$$/-dev/' || echo unknown)
-commit  = $(shell cat .git-commit)
+VERSION ?= $(shell git describe --match "v[0-9]*" --tags 2> /dev/null | sed -E 's/-[0-9]+-g[0-9a-f]+$$/-dev/' || echo unknown)
+COMMIT  ?= $(shell cat .git-commit)
 
-GOFLAGS += -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(version)' \
-                     -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(commit)'"
+GOFLAGS += -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(VERSION)' \
+                     -X 'github.com/confidential-containers/cloud-api-adaptor/cmd.COMMIT=$(COMMIT)'"
 
 # Build tags required to build cloud-api-adaptor are derived from BUILTIN_CLOUD_PROVIDERS.
 # When libvirt is specified, CGO_ENABLED is set to 1.
@@ -111,8 +112,8 @@ clean: ## Remove binaries.
 ##@ Build
 
 .PHONY: image
-image: ## Build and push docker image to $registry
-	hack/build.sh $(shell cat .git-commit)
+image: .git-commit ## Build and push docker image to $registry
+	COMMIT=$(COMMIT) VERSION=$(VERSION) hack/build.sh
 
 ##@ Deployment
 
