@@ -11,6 +11,7 @@ The PeerPod CR is owned by the original Pod object. Upon Pod deletion [backgroun
 
 ### Deletion time:
 Normal case: When remote hypervisor will get the stopVM request (upon Pod deletion) it will delete the pod VM instance and if it succeeds it will remove the finalizer attached to the owned PeerPod object so it can then be cleaned by the GC.
+
 Failure case: If for any reason cloud-api-adaptor doesn’t honor the delete request or it fails to perform deletion, the finalizer is not removed. Hence, when PeerPod controller gets a delete event for the owned PeerPod object by the GC and it still has the finalizer, it will comprehend that it needs to perform the deletion of pod VM resource by itself, based on the PeerPod CR fields.
 
 ## Getting Started
