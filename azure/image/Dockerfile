@@ -70,5 +70,20 @@ RUN --mount=type=secret,id=AZURE_SUBSCRIPTION_ID \
     export AZURE_CLIENT_ID=$(cat /run/secrets/AZURE_CLIENT_ID) && \
     export AZURE_CLIENT_SECRET=$(cat /run/secrets/AZURE_CLIENT_SECRET) && \
     export AZURE_TENANT_ID=$(cat /run/secrets/AZURE_TENANT_ID) && \
+    export PKR_VAR_client_id=${AZURE_CLIENT_ID} && \
+    export PKR_VAR_client_secret=${AZURE_CLIENT_SECRET} && \
+    export PKR_VAR_subscription_id=${AZURE_SUBSCRIPTION_ID} && \
+    export PKR_VAR_tenant_id=${AZURE_TENANT_ID} && \
+    export PKR_VAR_resource_group=${AZURE_RESOURCE_GROUP} && \
+    export PKR_VAR_location=${AZURE_LOCATION} && \
+    export PKR_VAR_az_image_name=${IMAGE_NAME} && \
+    export PKR_VAR_vm_size=${VM_SIZE} && \
+    export PKR_VAR_ssh_username=${SSH_USERNAME} && \
+    export PKR_VAR_publisher=${PUBLISHER} && \
+    export PKR_VAR_offer=${OFFER} && \
+    export PKR_VAR_sku=${SKU} && \
+    export PKR_VAR_plan_name=${PLAN_NAME} && \
+    export PKR_VAR_plan_product=${PLAN_PRODUCT} && \
+    export PKR_VAR_plan_publisher=${PLAN_PUBLISHER} && \
     cd cloud-api-adaptor/azure/image && \
      BINARIES= PAUSE_BUNDLE= CLOUD_PROVIDER=azure PODVM_DISTRO=$PODVM_DISTRO make image
