@@ -53,7 +53,7 @@ help: ## Display this help.
 	@printf "$$(git rev-parse HEAD 2>/dev/null || echo unknown)" >$@
 	@test -n "$$(git status --porcelain --untracked-files=no)" && echo -dirty >>$@ || true
 
-version = $(shell git describe --match "v[0-9]*" --abbrev=0 --tags --dirty=-dev || echo unknown)
+version = $(shell git describe --match "v[0-9]*" --tags 2> /dev/null | sed -E 's/-[0-9]+-g[0-9a-f]+$$/-dev/' || echo unknown)
 commit  = $(shell cat .git-commit)
 
 GOFLAGS += -ldflags="-X 'github.com/confidential-containers/cloud-api-adaptor/cmd.VERSION=$(version)' \
