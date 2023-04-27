@@ -10,21 +10,18 @@ image: $(IMAGE_FILE)
 
 $(IMAGE_FILE): $(BINARIES) $(FILES)
 	mkdir -p toupload
-	packer build -var client_id=${AZURE_CLIENT_ID} \
-		-var client_secret=${AZURE_CLIENT_SECRET} \
-		-var subscription_id=${AZURE_SUBSCRIPTION_ID} \
-		-var tenant_id=${AZURE_TENANT_ID} \
-		-var vm_size=${VM_SIZE} \
-		-var resource_group=${AZURE_RESOURCE_GROUP} \
-		-var az_image_name=${IMAGE_NAME} \
-		-var ssh_username=${SSH_USERNAME} \
-		-var publisher=${PUBLISHER} \
-		-var offer=${OFFER} \
-		-var sku=${SKU} \
-		-var plan_name=${PLAN_NAME} \
-		-var plan_product=${PLAN_PRODUCT} \
-		-var plan_publisher=${PLAN_PUBLISHER} \
-		./${PODVM_DISTRO}/
+	# export the required packer variables as PKR_VAR_<var_name>
+        # export PKR_VAR_client_id="${AZURE_CLIENT_ID}"
+        # export PKR_VAR_client_secret="${AZURE_CLIENT_SECRET}"
+        # export PKR_VAR_subscription_id="${AZURE_SUBSCRIPTION_ID}"
+        # export PKR_VAR_tenant_id="${AZURE_TENANT_ID}"
+        # export PKR_VAR_resource_group="${AZURE_RESOURCE_GROUP}"
+        # export PKR_VAR_location="${AZURE_LOCATION}"
+        # export PKR_VAR_az_image_name="${IMAGE_NAME}"
+        # export PKR_VAR_vm_size="${VM_SIZE}"
+        # export PKR_VAR_ssh_username="${SSH_USERNAME}"
+
+	packer build ./${PODVM_DISTRO}/
 	rm -fr toupload
 
 clean:
