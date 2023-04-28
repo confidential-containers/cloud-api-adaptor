@@ -31,8 +31,6 @@ const (
 	vrf2TableID = 49002
 	minTableID  = 50000
 	maxTableID  = 59999
-
-	daemonListenPort = "15150"
 )
 
 const (
@@ -217,10 +215,6 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		return err
 	}
 
-	if err := startKeepAlive(hostNS, podIP, net.JoinHostPort(podNodeIP.String(), daemonListenPort), true); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -287,10 +281,6 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 
 	if err := podNS.LinkDel(secondPodInterface); err != nil {
 		return fmt.Errorf("failed to delete a veth interface %s at %s: %w", secondPodInterface, podNS.Name, err)
-	}
-
-	if err := stopKeepAlive(podIP, true); err != nil {
-		logger.Printf("failed to stop keep alive: %v", err)
 	}
 
 	return nil

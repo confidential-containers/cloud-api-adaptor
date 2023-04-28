@@ -14,14 +14,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type podNodeTunneler struct {
-	keepAliveStopCh chan struct{}
-}
+type podNodeTunneler struct{}
 
 func NewPodNodeTunneler() tunneler.Tunneler {
-	return &podNodeTunneler{
-		keepAliveStopCh: make(chan struct{}),
-	}
+	return &podNodeTunneler{}
 }
 
 const (
@@ -200,23 +196,9 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		}
 	}
 
-	if err := startKeepAlive(hostNS, podIP, net.JoinHostPort(nodeIP.String(), defaultKeepAliveListenPort), false); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (t *podNodeTunneler) Teardown(nsPath, hostInterface string, config *tunneler.Config) error {
-
-	podIP, _, err := net.ParseCIDR(config.PodIP)
-	if err != nil {
-		return fmt.Errorf("failed to parse pod IP: %w", err)
-	}
-
-	if err := stopKeepAlive(podIP, false); err != nil {
-		logger.Printf("failed to stop keep alive: %v", err)
-	}
-
 	return nil
 }
