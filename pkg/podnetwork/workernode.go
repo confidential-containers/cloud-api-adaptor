@@ -62,7 +62,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		Index:      podIndexManager.Get(),
 	}
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open the host network namespace: %w", err)
 	}
@@ -86,22 +86,22 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	addrs, err := hostNS.GetIPNet(hostInterface)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get IP address on %s (netns: %s): %w", hostInterface, hostNS.Path, err)
+		return nil, fmt.Errorf("failed to get IP address on %s (netns: %s): %w", hostInterface, hostNS.Path(), err)
 	}
 	if len(addrs) != 1 {
-		logger.Printf("more than one IP address (%v) assigned on %s (netns: %s)", addrs, hostInterface, hostNS.Path)
+		logger.Printf("more than one IP address (%v) assigned on %s (netns: %s)", addrs, hostInterface, hostNS.Path())
 	}
 	// Use the first IP as the workerNodeIP
 	// TBD: Might be faster to retrieve using K8s downward API
 	config.WorkerNodeIP = addrs[0].String()
 
-	podNS, err := netops.NewNSFromPath(nsPath)
+	podNS, err := netops.OpenNamespace(nsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open network namespace %q: %w", nsPath, err)
 	}
 	defer func() {
 		if err := podNS.Close(); err != nil {
-			logger.Printf("failed to close a network namespace: %q", podNS.Path)
+			logger.Printf("failed to close a network namespace: %q", podNS.Path())
 		}
 	}()
 
@@ -172,7 +172,7 @@ func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
 		return fmt.Errorf("failed to get tunneler: %w", err)
 	}
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to open the host network namespace: %w", err)
 	}
@@ -198,11 +198,11 @@ func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
 	return nil
 }
 
-func getPodIP(podNS *netops.NS, podInterface string) (string, error) {
+func getPodIP(podNS netops.Namespace, podInterface string) (string, error) {
 
 	ipNets, err := podNS.GetIPNet(podInterface)
 	if err != nil {
-		return "", fmt.Errorf("failed to get IP address on %s of netns %s: %w", podInterface, podNS.Path, err)
+		return "", fmt.Errorf("failed to get IP address on %s of netns %s: %w", podInterface, podNS.Path(), err)
 	}
 
 	var ips []string
@@ -212,10 +212,10 @@ func getPodIP(podNS *netops.NS, podInterface string) (string, error) {
 		}
 	}
 	if len(ips) < 1 {
-		return "", fmt.Errorf("no IPv4 address found on %s of netns %s", podInterface, podNS.Path)
+		return "", fmt.Errorf("no IPv4 address found on %s of netns %s", podInterface, podNS.Path())
 	}
 	if len(ips) > 1 {
-		return "", fmt.Errorf("more than one IPv4 addresses found on %s of netns %s", podInterface, podNS.Path)
+		return "", fmt.Errorf("more than one IPv4 addresses found on %s of netns %s", podInterface, podNS.Path())
 	}
 	return ips[0], nil
 }

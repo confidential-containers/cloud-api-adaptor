@@ -37,13 +37,13 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 	}
 	podIPNet.IP = podIP
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to get host network namespace: %w", err)
 	}
 	defer hostNS.Close()
 
-	podNS, err := netops.NewNSFromPath(nsPath)
+	podNS, err := netops.OpenNamespace(nsPath)
 	if err != nil {
 		return fmt.Errorf("failed to get a pod network namespace: %s: %w", nsPath, err)
 	}
@@ -59,7 +59,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 	}
 
 	if err := hostNS.LinkSetNS(podVxlanInterface, podNS); err != nil {
-		return fmt.Errorf("failed to move vxlan interface %s to netns %s: %w", podVxlanInterface, podNS.Path, err)
+		return fmt.Errorf("failed to move vxlan interface %s to netns %s: %w", podVxlanInterface, podNS.Path(), err)
 	}
 
 	if err := podNS.SetHardwareAddr(podVxlanInterface, config.PodHwAddr); err != nil {
@@ -113,7 +113,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 			}
 		}
 
-		if err := podNS.RouteAdd(0, dst, gw, podVxlanInterface); err != nil {
+		if err := podNS.RouteAdd(0, dst, gw, podVxlanInterface, false); err != nil {
 			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", dst, gw, nsPath, err)
 		}
 	}

@@ -41,7 +41,7 @@ func (n *podNode) Setup() error {
 		return fmt.Errorf("failed to get tunneler: %w", err)
 	}
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to open the host network namespace: %w", err)
 	}
@@ -81,13 +81,13 @@ func (n *podNode) Setup() error {
 		podNodeIPs = append(podNodeIPs, dedicatePodNodeIP)
 	}
 
-	podNS, err := netops.NewNSFromPath(n.nsPath)
+	podNS, err := netops.OpenNamespace(n.nsPath)
 	if err != nil {
 		return fmt.Errorf("failed to open network namespace %q: %w", n.nsPath, err)
 	}
 	defer func() {
 		if err := podNS.Close(); err != nil {
-			logger.Printf("failed to close a network namespace: %q", podNS.Path)
+			logger.Printf("failed to close a network namespace: %q", podNS.Path())
 		}
 	}()
 
@@ -105,7 +105,7 @@ func (n *podNode) Teardown() error {
 		return fmt.Errorf("failed to get tunneler: %w", err)
 	}
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to open the host network namespace: %w", err)
 	}
@@ -131,7 +131,7 @@ func (n *podNode) Teardown() error {
 	return nil
 }
 
-func detectPrimaryInterface(hostNS *netops.NS, timeout time.Duration) (string, error) {
+func detectPrimaryInterface(hostNS netops.Namespace, timeout time.Duration) (string, error) {
 
 	timeoutCh := time.After(timeout)
 	ticker := time.NewTicker(1 * time.Second)
@@ -146,7 +146,7 @@ func detectPrimaryInterface(hostNS *netops.NS, timeout time.Duration) (string, e
 
 		select {
 		case <-timeoutCh:
-			return "", fmt.Errorf("failed to identify primary interface on netns %s", hostNS.Path)
+			return "", fmt.Errorf("failed to identify primary interface on netns %s", hostNS.Path())
 		case <-ticker.C:
 		}
 
@@ -154,7 +154,7 @@ func detectPrimaryInterface(hostNS *netops.NS, timeout time.Duration) (string, e
 	}
 }
 
-func detectIP(hostNS *netops.NS, hostInterface string, timeout time.Duration) (net.IP, error) {
+func detectIP(hostNS netops.Namespace, hostInterface string, timeout time.Duration) (net.IP, error) {
 
 	// An IP address of the second network interface of an IBM Cloud VPC instance is assigned by DHCP
 	// several seconds after the first interface gets an IP address.
@@ -167,10 +167,10 @@ func detectIP(hostNS *netops.NS, hostInterface string, timeout time.Duration) (n
 
 		ips, err := hostNS.GetIP(hostInterface)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get addresses assigned %s on netns %s: %w", hostInterface, hostNS.Path, err)
+			return nil, fmt.Errorf("failed to get addresses assigned %s on netns %s: %w", hostInterface, hostNS.Path(), err)
 		}
 		if len(ips) > 1 {
-			return nil, fmt.Errorf("more than one IP address assigned on %s (netns: %s)", hostInterface, hostNS.Path)
+			return nil, fmt.Errorf("more than one IP address assigned on %s (netns: %s)", hostInterface, hostNS.Path())
 		}
 		if len(ips) == 1 {
 			return ips[0], nil
@@ -178,7 +178,7 @@ func detectIP(hostNS *netops.NS, hostInterface string, timeout time.Duration) (n
 
 		select {
 		case <-timeoutCh:
-			return nil, fmt.Errorf("failed to identify IP address assigned to host interface %s on netns %s", hostInterface, hostNS.Path)
+			return nil, fmt.Errorf("failed to identify IP address assigned to host interface %s on netns %s", hostInterface, hostNS.Path())
 		case <-ticker.C:
 		}
 	}

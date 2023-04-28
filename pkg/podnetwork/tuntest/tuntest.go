@@ -18,9 +18,9 @@ import (
 type testPod struct {
 	workerNodeTunneler   tunneler.Tunneler
 	podNodeTunneler      tunneler.Tunneler
-	workerPodNS          *netops.NS
-	podNS                *netops.NS
-	podNodeNS            *netops.NS
+	workerPodNS          netops.Namespace
+	podNS                netops.Namespace
+	podNodeNS            netops.Namespace
 	config               *tunneler.Config
 	podAddr              string
 	podHwAddr            string
@@ -155,7 +155,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 		}
 
 		if err := workerNS.Run(func() error {
-			return pod.workerNodeTunneler.Setup(pod.workerPodNS.Path, podNodeIPs, pod.config)
+			return pod.workerNodeTunneler.Setup(pod.workerPodNS.Path(), podNodeIPs, pod.config)
 
 		}); err != nil {
 			t.Fatalf("Expect no error, got %v", err)
@@ -174,7 +174,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 		}()
 
 		if err := pod.podNodeNS.Run(func() error {
-			return pod.podNodeTunneler.Setup(pod.podNS.Path, podNodeIPs, pod.config)
+			return pod.podNodeTunneler.Setup(pod.podNS.Path(), podNodeIPs, pod.config)
 
 		}); err != nil {
 			t.Fatalf("Expect no error, got %v", err)
@@ -195,7 +195,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 
 		if err := workerNS.Run(func() error {
 
-			return pod.workerNodeTunneler.Teardown(pod.workerPodNS.Path, pod.hostInterface, pod.config)
+			return pod.workerNodeTunneler.Teardown(pod.workerPodNS.Path(), pod.hostInterface, pod.config)
 
 		}); err != nil {
 			t.Fatalf("Expect no error, got %v", err)
@@ -203,7 +203,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 
 		if err := pod.podNodeNS.Run(func() error {
 
-			return pod.podNodeTunneler.Teardown(pod.podNS.Path, pod.hostInterface, pod.config)
+			return pod.podNodeTunneler.Teardown(pod.podNS.Path(), pod.hostInterface, pod.config)
 
 		}); err != nil {
 			t.Fatalf("Expect no error, got %v", err)

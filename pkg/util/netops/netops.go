@@ -1,10 +1,9 @@
-// (C) Copyright IBM Corp. 2022.
+// (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package netops
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -16,84 +15,87 @@ import (
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"golang.org/x/sys/unix"
-
-	"github.com/containernetworking/plugins/pkg/utils/sysctl"
 )
 
 var logger = log.New(log.Writer(), "[util/netops] ", log.LstdFlags|log.Lmsgprefix)
 
-// NS represents a network namespace
-type NS struct {
+type Namespace interface {
+	AddrAdd(name string, addr *net.IPNet) error
+	Close() error
+	GetHardwareAddr(name string) (string, error)
+	GetIP(name string) ([]net.IP, error)
+	GetIPNet(name string) ([]*net.IPNet, error)
+	GetMTU(name string) (int, error)
+	GetRoutes() ([]*Route, error)
+	LinkAdd(name string, link netlink.Link) error
+	LinkDel(name string) error
+	LinkList() ([]string, error)
+	LinkNameByAddr(ip net.IP) (string, error)
+	LinkSetMaster(name, masterName string) error
+	LinkSetNS(name string, targetNS Namespace) error
+	LinkSetName(name, newName string) error
+	LinkSetUp(name string) error
+	LocalRouteDel(table int, dest *net.IPNet, dev string) error
+	Path() string
+	RedirectAdd(src, dst string) error
+	RedirectDel(src string) error
+	RouteAdd(table int, dest *net.IPNet, gw net.IP, dev string, onlink bool) error
+	RouteDel(table int, dest *net.IPNet, gw net.IP, dev string) error
+	RuleAdd(src *net.IPNet, iif string, priority int, table int) error
+	RuleDel(src *net.IPNet, iif string, priority int, table int) error
+	RuleList(src *net.IPNet, iif string, priority int) ([]netlink.Rule, error)
+	Run(fn func() error) error
+	SetHardwareAddr(name, hwAddr string) error
+	SetMTU(name string, mtu int) error
+	VethAdd(name string, peerNS Namespace, peerName string) error
+}
+
+type namespace struct {
 	handle   *netlink.Handle
-	Name     string
-	Path     string
+	path     string
 	nsHandle netns.NsHandle
 }
 
-// NewNSFromPath returns an NS specified by a namespace path
-func NewNSFromPath(nsPath string) (*NS, error) {
-
-	netnsDir := "/run/netns"
-	altNetnsDir := "/var/run/netns"
-
-	if filepath.Dir(nsPath) == altNetnsDir {
-		nsPath = filepath.Join(netnsDir, filepath.Base(nsPath))
-	}
-
-	if filepath.Dir(nsPath) != netnsDir {
-		return nil, fmt.Errorf("%s is not in %s", nsPath, netnsDir)
-	}
-
-	name := filepath.Base(nsPath)
+// OpenNamespace returns a namespace specified by a path
+func OpenNamespace(nsPath string) (Namespace, error) {
 
 	nsHandle, err := netns.GetFromPath(nsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get network namespace %s: %w", nsPath, err)
 	}
+
 	handle, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get a handle for network namespace %s: %w", nsPath, err)
 	}
-	ns := &NS{
-		Name:     name,
-		Path:     nsPath,
+
+	ns := &namespace{
+		path:     nsPath,
 		nsHandle: nsHandle,
 		handle:   handle,
 	}
+
 	return ns, nil
 }
 
-// GetNS returns an NS of the current network namespace
-func GetNS() (*NS, error) {
+// OpenCurrentNamespace returns the current network namespace
+func OpenCurrentNamespace() (Namespace, error) {
 
 	pid := os.Getpid()
 	tid := unix.Gettid()
 	path := fmt.Sprintf("/proc/%d/task/%d/ns/net", pid, tid)
 
-	nsHandle, err := netns.GetFromPath(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current network namespace: %w", err)
-	}
-	handle, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get a netlink handle for the current network namespace: %w", err)
-	}
-	ns := &NS{
-		nsHandle: nsHandle,
-		handle:   handle,
-		Path:     path,
-	}
-	return ns, nil
+	return OpenNamespace(path)
 }
 
-// NewNamedNS returns an NS of the current network namespace
-func NewNamedNS(name string) (ns *NS, err error) {
+// CreateNamedNamespace creates a new named network namespace, and returns its path
+func CreateNamedNamespace(name string) (string, error) {
 	runtime.LockOSThread()
 	defer runtime.LockOSThread()
 
 	old, err := netns.Get()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the current network namespace: %w", err)
+		return "", fmt.Errorf("failed to get the current network namespace: %w", err)
 	}
 	defer func() {
 		if e := netns.Set(old); e != nil {
@@ -103,48 +105,33 @@ func NewNamedNS(name string) (ns *NS, err error) {
 
 	nsHandle, err := netns.NewNamed(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current network namespace: %w", err)
+		return "", fmt.Errorf("failed to create a new named network namespace: %w", err)
 	}
-	handle, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get a netlink handle for the current network namespace: %w", err)
+	if err := nsHandle.Close(); err != nil {
+		return "", fmt.Errorf("failed to close a new named network namespace: %w", err)
 	}
-	ns = &NS{
-		Name:     name,
-		Path:     filepath.Join("/run/netns", name),
-		nsHandle: nsHandle,
-		handle:   handle,
-	}
-	return ns, nil
+
+	return filepath.Join("/run/netns", name), err
 }
 
-// Clone returns a copy of a network namespace. A returned network namespace need to be closed separately.
-func (ns *NS) Clone() (*NS, error) {
-
-	nsHandle, err := netns.GetFromPath(ns.Path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get network namespace at %q: %w", ns.Path, err)
+// DeleteNamedNamespace deletes a named NS
+func DeleteNamedNamespace(name string) error {
+	if err := netns.DeleteNamed(name); err != nil {
+		return fmt.Errorf("failed to delete a named network namespace %s: %w", name, err)
 	}
-	handle, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get a netlink handle for network namespace at %q: %w", ns.Path, err)
-	}
-
-	clone := &NS{
-		nsHandle: nsHandle,
-		handle:   handle,
-		Path:     ns.Path,
-	}
-	return clone, nil
+	return nil
 }
 
-// FD returns a file descriptor of the network namespace
-func (ns *NS) FD() int {
+func (ns *namespace) Path() string {
+	return ns.path
+}
+
+func (ns *namespace) fd() int {
 	return int(ns.nsHandle)
 }
 
 // Close closes an NS
-func (ns *NS) Close() error {
+func (ns *namespace) Close() error {
 
 	ns.handle.Close()
 
@@ -155,16 +142,8 @@ func (ns *NS) Close() error {
 	return nil
 }
 
-// Delete deletes a named NS
-func (ns *NS) Delete() error {
-	if err := netns.DeleteNamed(ns.Name); err != nil {
-		return fmt.Errorf("failed to delete a named network namespace %s: %w", ns.Name, err)
-	}
-	return nil
-}
-
 // Run calls a function in a network namespace
-func (ns *NS) Run(fn func() error) (err error) {
+func (ns *namespace) Run(fn func() error) (err error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -192,35 +171,8 @@ func (ns *NS) Run(fn func() error) (err error) {
 	return fn()
 }
 
-// SysctlGet returns a kernel parameter value specified by key
-func (ns *NS) SysctlGet(key string) (string, error) {
-	var val string
-	err := ns.Run(func() error {
-		var err error
-
-		val, err = sysctl.Sysctl(key)
-		if err != nil {
-			return fmt.Errorf("failed to get a value of sysctl parameter %q: %w", key, err)
-		}
-		return err
-	})
-	return val, err
-}
-
-// SysctlSet returns a kernel parameter value specified by key
-func (ns *NS) SysctlSet(key string, val string) error {
-
-	err := ns.Run(func() error {
-		if _, err := sysctl.Sysctl(key, val); err != nil {
-			return fmt.Errorf("failed to set sysctl parameter %q to %q: %w", key, val, err)
-		}
-		return nil
-	})
-	return err
-}
-
 // GetIP returns a list of IP addresses assigned to a link
-func (ns *NS) GetIP(linkName string) ([]net.IP, error) {
+func (ns *namespace) GetIP(linkName string) ([]net.IP, error) {
 
 	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
@@ -228,7 +180,7 @@ func (ns *NS) GetIP(linkName string) ([]net.IP, error) {
 	}
 	addrs, err := ns.handle.AddrList(link, netlink.FAMILY_V4)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get addressess assigned to %s (type: %s, netns: %s): %w", linkName, link.Type(), ns.Path, err)
+		return nil, fmt.Errorf("failed to get addressess assigned to %s (type: %s, netns: %s): %w", linkName, link.Type(), ns.path, err)
 	}
 
 	var ips []net.IP
@@ -240,7 +192,7 @@ func (ns *NS) GetIP(linkName string) ([]net.IP, error) {
 }
 
 // GetIPNet returns a list of IPNets assigned to a link
-func (ns *NS) GetIPNet(linkName string) ([]*net.IPNet, error) {
+func (ns *namespace) GetIPNet(linkName string) ([]*net.IPNet, error) {
 
 	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
@@ -260,7 +212,7 @@ func (ns *NS) GetIPNet(linkName string) ([]*net.IPNet, error) {
 }
 
 // GetMTU returns MTU size of a link
-func (ns *NS) GetMTU(linkName string) (int, error) {
+func (ns *namespace) GetMTU(linkName string) (int, error) {
 
 	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
@@ -273,7 +225,7 @@ func (ns *NS) GetMTU(linkName string) (int, error) {
 }
 
 // SetMTU sets MTU size of a link
-func (ns *NS) SetMTU(linkName string, mtu int) error {
+func (ns *namespace) SetMTU(linkName string, mtu int) error {
 
 	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
@@ -287,7 +239,7 @@ func (ns *NS) SetMTU(linkName string, mtu int) error {
 	return nil
 }
 
-func (ns *NS) GetHardwareAddr(linkName string) (string, error) {
+func (ns *namespace) GetHardwareAddr(linkName string) (string, error) {
 
 	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
@@ -299,7 +251,7 @@ func (ns *NS) GetHardwareAddr(linkName string) (string, error) {
 	return hwAddr, nil
 }
 
-func (ns *NS) SetHardwareAddr(linkName, hwAddr string) error {
+func (ns *namespace) SetHardwareAddr(linkName, hwAddr string) error {
 
 	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
@@ -313,17 +265,17 @@ func (ns *NS) SetHardwareAddr(linkName, hwAddr string) error {
 	}
 
 	if err := ns.handle.LinkSetHardwareAddr(link, mac); err != nil {
-		return fmt.Errorf("failed to set hardware address %q to %s (netns: %s): %w", hwAddr, linkName, ns.Path, err)
+		return fmt.Errorf("failed to set hardware address %q to %s (netns: %s): %w", hwAddr, linkName, ns.Path(), err)
 	}
 
 	return nil
 }
 
-func (ns *NS) LinkNameByAddr(ip net.IP) (string, error) {
+func (ns *namespace) LinkNameByAddr(ip net.IP) (string, error) {
 
 	links, err := ns.handle.LinkList()
 	if err != nil {
-		return "", fmt.Errorf("failed to get a list of interfaces (netns: %s): %w", ns.Path, err)
+		return "", fmt.Errorf("failed to get a list of interfaces (netns: %s): %w", ns.Path(), err)
 	}
 
 	var names []string
@@ -331,7 +283,7 @@ func (ns *NS) LinkNameByAddr(ip net.IP) (string, error) {
 		name := link.Attrs().Name
 		addrs, err := ns.GetIP(name)
 		if err != nil {
-			return "", fmt.Errorf("failed to obtain addresses assigned to %s (netns: %s)", name, ns.Path)
+			return "", fmt.Errorf("failed to obtain addresses assigned to %s (netns: %s)", name, ns.Path())
 		}
 		for _, addr := range addrs {
 			if addr.Equal(ip) {
@@ -342,37 +294,33 @@ func (ns *NS) LinkNameByAddr(ip net.IP) (string, error) {
 	}
 
 	if len(names) == 0 {
-		return "", fmt.Errorf("failed to find interface that has %s on netns %s", ip.String(), ns.Path)
+		return "", fmt.Errorf("failed to find interface that has %s on netns %s", ip.String(), ns.Path())
 	}
 	if len(names) > 1 {
-		return "", fmt.Errorf("multile interfaces have %s on netns %s: %s", ip.String(), ns.Path, strings.Join(names, ", "))
+		return "", fmt.Errorf("multiple interfaces have %s on netns %s: %s", ip.String(), ns.Path(), strings.Join(names, ", "))
 	}
 
 	return names[0], nil
 }
 
-func (ns *NS) LinkList() ([]netlink.Link, error) {
+func (ns *namespace) LinkList() ([]string, error) {
 
 	links, err := ns.handle.LinkList()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get a list of interfaces: %w", err)
 	}
 
-	return links, nil
-}
+	var names []string
 
-func (ns *NS) LinkByName(name string) (netlink.Link, error) {
-
-	link, err := ns.handle.LinkByName(name)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find interface %s: %w", name, err)
+	for _, link := range links {
+		names = append(names, link.Attrs().Name)
 	}
 
-	return link, nil
+	return names, nil
 }
 
 // LinkAdd creates a new link with an attribute specified by link
-func (ns *NS) LinkAdd(linkName string, link netlink.Link) error {
+func (ns *namespace) LinkAdd(linkName string, link netlink.Link) error {
 	attrs := link.Attrs()
 	*attrs = netlink.NewLinkAttrs()
 	attrs.Name = linkName
@@ -383,7 +331,7 @@ func (ns *NS) LinkAdd(linkName string, link netlink.Link) error {
 }
 
 // LinkDel deletes a link
-func (ns *NS) LinkDel(linkName string) error {
+func (ns *namespace) LinkDel(linkName string) error {
 	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
 		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
@@ -395,7 +343,7 @@ func (ns *NS) LinkDel(linkName string) error {
 }
 
 // LinkSetMaster sets a master device of a link
-func (ns *NS) LinkSetMaster(linkName, masterName string) error {
+func (ns *namespace) LinkSetMaster(linkName, masterName string) error {
 	master, err := ns.handle.LinkByName(masterName)
 	if err != nil {
 		return fmt.Errorf("failed to get interface %s: %w", masterName, err)
@@ -412,37 +360,37 @@ func (ns *NS) LinkSetMaster(linkName, masterName string) error {
 }
 
 // LinkSetNS changes network namespace of a link
-func (ns *NS) LinkSetNS(linkName string, targetNS *NS) error {
+func (ns *namespace) LinkSetNS(linkName string, targetNS Namespace) error {
 
-	link, err := ns.LinkByName(linkName)
+	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
 		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
 	}
 
-	if err := ns.handle.LinkSetNsFd(link, targetNS.FD()); err != nil {
-		return fmt.Errorf("failed to change network namespace of interface %s from %s to %s: %w", linkName, ns.Path, targetNS.Path, err)
+	if err := ns.handle.LinkSetNsFd(link, targetNS.(*namespace).fd()); err != nil {
+		return fmt.Errorf("failed to change network namespace of interface %s from %s to %s: %w", linkName, ns.path, targetNS.Path(), err)
 	}
 
 	return nil
 }
 
 // LinkSetName changes name of a link
-func (ns *NS) LinkSetName(linkName, newName string) error {
+func (ns *namespace) LinkSetName(linkName, newName string) error {
 
-	link, err := ns.LinkByName(linkName)
+	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
 		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
 	}
 
 	if err := ns.handle.LinkSetName(link, newName); err != nil {
-		return fmt.Errorf("failed to change name of interface %s on %s to %s: %w", linkName, ns.Path, newName, err)
+		return fmt.Errorf("failed to change name of interface %s on %s to %s: %w", linkName, ns.path, newName, err)
 	}
 
 	return nil
 }
 
 // AddrAdd adds an IP address to a link
-func (ns *NS) AddrAdd(linkName string, addr *net.IPNet) error {
+func (ns *namespace) AddrAdd(linkName string, addr *net.IPNet) error {
 	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
 		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
@@ -454,7 +402,7 @@ func (ns *NS) AddrAdd(linkName string, addr *net.IPNet) error {
 }
 
 // LinkSetUp makes the link status up
-func (ns *NS) LinkSetUp(linkName string) error {
+func (ns *namespace) LinkSetUp(linkName string) error {
 	link, err := ns.handle.LinkByName(linkName)
 	if err != nil {
 		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
@@ -466,7 +414,7 @@ func (ns *NS) LinkSetUp(linkName string) error {
 }
 
 // RouteAdd adds a new route
-func (ns *NS) RouteAdd(table int, dest *net.IPNet, gw net.IP, dev string) error {
+func (ns *namespace) RouteAdd(table int, dest *net.IPNet, gw net.IP, dev string, onlink bool) error {
 	logger.Printf("RouteAdd details: table(%d), dest(%v), gw(%v), dev(%s)", table, dest, gw, dev)
 
 	if dest == nil {
@@ -477,31 +425,8 @@ func (ns *NS) RouteAdd(table int, dest *net.IPNet, gw net.IP, dev string) error 
 		Dst:   dest,
 		Gw:    gw,
 	}
-	if dev != "" {
-		link, err := ns.handle.LinkByName(dev)
-		if err != nil {
-			return fmt.Errorf("failed to get interface %s: %w", dev, err)
-		}
-		route.LinkIndex = link.Attrs().Index
-	}
-	if gw == nil {
-		route.Scope = netlink.SCOPE_LINK
-	}
-	if err := ns.handle.RouteAdd(route); err != nil {
-		return fmt.Errorf("failed to create a route: %w", err)
-	}
-	return nil
-}
-
-func (ns *NS) RouteAddOnlink(table int, dest *net.IPNet, gw net.IP, dev string) error {
-	if dest == nil {
-		_, dest, _ = net.ParseCIDR("0.0.0.0/0")
-	}
-	route := &netlink.Route{
-		Table: table,
-		Dst:   dest,
-		Gw:    gw,
-		Flags: int(netlink.FLAG_ONLINK),
+	if onlink {
+		route.Flags = int(netlink.FLAG_ONLINK)
 	}
 	if dev != "" {
 		link, err := ns.handle.LinkByName(dev)
@@ -520,7 +445,7 @@ func (ns *NS) RouteAddOnlink(table int, dest *net.IPNet, gw net.IP, dev string) 
 }
 
 // RouteDel deletes routes
-func (ns *NS) RouteDel(table int, dest *net.IPNet, gw net.IP, dev string) error {
+func (ns *namespace) RouteDel(table int, dest *net.IPNet, gw net.IP, dev string) error {
 	filterMask := netlink.RT_FILTER_DST
 	if dest == nil {
 		_, dest, _ = net.ParseCIDR("0.0.0.0/0")
@@ -563,11 +488,11 @@ type Route struct {
 }
 
 // GetRoutes gets a list of routes on the main table
-func (ns *NS) GetRoutes() ([]*Route, error) {
+func (ns *namespace) GetRoutes() ([]*Route, error) {
 
 	routeList, err := ns.handle.RouteList(nil, netlink.FAMILY_V4)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get routes on namespace %q: %w", ns.Name, err)
+		return nil, fmt.Errorf("failed to get routes on namespace %q: %w", ns.Path(), err)
 	}
 
 	var routes []*Route
@@ -629,7 +554,7 @@ func (ns *NS) GetRoutes() ([]*Route, error) {
 }
 
 // LocalRouteDel deletes a route of the local local
-func (ns *NS) LocalRouteDel(table int, dest *net.IPNet, dev string) error {
+func (ns *namespace) LocalRouteDel(table int, dest *net.IPNet, dev string) error {
 
 	link, err := ns.handle.LinkByName(dev)
 	if err != nil {
@@ -650,32 +575,8 @@ func (ns *NS) LocalRouteDel(table int, dest *net.IPNet, dev string) error {
 	return nil
 }
 
-// GetAvailableTableID returns a table ID that is not currently used
-func (ns *NS) GetAvailableTableID(iif string, priority, min, max int) (int, error) {
-	rule := netlink.NewRule()
-	rule.Priority = priority
-	rule.IifName = iif
-
-	rules, err := ns.handle.RuleListFiltered(netlink.FAMILY_V4, nil, netlink.RT_FILTER_PRIORITY|netlink.RT_FILTER_IIF)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get rules: %w", err)
-	}
-
-	used := make(map[int]bool)
-	for _, rule := range rules {
-		used[rule.Table] = true
-	}
-
-	for id := min; id <= max; id++ {
-		if !used[id] {
-			return id, nil
-		}
-	}
-	return 0, fmt.Errorf("No table ID is available")
-}
-
 // RuleAdd adds a new rule in the routing policy database
-func (ns *NS) RuleAdd(src *net.IPNet, iif string, priority int, table int) error {
+func (ns *namespace) RuleAdd(src *net.IPNet, iif string, priority int, table int) error {
 	rule := netlink.NewRule()
 	rule.Src = src
 	rule.IifName = iif
@@ -689,7 +590,7 @@ func (ns *NS) RuleAdd(src *net.IPNet, iif string, priority int, table int) error
 }
 
 // RuleDel deletes a rule in the routing policy database
-func (ns *NS) RuleDel(src *net.IPNet, iif string, priority int, table int) error {
+func (ns *namespace) RuleDel(src *net.IPNet, iif string, priority int, table int) error {
 	rule := netlink.NewRule()
 	rule.Src = src
 	rule.IifName = iif
@@ -703,7 +604,7 @@ func (ns *NS) RuleDel(src *net.IPNet, iif string, priority int, table int) error
 }
 
 // RuleList gets a list of rules in the routing policy database
-func (ns *NS) RuleList(src *net.IPNet, iif string, priority int, table int) ([]netlink.Rule, error) {
+func (ns *namespace) RuleList(src *net.IPNet, iif string, priority int) ([]netlink.Rule, error) {
 	rule := netlink.NewRule()
 	var filterMask uint64
 	if src != nil {
@@ -725,90 +626,16 @@ func (ns *NS) RuleList(src *net.IPNet, iif string, priority int, table int) ([]n
 	return rules, nil
 }
 
-// DetectPodIP returns IP and link of the default route device
-func (ns *NS) DetectPodIP() (net.IP, string, error) {
-	routes, err := ns.handle.RouteList(nil, netlink.FAMILY_V4)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to get routes on the pod namespace: %w", err)
-	}
-
-	var defaultRoute *netlink.Route
-	for _, route := range routes {
-		if route.Dst == nil {
-			defaultRoute = &route
-			break
-		}
-	}
-	if defaultRoute == nil {
-		return nil, "", fmt.Errorf("failed to get default route on the pod namespace")
-	}
-	podLinks, err := ns.handle.LinkList()
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to get interfaces on the pod namespace: %w", err)
-	}
-	var defaultLink netlink.Link
-	var podIP net.IP
-	for _, link := range podLinks {
-		if link.Attrs().Index == defaultRoute.LinkIndex {
-			defaultLink = link
-			addrs, err := ns.handle.AddrList(link, netlink.FAMILY_V4)
-			if err != nil {
-				return nil, "", fmt.Errorf("failed to get IP address of interface %s on the pod namespace: %w", link.Attrs().Name, err)
-			}
-			if len(addrs) == 0 {
-				return nil, "", fmt.Errorf("found no IPv4 addresses on the interface %s on the pod namespace", link.Attrs().Name)
-			}
-			if len(addrs) > 1 {
-				return nil, "", fmt.Errorf("found multiple IPv4 addresses on the interface %s on the pod namespace", link.Attrs().Name)
-			}
-			podIP = addrs[0].IP
-			break
-		}
-	}
-
-	return podIP, defaultLink.Attrs().Name, nil
-}
-
 // VethAdd adds a veth pair
-func (ns *NS) VethAdd(name string, peerNS *NS, peerName string) error {
-	if err := ns.LinkAdd(name, &netlink.Veth{PeerName: peerName, PeerNamespace: netlink.NsFd(peerNS.nsHandle)}); err != nil {
+func (ns *namespace) VethAdd(name string, peerNS Namespace, peerName string) error {
+	if err := ns.LinkAdd(name, &netlink.Veth{PeerName: peerName, PeerNamespace: netlink.NsFd(peerNS.(*namespace).nsHandle)}); err != nil {
 		return fmt.Errorf("failed to add veth pair %s and %s: %w", name, peerName, err)
 	}
 	return nil
 }
 
-// VethAddPrefix adds a veth pair. One endpoint is create at ns, and its name begins with vethPrefix.
-// The other endpoint is created at peerNS and its name is peerName.
-func (ns *NS) VethAddPrefix(vethPrefix string, peerNS *NS, peerName string) (string, error) {
-	links, err := ns.handle.LinkList()
-	if err != nil {
-		return "", fmt.Errorf("failed to get interfaces on host: %w", err)
-	}
-	index := 1
-	for {
-		vethName := fmt.Sprintf("%s%d", vethPrefix, index)
-		var found bool
-		for _, link := range links {
-			if link.Attrs().Name == vethName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			err := ns.LinkAdd(vethName, &netlink.Veth{PeerName: peerName, PeerNamespace: netlink.NsFd(peerNS.nsHandle)})
-			if err == nil {
-				return vethName, nil
-			}
-			if !errors.Is(err, os.ErrExist) {
-				return "", fmt.Errorf("failed to add veth pair %s and %s: %w", vethName, peerName, err)
-			}
-		}
-		index++
-	}
-}
-
 // RedirectAdd adds a tc ingress qdisc and redirect filter that redirects all traffic from src to dst
-func (ns *NS) RedirectAdd(src, dst string) error {
+func (ns *namespace) RedirectAdd(src, dst string) error {
 	srcLink, err := ns.handle.LinkByName(src)
 	if err != nil {
 		return fmt.Errorf("failed to get interface %s: %w", src, err)
@@ -854,7 +681,7 @@ func (ns *NS) RedirectAdd(src, dst string) error {
 }
 
 // RedirectDel deletes a tc ingress qdisc and redirect filters on src
-func (ns *NS) RedirectDel(src string) error {
+func (ns *namespace) RedirectDel(src string) error {
 	srcLink, err := ns.handle.LinkByName(src)
 	if err != nil {
 		return fmt.Errorf("failed to get interface %s: %w", src, err)
