@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -20,15 +21,15 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 )
 
-func NewNamedNS(t *testing.T, prefix string) *netops.NS {
+func NewNamedNS(t *testing.T, prefix string) netops.Namespace {
 	t.Helper()
 
-	var ns *netops.NS
+	var nsPath string
 	name := prefix
 	index := 1
 	for {
 		var err error
-		ns, err = netops.NewNamedNS(name)
+		nsPath, err = netops.CreateNamedNamespace(name)
 		if err == nil {
 			break
 		}
@@ -39,6 +40,10 @@ func NewNamedNS(t *testing.T, prefix string) *netops.NS {
 		name = fmt.Sprintf("%s-%d", prefix, index)
 	}
 
+	ns, err := netops.OpenNamespace(nsPath)
+	if err != nil {
+		t.Fatalf("failed to open a named network namespace %s: %v", nsPath, err)
+	}
 	if err := ns.LinkSetUp("lo"); err != nil {
 		t.Fatalf("failed to set the link up: lo")
 	}
@@ -46,18 +51,18 @@ func NewNamedNS(t *testing.T, prefix string) *netops.NS {
 	return ns
 }
 
-func DeleteNamedNS(t *testing.T, ns *netops.NS) {
+func DeleteNamedNS(t *testing.T, ns netops.Namespace) {
 	t.Helper()
 
 	if err := ns.Close(); err != nil {
 		t.Fatal("failed to close a network namespace")
 	}
-	if err := ns.Delete(); err != nil {
-		t.Fatalf("failed to delete a named network namespace: %s: %v", ns.Name, err)
+	if err := netops.DeleteNamedNamespace(filepath.Base(ns.Path())); err != nil {
+		t.Fatalf("failed to delete a named network namespace: %s: %v", ns.Path(), err)
 	}
 }
 
-func BridgeAdd(t *testing.T, ns *netops.NS, name string) {
+func BridgeAdd(t *testing.T, ns netops.Namespace, name string) {
 	t.Helper()
 
 	attrs := netlink.NewLinkAttrs()
@@ -70,7 +75,7 @@ func BridgeAdd(t *testing.T, ns *netops.NS, name string) {
 	}
 }
 
-func LinkSetMaster(t *testing.T, ns *netops.NS, name, masterName string) {
+func LinkSetMaster(t *testing.T, ns netops.Namespace, name, masterName string) {
 	t.Helper()
 
 	if err := ns.LinkSetMaster(name, masterName); err != nil {
@@ -78,7 +83,7 @@ func LinkSetMaster(t *testing.T, ns *netops.NS, name, masterName string) {
 	}
 }
 
-func VethAdd(t *testing.T, ns *netops.NS, name string, peer *netops.NS, peerName string) {
+func VethAdd(t *testing.T, ns netops.Namespace, name string, peer netops.Namespace, peerName string) {
 	t.Helper()
 
 	if err := ns.VethAdd(name, peer, peerName); err != nil {
@@ -92,7 +97,7 @@ func VethAdd(t *testing.T, ns *netops.NS, name string, peer *netops.NS, peerName
 	}
 }
 
-func AddrAdd(t *testing.T, ns *netops.NS, name, addr string) {
+func AddrAdd(t *testing.T, ns netops.Namespace, name, addr string) {
 	t.Helper()
 
 	ip, err := netlink.ParseIPNet(addr)
@@ -104,7 +109,7 @@ func AddrAdd(t *testing.T, ns *netops.NS, name, addr string) {
 	}
 }
 
-func HwAddrAdd(t *testing.T, ns *netops.NS, name, hwAddr string) {
+func HwAddrAdd(t *testing.T, ns netops.Namespace, name, hwAddr string) {
 	t.Helper()
 
 	if err := ns.SetHardwareAddr(name, hwAddr); err != nil {
@@ -112,7 +117,7 @@ func HwAddrAdd(t *testing.T, ns *netops.NS, name, hwAddr string) {
 	}
 }
 
-func RouteAdd(t *testing.T, ns *netops.NS, dest, gw, dev string) {
+func RouteAdd(t *testing.T, ns netops.Namespace, dest, gw, dev string) {
 	t.Helper()
 
 	if dest == "" {
@@ -129,7 +134,7 @@ func RouteAdd(t *testing.T, ns *netops.NS, dest, gw, dev string) {
 			t.Fatalf("failed to parse IP %s: %v", gw, err)
 		}
 	}
-	if err := ns.RouteAdd(0, destNet, gwIP, dev); err != nil {
+	if err := ns.RouteAdd(0, destNet, gwIP, dev, false); err != nil {
 		t.Fatalf("failed to add a route to %s via %s: %v", dest, gw, err)
 	}
 }
@@ -143,12 +148,12 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type TestHTTPServer struct {
-	ns       *netops.NS
+	ns       netops.Namespace
 	listener net.Listener
 	server   *http.Server
 }
 
-func StartHTTPServer(t *testing.T, ns *netops.NS, addr string) *TestHTTPServer {
+func StartHTTPServer(t *testing.T, ns netops.Namespace, addr string) *TestHTTPServer {
 	t.Helper()
 	s := &TestHTTPServer{
 		ns: ns,
@@ -191,7 +196,7 @@ func (s *TestHTTPServer) Shutdown(t *testing.T) {
 	}
 }
 
-func ConnectToHTTPServer(t *testing.T, ns *netops.NS, addr, localAddr string) {
+func ConnectToHTTPServer(t *testing.T, ns netops.Namespace, addr, localAddr string) {
 	t.Helper()
 
 	var tcpAddr net.Addr
@@ -213,7 +218,7 @@ func ConnectToHTTPServer(t *testing.T, ns *netops.NS, addr, localAddr string) {
 					conn, err = d.DialContext(ctx, network, address)
 					return nil
 				}); e != nil {
-					t.Fatalf("failed to run a dialer at network namespace %s", ns.Name)
+					t.Fatalf("failed to run a dialer at network namespace %s", ns.Path())
 				}
 				return conn, err
 			},
@@ -234,15 +239,15 @@ func ConnectToHTTPServer(t *testing.T, ns *netops.NS, addr, localAddr string) {
 
 		res, err := client.Do(req)
 		if err != nil {
-			return fmt.Errorf("failed to get an http response at %s from http://%s : %v", ns.Name, addr, err)
+			return fmt.Errorf("failed to get an http response at %s from http://%s : %v", ns.Path(), addr, err)
 		}
 		body, err := io.ReadAll(res.Body)
 		if err != nil {
-			return fmt.Errorf("failed to read an http response at %s from http://%s:: %v", ns.Name, addr, err)
+			return fmt.Errorf("failed to read an http response at %s from http://%s:: %v", ns.Path(), addr, err)
 		}
 		content := string(body)
 		if content != string(testHTTPHandler) {
-			return fmt.Errorf("unexpected response at %s from the HTTP server: %s", ns.Name, content)
+			return fmt.Errorf("unexpected response at %s from the HTTP server: %s", ns.Path(), content)
 		}
 		return nil
 
@@ -251,7 +256,7 @@ func ConnectToHTTPServer(t *testing.T, ns *netops.NS, addr, localAddr string) {
 	}
 }
 
-func CheckVRF(t *testing.T, ns *netops.NS) {
+func CheckVRF(t *testing.T, ns netops.Namespace) {
 	t.Helper()
 
 	name := "vrf0dummy"

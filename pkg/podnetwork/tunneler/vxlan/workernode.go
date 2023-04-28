@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package vxlan
@@ -41,7 +41,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		dstAddr = podNodeIPs[0]
 	}
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to get current network namespace: %w", err)
 	}
@@ -51,7 +51,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		}
 	}()
 
-	podNS, err := netops.NewNSFromPath(nsPath)
+	podNS, err := netops.OpenNamespace(nsPath)
 	if err != nil {
 		return fmt.Errorf("failed to get a network namespace: %s: %w", nsPath, err)
 	}
@@ -74,7 +74,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		hostVxlanInterface = fmt.Sprintf("%s%d", hostVxlanInterfacePrefix, index)
 		var found bool
 		for _, link := range links {
-			if link.Attrs().Name == hostVxlanInterface {
+			if link == hostVxlanInterface {
 				found = true
 				break
 			}
@@ -87,13 +87,13 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 				VxlanId: config.VXLANID,
 				Port:    config.VXLANPort,
 			}
-			logger.Printf("vxlan %s (remote %s:%d, id: %d) created at %s", hostVxlanInterface, dstAddr.String(), config.VXLANPort, config.VXLANID, hostNS.Path)
+			logger.Printf("vxlan %s (remote %s:%d, id: %d) created at %s", hostVxlanInterface, dstAddr.String(), config.VXLANPort, config.VXLANID, hostNS.Path())
 			err := hostNS.LinkAdd(hostVxlanInterface, vxlanLink)
 			if err == nil {
-				logger.Printf("vxlan %s created at %s", hostVxlanInterface, hostNS.Path)
+				logger.Printf("vxlan %s created at %s", hostVxlanInterface, hostNS.Path())
 				break
 			}
-			logger.Printf("vxlan %s created at %s: %v", hostVxlanInterface, hostNS.Path, err)
+			logger.Printf("vxlan %s created at %s: %v", hostVxlanInterface, hostNS.Path(), err)
 			if !errors.Is(err, os.ErrExist) {
 				return fmt.Errorf("failed to add vxlan interface %s: %w", hostVxlanInterface, err)
 			}
@@ -105,12 +105,12 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 	}
 
 	if err := hostNS.LinkSetNS(hostVxlanInterface, podNS); err != nil {
-		return fmt.Errorf("failed to move vxlan interface %s to netns %s: %w", hostVxlanInterface, podNS.Path, err)
+		return fmt.Errorf("failed to move vxlan interface %s to netns %s: %w", hostVxlanInterface, podNS.Path(), err)
 	}
-	logger.Printf("vxlan %s is moved to %s", hostVxlanInterface, podNS.Path)
+	logger.Printf("vxlan %s is moved to %s", hostVxlanInterface, podNS.Path())
 
 	if err := podNS.LinkSetName(hostVxlanInterface, secondPodInterface); err != nil {
-		return fmt.Errorf("failed to change vxlan interface name %s on netns %s to %s: %w", hostVxlanInterface, podNS.Path, secondPodInterface, err)
+		return fmt.Errorf("failed to change vxlan interface name %s on netns %s to %s: %w", hostVxlanInterface, podNS.Path(), secondPodInterface, err)
 	}
 
 	if err := podNS.LinkSetUp(secondPodInterface); err != nil {
@@ -134,7 +134,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 
 func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunneler.Config) error {
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to get current network namespace: %w", err)
 	}
@@ -144,7 +144,7 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 		}
 	}()
 
-	podNS, err := netops.NewNSFromPath(nsPath)
+	podNS, err := netops.OpenNamespace(nsPath)
 	if err != nil {
 		return fmt.Errorf("failed to get a network namespace: %s: %w", nsPath, err)
 	}
@@ -167,7 +167,7 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 	logger.Printf("Delete vxlan interface %s in the network namespace %s", secondPodInterface, nsPath)
 
 	if err := podNS.LinkDel(secondPodInterface); err != nil {
-		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", secondPodInterface, podNS.Name, err)
+		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", secondPodInterface, podNS.Path(), err)
 	}
 	return nil
 }

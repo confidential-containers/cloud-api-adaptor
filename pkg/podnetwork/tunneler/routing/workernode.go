@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package routing
@@ -56,7 +56,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 
 	podNodeIP := podNodeIPs[1]
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to get current network namespace: %w", err)
 	}
@@ -72,7 +72,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 	}
 	hostInterface, err := hostNS.LinkNameByAddr(workerNodeIP)
 	if err != nil {
-		return fmt.Errorf("failed to identify host interface that has %s on netns %s", workerNodeIP.String(), hostNS.Path)
+		return fmt.Errorf("failed to identify host interface that has %s on netns %s", workerNodeIP.String(), hostNS.Path())
 	}
 
 	logger.Print("Ensure routing table entries and VRF devices on host")
@@ -104,7 +104,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		return fmt.Errorf("failed to set vrf %s up: %w", vrf2Name, err)
 	}
 
-	podNS, err := netops.NewNSFromPath(nsPath)
+	podNS, err := netops.OpenNamespace(nsPath)
 	if err != nil {
 		return fmt.Errorf("failed to get a network namespace: %s: %w", nsPath, err)
 	}
@@ -114,7 +114,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		}
 	}()
 
-	vethName, err := hostNS.VethAddPrefix(vethPrefix, podNS, secondPodInterface)
+	vethName, err := createVethWithPrefix(vethPrefix, hostNS, podNS, secondPodInterface)
 	if err != nil {
 		return err
 	}
@@ -149,11 +149,11 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 
 	hwAddr, err := podNS.GetHardwareAddr(podInterface)
 	if err != nil {
-		return fmt.Errorf("failed to get hardware address of pod interface %s (netns %s): %w", podInterface, podNS.Path, err)
+		return fmt.Errorf("failed to get hardware address of pod interface %s (netns %s): %w", podInterface, podNS.Path(), err)
 	}
 
 	if err := hostNS.SetHardwareAddr(vethName, hwAddr); err != nil {
-		return fmt.Errorf("failed to set hardware address %q to veth interface %s (netns %s): %w", hwAddr, vethName, hostNS.Path, err)
+		return fmt.Errorf("failed to set hardware address %q to veth interface %s (netns %s): %w", hwAddr, vethName, hostNS.Path(), err)
 	}
 
 	if err := hostNS.LinkSetUp(vethName); err != nil {
@@ -167,7 +167,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 	// when pod network is created for the first time
 	time.Sleep(time.Second)
 
-	if err := hostNS.RouteAdd(vrf2TableID, mask32(podIP), podNodeIP, hostInterface); err != nil {
+	if err := hostNS.RouteAdd(vrf2TableID, mask32(podIP), podNodeIP, hostInterface, false); err != nil {
 		return fmt.Errorf("failed to add a route to pod VM: %w", err)
 	}
 
@@ -183,11 +183,11 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 	tableID := minTableID
 	for {
 		var err error
-		tableID, err = hostNS.GetAvailableTableID(vrf1Name, sourceRouteTablePriority, tableID, maxTableID)
+		tableID, err = getAvailableTableID(hostNS, vrf1Name, sourceRouteTablePriority, tableID, maxTableID)
 		if err != nil {
 			return err
 		}
-		if err := hostNS.RouteAddOnlink(tableID, nil, net.ParseIP(config.Routes[0].GW), vethName); err == nil {
+		if err := hostNS.RouteAdd(tableID, nil, net.ParseIP(config.Routes[0].GW), vethName, true); err == nil {
 			break
 		} else if !errors.Is(err, os.ErrExist) {
 			return fmt.Errorf("failed to add a route from a pod VM to a pod proxy: %w", err)
@@ -206,7 +206,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		fmt.Sprintf("net/ipv4/conf/%s/proxy_arp", vethName):    "1",
 		fmt.Sprintf("net/ipv4/neigh/%s/proxy_delay", vethName): "0",
 	} {
-		if err := hostNS.SysctlSet(key, val); err != nil {
+		if err := sysctlSet(hostNS, key, val); err != nil {
 			return err
 		}
 	}
@@ -220,7 +220,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 
 func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunneler.Config) error {
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to get current network namespace: %w", err)
 	}
@@ -230,7 +230,7 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 		}
 	}()
 
-	podNS, err := netops.NewNSFromPath(nsPath)
+	podNS, err := netops.OpenNamespace(nsPath)
 	if err != nil {
 		return fmt.Errorf("failed to get a network namespace: %s: %w", nsPath, err)
 	}
@@ -250,7 +250,7 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 	if err := hostNS.RouteDel(vrf2TableID, mask32(podIP), nil, hostInterface); err != nil {
 		return err
 	}
-	rules, err := hostNS.RuleList(mask32(podIP), vrf1Name, sourceRouteTablePriority, 0)
+	rules, err := hostNS.RuleList(mask32(podIP), vrf1Name, sourceRouteTablePriority)
 	if err != nil {
 		return err
 	}
@@ -280,8 +280,61 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 	logger.Printf("Delete veth %s in the network namespace %s", secondPodInterface, nsPath)
 
 	if err := podNS.LinkDel(secondPodInterface); err != nil {
-		return fmt.Errorf("failed to delete a veth interface %s at %s: %w", secondPodInterface, podNS.Name, err)
+		return fmt.Errorf("failed to delete a veth interface %s at %s: %w", secondPodInterface, podNS.Path(), err)
 	}
 
 	return nil
+}
+
+func createVethWithPrefix(vethPrefix string, hostNS, peerNS netops.Namespace, peerName string) (string, error) {
+
+	links, err := hostNS.LinkList()
+	if err != nil {
+		return "", fmt.Errorf("failed to get interfaces on host: %w", err)
+	}
+	index := 1
+	for {
+		vethName := fmt.Sprintf("%s%d", vethPrefix, index)
+		var found bool
+		for _, link := range links {
+			if link == vethName {
+				found = true
+				break
+			}
+		}
+		if !found {
+			err := hostNS.VethAdd(vethName, peerNS, peerName)
+			if err == nil {
+				return vethName, nil
+			}
+			if !errors.Is(err, os.ErrExist) {
+				return "", fmt.Errorf("failed to add veth pair %s and %s: %w", vethName, peerName, err)
+			}
+		}
+		index++
+	}
+}
+
+func getAvailableTableID(ns netops.Namespace, iif string, priority, min, max int) (int, error) {
+
+	rule := netlink.NewRule()
+	rule.Priority = priority
+	rule.IifName = iif
+
+	rules, err := ns.RuleList(nil, iif, priority)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rules: %w", err)
+	}
+
+	used := make(map[int]bool)
+	for _, rule := range rules {
+		used[rule.Table] = true
+	}
+
+	for id := min; id <= max; id++ {
+		if !used[id] {
+			return id, nil
+		}
+	}
+	return 0, fmt.Errorf("No table ID is available")
 }

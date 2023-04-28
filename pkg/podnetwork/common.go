@@ -21,14 +21,14 @@ func init() {
 	tunneler.Register("vxlan", vxlan.NewWorkerNodeTunneler, vxlan.NewPodNodeTunneler)
 }
 
-func getRoutes(ns *netops.NS) ([]*netops.Route, string, error) {
+func getRoutes(ns netops.Namespace) ([]*netops.Route, string, error) {
 
 	routes, err := ns.GetRoutes()
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to get routes on namespace %q: %w", ns.Path, err)
+		return nil, "", fmt.Errorf("failed to get routes on namespace %q: %w", ns.Path(), err)
 	}
 
-	logger.Printf("routes on netns %s", ns.Path)
+	logger.Printf("routes on netns %s", ns.Path())
 	for _, r := range routes {
 		var dst, gw, dev string
 		if r.Dst != nil {
@@ -57,5 +57,5 @@ func getRoutes(ns *netops.NS) ([]*netops.Route, string, error) {
 		}
 	}
 
-	return nil, "", fmt.Errorf("failed to identify destination interface of default gateway on network namespace %q", ns.Path)
+	return nil, "", fmt.Errorf("failed to identify destination interface of default gateway on network namespace %q", ns.Path())
 }

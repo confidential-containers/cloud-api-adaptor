@@ -22,7 +22,7 @@ type iptablesRule struct {
 	spec  []string
 }
 
-func setIPTablesRules(ns *netops.NS, hostInterface string) error {
+func setIPTablesRules(ns netops.Namespace, hostInterface string) error {
 
 	var iptablesRules = []iptablesRule{
 		{

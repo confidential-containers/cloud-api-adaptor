@@ -74,7 +74,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		return fmt.Errorf("failed to parse node IP %s: %w", config.WorkerNodeIP, err)
 	}
 
-	hostNS, err := netops.GetNS()
+	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to get host network namespace: %w", err)
 	}
@@ -82,10 +82,10 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 
 	hostInterface, err := hostNS.LinkNameByAddr(podNodeIP)
 	if err != nil {
-		return fmt.Errorf("failed to identify host interface that has %s on netns %s", podNodeIP.String(), hostNS.Path)
+		return fmt.Errorf("failed to identify host interface that has %s on netns %s", podNodeIP.String(), hostNS.Path())
 	}
 
-	podNS, err := netops.NewNSFromPath(nsPath)
+	podNS, err := netops.OpenNamespace(nsPath)
 	if err != nil {
 		return fmt.Errorf("failed to get a pod network namespace: %s: %w", nsPath, err)
 	}
@@ -153,7 +153,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 			}
 		}
 
-		if err := podNS.RouteAdd(0, dst, gw, podVethName); err != nil {
+		if err := podNS.RouteAdd(0, dst, gw, podVethName, false); err != nil {
 			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", dst, gw, nsPath, err)
 		}
 
@@ -170,11 +170,11 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		return fmt.Errorf("failed to add GW IP %s to %s on host network namespace: %w", defaultRouteGateway, hostVethName, err)
 	}
 
-	if err := hostNS.RouteAdd(podTableID, mask32(podIP), nil, hostVethName); err != nil {
+	if err := hostNS.RouteAdd(podTableID, mask32(podIP), nil, hostVethName, false); err != nil {
 		return fmt.Errorf("failed to add route table %d to pod %s IP on host network namespace: %w", podTableID, podIP, err)
 	}
 
-	if err := hostNS.RouteAdd(sourceTableID, nil, nodeIP, hostInterface); err != nil {
+	if err := hostNS.RouteAdd(sourceTableID, nil, nodeIP, hostInterface, false); err != nil {
 		return fmt.Errorf("failed to add route table %d to pod %s IP on host network namespace: %w", sourceTableID, podIP, err)
 	}
 
@@ -191,7 +191,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		fmt.Sprintf("net/ipv4/conf/%s/proxy_arp", hostVethName):    "1",
 		fmt.Sprintf("net/ipv4/neigh/%s/proxy_delay", hostVethName): "0",
 	} {
-		if err := hostNS.SysctlSet(key, val); err != nil {
+		if err := sysctlSet(hostNS, key, val); err != nil {
 			return err
 		}
 	}

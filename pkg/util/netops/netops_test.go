@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package netops
@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
+	testutils "github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
 	"github.com/vishvananda/netns"
 )
 
@@ -39,7 +39,7 @@ func TestRoute(t *testing.T) {
 func TestRouteList(t *testing.T) {
 	testutils.SkipTestIfNotRoot(t)
 
-	ns, err := GetNS()
+	ns, err := OpenCurrentNamespace()
 	if err != nil {
 		t.Fatalf("Expect no error, got %v", err)
 	}

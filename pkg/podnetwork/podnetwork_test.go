@@ -86,10 +86,10 @@ func TestWorkerNode(t *testing.T) {
 			workerNode := NewWorkerNode(mockTunnelType, hostInterface, 0, 0)
 			require.NotNil(t, workerNode, "hostInterface=%q", hostInterface)
 
-			config, err := workerNode.Inspect(workerPodNS.Path)
+			config, err := workerNode.Inspect(workerPodNS.Path())
 			require.Nil(t, err, "hostInterface=%q", hostInterface)
 
-			err = workerNode.Setup(workerPodNS.Path, []net.IP{net.ParseIP("192.168.0.3"), net.ParseIP("192.168.0.3")}, config)
+			err = workerNode.Setup(workerPodNS.Path(), []net.IP{net.ParseIP("192.168.0.3"), net.ParseIP("192.168.0.3")}, config)
 			require.Nil(t, err, "hostInterface=%q", hostInterface)
 
 			require.Equal(t, "172.16.0.2/24", config.PodIP, "hostInterface=%q", hostInterface)
@@ -104,7 +104,7 @@ func TestWorkerNode(t *testing.T) {
 			require.Equal(t, config.Routes[0].GW, "172.16.0.1", "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[0].Dev, "eth0", "hostInterface=%q", hostInterface)
 
-			err = workerNode.Teardown(workerPodNS.Path, config)
+			err = workerNode.Teardown(workerPodNS.Path(), config)
 			require.Nil(t, err, "hostInterface=%q", hostInterface)
 
 			return nil
@@ -167,7 +167,7 @@ func TestPodNode(t *testing.T) {
 				Dedicated:     hostInterface == "ens1",
 			}
 
-			podNode := NewPodNode(podNS.Path, hostInterface, config)
+			podNode := NewPodNode(podNS.Path(), hostInterface, config)
 			require.NotNil(t, podNode, "hostInterface=%q", hostInterface)
 
 			err := podNode.Setup()
@@ -204,7 +204,7 @@ func TestPluginDetectHostInterface(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout does not occur")
 	case err := <-errCh:
-		if e, a := fmt.Sprintf("failed to identify IP address assigned to host interface eth1 on netns %s", hostNS.Path), err.Error(); e != a {
+		if e, a := fmt.Sprintf("failed to identify IP address assigned to host interface eth1 on netns %s", hostNS.Path()), err.Error(); e != a {
 			t.Fatalf("Expect %q, got %q", e, a)
 		}
 	}
