@@ -134,7 +134,7 @@ func RouteAdd(t *testing.T, ns netops.Namespace, dest, gw, dev string) {
 			t.Fatalf("failed to parse IP %s: %v", gw, err)
 		}
 	}
-	if err := ns.RouteAdd(0, destNet, gwIP, dev, false); err != nil {
+	if err := ns.RouteAdd(&netops.Route{Destination: destNet, Gateway: gwIP, Device: dev}); err != nil {
 		t.Fatalf("failed to add a route to %s via %s: %v", dest, gw, err)
 	}
 }

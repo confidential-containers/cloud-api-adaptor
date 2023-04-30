@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package podnetwork
@@ -72,7 +72,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		}
 	}()
 
-	_, hostPrimaryInterface, err := getRoutes(hostNS)
+	hostPrimaryInterface, err := findPrimaryInterface(hostNS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to identify the host primary interface: %w", err)
 	}
@@ -105,9 +105,31 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		}
 	}()
 
-	routes, podInterface, err := getRoutes(podNS)
+	routes, err := podNS.RouteList()
 	if err != nil {
 		return nil, err
+	}
+
+	podInterface, err := findPrimaryInterface(podNS)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Printf("routes on netns %s", nsPath)
+	for _, r := range routes {
+		var dst, gw, dev string
+		if r.Destination != nil {
+			dst = r.Destination.String()
+		} else {
+			dst = "default"
+		}
+		if r.Gateway != nil {
+			gw = "via " + r.Gateway.String()
+		}
+		if r.Device != "" {
+			dev = "dev " + r.Device
+		}
+		logger.Printf("    %s %s %s", dst, gw, dev)
 	}
 
 	podIP, err := getPodIP(podNS, podInterface)
@@ -132,13 +154,13 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	for _, route := range routes {
 		r := &tunneler.Route{
-			Dev: route.Dev,
+			Dev: route.Device,
 		}
-		if route.Dst != nil {
-			r.Dst = route.Dst.String()
+		if route.Destination != nil {
+			r.Dst = route.Destination.String()
 		}
-		if route.GW != nil {
-			r.GW = route.GW.String()
+		if route.Gateway != nil {
+			r.GW = route.Gateway.String()
 		}
 		config.Routes = append(config.Routes, r)
 	}
@@ -184,7 +206,7 @@ func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
 
 	hostInterface := n.hostInterface
 	if hostInterface == "" {
-		_, hostPrimaryInterface, err := getRoutes(hostNS)
+		hostPrimaryInterface, err := findPrimaryInterface(hostNS)
 		if err != nil {
 			return fmt.Errorf("failed to identify the host primary interface: %w", err)
 		}

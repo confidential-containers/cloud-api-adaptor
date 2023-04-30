@@ -91,11 +91,11 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 	}
 	defer podNS.Close()
 
-	if err := hostNS.RuleAdd(nil, "", localTableNewPriority, unix.RT_TABLE_LOCAL); err != nil && !errors.Is(err, os.ErrExist) {
+	if err := hostNS.RuleAdd(&netops.Rule{Priority: localTableNewPriority, Table: unix.RT_TABLE_LOCAL}); err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("failed to add local table at priority %d: %w", localTableNewPriority, err)
 	}
 
-	if err = hostNS.RuleDel(nil, "", localTableOriginalPriority, unix.RT_TABLE_LOCAL); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err = hostNS.RuleDel(&netops.Rule{Priority: localTableOriginalPriority, Table: unix.RT_TABLE_LOCAL}); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("failed to delete local table at priority %d: %w", localTableOriginalPriority, err)
 	}
 
@@ -153,7 +153,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 			}
 		}
 
-		if err := podNS.RouteAdd(0, dst, gw, podVethName, false); err != nil {
+		if err := podNS.RouteAdd(&netops.Route{Destination: dst, Gateway: gw, Device: podVethName}); err != nil {
 			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", dst, gw, nsPath, err)
 		}
 
@@ -170,19 +170,19 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		return fmt.Errorf("failed to add GW IP %s to %s on host network namespace: %w", defaultRouteGateway, hostVethName, err)
 	}
 
-	if err := hostNS.RouteAdd(podTableID, mask32(podIP), nil, hostVethName, false); err != nil {
+	if err := hostNS.RouteAdd(&netops.Route{Destination: mask32(podIP), Device: hostVethName, Table: podTableID}); err != nil {
 		return fmt.Errorf("failed to add route table %d to pod %s IP on host network namespace: %w", podTableID, podIP, err)
 	}
 
-	if err := hostNS.RouteAdd(sourceTableID, nil, nodeIP, hostInterface, false); err != nil {
+	if err := hostNS.RouteAdd(&netops.Route{Gateway: nodeIP, Device: hostInterface, Table: sourceTableID}); err != nil {
 		return fmt.Errorf("failed to add route table %d to pod %s IP on host network namespace: %w", sourceTableID, podIP, err)
 	}
 
-	if err := hostNS.RuleAdd(nil, "", podTablePriority, podTableID); err != nil && !errors.Is(err, os.ErrExist) {
+	if err := hostNS.RuleAdd(&netops.Rule{Priority: podTablePriority, Table: podTableID}); err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("failed to add route table %d for pod IP at priority %d: %w", podTableID, podTablePriority, err)
 	}
 
-	if err := hostNS.RuleAdd(mask32(podIP), hostVethName, sourceTablePriority, sourceTableID); err != nil && !errors.Is(err, os.ErrExist) {
+	if err := hostNS.RuleAdd(&netops.Rule{Src: mask32(podIP), IifName: hostVethName, Priority: sourceTablePriority, Table: sourceTableID}); err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("failed to add route table %d for source routing at priority %d: %w", sourceTableID, sourceTablePriority, err)
 	}
 

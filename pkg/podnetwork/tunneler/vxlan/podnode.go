@@ -113,7 +113,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 			}
 		}
 
-		if err := podNS.RouteAdd(0, dst, gw, podVxlanInterface, false); err != nil {
+		if err := podNS.RouteAdd(&netops.Route{Destination: dst, Gateway: gw, Device: podVxlanInterface}); err != nil {
 			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", dst, gw, nsPath, err)
 		}
 	}

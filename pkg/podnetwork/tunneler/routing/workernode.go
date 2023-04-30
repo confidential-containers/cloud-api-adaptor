@@ -77,10 +77,10 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 
 	logger.Print("Ensure routing table entries and VRF devices on host")
 
-	if err := hostNS.RuleAdd(nil, "", localTableNewPriority, unix.RT_TABLE_LOCAL); err != nil && !errors.Is(err, os.ErrExist) {
+	if err := hostNS.RuleAdd(&netops.Rule{Priority: localTableNewPriority, Table: unix.RT_TABLE_LOCAL}); err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("failed to add local table at priority %d: %w", localTableNewPriority, err)
 	}
-	if err = hostNS.RuleDel(nil, "", localTableOriginalPriority, unix.RT_TABLE_LOCAL); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err = hostNS.RuleDel(&netops.Rule{Priority: localTableOriginalPriority, Table: unix.RT_TABLE_LOCAL}); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("failed to delete local table at priority %d: %w", localTableOriginalPriority, err)
 	}
 
@@ -167,7 +167,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 	// when pod network is created for the first time
 	time.Sleep(time.Second)
 
-	if err := hostNS.RouteAdd(vrf2TableID, mask32(podIP), podNodeIP, hostInterface, false); err != nil {
+	if err := hostNS.RouteAdd(&netops.Route{Destination: mask32(podIP), Gateway: podNodeIP, Device: hostInterface, Table: vrf2TableID}); err != nil {
 		return fmt.Errorf("failed to add a route to pod VM: %w", err)
 	}
 
@@ -176,7 +176,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 	if err := hostNS.AddrAdd(vethName, mask32(podIP)); err != nil {
 		return err
 	}
-	if err := hostNS.LocalRouteDel(vrf2TableID, mask32(podIP), vethName); err != nil {
+	if err := hostNS.RouteDel(&netops.Route{Destination: mask32(podIP), Device: vethName, Table: vrf2TableID, Type: unix.RTN_LOCAL, Protocol: unix.RTPROT_KERNEL}); err != nil {
 		return err
 	}
 
@@ -187,7 +187,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		if err != nil {
 			return err
 		}
-		if err := hostNS.RouteAdd(tableID, nil, net.ParseIP(config.Routes[0].GW), vethName, true); err == nil {
+		if err := hostNS.RouteAdd(&netops.Route{Gateway: net.ParseIP(config.Routes[0].GW), Device: vethName, Table: tableID, Onlink: true}); err == nil {
 			break
 		} else if !errors.Is(err, os.ErrExist) {
 			return fmt.Errorf("failed to add a route from a pod VM to a pod proxy: %w", err)
@@ -195,7 +195,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		tableID++
 	}
 	logger.Printf("Add a routing table entry to route traffic from Pod VM %s back to pod network namespace %s", podNodeIP, nsPath)
-	if err := hostNS.RuleAdd(mask32(podIP), vrf1Name, sourceRouteTablePriority, tableID); err != nil {
+	if err := hostNS.RuleAdd(&netops.Rule{Src: mask32(podIP), IifName: vrf1Name, Priority: sourceRouteTablePriority, Table: tableID}); err != nil {
 		return err
 	}
 
@@ -247,10 +247,10 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 
 	logger.Printf("Delete routing table entries for Pod IP %s", podIP)
 
-	if err := hostNS.RouteDel(vrf2TableID, mask32(podIP), nil, hostInterface); err != nil {
+	if err := hostNS.RouteDel(&netops.Route{Destination: mask32(podIP), Device: hostInterface, Table: vrf2TableID}); err != nil {
 		return err
 	}
-	rules, err := hostNS.RuleList(mask32(podIP), vrf1Name, sourceRouteTablePriority)
+	rules, err := hostNS.RuleList(&netops.Rule{Src: mask32(podIP), IifName: vrf1Name, Priority: sourceRouteTablePriority})
 	if err != nil {
 		return err
 	}
@@ -261,7 +261,7 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 		if rule.Table == 0 {
 			return fmt.Errorf("failed to identify table ID for rule %s vrf %s pref %d", podIP, vrf1Name, sourceRouteTablePriority)
 		}
-		err := hostNS.RuleDel(mask32(podIP), vrf1Name, sourceRouteTablePriority, rule.Table)
+		err := hostNS.RuleDel(&netops.Rule{Src: mask32(podIP), IifName: vrf1Name, Priority: sourceRouteTablePriority, Table: rule.Table})
 		if err != nil {
 			return fmt.Errorf("failed to delete a rule %s vrf %s pref %d table %d: %w", podIP, vrf1Name, sourceRouteTablePriority, rule.Table, err)
 		}
@@ -321,7 +321,7 @@ func getAvailableTableID(ns netops.Namespace, iif string, priority, min, max int
 	rule.Priority = priority
 	rule.IifName = iif
 
-	rules, err := ns.RuleList(nil, iif, priority)
+	rules, err := ns.RuleList(&netops.Rule{IifName: iif, Priority: priority})
 	if err != nil {
 		return 0, fmt.Errorf("failed to get rules: %w", err)
 	}

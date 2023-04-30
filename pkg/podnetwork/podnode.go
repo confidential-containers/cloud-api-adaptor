@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package podnetwork
@@ -117,7 +117,7 @@ func (n *podNode) Teardown() error {
 
 	hostInterface := n.hostInterface
 	if hostInterface == "" {
-		_, hostPrimaryInterface, err := getRoutes(hostNS)
+		hostPrimaryInterface, err := findPrimaryInterface(hostNS)
 		if err != nil {
 			return fmt.Errorf("failed to identify the host primary interface: %w", err)
 		}
@@ -139,7 +139,7 @@ func detectPrimaryInterface(hostNS netops.Namespace, timeout time.Duration) (str
 
 	for {
 
-		_, hostPrimaryInterface, err := getRoutes(hostNS)
+		hostPrimaryInterface, err := findPrimaryInterface(hostNS)
 		if err == nil {
 			return hostPrimaryInterface, nil
 		}

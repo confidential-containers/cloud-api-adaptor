@@ -4,20 +4,19 @@
 package netops
 
 import (
+	"bytes"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"golang.org/x/sys/unix"
 )
-
-var logger = log.New(log.Writer(), "[util/netops] ", log.LstdFlags|log.Lmsgprefix)
 
 type Namespace interface {
 	AddrAdd(name string, addr *net.IPNet) error
@@ -26,7 +25,6 @@ type Namespace interface {
 	GetIP(name string) ([]net.IP, error)
 	GetIPNet(name string) ([]*net.IPNet, error)
 	GetMTU(name string) (int, error)
-	GetRoutes() ([]*Route, error)
 	LinkAdd(name string, link netlink.Link) error
 	LinkDel(name string) error
 	LinkList() ([]string, error)
@@ -35,15 +33,15 @@ type Namespace interface {
 	LinkSetNS(name string, targetNS Namespace) error
 	LinkSetName(name, newName string) error
 	LinkSetUp(name string) error
-	LocalRouteDel(table int, dest *net.IPNet, dev string) error
 	Path() string
 	RedirectAdd(src, dst string) error
 	RedirectDel(src string) error
-	RouteAdd(table int, dest *net.IPNet, gw net.IP, dev string, onlink bool) error
-	RouteDel(table int, dest *net.IPNet, gw net.IP, dev string) error
-	RuleAdd(src *net.IPNet, iif string, priority int, table int) error
-	RuleDel(src *net.IPNet, iif string, priority int, table int) error
-	RuleList(src *net.IPNet, iif string, priority int) ([]netlink.Rule, error)
+	RouteAdd(route *Route) error
+	RouteDel(route *Route) error
+	RouteList(filters ...*Route) ([]*Route, error)
+	RuleAdd(rule *Rule) error
+	RuleDel(rule *Rule) error
+	RuleList(rule *Rule) ([]*Rule, error)
 	Run(fn func() error) error
 	SetHardwareAddr(name, hwAddr string) error
 	SetMTU(name string, mtu int) error
@@ -413,216 +411,277 @@ func (ns *namespace) LinkSetUp(linkName string) error {
 	return nil
 }
 
-// RouteAdd adds a new route
-func (ns *namespace) RouteAdd(table int, dest *net.IPNet, gw net.IP, dev string, onlink bool) error {
-	logger.Printf("RouteAdd details: table(%d), dest(%v), gw(%v), dev(%s)", table, dest, gw, dev)
+type Route struct {
+	Destination *net.IPNet
+	Source      net.IP
+	Gateway     net.IP
+	Device      string
+	Priority    int
+	Table       int
+	Type        int
+	Protocol    int
+	Onlink      bool
+}
 
-	if dest == nil {
-		_, dest, _ = net.ParseCIDR("0.0.0.0/0")
+func (r1 *Route) compare(r2 *Route) bool {
+
+	if r1.Table != r2.Table {
+		return r1.Table < r2.Table
 	}
-	route := &netlink.Route{
-		Table: table,
-		Dst:   dest,
-		Gw:    gw,
+
+	d1 := r1.Destination
+	d2 := r2.Destination
+
+	if !(d1 == nil && d2 == nil) {
+		if d1 == nil {
+			return true
+		}
+		if d2 == nil {
+			return false
+		}
+
+		cmp := bytes.Compare(d1.IP.To4(), d2.IP.To4())
+		if cmp != 0 {
+			return cmp < 0
+		}
+
+		l1, _ := d1.Mask.Size()
+		l2, _ := d2.Mask.Size()
+		if l1 != l2 {
+			return l1 < l2
+		}
 	}
-	if onlink {
-		route.Flags = int(netlink.FLAG_ONLINK)
+
+	return r1.Priority < r2.Priority
+}
+
+func (ns *namespace) routeListFiltered(filter *Route) ([]*netlink.Route, error) {
+
+	var nlRoute netlink.Route
+	var filterMask uint64
+
+	if dst := filter.Destination; dst != nil {
+		if ones, bits := dst.Mask.Size(); ones > 0 && bits > 0 {
+			nlRoute.Dst = dst
+		}
+		filterMask |= netlink.RT_FILTER_DST
 	}
-	if dev != "" {
+	if filter.Source != nil {
+		nlRoute.Src = filter.Source
+		filterMask |= netlink.RT_FILTER_SRC
+	}
+	if filter.Gateway != nil {
+		nlRoute.Gw = filter.Gateway
+		filterMask |= netlink.RT_FILTER_GW
+	}
+	if dev := filter.Device; dev != "" {
 		link, err := ns.handle.LinkByName(dev)
 		if err != nil {
-			return fmt.Errorf("failed to get interface %s: %w", dev, err)
+			return nil, fmt.Errorf("failed to get interface %s: %w", dev, err)
 		}
-		route.LinkIndex = link.Attrs().Index
+		nlRoute.LinkIndex = link.Attrs().Index
+		filterMask |= netlink.RT_FILTER_OIF
 	}
-	if gw == nil {
-		route.Scope = netlink.SCOPE_LINK
+	if filter.Table != 0 {
+		nlRoute.Table = filter.Table
+		filterMask |= netlink.RT_FILTER_TABLE
 	}
-	if err := ns.handle.RouteAdd(route); err != nil {
-		return fmt.Errorf("failed to create a route (table: %d, dest: %s, gw: %s) with flags %d: %w", route.Table, route.Dst.String(), route.Gw.String(), route.Flags, err)
+	if filter.Type != 0 {
+		nlRoute.Type = filter.Type
+		filterMask |= netlink.RT_FILTER_TYPE
+	}
+	if filter.Protocol != 0 {
+		nlRoute.Protocol = netlink.RouteProtocol(filter.Protocol)
+		filterMask |= netlink.RT_FILTER_PROTOCOL
+	}
+
+	list, err := ns.handle.RouteListFiltered(netlink.FAMILY_V4, &nlRoute, filterMask)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get routes on namespace %q: %w", ns.Path(), err)
+	}
+
+	var nlRoutes []*netlink.Route
+	for _, r := range list {
+		r := r
+		nlRoutes = append(nlRoutes, &r)
+	}
+
+	return nlRoutes, nil
+}
+
+// RouteList gets a list of routes on the main table
+func (ns *namespace) RouteList(filters ...*Route) ([]*Route, error) {
+
+	if len(filters) == 0 {
+		defaultFilters := []*Route{
+			{Table: unix.RT_TABLE_MAIN, Type: unix.RTN_UNICAST, Protocol: unix.RTPROT_STATIC},
+			{Table: unix.RT_TABLE_MAIN, Type: unix.RTN_UNICAST, Protocol: unix.RTPROT_BOOT},
+			{Table: unix.RT_TABLE_MAIN, Type: unix.RTN_UNICAST, Protocol: unix.RTPROT_DHCP},
+		}
+		filters = append(filters, defaultFilters...)
+	}
+
+	var routes []*Route
+	for _, filter := range filters {
+		nlRoutes, err := ns.routeListFiltered(filter)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, r := range nlRoutes {
+
+			var dev string
+			if r.LinkIndex > 0 {
+				link, err := ns.handle.LinkByIndex(r.LinkIndex)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get a link with index %d of a route: %w", r.LinkIndex, err)
+				}
+				dev = link.Attrs().Name
+			}
+
+			onlink := r.Flags&int(netlink.FLAG_ONLINK) != 0
+
+			route := &Route{
+				Destination: r.Dst,
+				Source:      r.Src,
+				Gateway:     r.Gw,
+				Device:      dev,
+				Priority:    r.Priority,
+				Table:       r.Table,
+				Type:        r.Type,
+				Protocol:    int(r.Protocol),
+				Onlink:      onlink,
+			}
+
+			routes = append(routes, route)
+		}
+	}
+
+	sort.SliceStable(routes, func(i, j int) bool {
+		return routes[i].compare(routes[j])
+	})
+
+	return routes, nil
+}
+
+// RouteAdd adds a new route
+func (ns *namespace) RouteAdd(route *Route) error {
+
+	nlRoute := &netlink.Route{
+		Dst:      route.Destination,
+		Src:      route.Source,
+		Gw:       route.Gateway,
+		Priority: route.Priority,
+		Table:    route.Table,
+		Type:     route.Type,
+	}
+
+	if route.Device != "" {
+		link, err := ns.handle.LinkByName(route.Device)
+		if err != nil {
+			return fmt.Errorf("failed to get interface %s: %w", route.Device, err)
+		}
+		nlRoute.LinkIndex = link.Attrs().Index
+	}
+	if route.Onlink {
+		nlRoute.Flags = int(netlink.FLAG_ONLINK)
+	}
+	if route.Gateway == nil {
+		nlRoute.Scope = netlink.SCOPE_LINK
+	}
+	if err := ns.handle.RouteAdd(nlRoute); err != nil {
+		return fmt.Errorf("failed to create a route (table: %d, dest: %s, gw: %s) with flags %d: %w", nlRoute.Table, nlRoute.Dst.String(), nlRoute.Gw.String(), nlRoute.Flags, err)
 	}
 	return nil
 }
 
 // RouteDel deletes routes
-func (ns *namespace) RouteDel(table int, dest *net.IPNet, gw net.IP, dev string) error {
-	filterMask := netlink.RT_FILTER_DST
-	if dest == nil {
-		_, dest, _ = net.ParseCIDR("0.0.0.0/0")
-	}
-	route := &netlink.Route{
-		Dst: dest,
-	}
-	if table != 0 {
-		route.Table = table
-		filterMask |= netlink.RT_FILTER_TABLE
-	}
-	if gw != nil {
-		route.Gw = gw
-		filterMask |= netlink.RT_FILTER_GW
-	}
-	if dev != "" {
-		link, err := ns.handle.LinkByName(dev)
-		if err != nil {
-			return fmt.Errorf("failed to get interface %s: %w", dev, err)
-		}
-		route.LinkIndex = link.Attrs().Index
-		filterMask |= netlink.RT_FILTER_OIF
-	}
-	routes, err := ns.handle.RouteListFiltered(netlink.FAMILY_V4, route, filterMask)
+func (ns *namespace) RouteDel(route *Route) error {
+
+	routes, err := ns.routeListFiltered(route)
 	if err != nil {
-		return fmt.Errorf("failed to get a list of routes: table %d, dest: %s, gw: %s, dev %s: %w", table, dest, gw, dev, err)
+		return fmt.Errorf("failed to get a list of routes: dst: %s, gw: %s, dev %s: %w", route.Destination, route.Gateway, route.Device, err)
 	}
-	for _, route := range routes {
-		if err := ns.handle.RouteDel(&route); err != nil {
-			return fmt.Errorf("failed to delete a route: table %d, dest: %s, gw: %s, dev %s: %w", table, dest, gw, dev, err)
+
+	if len(routes) == 0 {
+		return fmt.Errorf("failed to identify routes to be deleted: dest: %s, gw: %s, dev %s: %w", route.Destination, route.Gateway, route.Device, err)
+	}
+
+	for _, r := range routes {
+		if err := ns.handle.RouteDel(r); err != nil {
+			return fmt.Errorf("failed to delete a route: dest: %s, gw: %s, dev %s: %w", route.Destination, route.Gateway, route.Device, err)
 		}
 	}
 	return nil
 }
 
-type Route struct {
-	Dst *net.IPNet
-	Dev string
-	GW  net.IP
-}
-
-// GetRoutes gets a list of routes on the main table
-func (ns *namespace) GetRoutes() ([]*Route, error) {
-
-	routeList, err := ns.handle.RouteList(nil, netlink.FAMILY_V4)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get routes on namespace %q: %w", ns.Path(), err)
-	}
-
-	var routes []*Route
-	for _, r := range routeList {
-
-		var dev string
-		if r.LinkIndex > 0 {
-			link, err := ns.handle.LinkByIndex(r.LinkIndex)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get a link with index %d of a route: %w", r.LinkIndex, err)
-			}
-			dev = link.Attrs().Name
-		}
-
-		if r.Type != unix.RTN_UNICAST {
-			logger.Printf("route (dst:%s, gw:%s: dev:%s) has unexpected type %d. ignoring", r.Dst, r.Gw, dev, r.Type)
-			continue
-		}
-
-		if r.Table != unix.RT_TABLE_MAIN {
-			logger.Printf("route (dst:%s, gw:%s: dev:%s) has unexpected table %d. ignoring", r.Dst, r.Gw, dev, r.Table)
-			continue
-		}
-
-		if r.Flags != 0 {
-			logger.Printf("route (dst:%s, gw:%s: dev:%s) has unexpected flags %d. ignoring", r.Dst, r.Gw, dev, r.Flags)
-			continue
-		}
-
-		switch r.Protocol {
-		case unix.RTPROT_STATIC:
-		case unix.RTPROT_BOOT:
-		case unix.RTPROT_DHCP:
-		case unix.RTPROT_KERNEL:
-			continue
-		default:
-			logger.Printf("route (dst:%s, gw:%s: dev:%s) has unexpected protocol %d. ignoring", r.Dst, r.Gw, dev, r.Protocol)
-			continue
-		}
-
-		switch r.Scope {
-		case netlink.SCOPE_UNIVERSE:
-		case netlink.SCOPE_LINK:
-		case netlink.SCOPE_HOST:
-		default:
-			logger.Printf("route (dst:%s, gw:%s: dev:%s) has unexpected scope %d. ignoring", r.Dst, r.Gw, dev, r.Scope)
-			continue
-		}
-
-		route := &Route{
-			Dst: r.Dst,
-			GW:  r.Gw,
-			Dev: dev,
-		}
-		routes = append(routes, route)
-	}
-
-	return routes, nil
-}
-
-// LocalRouteDel deletes a route of the local local
-func (ns *namespace) LocalRouteDel(table int, dest *net.IPNet, dev string) error {
-
-	link, err := ns.handle.LinkByName(dev)
-	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", dev, err)
-	}
-	route := &netlink.Route{
-		Table:     table,
-		Dst:       dest,
-		Src:       dest.IP,
-		Type:      unix.RTN_LOCAL,
-		Protocol:  unix.RTPROT_KERNEL,
-		Scope:     unix.RT_SCOPE_HOST,
-		LinkIndex: link.Attrs().Index,
-	}
-	if err := ns.handle.RouteDel(route); err != nil {
-		return fmt.Errorf("failed to delete a route: table %d, dest %s, dev %s: %w", table, dest, dev, err)
-	}
-	return nil
+type Rule struct {
+	Src      *net.IPNet
+	IifName  string
+	Priority int
+	Table    int
 }
 
 // RuleAdd adds a new rule in the routing policy database
-func (ns *namespace) RuleAdd(src *net.IPNet, iif string, priority int, table int) error {
-	rule := netlink.NewRule()
-	rule.Src = src
-	rule.IifName = iif
-	rule.Priority = priority
-	rule.Table = table
+func (ns *namespace) RuleAdd(rule *Rule) error {
+	nlRule := netlink.NewRule()
+	nlRule.Src = rule.Src
+	nlRule.IifName = rule.IifName
+	nlRule.Priority = rule.Priority
+	nlRule.Table = rule.Table
 
-	if err := ns.handle.RuleAdd(rule); err != nil {
+	if err := ns.handle.RuleAdd(nlRule); err != nil {
 		return fmt.Errorf("failed to add a rule: %w", err)
 	}
 	return nil
 }
 
 // RuleDel deletes a rule in the routing policy database
-func (ns *namespace) RuleDel(src *net.IPNet, iif string, priority int, table int) error {
-	rule := netlink.NewRule()
-	rule.Src = src
-	rule.IifName = iif
-	rule.Priority = priority
-	rule.Table = table
+func (ns *namespace) RuleDel(rule *Rule) error {
+	nlRule := netlink.NewRule()
+	nlRule.Src = rule.Src
+	nlRule.IifName = rule.IifName
+	nlRule.Priority = rule.Priority
+	nlRule.Table = rule.Table
 
-	if err := ns.handle.RuleDel(rule); err != nil {
+	if err := ns.handle.RuleDel(nlRule); err != nil {
 		return fmt.Errorf("failed to delete a rule: %w", err)
 	}
 	return nil
 }
 
 // RuleList gets a list of rules in the routing policy database
-func (ns *namespace) RuleList(src *net.IPNet, iif string, priority int) ([]netlink.Rule, error) {
-	rule := netlink.NewRule()
+func (ns *namespace) RuleList(rule *Rule) ([]*Rule, error) {
+	nlRule := netlink.NewRule()
 	var filterMask uint64
-	if src != nil {
-		rule.Src = src
+	if rule.Src != nil {
+		nlRule.Src = rule.Src
 		filterMask |= netlink.RT_FILTER_SRC
 	}
-	if iif != "" {
-		rule.IifName = iif
+	if rule.IifName != "" {
+		nlRule.IifName = rule.IifName
 		filterMask |= netlink.RT_FILTER_IIF
 	}
-	if priority != 0 {
-		rule.Priority = priority
+	if rule.Priority != 0 {
+		nlRule.Priority = rule.Priority
 		filterMask |= netlink.RT_FILTER_PRIORITY
 	}
-	rules, err := ns.handle.RuleListFiltered(netlink.FAMILY_V4, rule, filterMask)
+	nlRules, err := ns.handle.RuleListFiltered(netlink.FAMILY_V4, nlRule, filterMask)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rules: %w", err)
 	}
+
+	var rules []*Rule
+	for _, nlRule := range nlRules {
+		rule := &Rule{
+			Src:      nlRule.Src,
+			IifName:  nlRule.IifName,
+			Priority: nlRule.Priority,
+			Table:    nlRule.Table,
+		}
+		rules = append(rules, rule)
+	}
+
 	return rules, nil
 }
 
