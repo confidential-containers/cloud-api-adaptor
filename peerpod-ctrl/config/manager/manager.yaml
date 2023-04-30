@@ -83,8 +83,10 @@ spec:
         envFrom:
         - secretRef:
             name: peer-pods-secret
+            optional: true
         - configMapRef:
             name: peer-pods-cm
+            optional: true
         image: controller:latest
         name: manager
         securityContext:
