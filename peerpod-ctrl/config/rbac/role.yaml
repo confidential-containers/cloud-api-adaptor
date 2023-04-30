@@ -6,6 +6,16 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resourceNames:
+  - peer-pods-cm
+  - peer-pods-secret
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - get
+- apiGroups:
   - confidentialcontainers.org
   resources:
   - peerpods

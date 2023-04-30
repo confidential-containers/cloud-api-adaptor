@@ -18,24 +18,23 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	confidentialcontainersorgv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl/api/v1alpha1"
 	"github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl/controllers"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/cloudmgr"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -49,21 +48,6 @@ func init() {
 
 	utilruntime.Must(confidentialcontainersorgv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
-}
-
-func setProvider() (cloud.Provider, error) {
-	cloudName := os.Getenv("CLOUD_PROVIDER")
-	if cloud := cloudmgr.Get(cloudName); cloud != nil {
-		cloud.LoadEnv() // we assume LoadEnv knows to load all nessecry configs
-		provider, err := cloud.NewProvider()
-		if err != nil {
-			return nil, err
-		}
-		setupLog.Info("provider was set sucssefully", "Cloud Provider", cloudName)
-		return provider, nil
-	}
-
-	return nil, fmt.Errorf("cloudmgr: %s cloud provider not supported", cloudName)
 }
 
 func main() {
@@ -101,16 +85,20 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
+		ClientDisableCacheFor: []client.Object{
+			&corev1.Secret{},
+			&corev1.ConfigMap{},
+		},
+		// we disable client cache for Secrets and ConfigMaps to avoid unnecessary RBAC rules
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	provider, err := setProvider()
+	provider, err := controllers.SetProvider()
 	if err != nil {
-		setupLog.Error(err, "unable to set provider")
-		os.Exit(1)
+		setupLog.Info("unable to set provider at init, will retry at reconcile", "error", err)
 	}
 
 	if err = (&controllers.PeerPodReconciler{
