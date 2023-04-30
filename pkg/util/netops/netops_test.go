@@ -45,12 +45,12 @@ func TestRouteList(t *testing.T) {
 	}
 	defer ns.Close()
 
-	routes, err := ns.GetRoutes()
+	routes, err := ns.RouteList()
 	if err != nil {
 		t.Fatalf("Expect no error, got %v", err)
 	}
 
 	for _, route := range routes {
-		t.Logf("Route: %#v", route)
+		t.Logf("Route: dst:%s, gw:%s, dev:%s, prio: %d", route.Destination.String(), route.Gateway.String(), route.Device, route.Priority)
 	}
 }
