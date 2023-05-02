@@ -9,7 +9,6 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
-	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -49,36 +48,37 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 	}
 	defer podNS.Close()
 
-	vxlanLink := &netlink.Vxlan{
-		Group:   nodeIP,
-		VxlanId: config.VXLANID,
-		Port:    config.VXLANPort,
+	vxlanDevice := &netops.VXLAN{
+		Group: nodeIP,
+		ID:    config.VXLANID,
+		Port:  config.VXLANPort,
 	}
-	if err := hostNS.LinkAdd(podVxlanInterface, vxlanLink); err != nil {
+	vxlan, err := hostNS.LinkAdd(podVxlanInterface, vxlanDevice)
+	if err != nil {
 		return fmt.Errorf("failed to add vxlan interface %s: %w", podVxlanInterface, err)
 	}
 
-	if err := hostNS.LinkSetNS(podVxlanInterface, podNS); err != nil {
+	if err := vxlan.SetNamespace(podNS); err != nil {
 		return fmt.Errorf("failed to move vxlan interface %s to netns %s: %w", podVxlanInterface, podNS.Path(), err)
 	}
 
-	if err := podNS.SetHardwareAddr(podVxlanInterface, config.PodHwAddr); err != nil {
-		return fmt.Errorf("failed to set pod Mac %s on %s: %w", config.PodHwAddr, podVxlanInterface, err)
+	if err := vxlan.SetHardwareAddr(config.PodHwAddr); err != nil {
+		return fmt.Errorf("failed to set pod HW address %s on %s: %w", config.PodHwAddr, podVxlanInterface, err)
 	}
 
 	mtu := int(config.MTU)
 	if mtu > maxMTU {
 		mtu = maxMTU
 	}
-	if err := podNS.SetMTU(podVxlanInterface, mtu); err != nil {
+	if err := vxlan.SetMTU(mtu); err != nil {
 		return fmt.Errorf("failed to set MTU of %s to %d on %s: %w", podVxlanInterface, mtu, nsPath, err)
 	}
 
-	if err := podNS.AddrAdd(podVxlanInterface, podIPNet); err != nil {
+	if err := vxlan.AddAddr(podIPNet); err != nil {
 		return fmt.Errorf("failed to add pod IP %s to %s on %s: %w", podIPNet, podVxlanInterface, nsPath, err)
 	}
 
-	if err := podNS.LinkSetUp(podVxlanInterface); err != nil {
+	if err := vxlan.SetUp(); err != nil {
 		return err
 	}
 

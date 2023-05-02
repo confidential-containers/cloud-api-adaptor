@@ -73,12 +73,12 @@ func (n *podNode) Setup() error {
 			return fmt.Errorf("%s is not a dedicated interface", hostInterface)
 		}
 
-		dedicatePodNodeIP, err := detectIP(hostNS, hostInterface, 3*time.Minute)
+		dedicatedPodNodeIP, err := detectIP(hostNS, hostInterface, 3*time.Minute)
 		if err != nil {
 			return err
 		}
 
-		podNodeIPs = append(podNodeIPs, dedicatePodNodeIP)
+		podNodeIPs = append(podNodeIPs, dedicatedPodNodeIP)
 	}
 
 	podNS, err := netops.OpenNamespace(n.nsPath)
@@ -165,20 +165,25 @@ func detectIP(hostNS netops.Namespace, hostInterface string, timeout time.Durati
 
 	for {
 
-		ips, err := hostNS.GetIP(hostInterface)
+		hostLink, err := hostNS.LinkFind(hostInterface)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get addresses assigned %s on netns %s: %w", hostInterface, hostNS.Path(), err)
+			return nil, fmt.Errorf("failed to find host interface %q on netns %s: %w", hostInterface, hostNS.Path(), err)
 		}
-		if len(ips) > 1 {
-			return nil, fmt.Errorf("more than one IP address assigned on %s (netns: %s)", hostInterface, hostNS.Path())
+
+		ipNets, err := hostLink.GetAddr()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get addresses assigned %s on netns %s: %w", hostLink.Name(), hostLink.Namespace().Path(), err)
 		}
-		if len(ips) == 1 {
-			return ips[0], nil
+		if len(ipNets) > 1 {
+			return nil, fmt.Errorf("more than one IP address assigned on %s (netns: %s)", hostLink.Name(), hostLink.Namespace().Path())
+		}
+		if len(ipNets) == 1 {
+			return ipNets[0].IP, nil
 		}
 
 		select {
 		case <-timeoutCh:
-			return nil, fmt.Errorf("failed to identify IP address assigned to host interface %s on netns %s", hostInterface, hostNS.Path())
+			return nil, fmt.Errorf("failed to identify IP address assigned to host interface %s on netns %s", hostLink.Name(), hostLink.Namespace().Path())
 		case <-ticker.C:
 		}
 	}

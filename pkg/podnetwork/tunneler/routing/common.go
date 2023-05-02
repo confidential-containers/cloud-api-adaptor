@@ -6,6 +6,7 @@ package routing
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
 	"github.com/containernetworking/plugins/pkg/utils/sysctl"
@@ -33,4 +34,38 @@ func sysctlSet(ns netops.Namespace, key string, val string) error {
 		return nil
 	})
 	return err
+}
+
+func findLinkByAddr(ns netops.Namespace, ip net.IP) (netops.Link, error) {
+
+	links, err := ns.LinkList()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list interfaces netns %s", ns.Path())
+	}
+	var foundLinks []netops.Link
+	for _, link := range links {
+		ipNets, err := link.GetAddr()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get IP addresses assigned to %q on netns %s", link.Name(), ns.Path())
+		}
+		for _, ipNet := range ipNets {
+			if ipNet.IP.Equal(ip) {
+				foundLinks = append(foundLinks, link)
+				break
+			}
+		}
+	}
+
+	if len(foundLinks) == 0 {
+		return nil, fmt.Errorf("failed to find interface that has %s on netns %s", ip.String(), ns.Path())
+	}
+	if len(foundLinks) > 1 {
+		var names []string
+		for _, link := range foundLinks {
+			names = append(names, link.Name())
+		}
+		return nil, fmt.Errorf("multiple interfaces have %s on netns %s: %s", ip.String(), ns.Path(), strings.Join(names, ", "))
+	}
+
+	return foundLinks[0], nil
 }

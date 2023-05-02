@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strings"
 
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
@@ -19,20 +18,10 @@ import (
 )
 
 type Namespace interface {
-	AddrAdd(name string, addr *net.IPNet) error
 	Close() error
-	GetHardwareAddr(name string) (string, error)
-	GetIP(name string) ([]net.IP, error)
-	GetIPNet(name string) ([]*net.IPNet, error)
-	GetMTU(name string) (int, error)
-	LinkAdd(name string, link netlink.Link) error
-	LinkDel(name string) error
-	LinkList() ([]string, error)
-	LinkNameByAddr(ip net.IP) (string, error)
-	LinkSetMaster(name, masterName string) error
-	LinkSetNS(name string, targetNS Namespace) error
-	LinkSetName(name, newName string) error
-	LinkSetUp(name string) error
+	LinkAdd(name string, device Device) (Link, error)
+	LinkFind(name string) (Link, error)
+	LinkList() ([]Link, error)
 	Path() string
 	RedirectAdd(src, dst string) error
 	RedirectDel(src string) error
@@ -43,9 +32,6 @@ type Namespace interface {
 	RuleDel(rule *Rule) error
 	RuleList(rule *Rule) ([]*Rule, error)
 	Run(fn func() error) error
-	SetHardwareAddr(name, hwAddr string) error
-	SetMTU(name string, mtu int) error
-	VethAdd(name string, peerNS Namespace, peerName string) error
 }
 
 type namespace struct {
@@ -169,36 +155,47 @@ func (ns *namespace) Run(fn func() error) (err error) {
 	return fn()
 }
 
-// GetIP returns a list of IP addresses assigned to a link
-func (ns *namespace) GetIP(linkName string) ([]net.IP, error) {
+type Link interface {
+	Name() string
+	Namespace() Namespace
+	Type() string
+	Delete() error
 
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-	addrs, err := ns.handle.AddrList(link, netlink.FAMILY_V4)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get addressess assigned to %s (type: %s, netns: %s): %w", linkName, link.Type(), ns.path, err)
-	}
+	GetAddr() ([]*net.IPNet, error)
+	AddAddr(addr *net.IPNet) error
+	GetHardwareAddr() (string, error)
+	SetHardwareAddr(hwAddr string) error
+	GetMTU() (int, error)
+	SetMTU(mtu int) error
 
-	var ips []net.IP
-	for _, addr := range addrs {
-		ips = append(ips, addr.IP)
-	}
-
-	return ips, nil
+	SetMaster(master Link) error
+	SetNamespace(target Namespace) error
+	SetName(name string) error
+	SetUp() error
 }
 
-// GetIPNet returns a list of IPNets assigned to a link
-func (ns *namespace) GetIPNet(linkName string) ([]*net.IPNet, error) {
+type link struct {
+	nlLink netlink.Link
+	ns     *namespace
+}
 
-	link, err := ns.handle.LinkByName(linkName)
+func (l *link) Name() string {
+	return l.nlLink.Attrs().Name
+}
+
+func (l *link) Namespace() Namespace {
+	return l.ns
+}
+
+func (l *link) Type() string {
+	return l.nlLink.Type()
+}
+
+func (l *link) GetAddr() ([]*net.IPNet, error) {
+
+	addrs, err := l.ns.handle.AddrList(l.nlLink, netlink.FAMILY_V4)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-	addrs, err := ns.handle.AddrList(link, netlink.FAMILY_V4)
-	if err != nil {
-		return nil, fmt.Errorf("failed to delete an interface of %s: %s:  %w", linkName, link.Type(), err)
+		return nil, fmt.Errorf("failed to get IP addresses assigned to %s interface %q:  %w", l.Type(), l.Name(), err)
 	}
 
 	var ipNets []*net.IPNet
@@ -209,52 +206,39 @@ func (ns *namespace) GetIPNet(linkName string) ([]*net.IPNet, error) {
 	return ipNets, nil
 }
 
-// GetMTU returns MTU size of a link
-func (ns *namespace) GetMTU(linkName string) (int, error) {
+func (l *link) AddAddr(addr *net.IPNet) error {
 
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-
-	mtu := link.Attrs().MTU
-
-	return mtu, nil
-}
-
-// SetMTU sets MTU size of a link
-func (ns *namespace) SetMTU(linkName string, mtu int) error {
-
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-
-	if err := ns.handle.LinkSetMTU(link, mtu); err != nil {
-		return fmt.Errorf("failed to set MTU of %s to %d: %w", linkName, mtu, err)
+	if err := l.ns.handle.AddrAdd(l.nlLink, &netlink.Addr{IPNet: addr}); err != nil {
+		return fmt.Errorf("failed to assign an IP address %q to %s: %w", addr.String(), l.Name(), err)
 	}
 
 	return nil
 }
 
-func (ns *namespace) GetHardwareAddr(linkName string) (string, error) {
+func (l *link) GetMTU() (int, error) {
 
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return "", fmt.Errorf("failed to get interface %s: %w", linkName, err)
+	mtu := l.nlLink.Attrs().MTU
+
+	return mtu, nil
+}
+
+func (l *link) SetMTU(mtu int) error {
+
+	if err := l.ns.handle.LinkSetMTU(l.nlLink, mtu); err != nil {
+		return fmt.Errorf("failed to set MTU of %s to %d: %w", l.Name(), mtu, err)
 	}
 
-	hwAddr := link.Attrs().HardwareAddr.String()
+	return nil
+}
+
+func (l *link) GetHardwareAddr() (string, error) {
+
+	hwAddr := l.nlLink.Attrs().HardwareAddr.String()
 
 	return hwAddr, nil
 }
 
-func (ns *namespace) SetHardwareAddr(linkName, hwAddr string) error {
-
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
+func (l *link) SetHardwareAddr(hwAddr string) error {
 
 	mac, err := net.ParseMAC(hwAddr)
 	if err != nil {
@@ -262,153 +246,162 @@ func (ns *namespace) SetHardwareAddr(linkName, hwAddr string) error {
 
 	}
 
-	if err := ns.handle.LinkSetHardwareAddr(link, mac); err != nil {
-		return fmt.Errorf("failed to set hardware address %q to %s (netns: %s): %w", hwAddr, linkName, ns.Path(), err)
+	if err := l.ns.handle.LinkSetHardwareAddr(l.nlLink, mac); err != nil {
+		return fmt.Errorf("failed to set hardware address %q to %s (netns: %s): %w", hwAddr, l.Name(), l.ns.Path(), err)
 	}
 
 	return nil
 }
 
-func (ns *namespace) LinkNameByAddr(ip net.IP) (string, error) {
+func (l *link) SetMaster(master Link) error {
 
-	links, err := ns.handle.LinkList()
-	if err != nil {
-		return "", fmt.Errorf("failed to get a list of interfaces (netns: %s): %w", ns.Path(), err)
+	if err := l.ns.handle.LinkSetMaster(l.nlLink, master.(*link).nlLink); err != nil {
+		return fmt.Errorf("failed to set master device of %s to %s: %w", l.Name(), l.Name(), err)
 	}
-
-	var names []string
-	for _, link := range links {
-		name := link.Attrs().Name
-		addrs, err := ns.GetIP(name)
-		if err != nil {
-			return "", fmt.Errorf("failed to obtain addresses assigned to %s (netns: %s)", name, ns.Path())
-		}
-		for _, addr := range addrs {
-			if addr.Equal(ip) {
-				names = append(names, name)
-				break
-			}
-		}
-	}
-
-	if len(names) == 0 {
-		return "", fmt.Errorf("failed to find interface that has %s on netns %s", ip.String(), ns.Path())
-	}
-	if len(names) > 1 {
-		return "", fmt.Errorf("multiple interfaces have %s on netns %s: %s", ip.String(), ns.Path(), strings.Join(names, ", "))
-	}
-
-	return names[0], nil
+	return nil
 }
 
-func (ns *namespace) LinkList() ([]string, error) {
+func (l *link) SetNamespace(target Namespace) error {
 
-	links, err := ns.handle.LinkList()
+	if err := l.ns.handle.LinkSetNsFd(l.nlLink, target.(*namespace).fd()); err != nil {
+		return fmt.Errorf("failed to change network namespace of interface %s from %s to %s: %w", l.Name(), l.ns.path, target.Path(), err)
+	}
+
+	l.ns = target.(*namespace)
+
+	return nil
+}
+
+func (l *link) SetName(name string) error {
+
+	if err := l.ns.handle.LinkSetName(l.nlLink, name); err != nil {
+		return fmt.Errorf("failed to change name of interface %s on %s to %s: %w", l.Name(), l.ns.path, name, err)
+	}
+
+	return nil
+}
+
+func (l *link) SetUp() error {
+
+	if err := l.ns.handle.LinkSetUp(l.nlLink); err != nil {
+		return fmt.Errorf("failed to set link state up: %s: %w", l.Name(), err)
+	}
+	return nil
+}
+
+func (l *link) Delete() error {
+
+	if err := l.ns.handle.LinkDel(l.nlLink); err != nil {
+		return fmt.Errorf("failed to delete an interface of %s: %s:  %w", l.Name(), l.Type(), err)
+	}
+	return nil
+}
+
+type Device interface {
+	getLink() netlink.Link
+}
+
+type VEth struct {
+	PeerName      string
+	PeerNamespace Namespace
+}
+
+func (d *VEth) getLink() netlink.Link {
+
+	return &netlink.Veth{
+		PeerName:      d.PeerName,
+		PeerNamespace: netlink.NsFd(d.PeerNamespace.(*namespace).nsHandle),
+	}
+}
+
+type Bridge struct{}
+
+func (d *Bridge) getLink() netlink.Link {
+
+	return &netlink.Bridge{}
+}
+
+type VXLAN struct {
+	Group net.IP
+	ID    int
+	Port  int
+}
+
+func (d *VXLAN) getLink() netlink.Link {
+
+	return &netlink.Vxlan{
+		Group:   d.Group,
+		VxlanId: d.ID,
+		Port:    d.Port,
+	}
+}
+
+type VRF struct {
+	Table uint32
+}
+
+func (d *VRF) getLink() netlink.Link {
+	return &netlink.Vrf{
+		Table: d.Table,
+	}
+}
+
+func (ns *namespace) LinkFind(name string) (Link, error) {
+
+	nlLinks, err := ns.handle.LinkList()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get a list of interfaces (netns: %s): %w", ns.path, err)
+	}
+
+	for _, nlLink := range nlLinks {
+		if nlLink.Attrs().Name == name {
+			l := &link{
+				nlLink: nlLink,
+				ns:     ns,
+			}
+			return l, nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to find interface %q on netns %s", name, ns.path)
+}
+
+func (ns *namespace) LinkList() ([]Link, error) {
+
+	nlLinks, err := ns.handle.LinkList()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get a list of interfaces: %w", err)
 	}
 
-	var names []string
+	var links []Link
 
-	for _, link := range links {
-		names = append(names, link.Attrs().Name)
+	for _, nlLink := range nlLinks {
+		link := &link{
+			nlLink: nlLink,
+			ns:     ns,
+		}
+		links = append(links, link)
 	}
 
-	return names, nil
+	return links, nil
 }
 
-// LinkAdd creates a new link with an attribute specified by link
-func (ns *namespace) LinkAdd(linkName string, link netlink.Link) error {
-	attrs := link.Attrs()
-	*attrs = netlink.NewLinkAttrs()
-	attrs.Name = linkName
-	if err := ns.handle.LinkAdd(link); err != nil {
-		return fmt.Errorf("failed to create an interface of %s: %s:  %w", link.Type(), linkName, err)
-	}
-	return nil
-}
+// LinkAdd creates a new link with an attribute specified by device
+func (ns *namespace) LinkAdd(name string, device Device) (Link, error) {
 
-// LinkDel deletes a link
-func (ns *namespace) LinkDel(linkName string) error {
-	link, err := ns.handle.LinkByName(linkName)
+	nlLink := device.getLink()
+	nlLink.Attrs().Name = name
+
+	if err := ns.handle.LinkAdd(nlLink); err != nil {
+		return nil, fmt.Errorf("failed to create %s interface %q: %s:  %w", nlLink.Type(), name, ns.Path(), err)
+	}
+
+	link, err := ns.LinkFind(name)
 	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-	if err := ns.handle.LinkDel(link); err != nil {
-		return fmt.Errorf("failed to delete an interface of %s: %s:  %w", linkName, link.Type(), err)
-	}
-	return nil
-}
-
-// LinkSetMaster sets a master device of a link
-func (ns *namespace) LinkSetMaster(linkName, masterName string) error {
-	master, err := ns.handle.LinkByName(masterName)
-	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", masterName, err)
+		return nil, fmt.Errorf("failed to find created %s interface %q on %s:  %w", nlLink.Type(), name, ns.Path(), err)
 	}
 
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-	if err := ns.handle.LinkSetMaster(link, master); err != nil {
-		return fmt.Errorf("failed to set master device of %s to %s: %w", linkName, masterName, err)
-	}
-	return nil
-}
-
-// LinkSetNS changes network namespace of a link
-func (ns *namespace) LinkSetNS(linkName string, targetNS Namespace) error {
-
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-
-	if err := ns.handle.LinkSetNsFd(link, targetNS.(*namespace).fd()); err != nil {
-		return fmt.Errorf("failed to change network namespace of interface %s from %s to %s: %w", linkName, ns.path, targetNS.Path(), err)
-	}
-
-	return nil
-}
-
-// LinkSetName changes name of a link
-func (ns *namespace) LinkSetName(linkName, newName string) error {
-
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-
-	if err := ns.handle.LinkSetName(link, newName); err != nil {
-		return fmt.Errorf("failed to change name of interface %s on %s to %s: %w", linkName, ns.path, newName, err)
-	}
-
-	return nil
-}
-
-// AddrAdd adds an IP address to a link
-func (ns *namespace) AddrAdd(linkName string, addr *net.IPNet) error {
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-	if err := ns.handle.AddrAdd(link, &netlink.Addr{IPNet: addr}); err != nil {
-		return fmt.Errorf("failed to assign an IP address to %s: %w", linkName, err)
-	}
-	return nil
-}
-
-// LinkSetUp makes the link status up
-func (ns *namespace) LinkSetUp(linkName string) error {
-	link, err := ns.handle.LinkByName(linkName)
-	if err != nil {
-		return fmt.Errorf("failed to get interface %s: %w", linkName, err)
-	}
-	if err := ns.handle.LinkSetUp(link); err != nil {
-		return fmt.Errorf("failed to set link state up: %s: %w", linkName, err)
-	}
-	return nil
+	return link, err
 }
 
 type Route struct {
@@ -683,14 +676,6 @@ func (ns *namespace) RuleList(rule *Rule) ([]*Rule, error) {
 	}
 
 	return rules, nil
-}
-
-// VethAdd adds a veth pair
-func (ns *namespace) VethAdd(name string, peerNS Namespace, peerName string) error {
-	if err := ns.LinkAdd(name, &netlink.Veth{PeerName: peerName, PeerNamespace: netlink.NsFd(peerNS.(*namespace).nsHandle)}); err != nil {
-		return fmt.Errorf("failed to add veth pair %s and %s: %w", name, peerName, err)
-	}
-	return nil
 }
 
 // RedirectAdd adds a tc ingress qdisc and redirect filter that redirects all traffic from src to dst
