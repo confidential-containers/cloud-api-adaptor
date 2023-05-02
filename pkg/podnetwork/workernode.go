@@ -84,7 +84,12 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		config.Dedicated = true
 	}
 
-	addrs, err := hostNS.GetIPNet(hostInterface)
+	hostLink, err := hostNS.LinkFind(hostInterface)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find host interface %q on netns %s: %w", hostInterface, hostNS.Path(), err)
+	}
+
+	addrs, err := hostLink.GetAddr()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get IP address on %s (netns: %s): %w", hostInterface, hostNS.Path(), err)
 	}
@@ -132,13 +137,18 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		logger.Printf("    %s %s %s", dst, gw, dev)
 	}
 
-	podIP, err := getPodIP(podNS, podInterface)
+	podLink, err := podNS.LinkFind(podInterface)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find pod interface %q on netns %s): %w", podInterface, podNS.Path(), err)
+	}
+
+	podIP, err := getPodIP(podLink)
 	if err != nil {
 		return nil, err
 	}
 
 	config.PodIP = podIP
-	config.PodHwAddr, err = podNS.GetHardwareAddr(podInterface)
+	config.PodHwAddr, err = podLink.GetHardwareAddr()
 	if err != nil {
 		logger.Printf("failed to get Mac address of the Pod interface")
 		return nil, fmt.Errorf("failed to get Mac address for Pod interface %s: %w", podInterface, err)
@@ -146,7 +156,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	config.InterfaceName = podInterface
 
-	mtu, err := podNS.GetMTU(podInterface)
+	mtu, err := podLink.GetMTU()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get MTU size of %s: %w", podInterface, err)
 	}
@@ -220,11 +230,11 @@ func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
 	return nil
 }
 
-func getPodIP(podNS netops.Namespace, podInterface string) (string, error) {
+func getPodIP(podLink netops.Link) (string, error) {
 
-	ipNets, err := podNS.GetIPNet(podInterface)
+	ipNets, err := podLink.GetAddr()
 	if err != nil {
-		return "", fmt.Errorf("failed to get IP address on %s of netns %s: %w", podInterface, podNS.Path(), err)
+		return "", fmt.Errorf("failed to get IP address on %s of netns %s: %w", podLink.Name(), podLink.Namespace().Path(), err)
 	}
 
 	var ips []string
@@ -234,10 +244,10 @@ func getPodIP(podNS netops.Namespace, podInterface string) (string, error) {
 		}
 	}
 	if len(ips) < 1 {
-		return "", fmt.Errorf("no IPv4 address found on %s of netns %s", podInterface, podNS.Path())
+		return "", fmt.Errorf("no IPv4 address found on %s of netns %s", podLink.Name(), podLink.Namespace().Path())
 	}
 	if len(ips) > 1 {
-		return "", fmt.Errorf("more than one IPv4 addresses found on %s of netns %s", podInterface, podNS.Path())
+		return "", fmt.Errorf("more than one IPv4 addresses found on %s of netns %s", podLink.Name(), podLink.Namespace().Path())
 	}
 	return ips[0], nil
 }

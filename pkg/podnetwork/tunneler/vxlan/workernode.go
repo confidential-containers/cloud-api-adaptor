@@ -12,7 +12,6 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
-	"github.com/vishvananda/netlink"
 )
 
 var logger = log.New(log.Writer(), "[tunneler/vxlan] ", log.LstdFlags|log.Lmsgprefix)
@@ -69,12 +68,13 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 	}
 
 	var hostVxlanInterface string
+	var hostVxlanLink netops.Link
 
 	for {
 		hostVxlanInterface = fmt.Sprintf("%s%d", hostVxlanInterfacePrefix, index)
 		var found bool
 		for _, link := range links {
-			if link == hostVxlanInterface {
+			if link.Name() == hostVxlanInterface {
 				found = true
 				break
 			}
@@ -82,13 +82,13 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 
 		if !found {
 
-			vxlanLink := &netlink.Vxlan{
-				Group:   dstAddr,
-				VxlanId: config.VXLANID,
-				Port:    config.VXLANPort,
+			vxlanDevice := &netops.VXLAN{
+				Group: dstAddr,
+				ID:    config.VXLANID,
+				Port:  config.VXLANPort,
 			}
 			logger.Printf("vxlan %s (remote %s:%d, id: %d) created at %s", hostVxlanInterface, dstAddr.String(), config.VXLANPort, config.VXLANID, hostNS.Path())
-			err := hostNS.LinkAdd(hostVxlanInterface, vxlanLink)
+			hostVxlanLink, err = hostNS.LinkAdd(hostVxlanInterface, vxlanDevice)
 			if err == nil {
 				logger.Printf("vxlan %s created at %s", hostVxlanInterface, hostNS.Path())
 				break
@@ -104,16 +104,21 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		}
 	}
 
-	if err := hostNS.LinkSetNS(hostVxlanInterface, podNS); err != nil {
+	if err := hostVxlanLink.SetNamespace(podNS); err != nil {
 		return fmt.Errorf("failed to move vxlan interface %s to netns %s: %w", hostVxlanInterface, podNS.Path(), err)
 	}
 	logger.Printf("vxlan %s is moved to %s", hostVxlanInterface, podNS.Path())
 
-	if err := podNS.LinkSetName(hostVxlanInterface, secondPodInterface); err != nil {
+	podVxlanInterface, err := podNS.LinkFind(hostVxlanInterface)
+	if err != nil {
+		return fmt.Errorf("failed to find vxlan interface %q on pod netns %s to %s: %w", hostVxlanInterface, podNS.Path(), secondPodInterface, err)
+	}
+
+	if err := podVxlanInterface.SetName(secondPodInterface); err != nil {
 		return fmt.Errorf("failed to change vxlan interface name %s on netns %s to %s: %w", hostVxlanInterface, podNS.Path(), secondPodInterface, err)
 	}
 
-	if err := podNS.LinkSetUp(secondPodInterface); err != nil {
+	if err := podVxlanInterface.SetUp(); err != nil {
 		return err
 	}
 
@@ -166,7 +171,12 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 
 	logger.Printf("Delete vxlan interface %s in the network namespace %s", secondPodInterface, nsPath)
 
-	if err := podNS.LinkDel(secondPodInterface); err != nil {
+	podVxlanInterface, err := podNS.LinkFind(secondPodInterface)
+	if err != nil {
+		return fmt.Errorf("failed to find vxlan interface %q on pod netns %s to %s: %w", secondPodInterface, podNS.Path(), secondPodInterface, err)
+	}
+
+	if err := podVxlanInterface.Delete(); err != nil {
 		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", secondPodInterface, podNS.Path(), err)
 	}
 	return nil

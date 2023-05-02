@@ -44,7 +44,13 @@ func NewNamedNS(t *testing.T, prefix string) netops.Namespace {
 	if err != nil {
 		t.Fatalf("failed to open a named network namespace %s: %v", nsPath, err)
 	}
-	if err := ns.LinkSetUp("lo"); err != nil {
+
+	link, err := ns.LinkFind("lo")
+	if err != nil {
+		t.Fatalf("failed to find an interface: %v", err)
+	}
+
+	if err := link.SetUp(); err != nil {
 		t.Fatalf("failed to set the link up: lo")
 	}
 
@@ -65,12 +71,11 @@ func DeleteNamedNS(t *testing.T, ns netops.Namespace) {
 func BridgeAdd(t *testing.T, ns netops.Namespace, name string) {
 	t.Helper()
 
-	attrs := netlink.NewLinkAttrs()
-	attrs.Namespace = ns
-	if err := ns.LinkAdd(name, &netlink.Bridge{LinkAttrs: attrs}); err != nil {
+	br, err := ns.LinkAdd(name, &netops.Bridge{})
+	if err != nil {
 		t.Fatalf("failed to create a bridge: %v", err)
 	}
-	if err := ns.LinkSetUp(name); err != nil {
+	if err := br.SetUp(); err != nil {
 		t.Fatalf("failed to set the link up: %s: %v", name, err)
 	}
 }
@@ -78,21 +83,35 @@ func BridgeAdd(t *testing.T, ns netops.Namespace, name string) {
 func LinkSetMaster(t *testing.T, ns netops.Namespace, name, masterName string) {
 	t.Helper()
 
-	if err := ns.LinkSetMaster(name, masterName); err != nil {
+	link, err := ns.LinkFind(name)
+	if err != nil {
+		t.Fatalf("failed to find an interface: %v", err)
+	}
+	master, err := ns.LinkFind(masterName)
+	if err != nil {
+		t.Fatalf("failed to find an interface: %v", err)
+	}
+
+	if err := link.SetMaster(master); err != nil {
 		t.Fatalf("failed to set the master link of %s to %s: %v", name, masterName, err)
 	}
 }
 
-func VethAdd(t *testing.T, ns netops.Namespace, name string, peer netops.Namespace, peerName string) {
+func VethAdd(t *testing.T, ns netops.Namespace, name string, peerNamespace netops.Namespace, peerName string) {
 	t.Helper()
 
-	if err := ns.VethAdd(name, peer, peerName); err != nil {
+	link, err := ns.LinkAdd(name, &netops.VEth{PeerName: peerName, PeerNamespace: peerNamespace})
+	if err != nil {
 		t.Fatalf("failed to create a veth pair between two namespaces: %v", err)
 	}
-	if err := ns.LinkSetUp(name); err != nil {
+	if err := link.SetUp(); err != nil {
 		t.Fatalf("failed to set the link up: %s: %v", name, err)
 	}
-	if err := peer.LinkSetUp(peerName); err != nil {
+	peer, err := peerNamespace.LinkFind(peerName)
+	if err != nil {
+		t.Fatalf("failed to find interface %q on %s: %v", peerName, peerNamespace.Path(), err)
+	}
+	if err := peer.SetUp(); err != nil {
 		t.Fatalf("failed to set the link up: %s: %v", peerName, err)
 	}
 }
@@ -104,7 +123,11 @@ func AddrAdd(t *testing.T, ns netops.Namespace, name, addr string) {
 	if err != nil {
 		t.Fatalf("failed to parse IP %s: %v", addr, err)
 	}
-	if err := ns.AddrAdd(name, ip); err != nil {
+	link, err := ns.LinkFind(name)
+	if err != nil {
+		t.Fatalf("failed to find an interface: %v", err)
+	}
+	if err := link.AddAddr(ip); err != nil {
 		t.Fatalf("failed to add %s to %s: %v", addr, name, err)
 	}
 }
@@ -112,7 +135,11 @@ func AddrAdd(t *testing.T, ns netops.Namespace, name, addr string) {
 func HwAddrAdd(t *testing.T, ns netops.Namespace, name, hwAddr string) {
 	t.Helper()
 
-	if err := ns.SetHardwareAddr(name, hwAddr); err != nil {
+	link, err := ns.LinkFind(name)
+	if err != nil {
+		t.Fatalf("failed to find an interface: %v", err)
+	}
+	if err := link.SetHardwareAddr(hwAddr); err != nil {
 		t.Fatalf("failed to add %s to %s: %v", hwAddr, name, err)
 	}
 }
@@ -261,7 +288,8 @@ func CheckVRF(t *testing.T, ns netops.Namespace) {
 
 	name := "vrf0dummy"
 
-	if err := ns.LinkAdd(name, &netlink.Vrf{Table: 12345}); err != nil {
+	vrf, err := ns.LinkAdd(name, &netops.VRF{Table: 12345})
+	if err != nil {
 
 		if errors.Is(err, unix.ENOTSUP) {
 			t.Log(
@@ -278,7 +306,7 @@ func CheckVRF(t *testing.T, ns netops.Namespace) {
 		t.Fatalf("failed to create a VRF interface: %v\n", err)
 	}
 
-	if err := ns.LinkDel("vrf0dummy"); err != nil {
+	if err := vrf.Delete(); err != nil {
 		t.Fatalf("failed to delete a VRF interface %s: %v\n", name, err)
 	}
 }
