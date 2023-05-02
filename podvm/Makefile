@@ -6,12 +6,6 @@ include Makefile.inc
 
 .PHONY: image clean clean_sources
 
-# Check for set but empty or unset URL and CHECKSUM
-UBUNTU_IMAGE_URL := $(or $(UBUNTU_IMAGE_URL),https://cloud-images.ubuntu.com/$(UBUNTU_RELEASE)/current/$(UBUNTU_RELEASE)-server-cloudimg-$(DEB_ARCH).img)
-UBUNTU_IMAGE_CHECKSUM := $(or $(UBUNTU_IMAGE_CHECKSUM),$(shell curl -LO  https://cloud-images.ubuntu.com/"$(UBUNTU_RELEASE)"/current/SHA256SUMS && \
-				grep "$(UBUNTU_RELEASE)"-server-cloudimg-"$(DEB_ARCH)".img SHA256SUMS | awk '{print $$1}' && \
-				rm -f SHA256SUMS))
-
 IMAGE_SUFFIX := .qcow2
 PODVM_DISTRO ?= ubuntu
 KATA_AGENT_SRC := ../../kata-containers/src/agent
@@ -31,6 +25,13 @@ image: $(IMAGE_FILE)
 setopts:
 ifeq ($(PODVM_DISTRO),ubuntu)
 	@echo defined
+
+	# Check for set but empty or unset URL and CHECKSUM
+	UBUNTU_IMAGE_URL := $(or $(UBUNTU_IMAGE_URL),https://cloud-images.ubuntu.com/$(UBUNTU_RELEASE)/current/$(UBUNTU_RELEASE)-server-cloudimg-$(DEB_ARCH).img)
+	UBUNTU_IMAGE_CHECKSUM := $(or $(UBUNTU_IMAGE_CHECKSUM),$(shell curl -LO  https://cloud-images.ubuntu.com/"$(UBUNTU_RELEASE)"/current/SHA256SUMS && \
+				grep "$(UBUNTU_RELEASE)"-server-cloudimg-"$(DEB_ARCH)".img SHA256SUMS | awk '{print $$1}' && \
+				rm -f SHA256SUMS))
+
 	$(eval OPTS := -var qemu_image_name=${IMAGE_FILE} \
 	-var cloud_image_url=${UBUNTU_IMAGE_URL} \
 	-var cloud_image_checksum=${UBUNTU_IMAGE_CHECKSUM})
