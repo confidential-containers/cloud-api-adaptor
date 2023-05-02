@@ -61,9 +61,10 @@ func (r *PeerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// cloud provider was not set, try to fetch cloud provider and its configs dynamically from ConfigMap or Secret
 	// make sure the matching RBAC rules are set
 	if r.Provider == nil {
+		logger.Info("trying to fetch cloud provider configs for peerpod-ctrl")
 		if err := r.cloudConfigsGetter(); err != nil {
 			// don't requeue, if cloud configs are missing it will requeue later
-			logger.Info("connot fetch cloud configs at the moment", "error", err)
+			logger.Info("cannot fetch cloud configs at the moment", "error", err)
 		}
 
 		var pErr error
