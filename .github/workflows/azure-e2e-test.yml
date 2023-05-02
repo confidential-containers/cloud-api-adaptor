@@ -1,0 +1,294 @@
+name: azure-e2e-test
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  PODVM_IMAGE_NAME: "peerpod-image-${{ github.run_id }}-${{ github.run_attempt }}"
+  SSH_USERNAME: "peerpod"
+  # VM size used for building image.
+  VM_SIZE: "Standard_D2as_v5"
+  CLUSTER_NAME: "e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
+
+on:
+  pull_request_target:
+    branches:
+      - main
+
+jobs:
+  authorize:
+    environment:
+      ${{ (github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name != github.repository) &&
+      'external' || 'internal' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: true
+
+  build-podvm-image:
+    runs-on: ubuntu-latest
+    needs: authorize
+    outputs:
+      pod-image-version: "${{ steps.generate_image_version.outputs.pod_image_version }}"
+    steps:
+    - name: Generate version for pod vm image
+      id: generate_image_version
+      run: |
+        unique_version="$(date '+%m.%d.%H%M%S')${{ github.run_attempt }}"
+        echo "Generated unique version for the image as: ${unique_version}"
+        echo "pod_image_version=${unique_version}" >> $GITHUB_OUTPUT
+
+    - uses: actions/checkout@v3
+      with:
+        path: cloud-api-adaptor
+
+    - name: Clone kata repository
+      uses: actions/checkout@v3
+      with:
+        repository: kata-containers/kata-containers 
+        path: kata-containers
+        ref: CC-0.7.0
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: 1.69.0
+        default: true
+
+    - name: Set up rust build cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        # The paths to cache are documented here: https://doc.rust-lang.org/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
+        path: |
+          ~/.cargo/.crates.toml
+          ~/.cargo/.crates2.json
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+        key: rust
+
+    - name: Set up Go environment
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+        cache-dependency-path: cloud-api-adaptor/go.sum
+
+    - name: Install Dependencies
+      run: |
+        rustup target add x86_64-unknown-linux-musl
+        sudo apt-get install -y musl-tools libdevmapper-dev libgpgme-dev
+      shell: bash
+
+    - name: Set up rust cache for kata-containers repository
+      uses: actions/cache@v3
+      with:
+        path: |
+          kata-containers/src/agent/target
+          cloud-api-adaptor/podvm/files/usr/local/bin/kata-agent
+        key: rust-${{ hashFiles('kata-containers/src/agent/Cargo.lock') }}
+
+    - name: Set up umoci, skopeo cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          cloud-api-adaptor/azure/image/umoci
+          cloud-api-adaptor/azure/image/skopeo
+          guest-components/
+        key: umoci-${{ hashFiles('cloud-api-adaptor/podvm/Makefile.inc') }}
+
+    - name: Build binaries
+      env:
+        GOPATH: /home/runner/go
+      run: |
+        pushd cloud-api-adaptor/azure/image
+        make binaries
+        popd
+
+    - uses: azure/login@v1
+      name: 'Az CLI login'
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+    - name: Create podvm image
+      id: create-podvm-image
+      env:
+        PKR_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        PKR_VAR_resource_group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        PKR_VAR_location: ${{ secrets.AZURE_REGION }}
+        PKR_VAR_az_image_name: ${{ env.PODVM_IMAGE_NAME }}
+        PKR_VAR_vm_size: ${{ env.VM_SIZE }}
+        PKR_VAR_ssh_username: ${{ env.SSH_USERNAME }}
+        PKR_VAR_az_gallery_name: ${{ secrets.AZURE_PODVM_GALLERY_NAME }}
+        PKR_VAR_az_gallery_image_name: ${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }}
+        PKR_VAR_az_gallery_image_version: ${{ steps.generate_image_version.outputs.pod_image_version }}
+        PKR_VAR_use_azure_cli_auth: "true"
+        PODVM_DISTRO: "ubuntu"
+      run: |
+        pushd cloud-api-adaptor/azure/image
+        make image
+        popd
+
+  build-caa-container-image:
+    runs-on: ubuntu-latest
+    needs: authorize
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go environment
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+        cache-dependency-path: go.sum
+
+    - uses: azure/login@v1
+      name: 'Az CLI login'
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y libvirt-dev
+
+    - name: Build container image
+      env:
+        ARCHES: "linux/amd64"
+        RELEASE_BUILD: "false"
+        registry: "${{ secrets.ACR_URL }}"
+        COMMIT: "${GITHUB_SHA}"
+      run: |
+        az acr login --name ${{ secrets.ACR_URL }}
+
+        # This builds image in the following format:
+        # ACR_URL/cloud-api-adaptor:dev-COMMIT
+        make image
+
+  run-e2e-test:
+    runs-on: ubuntu-latest
+    needs:
+    - authorize
+    - build-podvm-image
+    - build-caa-container-image
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go environment
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+
+    - name: Create provisioner file
+      env:
+        TEST_E2E_CREATE_RG: "no"
+        PODVM_IMAGE_VERSION: "${{ needs.build-podvm-image.outputs.pod-image-version }}"
+      run: |
+        cat << EOF > /tmp/provision_azure.properties
+          AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          AZURE_CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
+          RESOURCE_GROUP_NAME="${{ secrets.AZURE_RESOURCE_GROUP }}"
+          CLUSTER_NAME="$CLUSTER_NAME"
+          LOCATION="${{ secrets.AZURE_REGION }}"
+          SSH_KEY_ID="id_rsa.pub"
+          AZURE_IMAGE_ID="/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Compute/galleries/${{ secrets.AZURE_PODVM_GALLERY_NAME }}/images/${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }}/versions/${PODVM_IMAGE_VERSION}"
+          SSH_USERNAME="${{ env.SSH_USERNAME }}"
+          IS_CI_MANAGED_CLUSTER="true"
+          AZURE_CLI_AUTH="true"
+          MANAGED_IDENTITY_NAME="${{ secrets.AZURE_MANAGED_IDENTITY_NAME}}"
+          CAA_IMAGE="${{ secrets.ACR_URL }}/cloud-api-adaptor:dev-${GITHUB_SHA}"
+        EOF
+        cat /tmp/provision_azure.properties
+
+    - name: Create public ssh key and secrets
+      run: |
+        # TODO: This is a temporary fix to create an empty file for env.
+        touch install/overlays/azure/service-principal.env
+        ssh-keygen -t rsa -b 4096 -f install/overlays/azure/id_rsa -N "" -C dev@coco.io
+
+    - uses: azure/login@v1
+      name: 'Az CLI login'
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Run e2e test
+      env:
+        TEST_PROVISION_FILE: "/tmp/provision_azure.properties"
+        TEST_PROVISION: "yes"
+        CLOUD_PROVIDER: "azure"
+        BUILTIN_CLOUD_PROVIDERS: "azure"
+      run: make test-e2e
+
+    # Clean up step, run regardless of the failure state.
+    - name: Run deprovisioner
+      if: ${{ always() }}
+      env:
+        TEST_PROVISION_FILE: "/tmp/provision_azure.properties"
+        CLOUD_PROVIDER: "azure"
+        BUILTIN_CLOUD_PROVIDERS: "azure"
+      run: |
+        cd test/tools
+        make caa-provisioner-cli
+
+        # Ignore the error if the deprovision fails.
+        ./caa-provisioner-cli -action=deprovision || true
+
+  cleanup-resources:
+    runs-on: ubuntu-latest
+    needs:
+    - authorize
+    - build-podvm-image
+    - build-caa-container-image
+    - run-e2e-test
+    if: always()
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: azure/login@v1
+      name: 'Az CLI login'
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Remove podvm image
+      env:
+        PODVM_IMAGE_VERSION: "${{ needs.build-podvm-image.outputs.pod-image-version }}"
+      run: |
+        # Delete the Pod VM image and its copy from the gallery.
+        az image delete \
+          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --name ${{ env.PODVM_IMAGE_NAME }} || true
+
+        az sig image-version delete \
+          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --gallery-name ${{ secrets.AZURE_PODVM_GALLERY_NAME }} \
+          --gallery-image-definition ${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }} \
+          --gallery-image-version "${PODVM_IMAGE_VERSION}" || true
+
+        # Delete the CAA container image built for this run.
+        suffix=".azurecr.io"
+        acr_url=${{ secrets.ACR_URL }}
+        registry_name="${acr_url%$suffix}"
+
+        az acr repository delete \
+          --name "${registry_name}" \
+          --image "${{ secrets.ACR_URL }}/cloud-api-adaptor:dev-${GITHUB_SHA}" \
+          --yes || true
+
+        # Delete the cluster even if it has been deleted already or does not exists.
+        az aks delete \
+          --name "${CLUSTER_NAME}" \
+          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --no-wait \
+          --yes || true
