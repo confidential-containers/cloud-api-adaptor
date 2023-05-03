@@ -35,6 +35,7 @@ func (_ *Manager) LoadEnv() {
 	cloud.DefaultToEnv(&azurecfg.TenantId, "AZURE_TENANT_ID", "")
 	cloud.DefaultToEnv(&azurecfg.SubscriptionId, "AZURE_SUBSCRIPTION_ID", "")
 	cloud.DefaultToEnv(&azurecfg.Region, "AZURE_REGION", "")
+	cloud.DefaultToEnv(&azurecfg.ResourceGroupName, "AZURE_RESOURCE_GROUP", "")
 }
 
 func (_ *Manager) NewProvider() (cloud.Provider, error) {
