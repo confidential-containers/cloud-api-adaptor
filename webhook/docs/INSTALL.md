@@ -55,7 +55,7 @@ kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.9
 kubectl apply -f hack/webhook-deploy.yaml
 ```
 
-The default `RuntimeClass` that the webhook monitors is `kata-remote-cc`. 
+The default `RuntimeClass` that the webhook monitors is `kata-remote`. 
 The default `RuntimeClass` can be changed by modifying the `TARGET_RUNTIMECLASS` environment variable.
 For example, executing the following command changes it to `kata`
 

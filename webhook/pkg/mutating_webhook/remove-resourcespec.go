@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	RUNTIME_CLASS_NAME_DEFAULT       = "kata-remote-cc"
+	RUNTIME_CLASS_NAME_DEFAULT       = "kata-remote"
 	POD_VM_ANNOTATION_INSTANCE_TYPE  = "kata.peerpods.io/instance_type"
 	POD_VM_INSTANCE_TYPE_DEFAULT     = "t2.small"
 	POD_VM_EXTENDED_RESOURCE_DEFAULT = "kata.peerpods.io/vm"

@@ -15,4 +15,4 @@ spec:
       limits:
         cpu: 1
         memory: 2Gi
-  runtimeClassName: kata-remote-cc
+  runtimeClassName: kata-remote
