@@ -24,7 +24,7 @@ func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	// TODO: generate me.
 	namespace := "default"
 	name := "simple-peer-pod"
-	pod := newPod(namespace, name, "nginx", "kata")
+	pod := newPod(namespace, name, "nginx", "kata-remote")
 
 	simplePodFeature := features.New("Simple Peer Pod").
 		WithSetup("Create pod", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -66,7 +66,7 @@ func doTestCreatePodWithConfigMap(t *testing.T, assert CloudAssert) {
 	configmapname := "nginx-config"
 	configmapData := map[string]string{"example.txt": "Hello, world"}
 	containerName := "nginx"
-	pod := newPodWithConfigMap(namespace, name, containerName, "kata", configmapname)
+	pod := newPodWithConfigMap(namespace, name, containerName, "kata-remote", configmapname)
 	configmap := newConfigMap(namespace, configmapname, configmapData)
 	nginxPodFeature := features.New("Configmap Pod").
 		WithSetup("Create pod", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -134,7 +134,7 @@ func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 	secretname := "nginx-secret"
 	containerName := "nginx"
 	secretData := map[string][]byte{"password": []byte("123456"), "username": []byte("admin")}
-	pod := newPodWithSecret(namespace, name, containerName, "kata", secretname)
+	pod := newPodWithSecret(namespace, name, containerName, "kata-remote", secretname)
 	secret := newSecret(namespace, secretname, secretData)
 	nginxPodFeature := features.New("Secret Pod").
 		WithSetup("Create pod", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -204,7 +204,7 @@ func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 func doTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	podname := "busy-box-pod"
-	pod := newBusyboxPod(namespace, podname, "busybox", "kata")
+	pod := newBusyboxPod(namespace, podname, "busybox", "kata-remote")
 	PublicpodFeature := features.New("Peer Pod Container").
 		WithSetup("Create pod", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			client, err := cfg.NewClient()
