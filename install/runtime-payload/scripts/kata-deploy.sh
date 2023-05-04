@@ -131,7 +131,7 @@ function cleanup_different_shims_base() {
 }
 
 function configure_crio_runtime() {
-	local runtime="kata"
+	local runtime="kata-remote"
 	local configuration="configuration"
 	if [ -n "${1-}" ]; then
 		runtime+="-$1"
@@ -172,7 +172,7 @@ function configure_crio() {
 }
 
 function configure_containerd_runtime() {
-	local runtime="kata"
+	local runtime="kata-remote"
 	local configuration="configuration"
 	if [ -n "${1-}" ]; then
 		runtime+="-$1"
