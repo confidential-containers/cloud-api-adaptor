@@ -29,6 +29,7 @@ type PeerPodService struct {
 	client        *kubernetes.Clientset
 	uclient       *rest.RESTClient // use generated client instaed
 	cloudProvider string
+	podToPP       map[string]string // map Pod UID to owned PeerPod Name
 }
 
 func NewPeerPodService() (*PeerPodService, error) {
@@ -54,7 +55,7 @@ func NewPeerPodService() (*PeerPodService, error) {
 		return nil, fmt.Errorf("NewPeerPodService: failed to create UnversionedRESTClient: %s", err)
 	}
 	logger.Printf("initialized PeerPodService")
-	return &PeerPodService{client: clientset, uclient: restClient, cloudProvider: cloudProvider}, nil
+	return &PeerPodService{client: clientset, uclient: restClient, cloudProvider: cloudProvider, podToPP: make(map[string]string)}, nil
 }
 
 func (s *PeerPodService) newPeerPod(pod *v1.Pod, instanceId string) *peerPodV1alpha1.PeerPod {
@@ -100,6 +101,7 @@ func (s *PeerPodService) OwnPeerPod(podname string, podns string, instanceID str
 	if err != nil {
 		return err
 	}
+	s.podToPP[string(pod.UID)] = string(pp.Name)
 	logger.Printf("%s is now owning a PeerPod object", podname)
 	return nil
 }
@@ -111,12 +113,17 @@ func (s *PeerPodService) ReleasePeerPod(podname string, podns string, instanceID
 		return err
 	}
 
+	ownedPPName, ok := s.podToPP[string(pod.UID)]
+	if !ok {
+		return errors.New("pod to PeerPod mapping not found")
+	}
 	result := peerPodV1alpha1.PeerPod{}
 	patch := []byte(`[{"op": "remove", "path": "/metadata/finalizers"}]`)
-	err = s.uclient.Patch(types.JSONPatchType).Name(string(pod.UID)).Namespace(podns).Resource("peerPods").Body(patch).Do(context.TODO()).Into(&result)
+	err = s.uclient.Patch(types.JSONPatchType).Name(ownedPPName).Namespace(podns).Resource("peerPods").Body(patch).Do(context.TODO()).Into(&result)
 	if err != nil {
 		return err
 	}
+	delete(s.podToPP, string(pod.UID))
 	logger.Printf("%s's owned PeerPod object can now be deleted", podname)
 	return nil
 }
