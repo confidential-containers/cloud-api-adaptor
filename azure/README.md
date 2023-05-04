@@ -348,14 +348,12 @@ Verify that the runtime class is created after deploying CAA:
 kubectl get runtimeclass
 ```
 
-Once you can find a runtimeclass named `kata` then you can be sure that the deployment was successful. Successful deployment will look like this:
+Once you can find a runtimeclass named `kata-remote` then you can be sure that the deployment was successful. Successful deployment will look like this:
 
 ```console
 $ kubectl get runtimeclass
-NAME        HANDLER     AGE
-kata        kata        7s
-kata-clh    kata-clh    7s
-kata-qemu   kata-qemu   7s
+NAME          HANDLER       AGE
+kata-remote   kata-remote   7m18s
 ```
 
 ### Deploy Workload
@@ -379,7 +377,7 @@ spec:
       labels:
         app: nginx
     spec:
-      runtimeClassName: kata
+      runtimeClassName: kata-remote
       containers:
       - name: nginx
         image: bitnami/nginx:1.14

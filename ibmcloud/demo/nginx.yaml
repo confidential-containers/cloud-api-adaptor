@@ -5,7 +5,7 @@ metadata:
   labels:
     app: nginx
 spec:
-  runtimeClassName: kata
+  runtimeClassName: kata-remote
   containers:
     - name: nginx
       image: nginx
