@@ -5669,6 +5669,12 @@ spec:
                           type: object
                         type: array
                     type: object
+                  runtimeClassNames:
+                    description: This specifies the RuntimeClasses that needs to be
+                      created
+                    items:
+                      type: string
+                    type: array
                   runtimeImage:
                     description: This specifies the location of the container image
                       containing the Cc runtime binaries If both payloadImage and
