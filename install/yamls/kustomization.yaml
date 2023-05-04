@@ -13,3 +13,6 @@ patchesJSON6902:
       path: /spec/config/preInstall
     - op: remove
       path: /spec/config/postUninstall
+    - op: replace
+      path: /spec/config/runtimeClassNames
+      value: ["kata-remote"]
