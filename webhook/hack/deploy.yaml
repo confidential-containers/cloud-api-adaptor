@@ -14,7 +14,7 @@ spec:
       labels:
         app: nginx
     spec:
-      runtimeClassName: kata-remote-cc
+      runtimeClassName: kata-remote
       containers:
       - name: nginx
         image: bitnami/nginx
