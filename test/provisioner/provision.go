@@ -77,7 +77,7 @@ func NewCloudAPIAdaptor(provider string) (*CloudAPIAdaptor, error) {
 		controllerDeployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-controller-manager", Namespace: namespace}},
 		namespace:            namespace,
 		installOverlay:       overlay,
-		runtimeClass:         &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata", Namespace: ""}},
+		runtimeClass:         &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata-remote", Namespace: ""}},
 	}, nil
 }
 
