@@ -134,10 +134,8 @@ were created on the cluster, as for example:
 
 ```
 $ kubectl get runtimeclass
-NAME        HANDLER     AGE
-kata        kata        7m41s
-kata-clh    kata-clh    7m41s
-kata-qemu   kata-qemu   7m41s
+NAME          HANDLER       AGE
+kata-remote   kata-remote   7m18s
 ```
 
 ## Create a sample peer-pods pod
@@ -169,7 +167,7 @@ spec:
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Never
-  runtimeClassName: kata
+  runtimeClassName: kata-remote
 ```
 
 And create the Pod:

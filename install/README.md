@@ -66,12 +66,10 @@
     ```
     kubectl get runtimeclass
     ```
-  A successful install should show `kata` related `RuntimeClasses`
+  A successful install should show `kata-remote` related `RuntimeClasses`
     ```
-    NAME        HANDLER     AGE
-    kata        kata        6m7s
-    kata-clh    kata-clh    6m7s
-    kata-qemu   kata-qemu   6m7s
+    NAME          HANDLER       AGE
+    kata-remote   kata-remote   7m18s
     ```
 
 * View cloud-api-adaptor logs

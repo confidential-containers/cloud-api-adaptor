@@ -6,7 +6,7 @@ metadata:
     app: nginx
   namespace: kube-system
 spec:
-  runtimeClassName: kata
+  runtimeClassName: kata-remote
   containers:
     - name: ibm-vpc-block-podvm-node-driver
       env:
