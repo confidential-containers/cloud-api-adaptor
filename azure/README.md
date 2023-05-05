@@ -141,8 +141,8 @@ docker build -t azure \
 --build-arg AZURE_REGION=${AZURE_REGION} \
 --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}  \
 --build-arg PUBLISHER=RedHat \
---build-arg SKU=9-raw \
---build-arg OFFER=rhel-raw \
+--build-arg SKU=9-lvm \
+--build-arg OFFER=RHEL \
 --build-arg PODVM_DISTRO=rhel \
 -f Dockerfile .
 ```
