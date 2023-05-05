@@ -153,6 +153,19 @@ $ docker build -t podvm-s390x \
          -f Dockerfile.podvm .
 ```
 
+The podvm image can also be built using UEFI based images. For example if you want to build a
+RHEL podvm image using UEFI based qcow2 image, then run the build using as shown below:
+
+```
+$ docker build -t podvm-uefi \
+         --build-arg BUILDER_IMG=podvm_builder \
+         --build-arg BINARIES_IMG=podvm_binaries \
+         --build-arg RHEL_IMAGE_URL="_url_to_uefi_based_qcow2_" \
+         --build-arg RHEL_IMAGE_CHECKSUM="_qcow2_image_checksum" \
+	 --build-arg UEFI=true \
+         -f Dockerfile.podvm.rhel .
+```
+
 ## Extracting the qcow2 image
 
 The final podvm image, i.e. the qcow2 file, is stored on the root of the podvm
