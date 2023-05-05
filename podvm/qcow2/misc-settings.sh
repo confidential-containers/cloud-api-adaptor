@@ -59,6 +59,8 @@ case $PODVM_DISTRO in
              ;&
        rhel)
             systemctl disable kdump.service
+	    systemctl disable tuned.service
+	    systemctl disable firewalld.service
             ;;
        ubuntu)
              systemctl disable apt-daily.service
