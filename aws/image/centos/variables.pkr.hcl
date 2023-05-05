@@ -26,3 +26,13 @@ variable "subnet_id" {
   type = string
   default = null
 }
+
+variable "podvm_distro" {
+  type    = string
+  default = env("PODVM_DISTRO")
+}
+
+variable "cloud_provider" {
+  type    = string
+  default = env("CLOUD_PROVIDER")
+}
