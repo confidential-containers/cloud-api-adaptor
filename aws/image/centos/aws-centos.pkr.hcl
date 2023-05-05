@@ -82,6 +82,10 @@ build {
 
   provisioner "shell" {
     remote_folder = "~"
+    environment_vars = [
+        "CLOUD_PROVIDER=${var.cloud_provider}",
+        "PODVM_DISTRO=${var.podvm_distro}",
+    ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"
     ]
