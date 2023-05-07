@@ -5,7 +5,7 @@
 # Creates a builder container image that should be used to build the Pod VM
 # disk inside a container.
 #
-FROM registry.access.redhat.com/ubi8/ubi:8.7
+FROM registry.access.redhat.com/ubi9/ubi:9.1
 
 ARG GO_VERSION="1.19.6"
 ARG PROTOC_VERSION="3.11.4"
@@ -15,7 +15,7 @@ ARG RUST_VERSION="1.66.0"
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
 
 RUN dnf groupinstall -y 'Development Tools' && \
-    dnf install -y yum-utils gnupg git curl pkg-config libseccomp-devel gpgme-devel \
+    dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
         device-mapper-devel qemu-kvm unzip wget libassuan-devel \
 	genisoimage cloud-utils-growpart cloud-init && \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
