@@ -62,7 +62,7 @@ resource "azurerm_role_definition" "caa_ci_provisioner" {
 
 resource "azurerm_role_assignment" "ci_custom_role_binding" {
   scope                = data.azurerm_subscription.current.id
-  role_definition_name = "Azure CAA CI Provisioner"
+  role_definition_name = azurerm_role_definition.caa_ci_provisioner.name
   principal_id         = azurerm_user_assigned_identity.gh_action_user_identity.principal_id
 }
 
