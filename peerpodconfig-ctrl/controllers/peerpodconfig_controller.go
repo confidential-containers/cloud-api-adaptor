@@ -81,7 +81,7 @@ func (r *PeerPodConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	_ = r.Log.WithValues("peerpod-controller", req.NamespacedName)
 	r.Log.Info("Reconciling PeerPodConfig in Kubernetes Cluster")
 
-	// Fetch the CcRuntime instance
+	// Fetch the PeerPodConfig instance
 	r.peerPodConfig = &ccv1alpha1.PeerPodConfig{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, r.peerPodConfig)
 	if err != nil {
@@ -308,6 +308,12 @@ func (r *PeerPodConfigReconciler) advertiseExtendedResources() error {
 	if err != nil {
 		r.Log.Info("getting node list failed when trying to update nodes with extended resources")
 		return err
+	}
+
+	// Do nothing for empty nodes list
+	if len(nodesList.Items) == 0 {
+		r.Log.Info("Not advertising extended resources for empty nodelist for nodeSelector", "nodeSelector", nodeSelector)
+		return nil
 	}
 
 	// FIXME distribute remainder among nodes
