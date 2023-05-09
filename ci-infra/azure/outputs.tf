@@ -10,7 +10,7 @@ output "AZURE_CLIENT_ID" {
   value = azurerm_user_assigned_identity.gh_action_user_identity.client_id
 }
 
-output "RESOURCE_GROUP" {
+output "AZURE_RESOURCE_GROUP" {
   value = azurerm_resource_group.ci_rg.name
 }
 
