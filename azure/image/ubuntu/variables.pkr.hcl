@@ -89,17 +89,17 @@ variable "cloud_provider" {
 }
 
 variable "plan_name" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "plan_product" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "plan_publisher" {
-  type = string
+  type    = string
   default = ""
 }
 
