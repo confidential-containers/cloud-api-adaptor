@@ -79,7 +79,6 @@ RUN --mount=type=secret,id=AZURE_SUBSCRIPTION_ID \
     export PKR_VAR_subscription_id=${AZURE_SUBSCRIPTION_ID} && \
     export PKR_VAR_tenant_id=${AZURE_TENANT_ID} && \
     export PKR_VAR_resource_group=${AZURE_RESOURCE_GROUP} && \
-    export PKR_VAR_location=${AZURE_LOCATION} && \
     export PKR_VAR_az_image_name=${IMAGE_NAME} && \
     export PKR_VAR_az_gallery_name=${GALLERY_NAME} && \
     export PKR_VAR_az_gallery_image_name=${GALLERY_IMAGE_DEF_NAME} && \
