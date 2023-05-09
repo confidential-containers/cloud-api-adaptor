@@ -32,12 +32,6 @@ variable "vm_size" {
   default = "Standard_D2as_v5"
 }
 
-// region
-variable "location" {
-  type    = string
-  default = "eastus"
-}
-
 variable "resource_group" {
   type = string
 }

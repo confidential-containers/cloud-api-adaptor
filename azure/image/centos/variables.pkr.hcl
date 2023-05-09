@@ -14,12 +14,6 @@ variable "vm_size" {
   default = "Standard_A2_v2"
 }
 
-// region
-variable "location" {
-  type    = string
-  default = "eastus"
-}
-
 variable "resource_group" {
   type = string
 }

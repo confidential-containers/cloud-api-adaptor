@@ -95,7 +95,6 @@ az sig image-definition create \
 ```bash
 cd image
 export PKR_VAR_resource_group="${AZURE_RESOURCE_GROUP}"
-export PKR_VAR_location="${AZURE_REGION}"
 export PKR_VAR_subscription_id="${AZURE_SUBSCRIPTION_ID}"
 export PKR_VAR_client_id="${AZURE_CLIENT_ID}"
 export PKR_VAR_client_secret="${AZURE_CLIENT_SECRET}"
