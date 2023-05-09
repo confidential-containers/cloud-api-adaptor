@@ -16,7 +16,7 @@ variable "vm_size" {
 
 // region
 variable "location" {
-  type = string
+  type    = string
   default = "eastus"
 }
 
@@ -41,7 +41,7 @@ variable "tenant_id" {
 }
 
 variable "ssh_username" {
-  type = string
+  type    = string
   default = "peerpod"
 }
 
@@ -68,16 +68,16 @@ variable "cloud_provider" {
 }
 
 variable "plan_name" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "plan_product" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "plan_publisher" {
-  type = string
+  type    = string
   default = ""
 }
