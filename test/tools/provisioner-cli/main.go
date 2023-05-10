@@ -10,6 +10,7 @@ import (
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
+	kconf "sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
@@ -94,6 +95,44 @@ func main() {
 			log.Fatal(err)
 		}
 		if err := provisioner.UploadPodvm(podvmImage, context.TODO(), cfg); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if *action == "install" {
+		log.Info("Installing CoCo operator and cloud-api-adaptor resources")
+		deployer, err := pv.NewCloudAPIAdaptor(cloudProvider)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		kubeconfigPath := kconf.ResolveKubeConfigFile()
+		if kubeconfigPath == "" {
+			log.Fatal("Unabled to find a kubeconfig file")
+		}
+		cfg := envconf.NewWithKubeConfig(kubeconfigPath)
+
+		err = deployer.Deploy(context.TODO(), cfg, provisioner.GetProperties(context.TODO(), cfg))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if *action == "uninstall" {
+		log.Info("Uninstalling CoCo operator and cloud-api-adaptor resources")
+		deployer, err := pv.NewCloudAPIAdaptor(cloudProvider)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		kubeconfigPath := kconf.ResolveKubeConfigFile()
+		if kubeconfigPath == "" {
+			log.Fatal("Unabled to find a kubeconfig file")
+		}
+		cfg := envconf.NewWithKubeConfig(kubeconfigPath)
+
+		err = deployer.Delete(context.TODO(), cfg)
+		if err != nil {
 			log.Fatal(err)
 		}
 	}
