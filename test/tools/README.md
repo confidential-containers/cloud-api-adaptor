@@ -28,7 +28,17 @@ export TEST_PROVISION_FILE=${PROPERTIES_FILE_PATH}
 export TEST_PROVISION="yes"
 ./caa-provisioner-cli -actions=${ACTION}
 ```
-`ACTION` supports `provision`, `deprovision` and `uploadimage`.
+`ACTION` supports `provision`, `deprovision`, `install`, `uninstall` and `uploadimage`.
+
+### Brief Action Explanations
+
+`provision` : Uses the provisioner to create a new cluster, and install cloud-api-adaptor resources
+
+`deprovision` : Deletes the cluster that we previously created
+
+`install` : Install the cloud-api-adaptor using the operator to an existing cluster, must set `KUBECONFIG`
+
+`uninstall` : Removes the cloud-api-adaptor resources from the cluster, must set `KUBECONFIG`
 
 ### Add a new provider support
 `ibmcloud`, `azure` and `libvirt` providers are supported now, to add a new provider please add it in [cluster provisioner package](../provisioner)
