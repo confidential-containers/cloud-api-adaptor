@@ -9,7 +9,7 @@ source "azure-arm" "ubuntu" {
   image_publisher                   = "${var.publisher}"
   image_offer                       = "${var.offer}"
   image_sku                         = "${var.sku}"
-  managed_image_name                = "${var.az_image_name}"
+  managed_image_name                = "${var.az_image_name}-${var.az_gallery_image_version}"
   managed_image_resource_group_name = "${var.resource_group}"
   build_resource_group_name         = "${var.resource_group}"
 
