@@ -1,20 +1,22 @@
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 
-You'll also need to advertise the extended resource `kata.peerpods.io/vm`.
+### Deploy extended resources
+
+You'll need to advertise the extended resource `kata.peerpods.io/vm`.
 
 A simple daemonset is provided under the following [directory](../hack/extended-resources/).
+
+The following command advertises `20` pod VM resources. You can modify the spec as needed.
 
 ```
 cd ../hack/extended-resources
 ./setup.sh
 ```
 
-The above command advertises `20` pod VM resources. You can modify the spec as needed.
-
 To verify, check the node object
 ```
-kubectl get node $NODENAME -o=jsonpath='{.status.allocatable} | jq'
+kubectl get node $NODENAME -o=jsonpath='{.status.allocatable}' | jq
 ```
 
 You should see a similar output like the one below:
@@ -43,19 +45,19 @@ Deploy the webhook in the kind cluster
 make kind-deploy IMG=quay.io/confidential-containers/peer-pods-webhook
 ```
 
-If not using `kind`, the follow these steps to deploy the webhook
+### Using a remote cluster
 
-### Deploy cert-manager
+#### Deploy cert-manager
 ```
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.9.1/cert-manager.yaml
 ```
 
-### Deploy webhook
+#### Deploy webhook
 ```
 kubectl apply -f hack/webhook-deploy.yaml
 ```
 
-The default `RuntimeClass` that the webhook monitors is `kata-remote`. 
+The default `RuntimeClass` that the webhook monitors is `kata-remote`.
 The default `RuntimeClass` can be changed by modifying the `TARGET_RUNTIMECLASS` environment variable.
 For example, executing the following command changes it to `kata`
 
