@@ -34,7 +34,7 @@ export AZURE_SUBSCRIPTION_ID=$(az account show --query id --output tsv)
 
 az ad sp create-for-rbac \
   --name "caa-${AZURE_RESOURCE_GROUP}"  \
-  --role "Contributor"   \
+  --role "Owner"   \
   --scopes /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP} \
   --query "{ AZURE_CLIENT_ID: appId, AZURE_CLIENT_SECRET: password, AZURE_TENANT_ID: tenant }"
 ```
@@ -409,4 +409,3 @@ az group delete \
   --name "${AZURE_RESOURCE_GROUP}" \
   --yes --no-wait
 ```
-
