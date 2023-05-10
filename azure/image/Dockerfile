@@ -47,8 +47,8 @@ ARG GALLERY_NAME=caaubntcvmsGallery
 ARG GALLERY_IMAGE_DEF_NAME=cc-image
 ARG SSH_USERNAME=peerpod
 ARG PUBLISHER=Canonical
-ARG OFFER=0001-com-ubuntu-minimal-jammy
-ARG SKU=minimal-22_04-lts
+ARG OFFER=0001-com-ubuntu-confidential-vm-jammy
+ARG SKU=22_04-lts-cvm
 ARG PLAN_NAME
 ARG PLAN_PRODUCT
 ARG PLAN_PUBLISHER
