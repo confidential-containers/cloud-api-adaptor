@@ -189,7 +189,7 @@
                 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
                   [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
                     runtime_type = "io.containerd.runc.v2"
-                  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.kata]
+                  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.kata-remote]
                     runtime_type = "io.containerd.kata.v2"
                     cri_handler = "cc"
 
