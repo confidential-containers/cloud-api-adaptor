@@ -38,7 +38,7 @@ ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
 RUN echo $PATH
 
 RUN rustup target add x86_64-unknown-linux-musl && ln -sf /usr/bin/g++ /bin/musl-g++
-    
+
 
 RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
     unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
@@ -49,7 +49,7 @@ ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
 ARG CAA_SRC_BRANCH="staging"
 
 ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
-ARG KATA_SRC_BRANCH="CC-0.5.0"
+ARG KATA_SRC_BRANCH="CCv0"
 
 RUN echo $CAA_SRC
 
