@@ -184,6 +184,16 @@ docker build -t azure \
 -f Dockerfile .
 ```
 
+## Build CAA Container Image
+
+If you have made changes to the Cloud API Adaptor code and if you want to deploy those changes then follow [these instructions](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/install/README.md#building-custom-cloud-api-adaptor-image) to build the container image from the root of this repository.
+
+If you would like to deploy the latest code from the default branch (`staging`) of this repository then just expose the following environment variable:
+
+```bash
+export registry="quay.io/confidential-containers"
+```
+
 ## Deploy Kubernetes using AKS
 
 Make changes to the following environment variable as you see fit:
