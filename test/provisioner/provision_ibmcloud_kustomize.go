@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -117,8 +118,8 @@ func getCaaLatestCommitTag() string {
 	return ""
 }
 
-func NewIBMCloudInstallOverlay() (InstallOverlay, error) {
-	overlay, err := NewKustomizeOverlay("../../install/overlays/ibmcloud")
+func NewIBMCloudInstallOverlay(installDir string) (InstallOverlay, error) {
+	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "overlays/ibmcloud"))
 	if err != nil {
 		return nil, err
 	}

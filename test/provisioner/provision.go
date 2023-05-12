@@ -48,7 +48,7 @@ type CloudAPIAdaptor struct {
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
 }
 
-type newInstallOverlayFunc func() (InstallOverlay, error)
+type newInstallOverlayFunc func(installDir string) (InstallOverlay, error)
 
 var newInstallOverlayFunctions = make(map[string]newInstallOverlayFunc)
 
@@ -62,10 +62,10 @@ type InstallOverlay interface {
 	Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
 }
 
-func NewCloudAPIAdaptor(provider string) (*CloudAPIAdaptor, error) {
+func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, error) {
 	namespace := "confidential-containers-system"
 
-	overlay, err := GetInstallOverlay(provider)
+	overlay, err := GetInstallOverlay(provider, installDir)
 	if err != nil {
 		return nil, err
 	}
@@ -104,14 +104,14 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 }
 
 // GetInstallOverlay returns the InstallOverlay implementation for the provider
-func GetInstallOverlay(provider string) (InstallOverlay, error) {
+func GetInstallOverlay(provider string, installDir string) (InstallOverlay, error) {
 
 	overlayFunc, ok := newInstallOverlayFunctions[provider]
 	if !ok {
 		return nil, fmt.Errorf("Not implemented install overlay for %s\n", provider)
 	}
 
-	return overlayFunc()
+	return overlayFunc(installDir)
 }
 
 // Deletes the peer pods installation including the controller manager.
