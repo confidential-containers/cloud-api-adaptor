@@ -18,8 +18,8 @@ done
 [[ -z $host_keys ]] && echo "Didn't find host key files, please download host key files to 'files' folder " && exit 1
 echo "Installing jq"
 export DEBIAN_FRONTEND=noninteractive
-sudo apt-get update 2>&1 >/dev/null
-sudo apt-get install jq -y 2>&1 >/dev/null
+sudo apt-get update > /dev/null 2>&1
+sudo apt-get install jq -y > /dev/null 2>&1
 sudo apt-get remove unattended-upgrades -y
 sudo apt-get autoremove
 sudo apt-get clean
