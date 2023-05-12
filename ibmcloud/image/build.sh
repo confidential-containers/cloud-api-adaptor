@@ -101,7 +101,7 @@ rm -f "$src_img_path" "$tmp_img_path"
 echo "Cleanuping build env"
 cleanup ""
 if [ "${SE_BOOT}" = "1" ]; then
-    echo "Finding host key files" 
+    echo "Finding host key files"
     host_keys=""
     for i in $(ls ${HOST_KEYS_DIR}/*.crt); do
         echo "found host key file: \"${i}\""
@@ -176,7 +176,7 @@ sleep 1
 resize2fs -f "${src_nbd}p1"
 
 if [ "${SE_BOOT}" = "1" ]; then
-    echo "Creating boot-se and root partitions" 
+    echo "Creating boot-se and root partitions"
     parted -a optimal $tmp_nbd mklabel gpt \
         mkpart boot-se ext4 1MiB 256MiB \
         mkpart root 256MiB "${disksize}" \
@@ -201,7 +201,8 @@ if [ "${SE_BOOT}" = "1" ]; then
     done
     printf "\nFormatting boot-se partition\n"
     mke2fs -t ext4 -L boot-se ${tmp_nbd}p1
-    export boot_uuid=$(blkid ${tmp_nbd}p1 -s PARTUUID -o value)
+    boot_uuid=$(blkid ${tmp_nbd}p1 -s PARTUUID -o value)
+    export boot_uuid
     printf "\nSetting up encrypted root partition\n"
     mkdir rootkeys || true
     mount -t tmpfs rootkeys ./rootkeys

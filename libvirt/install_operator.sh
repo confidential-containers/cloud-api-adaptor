@@ -52,7 +52,8 @@ usage() {
 #
 wait_pods() {
 	local ns="confidential-containers-system"
-	local pods="$(kubectl get pods --no-headers -n "$ns" | \
+	local pods
+	pods="$(kubectl get pods --no-headers -n "$ns" | \
 		awk '{ print $1 }')"
 	for pod in $pods; do
 		kubectl wait --for=condition=Ready --timeout 120s -n "$ns" "pod/${pod}"

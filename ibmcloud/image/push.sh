@@ -27,7 +27,8 @@ if [[ -z "${image_name-}" || -z "${image_path-}"  ]]; then
     exit 1
 fi
 
-export IBMCLOUD_HOME=$(pwd -P)
+IBMCLOUD_HOME=$(pwd -P)
+export IBMCLOUD_HOME
 ./login.sh
 
 region=${IBMCLOUD_COS_REGION:-jp-tok}
@@ -86,9 +87,9 @@ echo -e "\nUploading $image_path to cloud object stroage at "$cos_bucket" with k
 
 ibmcloud cos object-head --bucket "$cos_bucket" --key "$object_key"
 
-if [[ ! "$region" =~ - ]]; then 
+if [[ ! "$region" =~ - ]]; then
     location="${region}-geo"
-else 
+else
     location=$region
 fi
 image_ref="cos://$location/$cos_bucket/$object_key"

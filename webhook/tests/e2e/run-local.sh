@@ -11,7 +11,8 @@ set -o nounset
 set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly webhook_dir="$(cd "${script_dir}/../../" && pwd)"
+webhook_dir="$(cd "${script_dir}/../../" && pwd)"
+readonly webhook_dir
 
 # Whether to run this script in debug mode or not.
 debug=0
@@ -37,7 +38,8 @@ cluster_up() {
 	popd >/dev/null
 
 	local cert_manager_ns="cert-manager"
-	local cert_manager_pods="$(kubectl get pods -n "$cert_manager_ns" 2>/dev/null | \
+	local cert_manager_pods
+	cert_manager_pods="$(kubectl get pods -n "$cert_manager_ns" 2>/dev/null | \
 		grep cert-manager-webhook |awk '{ print $1}')"
 
 	if [ -z "$cert_manager_pods" ]; then
@@ -61,7 +63,8 @@ install_webhook() {
 	make deploy
 	popd >/dev/null
 
-	local webhook_pods="$(kubectl get pods -n "$ns" 2>/dev/null | \
+	local webhook_pods
+	webhook_pods="$(kubectl get pods -n "$ns" 2>/dev/null | \
 		grep peer-pods-webhook-controller-manager |awk '{ print $1}')"
 
 	if [ -z "$webhook_pods" ];then

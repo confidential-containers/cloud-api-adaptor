@@ -41,7 +41,8 @@ esac
 
 name=$(printf "imagetest-%.8s-%s" "$(uuidgen)" "$image")
 
-export IBMCLOUD_HOME=$(pwd -P)
+IBMCLOUD_HOME=$(pwd -P)
+export IBMCLOUD_HOME
 ./login.sh
 
 echo "Create an instance of $image with profle $profile"

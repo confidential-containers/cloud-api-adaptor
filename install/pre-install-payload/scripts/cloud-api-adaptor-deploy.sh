@@ -60,7 +60,8 @@ function print_help() {
 
 function main() {
 	# script requires that user is root
-	local euid=$(id -u)
+	local euid
+	euid=$(id -u)
 	if [ ${euid} -ne 0 ]; then
 		die "This script must be run as root"
 	fi
