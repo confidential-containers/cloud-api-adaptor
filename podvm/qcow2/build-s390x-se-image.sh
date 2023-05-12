@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [ "${SE_BOOT:-0}" != "1" ]; then
     exit 0
 elif [ "${ARCH}" != "s390x" ]; then

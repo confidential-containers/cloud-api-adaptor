@@ -1,3 +1,4 @@
+#!/bin/bash
 # Uncomment the awk statement if you want to use mac as
 # dhcp-identifier in Ubuntu
 #awk '/^[[:space:]-]*dhcp4/{ split($0,arr,/dhcp4.*/)
