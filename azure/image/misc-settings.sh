@@ -24,13 +24,13 @@ then
 	    #fallthrough
 	    ;&
 	rhel)
-	    (! dnf list --installed | grep open-vm-tools 2>&1 >/dev/null) && \
+	    (! dnf list --installed | grep open-vm-tools >/dev/null 2>&1) && \
 		(! dnf -y install open-vm-tools) && \
 		     echo "$PODVM_DISTRO: Error installing package required for cloud provider: $CLOUD_PROVIDER" 1>&2 && exit 1
 	    ;;
 	ubuntu)
-	    (! dpkg -l | grep open-vm-tools 2>&1 > /dev/null) && apt-get update && \
-		(! apt-get -y install open-vm-tools 2>&1 > /dev/null) && \
+	    (! dpkg -l | grep open-vm-tools > /dev/null 2>&1) && apt-get update && \
+		(! apt-get -y install open-vm-tools > /dev/null 2>&1) && \
 		     echo "$PODVM_DISTRO: Error installing package required for cloud provider: $CLOUD_PROVIDER" 1>&2  && exit 1
 	    ;;
 	*)

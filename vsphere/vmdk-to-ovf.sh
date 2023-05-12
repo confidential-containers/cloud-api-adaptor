@@ -48,8 +48,8 @@ warnmsg  () {
 }
 
 pre_checks() {
-        [[ -x "$(command -v pwsh)" ]] || { warnmsg "Powershell is not installed, Please see: https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux?view=powershell-7.3" exit 1; }
-	(pwsh -Command Get-InstalledModule -Name "VMware.PowerCLI" | grep "No match" 2>&1 >/dev/null) && warnmsg "VMware.PowerCLI module is not installed for Powershell, Please see: https://docs.vmware.com/en/VMware-vSphere/7.0/com.vmware.esxi.install.doc/GUID-F02D0C2D-B226-4908-9E5C-2E783D41FE2D.html" && exit 1;
+    [[ -x "$(command -v pwsh)" ]] || { warnmsg "Powershell is not installed, Please see: https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux?view=powershell-7.3" exit 1; }
+	(pwsh -Command Get-InstalledModule -Name "VMware.PowerCLI" | grep "No match" >/dev/null 2>&1) && warnmsg "VMware.PowerCLI module is not installed for Powershell, Please see: https://docs.vmware.com/en/VMware-vSphere/7.0/com.vmware.esxi.install.doc/GUID-F02D0C2D-B226-4908-9E5C-2E783D41FE2D.html" && exit 1;
 	[[ "$FORMAT" == "vmdk"  ]] || { warnmsg "image must be \"vmdk\", convert with: \"qemu-img convert -O vmdk -o subformat=streamOptimized ${IMAGE_NAME} ${VMDK_NAME}.vmdk\""; exit 1; }
 }
 
