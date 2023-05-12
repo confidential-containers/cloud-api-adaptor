@@ -57,7 +57,7 @@ currently accepted:
 |Argument|Default value|Description|
 |--------|-------------|-----------|
 |CAA\_SRC |https://github.com/confidential-containers/cloud-api-adaptor | The cloud-api-adaptor source repository |
-|CAA\_SRC\_BRANCH|staging| cloud-api-adaptor repository branch |
+|CAA\_SRC\_REF|staging| cloud-api-adaptor repository branch or commit |
 |KATA\_SRC | https://github.com/kata-containers/kata-containers | The Kata Containers source repository |
 |KATA\_SRC\_BRANCH | CCv0 | The Kata Containers repository branch |
 |GO\_VERSION | 1.18.7 | Go version |
