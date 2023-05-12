@@ -32,11 +32,17 @@ func initLogger() {
 	log.SetLevel(level)
 }
 
-// TODO revise provisioner to enable run cluster-provisioner in any folder.
 func main() {
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
 	provisionPropsFile := os.Getenv("TEST_PROVISION_FILE")
 	podvmImage := os.Getenv("TEST_PODVM_IMAGE")
+
+	installDirectory := os.Getenv("INSTALL_DIR")
+	// If not set assume we are in the test/tools directory
+	if installDirectory == "" {
+		installDirectory = "../../install"
+	}
+
 	cfg := envconf.New()
 
 	provisioner, err := pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
@@ -68,7 +74,7 @@ func main() {
 			}
 		}
 
-		cloudAPIAdaptor, err := pv.NewCloudAPIAdaptor(cloudProvider)
+		cloudAPIAdaptor, err := pv.NewCloudAPIAdaptor(cloudProvider, installDirectory)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -101,7 +107,7 @@ func main() {
 
 	if *action == "install" {
 		log.Info("Installing CoCo operator and cloud-api-adaptor resources")
-		deployer, err := pv.NewCloudAPIAdaptor(cloudProvider)
+		deployer, err := pv.NewCloudAPIAdaptor(cloudProvider, installDirectory)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -120,7 +126,7 @@ func main() {
 
 	if *action == "uninstall" {
 		log.Info("Uninstalling CoCo operator and cloud-api-adaptor resources")
-		deployer, err := pv.NewCloudAPIAdaptor(cloudProvider)
+		deployer, err := pv.NewCloudAPIAdaptor(cloudProvider, installDirectory)
 		if err != nil {
 			log.Fatal(err)
 		}
