@@ -221,8 +221,8 @@ func (l *LibvirtProvisioner) GetStoragePool() (*libvirt.StoragePool, error) {
 	return sp, nil
 }
 
-func NewLibvirtInstallOverlay() (InstallOverlay, error) {
-	overlay, err := NewKustomizeOverlay("../../install/overlays/libvirt")
+func NewLibvirtInstallOverlay(installDir string) (InstallOverlay, error) {
+	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "overlays/libvirt"))
 	if err != nil {
 		return nil, err
 	}

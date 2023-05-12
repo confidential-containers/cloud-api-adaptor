@@ -7,6 +7,7 @@ package provisioner
 
 import (
 	"context"
+	"path/filepath"
 
 	"errors"
 	"fmt"
@@ -14,8 +15,9 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"time"
+
+	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/containerservice/mgmt/containerservice"
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/network/mgmt/network"
@@ -375,8 +377,8 @@ func isAzureKustomizeSecretKey(key string) bool {
 	}
 }
 
-func NewAzureInstallOverlay() (InstallOverlay, error) {
-	overlay, err := NewKustomizeOverlay("../../install/overlays/azure")
+func NewAzureInstallOverlay(installDir string) (InstallOverlay, error) {
+	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "overlays/azure"))
 	if err != nil {
 		return nil, err
 	}

@@ -116,7 +116,8 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		if cloudAPIAdaptor, err = pv.NewCloudAPIAdaptor(cloudProvider); err != nil {
+		relativeInstallDirectory := "../../install"
+		if cloudAPIAdaptor, err = pv.NewCloudAPIAdaptor(cloudProvider, relativeInstallDirectory); err != nil {
 			return ctx, err
 		}
 		log.Info("Deploy the Cloud API Adaptor")
