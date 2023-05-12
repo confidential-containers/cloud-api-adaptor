@@ -15,7 +15,7 @@ supported_go_arches=(
 
 function build_kata_shim_v2() {
 	pushd "${kata_dir}/src/runtime/cmd/containerd-shim-kata-v2"
-		for go_arch in ${supported_go_arches[@]}; do
+		for go_arch in "${supported_go_arches[@]}"; do
 			env GOOS=linux GOARCH="${go_arch/x86_64/amd64}" CGO_ENABLED=0 go build -o containerd-shim-kata-v2-${go_arch}
 			cp containerd-shim-kata-v2-${go_arch} ${bin_dir}/
 		done

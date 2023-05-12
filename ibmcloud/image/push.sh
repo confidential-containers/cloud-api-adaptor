@@ -82,7 +82,7 @@ while image_id=$(ibmcloud is images --output=json --visibility=private | jq -r "
     fi
 done
 
-echo -e "\nUploading $image_path to cloud object stroage at "$cos_bucket" with key $object_key\n"
+echo -e "\nUploading $image_path to cloud object storage at \"$cos_bucket\" with key \"$object_key\"\n"
 ./multipart_upload.sh --bucket "$cos_bucket" --file "$image_path"
 
 ibmcloud cos object-head --bucket "$cos_bucket" --key "$object_key"

@@ -23,7 +23,7 @@ while read line; do
         capture="false"
     fi
     if [ $capture = "true" ]; then
-        ips+=($line)
+        ips+=("$line")
     fi
     if [ "$line" = "$start" ]; then
         capture="true"

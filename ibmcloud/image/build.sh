@@ -309,11 +309,12 @@ if [ "${SE_BOOT}" = "1" ]; then
 PARTUUID=$boot_uuid    /boot-se    ext4  norecovery 1 2
 END
     echo "adding luks keyfile for fs"
-    cp ./rootkeys/rootkey.bin ${dst_mnt}/etc/keys/luks-$(blkid -s UUID -o value /dev/mapper/$LUKS_NAME).key
-    chmod 600 ${dst_mnt}/etc/keys/luks-$(blkid -s UUID -o value /dev/mapper/$LUKS_NAME).key
+    dev_uuid=$(blkid -s UUID -o value "/dev/mapper/$LUKS_NAME")
+    cp ./rootkeys/rootkey.bin "${dst_mnt}/etc/keys/luks-${dev_uuid}.key"
+    chmod 600 "${dst_mnt}/etc/keys/luks-${dev_uuid}.key"
     cat <<END > ${dst_mnt}/etc/crypttab
 #This file was auto-generated
-$LUKS_NAME UUID=$(blkid -s UUID -o value ${dst_part}) /etc/keys/luks-$(blkid -s UUID -o value /dev/mapper/$LUKS_NAME).key luks,discard,initramfs
+$LUKS_NAME UUID=$(blkid -s UUID -o value ${dst_part}) /etc/keys/luks-$(blkid -s UUID -o value "/dev/mapper/$LUKS_NAME").key luks,discard,initramfs
 END
     chmod 744 ${dst_mnt}/etc/crypttab
     # Disable virtio_rng

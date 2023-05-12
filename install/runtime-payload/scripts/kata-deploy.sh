@@ -307,8 +307,8 @@ function main() {
 		containerd_conf_file_backup="${containerd_conf_file}.bak"
 	elif [ "$runtime" == "containerd" ]; then
 		# runtime == containerd
-		if [ ! -f "$containerd_conf_file" ] && [ -d $(dirname "$containerd_conf_file") ] && \
-			[ -x $(command -v containerd) ]; then
+		if [ ! -f "$containerd_conf_file" ] && [ -d "$(dirname "$containerd_conf_file")" ] && \
+			[ -x "$(command -v containerd)" ]; then
 			containerd config default > "$containerd_conf_file"
 		fi
 	# CRI-O isn't consistent with the naming -- let's use crio to match the service file
