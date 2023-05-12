@@ -9,7 +9,7 @@ set -o errexit -o pipefail -o nounset
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 function usage() {
-    echo "Usage: $0 --bastion-node <bastion host> --control-plane-node --worker-nodes <worker hosts> [--ssh-private-key <ssh private key file>]"
+    echo "Usage: $0 --bastion-node <bastion host> --control-plane-node --worker-nodes <worker hosts>"
 }
 
 declare -a workers
@@ -19,7 +19,6 @@ while (( $# )); do
         --control-plane) control_plane=$2 ;;
         --workers)       IFS=', ' read -a workers <<< "$2" ;;
         --bastion)       bastion=$2 ;;
-        --ssh-private-key)    ssh_private_key=$2 ;;
         --help)     usage; exit 0 ;;
         *)          usage 1>&2; exit 1;;
     esac
@@ -32,7 +31,6 @@ if [[ -z "${control_plane-}" || "${#workers[@]}" -eq 0 || -z "${bastion-}" ]]; t
 fi
 
 tmpdir=$(mktemp -d)
-ssh_ctl_sock="$tmpdir/ssh-ctl.sock"
 ssh_known_hosts="$tmpdir/known_hosts"
 
 opts=(-l root -o StrictHostKeyChecking=accept-new -o "UserKnownHostsFile=$ssh_known_hosts" -o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p root@$bastion")

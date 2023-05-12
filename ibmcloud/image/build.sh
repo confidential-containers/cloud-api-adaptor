@@ -103,7 +103,8 @@ cleanup ""
 if [ "${SE_BOOT}" = "1" ]; then
     echo "Finding host key files"
     host_keys=""
-    for i in $(ls ${HOST_KEYS_DIR}/*.crt); do
+    for i in "${HOST_KEYS_DIR}"/*.crt; do
+        [[ -e "$i" ]] || break
         echo "found host key file: \"${i}\""
         host_keys+="-k ${i} "
     done
@@ -362,7 +363,7 @@ END
     # exit and throw an error if no se image was created
     [ ! -e $dst_mnt/boot-se/se.img ] && exit 1
     # if building the image succeeded wipe /boot
-    rm -rf ${dst_mnt}/boot/*
+    rm -rf ${dst_mnt:?}/boot/*
     printf "\nRunning zipl to prepare boot partition\n"
     chroot $dst_mnt zipl --targetbase $tmp_nbd \
     --targettype scsi \

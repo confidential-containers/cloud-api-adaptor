@@ -26,10 +26,10 @@ if ! ibmcloud iam oauth-tokens &> /dev/null; then
 fi
 
 required_plugins=(vpc-infrastructure cloud-object-storage)
-installed_plugins=($(ibmcloud plugin list --output json | jq -r '.[].Name'))
+mapfile -t installed_plugins < <(ibmcloud plugin list --output json | jq -r '.[].Name')
 
 for plugin in "${required_plugins[@]}"; do
-    if ! [[ -n "${installed_plugins-}" && " ${installed_plugins[*]} " =~ " $plugin " ]]; then
+    if ! [[ -n "${installed_plugins-}" && " ${installed_plugins[*]} " == *" $plugin "* ]]; then
         ibmcloud plugin install "$plugin"
     fi
 done
