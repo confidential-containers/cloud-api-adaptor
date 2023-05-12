@@ -1,4 +1,4 @@
-# Uncomment the awk statement if you want to use mac as 
+# Uncomment the awk statement if you want to use mac as
 # dhcp-identifier in Ubuntu
 #awk '/^[[:space:]-]*dhcp4/{ split($0,arr,/dhcp4.*/)
 #                           gsub(/-/," ", arr[1])
@@ -10,7 +10,7 @@
 
 # This ensures machine-id is generated during first boot and a unique
 # dhcp IP is assigned to the VM
-sudo echo -n > /etc/machine-id
+echo -n | sudo tee /etc/machine-id
 #Lock password for the ssh user (peerpod) to disallow logins
 sudo passwd -l peerpod
 

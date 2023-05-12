@@ -10,4 +10,4 @@
 
 # This ensures machine-id is generated during first boot and a unique
 # dhcp IP is assigned to the VM
-sudo echo -n > /etc/machine-id
+echo -n | sudo tee /etc/machine-id
