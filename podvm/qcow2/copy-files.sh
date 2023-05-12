@@ -1,4 +1,5 @@
-# copy-files.sh is used to copy required files into 
+#!/bin/bash
+# copy-files.sh is used to copy required files into
 # the correct location on the podvm image
 
 sudo mkdir -p /etc/containers
