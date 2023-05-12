@@ -10,11 +10,12 @@ echo "Building SE podvm image for $ARCH"
 echo "Finding host key files"
 host_keys=""
 rm /tmp/files/.dummy.crt || true
-for i in $(ls /tmp/files/*.crt); do
+for i in /tmp/files/*.crt; do
+    [[ -f "$i" ]] || break
     echo "found host key file: \"${i}\""
     host_keys+="-k ${i} "
 done
-[[ -z $host_keys ]] && echo "Didn't find host key files, please download host key files to `files` folder " && exit 1
+[[ -z $host_keys ]] && echo "Didn't find host key files, please download host key files to 'files' folder " && exit 1
 echo "Installing jq"
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update 2>&1 >/dev/null

@@ -12,8 +12,6 @@ function usage() {
     echo "Usage: $0 --bastion <bastion host> [--ssh-private-key <ssh private key file>] host1 [host2...]"
 }
 
-declare -a worker_nodes
-
 while (( $# )); do
     case "$1" in
         --bastion)        bastion=$2 ;;
@@ -70,7 +68,7 @@ for host in "${hosts[@]}"; do
         ssh "${opts[@]}" -o ExitOnForwardFailure=yes -S "$ssh_ctl_sock" -L "$port:$host:22" -M -f -N -l root "$bastion"
         [[ $(uname) = "Darwin" ]] && force_option="-f"
         ssh-copy-id ${force_option:-} "${opts[@]}" -i "$key.pub" -p "$port" root@localhost
-        
+
         ssh-keygen -R "[localhost]:$port" -f "$ssh_known_hosts"
     )
 done
