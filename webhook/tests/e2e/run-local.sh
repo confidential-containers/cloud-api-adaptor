@@ -80,7 +80,7 @@ install_webhook() {
 }
 
 main() {
-	parse_args $@
+	parse_args "$@"
 
 	for cmd in bats docker kind; do
 		if ! command -v "$cmd" &>/dev/null; then

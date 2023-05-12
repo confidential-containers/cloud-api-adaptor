@@ -23,7 +23,7 @@ function setup_env_for_arch() {
 			;;
 		(*) echo "$1 is not supported" && exit 1
 	esac
-		
+
 }
 
 function build_runtime_payload() {
@@ -31,7 +31,7 @@ function build_runtime_payload() {
 
 	tag=$(date +%Y%m%d%H%M%s)
 
-	for arch in ${supported_arches[@]}; do
+	for arch in "${supported_arches[@]}"; do
 		setup_env_for_arch "${arch}"
 
 		echo "Building payload image for ${arch}"

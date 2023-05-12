@@ -49,11 +49,12 @@ echo "Create an instance of $image with profle $profile"
 
 id=$(ibmcloud is instance-create "$name" "$vpc" "$zone" "$profile" "$subnet" --image "$image" --output json | jq -r .id)
 
+# shellcheck disable=SC2064
 trap "ibmcloud is instance-delete -f '$id'" 0
 
 echo "Wait for instance $id to become \"running\""
 
-while ! ibmcloud is instance $id --output json | jq -e '.status == "running"' > /dev/null; do
+while ! ibmcloud is instance "$id" --output json | jq -e '.status == "running"' > /dev/null; do
     sleep 5
 done
 

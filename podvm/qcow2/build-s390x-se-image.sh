@@ -4,8 +4,8 @@ elif [ "${ARCH}" != "s390x" ]; then
     echo "Building of SE podvm image is only supported for s390x"
     exit 0
 fi
-echo "Building SE podvm image for $ARCH" 
-echo "Finding host key files" 
+echo "Building SE podvm image for $ARCH"
+echo "Finding host key files"
 host_keys=""
 rm /tmp/files/.dummy.crt || true
 for i in $(ls /tmp/files/*.crt); do
@@ -14,7 +14,7 @@ for i in $(ls /tmp/files/*.crt); do
 done
 [[ -z $host_keys ]] && echo "Didn't find host key files, please download host key files to `files` folder " && exit 1
 echo "Installing jq"
-export DEBIAN_FRONTEND=noninteractive 
+export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update 2>&1 >/dev/null
 sudo apt-get install jq -y 2>&1 >/dev/null
 sudo apt-get remove unattended-upgrades -y
@@ -91,14 +91,15 @@ PARTUUID=$boot_uuid    /boot-se    ext4  norecovery 1 2
 END'
 
 echo "Adding luks keyfile for fs"
-sudo cp ${workdir}/rootkeys/rootkey.bin ${dst_mnt}/etc/keys/luks-$(sudo blkid -s UUID -o value /dev/mapper/$LUKS_NAME).key
-sudo chmod 600 ${dst_mnt}/etc/keys/luks-$(sudo blkid -s UUID -o value /dev/mapper/$LUKS_NAME).key
+dev_uuid=$(sudo blkid -s UUID -o value "/dev/mapper/$LUKS_NAME")
+sudo cp "${workdir}/rootkeys/rootkey.bin" "${dst_mnt}/etc/keys/luks-${dev_uuid}.key"
+sudo chmod 600 "${dst_mnt}/etc/keys/luks-${dev_uuid}.key"
 
 sudo -E bash -c 'cat <<END > ${dst_mnt}/etc/crypttab
 #This file was auto-generated
 $LUKS_NAME UUID=$(sudo blkid -s UUID -o value ${tmp_nbd}2) /etc/keys/luks-$(blkid -s UUID -o value /dev/mapper/$LUKS_NAME).key luks,discard,initramfs
 END'
-sudo chmod 744 ${dst_mnt}/etc/crypttab
+sudo chmod 744 "${dst_mnt}/etc/crypttab"
 
 # Disable virtio_rng
 sudo -E bash -c 'cat <<END > ${dst_mnt}/etc/modprobe.d/blacklist-virtio.conf

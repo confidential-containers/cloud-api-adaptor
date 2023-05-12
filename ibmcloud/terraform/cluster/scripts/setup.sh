@@ -48,7 +48,7 @@ if ! [[ -e /var/lib/kubelet/kubeadm-flags.env ]]; then
     # https://cloud.ibm.com/docs/vpc?topic=vpc-configuring-address-prefixes&locale=en
 
     curl -sL -o /tmp/kube-flannel.yml https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-    sed -i 's|"10.244.0.0/16"|"172.20.0.0/16"|' /tmp/kube-flannel.yml
+    sed -i 's|\"10.244.0.0/16\"|\"172.20.0.0/16\"|' /tmp/kube-flannel.yml
     kubectl apply -f /tmp/kube-flannel.yml
 fi
 "

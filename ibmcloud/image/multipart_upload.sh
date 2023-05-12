@@ -38,13 +38,13 @@ fi
 
 # Divide the original file up into smaller sections
 split "$original_file" -b $split_size "$original_file."
-# Create a multipart-upload, need the upload-id for part uploads 
+# Create a multipart-upload, need the upload-id for part uploads
 upload_id=$(ibmcloud cos multipart-upload-create --bucket "$bucket" --key "$original_file" --output JSON | jq -r '.UploadId')
-if [[ -z "$upload_id" ]]; then 
+if [[ -z "$upload_id" ]]; then
     echo "Unable to start upload, check permissions" 1>&2
     exit 1
 else
-    echo "Uploading to "$upload_id""
+    echo "Uploading to $upload_id"
 fi
 
 # The complete command requires a description of the parts to piece together into the final object
@@ -53,7 +53,7 @@ fi
 structure="{\"Parts\":[]}"
 i=1
 for part in "$original_file".*;
-do 
+do
     echo "Uploading part ${part} to bucket ${bucket}";
     etag=$(ibmcloud cos part-upload --bucket "$bucket" --key "$original_file" --upload-id "$upload_id" --part-number $i --body "$part" --output JSON | jq -r '.ETag')
     structure=$(echo "$structure" | jq --arg etag "$etag" --argjson i $i '.Parts += [{"ETag": $etag, "PartNumber": $i}]')
