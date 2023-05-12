@@ -46,7 +46,8 @@ done
 
 echo "Formatting boot-se partition"
 sudo mke2fs -t ext4 -L boot-se ${tmp_nbd}1
-export boot_uuid=$(sudo blkid ${tmp_nbd}1 -s PARTUUID -o value)
+boot_uuid=$(sudo blkid ${tmp_nbd}1 -s PARTUUID -o value)
+export boot_uuid
 
 echo "Setting up encrypted root partition"
 sudo mkdir ${workdir}/rootkeys
@@ -54,7 +55,8 @@ sudo mount -t tmpfs rootkeys ${workdir}/rootkeys
 sudo dd if=/dev/random of=${workdir}/rootkeys/rootkey.bin bs=1 count=64 &> /dev/null
 echo YES | sudo cryptsetup luksFormat --type luks2 ${tmp_nbd}2 --key-file ${workdir}/rootkeys/rootkey.bin
 echo "Setting luks name for root partition"
-export LUKS_NAME="luks-$(sudo blkid -s UUID -o value ${tmp_nbd}2)"
+LUKS_NAME="luks-$(sudo blkid -s UUID -o value ${tmp_nbd}2)"
+export LUKS_NAME
 echo "luks name is: $LUKS_NAME"
 sudo cryptsetup open ${tmp_nbd}2 $LUKS_NAME --key-file ${workdir}/rootkeys/rootkey.bin
 

@@ -8,7 +8,8 @@ set -o errexit -o pipefail -o nounset
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-export IBMCLOUD_HOME=$(pwd -P)
+IBMCLOUD_HOME=$(pwd -P)
+export IBMCLOUD_HOME
 ./login.sh
 
 cos_bucket="paidvpcimagebucket"

@@ -37,7 +37,8 @@ function print_usage() {
 
 function get_container_runtime() {
 
-	local runtime=$(kubectl get node $NODE_NAME -o jsonpath='{.status.nodeInfo.containerRuntimeVersion}')
+	local runtime
+	runtime=$(kubectl get node $NODE_NAME -o jsonpath='{.status.nodeInfo.containerRuntimeVersion}')
 	if [ "$?" -ne 0 ]; then
                 die "invalid node name"
 	fi
