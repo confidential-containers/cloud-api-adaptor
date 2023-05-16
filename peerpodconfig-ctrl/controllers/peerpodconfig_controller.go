@@ -45,7 +45,7 @@ import (
 
 const (
 	// Name of env var containing the cloud-api-adaptor image name
-	CloudApiAdaptorImageEnvName = "CAA_IMAGE"
+	CloudApiAdaptorImageEnvName = "RELATED_IMAGE_CAA"
 	DefaultCloudApiAdaptorImage = "quay.io/confidential-containers/cloud-api-adaptor"
 	defaultNodeSelectorLabel    = "node-role.kubernetes.io/worker"
 )
