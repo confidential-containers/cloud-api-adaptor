@@ -8,7 +8,7 @@ SHELL = bash -o pipefail
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
 # Default is dev build. To create release build set RELEASE_BUILD=true
 RELEASE_BUILD ?= false
-# CLOUD_PROVIDER is used for runtime -- which provider should be run against the binary/code. 
+# CLOUD_PROVIDER is used for runtime -- which provider should be run against the binary/code.
 CLOUD_PROVIDER ?=
 GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
 GOFLAGS     ?=
@@ -94,7 +94,7 @@ else
 endif
 
 .PHONY: check
-check: fmt vet ## Run go vet and go vet against the code.
+check: fmt vet shellcheck ## Run formatters and linters against the code.
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -103,6 +103,10 @@ fmt: ## Run go fmt against code.
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet $(GOFLAGS) $(PACKAGES)
+
+.PHONY: shellcheck
+shellcheck: ## Run shellcheck against shell scripts.
+	./hack/shellcheck.sh
 
 .PHONY: clean
 clean: ## Remove binaries.
@@ -117,7 +121,7 @@ image: .git-commit ## Build and push docker image to $registry
 
 ##@ Deployment
 
-.PHONY: deploy 
+.PHONY: deploy
 deploy: ## Deploy cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
 ifneq ($(CLOUD_PROVIDER),)
 	kubectl apply -f install/yamls/deploy.yaml
