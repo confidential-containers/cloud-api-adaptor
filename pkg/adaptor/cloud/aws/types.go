@@ -51,6 +51,7 @@ type Config struct {
 	InstanceTypes        instanceTypes
 	InstanceTypeSpecList []cloud.InstanceTypeSpec
 	Tags                 cloud.KeyValueFlag
+	UsePublicIP          bool
 }
 
 func (c Config) Redact() Config {

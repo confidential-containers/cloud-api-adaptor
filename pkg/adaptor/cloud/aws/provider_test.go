@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -91,6 +92,54 @@ func (m mockEC2Client) DescribeInstanceTypes(ctx context.Context,
 	}, nil
 }
 
+// Create a mock EC2 DescribeInstances method
+func (m mockEC2Client) DescribeInstances(ctx context.Context,
+	params *ec2.DescribeInstancesInput,
+	optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
+
+	// Create a mock instance ID
+	mockInstanceID := "i-1234567890abcdef0"
+	// Return a mock DescribeInstancesOutput
+	return &ec2.DescribeInstancesOutput{
+		Reservations: []types.Reservation{
+			{
+				Instances: []types.Instance{
+					{
+						InstanceId: &mockInstanceID,
+						// Add private IP address to mock instance
+						PrivateIpAddress: aws.String("10.0.0.2"),
+						// Add private IP address to network interface
+						NetworkInterfaces: []types.InstanceNetworkInterface{
+							{
+								PrivateIpAddress: aws.String("10.0.0.2"),
+								// Add public IP address to network interface
+								Association: &types.InstanceNetworkInterfaceAssociation{
+									PublicIp:      aws.String("192.168.100.1"),
+									PublicDnsName: aws.String("ec2-192-168-100-1.compute-1.amazonaws.com"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+// Mock instanceRunningWaiter
+type MockAWSInstanceWaiter struct{}
+
+// Return a new mock waiter
+func (m *MockAWSInstanceWaiter) Wait(ctx context.Context, params *ec2.DescribeInstancesInput, maxWaitDur time.Duration, optFns ...func(*ec2.InstanceRunningWaiterOptions)) error {
+
+	return nil
+}
+
+// Create a new mock AWSInstanceWaiter
+func newMockAWSInstanceWaiter() *MockAWSInstanceWaiter {
+	return &MockAWSInstanceWaiter{}
+}
+
 // Create a serviceConfig struct without public IP
 var serviceConfig = &Config{
 	Region: "us-east-1",
@@ -104,6 +153,23 @@ var serviceConfig = &Config{
 	ImageId: "ami-1234567890abcdef0",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{"t2.small", "t2.medium"},
+}
+
+// Create a serviceConfig struct with public IP
+var serviceConfigPublicIP = &Config{
+	Region: "us-east-1",
+	// Add instance type to serviceConfig
+	InstanceType: "t2.small",
+	// Add subnet ID to serviceConfig
+	SubnetId: "subnet-1234567890abcdef0",
+	// Add security group ID to serviceConfig
+	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
+	// Add image ID to serviceConfig
+	ImageId: "ami-1234567890abcdef0",
+	// Add InstanceTypes to serviceConfig
+	InstanceTypes: []string{"t2.small", "t2.medium"},
+	// Add public IP to serviceConfig
+	UsePublicIP: true,
 }
 
 // Create a serviceConfig struct with invalid instance type
@@ -145,6 +211,7 @@ func (c *mockCloudConfig) Generate() (string, error) {
 func TestCreateInstance(t *testing.T) {
 	type fields struct {
 		ec2Client     ec2Client
+		waiter        *MockAWSInstanceWaiter
 		serviceConfig *Config
 	}
 	type args struct {
@@ -168,6 +235,8 @@ func TestCreateInstance(t *testing.T) {
 			fields: fields{
 				// Add mock EC2 client to fields
 				ec2Client: newMockEC2Client(),
+				// Add mock waiter to fields
+				waiter: newMockAWSInstanceWaiter(),
 				// Add serviceConfig to fields
 				serviceConfig: serviceConfig,
 			},
@@ -186,6 +255,33 @@ func TestCreateInstance(t *testing.T) {
 			// Test should not return an error
 			wantErr: false,
 		},
+		// Test creating an instance with public IP
+		{
+			name: "CreateInstancePublicIP",
+			// Add fields to test
+			fields: fields{
+				// Add mock EC2 client to fields
+				ec2Client: newMockEC2Client(),
+				// Add mock waiter to fields
+				waiter: newMockAWSInstanceWaiter(),
+				// Add serviceConfigPublicIP to fields
+				serviceConfig: serviceConfigPublicIP,
+			},
+			args: args{
+				ctx:         context.Background(),
+				podName:     "podpublicip",
+				sandboxID:   "123",
+				cloudConfig: &mockCloudConfig{},
+				spec:        cloud.InstanceTypeSpec{InstanceType: "t2.small"},
+			},
+			want: &cloud.Instance{
+				ID:   "i-1234567890abcdef0",
+				Name: "podvm-podpublicip-123",
+				IPs:  []netip.Addr{netip.MustParseAddr("192.168.100.1")},
+			},
+			// Test should not return an error
+			wantErr: false,
+		},
 		// Test creating an instance with invalid instanceType
 		{
 			name: "CreateInstanceInvalidInstanceType",
@@ -193,6 +289,8 @@ func TestCreateInstance(t *testing.T) {
 			fields: fields{
 				// Add mock EC2 client to fields
 				ec2Client: newMockEC2Client(),
+				// Add mock waiter to fields
+				waiter: newMockAWSInstanceWaiter(),
 				// Add serviceConfigInvalidInstanceType to fields
 				serviceConfig: serviceConfigInvalidInstanceType,
 			},
@@ -214,6 +312,8 @@ func TestCreateInstance(t *testing.T) {
 			fields: fields{
 				// Add mock EC2 client to fields
 				ec2Client: newMockEC2Client(),
+				// Add mock waiter to fields
+				waiter: newMockAWSInstanceWaiter(),
 				// Add serviceConfigEmptyInstanceTypes to fields
 				serviceConfig: serviceConfigEmptyInstanceTypes,
 			},
@@ -235,6 +335,8 @@ func TestCreateInstance(t *testing.T) {
 			fields: fields{
 				// Add mock EC2 client to fields
 				ec2Client: newMockEC2Client(),
+				// Add mock waiter to fields
+				waiter: newMockAWSInstanceWaiter(),
 				// Add serviceConfigEmptyInstanceTypes to fields
 				serviceConfig: serviceConfigEmptyInstanceTypes,
 			},
@@ -261,6 +363,8 @@ func TestCreateInstance(t *testing.T) {
 			fields: fields{
 				// Add mock EC2 client to fields
 				ec2Client: newMockEC2Client(),
+				// Add mock waiter to fields
+				waiter: newMockAWSInstanceWaiter(),
 				// Add serviceConfigEmptyInstanceType to fields
 				serviceConfig: serviceConfig,
 			},
@@ -286,6 +390,7 @@ func TestCreateInstance(t *testing.T) {
 
 			p := &awsProvider{
 				ec2Client:     tt.fields.ec2Client,
+				waiter:        tt.fields.waiter,
 				serviceConfig: tt.fields.serviceConfig,
 			}
 
