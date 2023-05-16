@@ -883,7 +883,11 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 
 	var osNames []string
 	if strings.EqualFold("s390x", IBMCloudProps.PodvmImageArch) {
-		osNames = []string{"ubuntu-20-04-s390x"}
+		if strings.Contains(IBMCloudProps.InstanceProfile, "e-") {
+			osNames = []string{"hyper-protect-1-0-s390x"}
+		} else {
+			osNames = []string{"ubuntu-20-04-s390x"}
+		}
 	} else {
 		osNames = []string{"ubuntu-20-04-amd64"}
 

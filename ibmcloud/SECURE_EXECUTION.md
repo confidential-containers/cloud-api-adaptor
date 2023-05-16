@@ -131,7 +131,7 @@ $ kubectl get pods -n confidential-containers-system --watch
 ## Test
 
 You can follow guide [Validating the set-up](./README.md#validating-the-set-up) to deploy a nginx pod.
-- Verify the Peer Pod VM is created with the SE enabled custom image.
+- Verify the Peer Pod VM is created with the Secure Execution enabled custom image.
 ```bash
 $ ibmcloud is ins
 Listing instances in all resource groups and region eu-gb under account DaLi Liu's Account as user liudali@cn.ibm.com...
@@ -141,3 +141,13 @@ ID                                          Name                   Status    Res
 > **Note**
 > - `Profile` should be `bz2e-2x8`.
 > - `Image` should be match `<image-name>` from the previous step.
+- Verify the Secure Execution feature is enabled inside the container.
+```bash
+$ kubectl exec nginx -- grep facilities /proc/cpuinfo | grep 158
+```
+> **Note** If the command displays any output, the CPU is compatible with Secure Execution.
+- Verify the kernel includes support for Secure Execution inside the container
+```bash
+$ kubectl exec nginx -- cat /sys/firmware/uv/prot_virt_guest
+```
+> **Note** If the command output is `1`, the kernel supports Secure Execution.
