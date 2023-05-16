@@ -34,6 +34,7 @@ one_of() {
 aws() {
     test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 
+
     [[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]] && optionals+="-use-lt -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME} " # has precedence if set
     [[ "${AWS_SG_IDS}" ]] && optionals+="-securitygroupids ${AWS_SG_IDS} "                                  # MUST if template is not used
     [[ "${PODVM_AMI_ID}" ]] && optionals+="-imageid ${PODVM_AMI_ID} "                                       # MUST if template is not used
@@ -43,6 +44,7 @@ aws() {
     [[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} " # if not set retrieved from IMDS
     [[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} "     # if not set retrieved from IMDS
     [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
+    [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip " # Use public IP for pod vm
 
     set -x
     exec cloud-api-adaptor aws \

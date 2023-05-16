@@ -29,6 +29,7 @@ configMapGenerator:
   #- SSH_KP_NAME="" # if not set retrieved from IMDS
   #- AWS_SUBNET_ID="" # if not set retrieved from IMDS
   #- TAGS="" # Uncomment and add key1=value1,key2=value2 etc if you want to use specific tags for podvm
+  #- USE_PUBLIC_IP="true" # Uncomment if you want to use public ip for podvm
 ##TLS_SETTINGS
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS
