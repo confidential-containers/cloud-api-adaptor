@@ -1,4 +1,4 @@
-module confidential-containers/peer-pods-webhook
+module github.com/confidential-containers/cloud-api-adaptor/webhook
 
 go 1.19
 
