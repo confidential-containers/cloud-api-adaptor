@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	confidential-containers/peer-pods-webhook v0.0.0-00010101000000-000000000000 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -30,7 +31,7 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
-	github.com/imdario/mergo v0.3.6 // indirect
+	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
@@ -70,3 +71,7 @@ require (
 )
 
 replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.14.0
+
+//replace github.com/confidential-containers/peer-pods-webhook => github.com/confidential-containers/cloud-api-adaptor/webhook v0.0.0-20230511080823-b27f1ba3e7a5
+
+replace confidential-containers/peer-pods-webhook => github.com/confidential-containers/cloud-api-adaptor/webhook v0.0.0-20230511080823-b27f1ba3e7a5

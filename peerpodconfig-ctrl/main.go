@@ -29,6 +29,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	peerpodwebhook "confidential-containers/peer-pods-webhook/pkg/mutating_webhook"
 
 	confidentialcontainersorgv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peerpodconfig-ctrl/api/v1alpha1"
 	"github.com/confidential-containers/cloud-api-adaptor/peerpodconfig-ctrl/controllers"
@@ -94,6 +97,8 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: &peerpodwebhook.PodMutator{Client: mgr.GetClient()}})
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
