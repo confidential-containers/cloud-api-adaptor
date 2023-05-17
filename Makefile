@@ -94,7 +94,7 @@ else
 endif
 
 .PHONY: check
-check: fmt vet shellcheck ## Run formatters and linters against the code.
+check: fmt vet golangci-lint shellcheck ## Run formatters and linters against the code.
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -107,6 +107,11 @@ vet: ## Run go vet against code.
 .PHONY: shellcheck
 shellcheck: ## Run shellcheck against shell scripts.
 	./hack/shellcheck.sh
+
+.PHONY: golangci-lint
+golangci-lint: ## Run golangci-lint against code.
+	./hack/golangci-lint.sh
+
 
 .PHONY: clean
 clean: ## Remove binaries.
