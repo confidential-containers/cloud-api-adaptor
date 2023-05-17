@@ -37,19 +37,28 @@ variable "resource_group" {
 }
 
 variable "client_id" {
-  type = string
+  type    = string
+  default = ""
 }
 
 variable "client_secret" {
-  type = string
+  type    = string
+  default = ""
 }
 
 variable "subscription_id" {
-  type = string
+  type    = string
+  default = ""
 }
 
 variable "tenant_id" {
-  type = string
+  type    = string
+  default = ""
+}
+
+variable "use_azure_cli_auth" {
+  type    = bool
+  default = false
 }
 
 variable "ssh_username" {

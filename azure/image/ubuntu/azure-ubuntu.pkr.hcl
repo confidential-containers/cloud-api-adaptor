@@ -1,8 +1,9 @@
 source "azure-arm" "ubuntu" {
-  client_id       = "${var.client_id}"
-  client_secret   = "${var.client_secret}"
-  subscription_id = "${var.subscription_id}"
-  tenant_id       = "${var.tenant_id}"
+  use_azure_cli_auth = "${var.use_azure_cli_auth}"
+  client_id          = "${var.client_id}"
+  client_secret      = "${var.client_secret}"
+  subscription_id    = "${var.subscription_id}"
+  tenant_id          = "${var.tenant_id}"
 
   vm_size                           = "${var.vm_size}"
   os_type                           = "Linux"
