@@ -4,53 +4,65 @@
 # Run linting tools on the sources of the project.
 ---
 name: lint
-on: [pull_request]
+on: [workflow_dispatch, pull_request]
+env:
+  GO_VERSION: "1.19"
 jobs:
-  golangci-lint_job:
-    name: golangci-lint
+  vet-and-fmt:
+    name: vet and fmt
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        go_version:
-          - 1.19
-        workdir:
-          - .
-          - peerpod-ctrl
-          - peerpodconfig-ctrl
-          - volumes/csi-wrapper
-          - webhook
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v3
-      - name: Setup Golang version ${{ matrix.go_version }}
+      - name: Setup Golang version ${{ env.GO_VERSION }}
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ matrix.go_version }}
+          go-version: ${{ env.GO_VERSION }}
       - name: Install dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libvirt-dev
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          working-directory: ${{ matrix.workdir }}
-          args: --path-prefix=${{ matrix.workdir }}
-          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: v1.52.2
+      - name: check
+        run: |
+          make fmt
+          make vet
 
-  go_check:
+  golangci-lint:
+    name: golangci-lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@main
-      - uses: actions/setup-go@main
+      - name: Checkout the pull request code
+        uses: actions/checkout@v3
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.19
-      - name: Install build dependencies
+          go-version: ${{ env.GO_VERSION }}
+      - name: Install dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libvirt-dev
+      - name: Install golangci-lint
+        env:
+          GOLANGCI_LINT_VERSION: "1.52.2"
+        working-directory: /tmp
+        run: |
+          curl -sSfLO "https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+          tar -xzf "golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+          sudo mv "golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint" /usr/local/bin
       - name: check
-        run: make check
+        run: make golangci-lint
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@v3
+      - name: Run shellcheck
+        run: make shellcheck
