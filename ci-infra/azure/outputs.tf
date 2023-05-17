@@ -21,3 +21,11 @@ output "AZURE_REGION" {
 output "ACR_URL" {
   value = azurerm_container_registry.acr.login_server
 }
+
+output "AZURE_PODVM_GALLERY_NAME" {
+  value = azurerm_shared_image_gallery.podvm_image_gallery.name
+}
+
+output "AZURE_PODVM_IMAGE_DEF_NAME" {
+  value = azurerm_shared_image.podvm_image.name
+}
