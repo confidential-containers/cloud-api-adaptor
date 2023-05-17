@@ -17,9 +17,10 @@ limitations under the License.
 package main
 
 import (
-	"confidential-containers/peer-pods-webhook/pkg/mutating_webhook"
 	"flag"
 	"os"
+
+	"github.com/confidential-containers/cloud-api-adaptor/webhook/pkg/mutating_webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
