@@ -23,7 +23,8 @@ jobs:
       matrix:
         include:
           - type: amd64
-          - type: s390x
+          - type: s390x-non-secure-execution
+          - type: s390x-secure-execution
     steps:
       - name: Checkout the code
         uses: actions/checkout@v3
