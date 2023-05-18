@@ -7,6 +7,7 @@ fi
 echo "Building SE podvm image for $ARCH" 
 echo "Finding host key files" 
 host_keys=""
+rm /tmp/files/.dummy.crt || true
 for i in $(ls /tmp/files/*.crt); do
     echo "found host key file: \"${i}\""
     host_keys+="-k ${i} "

@@ -56,9 +56,8 @@ COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/fil
 RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
 
 # Copy HOST KEY documents to podvm/files folder for Secure Execution
-# Use one .dummy file at here to avoid `COPY failed: no source files were specified` for non-SE build
-# https://forums.docker.com/t/copy-only-if-file-exist/3781
-COPY .dummy files/*.crt /src/cloud-api-adaptor/podvm/files/
+# Use one files/.dummy.crt file at here to avoid `COPY failed: no source files were specified` for non-SE build
+COPY files/*.crt /src/cloud-api-adaptor/podvm/files/
 
 RUN cd cloud-api-adaptor/podvm && \
      make BINARIES= PAUSE_BUNDLE= image
