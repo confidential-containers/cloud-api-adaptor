@@ -6,10 +6,11 @@ source "azure-arm" "rhel" {
     plan_publisher = "${var.plan_publisher}"
   }
 
-  client_id       = "${var.client_id}"
-  client_secret   = "${var.client_secret}"
-  subscription_id = "${var.subscription_id}"
-  tenant_id       = "${var.tenant_id}"
+  use_azure_cli_auth = "${var.use_azure_cli_auth}"
+  client_id          = "${var.client_id}"
+  client_secret      = "${var.client_secret}"
+  subscription_id    = "${var.subscription_id}"
+  tenant_id          = "${var.tenant_id}"
 
   vm_size                           = "${var.vm_size}"
   os_type                           = "Linux"
@@ -61,8 +62,8 @@ build {
     ]
   }
 
-# relabel copied files right after copy-files.sh
-# to prevent other commands from failing
+  # relabel copied files right after copy-files.sh
+  # to prevent other commands from failing
   provisioner "file" {
     source      = "selinux_relabel.sh"
     destination = "~/selinux_relabel.sh"
@@ -83,9 +84,9 @@ build {
   provisioner "shell" {
     remote_folder = "~"
     environment_vars = [
-        "CLOUD_PROVIDER=${var.cloud_provider}",
-        "PODVM_DISTRO=${var.podvm_distro}",
-        ]
+      "CLOUD_PROVIDER=${var.cloud_provider}",
+      "PODVM_DISTRO=${var.podvm_distro}",
+    ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"
     ]
