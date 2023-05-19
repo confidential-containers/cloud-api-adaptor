@@ -99,6 +99,13 @@ func TestCreatePeerPodAndCheckUserLogs(t *testing.T) {
 	doTestCreatePeerPodAndCheckUserLogs(t, assert)
 }
 
+func TestCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestCreatePeerPodAndCheckWorkDirLogs(t, assert)
+}
+
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
 type IBMCloudAssert struct {
 	vpc *vpcv1.VpcV1
