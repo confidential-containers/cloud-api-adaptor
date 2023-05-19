@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -52,6 +53,7 @@ type testCase struct {
 	testCommands         []testCommand
 	expectedPodLogString string
 	podState             v1.PodPhase
+	imagePullTimer       bool
 }
 
 func (tc *testCase) withConfigMap(configMap *v1.ConfigMap) *testCase {
@@ -86,6 +88,11 @@ func (tc *testCase) withExpectedPodLogString(expectedPodLogString string) *testC
 
 func (tc *testCase) withCustomPodState(customPodState v1.PodPhase) *testCase {
 	tc.podState = customPodState
+	return tc
+}
+
+func (tc *testCase) withPodWatcher() *testCase {
+	tc.imagePullTimer = true
 	return tc
 }
 
@@ -157,8 +164,22 @@ func (tc *testCase) run() {
 			}
 
 			if tc.pod != nil {
-				if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
-					t.Fatal(err)
+
+				if tc.imagePullTimer {
+					if err := client.Resources("confidential-containers-system").List(ctx, &podlist); err != nil {
+						t.Fatal(err)
+					}
+					for _, caaPod := range podlist.Items {
+						if caaPod.Labels["app"] == "cloud-api-adaptor" {
+							imagePullTime, err := watchImagePullTime(ctx, client, caaPod, *tc.pod)
+							if err != nil {
+								t.Fatal(err)
+							}
+							t.Logf("Time Taken to pull 4GB Image: %s", imagePullTime)
+							break
+						}
+					}
+
 				}
 				if tc.expectedPodLogString != "" {
 					LogString, err := comparePodLogString(ctx, client, *tc.pod, tc.expectedPodLogString)
@@ -169,6 +190,9 @@ func (tc *testCase) run() {
 					t.Logf("Log output of peer pod:%s", LogString)
 				}
 				if tc.podState == v1.PodRunning {
+					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
+						t.Fatal(err)
+					}
 					if len(tc.testCommands) > 0 {
 						for _, testCommand := range tc.testCommands {
 							var stdout, stderr bytes.Buffer
@@ -249,14 +273,91 @@ func (tc *testCase) run() {
 
 func newTestCase(t *testing.T, testName string, assert CloudAssert, assessMessage string) *testCase {
 	testCase := &testCase{
-		testing:       t,
-		testName:      testName,
-		assert:        assert,
-		assessMessage: assessMessage,
-		podState:      v1.PodRunning,
+		testing:        t,
+		testName:       testName,
+		assert:         assert,
+		assessMessage:  assessMessage,
+		podState:       v1.PodRunning,
+		imagePullTimer: false,
 	}
 
 	return testCase
+}
+
+func reverseSlice(slice []string) []string {
+	length := len(slice)
+	for i := 0; i < length/2; i++ {
+		slice[i], slice[length-i-1] = slice[length-i-1], slice[i]
+	}
+	return slice
+}
+
+// timeExtractor for comparing and extracting time from a Log String
+func timeExtractor(log string) (string, error) {
+	matchString := regexp.MustCompile(`\b(\d{2}):(\d{2}):(\d{2})\b`).FindStringSubmatch(log)
+	if len(matchString) != 4 {
+		return "", errors.New("Invalid Time Data")
+	}
+	return matchString[0], nil
+}
+
+func watchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod, Pod v1.Pod) (string, error) {
+	pullingtime := ""
+	podLogString := ""
+	var startTime, endTime time.Time
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		return "", err
+	}
+
+	if Pod.Status.Phase == v1.PodRunning {
+		req := clientset.CoreV1().Pods(caaPod.ObjectMeta.Namespace).GetLogs(caaPod.ObjectMeta.Name, &v1.PodLogOptions{})
+		podLogs, err := req.Stream(ctx)
+		if err != nil {
+			return "", err
+		}
+		defer podLogs.Close()
+		buf := new(bytes.Buffer)
+		_, err = io.Copy(buf, podLogs)
+		if err != nil {
+			return "", err
+		}
+		podLogString = buf.String()
+
+		if podLogString != "" {
+			podLogSlice := reverseSlice(strings.Split(podLogString, "\n"))
+			for _, i := range podLogSlice {
+				if strings.Contains(i, "calling PullImage for \""+Pod.Spec.Containers[0].Image+"\"") {
+					timeString, err := timeExtractor(i)
+					if err != nil {
+						return "", err
+					}
+					startTime, err = time.Parse("15:04:05", timeString)
+					if err != nil {
+						return "", err
+					}
+					break
+				}
+				if strings.Contains(i, "successfully pulled image \""+Pod.Spec.Containers[0].Image+"\"") {
+					timeString, err := timeExtractor(i)
+					if err != nil {
+						return "", err
+					}
+					endTime, err = time.Parse("15:04:05", timeString)
+					if err != nil {
+						return "", err
+					}
+				}
+			}
+		} else {
+			return "", errors.New("Pod Failed to Log expected Output")
+		}
+	} else {
+		return "", errors.New("Pod Failed to Start")
+	}
+
+	pullingtime = endTime.Sub(startTime).String()
+	return pullingtime, nil
 }
 
 func comparePodLogString(ctx context.Context, client klient.Client, customPod v1.Pod, expectedPodlogString string) (string, error) {
@@ -520,4 +621,12 @@ func doTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing
 	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever), withEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}))
 	expectedPodLogString := "ISPRODUCTION=true"
 	newTestCase(t, "EnvVariablePeerPodWithBoth", assert, "Peer pod with environmental variables has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).withCustomPodState(v1.PodSucceeded).run()
+}
+
+func doTestCreatePeerPodWithLargeImage(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	podName := "largeimage-pod"
+	imageName := "quay.io/confidential-containers/test-images:largeimage"
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever))
+	newTestCase(t, "LargeImagePeerPod", assert, "Peer pod with Large Image has been created").withPod(pod).withPodWatcher().run()
 }
