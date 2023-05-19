@@ -23,6 +23,12 @@ func withCommand(command []string) podOption {
 	}
 }
 
+func withEnvironmentalVariables(envVar []corev1.EnvVar) podOption {
+	return func(p *corev1.Pod) {
+		p.Spec.Containers[0].Env = envVar
+	}
+}
+
 func withConfigMapBinding(mountPath string, configMapName string) podOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "config-volume", MountPath: mountPath})

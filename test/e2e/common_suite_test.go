@@ -163,6 +163,7 @@ func (tc *testCase) run() {
 				if tc.expectedPodLogString != "" {
 					LogString, err := comparePodLogString(ctx, client, *tc.pod, tc.expectedPodLogString)
 					if err != nil {
+						t.Logf("Output:%s", LogString)
 						t.Fatal(err)
 					}
 					t.Logf("Log output of peer pod:%s", LogString)
@@ -291,8 +292,8 @@ func comparePodLogString(ctx context.Context, client klient.Client, customPod v1
 		return podLogString, err
 	}
 
-	if podLogString != expectedPodlogString {
-		return podLogString, errors.New("Error: Pod Log doesn't match with Expected String")
+	if !strings.Contains(podLogString, expectedPodlogString) {
+		return podLogString, errors.New("Error: Pod Log doesn't contain Expected String")
 	}
 
 	return podLogString, nil
@@ -492,4 +493,31 @@ func doTestCreatePeerPodAndCheckWorkDirLogs(t *testing.T, assert CloudAssert) {
 	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever))
 	expectedPodLogString := "/other"
 	newTestCase(t, "WorkDirPeerPod", assert, "Peer pod with work directory has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).withCustomPodState(v1.PodSucceeded).run()
+}
+
+func doTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	podName := "env-variable-in-image"
+	imageName := "quay.io/confidential-containers/test-images:testenv"
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever))
+	expectedPodLogString := "ISPRODUCTION=false"
+	newTestCase(t, "EnvVariablePeerPodWithImageOnly", assert, "Peer pod with environmental variables has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).withCustomPodState(v1.PodSucceeded).run()
+}
+
+func doTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	podName := "env-variable-in-config"
+	imageName := "nginx:latest"
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever), withEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}), withCommand([]string{"/bin/sh", "-c", "env"}))
+	expectedPodLogString := "ISPRODUCTION=true"
+	newTestCase(t, "EnvVariablePeerPodWithDeploymentOnly", assert, "Peer pod with environmental variables has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).run()
+}
+
+func doTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	podName := "env-variable-in-both"
+	imageName := "quay.io/confidential-containers/test-images:testenv"
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever), withEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}))
+	expectedPodLogString := "ISPRODUCTION=true"
+	newTestCase(t, "EnvVariablePeerPodWithBoth", assert, "Peer pod with environmental variables has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).withCustomPodState(v1.PodSucceeded).run()
 }
