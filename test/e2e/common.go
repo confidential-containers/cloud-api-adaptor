@@ -42,7 +42,7 @@ func newPod(namespace string, podName string, containerName string, imageName st
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: podName, Namespace: namespace},
 		Spec: corev1.PodSpec{
-			Containers:       []corev1.Container{{Name: containerName, Image: imageName}},
+			Containers:       []corev1.Container{{Name: containerName, Image: imageName, ImagePullPolicy: corev1.PullAlways}},
 			RuntimeClassName: &runtimeClassName,
 		},
 	}
