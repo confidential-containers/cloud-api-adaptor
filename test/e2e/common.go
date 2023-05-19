@@ -3,6 +3,8 @@ package e2e
 import (
 	"testing"
 
+	batchv1 "k8s.io/api/batch/v1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -85,6 +87,35 @@ func newSecret(namespace string, name string, data map[string][]byte) *corev1.Se
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Data:       data,
+	}
+}
+
+// newJob returns a new job
+func newJob(namespace string, name string) *batchv1.Job {
+	runtimeClassName := "kata-remote"
+	BackoffLimit := int32(8)
+	TerminateGracePeriod := int64(0)
+	return &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: batchv1.JobSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace},
+				Spec: corev1.PodSpec{
+					TerminationGracePeriodSeconds: &TerminateGracePeriod,
+					Containers: []corev1.Container{{
+						Name:    name,
+						Image:   "quay.io/prometheus/busybox:latest",
+						Command: []string{"/bin/sh", "-c", "echo 'scale=5; 4*a(1)' | bc -l"},
+					}},
+					RestartPolicy:    corev1.RestartPolicyNever,
+					RuntimeClassName: &runtimeClassName,
+				},
+			},
+			BackoffLimit: &BackoffLimit,
+		},
 	}
 }
 

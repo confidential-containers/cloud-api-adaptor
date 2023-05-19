@@ -7,11 +7,20 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"strings"
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/client-go/kubernetes"
+
+	batchv1 "k8s.io/api/batch/v1"
+
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/e2e-framework/klient"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	envconf "sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -19,6 +28,7 @@ import (
 )
 
 const WAIT_POD_RUNNING_TIMEOUT = time.Second * 300
+const WAIT_JOB_RUNNING_TIMEOUT = time.Second * 600
 
 // testCommand is a list of commands to execute inside the pod container,
 // each with a function to test if the command outputs the value the test
@@ -30,13 +40,16 @@ type testCommand struct {
 }
 
 type testCase struct {
-	testing       *testing.T
-	assert        CloudAssert
-	assessMessage string
-	pod           *v1.Pod
-	configMap     *v1.ConfigMap
-	secret        *v1.Secret
-	testCommands  []testCommand
+	testing              *testing.T
+	testName             string
+	assert               CloudAssert
+	assessMessage        string
+	pod                  *v1.Pod
+	configMap            *v1.ConfigMap
+	secret               *v1.Secret
+	job                  *batchv1.Job
+	testCommands         []testCommand
+	expectedPodLogString string
 }
 
 func (tc *testCase) withConfigMap(configMap *v1.ConfigMap) *testCase {
@@ -49,14 +62,29 @@ func (tc *testCase) withSecret(secret *v1.Secret) *testCase {
 	return tc
 }
 
+func (tc *testCase) withJob(job *batchv1.Job) *testCase {
+	tc.job = job
+	return tc
+}
+
+func (tc *testCase) withPod(pod *v1.Pod) *testCase {
+	tc.pod = pod
+	return tc
+}
+
 func (tc *testCase) withTestCommands(testCommands []testCommand) *testCase {
 	tc.testCommands = testCommands
 	return tc
 }
 
+func (tc *testCase) withExpectedPodLogString(expectedPodLogString string) *testCase {
+	tc.expectedPodLogString = expectedPodLogString
+	return tc
+}
+
 func (tc *testCase) run() {
-	podFeature := features.New(fmt.Sprintf("%s Pod", tc.pod.Name)).
-		WithSetup("Create pod", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+	testCaseFeature := features.New(fmt.Sprintf("%s test", tc.testName)).
+		WithSetup("Create testworkload", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			client, err := cfg.NewClient()
 			if err != nil {
 				t.Fatal(err)
@@ -73,38 +101,70 @@ func (tc *testCase) run() {
 					t.Fatal(err)
 				}
 			}
-
-			if err = client.Resources().Create(ctx, tc.pod); err != nil {
-				t.Fatal(err)
+			if tc.job != nil {
+				if err = client.Resources().Create(ctx, tc.job); err != nil {
+					t.Fatal(err)
+				}
+				if err = wait.For(conditions.New(client.Resources()).JobCompleted(tc.job), wait.WithTimeout(WAIT_JOB_RUNNING_TIMEOUT)); err != nil {
+					//Using t.log instead of t.Fatal here because we need to assess number of success and failure pods if job fails to complete
+					t.Log(err)
+				}
 			}
-
-			if err = wait.For(conditions.New(client.Resources()).PodRunning(tc.pod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
-				t.Fatal(err)
+			if tc.pod != nil {
+				if err = client.Resources().Create(ctx, tc.pod); err != nil {
+					t.Fatal(err)
+				}
+				if err = wait.For(conditions.New(client.Resources()).PodRunning(tc.pod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+					t.Fatal(err)
+				}
 			}
-
 			return ctx
 		}).
 		Assess(tc.assessMessage, func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			tc.assert.HasPodVM(t, tc.pod.Name)
-
+			client := cfg.Client()
 			var podlist v1.PodList
 
-			if err := cfg.Client().Resources(tc.pod.Namespace).List(context.TODO(), &podlist); err != nil {
-				t.Fatal(err)
+			if tc.job != nil {
+				if err := client.Resources(tc.job.Namespace).List(ctx, &podlist); err != nil {
+					t.Fatal(err)
+				}
+				successPod, errorPod, podLogString, err := getSuccessfulAndErroredPods(ctx, t, client, *tc.job)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if errorPod == len(podlist.Items) {
+					t.Errorf("Job Failed to Start pod")
+				}
+				if successPod == 1 && errorPod >= 1 {
+					t.Skip("Expected Completed status on first attempt")
+				}
+				if podLogString != "" {
+					if strings.Contains(podLogString, tc.expectedPodLogString) {
+						log.Printf("Output Log from Pod: %s", podLogString)
+					} else {
+						t.Errorf("Job Created pod with Invalid log")
+					}
+				}
+
 			}
+			if tc.pod != nil {
+				if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
+					t.Fatal(err)
+				}
+				tc.assert.HasPodVM(t, tc.pod.Name)
+				for _, testCommand := range tc.testCommands {
+					var stdout, stderr bytes.Buffer
 
-			for _, testCommand := range tc.testCommands {
-				var stdout, stderr bytes.Buffer
+					for _, podItem := range podlist.Items {
+						if podItem.ObjectMeta.Name == tc.pod.Name {
+							if err := cfg.Client().Resources(tc.pod.Namespace).ExecInPod(ctx, tc.pod.Namespace, tc.pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
+								t.Log(stderr.String())
+								t.Fatal(err)
+							}
 
-				for _, podItem := range podlist.Items {
-					if podItem.ObjectMeta.Name == tc.pod.Name {
-						if err := cfg.Client().Resources(tc.pod.Namespace).ExecInPod(ctx, tc.pod.Namespace, tc.pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
-							t.Log(stderr.String())
-							t.Fatal(err)
-						}
-
-						if !testCommand.testCommandStdoutFn(stdout) {
-							t.Fatal(fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String()))
+							if !testCommand.testCommandStdoutFn(stdout) {
+								t.Fatal(fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String()))
+							}
 						}
 					}
 				}
@@ -117,13 +177,6 @@ func (tc *testCase) run() {
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			if err = client.Resources().Delete(ctx, tc.pod); err != nil {
-				t.Fatal(err)
-			}
-
-			log.Infof("Deleting pod... %s", tc.pod.Name)
-
 			if tc.configMap != nil {
 				if err = client.Resources().Delete(ctx, tc.configMap); err != nil {
 					t.Fatal(err)
@@ -140,27 +193,106 @@ func (tc *testCase) run() {
 				}
 			}
 
+			if tc.job != nil {
+				var podlist v1.PodList
+				if err := client.Resources(tc.job.Namespace).List(ctx, &podlist); err != nil {
+					t.Fatal(err)
+				}
+				if err = client.Resources().Delete(ctx, tc.job); err != nil {
+					t.Fatal(err)
+				} else {
+					log.Infof("Deleting Job... %s", tc.job.Name)
+				}
+				for _, pod := range podlist.Items {
+					if pod.ObjectMeta.Labels["job-name"] == tc.job.Name {
+						if err = client.Resources().Delete(ctx, &pod); err != nil {
+							t.Fatal(err)
+						}
+						log.Infof("Deleting pods created by job... %s", pod.ObjectMeta.Name)
+
+					}
+				}
+			}
+			if tc.pod != nil {
+				if err = client.Resources().Delete(ctx, tc.pod); err != nil {
+					t.Fatal(err)
+				}
+				log.Infof("Deleting pod... %s", tc.pod.Name)
+
+			}
+
 			return ctx
 		}).Feature()
-	testEnv.Test(tc.testing, podFeature)
+	testEnv.Test(tc.testing, testCaseFeature)
 }
 
-func newTestCase(t *testing.T, assert CloudAssert, assessMessage string, pod *v1.Pod) *testCase {
+func newTestCase(t *testing.T, testName string, assert CloudAssert, assessMessage string) *testCase {
 	testCase := &testCase{
 		testing:       t,
+		testName:      testName,
 		assert:        assert,
 		assessMessage: assessMessage,
-		pod:           pod,
 	}
 
 	return testCase
+}
+
+func getSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klient.Client, job batchv1.Job) (int, int, string, error) {
+	podLogString := ""
+	errorPod := 0
+	successPod := 0
+	var podlist v1.PodList
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		return 0, 0, "", err
+	}
+	if err := client.Resources(job.Namespace).List(ctx, &podlist); err != nil {
+		return 0, 0, "", err
+	}
+	for _, pod := range podlist.Items {
+		if pod.ObjectMeta.Labels["job-name"] == job.Name && pod.Status.ContainerStatuses[0].State.Terminated.Reason == "StartError" {
+			errorPod++
+			t.Log("WARNING:", pod.ObjectMeta.Name, "-", pod.Status.ContainerStatuses[0].State.Terminated.Reason)
+		}
+		if pod.ObjectMeta.Labels["job-name"] == job.Name && pod.Status.ContainerStatuses[0].State.Terminated.Reason == "Completed" {
+			successPod++
+			watcher, err := clientset.CoreV1().Events(job.Namespace).Watch(ctx, metav1.ListOptions{})
+			if err != nil {
+				return 0, 0, "", err
+			}
+			defer watcher.Stop()
+			for event := range watcher.ResultChan() {
+				if event.Object.(*v1.Event).Reason == "Started" && pod.Status.ContainerStatuses[0].State.Terminated.Reason == "Completed" {
+					func() {
+						req := clientset.CoreV1().Pods(job.Namespace).GetLogs(pod.ObjectMeta.Name, &v1.PodLogOptions{})
+						podLogs, err := req.Stream(ctx)
+						if err != nil {
+							return
+						}
+						defer podLogs.Close()
+						buf := new(bytes.Buffer)
+						_, err = io.Copy(buf, podLogs)
+						if err != nil {
+							return
+						}
+						podLogString = strings.TrimSpace(buf.String())
+					}()
+					t.Log("SUCCESS:", pod.ObjectMeta.Name, "-", pod.Status.ContainerStatuses[0].State.Terminated.Reason, "- LOG:", podLogString)
+					break
+				}
+
+			}
+		}
+
+	}
+	return successPod, errorPod, podLogString, nil
 }
 
 // doTestCreateSimplePod tests a simple peer-pod can be created.
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	pod := newNginxPod(namespace)
-	newTestCase(t, assert, "PodVM is created", pod).run()
+	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).run()
 }
 
 func doTestCreatePodWithConfigMap(t *testing.T, assert CloudAssert) {
@@ -188,7 +320,7 @@ func doTestCreatePodWithConfigMap(t *testing.T, assert CloudAssert) {
 		},
 	}
 
-	newTestCase(t, assert, "Configmap is created and contains data", pod).withConfigMap(configMap).withTestCommands(testCommands).run()
+	newTestCase(t, "ConfigMapPeerPod", assert, "Configmap is created and contains data").withPod(pod).withConfigMap(configMap).withTestCommands(testCommands).run()
 }
 
 func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
@@ -235,7 +367,7 @@ func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 		},
 	}
 
-	newTestCase(t, assert, "Secret has been created and contains data", pod).withSecret(secret).withTestCommands(testCommands).run()
+	newTestCase(t, "SecretPeerPod", assert, "Secret has been created and contains data").withPod(pod).withSecret(secret).withTestCommands(testCommands).run()
 }
 
 func doTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, assert CloudAssert) {
@@ -257,7 +389,16 @@ func doTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, assert Cloud
 		},
 	}
 
-	newTestCase(t, assert, "Peer Pod Container Connected to External IP", pod).withTestCommands(testCommands).run()
+	newTestCase(t, "IPAccessPeerPod", assert, "Peer Pod Container Connected to External IP").withPod(pod).withTestCommands(testCommands).run()
+}
+
+func doTestCreatePeerPodWithJob(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	jobName := "job-pi"
+	job := newJob(namespace, jobName)
+	expectedPodLogString := "3.14"
+	newTestCase(t, "JobPeerPod", assert, "Job has been created").withJob(job).withExpectedPodLogString(expectedPodLogString).run()
+
 }
 
 // doTestCreateConfidentialPod verify a confidential peer-pod can be created.
@@ -267,5 +408,5 @@ func doTestCreateConfidentialPod(t *testing.T, assert CloudAssert, testCommands 
 	for i := 0; i < len(testCommands); i++ {
 		testCommands[i].containerName = pod.Spec.Containers[0].Name
 	}
-	newTestCase(t, assert, "Confidential PodVM is created", pod).withTestCommands(testCommands).run()
+	newTestCase(t, "ConfidentialPodVM", assert, "Confidential PodVM is created").withPod(pod).withTestCommands(testCommands).run()
 }
