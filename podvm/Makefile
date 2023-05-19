@@ -37,8 +37,8 @@ ifeq ($(PODVM_DISTRO),ubuntu)
 	-var cloud_image_url=${UBUNTU_IMAGE_URL} \
 	-var cloud_image_checksum=${UBUNTU_IMAGE_CHECKSUM} \
 	-var se_boot=${SE_BOOT})
-ifeq ($(SE_BOOT),1)
-	$(eval PACKER_DEFAULT_OPTS = -var boot_wait=480s )
+ifeq ($(ARCH),s390x)
+	$(eval PACKER_DEFAULT_OPTS = -var boot_wait=600s )
 endif
 ifneq ($(HOST_ARCH),$(ARCH))
 	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
