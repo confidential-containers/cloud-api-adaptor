@@ -106,6 +106,27 @@ func TestCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
 	doTestCreatePeerPodAndCheckWorkDirLogs(t, assert)
 }
 
+func TestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t, assert)
+}
+
+func TestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t, assert)
+}
+
+func TestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, assert)
+}
+
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
 type IBMCloudAssert struct {
 	vpc *vpcv1.VpcV1
