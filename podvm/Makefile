@@ -26,7 +26,7 @@ UEFI_FIRMWARE_LOCATION ?=
 SE_BOOT ?= 0
 
 # Env variable for default qemu builder options across distros/arch
-PACKER_DEFAULT_OPTS ?= -var boot_wait=300s
+PACKER_DEFAULT_OPTS ?=
 
 image: $(IMAGE_FILE)
 
@@ -37,9 +37,6 @@ ifeq ($(PODVM_DISTRO),ubuntu)
 	-var cloud_image_url=${UBUNTU_IMAGE_URL} \
 	-var cloud_image_checksum=${UBUNTU_IMAGE_CHECKSUM} \
 	-var se_boot=${SE_BOOT})
-ifeq ($(ARCH),s390x)
-	$(eval PACKER_DEFAULT_OPTS = -var boot_wait=600s )
-endif
 ifneq ($(HOST_ARCH),$(ARCH))
 	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
 ifndef QEMU_BINARY
