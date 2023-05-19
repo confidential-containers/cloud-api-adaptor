@@ -6,6 +6,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -50,6 +51,7 @@ type testCase struct {
 	job                  *batchv1.Job
 	testCommands         []testCommand
 	expectedPodLogString string
+	podState             v1.PodPhase
 }
 
 func (tc *testCase) withConfigMap(configMap *v1.ConfigMap) *testCase {
@@ -79,6 +81,11 @@ func (tc *testCase) withTestCommands(testCommands []testCommand) *testCase {
 
 func (tc *testCase) withExpectedPodLogString(expectedPodLogString string) *testCase {
 	tc.expectedPodLogString = expectedPodLogString
+	return tc
+}
+
+func (tc *testCase) withCustomPodState(customPodState v1.PodPhase) *testCase {
+	tc.podState = customPodState
 	return tc
 }
 
@@ -114,9 +121,11 @@ func (tc *testCase) run() {
 				if err = client.Resources().Create(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
-				if err = wait.For(conditions.New(client.Resources()).PodRunning(tc.pod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+
+				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
 					t.Fatal(err)
 				}
+
 			}
 			return ctx
 		}).
@@ -145,31 +154,40 @@ func (tc *testCase) run() {
 						t.Errorf("Job Created pod with Invalid log")
 					}
 				}
-
 			}
+
 			if tc.pod != nil {
 				if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
 					t.Fatal(err)
 				}
-				tc.assert.HasPodVM(t, tc.pod.Name)
-				for _, testCommand := range tc.testCommands {
-					var stdout, stderr bytes.Buffer
+				if tc.expectedPodLogString != "" {
+					LogString, err := comparePodLogString(ctx, client, *tc.pod, tc.expectedPodLogString)
+					if err != nil {
+						t.Fatal(err)
+					}
+					t.Logf("Log output of peer pod:%s", LogString)
+				}
+				if tc.podState == v1.PodRunning && tc.testCommands != nil {
+					for _, testCommand := range tc.testCommands {
+						var stdout, stderr bytes.Buffer
 
-					for _, podItem := range podlist.Items {
-						if podItem.ObjectMeta.Name == tc.pod.Name {
-							if err := cfg.Client().Resources(tc.pod.Namespace).ExecInPod(ctx, tc.pod.Namespace, tc.pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
-								t.Log(stderr.String())
-								t.Fatal(err)
-							}
+						for _, podItem := range podlist.Items {
+							if podItem.ObjectMeta.Name == tc.pod.Name {
+								if err := cfg.Client().Resources(tc.pod.Namespace).ExecInPod(ctx, tc.pod.Namespace, tc.pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
+									t.Log(stderr.String())
+									t.Fatal(err)
+								}
 
-							if !testCommand.testCommandStdoutFn(stdout) {
-								t.Fatal(fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String()))
+								if !testCommand.testCommandStdoutFn(stdout) {
+									t.Fatal(fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String()))
+								}
 							}
 						}
 					}
 				}
-			}
+				tc.assert.HasPodVM(t, tc.pod.Name)
 
+			}
 			return ctx
 		}).
 		Teardown(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -232,9 +250,50 @@ func newTestCase(t *testing.T, testName string, assert CloudAssert, assessMessag
 		testName:      testName,
 		assert:        assert,
 		assessMessage: assessMessage,
+		podState:      v1.PodRunning,
 	}
 
 	return testCase
+}
+
+func comparePodLogString(ctx context.Context, client klient.Client, customPod v1.Pod, expectedPodlogString string) (string, error) {
+	podLogString := ""
+	var podlist v1.PodList
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		return podLogString, err
+	}
+	if err := client.Resources(customPod.Namespace).List(ctx, &podlist); err != nil {
+		return podLogString, err
+	}
+	for _, pod := range podlist.Items {
+		if pod.ObjectMeta.Name == customPod.Name {
+			func() {
+				req := clientset.CoreV1().Pods(customPod.Namespace).GetLogs(pod.ObjectMeta.Name, &v1.PodLogOptions{})
+				podLogs, err := req.Stream(ctx)
+				if err != nil {
+					return
+				}
+				defer podLogs.Close()
+				buf := new(bytes.Buffer)
+				_, err = io.Copy(buf, podLogs)
+				if err != nil {
+					return
+				}
+				podLogString = strings.TrimSpace(buf.String())
+			}()
+		}
+	}
+
+	if err != nil {
+		return podLogString, err
+	}
+
+	if podLogString != expectedPodlogString {
+		return podLogString, errors.New("Error: Pod Log doesn't match with Expected String")
+	}
+
+	return podLogString, nil
 }
 
 func getSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klient.Client, job batchv1.Job) (int, int, string, error) {
@@ -398,7 +457,15 @@ func doTestCreatePeerPodWithJob(t *testing.T, assert CloudAssert) {
 	job := newJob(namespace, jobName)
 	expectedPodLogString := "3.14"
 	newTestCase(t, "JobPeerPod", assert, "Job has been created").withJob(job).withExpectedPodLogString(expectedPodLogString).run()
+}
 
+func doTestCreatePeerPodAndCheckUserLogs(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	podName := "user-pod"
+	imageName := "quay.io/confidential-containers/test-images:testuser"
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever))
+	expectedPodLogString := "otheruser"
+	newTestCase(t, "UserPeerPod", assert, "Peer pod with user has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).withCustomPodState(v1.PodSucceeded).run()
 }
 
 // doTestCreateConfidentialPod verify a confidential peer-pod can be created.
