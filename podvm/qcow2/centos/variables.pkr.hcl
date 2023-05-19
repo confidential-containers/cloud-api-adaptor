@@ -44,6 +44,11 @@ variable "ssh_username" {
   default = "peerpod"
 }
 
+variable "ssh_timeout" {
+  type = string
+  default = "15m"
+}
+
 variable "qemu_image_name" {
   type    = string
   default = "peer-pod"

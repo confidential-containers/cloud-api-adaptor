@@ -5,7 +5,7 @@ locals {
 }
 
 source "qemu" "centos" {
-  boot_command      = ["<enter>"]
+  disable_vnc       = true
   disk_compression  = true
   disk_image        = true
   disk_size         = "${var.disk_size}"
@@ -18,7 +18,7 @@ source "qemu" "centos" {
   ssh_password      = "${var.ssh_password}"
   ssh_port          = 22
   ssh_username      = "${var.ssh_username}"
-  ssh_wait_timeout  = "300s"
+  ssh_timeout       = "${var.ssh_timeout}"
   boot_wait         = "${var.boot_wait}"
   vm_name           = "${var.qemu_image_name}"
   shutdown_command  = "sudo shutdown -h now"
