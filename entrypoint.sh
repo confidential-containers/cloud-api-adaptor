@@ -24,6 +24,13 @@ test_vars() {
         [[ -n $EXT ]] && exit 1
 }
 
+one_of() {
+        for i in "$@"; do
+                [ -n "${!i}" ] && echo "\$$i is SET" && EXIST=1
+        done
+        [[ -z $EXIST ]] && echo "At least one of these must be SET: $@" && exit 1
+}
+
 aws() {
 test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 
@@ -63,7 +70,7 @@ exec cloud-api-adaptor azure \
 }
 
 ibmcloud() {
-test_vars IBMCLOUD_API_KEY
+one_of IBMCLOUD_API_KEY IBMCLOUD_IAM_PROFILE_ID
 
 set -x
 exec cloud-api-adaptor ibmcloud \

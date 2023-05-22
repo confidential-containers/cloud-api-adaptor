@@ -43,12 +43,26 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 
 	logger.Printf("ibmcloud-vpc config: %#v", config.Redact())
 
-	vpcV1, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{
-		Authenticator: &core.IamAuthenticator{
+	var authenticator core.Authenticator
+
+	if config.ApiKey != "" {
+		authenticator = &core.IamAuthenticator{
 			ApiKey: config.ApiKey,
 			URL:    config.IamServiceURL,
-		},
-		URL: config.VpcServiceURL,
+		}
+	} else if config.IAMProfileID != "" {
+		authenticator = &core.ContainerAuthenticator{
+			URL:             config.IamServiceURL,
+			IAMProfileID:    config.IAMProfileID,
+			CRTokenFilename: config.CRTokenFileName,
+		}
+	} else {
+		return nil, fmt.Errorf("either an IAM API Key or Profile ID needs to be set")
+	}
+
+	vpcV1, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{
+		Authenticator: authenticator,
+		URL:           config.VpcServiceURL,
 	})
 
 	if err != nil {

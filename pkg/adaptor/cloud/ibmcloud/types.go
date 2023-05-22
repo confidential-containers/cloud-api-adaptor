@@ -7,6 +7,8 @@ import "github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 
 type Config struct {
 	ApiKey                   string
+	IAMProfileID             string
+	CRTokenFileName          string
 	IamServiceURL            string
 	VpcServiceURL            string
 	ResourceGroupID          string
