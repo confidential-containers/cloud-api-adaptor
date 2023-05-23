@@ -1,0 +1,68 @@
+name: Create Test Images
+on:
+  push:
+    branches:
+      - "staging"
+    paths:
+      - 'test/e2e/fixtures/Dockerfile.*'
+
+jobs:
+  list-dockerfiles:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ env.MATRIX }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-matrix
+        run: echo "MATRIX=$(ls test/e2e/fixtures/Dockerfile.* | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_ENV
+  build:
+    name: Create Test Images
+    needs: list-dockerfiles
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        targets: ${{ fromJson(needs.list-dockerfiles.outputs.matrix) }}
+        arch: [amd64, s390x]
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: docker.io
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Login to Quay container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: quay.io
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+    - name: determine docker tag by splitting branch name on slash
+      id: docker-tag
+      shell: bash
+      run: |
+          for path in "${{matrix.targets}}"; do
+            file_name=$(basename "$path")
+            name="${file_name##*.}"
+            output_paths+=("${name,,}")
+          done
+          echo "DOCKER_TAG=${output_paths[*]}" >> $GITHUB_ENV
+    - name: Build and push
+      uses: docker/build-push-action@v3
+      with:
+        tags: |
+          quay.io/${{ secrets.QUAY_USERNAME }}/test-images:${{env.DOCKER_TAG}}
+        push: true
+        context: .
+        platforms: linux/s390x,linux/amd64
+        file: ${{matrix.targets}}
+        build-args: |
+          "ARCH=${{ matrix.arch }}"
