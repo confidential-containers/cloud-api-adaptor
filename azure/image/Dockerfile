@@ -39,7 +39,6 @@ RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/clo
 COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files
 RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
 
-ARG AZURE_REGION=eastus
 ARG VM_SIZE=Standard_D2as_v5
 ARG AZURE_RESOURCE_GROUP
 ARG IMAGE_NAME=peer-pod-vmimage
@@ -53,7 +52,6 @@ ARG PLAN_NAME
 ARG PLAN_PRODUCT
 ARG PLAN_PUBLISHER
 
-ENV AZURE_REGION ${AZURE_REGION}
 ENV AZURE_RESOURCE_GROUP ${AZURE_RESOURCE_GROUP}
 ENV VM_SIZE ${VM_SIZE}
 ENV IMAGE_NAME ${IMAGE_NAME}

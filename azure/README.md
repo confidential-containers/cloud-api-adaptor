@@ -127,7 +127,6 @@ docker build -t azure \
 --secret id=AZURE_CLIENT_SECRET \
 --secret id=AZURE_SUBSCRIPTION_ID \
 --secret id=AZURE_TENANT_ID \
---build-arg AZURE_REGION=${AZURE_REGION} \
 --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP} \
 -f Dockerfile .
 ```
@@ -155,7 +154,6 @@ docker build -t azure \
 --secret id=AZURE_CLIENT_SECRET \
 --secret id=AZURE_SUBSCRIPTION_ID \
 --secret id=AZURE_TENANT_ID \
---build-arg AZURE_REGION=${AZURE_REGION} \
 --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}  \
 --build-arg PUBLISHER=eurolinuxspzoo1620639373013 \
 --build-arg SKU=centos-8-5-free \
@@ -175,7 +173,6 @@ docker build -t azure \
 --secret id=AZURE_CLIENT_SECRET \
 --secret id=AZURE_SUBSCRIPTION_ID \
 --secret id=AZURE_TENANT_ID \
---build-arg AZURE_REGION=${AZURE_REGION} \
 --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}  \
 --build-arg PUBLISHER=RedHat \
 --build-arg SKU=9-lvm \
