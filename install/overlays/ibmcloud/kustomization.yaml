@@ -1,8 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-bases:
-- ../../yamls
+resources:
+  - ../../yamls
 
 images:
 - name: cloud-api-adaptor
@@ -44,7 +44,10 @@ secretGenerator:
 - name: peer-pods-secret
   namespace: confidential-containers-system
   literals:
-  - IBMCLOUD_API_KEY="" # set
+##IAM PROFILE SETTINGS
+# - IBMCLOUD_IAM_PROFILE_ID="" # set
+##/IAM PROFILE SETTINGS
+  - IBMCLOUD_API_KEY="" # set if not using IAM profile ID
   - IBMCLOUD_IAM_ENDPOINT="" #set
   - IBMCLOUD_ZONE="" #set
 ##TLS_SETTINGS
@@ -56,8 +59,11 @@ secretGenerator:
 #  - <path_to_client.key> # set - path to client.key
 ##TLS_SETTINGS
 
-patchesStrategicMerge:
-  - cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
+patches:
+  - path: cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
+##IAM PROFILE SETTINGS
+# - path: cr_token_projection.yaml
+##/IAM PROFILE SETTINGS
 ##TLS_SETTINGS
-  #- tls_certs_volume_mount.yaml # set (for tls)
+# - path: tls_certs_volume_mount.yaml # set (for tls)
 ##TLS_SETTINGS
