@@ -8,9 +8,14 @@ include ../../podvm/Makefile.inc
 
 image: $(IMAGE_FILE)
 
-$(IMAGE_FILE): $(BINARIES) $(FILES)
+$(IMAGE_FILE): $(BINARIES) $(FILES) packer-build
+
+# When doing a packer build we already have dependencies built. We don't need to build things like kata-agent, etc.
+image-build-in-docker: packer-build
+
+packer-build:
 	mkdir -p toupload
-	packer build ./${PODVM_DISTRO}/
+	packer build -var-file=./${PODVM_DISTRO}/variables.pkrvars.hcl ./${PODVM_DISTRO}/
 	rm -fr toupload
 
 clean:

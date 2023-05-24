@@ -33,4 +33,4 @@ RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/clo
     rm /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz
 
 RUN cd /src/cloud-api-adaptor/azure/image && \
-    BINARIES= PAUSE_BUNDLE= CLOUD_PROVIDER=azure PODVM_DISTRO=$PODVM_DISTRO make image
+    BINARIES= PAUSE_BUNDLE= CLOUD_PROVIDER=azure PODVM_DISTRO=$PODVM_DISTRO make image-build-in-docker
