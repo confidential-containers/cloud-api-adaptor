@@ -48,8 +48,6 @@ export AZURE_CLIENT_SECRET="REPLACE_ME"
 export AZURE_TENANT_ID="REPLACE_ME"
 ```
 
-> **NOTE:** The following environment variables `GALLERY_NAME` and `GALLERY_IMAGE_DEF_NAME` should match with the packer input `az_gallery_name` and `az_gallery_image_name` respectively.
-
 ### Shared Image Gallery
 Create shared image gallery to host the built pod vm image.
 ```bash
@@ -89,27 +87,84 @@ az sig image-definition create \
 ### Option-1: Modifying existing marketplace image
 - Install packer by following [these instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
 
-> **NOTE**: For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
+> **Note**
+>
+> For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
 
-- Create a custom Azure VM image based on Ubuntu 22.04 having kata-agent, agent-protocol-forwarder and other dependencies.
+Create a custom Azure VM image having kata-agent, agent-protocol-forwarder and other dependencies. Unfold the distribution you would want to build for and follow the steps.
+
+<details>
+<summary>Ubuntu</summary>
+
+To build an Ubuntu based pod vm image, execute the following steps.
 
 ```bash
-cd image
-export PKR_VAR_resource_group="${AZURE_RESOURCE_GROUP}"
-export PKR_VAR_subscription_id="${AZURE_SUBSCRIPTION_ID}"
-export PKR_VAR_client_id="${AZURE_CLIENT_ID}"
-export PKR_VAR_client_secret="${AZURE_CLIENT_SECRET}"
-export PKR_VAR_tenant_id="${AZURE_TENANT_ID}"
+export PODVM_DISTRO=ubuntu
+```
 
-# Optional
-# export PKR_VAR_az_image_name="REPLACE_ME"
-# export PKR_VAR_vm_size="REPLACE_ME"
-# export PKR_VAR_ssh_username="REPLACE_ME"
-# export PKR_VAR_az_gallery_name="${GALLERY_NAME}"
-# export PKR_VAR_az_gallery_image_name="${GALLERY_IMAGE_DEF_NAME}"
+You can now jump to the step: ["Build Pod VM Image using Docker"](#Build-Pod-VM-Image-using-Docker).
 
-export CLOUD_PROVIDER=azure
-PODVM_DISTRO=ubuntu make image && cd -
+</details>
+
+<details>
+<summary>CentOS</summary>
+
+If you prefer to build a CentOS based pod vm image over Ubuntu, then execute the following steps.
+
+```bash
+export PODVM_DISTRO=centos
+```
+
+> **Note**
+>
+> When using the marketplace image, sometimes it requires accepting a licensing agreement and also using a published plan. Following [link](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage) provides more detail.
+
+When using the CentOS 8.5 image from `eurolinux` publisher, it requires a license agreement. Accept the agreement by running the following command:
+
+```bash
+az vm image terms accept \
+  --urn eurolinuxspzoo1620639373013:centos-8-5-free:centos-8-5-free:8.5.5
+```
+
+> **Note**
+>
+> If you want to use a different base image, then provide different values for: `publisher`, `offer` and `sku`.
+
+You can now jump to the step: ["Build Pod VM Image using Docker"](#Build-Pod-VM-Image-using-Docker).
+
+</details>
+
+<details>
+<summary>RHEL</summary>
+
+To build a RHEL based pod vm image, execute the following steps.
+
+```bash
+export PODVM_DISTRO=rhel
+```
+
+</details>
+
+### Build Pod VM Image using Docker
+
+Create a variables file to be used by packer:
+
+```bash
+envsubst < ./azure/image/${PODVM_DISTRO}/variables.pkrvars.hcl.example > ./azure/image/${PODVM_DISTRO}/variables.pkrvars.hcl
+```
+
+Before starting the build, you can check if the variables file looks okay by running the following command:
+
+```bash
+cat ./azure/image/${PODVM_DISTRO}/variables.pkrvars.hcl
+```
+
+Run the following command to build the pod vm image:
+
+```bash
+docker build -t azure \
+  --build-arg PODVM_DISTRO=${PODVM_DISTRO} \
+  -f azure/image/Dockerfile .
 ```
 
 Use the `ManagedImageSharedImageGalleryId` field from output of the above command to populate the following environment variable it will be used while deploying the cloud-api-adaptor:
@@ -118,7 +173,6 @@ Use the `ManagedImageSharedImageGalleryId` field from output of the above comman
 # e.g. format: /subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/galleries/.../images/.../versions/..
 export AZURE_IMAGE_ID="REPLACE_ME"
 ```
-
 
 You can also build the image using docker
 ```bash
@@ -325,10 +379,9 @@ kubectl label nodes --all node.kubernetes.io/worker=
 
 ## Deploy Cloud API Adaptor
 
-> **NOTE**: If you are using Calico CNI on a different Kubernetes cluster,
-> then,
-> [configure](https://projectcalico.docs.tigera.io/networking/vxlan-ipip#configure-vxlan-encapsulation-for-all-inter-workload-traffic)
-> VXLAN encapsulation for all inter workload traffic.
+> **Note**
+>
+> If you are using Calico CNI on a different Kubernetes cluster, then, [configure](https://projectcalico.docs.tigera.io/networking/vxlan-ipip#configure-vxlan-encapsulation-for-all-inter-workload-traffic) VXLAN encapsulation for all inter workload traffic.
 
 ### AKS Resource Group permissions
 
@@ -516,8 +569,11 @@ az group delete \
   --name "${AZURE_RESOURCE_GROUP}" \
   --yes --no-wait
 ```
+<<<<<<< HEAD
 
 Delete the creates service principals by running:
 ```bash
 az ad sp delete --id ${AZURE_CLIENT_ID}
 ```
+=======
+>>>>>>> 210febc (Azure: Default to docker based podvm image builds)

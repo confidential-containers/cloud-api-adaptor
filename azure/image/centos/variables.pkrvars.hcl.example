@@ -1,0 +1,24 @@
+resource_group        = "${AZURE_RESOURCE_GROUP}"
+subscription_id       = "${AZURE_SUBSCRIPTION_ID}"
+az_gallery_name       = "${GALLERY_NAME}"
+az_gallery_image_name = "${GALLERY_IMAGE_DEF_NAME}"
+podvm_distro          = "${PODVM_DISTRO}"
+
+# If you set this true then don't provide client_id, client_secret & tenant_id.
+# use_azure_cli_auth  = "false"
+client_id             = "${AZURE_CLIENT_ID}"
+client_secret         = "${AZURE_CLIENT_SECRET}"
+tenant_id             = "${AZURE_TENANT_ID}"
+
+# az_gallery_image_version = "0.0.1"
+# az_image_name            = "peer-pod-vmimage"
+# # We cannot use the confidential machine type while building the image because packer fails with the following error:
+# # The VM size 'Standard_DC2as_v5' is not supported for creation of VMs and Virtual Machine Scale Set with 'NULL' security type.
+# vm_size                  = "Standard_D2as_v5"
+# ssh_username             = "peerpod"
+# publisher                = ""
+# offer                    = ""
+# sku                      = ""
+# plan_name                = ""
+# plan_product             = ""
+# plan_publisher           = ""
