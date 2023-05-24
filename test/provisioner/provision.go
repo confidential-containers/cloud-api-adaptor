@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -17,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	"sigs.k8s.io/e2e-framework/klient/decoder"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
@@ -131,10 +131,19 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 		return err
 	}
 
-	log.Info("Uninstall CoCo and cloud-api-adaptor")
+	log.Info("Uninstall the cloud-api-adaptor")
 	if err = p.installOverlay.Delete(ctx, cfg); err != nil {
 		return err
 	}
+
+	log.Info("Uninstall CCRuntime CRD")
+	cmd := exec.Command("kubectl", "delete", "-k", "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 
 	for _, pods := range []*corev1.PodList{ccPods, caaPods} {
 		if err != nil {
@@ -148,10 +157,13 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	deployments := &appsv1.DeploymentList{Items: []appsv1.Deployment{*p.controllerDeployment}}
 
 	log.Info("Uninstall the controller manager")
-	err = decoder.DecodeEachFile(ctx, os.DirFS("../../install/yamls"), "deploy.yaml", decoder.DeleteHandler(resources))
+	cmd = exec.Command("kubectl", "delete", "-k", "github.com/confidential-containers/operator/config/default")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err = cmd.CombinedOutput()
 	if err != nil {
 		return err
 	}
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 
 	log.Infof("Wait for the %s deployment be deleted\n", p.controllerDeployment.GetName())
 	if err = wait.For(conditions.New(resources).ResourcesDeleted(deployments),
@@ -171,10 +183,14 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	resources := client.Resources(p.namespace)
 
 	log.Info("Install the controller manager")
-	err = decoder.DecodeEachFile(ctx, os.DirFS("../../install/yamls"), "deploy.yaml", decoder.CreateIgnoreAlreadyExists(resources))
+	// TODO - find go idiomatic way to apply/delete remote kustomize and apply to this file
+	cmd := exec.Command("kubectl", "apply", "-k", "github.com/confidential-containers/operator/config/default")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		return err
 	}
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 
 	fmt.Printf("Wait for the %s deployment be available\n", p.controllerDeployment.GetName())
 	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(p.controllerDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
@@ -186,7 +202,16 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	if err := p.installOverlay.Edit(ctx, cfg, props); err != nil {
 		return err
 	}
-	log.Info("Install CoCo and cloud-api-adaptor")
+
+	cmd = exec.Command("kubectl", "apply", "-k", "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err = cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+
+	log.Info("Install the cloud-api-adaptor")
 	if err := p.installOverlay.Apply(ctx, cfg); err != nil {
 		return err
 	}
