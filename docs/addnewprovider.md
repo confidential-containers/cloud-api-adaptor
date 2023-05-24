@@ -1,62 +1,43 @@
 # :memo: Adding support for a new provider
 
-### Step 1: Add provider specific options 
+### Step 1: Initialize and register the cloud provider manager 
 
-Provider specific options goes under `cmd/cloud-api-adaptor`
-- [Options](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/cmd/cloud-api-adaptor/main.go#L48)
-- [Parsing](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/cmd/parse.go#L21)
-- [Calling the specific provider](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/cmd/cloud-api-adaptor/main.go#L103)
+The provider-specific cloud manager should be placed under `pkg/adaptor/cloud/cloudmgr/`.
 
+:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/cloud/cloudmgr/aws.go)
 
 ### Step 2: Add provider specific code 
 
-- The code goes under `pkg/adaptor/hypervisor/<provider>`
-- Use BUILD TAGs to build the provider  (eg // +build libvirt). 
+Under `pkg/adaptor/cloud/<provider>`, start by adding a new file called `types.go`. This file defines a configuration struct that contains the required parameters for a cloud provider.
 
-:information_source: Note that there will be separate binaries for each provider.
+:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/cloud/aws/types.go)
 
-#### Step 2.1: Add provider entry point
+#### Step 2.1: Implement the Cloud interface
 
-Add provider entry point to the registry. The `registry.newServer` method is the entry point for the provider code.
+Create a provider-specific manager file called `manager.go`, which implements the following methods for parsing command-line flags, loading environment variables, and creating a new provider.
 
-:information_source: [Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/hypervisor/registry/libvirt.go)
+- ParseCmd
+- LoadEnv
+- NewProvider
 
-#### Step 2.2: Implement NewServer method
+:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/cloud/aws/manager.go)
 
-The `NewServer` method creates the service which is responsible for VM lifecycle operations.
+#### Step 2.2: Implement the Provider interface
 
-Each provider implements `NewServer` method. 
+The Provider interface defines a set of methods that need to be implemented by the cloud provider for managing virtual instances. Add the required methods:
 
-By convention this should be in the file `<provider>/server.go`
+ - CreateInstance
+ - DeleteInstance
+ - Teardown
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/hypervisor/libvirt/server.go#L36)
+:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/cloud/aws/provider.go#L76-L175)
 
-#### Step 2.3: Implement NewService method
+Also, consider adding additional files to modularize the code. You can refer to existing providers such as `aws`, `azure`, `ibmcloud`, and `libvirt` for guidance. Adding unit tests wherever necessary is good practice.
 
-Each provider implements `newService` method. 
+#### Step 3: Add documentation on how to build a Pod VM image
 
-By convention this should be in the file `<provider>/service.go`
+For using the provider, a pod VM image needs to be created in order to create the peer pod instances. Add the instructions for building the peer pod VM image at the root directory similar to the other providers.
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/hypervisor/libvirt/service.go#L44)
+#### Step 4: Add E2E tests for the new provider
 
-#### Step 2.4: Implement Kata specific methods
-    
-Add required methods 
- - CreateVM
- - StartVM
- - StopVM
- - Version
-
-These methods are required by Kata and a Kata hypervisor needs to implement these methods.
-
-#### Step 2.5: Implement Kata specific methods
-
-Add additional files to modularize the code.
-
-See existing providers - `aws|azure|ibmcloud|libvirt`
-
-#### Step 3: Update Continuous Integration (CI) workflows
-
-Each provider should be built and tested on CI.
-
-Update the `provider` list under the `matrix` property in [`.github/workflows/build.yaml`](../.github/workflows/build.yaml).
+For more information, please refer to the section on [adding support for a new cloud provider](../test/e2e/README.md#adding-support-for-a-new-cloud-provider) in the E2E testing documentation.
