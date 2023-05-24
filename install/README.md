@@ -29,8 +29,14 @@
 
    Please refer to the instructions available in the following [doc](../webhook/docs/INSTALL.md).
 
-## Deploy cloud-api-adaptor
+## Configure and deploy CoCo and the cloud-api-adaptor
 
+- Update the `kustomization.yaml` file in `install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml` with your own settings
+- Optionally [set up authenticated registry support](../docs/registries-authentication.md)
+
+## Deploy the CoCo operator, CC runtime CRD and the cloud-api-adaptor daemonset
+
+You can either deploy the CoCo operator and cloud-api-adaptor with the `Makefile` by running
 * set CLOUD_PROVIDER
     ```
     export CLOUD_PROVIDER=<aws|azure|ibmcloud|libvirt>
@@ -38,11 +44,55 @@
 
 * `make deploy` deploys operator, runtime and cloud-api-adaptor pod in the configured cluster
     * validate kubectl is available in your `$PATH` and `$KUBECONFIG` is set
-    * configure install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml with your own settings
-	* [setting up authenticated registry support](../docs/registries-authentication.md)
 
-* `make delete` deletes the daemonset from the configured cluster
+> **Note:** `make delete` deletes the cloud-api-adaptor daemonset from the configured cluster
 
+Alternatively the manual approach, if you want to pick a specific CoCo release/reference is:
+
+- Deploy the [CoCo operator](https://github.com/confidential-containers/operator/blob/main/docs/INSTALL.md#deploy-the-operator)
+  - Either deploy a released version of Confidential Containers Operator, run the following command where `<RELEASE_VERSION>` needs to be substituted with the desired [release tag](https://github.com/confidential-containers/operator/tags). For example, to deploy the `v0.6.0` release run: `export RELEASE_VERSION="v0.6.0"`.
+  ```
+  export RELEASE_VERSION=<RELEASE_VERSION>
+  kubectl apply -k "github.com/confidential-containers/operator/config/release?ref=${RELEASE_VERSION}"
+  ```
+  - Or for development activities, to install the latest, non-released version of the Confidential Containers Operator run:
+  ```
+  kubectl apply -k "github.com/confidential-containers/operator/config/default"
+  ```
+  - Wait for the cc-operator-controller-manager be in running state with:
+  ```
+  kubectl get pods -n confidential-containers-system --watch
+  ```
+
+- Create the peer pods variant of the CC custom resource to install the required pieces of CC and create the `kata-remote` `RuntimeClass`
+  - Again, either deploy a release version of the Confidential Containers peer pod customer resource with, by running the following command where `<RELEASE_VERSION>` needs to be substituted with the desired [release tag](https://github.com/confidential-containers/operator/tags):
+  > **Note:** the release version needs to be `v0.6.0` or after
+  ```
+  export RELEASE_VERSION=<RELEASE_VERSION>
+  kubectl apply -k github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods?ref=<RELEASE_VERSION>
+  ```
+  - Alternatively install the latest development version with:
+  ```
+  kubectl apply -k "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods"
+  ```
+- Wait until all the pods are running with:
+  ```
+  kubectl get pods -n confidential-containers-system --watch
+  ```
+
+- Wait until the `kata-remote` runtime class has been created by running:
+  ```
+  kubectl get runtimeclass --watch
+  ```
+
+- Apply the kustomize.yaml configuration that you modified earlier with:
+  ```
+  kubectl apply -k install/overlays/ibmcloud
+  ```
+- Wait until all the pods are running with:
+  ```
+  kubectl get pods -n confidential-containers-system --watch
+  ```
 ### Verify
 
 * Check POD status
@@ -54,28 +104,17 @@
   namespace.
   
     ```
-    NAME                                                 READY   STATUS        RESTARTS   AGE
-    cc-operator-controller-manager-dc4846d94-nfnr7       2/2     Running       0          20h
-    cc-operator-daemon-install-bdp89                     1/1     Running       0          5s
-    cc-operator-pre-install-daemon-hclk9                 1/1     Running       0          9s
-    cloud-api-adaptor-daemonset-aws-7c66d68484-zpnnw    1/1     Running       0          9s
-    ```
-
-* Check `RuntimeClasses`
-
-    ```
-    kubectl get runtimeclass
-    ```
-  A successful install should show `kata-remote` related `RuntimeClasses`
-    ```
-    NAME          HANDLER       AGE
-    kata-remote   kata-remote   7m18s
+    NAME                                              READY   STATUS    RESTARTS   AGE
+    cc-operator-controller-manager-546574cf87-phbdv   2/2     Running   0          43m
+    cc-operator-daemon-install-pzc4b                  1/1     Running   0          42m
+    cc-operator-pre-install-daemon-sgld6              1/1     Running   0          42m
+    cloud-api-adaptor-daemonset-mk8ln                 1/1     Running   0          37s
     ```
 
 * View cloud-api-adaptor logs
 
     ```
-    kubectl logs pod/cloud-api-adaptor-daemonset-aws-7c66d68484-zpnnw -n confidential-containers-system
+    kubectl logs pod/cloud-api-adaptor-daemonset-mk8ln -n confidential-containers-system
     ```
 
 ## Building custom cloud-api-adaptor image
@@ -94,48 +133,3 @@
    ```
    make image
    ```
-
-## Building custom runtime payload and pre-install images
-
-   These instructions should help you build your own images for development and testing.
-
-   Before proceeding ensure you can build the kata runtime and the agent successfully by
-   following the instructions mentioned in the following [link](../docs/DEVELOPMENT.md).
-
-### Building Runtime Payload Image
-
-* Set container registry and image name
-    ```
-    export registry=<namespace>/<image_name>
-    ```
-
-* Build the multi arch runtime payload images and push them to `$registry`
-    ```
-    cd runtime-payload
-    make binaries
-    make build
-    ```
-    When I set `registry=liudali/pp-payload` the output looks like:
-    ```
-    ...
-    s390x-2023011605591673848771: digest: sha256:3a00b9b754f687179f26bf32a27d381f4d2b900d976d6941dc89f217113a6ab9 size: 2002
-    Created manifest list docker.io/liudali/pp-payload:2023011605591673848771
-    Created manifest list docker.io/liudali/pp-payload:latest
-    sha256:d58315740fa7f32aa55f5b58ccc628e4961fce3ccbbba2aa0ed76a278e776e37
-    sha256:d58315740fa7f32aa55f5b58ccc628e4961fce3ccbbba2aa0ed76a278e776e37
-    ~/cloud-api-adaptor/install/runtime-payload
-    ```
-
-### Building Pre-Install Payload Image
-
-* Set container registry and image name
-    ```
-    export registry=<namespace>/<image_name>
-    ```
-
-* Build the container image and push it to `$registry`
-    ```
-    cd pre-install-payload
-    make build
-    ```
-
