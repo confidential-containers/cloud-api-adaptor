@@ -57,15 +57,18 @@ variable "ssh_username" {
 }
 
 variable "publisher" {
-  type = string
+  type    = string
+  default = "eurolinuxspzoo1620639373013"
 }
 
 variable "offer" {
-  type = string
+  type    = string
+  default = "centos-8-5-free"
 }
 
 variable "sku" {
-  type = string
+  type    = string
+  default = "centos-8-5-free"
 }
 
 variable "podvm_distro" {
@@ -80,15 +83,15 @@ variable "cloud_provider" {
 
 variable "plan_name" {
   type    = string
-  default = ""
+  default = "centos-8-5-free"
 }
 
 variable "plan_product" {
   type    = string
-  default = ""
+  default = "centos-8-5-free"
 }
 
 variable "plan_publisher" {
   type    = string
-  default = ""
+  default = "eurolinuxspzoo1620639373013"
 }

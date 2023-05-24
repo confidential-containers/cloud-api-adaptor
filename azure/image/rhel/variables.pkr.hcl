@@ -57,15 +57,18 @@ variable "ssh_username" {
 }
 
 variable "publisher" {
-  type = string
+  type    = string
+  default = "RedHat"
 }
 
 variable "offer" {
-  type = string
+  type    = string
+  default = "RHEL"
 }
 
 variable "sku" {
-  type = string
+  type    = string
+  default = "9-lvm"
 }
 
 variable "podvm_distro" {
