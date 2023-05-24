@@ -15,21 +15,14 @@ ARG CLOUD_PROVIDER=azure
 ARG PODVM_DISTRO=ubuntu
 # If not provided, uses system architecture
 ARG ARCH=x86_64
-ARG CAA_SRC=""
-ARG CAA_SRC_REF=""
 
 ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
 ENV PODVM_DISTRO ${PODVM_DISTRO}
 
-RUN if [ -n "${CAA_SRC}" ]; then \
-      rm -rf cloud-api-adaptor && \
-      git clone ${CAA_SRC} cloud-api-adaptor;\
-    fi && \
-    if [ -n "${CAA_SRC_REF}" ]; then \
-      cd cloud-api-adaptor && \
-      git fetch origin ${CAA_SRC_REF} && \
-      git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
-    fi
+# Copy the local source code of cloud api adaptor.
+RUN rm -rf /src/cloud-api-adaptor
+COPY . /src/cloud-api-adaptor
+RUN mkdir -p /src/cloud-api-adaptor/podvm/files
 
 # Copy the binaries to podvm/files folder
 COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/cloud-api-adaptor/podvm/files
