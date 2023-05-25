@@ -126,6 +126,7 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		},
 		retry.Attempts(0),
 		retry.Context(ctx),
+		retry.MaxDelay(5*time.Second),
 	)
 
 	if err != nil {
