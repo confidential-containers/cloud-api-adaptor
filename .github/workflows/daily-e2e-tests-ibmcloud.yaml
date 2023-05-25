@@ -64,5 +64,38 @@ jobs:
             echo "ibmcloud e2e test (${{matrix.type}}) is failed."
             exit 2
           fi
+          caa_commitid=$(grep "CAA commit_id:" $log_name | cut -d " " -f 4)
+          echo ${caa_commitid} > caa_commitid
+        env:
+          bucket_name : "daily-e2e-test-bucket"
+      - name: Login to Quay container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+      - name: Download and Push podvm ubuntu oci image
+        run: |
+          caa_commit_id=$(cat caa_commitid)
+          echo "The built podvm image is based on CAA commit_id: ${caa_commit_id}"
+          arch_string=""
+          podvm_docker_name=""
+          case "${{matrix.type}}" in
+            amd64)
+              arch_string="amd64"
+              ;;
+            s390x-non-secure-execution)
+              arch_string="s390x"
+              ;;
+            s390x-secure-execution)
+              arch_string="s390x-se"
+              ;;
+          esac
+          podvm_image_tar_name="podvm-generic-ubuntu-${arch_string}-${caa_commit_id}.tar"
+          podvm_docker_name="quay.io/confidential-containers/podvm-generic-ubuntu-${arch_string}:${caa_commit_id}"
+          ibmcloud cos object-get --bucket daily-e2e-test-bucket --key=$podvm_image_tar_name $podvm_image_tar_name
+          docker load -i $podvm_image_tar_name
+          docker push ${podvm_docker_name}
+          echo "${podvm_docker_name} is pushed"
         env:
           bucket_name : "daily-e2e-test-bucket"
