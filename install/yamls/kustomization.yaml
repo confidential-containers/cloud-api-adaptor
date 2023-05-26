@@ -1,18 +1,3 @@
 resources:
-    - ccruntime-peer-pods.yaml
     - caa-pod.yaml
     - ../rbac
-
-# remove host-install configuration from ccruntime-peer-pods.yaml
-patchesJSON6902:
-- target:
-    kind: CcRuntime
-    name: ccruntime-sample
-  patch: |-
-    - op: remove
-      path: /spec/config/preInstall
-    - op: remove
-      path: /spec/config/postUninstall
-    - op: replace
-      path: /spec/config/runtimeClassNames
-      value: ["kata-remote"]
