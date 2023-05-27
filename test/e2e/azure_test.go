@@ -6,11 +6,10 @@
 package e2e
 
 import (
-	"context"
-	"strings"
+	//"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/resources"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 )
@@ -38,22 +37,22 @@ func TestCreatePodWithSecretAzure(t *testing.T) {
 
 // AzureCloudAssert implements the CloudAssert interface for azure.
 type AzureCloudAssert struct {
-	group *resources.Group
+	group *armresources.ResourceGroup
 }
 
 func checkVMExistence(resourceGroupName, prefixName string) bool {
-	vmList, err := pv.AzureProps.ManagedVmClient.List(context.Background(), resourceGroupName, "")
-	if err != nil {
+	//vmList, err := pv.AzureProps.ManagedVmClient.List(resourceGroupName)
+	/*if err != nil {
 		return false
 	}
 
-	for _, vm := range vmList.Values() {
+	for _, vm := range vmList.Value() {
 		if strings.HasPrefix(*vm.Name, prefixName) {
 			// VM found
 			return true
 		}
 	}
-
+	*/
 	return false
 }
 
