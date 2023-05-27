@@ -6,17 +6,19 @@ package provisioner
 import (
 	"errors"
 	"fmt"
+	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/compute/mgmt/compute"
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/containerservice/mgmt/containerservice"
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/network/mgmt/network"
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/resources"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 )
 
 type AzureProperties struct {
-	ResourceGroup     *resources.Group
+	ResourceGroup     *armresources.ResourceGroup
 	CloudProvider     string
 	SubscriptionID    string
 	ClientID          string
@@ -31,16 +33,17 @@ type AzureProperties struct {
 	SubnetID          string
 	ImageID           string
 	SshUserName       string
+	IsAzCliAuth       bool
 
 	InstanceSize string
 	NodeName     string
 	OsType       string
 
-	ResourceGroupClient *resources.GroupsClient
-	ManagedVnetClient   *network.VirtualNetworksClient
-	ManagedSubnetClient *network.SubnetsClient
-	ManagedAksClient    *containerservice.ManagedClustersClient
-	ManagedVmClient     *compute.VirtualMachinesClient
+	ResourceGroupClient *armresources.ResourceGroupsClient
+	ManagedVnetClient   *armnetwork.VirtualNetworksClient
+	ManagedSubnetClient *armnetwork.SubnetsClient
+	ManagedAksClient    *armcontainerservice.ManagedClustersClient
+	ManagedVmClient     *armcompute.VirtualMachinesClient
 }
 
 var AzureProps = &AzureProperties{}
@@ -62,6 +65,12 @@ func initAzureProperties(properties map[string]string) error {
 		SshUserName:       properties["SSH_USERNAME"],
 	}
 
+	CliAuthStr := properties["AZURE_CLI_AUTH"]
+	AzureProps.IsAzCliAuth = false
+	if strings.EqualFold(CliAuthStr, "yes") || strings.EqualFold(CliAuthStr, "true") {
+		AzureProps.IsAzCliAuth = true
+	}
+
 	AzureProps.VnetName = AzureProps.ClusterName + "_vnet"
 	AzureProps.SubnetName = AzureProps.ClusterName + "_subnet"
 	AzureProps.InstanceSize = "Standard_D2as_v5"
@@ -71,10 +80,10 @@ func initAzureProperties(properties map[string]string) error {
 	if AzureProps.SubscriptionID == "" {
 		return errors.New("AZURE_SUBSCRIPTION_ID was not set.")
 	}
-	if AzureProps.ClientID == "" {
+	if AzureProps.ClientID == "" && !AzureProps.IsAzCliAuth {
 		return errors.New("AZURE_CLIENT_ID was not set.")
 	}
-	if AzureProps.ClientSecret == "" {
+	if AzureProps.ClientSecret == "" && !AzureProps.IsAzCliAuth {
 		return errors.New("AZURE_CLIENT_SECRET was not set")
 	}
 	if AzureProps.TenantID == "" {
@@ -109,31 +118,41 @@ func initAzureProperties(properties map[string]string) error {
 
 func initManagedClients() error {
 	log.Trace("initManagedClients()")
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return err
 	}
 
-	groupsClient := resources.NewGroupsClient(AzureProps.SubscriptionID)
-	groupsClient.Authorizer = authorizer
+	resourcesClientFactory, err := armresources.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
+	if err != nil {
+		return err
+	}
+	resourceGroupClient := resourcesClientFactory.NewResourceGroupsClient()
 
-	vnetClient := network.NewVirtualNetworksClient(AzureProps.SubscriptionID)
-	vnetClient.Authorizer = authorizer
+	networkClientFactory, err := armnetwork.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
+	if err != nil {
+		return err
+	}
+	virtualNetworksClient := networkClientFactory.NewVirtualNetworksClient()
+	subnetsClient := networkClientFactory.NewSubnetsClient()
 
-	aksClient := containerservice.NewManagedClustersClient(AzureProps.SubscriptionID)
-	aksClient.Authorizer = authorizer
+	computeClientFactory, err := armcompute.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	subnetClient := network.NewSubnetsClient(AzureProps.SubscriptionID)
-	subnetClient.Authorizer = authorizer
+	virtualMachinesClient := computeClientFactory.NewVirtualMachinesClient()
 
-	vmClient := compute.NewVirtualMachinesClient(AzureProps.SubscriptionID)
-	vmClient.Authorizer = authorizer
+	containerserviceClientFactory, err := armcontainerservice.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	managedClustersClient := containerserviceClientFactory.NewManagedClustersClient()
 
-	AzureProps.ResourceGroupClient = &groupsClient
-	AzureProps.ManagedVnetClient = &vnetClient
-	AzureProps.ManagedSubnetClient = &subnetClient
-	AzureProps.ManagedAksClient = &aksClient
-	AzureProps.ManagedVmClient = &vmClient
-
+	AzureProps.ResourceGroupClient = resourceGroupClient
+	AzureProps.ManagedAksClient = managedClustersClient
+	AzureProps.ManagedVmClient = virtualMachinesClient
+	AzureProps.ManagedSubnetClient = subnetsClient
+	AzureProps.ManagedVnetClient = virtualNetworksClient
 	return nil
 }
