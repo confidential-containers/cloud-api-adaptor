@@ -19,14 +19,13 @@ import (
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
-	"github.com/Azure/go-autorest/autorest"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/wait"
-
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"github.com/Azure/go-autorest/autorest"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 func init() {
@@ -36,7 +35,8 @@ func init() {
 
 func createResourceGroup() error {
 	newRG := armresources.ResourceGroup{
-		Location: &AzureProps.Location}
+		Location: &AzureProps.Location,
+	}
 
 	log.Infof("Creating Resource group %s.\n", AzureProps.ResourceGroupName)
 	resourceGroupResp, err := AzureProps.ResourceGroupClient.CreateOrUpdate(context.Background(), AzureProps.ResourceGroupName, newRG, nil)
@@ -61,16 +61,17 @@ func deleteResourceGroup() error {
 				return nil
 			}
 		}
-		log.Infof("Failed to delete resource group %s:%v.\n", AzureProps.ResourceGroupName, err)
+		err = fmt.Errorf("Deleting resource group %s: %w", AzureProps.ResourceGroupName, err)
+		log.Error(err)
 		return err
 	}
 
 	_, err = pollerResponse.PollUntilDone(context.Background(), nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("TImeout waiting deletion of resource group %s: %w", AzureProps.ResourceGroupName, err)
 	}
 
-	log.Infof("Successfully Deleted Resource group %s.\n", AzureProps.ResourceGroupName)
+	log.Infof("Successfully deleted Resource group %s.\n", AzureProps.ResourceGroupName)
 	return nil
 }
 
@@ -99,7 +100,7 @@ func createVnetSubnet() error {
 	log.Infof("Creating  vnet %s in resource group %s with addressPrefix %s subnetAddressPrefix %s.\n", AzureProps.VnetName, AzureProps.ResourceGroupName, addressPrefix, subnetAddressPrefix)
 	pollerResponse, err := AzureProps.ManagedVnetClient.BeginCreateOrUpdate(context.Background(), AzureProps.ResourceGroupName, AzureProps.VnetName, vnetParams, nil)
 	if err != nil {
-		return fmt.Errorf("creating vnet: %w", err)
+		return fmt.Errorf("Failed creating vnet %s: %w", AzureProps.VnetName, err)
 	}
 
 	_, err = pollerResponse.PollUntilDone(context.Background(), nil)
@@ -211,11 +212,34 @@ func (p *AzureCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Conf
 func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("CreateCluster()")
 
-	pollerResp, err := AzureProps.ManagedAksClient.BeginCreateOrUpdate(
-		context.Background(),
-		AzureProps.ResourceGroupName,
-		AzureProps.ClusterName,
-		armcontainerservice.ManagedCluster{
+	managedcluster := &armcontainerservice.ManagedCluster{
+		Location: to.Ptr(AzureProps.Location),
+		Properties: &armcontainerservice.ManagedClusterProperties{
+			DNSPrefix: to.Ptr("caa"),
+			AgentPoolProfiles: []*armcontainerservice.ManagedClusterAgentPoolProfile{
+				{
+
+					Name:               to.Ptr(AzureProps.NodeName),
+					Count:              to.Ptr[int32](1),
+					VMSize:             to.Ptr(AzureProps.InstanceSize),
+					Mode:               to.Ptr(armcontainerservice.AgentPoolModeSystem),
+					OSType:             to.Ptr(armcontainerservice.OSType(AzureProps.OsType)),
+					EnableNodePublicIP: to.Ptr(false),
+					VnetSubnetID:       &AzureProps.SubnetID,
+				},
+			},
+			ServicePrincipalProfile: &armcontainerservice.ManagedClusterServicePrincipalProfile{
+				ClientID: to.Ptr(AzureProps.ClientID),
+				Secret:   to.Ptr(AzureProps.ClientSecret),
+			},
+		},
+		Identity: &armcontainerservice.ManagedClusterIdentity{
+			Type: to.Ptr(armcontainerservice.ResourceIdentityTypeSystemAssigned),
+		},
+	}
+
+	if AzureProps.IsAzCliAuth {
+		managedcluster = &armcontainerservice.ManagedCluster{
 			Location: to.Ptr(AzureProps.Location),
 			Properties: &armcontainerservice.ManagedClusterProperties{
 				DNSPrefix: to.Ptr("caa"),
@@ -231,12 +255,18 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 						VnetSubnetID:       &AzureProps.SubnetID,
 					},
 				},
-				ServicePrincipalProfile: &armcontainerservice.ManagedClusterServicePrincipalProfile{
-					ClientID: to.Ptr(AzureProps.ClientID),
-					Secret:   to.Ptr(AzureProps.ClientSecret),
-				},
 			},
-		},
+			Identity: &armcontainerservice.ManagedClusterIdentity{
+				Type: to.Ptr(armcontainerservice.ResourceIdentityTypeSystemAssigned),
+			},
+		}
+	}
+
+	pollerResp, err := AzureProps.ManagedAksClient.BeginCreateOrUpdate(
+		context.Background(),
+		AzureProps.ResourceGroupName,
+		AzureProps.ClusterName,
+		*managedcluster,
 		nil,
 	)
 

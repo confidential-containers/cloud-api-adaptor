@@ -8,13 +8,12 @@ import (
 	"fmt"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	log "github.com/sirupsen/logrus"
 )
 
 type AzureProperties struct {
@@ -110,7 +109,7 @@ func initAzureProperties(properties map[string]string) error {
 
 	err := initManagedClients()
 	if err != nil {
-		return fmt.Errorf("Initialising managed clients:%w", err)
+		return fmt.Errorf("Failed initialising managed clients:%w", err)
 	}
 
 	return nil
@@ -125,27 +124,27 @@ func initManagedClients() error {
 
 	resourcesClientFactory, err := armresources.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed creating resource client factory:%w", err)
 	}
 	resourceGroupClient := resourcesClientFactory.NewResourceGroupsClient()
 
 	networkClientFactory, err := armnetwork.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed creating network client factory:%w", err)
 	}
 	virtualNetworksClient := networkClientFactory.NewVirtualNetworksClient()
 	subnetsClient := networkClientFactory.NewSubnetsClient()
 
 	computeClientFactory, err := armcompute.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Failed creating compute client factory:%w", err)
 	}
 
 	virtualMachinesClient := computeClientFactory.NewVirtualMachinesClient()
 
 	containerserviceClientFactory, err := armcontainerservice.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Failed creating container service client factory:%w", err)
 	}
 	managedClustersClient := containerserviceClientFactory.NewManagedClustersClient()
 
