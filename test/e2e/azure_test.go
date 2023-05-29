@@ -6,7 +6,8 @@
 package e2e
 
 import (
-	//"strings"
+	"context"
+	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
@@ -41,18 +42,24 @@ type AzureCloudAssert struct {
 }
 
 func checkVMExistence(resourceGroupName, prefixName string) bool {
-	//vmList, err := pv.AzureProps.ManagedVmClient.List(resourceGroupName)
-	/*if err != nil {
-		return false
+	pager := pv.AzureProps.ManagedVmClient.NewListPager(resourceGroupName, nil)
+
+	for pager.More() {
+		page, err := pager.NextPage(context.Background())
+		if err != nil {
+			log.Errorf("failed to advance page: %v", err)
+			return false
+		}
+
+		for _, vm := range page.Value {
+			if strings.HasPrefix(*vm.Name, prefixName) {
+				// VM found
+				return true
+			}
+		}
+
 	}
 
-	for _, vm := range vmList.Value() {
-		if strings.HasPrefix(*vm.Name, prefixName) {
-			// VM found
-			return true
-		}
-	}
-	*/
 	return false
 }
 
