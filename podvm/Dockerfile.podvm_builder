@@ -5,45 +5,13 @@
 # Creates a builder container image that should be used to build the Pod VM
 # disk inside a container.
 #
-FROM ubuntu:20.04
 
-ARG GO_VERSION="1.19.6"
-ARG PROTOC_VERSION="3.11.4"
-ARG RUST_VERSION="1.66.0"
+ARG SOURCE_FROM=remote
+ARG PODVM_DISTRO=ubuntu
 
-# Without setting ENV gh-action is failing to use the correct values
-ENV GO_VERSION ${GO_VERSION}
-ENV RUST_VERSION ${RUST_VERSION}
-ENV PROTOC_VERSION ${PROTOC_VERSION}
-
-ENV DEBIAN_FRONTEND noninteractive
-
-RUN apt-get update -y && \
-    apt-get install --no-install-recommends -y build-essential cloud-image-utils curl git gnupg \
-        libdevmapper-dev libgpgme-dev lsb-release pkg-config qemu-kvm \
-        musl-tools unzip wget git && \
-    curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - && \
-    echo "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee -a /etc/apt/sources.list && \
-    apt-get update && apt-get install --no-install-recommends -y packer && \
-    apt-get clean && \
-    curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -f go${GO_VERSION}.linux-amd64.tar.gz
-
-
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${RUST_VERSION}
-
-ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
-
-RUN echo $PATH
-
-RUN rustup target add x86_64-unknown-linux-musl && ln -sf /usr/bin/g++ /bin/musl-g++
-
-
-RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
-    unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
-
-WORKDIR /src
+ARG UBUNTU_IMG=ubuntu:20.04
+ARG CENTOS_IMG=quay.io/centos/centos:stream8
+ARG RHEL_IMG=registry.access.redhat.com/ubi9/ubi:9.1
 
 ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
 ARG CAA_SRC_REF="staging"
@@ -51,12 +19,126 @@ ARG CAA_SRC_REF="staging"
 ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
 ARG KATA_SRC_BRANCH="CCv0"
 
-RUN echo $CAA_SRC
+ARG GO_VERSION="1.19.6"
+ARG PROTOC_VERSION="3.11.4"
+ARG RUST_VERSION="1.66.0"
 
-RUN echo $CAA_SRC_REF
 
-RUN git clone ${CAA_SRC} -b ${CAA_SRC_REF} cloud-api-adaptor
+##### Ubuntu Base Image #####
+
+FROM ${UBUNTU_IMG} AS ubuntu-base
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"] 
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get update -y && \
+    apt-get install --no-install-recommends -y build-essential cloud-image-utils curl git gnupg \
+        libdevmapper-dev libgpgme-dev lsb-release pkg-config qemu-kvm \
+        musl-tools unzip wget git && \
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - && \
+    echo "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee -a /etc/apt/sources.list && \
+    apt-get update && apt-get install --no-install-recommends -y packer && \
+    apt-get clean
+
+
+##### CentOS Base Image #####
+
+FROM ${CENTOS_IMG} AS centos-base
+
+RUN dnf install -y 'dnf-command(config-manager)' && dnf config-manager --set-enabled powertools && \
+    dnf install -y epel-release epel-next-release && dnf update -y && \
+    dnf groupinstall -y 'Development Tools' && \
+    dnf install -y yum-utils gnupg git curl pkg-config libseccomp-devel gpgme-devel \
+        device-mapper-devel qemu-kvm unzip wget libassuan-devel golang-github-cpuguy83-md2man \
+	    genisoimage cloud-utils-growpart cloud-init && \
+    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
+    dnf install -y packer && \
+    dnf clean all
+
+# set a correspond qemu-system-* named link to qemu-kvm
+RUN ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-$(uname -m)
+
+# cloud-utils package is not available for centos.
+RUN git clone https://github.com/canonical/cloud-utils
+RUN cd cloud-utils && make install
+
+ENV LIBC gnu
+
+
+##### RHEL Base Image #####
+
+FROM ${RHEL_IMG} AS rhel-base
+
+RUN dnf groupinstall -y 'Development Tools' && \
+    dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
+        device-mapper-devel qemu-kvm unzip wget libassuan-devel \
+	genisoimage cloud-utils-growpart cloud-init && \
+    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
+    dnf install -y packer && \
+    dnf clean all 
+
+# set a correspond qemu-system-* named link to qemu-kvm
+RUN ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-$(uname -m)
+
+# cloud-utils package is not available for rhel.
+RUN git clone https://github.com/canonical/cloud-utils
+RUN cd cloud-utils && make install
+
+ENV LIBC gnu
+
+
+##### Builder Base Image #####
+
+FROM ${PODVM_DISTRO}-base AS builder-base
+
+ARG GO_VERSION
+ARG PROTOC_VERSION
+ARG RUST_VERSION
+
+# Without setting ENV gh-action is failing to use the correct values
+ENV GO_VERSION ${GO_VERSION}
+ENV RUST_VERSION ${RUST_VERSION}
+ENV PROTOC_VERSION ${PROTOC_VERSION}
+
+RUN curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
+    rm -f go${GO_VERSION}.linux-amd64.tar.gz
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${RUST_VERSION}
+ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
+RUN echo $PATH
+RUN rustup target add x86_64-unknown-linux-musl && ln -sf /usr/bin/g++ /bin/musl-g++
+
+RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
+    unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
+
+WORKDIR /src
+ENV GOPATH /src
+
+ARG KATA_SRC
+ARG KATA_SRC_BRANCH
 RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH} kata-containers
 
 
-ENV GOPATH /src
+##### Builder Release Image #####
+
+FROM builder-base AS builder-remote
+
+ARG CAA_SRC
+ARG CAA_SRC_REF
+
+RUN git clone ${CAA_SRC} cloud-api-adaptor && \
+    cd cloud-api-adaptor && \
+    git fetch origin ${CAA_SRC_REF} && \
+    git checkout ${CAA_SRC_REF} && \
+    echo ${CAA_SRC} && \
+    echo ${CAA_SRC_REF}
+
+##### Builder Dev Image #####
+
+FROM builder-base AS builder-local
+
+COPY . /src/cloud-api-adaptor
+
+
+##### Builder Image #####
+
+FROM builder-${SOURCE_FROM}

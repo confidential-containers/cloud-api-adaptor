@@ -9,24 +9,71 @@ ARG BUILDER_IMG="quay.io/confidential-containers/podvm-builder-ubuntu"
 # Override it via build-args for different platforms
 ARG BINARIES_IMG="quay.io/confidential-containers/podvm-binaries-ubuntu-amd64"
 
-FROM ${BINARIES_IMG} AS podvm_binaries
-FROM ${BUILDER_IMG} AS podvm_builder
+ARG SOURCE_FROM=remote
+ARG PODVM_DISTRO=ubuntu
+ARG ARCH=x86_64
+ARG CAA_SRC
+ARG CAA_SRC_REF
+
 
 ARG CLOUD_PROVIDER
 ARG SE_BOOT
-ARG PODVM_DISTRO=ubuntu
 ARG UEFI=false
 
-# If not provided, uses system architecture
-ARG ARCH=x86_64
-ARG CAA_SRC=""
-ARG CAA_SRC_REF=""
+ARG EXTRAFILES_IMG=${SE_BOOT:+hostkeys}
 
-ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
-ENV PODVM_DISTRO ${PODVM_DISTRO}
+# Defaults to Ubuntu Focal amd64 release image. These variables can be overriden as needed
+ARG UBUNTU_IMAGE_URL=https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-amd64.img
+ARG UBUNTU_IMAGE_CHECKSUM=3895e38566e5c2c019f5c6f825ab7570ee34dac6b9142fab0c7e5a78084c4280
+
+# Defaults to CentOS 8-stream x86_64 image. These variables can be overriden as needed
+ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
+ARG CENTOS_IMAGE_CHECKSUM=8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c
+
+ARG RHEL_IMAGE_URL="/tmp/rhel.qcow2"
+ARG RHEL_IMAGE_CHECKSUM
+
+
+FROM ${BINARIES_IMG} AS binaries
+
+FROM scratch AS hostkeys
+
+# Copy HOST KEY documents to podvm/files folder for Secure Execution
+COPY podvm/files/HKD-*.crt /src/cloud-api-adaptor/podvm/files/
+
+FROM ${EXTRAFILES_IMG:-scratch} AS extrafiles
+
+FROM ${BUILDER_IMG} AS builder-common
+
+ARG ARCH
 ENV ARCH ${ARCH}
-ENV UEFI ${UEFI}
-ENV SE_BOOT ${SE_BOOT}
+
+# Installs add-ons for foreign target, if required
+RUN ./cloud-api-adaptor/podvm/hack/cross-build-extras.sh
+
+ARG UBUNTU_IMAGE_URL
+ARG UBUNTU_IMAGE_CHECKSUM
+ARG CENTOS_IMAGE_URL
+ARG CENTOS_IMAGE_CHECKSUM
+ARG RHEL_IMAGE_URL
+ARG RHEL_IMAGE_CHECKSUM
+
+ENV UBUNTU_IMAGE_URL ${UBUNTU_IMAGE_URL}
+ENV UBUNTU_IMAGE_CHECKSUM ${UBUNTU_IMAGE_CHECKSUM}
+ENV CENTOS_IMAGE_URL ${CENTOS_IMAGE_URL}
+ENV CENTOS_IMAGE_CHECKSUM ${CENTOS_IMAGE_CHECKSUM}
+ENV RHEL_IMAGE_URL ${RHEL_IMAGE_URL}
+ENV RHEL_IMAGE_CHECKSUM ${RHEL_IMAGE_CHECKSUM}
+
+# Copy the binaries to podvm/files folder
+COPY --from=binaries /podvm-binaries.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/cloud-api-adaptor/podvm/files
+
+# Copy the pause_bundle to podvm/files folder
+COPY --from=binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
+
+FROM builder-common AS builder-remote
 
 RUN if [ -n "${CAA_SRC}" ]; then \
       rm -rf cloud-api-adaptor && \
@@ -35,29 +82,32 @@ RUN if [ -n "${CAA_SRC}" ]; then \
     if [ -n "${CAA_SRC_REF}" ]; then \
       cd cloud-api-adaptor && \
       git fetch origin ${CAA_SRC_REF} && \
-      git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
+      git checkout ${CAA_SRC_REF} ;\
     fi
-# Installs add-ons for foreign target, if required
-RUN ./cloud-api-adaptor/podvm/hack/cross-build-extras.sh
 
-# Defaults to Ubuntu Focal amd64 release image. These variables can be overriden as needed
-ARG UBUNTU_IMAGE_URL=https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-amd64.img
-ARG UBUNTU_IMAGE_CHECKSUM=3895e38566e5c2c019f5c6f825ab7570ee34dac6b9142fab0c7e5a78084c4280
+FROM builder-common AS builder-local
 
-ENV UBUNTU_IMAGE_URL ${UBUNTU_IMAGE_URL}
-ENV UBUNTU_IMAGE_CHECKSUM ${UBUNTU_IMAGE_CHECKSUM}
+RUN rm -fr /src/cloud-api-adaptor
+COPY . /src/cloud-api-adaptor
 
-# Copy the binaries to podvm/files folder
-COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/cloud-api-adaptor/podvm/files
-RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/cloud-api-adaptor/podvm/files
+FROM builder-${SOURCE_FROM} AS builder
 
-# Copy the pause_bundle to podvm/files folder
-COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files
-RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
+ARG CLOUD_PROVIDER
+ARG SE_BOOT
+ARG PODVM_DISTRO
+ARG UEFI
+ARG ARCH
+ARG CAA_SRC
+ARG CAA_SRC_REF
 
-# Copy HOST KEY documents to podvm/files folder for Secure Execution
-# Use one files/.dummy.crt file at here to avoid `COPY failed: no source files were specified` for non-SE build
-COPY files/*.crt /src/cloud-api-adaptor/podvm/files/
+ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
+ENV PODVM_DISTRO ${PODVM_DISTRO}
+ENV ARCH ${ARCH}
+ENV UEFI ${UEFI}
+ENV SE_BOOT ${SE_BOOT}
+
+# Copy additional files from ${EXTRAFILES_IMG}
+COPY --from=extrafiles / /src/cloud-api-adaptor/podvm/files
 
 RUN cd cloud-api-adaptor/podvm && \
      make BINARIES= PAUSE_BUNDLE= image
@@ -68,4 +118,4 @@ RUN cd cloud-api-adaptor/podvm && \
 #RUN  make image
 
 FROM scratch
-COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 /
+COPY --from=builder /src/cloud-api-adaptor/podvm/output/*.qcow2 /
