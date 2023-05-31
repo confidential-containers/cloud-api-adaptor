@@ -1,8 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-resources:
-  - ../../yamls
+bases:
+- ../../yamls
 
 images:
 - name: cloud-api-adaptor
@@ -59,11 +59,11 @@ secretGenerator:
 #  - <path_to_client.key> # set - path to client.key
 ##TLS_SETTINGS
 
-patches:
-  - path: cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
+patchesStrategicMerge:
+  - cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
 ##IAM PROFILE SETTINGS
-# - path: cr_token_projection.yaml
+# - cr_token_projection.yaml
 ##/IAM PROFILE SETTINGS
 ##TLS_SETTINGS
-# - path: tls_certs_volume_mount.yaml # set (for tls)
+# - tls_certs_volume_mount.yaml # set (for tls)
 ##TLS_SETTINGS
