@@ -28,7 +28,7 @@ one_of() {
         for i in "$@"; do
                 [ -n "${!i}" ] && echo "\$$i is SET" && EXIST=1
         done
-        [[ -z $EXIST ]] && echo "At least one of these must be SET: $@" && exit 1
+        [[ -z $EXIST ]] && echo "At least one of these must be SET: $*" && exit 1
 }
 
 aws() {
