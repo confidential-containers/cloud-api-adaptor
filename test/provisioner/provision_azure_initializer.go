@@ -33,6 +33,7 @@ type AzureProperties struct {
 	ImageID           string
 	SshUserName       string
 	IsAzCliAuth       bool
+	IsCIManaged       bool
 
 	InstanceSize string
 	NodeName     string
@@ -62,6 +63,12 @@ func initAzureProperties(properties map[string]string) error {
 		ImageID:           properties["AZURE_IMAGE_ID"],
 		SubnetID:          properties["AZURE_SUBNET_ID"],
 		SshUserName:       properties["SSH_USERNAME"],
+	}
+
+	CIManagedStr := properties["IS_CI_MANAGED_CLUSTER"]
+	AzureProps.IsCIManaged = false
+	if strings.EqualFold(CIManagedStr, "yes") || strings.EqualFold(CIManagedStr, "true") {
+		AzureProps.IsCIManaged = true
 	}
 
 	CliAuthStr := properties["AZURE_CLI_AUTH"]

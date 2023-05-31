@@ -34,6 +34,11 @@ func init() {
 }
 
 func createResourceGroup() error {
+	if AzureProps.IsCIManaged {
+		log.Infof("Resource group %s is CI managed. No need to create new one manually\n", AzureProps.ResourceGroupName)
+		return nil
+	}
+
 	newRG := armresources.ResourceGroup{
 		Location: &AzureProps.Location,
 	}
@@ -52,8 +57,12 @@ func createResourceGroup() error {
 }
 
 func deleteResourceGroup() error {
-	log.Infof("Deleting Resource group %s.\n", AzureProps.ResourceGroupName)
+	if AzureProps.IsCIManaged {
+		log.Infof("Resource group %s is CI managed. No need to delete manually\n", AzureProps.ResourceGroupName)
+		return nil
+	}
 
+	log.Infof("Deleting Resource group %s.\n", AzureProps.ResourceGroupName)
 	pollerResponse, err := AzureProps.ResourceGroupClient.BeginDelete(context.Background(), AzureProps.ResourceGroupName, nil)
 	if err != nil {
 		if typedError, ok := err.(autorest.DetailedError); ok {
