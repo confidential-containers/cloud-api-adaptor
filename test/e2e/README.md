@@ -4,6 +4,8 @@ This directory contain the framework to run complete end-to-end (e2e) tests for 
 
 # Running end-to-end tests
 
+>**Note:** When running the e2e framework, both the `kubectl` and `git` commands needs to be available on `PATH`.
+
 As long as the cloud provider support is implemented on this framework, you can run the tests
 as shown below for *libvirt*:
 
