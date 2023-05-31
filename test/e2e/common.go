@@ -56,6 +56,10 @@ func newNginxPod(namespace string) *corev1.Pod {
 	return newPod(namespace, "nginx", "nginx", "nginx", withRestartPolicy(corev1.RestartPolicyNever))
 }
 
+func newNginxPodWithName(namespace string, podName string) *corev1.Pod {
+	return newPod(namespace, podName, "nginx", "nginx", withRestartPolicy(corev1.RestartPolicyNever))
+}
+
 func newBusyboxPod(namespace string) *corev1.Pod {
 	return newPod(namespace, "busybox-pod", "busybox", "quay.io/prometheus/busybox:latest", withCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 }

@@ -259,3 +259,13 @@ func doTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, assert Cloud
 
 	newTestCase(t, assert, "Peer Pod Container Connected to External IP", pod).withTestCommands(testCommands).run()
 }
+
+// doTestCreateConfidentialPod verify a confidential peer-pod can be created.
+func doTestCreateConfidentialPod(t *testing.T, assert CloudAssert, testCommands []testCommand) {
+	namespace := envconf.RandomName("default", 7)
+	pod := newNginxPodWithName(namespace, "confidential-pod-nginx")
+	for i := 0; i < len(testCommands); i++ {
+		testCommands[i].containerName = pod.Spec.Containers[0].Name
+	}
+	newTestCase(t, assert, "Confidential PodVM is created", pod).withTestCommands(testCommands).run()
+}

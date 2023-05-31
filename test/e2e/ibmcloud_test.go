@@ -6,6 +6,7 @@
 package e2e
 
 import (
+	"bytes"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
@@ -18,6 +19,50 @@ func TestCreateSimplePod(t *testing.T) {
 		vpc: pv.IBMCloudProps.VPC,
 	}
 	doTestCreateSimplePod(t, assert)
+}
+
+func TestCreateConfidentialPod(t *testing.T) {
+	instanceProfile := pv.IBMCloudProps.InstanceProfile
+	if strings.HasPrefix(instanceProfile, "bz2e") {
+		log.Infof("Test SE pod")
+		assert := IBMCloudAssert{
+			vpc: pv.IBMCloudProps.VPC,
+		}
+
+		testCommands := []testCommand{
+			{
+				command:       []string{"cat", "/sys/firmware/uv/prot_virt_guest"},
+				containerName: "fakename", //container name will be updated after pod is created.
+				testCommandStdoutFn: func(stdout bytes.Buffer) bool {
+					trimmedStdout := strings.Trim(stdout.String(), "\n")
+					if trimmedStdout == "1" {
+						log.Infof("The pod is SE pod based on content of prot_virt_guest file: %s", stdout.String())
+						return true
+					} else {
+						log.Infof("The pod is non SE pod based on content of prot_virt_guest file: %s", stdout.String())
+						return false
+					}
+				},
+			},
+			{
+				command:       []string{"grep", "facilities", "/proc/cpuinfo"},
+				containerName: "fakename", //container name will be updated after pod is created.
+				testCommandStdoutFn: func(stdout bytes.Buffer) bool {
+					if strings.Contains(stdout.String(), "158") {
+						log.Infof("The pod is SE pod based on facilities of /proc/cpuinfo file: %s", stdout.String())
+						return true
+					} else {
+						log.Infof("The pod is non SE pod based on facilities of /proc/cpuinfo file: %s", stdout.String())
+						return false
+					}
+				},
+			},
+		}
+		doTestCreateConfidentialPod(t, assert, testCommands)
+	} else {
+		log.Infof("Ignore SE test for simple pod")
+	}
+
 }
 
 func TestCreatePodWithConfigMap(t *testing.T) {
