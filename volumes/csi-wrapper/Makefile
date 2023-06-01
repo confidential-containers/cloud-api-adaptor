@@ -3,15 +3,15 @@ SOURCEDIRS := ./cmd ./pkg
 PACKAGES   := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES    := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 
-# Determine the go arch (amd64 for x86, ppc64le for power, s390x for z)
-GO_BLD_ARCH=$(shell go env GOHOSTARCH)
+ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
+GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
 BUILD_ROOT=${PWD}
 
 all: build
 build: $(BINARIES)
 
 $(BINARIES): $(SOURCES)
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(GO_BLD_ARCH) go build  -o "$(BUILD_ROOT)/build/$@/$@" "cmd/$@/main.go"
+	$(GOOPTIONS) go build  -o "$(BUILD_ROOT)/build/$@/$@" "cmd/$@/main.go"
 
 test:
 	go test -cover $(PACKAGES)
@@ -28,19 +28,31 @@ clean:
 	rm -fr $(BUILD_ROOT)/build/*
 
 .PHONY: csi-node-wrapper-docker
-csi-node-wrapper-docker: csi-node-wrapper
-	cp hack/dockers/csi-node-wrapper/Dockerfile $(BUILD_ROOT)/build/csi-node-wrapper/
-	docker build -t csi-node-wrapper:local $(BUILD_ROOT)/build/csi-node-wrapper
+csi-node-wrapper-docker:
+	docker build -t csi-node-wrapper:local \
+		--build-arg BINARY=csi-node-wrapper \
+		--build-arg SOURCE_FROM=local \
+		--build-arg TARGETARCH=s390x \
+		--build-arg TARGETPLATFORM=s390x \
+		-f Dockerfile.csi_wrappers .
 
 .PHONY: csi-controller-wrapper-docker
-csi-controller-wrapper-docker: csi-controller-wrapper
-	cp hack/dockers/csi-controller-wrapper/Dockerfile $(BUILD_ROOT)/build/csi-controller-wrapper/
-	docker build -t csi-controller-wrapper:local $(BUILD_ROOT)/build/csi-controller-wrapper
+csi-controller-wrapper-docker:
+	docker build -t csi-controller-wrapper:local \
+		--build-arg BINARY=csi-controller-wrapper \
+		--build-arg SOURCE_FROM=local \
+		--build-arg TARGETARCH=s390x \
+		--build-arg TARGETPLATFORM=s390x \
+		-f Dockerfile.csi_wrappers .
 
 .PHONY: csi-podvm-wrapper-docker
-csi-podvm-wrapper-docker: csi-podvm-wrapper
-	cp hack/dockers/csi-podvm-wrapper/Dockerfile $(BUILD_ROOT)/build/csi-podvm-wrapper/
-	docker build -t csi-podvm-wrapper:local $(BUILD_ROOT)/build/csi-podvm-wrapper
+csi-podvm-wrapper-docker:
+	docker build -t csi-podvm-wrapper:local \
+		--build-arg BINARY=csi-podvm-wrapper \
+		--build-arg SOURCE_FROM=local \
+		--build-arg TARGETARCH=s390x \
+		--build-arg TARGETPLATFORM=s390x \
+		-f Dockerfile.csi_wrappers .
 
 .PHONY: import-csi-node-wrapper-docker
 import-csi-node-wrapper-docker: csi-node-wrapper-docker

@@ -1,0 +1,42 @@
+# Copyright Confidential Containers Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Builds csi wrappers images inside container
+
+ARG SOURCE_FROM=remote
+
+##### Builder Dev Image #####
+FROM --platform=${BUILDPLATFORM} golang:1.19 AS builder-local
+WORKDIR /src
+COPY go.mod go.sum ./cloud-api-adaptor/volumes/csi-wrapper/
+COPY Makefile ./cloud-api-adaptor/volumes/csi-wrapper/
+COPY cmd   ./cloud-api-adaptor/volumes/csi-wrapper/cmd
+COPY pkg   ./cloud-api-adaptor/volumes/csi-wrapper/pkg
+
+##### Builder Release Image #####
+FROM --platform=${BUILDPLATFORM} golang:1.19 AS builder-remote
+ARG BINARY
+ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
+ARG CAA_SRC_REF="staging"
+
+WORKDIR /src
+
+RUN echo $CAA_SRC
+RUN echo $CAA_SRC_REF
+RUN git clone ${CAA_SRC} -b ${CAA_SRC_REF} cloud-api-adaptor
+
+FROM builder-${SOURCE_FROM} AS builder
+ARG TARGETARCH
+ARG BINARY
+
+RUN cd cloud-api-adaptor/volumes/csi-wrapper/ && make ARCH=${TARGETARCH} ${BINARY}
+
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+FROM --platform=${TARGETPLATFORM} gcr.io/distroless/static:nonroot
+ARG BINARY
+WORKDIR /
+COPY --from=builder /src/cloud-api-adaptor/volumes/csi-wrapper/build/${BINARY}/${BINARY} /usr/bin/${BINARY}
+
+ENTRYPOINT ["/usr/bin/${BINARY}"]
