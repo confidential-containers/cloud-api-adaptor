@@ -10,7 +10,7 @@
 UBUNTU_RELEASE     = focal
 SKOPEO_VERSION     = 1.5.0
 UMOCI_VERSION      = 0.4.7
-AA_VERSION         = v0.5.0
+AA_VERSION         = aa1d3c510350cd2f2668aca374abba19e2b73b3f
 
 IMAGE_PREFIX := podvm
 
@@ -128,7 +128,7 @@ $(ATTESTATION_AGENT_SRC):
 $(ATTESTATION_AGENT): $(ATTESTATION_AGENT_SRC)
 	cd "$(ATTESTATION_AGENT_SRC)" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" ttrpc=true LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
-	install --compare "$(ATTESTATION_AGENT_SRC)/app/target/$(RUST_TARGET)/release/attestation-agent" "$@"
+	install --compare "$(ATTESTATION_AGENT_SRC)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
 
 clean_sources:
 	[ -d "$(ATTESTATION_AGENT_SRC)" ] && cd "$(ATTESTATION_AGENT_SRC)" && git clean -xfd
