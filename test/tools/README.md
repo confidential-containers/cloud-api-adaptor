@@ -27,7 +27,7 @@ export CLOUD_PROVIDER=${CLOUD_PROVIDER}
 export TEST_PROVISION_FILE=${PROPERTIES_FILE_PATH}
 export TEST_PROVISION="yes"
 export INSTALL_DIR="../../install"
-./caa-provisioner-cli -actions=${ACTION}
+./caa-provisioner-cli -action=${ACTION}
 ```
 `ACTION` supports `provision`, `deprovision`, `install`, `uninstall` and `uploadimage`.
 
