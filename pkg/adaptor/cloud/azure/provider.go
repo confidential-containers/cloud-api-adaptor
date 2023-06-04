@@ -225,6 +225,16 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		}
 	}
 
+	// Add tags to the instance
+	tags := map[string]*string{
+		"Name": to.Ptr(instanceName),
+	}
+
+	// Add custom tags from serviceConfig.Tags to the instance
+	for k, v := range p.serviceConfig.Tags {
+		tags[k] = to.Ptr(v)
+	}
+
 	vmParameters := armcompute.VirtualMachine{
 		Location: to.Ptr(p.serviceConfig.Region),
 		Properties: &armcompute.VirtualMachineProperties{
@@ -268,6 +278,8 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 			},
 			SecurityProfile: securityProfile,
 		},
+		// Add tags to the instance
+		Tags: tags,
 	}
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
