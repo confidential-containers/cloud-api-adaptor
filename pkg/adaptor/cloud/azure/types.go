@@ -43,6 +43,7 @@ type Config struct {
 	DisableCVM           bool
 	InstanceSizes        instanceSizes
 	InstanceSizeSpecList []cloud.InstanceTypeSpec
+	Tags                 cloud.KeyValueFlag
 }
 
 func (c Config) Redact() Config {
