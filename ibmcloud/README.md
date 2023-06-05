@@ -2,10 +2,6 @@
 
 This guide describes how to set up a demo environment on IBM Cloud for peer pod VMs using the operator deployment approach.
 
-> **Note:** The previous approach that used terraform and ansible to install peer pods and build the cloud-api-adaptor
-and peer pod vm image as part of a single process is deprecated in favour of the operator (which aligns with the other
- cloud providers), but can currently be found in the [terraform directory](./terraform/README.md).
-
 The high level flow involved is:
 
 - Build and upload a peer pod custom image to IBM Cloud
