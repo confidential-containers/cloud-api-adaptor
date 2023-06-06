@@ -8,7 +8,7 @@ spec:
             - --endpoint=/csi/csi-controller-wrapper.sock
             - --target-endpoint=/csi/csi.sock
             - --namespace=kube-system
-          image: docker.io/library/csi-controller-wrapper:local
+          image: quay.io/confidential-containers/csi-controller-wrapper:latest
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: /csi

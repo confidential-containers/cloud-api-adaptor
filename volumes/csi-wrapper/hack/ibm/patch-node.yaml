@@ -13,7 +13,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-          image: docker.io/library/csi-node-wrapper:local
+          image: quay.io/confidential-containers/csi-node-wrapper:latest
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: /csi

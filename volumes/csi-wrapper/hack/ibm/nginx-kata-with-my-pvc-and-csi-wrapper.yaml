@@ -65,12 +65,11 @@ spec:
             fieldRef:
               fieldPath: spec.nodeName
       args:
-        - /usr/bin/csi-podvm-wrapper
         - --v=5
         - --endpoint=/tmp/csi-podvm-wrapper.sock
         - --target-endpoint=/tmp/csi.sock
         - --namespace=kube-system
-      image: liudali/csi-podvm-wrapper:dev
+      image: quay.io/confidential-containers/csi-podvm-wrapper:latest
       imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
