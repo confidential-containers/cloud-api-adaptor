@@ -25,8 +25,21 @@ var errNotReady = errors.New("address not ready")
 
 const maxInstanceNameLen = 63
 
+// Make ec2Client a mockable interface
+type ec2Client interface {
+	RunInstances(ctx context.Context,
+		params *ec2.RunInstancesInput,
+		optFns ...func(*ec2.Options)) (*ec2.RunInstancesOutput, error)
+	TerminateInstances(ctx context.Context,
+		params *ec2.TerminateInstancesInput,
+		optFns ...func(*ec2.Options)) (*ec2.TerminateInstancesOutput, error)
+	CreateTags(ctx context.Context,
+		params *ec2.CreateTagsInput,
+		optFns ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error)
+}
+
 type awsProvider struct {
-	ec2Client     *ec2.Client
+	ec2Client     ec2Client
 	serviceConfig *Config
 }
 
