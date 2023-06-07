@@ -86,6 +86,7 @@ az sig image-definition create \
 
 ## Build Pod VM Image
 
+### Option-1: Modifying existing marketplace image
 - Install packer by following [these instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
 
 > **NOTE**: For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
@@ -185,6 +186,91 @@ docker build -t azure \
   --build-arg OFFER=RHEL \
   --build-arg PODVM_DISTRO=rhel \
   -f Dockerfile .
+```
+
+### Option-2: Using precreated QCOW2 image
+
+The precreated images are available as container images from `quay.io/confidential-containers`
+
+- Download QCOW2 image
+```
+mkdir -p qcow2-img && cd qcow2-img
+
+export QCOW2_IMAGE="quay.io/confidential-containers/podvm-generic-ubuntu-amd64:latest"
+curl -LO https://raw.githubusercontent.com/confidential-containers/cloud-api-adaptor/staging/podvm/hack/download-image.sh
+
+bash download-image.sh $QCOW2_IMAGE . -o podvm.qcow2
+
+```
+
+- Convert QCOW2 image to VHD format
+You'll need the `qemu-img` tool for conversion.
+```
+qemu-img convert -O vpc -o subformat=fixed,force_size podvm.qcow2 podvm.vhd
+```
+
+- Create Storage Account
+Create a storage account if none exists. Otherwise you can use the existing storage account.
+```
+export AZURE_STORAGE_ACCOUNT=cocosa
+
+az storage account create \
+--name $AZURE_STORAGE_ACCOUNT  \
+    --resource-group $AZURE_RESOURCE_GROUP \
+    --location $AZURE_REGION \
+    --sku Standard_ZRS \
+    --encryption-services blob
+```
+
+- Create storage container
+Create a storage container if none exists. Otherwise you can use the existing storage account
+
+```
+export AZURE_STORAGE_CONTAINER=vhd
+az storage container create \
+    --account-name $AZURE_STORAGE_ACCOUNT \
+    --name $AZURE_STORAGE_CONTAINER \
+    --auth-mode login
+```
+
+- Get storage key
+```
+AZURE_STORAGE_KEY=$(az storage account keys list --resource-group $AZURE_RESOURCE_GROUP --account-name $AZURE_STORAGE_ACCOUNT --query "[?keyName=='key1'].{Value:value}" --output tsv)
+
+echo $AZURE_STORAGE_KEY
+```
+
+- Upload VHD file to Azure Storage
+```
+az storage blob upload  --container-name $AZURE_STORAGE_CONTAINER --name podvm.vhd --file podvm.vhd
+```
+
+- Get the VHD URI
+```
+AZURE_STORAGE_EP=$(az storage account list -g $AZURE_RESOURCE_GROUP --query "[].{uri:primaryEndpoints.blob} | [? contains(uri, '$AZURE_STORAGE_ACCOUNT')]" --output tsv)
+
+echo $AZURE_STORAGE_EP
+
+export VHD_URI="${AZURE_STORAGE_EP}${AZURE_STORAGE_CONTAINER}/podvm.vhd"
+```
+
+- Create Azure VM Image Version
+```
+az sig image-version create \
+   --resource-group $AZURE_RESOURCE_GROUP \
+   --gallery-name $GALLERY_NAME  \
+   --gallery-image-definition $GALLERY_IMAGE_DEF_NAME \
+   --gallery-image-version 0.0.1 \
+   --target-regions $AZURE_REGION \
+   --os-vhd-uri "$VHD_URI" \
+   --os-vhd-storage-account $AZURE_STORAGE_ACCOUNT
+```
+On success, the command will generate the image id, which needs to be used to set the value of `AZURE_IMAGE_ID` in `peer-pods-cm` configmap.
+You can also use the following command to retrieve the image id
+```
+AZURE_IMAGE_ID=$(az sig image-version  list --resource-group  $AZURE_RESOURCE_GROUP --gallery-name $GALLERY_NAME --gallery-image-definition $GALLERY_IMAGE_DEF_NAME_COCO --query "[].{Id: id}" --output tsv
+
+echo $AZURE_IMAGE_ID
 ```
 
 ## Build CAA Container Image
