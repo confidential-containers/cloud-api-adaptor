@@ -283,6 +283,9 @@ func (m *agentMock) WaitProcess(ctx context.Context, req *pb.WaitProcessRequest)
 func (m *agentMock) UpdateContainer(ctx context.Context, req *pb.UpdateContainerRequest) (*types.Empty, error) {
 	return &types.Empty{}, nil
 }
+func (m *agentMock) UpdateEphemeralMounts(ctx context.Context, req *pb.UpdateEphemeralMountsRequest) (*types.Empty, error) {
+	return &types.Empty{}, nil
+}
 func (m *agentMock) StatsContainer(ctx context.Context, req *pb.StatsContainerRequest) (*pb.StatsContainerResponse, error) {
 	return &pb.StatsContainerResponse{}, nil
 }
@@ -365,6 +368,9 @@ func (m *agentMock) GetVolumeStats(ctx context.Context, req *pb.VolumeStatsReque
 	return &pb.VolumeStatsResponse{}, nil
 }
 func (m *agentMock) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeRequest) (*types.Empty, error) {
+	return &types.Empty{}, nil
+}
+func (p *agentMock) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (*types.Empty, error) {
 	return &types.Empty{}, nil
 }
 func (m *agentMock) PullImage(ctx context.Context, req *pb.PullImageRequest) (*pb.PullImageResponse, error) {

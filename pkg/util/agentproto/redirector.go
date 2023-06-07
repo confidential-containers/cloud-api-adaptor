@@ -144,6 +144,14 @@ func (s *redirector) UpdateContainer(ctx context.Context, req *pb.UpdateContaine
 	return s.agentClient.UpdateContainer(ctx, req)
 }
 
+func (s *redirector) UpdateEphemeralMounts(ctx context.Context, req *pb.UpdateEphemeralMountsRequest) (res *types.Empty, err error) {
+
+	if err := s.Connect(ctx); err != nil {
+		return nil, err
+	}
+	return s.agentClient.UpdateEphemeralMounts(ctx, req)
+}
+
 func (s *redirector) StatsContainer(ctx context.Context, req *pb.StatsContainerRequest) (res *pb.StatsContainerResponse, err error) {
 
 	if err := s.Connect(ctx); err != nil {
@@ -166,6 +174,13 @@ func (s *redirector) ResumeContainer(ctx context.Context, req *pb.ResumeContaine
 		return nil, err
 	}
 	return s.agentClient.ResumeContainer(ctx, req)
+}
+
+func (s *redirector) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (res *types.Empty, err error) {
+	if err := s.Connect(ctx); err != nil {
+		return nil, err
+	}
+	return s.agentClient.RemoveStaleVirtiofsShareMounts(ctx, req)
 }
 
 func (s *redirector) WriteStdin(ctx context.Context, req *pb.WriteStreamRequest) (res *pb.WriteStreamResponse, err error) {

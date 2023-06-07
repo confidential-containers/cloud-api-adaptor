@@ -364,6 +364,10 @@ func (s *agentService) UpdateContainer(ctx context.Context, req *agent.UpdateCon
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
+func (s *agentService) UpdateEphemeralMounts(ctx context.Context, req *agent.UpdateEphemeralMountsRequest) (*types.Empty, error) {
+	log.Printf("agent call: %T %#v", req, req)
+	return &types.Empty{}, nil
+}
 func (s *agentService) StatsContainer(ctx context.Context, req *agent.StatsContainerRequest) (*agent.StatsContainerResponse, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &agent.StatsContainerResponse{}, nil
@@ -504,6 +508,10 @@ func (s *agentService) GetVolumeStats(ctx context.Context, req *agent.VolumeStat
 	return &agent.VolumeStatsResponse{}, nil
 }
 func (s *agentService) ResizeVolume(ctx context.Context, req *agent.ResizeVolumeRequest) (*types.Empty, error) {
+	log.Printf("agent call: %T %#v", req, req)
+	return &types.Empty{}, nil
+}
+func (s *agentService) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *agent.RemoveStaleVirtiofsShareMountsRequest) (*types.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &types.Empty{}, nil
 }
