@@ -41,7 +41,7 @@ type peerpodVolumes struct {
 }
 
 // newPeerpodVolumes returns a PeerpodVolumes
-func newPeerpodVolumes(c *PeerpodV1alpha1Client, namespace string) *peerpodVolumes {
+func newPeerpodVolumes(c *ConfidentialcontainersV1alpha1Client, namespace string) *peerpodVolumes {
 	return &peerpodVolumes{
 		client: c.RESTClient(),
 		ns:     namespace,

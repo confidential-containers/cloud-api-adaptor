@@ -1,7 +1,7 @@
-// (C) Copyright IBM Corp. 2022.
+// Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // +k8s:deepcopy-gen=package
-// +groupName=peerpod.ibm.com
+// +groupName=confidentialcontainers.org
 
 package v1alpha1

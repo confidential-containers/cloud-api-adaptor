@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package main
@@ -72,7 +72,7 @@ func main() {
 	options := metav1.ListOptions{
 		LabelSelector: labelSelector.String(),
 	}
-	peerpodVolumes, err := peerPodVolumeClient.PeerpodV1alpha1().PeerpodVolumes(cfg.Namespace).List(context.Background(), options)
+	peerpodVolumes, err := peerPodVolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(cfg.Namespace).List(context.Background(), options)
 	if err != nil {
 		glog.Fatalf("Failed to get peerpodVolume crd object by podUid: %v, err: %v", podUid, err)
 	}
@@ -86,14 +86,14 @@ func main() {
 	savedPeerpodvolume.Labels["podName"] = podName
 	savedPeerpodvolume.Labels["podNamespace"] = podNamespace
 	savedPeerpodvolume.Labels["podNodeName"] = podNodeName
-	updatedPeerpodvolume, err := peerPodVolumeClient.PeerpodV1alpha1().PeerpodVolumes(cfg.Namespace).Update(context.Background(), &savedPeerpodvolume, metav1.UpdateOptions{})
+	updatedPeerpodvolume, err := peerPodVolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(cfg.Namespace).Update(context.Background(), &savedPeerpodvolume, metav1.UpdateOptions{})
 	if err != nil {
 		glog.Fatalf("Error happens while Update podName and podNamespace to PeerpodVolume, err: %v", err.Error())
 	}
 	updatedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
 		State: v1alpha1.PeerPodVSIRunning,
 	}
-	_, err = peerPodVolumeClient.PeerpodV1alpha1().PeerpodVolumes(cfg.Namespace).UpdateStatus(context.Background(), updatedPeerpodvolume, metav1.UpdateOptions{})
+	_, err = peerPodVolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(cfg.Namespace).UpdateStatus(context.Background(), updatedPeerpodvolume, metav1.UpdateOptions{})
 	if err != nil {
 		glog.Fatalf("Error happens while Update PeerpodVolume status to PeerPodVSIRunning, err: %v", err.Error())
 	}

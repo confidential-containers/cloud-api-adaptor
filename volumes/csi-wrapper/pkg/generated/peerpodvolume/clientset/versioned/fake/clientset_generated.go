@@ -4,8 +4,8 @@ package fake
 
 import (
 	clientset "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned"
-	peerpodv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned/typed/peerpodvolume/v1alpha1"
-	fakepeerpodv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned/typed/peerpodvolume/v1alpha1/fake"
+	confidentialcontainersv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned/typed/peerpodvolume/v1alpha1"
+	fakeconfidentialcontainersv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned/typed/peerpodvolume/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -63,7 +63,7 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// PeerpodV1alpha1 retrieves the PeerpodV1alpha1Client
-func (c *Clientset) PeerpodV1alpha1() peerpodv1alpha1.PeerpodV1alpha1Interface {
-	return &fakepeerpodv1alpha1.FakePeerpodV1alpha1{Fake: &c.Fake}
+// ConfidentialcontainersV1alpha1 retrieves the ConfidentialcontainersV1alpha1Client
+func (c *Clientset) ConfidentialcontainersV1alpha1() confidentialcontainersv1alpha1.ConfidentialcontainersV1alpha1Interface {
+	return &fakeconfidentialcontainersv1alpha1.FakeConfidentialcontainersV1alpha1{Fake: &c.Fake}
 }

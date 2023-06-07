@@ -1,4 +1,4 @@
-// (C) Copyright IBM Corp. 2022.
+// Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package wrapper
@@ -153,7 +153,7 @@ func (s *PodVMNodeService) ReproduceNodeStageVolume(peerPodVolume *peerpodvolume
 					peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
 						State: v1alpha1.NodeStageVolumeApplied,
 					}
-					_, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
+					_, err := s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 					if err != nil {
 						glog.Errorf("Error happens while Update PeerpodVolume status to NodeStageVolumeApplied, err: %v", err.Error())
 					} else {
@@ -198,7 +198,7 @@ func (s *PodVMNodeService) ReproduceNodePublishVolume(peerPodVolume *peerpodvolu
 					peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
 						State: v1alpha1.NodePublishVolumeApplied,
 					}
-					_, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
+					_, err := s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 					if err != nil {
 						glog.Errorf("Error happens while Update PeerpodVolume status to NodePublishVolumeApplied, err: %v", err.Error())
 					} else {
@@ -237,7 +237,7 @@ func (s *PodVMNodeService) ReproduceNodeUnpublishVolume(peerPodVolume *peerpodvo
 				peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
 					State: v1alpha1.NodeUnpublishVolumeApplied,
 				}
-				_, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
+				_, err := s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 				if err != nil {
 					glog.Errorf("Error happens while Update PeerpodVolume status to NodeUnpublishVolumeApplied, err: %v", err.Error())
 				}
@@ -265,7 +265,7 @@ func (s *PodVMNodeService) ReproduceNodeUnstageVolume(peerPodVolume *peerpodvolu
 				peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
 					State: v1alpha1.NodeUnstageVolumeApplied,
 				}
-				_, err := s.PeerpodvolumeClient.PeerpodV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
+				_, err := s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 				if err != nil {
 					glog.Errorf("Error happens while Update PeerpodVolume status to NodeUnstageVolumeApplied, err: %v", err.Error())
 				}

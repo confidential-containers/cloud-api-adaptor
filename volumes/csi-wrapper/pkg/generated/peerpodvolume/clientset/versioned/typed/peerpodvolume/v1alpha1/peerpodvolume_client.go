@@ -10,24 +10,24 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type PeerpodV1alpha1Interface interface {
+type ConfidentialcontainersV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	PeerpodVolumesGetter
 }
 
-// PeerpodV1alpha1Client is used to interact with features provided by the peerpod.ibm.com group.
-type PeerpodV1alpha1Client struct {
+// ConfidentialcontainersV1alpha1Client is used to interact with features provided by the confidentialcontainers.org group.
+type ConfidentialcontainersV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *PeerpodV1alpha1Client) PeerpodVolumes(namespace string) PeerpodVolumeInterface {
+func (c *ConfidentialcontainersV1alpha1Client) PeerpodVolumes(namespace string) PeerpodVolumeInterface {
 	return newPeerpodVolumes(c, namespace)
 }
 
-// NewForConfig creates a new PeerpodV1alpha1Client for the given config.
+// NewForConfig creates a new ConfidentialcontainersV1alpha1Client for the given config.
 // NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
 // where httpClient was generated with rest.HTTPClientFor(c).
-func NewForConfig(c *rest.Config) (*PeerpodV1alpha1Client, error) {
+func NewForConfig(c *rest.Config) (*ConfidentialcontainersV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -39,9 +39,9 @@ func NewForConfig(c *rest.Config) (*PeerpodV1alpha1Client, error) {
 	return NewForConfigAndClient(&config, httpClient)
 }
 
-// NewForConfigAndClient creates a new PeerpodV1alpha1Client for the given config and http client.
+// NewForConfigAndClient creates a new ConfidentialcontainersV1alpha1Client for the given config and http client.
 // Note the http client provided takes precedence over the configured transport values.
-func NewForConfigAndClient(c *rest.Config, h *http.Client) (*PeerpodV1alpha1Client, error) {
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ConfidentialcontainersV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -50,12 +50,12 @@ func NewForConfigAndClient(c *rest.Config, h *http.Client) (*PeerpodV1alpha1Clie
 	if err != nil {
 		return nil, err
 	}
-	return &PeerpodV1alpha1Client{client}, nil
+	return &ConfidentialcontainersV1alpha1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new PeerpodV1alpha1Client for the given config and
+// NewForConfigOrDie creates a new ConfidentialcontainersV1alpha1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *PeerpodV1alpha1Client {
+func NewForConfigOrDie(c *rest.Config) *ConfidentialcontainersV1alpha1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -63,9 +63,9 @@ func NewForConfigOrDie(c *rest.Config) *PeerpodV1alpha1Client {
 	return client
 }
 
-// New creates a new PeerpodV1alpha1Client for the given RESTClient.
-func New(c rest.Interface) *PeerpodV1alpha1Client {
-	return &PeerpodV1alpha1Client{c}
+// New creates a new ConfidentialcontainersV1alpha1Client for the given RESTClient.
+func New(c rest.Interface) *ConfidentialcontainersV1alpha1Client {
+	return &ConfidentialcontainersV1alpha1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -83,7 +83,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *PeerpodV1alpha1Client) RESTClient() rest.Interface {
+func (c *ConfidentialcontainersV1alpha1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

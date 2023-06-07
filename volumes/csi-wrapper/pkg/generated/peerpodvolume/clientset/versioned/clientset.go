@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	peerpodv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned/typed/peerpodvolume/v1alpha1"
+	confidentialcontainersv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/volumes/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned/typed/peerpodvolume/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -14,19 +14,18 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	PeerpodV1alpha1() peerpodv1alpha1.PeerpodV1alpha1Interface
+	ConfidentialcontainersV1alpha1() confidentialcontainersv1alpha1.ConfidentialcontainersV1alpha1Interface
 }
 
-// Clientset contains the clients for groups. Each group has exactly one
-// version included in a Clientset.
+// Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	peerpodV1alpha1 *peerpodv1alpha1.PeerpodV1alpha1Client
+	confidentialcontainersV1alpha1 *confidentialcontainersv1alpha1.ConfidentialcontainersV1alpha1Client
 }
 
-// PeerpodV1alpha1 retrieves the PeerpodV1alpha1Client
-func (c *Clientset) PeerpodV1alpha1() peerpodv1alpha1.PeerpodV1alpha1Interface {
-	return c.peerpodV1alpha1
+// ConfidentialcontainersV1alpha1 retrieves the ConfidentialcontainersV1alpha1Client
+func (c *Clientset) ConfidentialcontainersV1alpha1() confidentialcontainersv1alpha1.ConfidentialcontainersV1alpha1Interface {
+	return c.confidentialcontainersV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -73,7 +72,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
-	cs.peerpodV1alpha1, err = peerpodv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.confidentialcontainersV1alpha1, err = confidentialcontainersv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +97,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.peerpodV1alpha1 = peerpodv1alpha1.New(c)
+	cs.confidentialcontainersV1alpha1 = confidentialcontainersv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
