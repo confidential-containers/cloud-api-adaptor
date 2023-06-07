@@ -46,13 +46,13 @@ func NewFilteredPeerpodVolumeInformer(client versioned.Interface, namespace stri
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.PeerpodV1alpha1().PeerpodVolumes(namespace).List(context.TODO(), options)
+				return client.ConfidentialcontainersV1alpha1().PeerpodVolumes(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.PeerpodV1alpha1().PeerpodVolumes(namespace).Watch(context.TODO(), options)
+				return client.ConfidentialcontainersV1alpha1().PeerpodVolumes(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&peerpodvolumev1alpha1.PeerpodVolume{},

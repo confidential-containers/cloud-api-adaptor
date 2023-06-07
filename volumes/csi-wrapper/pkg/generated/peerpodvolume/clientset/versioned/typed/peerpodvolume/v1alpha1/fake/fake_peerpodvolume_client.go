@@ -8,17 +8,17 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-type FakePeerpodV1alpha1 struct {
+type FakeConfidentialcontainersV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakePeerpodV1alpha1) PeerpodVolumes(namespace string) v1alpha1.PeerpodVolumeInterface {
+func (c *FakeConfidentialcontainersV1alpha1) PeerpodVolumes(namespace string) v1alpha1.PeerpodVolumeInterface {
 	return &FakePeerpodVolumes{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakePeerpodV1alpha1) RESTClient() rest.Interface {
+func (c *FakeConfidentialcontainersV1alpha1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

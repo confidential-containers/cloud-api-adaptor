@@ -35,7 +35,7 @@ func NewPodVolumeMonitor(
 ) (CsiPodVolumeMonitor, error) {
 
 	informerFactory := informers.NewSharedInformerFactory(client, time.Second*30)
-	informer := informerFactory.Peerpod().V1alpha1().PeerpodVolumes()
+	informer := informerFactory.Confidentialcontainers().V1alpha1().PeerpodVolumes()
 
 	controller := newPeerpodvolumeController(
 		client,

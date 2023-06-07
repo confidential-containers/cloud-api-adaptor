@@ -16,13 +16,13 @@ import (
 
 // FakePeerpodVolumes implements PeerpodVolumeInterface
 type FakePeerpodVolumes struct {
-	Fake *FakePeerpodV1alpha1
+	Fake *FakeConfidentialcontainersV1alpha1
 	ns   string
 }
 
-var peerpodvolumesResource = schema.GroupVersionResource{Group: "peerpod.ibm.com", Version: "v1alpha1", Resource: "peerpodvolumes"}
+var peerpodvolumesResource = schema.GroupVersionResource{Group: "confidentialcontainers.org", Version: "v1alpha1", Resource: "peerpodvolumes"}
 
-var peerpodvolumesKind = schema.GroupVersionKind{Group: "peerpod.ibm.com", Version: "v1alpha1", Kind: "PeerpodVolume"}
+var peerpodvolumesKind = schema.GroupVersionKind{Group: "confidentialcontainers.org", Version: "v1alpha1", Kind: "PeerpodVolume"}
 
 // Get takes name of the peerpodVolume, and returns the corresponding peerpodVolume object, and an error if there is any.
 func (c *FakePeerpodVolumes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.PeerpodVolume, err error) {

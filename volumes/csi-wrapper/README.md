@@ -133,7 +133,7 @@ kubectl create -f volumes/csi-wrapper/crd/peerpodvolume.yaml
 ```
 The output looks like:
 ```bash
-customresourcedefinition.apiextensions.k8s.io/peerpodvolumes.peerpod.ibm.com created
+customresourcedefinition.apiextensions.k8s.io/peerpodvolumes.confidentialcontainers.org created
 ```
 2. Create vpc-block-csi-wrapper-runner role  bind to ibm-vpc-block-controller-sa account
 ```bash

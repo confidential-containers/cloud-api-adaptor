@@ -1,4 +1,4 @@
-apiVersion: "peerpod.ibm.com/v1alpha1"
+apiVersion: "confidentialcontainers.org/v1alpha1"
 kind: PeerpodVolume
 metadata:
   name: test

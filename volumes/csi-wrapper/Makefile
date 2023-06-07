@@ -29,30 +29,27 @@ clean:
 
 .PHONY: csi-node-wrapper-docker
 csi-node-wrapper-docker:
-	docker build -t csi-node-wrapper:local \
+	docker buildx build --platform "linux/$(ARCH)" \
 		--build-arg BINARY=csi-node-wrapper \
 		--build-arg SOURCE_FROM=local \
-		--build-arg TARGETARCH=s390x \
-		--build-arg TARGETPLATFORM=s390x \
-		-f Dockerfile.csi_wrappers .
+		-t csi-node-wrapper:local \
+		-f Dockerfile.csi_wrappers --load .
 
 .PHONY: csi-controller-wrapper-docker
 csi-controller-wrapper-docker:
-	docker build -t csi-controller-wrapper:local \
+	docker buildx build --platform "linux/$(ARCH)" \
 		--build-arg BINARY=csi-controller-wrapper \
 		--build-arg SOURCE_FROM=local \
-		--build-arg TARGETARCH=s390x \
-		--build-arg TARGETPLATFORM=s390x \
-		-f Dockerfile.csi_wrappers .
+		-t csi-controller-wrapper:local \
+		-f Dockerfile.csi_wrappers --load .
 
 .PHONY: csi-podvm-wrapper-docker
 csi-podvm-wrapper-docker:
-	docker build -t csi-podvm-wrapper:local \
+	docker buildx build --platform "linux/$(ARCH)" \
 		--build-arg BINARY=csi-podvm-wrapper \
 		--build-arg SOURCE_FROM=local \
-		--build-arg TARGETARCH=s390x \
-		--build-arg TARGETPLATFORM=s390x \
-		-f Dockerfile.csi_wrappers .
+		-t csi-podvm-wrapper:local \
+		-f Dockerfile.csi_wrappers --load .
 
 .PHONY: import-csi-node-wrapper-docker
 import-csi-node-wrapper-docker: csi-node-wrapper-docker
