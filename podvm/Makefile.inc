@@ -10,7 +10,7 @@
 UBUNTU_RELEASE     = focal
 SKOPEO_VERSION     = 1.5.0
 UMOCI_VERSION      = 0.4.7
-AA_VERSION         = aa1d3c510350cd2f2668aca374abba19e2b73b3f
+AA_VERSION         = v0.6.0
 
 IMAGE_PREFIX := podvm
 
