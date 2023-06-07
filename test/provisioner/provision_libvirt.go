@@ -65,6 +65,11 @@ func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, erro
 		uri = properties["libvirt_uri"]
 	}
 
+	vol_name := "podvm-base.qcow2"
+	if properties["libvirt_vol_name"] != "" {
+		vol_name = properties["libvirt_vol_name"]
+	}
+
 	// TODO: accept a different URI.
 	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
@@ -79,7 +84,7 @@ func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, erro
 		storage:      storage,
 		uri:          uri,
 		wd:           wd,
-		volumeName:   "podvm-base.qcow2",
+		volumeName:   vol_name,
 	}, nil
 }
 
@@ -246,11 +251,12 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 
 	// Mapping the internal properties to ConfigMapGenerator properties and their default values.
 	mapProps := map[string][2]string{
-		"network":     {"default", "LIBVIRT_NET"},
-		"storage":     {"default", "LIBVIRT_POOL"},
-		"pause_image": {"", "PAUSE_IMAGE"},
-		"uri":         {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
-		"vxlan_port":  {"", "VXLAN_PORT"},
+		"network":      {"default", "LIBVIRT_NET"},
+		"storage":      {"default", "LIBVIRT_POOL"},
+		"pause_image":  {"", "PAUSE_IMAGE"},
+		"podvm_volume": {"", "LIBVIRT_VOL_NAME"},
+		"uri":          {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
+		"vxlan_port":   {"", "VXLAN_PORT"},
 	}
 
 	for k, v := range mapProps {
