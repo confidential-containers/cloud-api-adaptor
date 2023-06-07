@@ -9,6 +9,8 @@
 
 ## Build Pod VM Image
 
+### Option-1: Modifying existing marketplace image
+
 - Set environment variables
 ```
 export AWS_REGION="us-east-1" # mandatory
@@ -72,6 +74,36 @@ get the AMI_ID. The command assumes that you are using the default AMI name: `pe
 ```
 aws ec2 describe-images --query "Images[*].[ImageId]" --filters "Name=name,Values=peer-pod-ami" --region ${AWS_REGION} --output text
 ```
+
+### Option-2: Using precreated QCOW2 image
+
+- Download QCOW2 image
+```
+mkdir -p qcow2-img && cd qcow2-img
+
+curl -LO https://raw.githubusercontent.com/confidential-containers/cloud-api-adaptor/staging/podvm/hack/download-image.sh
+
+bash download-image.sh quay.io/confidential-containers/podvm-generic-ubuntu-amd64:latest . -o podvm.qcow2
+
+```
+
+- Convert QCOW2 image to RAW format
+You'll need the `qemu-img` tool for conversion.
+```
+qemu-img convert -O raw podvm.qcow2 podvm.raw
+```
+
+- Upload RAW image to S3 and create AMI
+You can use the following helper script to upload the podvm.raw image to S3 and create an AMI
+Note that AWS cli should be configured to use the helper script.
+
+```
+curl -L0 https://raw.githubusercontent.com/confidential-containers/cloud-api-adaptor/staging/aws/raw-to-ami.sh
+
+bash raw-to-ami.sh podvm.raw <Some S3 Bucket Name> <AWS Region>
+```
+
+On success, the command will generate the `AMI_ID`, which needs to be used to set the value of `PODVM_AMI_ID` in `peer-pods-cm` configmap.
 
 ## Running cloud-api-adaptor
 
