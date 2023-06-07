@@ -1,0 +1,21 @@
+YQ_PATH        := ../hack/yq.sh
+VERSIONS_SRC   := ../versions.yaml
+
+define query
+$(or $(shell $(YQ_PATH) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
+		$(error $(1) is not set, and could not be automatically set from $(VERSIONS_SRC)))
+endef
+
+ubuntu_amd64_IMAGE_URL ?= $(call query,cloudimg.ubuntu.focal.amd64.url)
+ubuntu_amd64_IMAGE_CHECKSUM ?= $(call query,cloudimg.ubuntu.focal.amd64.checksum)
+ubuntu_s390x_IMAGE_URL ?= $(call query,cloudimg.ubuntu.focal.s390x.url)
+ubuntu_s390x_IMAGE_CHECKSUM ?= $(call query,cloudimg.ubuntu.focal.s390x.checksum)
+centos_amd64_IMAGE_URL ?= $(call query,cloudimg.centos.stream-8.amd64.url)
+centos_amd64_IMAGE_CHECKSUM ?= $(call query,cloudimg.centos.stream-8.amd64.checksum)
+CAA_SRC ?= $(call query,git.cloud-api-adaptor.url)
+CAA_SRC_REF ?= $(call query,git.cloud-api-adaptor.reference)
+KATA_SRC ?= $(call query,git.kata-containers.url)
+KATA_SRC_REF ?= $(call query,git.kata-containers.reference)
+GO_VERSION ?= $(call query,tools.golang)
+PROTOC_VERSION ?= $(call query,tools.protoc)
+RUST_VERSION ?= $(call query,tools.rust)
