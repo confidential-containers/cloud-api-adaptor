@@ -13,14 +13,11 @@ CSI Wrapper for Peer Pod Storage
 
 Follow the [README.md](../../ibmcloud/README.md) to setup a x86 based demo environment on IBM Cloud VPC.
 
-### Deploy ibm-vpc-block-csi-driver on the worker node
+### Deploy ibm-vpc-block-csi-driver on the cluster
 
-1. Login to the worker node
-```bash
-ssh root@ip-of-your-worker-node
-```
+1. Setup kubeconfig so that you can access the cluster using `kubectl`.
 
-2. Clone the source code on the worker node:
+2. Clone the source code:
 ```bash
 git clone https://github.com/kubernetes-sigs/ibm-vpc-block-csi-driver.git
 cd ibm-vpc-block-csi-driver
@@ -148,36 +145,14 @@ clusterrole.rbac.authorization.k8s.io/vpc-block-csi-wrapper-runner created
 clusterrolebinding.rbac.authorization.k8s.io/vpc-block-csi-wrapper-controller-binding created
 clusterrolebinding.rbac.authorization.k8s.io/vpc-block-csi-wrapper-node-binding created
 ```
-3. Build csi-wrapper images on worker node:
-```bash
-apt install docker.io -y
-cd volumes/csi-wrapper/
-make import-csi-controller-wrapper-docker
-make import-csi-node-wrapper-docker
-make csi-podvm-wrapper-docker
-```
-4. Push csi-podvm-wrapper docker image to docker hub (Optional)
-```bash
-docker login -u [your_docker_hub_name] -p [your_docker_hub_password]
-docker tag csi-podvm-wrapper:local [your_docker_hub_name]/csi-podvm-wrapper:dev
-docker push [your_docker_hub_name]/csi-podvm-wrapper:dev
-```
-The output looks like:
-```bash
-docker push liudali/csi-podvm-wrapper:dev
-The push refers to repository [docker.io/liudali/csi-podvm-wrapper]
-f396e7e3d2ba: Pushed
-0002c93bdb37: Mounted from library/ubuntu
-dev: digest: sha256:48e90756c0fe327b369b03226bbc2c236f18264dd3c00a285a5632f3ff3fce7f size: 741
-```
 
-5. patch ibm-vpc-block-csi-driver:
+3. patch ibm-vpc-block-csi-driver:
 ```bash
 kubectl patch statefulset ibm-vpc-block-csi-controller -n kube-system --patch-file hack/ibm/patch-controller.yaml
 kubectl patch ds ibm-vpc-block-csi-node -n kube-system --patch-file hack/ibm/patch-node.yaml
 ```
 
-6. Check pod status now:
+4. Check pod status now:
 ```bash
 kubectl get po -A -o wide | grep vpc
 kube-system    ibm-vpc-block-csi-controller-0       6/6     Running             0             8m18s   172.20.1.6    csi-x86-worker   <none>           <none>
@@ -186,7 +161,7 @@ kube-system    ibm-vpc-block-csi-node-r7b5w         0/4     ContainerCreating   
 ```
 > **Note** The `ibm-vpc-block-csi-node-r7b5w` pod won't in `Running` status as it's on control node, just ignore it.
 
-7. Create **storage class** for Peerpod:
+5. Create **storage class** for Peerpod:
 ```bash
 kubectl apply -f hack/ibm/ibm-vpc-block-5iopsTier-StorageClass-for-peerpod.yaml
 ```
