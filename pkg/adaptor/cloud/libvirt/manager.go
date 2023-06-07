@@ -20,6 +20,7 @@ const (
 	defaultPoolName    = "default"
 	defaultNetworkName = "default"
 	defaultDataDir     = "/var/lib/libvirt/images"
+	defaultVolName     = "podvm-base.qcow2"
 )
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
@@ -35,6 +36,7 @@ func (_ *Manager) LoadEnv() {
 	cloud.DefaultToEnv(&libvirtcfg.URI, "LIBVIRT_URI", defaultURI)
 	cloud.DefaultToEnv(&libvirtcfg.PoolName, "LIBVIRT_POOL", defaultPoolName)
 	cloud.DefaultToEnv(&libvirtcfg.NetworkName, "LIBVIRT_NET", defaultNetworkName)
+	cloud.DefaultToEnv(&libvirtcfg.VolName, "LIBVIRT_VOL_NAME", defaultVolName)
 }
 
 func (_ *Manager) NewProvider() (cloud.Provider, error) {

@@ -16,6 +16,7 @@ type Config struct {
 	PoolName    string
 	NetworkName string
 	DataDir     string
+	VolName     string
 }
 
 type vmConfig struct {
@@ -45,4 +46,6 @@ type libvirtClient struct {
 	networkName string
 
 	dataDir string
+
+	volName string
 }

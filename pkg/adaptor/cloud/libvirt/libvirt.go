@@ -20,12 +20,6 @@ import (
 	libvirtxml "libvirt.org/go/libvirtxml"
 )
 
-// Create a base volume
-// Create qcow2 image with prerequisites
-// virsh vol-create-as --pool default --name podvm-base.qcow2 --capacity 107374182400 --allocation 2361393152 --prealloc-metadata --format qcow2
-// virsh vol-upload --vol podvm-base.qcow2 ./podvm.qcow2 --pool default --sparse
-const podBaseVolName = "podvm-base.qcow2"
-
 func createCloudInitISO(v *vmConfig, libvirtClient *libvirtClient) string {
 	logger.Printf("Create cloudInit iso\n")
 	cloudInitIso := libvirtClient.dataDir + "/" + v.name + "-cloudinit.iso"
@@ -140,7 +134,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}
 
 	rootVolName := v.name + "-root.qcow2"
-	err = createVolume(rootVolName, v.rootDiskSize, podBaseVolName, libvirtClient)
+	err = createVolume(rootVolName, v.rootDiskSize, libvirtClient.volName, libvirtClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error in creating volume: %s", err)
 	}
@@ -384,6 +378,7 @@ func NewLibvirtClient(libvirtCfg Config) (*libvirtClient, error) {
 		poolName:    libvirtCfg.PoolName,
 		networkName: libvirtCfg.NetworkName,
 		dataDir:     libvirtCfg.DataDir,
+		volName:     libvirtCfg.VolName,
 	}, nil
 }
 
