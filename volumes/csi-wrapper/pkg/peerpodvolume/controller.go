@@ -47,7 +47,8 @@ func newPeerpodvolumeController(
 		deleteFunction: deleteFunction,
 	}
 
-	informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	// TODO: error check
+	_, _ = informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueuePeerpodvolume,
 		UpdateFunc: func(old, new interface{}) {
 			oldPeerpodvolume := old.(*peerpodvolumeV1alpha1.PeerpodVolume)
