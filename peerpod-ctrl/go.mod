@@ -3,7 +3,7 @@ module github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl
 go 1.19
 
 require (
-	github.com/confidential-containers/cloud-api-adaptor v0.5.1-0.20230504043629-580abeb128aa
+	github.com/confidential-containers/cloud-api-adaptor v0.6.0
 	github.com/onsi/ginkgo/v2 v2.8.1
 	github.com/onsi/gomega v1.27.1
 	k8s.io/api v0.26.0
@@ -131,5 +131,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/confidential-containers/cloud-api-adaptor => ../
