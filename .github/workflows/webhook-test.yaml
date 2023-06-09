@@ -3,7 +3,7 @@
 #
 # Run end-to-end tests if any webhook source files changed.
 ---
-name: webhook
+name: webhook-test
 on:
   pull_request:
     paths:

@@ -59,10 +59,10 @@ kubectl apply -f hack/webhook-deploy.yaml
 
 The default `RuntimeClass` that the webhook monitors is `kata-remote`.
 The default `RuntimeClass` can be changed by modifying the `TARGET_RUNTIMECLASS` environment variable.
-For example, executing the following command changes it to `kata`
+For example, executing the following command changes it to `kata-remote`
 
 ```
-kubectl set env deployment/peer-pods-webhook-controller-manager -n peer-pods-webhook-system TARGET_RUNTIMECLASS=kata
+kubectl set env deployment/peer-pods-webhook-controller-manager -n peer-pods-webhook-system TARGET_RUNTIMECLASS=kata-remote
 ```
 
 The default Pod VM instance type is `t2.small` and can be changed by modifying the `POD_VM_INSTANCE_TYPE` environment variable.
