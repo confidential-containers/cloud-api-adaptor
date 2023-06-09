@@ -5,8 +5,11 @@ package proxy
 
 import (
 	"context"
+	b64 "encoding/base64"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/avast/retry-go/v4"
@@ -24,7 +27,12 @@ type proxyService struct {
 	pauseImage string
 }
 
-const defaultPauseImage = "registry.k8s.io/pause:3.7"
+const (
+	defaultPauseImage            = "registry.k8s.io/pause:3.7"
+	kataDirectVolumesDir         = "/run/kata-containers/shared/direct-volumes"
+	volumeTargetPathKey          = "io.confidentialcontainers.org.peerpodvolumes.target_path"
+	csiPluginEscapeQualifiedName = "kubernetes.io~csi"
+)
 
 func newProxyService(dialer func(context.Context) (net.Conn, error), criClient *criClient, pauseImage string) *proxyService {
 
@@ -94,16 +102,20 @@ func (s *proxyService) getImageName(annotations map[string]string) (string, erro
 func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*types.Empty, error) {
 
 	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
-	if len(req.OCI.Annotations) > 0 {
-		logger.Print("    annotations:")
-		for k, v := range req.OCI.Annotations {
-			logger.Printf("        %s: %s", k, v)
-		}
-	}
 	if len(req.OCI.Mounts) > 0 {
 		logger.Print("    mounts:")
 		for _, m := range req.OCI.Mounts {
 			logger.Printf("        destination:%s source:%s type:%s", m.Destination, m.Source, m.Type)
+
+			if isNodePublishVolumeTargetPath(m.Source, kataDirectVolumesDir) {
+				req.OCI.Annotations[volumeTargetPathKey] = m.Source
+			}
+		}
+	}
+	if len(req.OCI.Annotations) > 0 {
+		logger.Print("    annotations:")
+		for k, v := range req.OCI.Annotations {
+			logger.Printf("        %s: %s", k, v)
 		}
 	}
 	if len(req.Storages) > 0 {
@@ -167,6 +179,17 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 	}
 
 	return res, err
+}
+
+func isNodePublishVolumeTargetPath(volumePath, directVolumesDir string) bool {
+	if !strings.Contains(filepath.Clean(volumePath), "/volumes/"+csiPluginEscapeQualifiedName+"/") {
+		return false
+	}
+
+	volumeDir := filepath.Join(directVolumesDir, b64.URLEncoding.EncodeToString([]byte(volumePath)))
+	_, err := os.Stat(volumeDir)
+
+	return err == nil
 }
 
 func (s *proxyService) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*types.Empty, error) {

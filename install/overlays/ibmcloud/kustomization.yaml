@@ -61,6 +61,7 @@ secretGenerator:
 
 patchesStrategicMerge:
   - cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
+  - kata_direct_volumes_mount.yaml # set (for volumes/csi-wrapper)
 ##IAM PROFILE SETTINGS
 # - cr_token_projection.yaml
 ##/IAM PROFILE SETTINGS

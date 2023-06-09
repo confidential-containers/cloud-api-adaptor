@@ -14,9 +14,16 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/gogo/protobuf/types"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
+	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/agentproto"
+)
+
+const (
+	volumeTargetPathKey = "io.confidentialcontainers.org.peerpodvolumes.target_path"
+	volumeCheckInterval = 5 * time.Second
+	volumeCheckTimeout  = 3 * time.Minute
 )
 
 var logger = log.New(log.Writer(), "[forwarder/interceptor] ", log.LstdFlags|log.Lmsgprefix)
@@ -87,12 +94,21 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 		logger.Printf("    %s: %q", ns.Type, ns.Path)
 	}
 
+	volumeTargetPath := req.OCI.Annotations[volumeTargetPathKey]
 	if len(req.OCI.Mounts) > 0 {
 		for _, m := range req.OCI.Mounts {
 			if _, err := os.Stat(m.Source); os.IsNotExist(err) && m.Type == "bind" {
 				logger.Printf("mount source %s doesn't exist, try to create", m.Source)
 				if err = os.MkdirAll(m.Source, os.ModePerm); err != nil {
 					logger.Printf("Failed to create dir: %v", err)
+				}
+			}
+
+			if isTargetPath(m.Source, volumeTargetPath) {
+				logger.Printf("Waiting for device mounted to: %s", m.Source)
+				err := waitForDeviceMounted(ctx, m.Source)
+				if err != nil {
+					return nil, err
 				}
 			}
 		}
@@ -105,6 +121,47 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 	}
 
 	return res, err
+}
+
+func isTargetPath(path, targetPath string) bool {
+	return targetPath != "" && targetPath == path
+}
+
+func waitForDeviceMounted(ctx context.Context, path string) error {
+
+	ctx, cancel := context.WithTimeout(ctx, volumeCheckTimeout)
+	defer cancel()
+
+	err := retry.Do(
+		func() error {
+			isMounted, err := mountinfo.Mounted(path)
+			if err != nil {
+				logger.Printf("Mounted check error: %v", err)
+				return err
+			}
+
+			if isMounted {
+				logger.Printf("Device has been mounted to %s", path)
+				return nil
+			} else {
+				err = fmt.Errorf("Device has not been mounted to %s", path)
+				logger.Print(err)
+				return err
+			}
+		},
+		retry.Attempts(0),
+		retry.Context(ctx),
+		retry.MaxDelay(volumeCheckInterval),
+	)
+
+	if err != nil {
+		err = fmt.Errorf("Timeout waiting for device to mount to %s: %w", path, err)
+		logger.Print(err)
+		return err
+	}
+
+	return nil
+
 }
 
 func (i *interceptor) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*types.Empty, error) {
