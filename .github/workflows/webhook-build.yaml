@@ -1,0 +1,43 @@
+# (C) Copyright Confidential Containers Contributors 2022.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build and push the webhook image if any webhook source files changed.
+---
+name: webhook-build-push
+on:
+  push:
+    branches:
+      - staging
+    paths:
+      - 'webhook/**'
+env:
+  go_version: 1.19
+
+jobs:
+  build_push_webhook:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: webhook
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Golang version ${{ env.go_version }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.go_version }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to quay Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+      - name: Build and push image
+        run: |
+          make docker-load docker-push IMG=quay.io/confidential-containers/peer-pods-webhook:${{ github.sha }}
+          make docker-push IMG=quay.io/confidential-containers/peer-pods-webhook:latest
