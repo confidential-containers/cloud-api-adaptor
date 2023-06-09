@@ -49,3 +49,25 @@ roleRef:
   kind: ClusterRole
   name: peerpod-editor
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-viewer
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-viewer
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: confidential-containers-system
+roleRef:
+  kind: ClusterRole
+  name: node-viewer
+  apiGroup: rbac.authorization.k8s.io
