@@ -18,6 +18,11 @@ spec:
       containers:
       - command:
         - /usr/local/bin/entrypoint.sh
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         envFrom:
         - secretRef:
             name: peer-pods-secret
