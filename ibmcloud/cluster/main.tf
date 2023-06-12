@@ -80,3 +80,12 @@ resource "null_resource" "kubeadm" {
     command = "./kube-init.sh ${module.nodes[0].private_ip}"
   }
 }
+
+resource "null_resource" "label_nodes" {
+  depends_on = [
+    null_resource.kubeadm
+  ]
+  provisioner "local-exec" {
+    command = "./label-nodes.sh ${var.region} ${var.zone} ${module.vpc.subnet_id}"
+  }
+}
