@@ -18,7 +18,7 @@ spec:
         node-role.kubernetes.io/worker: ""
       serviceAccountName: ext-res-updater
       containers:
-      - image: curlimages/curl
+      - image: curlimages/curl:8.1.1
         command: ["sh"]
         args: ["/ext-res-updater.sh"]
         name: updater
