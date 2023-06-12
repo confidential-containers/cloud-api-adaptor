@@ -85,16 +85,18 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData string
 		UserData: &userData,
 		Profile:  &vpcv1.InstanceProfileIdentity{Name: &p.serviceConfig.ProfileName},
 		Zone:     &vpcv1.ZoneIdentity{Name: &p.serviceConfig.ZoneName},
-		Keys: []vpcv1.KeyIdentityIntf{
-			&vpcv1.KeyIdentity{ID: &p.serviceConfig.KeyID},
-		},
-		VPC: &vpcv1.VPCIdentity{ID: &p.serviceConfig.VpcID},
+		Keys:     []vpcv1.KeyIdentityIntf{},
+		VPC:      &vpcv1.VPCIdentity{ID: &p.serviceConfig.VpcID},
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfacePrototype{
 			Subnet: &vpcv1.SubnetIdentity{ID: &p.serviceConfig.PrimarySubnetID},
 			SecurityGroups: []vpcv1.SecurityGroupIdentityIntf{
 				&vpcv1.SecurityGroupIdentityByID{ID: &p.serviceConfig.PrimarySecurityGroupID},
 			},
 		},
+	}
+
+	if p.serviceConfig.KeyID != "" {
+		prototype.Keys = append(prototype.Keys, &vpcv1.KeyIdentity{ID: &p.serviceConfig.KeyID})
 	}
 
 	if p.serviceConfig.ResourceGroupID != "" {
