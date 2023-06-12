@@ -4,15 +4,19 @@
 #
 
 ---
+
+- name: Stop service unattended-upgrades if running
+  ansible.builtin.systemd:
+    name: unattended-upgrades
+    state: stopped
+
+- name: Remove unattended-upgrades
+  apt:
+    name: unattended-upgrades
+    state: absent
+
 - name: "Install required packages on Ubuntu"
   apt:
     update_cache: true
-    name: "{{ item }}"
+    name: ['unzip', 'tar', 'apt-transport-https', 'libbtrfs-dev', 'libseccomp2', 'util-linux']
     state: latest
-  with_items:
-      - unzip
-      - tar
-      - apt-transport-https
-      - libbtrfs-dev
-      - libseccomp2
-      - util-linux

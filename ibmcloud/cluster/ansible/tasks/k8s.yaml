@@ -15,15 +15,8 @@
     state: present
     filename: "kubernetes"
 
-- name: "Update the repository cache "
-  apt:
-    update_cache: yes
-
 - name: "Install kubelet, kubeadm, kubectl "
-  apt: name={{item}} state=present
-  with_items:
-    - kubelet
-    - kubeadm
-    - kubectl
-    - kubernetes-cni
-    - cri-tools
+  apt:
+    update_cache: true
+    name: ['kubelet', 'kubeadm', 'kubectl', 'kubernetes-cni', 'cri-tools']
+    state: present
