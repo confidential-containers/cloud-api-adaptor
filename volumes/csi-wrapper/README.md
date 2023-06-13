@@ -128,8 +128,8 @@ root@csi-x86-worker:~/cloud-api-adaptor#
 
 1. Create the PeerpodVolume CRD object
 ```bash
-cd /root/cloud-api-adaptor/
-kubectl create -f volumes/csi-wrapper/crd/peerpodvolume.yaml
+cd /root/cloud-api-adaptor/volumes/csi-wrapper/
+kubectl create -f crd/peerpodvolume.yaml
 ```
 The output looks like:
 ```bash
@@ -137,7 +137,7 @@ customresourcedefinition.apiextensions.k8s.io/peerpodvolumes.confidentialcontain
 ```
 2. Create vpc-block-csi-wrapper-runner role  bind to ibm-vpc-block-controller-sa account
 ```bash
-kubectl create -f volumes/csi-wrapper/hack/ibm/vpc-block-csi-wrapper-runner.yaml
+kubectl create -f hack/ibm/vpc-block-csi-wrapper-runner.yaml
 ```
 The output looks like:
 ```
