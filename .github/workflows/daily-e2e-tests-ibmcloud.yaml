@@ -64,7 +64,8 @@ jobs:
             echo "ibmcloud e2e test (${{matrix.type}}) is failed."
             exit 2
           fi
-          caa_commitid=$(grep "CAA commit_id:" $log_name | cut -d " " -f 4)
+          caa_commitid=$(cat $log_name | grep -oP 'CAA commit_id: \K\S+')
+          echo "The CAA commit_id: ${caa_commitid}"
           echo ${caa_commitid} > caa_commitid
         env:
           bucket_name : "daily-e2e-test-bucket"
