@@ -135,10 +135,10 @@ func initProperties(properties map[string]string) error {
 		return errors.New("APIKEY was not set.")
 	}
 	if len(IBMCloudProps.ResourceGroupID) <= 0 {
-		return errors.New("RESOURCE_GROUP_ID was not set.")
+		log.Info("[warning] RESOURCE_GROUP_ID was not set.")
 	}
 	if len(IBMCloudProps.Zone) <= 0 {
-		return errors.New("ZONE was not set.")
+		log.Info("[warning] ZONE was not set.")
 	}
 
 	// IAM_SERVICE_URL can overwrite default IamServiceURL, for example: IAM_SERVICE_URL="https://iam.test.cloud.ibm.com/identity/token"
@@ -149,7 +149,11 @@ func initProperties(properties map[string]string) error {
 
 	// VPC_SERVICE_URL can overwrite default VpcServiceURL https://{REGION}.iaas.cloud.ibm.com/v1, for example: VPC_SERVICE_URL="https://jp-tok.iaas.test.cloud.ibm.com/v1"
 	if len(IBMCloudProps.VpcServiceURL) <= 0 {
-		IBMCloudProps.VpcServiceURL = "https://" + IBMCloudProps.Region + ".iaas.cloud.ibm.com/v1"
+		if len(IBMCloudProps.Region) > 0 {
+			IBMCloudProps.VpcServiceURL = "https://" + IBMCloudProps.Region + ".iaas.cloud.ibm.com/v1"
+		} else {
+			log.Info("[warning] REGION was not set.")
+		}
 	}
 	log.Infof("VpcServiceURL is: %s.", IBMCloudProps.VpcServiceURL)
 
@@ -173,16 +177,16 @@ func initProperties(properties map[string]string) error {
 			return errors.New("PODVM_IMAGE_ID was not set, set it with existing custom image id in VPC")
 		}
 		if len(IBMCloudProps.SshKeyID) <= 0 {
-			return errors.New("SSH_KEY_ID was not set, set it with existing SSH key id in VPC")
+			log.Info("[warning] SSH_KEY_ID was not set.")
 		}
 		if len(IBMCloudProps.SubnetID) <= 0 {
-			return errors.New("VPC_SUBNET_ID was not set, set it with existing subnet id in VPC")
+			log.Info("[warning] VPC_SUBNET_ID was not set.")
 		}
 		if len(IBMCloudProps.SecurityGroupID) <= 0 {
-			return errors.New("VPC_SECURITY_GROUP_ID was not set, set it with existing security group id in VPC")
+			log.Info("[warning] VPC_SECURITY_GROUP_ID was not set.")
 		}
 		if len(IBMCloudProps.VpcID) <= 0 {
-			return errors.New("VPC_ID was not set, set it with existing VPC id")
+			log.Info("[warning] VPC_ID was not set.")
 		}
 	}
 
