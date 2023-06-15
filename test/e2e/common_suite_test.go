@@ -167,26 +167,28 @@ func (tc *testCase) run() {
 					}
 					t.Logf("Log output of peer pod:%s", LogString)
 				}
-				if tc.podState == v1.PodRunning && tc.testCommands != nil {
-					for _, testCommand := range tc.testCommands {
-						var stdout, stderr bytes.Buffer
+				if tc.podState == v1.PodRunning {
+					if len(tc.testCommands) > 0 {
+						for _, testCommand := range tc.testCommands {
+							var stdout, stderr bytes.Buffer
 
-						for _, podItem := range podlist.Items {
-							if podItem.ObjectMeta.Name == tc.pod.Name {
-								if err := cfg.Client().Resources(tc.pod.Namespace).ExecInPod(ctx, tc.pod.Namespace, tc.pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
-									t.Log(stderr.String())
-									t.Fatal(err)
-								}
+							for _, podItem := range podlist.Items {
+								if podItem.ObjectMeta.Name == tc.pod.Name {
+									if err := cfg.Client().Resources(tc.pod.Namespace).ExecInPod(ctx, tc.pod.Namespace, tc.pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
+										t.Log(stderr.String())
+										t.Fatal(err)
+									}
 
-								if !testCommand.testCommandStdoutFn(stdout) {
-									t.Fatal(fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String()))
+									if !testCommand.testCommandStdoutFn(stdout) {
+										t.Fatal(fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String()))
+									}
 								}
 							}
 						}
 					}
-				}
-				tc.assert.HasPodVM(t, tc.pod.Name)
 
+					tc.assert.HasPodVM(t, tc.pod.Name)
+				}
 			}
 			return ctx
 		}).
