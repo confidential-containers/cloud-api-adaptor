@@ -90,6 +90,7 @@ func TestCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 	}
 	doTestCreatePeerPodContainerWithExternalIPAccess(t, assert)
 }
+
 func TestCreatePeerPodWithJob(t *testing.T) {
 	assert := IBMCloudAssert{
 		vpc: pv.IBMCloudProps.VPC,
@@ -131,6 +132,7 @@ func TestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T
 	}
 	doTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, assert)
 }
+
 func TestCreatePeerPodWithLargeImage(t *testing.T) {
 	assert := IBMCloudAssert{
 		vpc: pv.IBMCloudProps.VPC,
@@ -379,6 +381,39 @@ func newPodWithPVCFromIBMVPCBlockDriver(namespace, podName, containerName, image
 	}
 
 	return pod
+}
+
+func TestCreatePeerPodWithAuthenticatedImagewithValidCredentials(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		doTestCreatePeerPodWithAuthenticatedImagewithValidCredentials(t, assert)
+	} else {
+		t.Skip("Registry Credentials not exported")
+	}
+}
+
+func TestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		doTestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t, assert)
+	} else {
+		t.Skip("Registry Credentials not exported")
+	}
+}
+
+func TestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		doTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t, assert)
+	} else {
+		t.Skip("Image Name not exported")
+	}
 }
 
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.

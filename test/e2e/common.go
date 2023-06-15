@@ -30,6 +30,16 @@ func withEnvironmentalVariables(envVar []corev1.EnvVar) podOption {
 	}
 }
 
+func withImagePullSecrets(secretName string) podOption {
+	return func(p *corev1.Pod) {
+		p.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
+			{
+				Name: secretName,
+			},
+		}
+	}
+}
+
 func withConfigMapBinding(mountPath string, configMapName string) podOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "config-volume", MountPath: mountPath})
@@ -90,10 +100,11 @@ func newConfigMap(namespace string, name string, configMapData map[string]string
 }
 
 // newSecret returns a new secret object.
-func newSecret(namespace string, name string, data map[string][]byte) *corev1.Secret {
+func newSecret(namespace string, name string, data map[string][]byte, secretType corev1.SecretType) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Data:       data,
+		Type:       secretType,
 	}
 }
 
