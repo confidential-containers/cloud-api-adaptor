@@ -79,13 +79,6 @@ If you don't have a Kubernetes cluster for testing, you can follow the open-sour
 [instructions](./cluster)
  to set up a basic cluster where the Kubernetes nodes run on IBM Cloud provided infrastructure.
 
-After creating the cluster and setting up `kubeconfig` as described, ensure that the node has the worker label set. To do
-this you can run:
-```
-node=$(kubectl get nodes -o json | jq -r '.items[-1].metadata.name')
-kubectl label node $node node-role.kubernetes.io/worker=
-```
-
 ## Deploy PeerPod Webhook
 
 #### Deploy cert-manager
@@ -130,25 +123,17 @@ This will create `caa-provisioner-cli` in the `test/tools` directory. To use the
 ```bash
 export IBMCLOUD_API_KEY= # your ibmcloud apikey
 export PODVM_IMAGE_ID= # the image id of the peerpod vm uploaded in the previous step
-export PODVM_IMAGE_ARCH= # the architecture of the peerpod image (amd64/s390x)
 export PODVM_INSTANCE_PROFILE= # instance profile name that runs the peerpod (bx2-2x8 or bz2-2x8 for example)
-
+export CAA_IMAGE_TAG= # cloud-api-adaptor image tag that supports this arch, see quay.io/confidential-containers/cloud-api-adaptor
 pushd ibmcloud/cluster
 
 cat <<EOF > ../../selfmanaged_cluster.properties
 IBMCLOUD_PROVIDER="ibmcloud"
 APIKEY="$IBMCLOUD_API_KEY"
 PODVM_IMAGE_ID="$PODVM_IMAGE_ID"
-PODVM_IMAGE_ARCH="$PODVM_IMAGE_ARCH"
 INSTANCE_PROFILE_NAME="$PODVM_INSTANCE_PROFILE"
-WORKER_FLAVOR="$PODVM_INSTANCE_PROFILE"
-REGION="$(terraform output --raw region)"
-ZONE="$(terraform output --raw zone)"
-RESOURCE_GROUP_ID="$(terraform output --raw resource_group_id)"
+CAA_IMAGE_TAG="$CAA_IMAGE_TAG"
 SSH_KEY_ID="$(terraform output --raw ssh_key_id)"
-VPC_SUBNET_ID="$(terraform output --raw subnet_id)"
-VPC_SECURITY_GROUP_ID="$(terraform output --raw security_group_id)"
-VPC_ID="$(terraform output --raw vpc_id)"
 EOF
 
 popd
