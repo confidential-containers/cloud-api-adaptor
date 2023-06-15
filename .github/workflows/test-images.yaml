@@ -59,7 +59,7 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         tags: |
-          quay.io/${{ secrets.QUAY_USERNAME }}/test-images:${{env.DOCKER_TAG}}
+          quay.io/confidential-containers/test-images:${{env.DOCKER_TAG}}
         push: true
         context: .
         platforms: linux/s390x,linux/amd64
