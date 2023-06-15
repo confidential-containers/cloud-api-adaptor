@@ -749,25 +749,25 @@ func (p *IBMCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config
 }
 
 func (p *IBMCloudProvisioner) CreateAuthJSON(ctx context.Context, cfg *envconf.Config) error {
-	log.Info("Setting up auth.json")
-	if os.Getenv("REGISTRY_AUTH") == "" {
-		log.Fatal("Export base64 version of auth.json in REGISTRY_AUTH and image in AUTH_REGISTRY_IMAGE")
-	}
-	data := map[string]interface{}{
-		"auths": map[string]interface{}{
-			"quay.io": map[string]interface{}{
-				"auth": os.Getenv("REGISTRY_AUTH"),
+	if os.Getenv("REGISTRY_AUTH") != "" {
+		log.Info("Setting up auth.json")
+		data := map[string]interface{}{
+			"auths": map[string]interface{}{
+				"quay.io": map[string]interface{}{
+					"auth": os.Getenv("REGISTRY_AUTH"),
+				},
 			},
-		},
-	}
-	jsondata, err := json.MarshalIndent(data, "", " ")
-	if err != nil {
-		return err
+		}
+		jsondata, err := json.MarshalIndent(data, "", " ")
+		if err != nil {
+			return err
+		}
+
+		if err := ioutil.WriteFile("../../install/overlays/ibmcloud/auth.json", jsondata, 0644); err != nil {
+			return err
+		}
 	}
 
-	if err := ioutil.WriteFile("../../install/overlays/ibmcloud/auth.json", jsondata, 0644); err != nil {
-		return err
-	}
 	return nil
 
 }

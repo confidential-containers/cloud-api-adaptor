@@ -393,6 +393,17 @@ func TestCreatePeerPodWithAuthenticatedImage(t *testing.T) {
 	}
 }
 
+func TestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	if os.Getenv("REGISTRY_AUTH") != "" && os.Getenv("REGISTRY_IMAGE") != "" {
+		doTestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t, assert)
+	} else {
+		t.Skip("Registry Credentials not exported")
+	}
+}
+
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
 type IBMCloudAssert struct {
 	vpc *vpcv1.VpcV1
