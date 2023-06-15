@@ -12,5 +12,5 @@ output "subnet_id" {
 }
 
 output "security_group_id" {
-  value = ibm_is_security_group.primary.id
+  value = ibm_is_vpc.vpc.default_security_group
 }

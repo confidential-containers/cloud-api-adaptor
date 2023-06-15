@@ -5,6 +5,7 @@
 
 resource "ibm_is_vpc" "vpc" {
   name = "${var.cluster_name}-vpc"
+  default_security_group_name = "${var.cluster_name}-security-group"
 }
 
 resource "ibm_is_floating_ip" "gateway" {
@@ -29,25 +30,20 @@ resource "ibm_is_subnet" "primary" {
   public_gateway           = ibm_is_public_gateway.gateway.id
 }
 
-resource "ibm_is_security_group" "primary" {
-  name = "${var.cluster_name}-security-group"
-  vpc  = ibm_is_vpc.vpc.id
-}
-
 resource "ibm_is_security_group_rule" "primary_outbound" {
-  group      = ibm_is_security_group.primary.id
+  group      = ibm_is_vpc.vpc.default_security_group
   direction  = "outbound"
   remote     = "0.0.0.0/0"
 }
 
 resource "ibm_is_security_group_rule" "primary_inbound" {
-  group      = ibm_is_security_group.primary.id
+  group      = ibm_is_vpc.vpc.default_security_group
   direction  = "inbound"
-  remote     = ibm_is_security_group.primary.id
+  remote     = ibm_is_vpc.vpc.default_security_group
 }
 
 resource "ibm_is_security_group_rule" "primary_ssh" {
-  group      = ibm_is_security_group.primary.id
+  group      = ibm_is_vpc.vpc.default_security_group
   direction  = "inbound"
   remote     = "0.0.0.0/0"
 
@@ -58,7 +54,7 @@ resource "ibm_is_security_group_rule" "primary_ssh" {
 }
 
 resource "ibm_is_security_group_rule" "primary_ping" {
-  group      = ibm_is_security_group.primary.id
+  group      = ibm_is_vpc.vpc.default_security_group
   direction  = "inbound"
   remote     = "0.0.0.0/0"
 
@@ -69,7 +65,7 @@ resource "ibm_is_security_group_rule" "primary_ping" {
 }
 
 resource "ibm_is_security_group_rule" "primary_api_server" {
-  group      = ibm_is_security_group.primary.id
+  group      = ibm_is_vpc.vpc.default_security_group
   direction  = "inbound"
   remote     = "0.0.0.0/0"
 
