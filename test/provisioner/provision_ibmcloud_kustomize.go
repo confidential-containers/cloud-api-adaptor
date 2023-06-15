@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -170,7 +171,11 @@ func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config
 			}
 		}
 	}
-
+	if os.Getenv("REGISTRY_AUTH") != "" {
+		if err = lio.overlay.SetKustomizeSecretGeneratorFile("auth-json-secret", "auth.json"); err != nil {
+			return err
+		}
+	}
 	if err = lio.overlay.YamlReload(); err != nil {
 		return err
 	}

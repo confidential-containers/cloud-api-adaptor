@@ -31,6 +31,14 @@ func (p *SelfManagedClusterProvisioner) DeleteVPC(ctx context.Context, cfg *envc
 	return deleteVpcImpl()
 }
 
+func (p *SelfManagedClusterProvisioner) CreateAuthJSON(ctx context.Context, cfg *envconf.Config) error {
+	return nil
+}
+
+func (p *SelfManagedClusterProvisioner) DeleteAuthJSON(ctx context.Context, cfg *envconf.Config) error {
+	return nil
+}
+
 func (p *SelfManagedClusterProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	return nil
 }

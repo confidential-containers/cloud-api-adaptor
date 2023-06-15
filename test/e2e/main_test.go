@@ -115,7 +115,11 @@ func TestMain(m *testing.M) {
 				return ctx, err
 			}
 		}
-
+		if os.Getenv("REGISTRY_AUTH") != "" {
+			if err = provisioner.CreateAuthJSON(ctx, cfg); err != nil {
+				return ctx, err
+			}
+		}
 		relativeInstallDirectory := "../../install"
 		if cloudAPIAdaptor, err = pv.NewCloudAPIAdaptor(cloudProvider, relativeInstallDirectory); err != nil {
 			return ctx, err
@@ -142,6 +146,11 @@ func TestMain(m *testing.M) {
 				return ctx, nil
 			}
 		} else {
+			if os.Getenv("REGISTRY_AUTH") != "" {
+				if err = provisioner.DeleteAuthJSON(ctx, cfg); err != nil {
+					return ctx, err
+				}
+			}
 			log.Info("Delete the Cloud API Adaptor installation")
 			if err = cloudAPIAdaptor.Delete(ctx, cfg); err != nil {
 				return ctx, err

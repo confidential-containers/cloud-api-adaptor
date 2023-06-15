@@ -90,6 +90,7 @@ func TestCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 	}
 	doTestCreatePeerPodContainerWithExternalIPAccess(t, assert)
 }
+
 func TestCreatePeerPodWithJob(t *testing.T) {
 	assert := IBMCloudAssert{
 		vpc: pv.IBMCloudProps.VPC,
@@ -131,6 +132,7 @@ func TestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T
 	}
 	doTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, assert)
 }
+
 func TestCreatePeerPodWithLargeImage(t *testing.T) {
 	assert := IBMCloudAssert{
 		vpc: pv.IBMCloudProps.VPC,
@@ -378,6 +380,17 @@ func newPodWithPVCFromIBMVPCBlockDriver(namespace, podName, containerName, image
 	}
 
 	return pod
+}
+
+func TestCreatePeerPodWithAuthenticatedImage(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	if os.Getenv("REGISTRY_AUTH") != "" && os.Getenv("REGISTRY_IMAGE") != "" {
+		doTestCreatePeerPodWithAuthenticatedImage(t, assert)
+	} else {
+		t.Skip("Registry Credentials not exported")
+	}
 }
 
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
