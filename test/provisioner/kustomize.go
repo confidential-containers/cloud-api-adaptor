@@ -195,22 +195,24 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorFile(sgName string, file 
 	}
 
 	if len(m.SecretGenerator) == 0 {
-		return fmt.Errorf("None SecretGenerator found")
+		m.SecretGenerator = append(m.SecretGenerator, ktypes.SecretArgs{
+			GeneratorArgs: ktypes.GeneratorArgs{
+				DataSources: ktypes.DataSources{
+					FileSources: []string{file},
+				},
+			},
+		})
+	} else {
+		i := slices.IndexFunc(m.SecretGenerator, func(sa ktypes.SecretArgs) bool { return sa.Name == sgName })
+		if i == -1 {
+			return fmt.Errorf("SecretGenerator %s not found\n", sgName)
+		}
+		gs := &m.SecretGenerator[i]
+		if !stringSliceContains(gs.GeneratorArgs.DataSources.FileSources, file) {
+			gs.GeneratorArgs.DataSources.FileSources = append(gs.GeneratorArgs.DataSources.FileSources, file)
+		}
+
 	}
-
-	i := slices.IndexFunc(m.SecretGenerator, func(sa ktypes.SecretArgs) bool { return sa.Name == sgName })
-	if i == -1 {
-		return fmt.Errorf("SecretGenerator %s not found\n", sgName)
-	}
-	gs := &m.SecretGenerator[i]
-
-	newFiles := gs.GeneratorArgs.DataSources.FileSources
-
-	if !slices.Contains(newFiles, file) {
-		newFiles = append(newFiles, file)
-	}
-
-	gs.GeneratorArgs.DataSources.FileSources = newFiles
 
 	if err = kf.Write(m); err != nil {
 		return err
@@ -244,6 +246,15 @@ func (kh *KustomizeOverlay) AddToPatchesStrategicMerge(fileName string) error {
 	m.PatchesStrategicMerge = append(m.PatchesStrategicMerge, patch.StrategicMerge(fileName))
 
 	return kf.Write(m)
+}
+
+func stringSliceContains(slice []string, value string) bool {
+	for _, s := range slice {
+		if s == value {
+			return true
+		}
+	}
+	return false
 }
 
 // SetKustomizeImage updates the kustomization YAML by setting `value` to `key` on the

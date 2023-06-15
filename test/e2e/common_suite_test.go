@@ -6,10 +6,14 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -55,6 +59,8 @@ type testCase struct {
 	expectedPodLogString string
 	podState             v1.PodPhase
 	imagePullTimer       bool
+	isAuth               bool
+	AuthImageStatus      string
 }
 
 func (tc *testCase) withConfigMap(configMap *v1.ConfigMap) *testCase {
@@ -102,6 +108,16 @@ func (tc *testCase) withPodWatcher() *testCase {
 	return tc
 }
 
+func (tc *testCase) withAuthenticatedImage() *testCase {
+	tc.isAuth = true
+	return tc
+}
+
+func (tc *testCase) withAuthImageStatus(status string) *testCase {
+	tc.AuthImageStatus = status
+	return tc
+}
+
 func (tc *testCase) run() {
 	testCaseFeature := features.New(fmt.Sprintf("%s test", tc.testName)).
 		WithSetup("Create testworkload", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -138,6 +154,24 @@ func (tc *testCase) run() {
 				}
 			}
 
+			if tc.AuthImageStatus == "WithoutCredentials" {
+				clientSet, err := kubernetes.NewForConfig(client.RESTConfig())
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = clientSet.CoreV1().Secrets("confidential-containers-system").Get(ctx, "auth-json-secret", metav1.GetOptions{})
+				if err == nil {
+					log.Info("Deleting pre-existing auth-json-secret...")
+					if err = clientSet.CoreV1().Secrets("confidential-containers-system").Delete(ctx, "auth-json-secret", metav1.DeleteOptions{}); err != nil {
+						t.Fatal(err)
+					}
+					log.Info("Creating empty auth-json-secret...")
+					if err = client.Resources().Create(ctx, &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "auth-json-secret", Namespace: "confidential-containers-system"}, Type: v1.SecretTypeOpaque}); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+
 			if tc.pod != nil {
 				if err = client.Resources().Create(ctx, tc.pod); err != nil {
 					t.Fatal(err)
@@ -160,6 +194,7 @@ func (tc *testCase) run() {
 				}
 
 			}
+
 			return ctx
 		}).
 		Assess(tc.assessMessage, func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -207,6 +242,7 @@ func (tc *testCase) run() {
 					}
 
 				}
+
 				if tc.expectedPodLogString != "" {
 					LogString, err := comparePodLogString(ctx, client, *tc.pod, tc.expectedPodLogString)
 					if err != nil {
@@ -215,6 +251,16 @@ func (tc *testCase) run() {
 					}
 					t.Logf("Log output of peer pod:%s", LogString)
 				}
+
+				if tc.isAuth {
+					if err := getAuthenticatedImageStatus(ctx, client, tc.AuthImageStatus, *tc.pod); err != nil {
+						t.Fatal(err)
+					}
+
+					t.Logf("PodVM has successfully reached %v state with authenticated Image - %v", tc.AuthImageStatus, os.Getenv("AUTHENTICATED_REGISTRY_IMAGE"))
+
+				}
+
 				if tc.podState == v1.PodRunning {
 					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
 						t.Fatal(err)
@@ -316,6 +362,7 @@ func newTestCase(t *testing.T, testName string, assert CloudAssert, assessMessag
 		assessMessage:  assessMessage,
 		podState:       v1.PodRunning,
 		imagePullTimer: false,
+		isAuth:         false,
 	}
 
 	return testCase
@@ -494,6 +541,47 @@ func getSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 	return successPod, errorPod, podLogString, nil
 }
 
+func getAuthenticatedImageStatus(ctx context.Context, client klient.Client, expectedStatus string, authpod v1.Pod) error {
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		return err
+	}
+	watcher, err := clientset.CoreV1().Events(authpod.ObjectMeta.Namespace).Watch(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	defer watcher.Stop()
+	for event := range watcher.ResultChan() {
+		if event.Object.(*v1.Event).InvolvedObject.Name == authpod.ObjectMeta.Name {
+			if event.Object.(*v1.Event).Type == "Normal" && event.Object.(*v1.Event).Reason == "Started" {
+				return nil
+			}
+			if event.Object.(*v1.Event).Type == "Warning" && (strings.Contains(event.Object.(*v1.Event).Message, "failed to authorize") || strings.Contains(event.Object.(*v1.Event).Message, "illegal base64 data at input byte") || strings.Contains(event.Object.(*v1.Event).Message, "401 UNAUTHORIZED")) {
+				if expectedStatus == "Completed" {
+					return errors.New("Invalid Credentials: " + event.Object.(*v1.Event).Message)
+				} else {
+					return nil
+				}
+			}
+
+			if event.Object.(*v1.Event).Type == "Warning" && strings.Contains(event.Object.(*v1.Event).Message, "not found") {
+				return errors.New("Invalid Image Name: " + event.Object.(*v1.Event).Message)
+			}
+
+			if event.Object.(*v1.Event).Type == "Warning" && strings.Contains(event.Object.(*v1.Event).Message, "failed to pull manifest Not authorized") {
+				if expectedStatus == "Completed" {
+					return errors.New("Invalid auth-json-secret: " + event.Object.(*v1.Event).Message)
+				} else {
+					return nil
+				}
+			}
+
+		}
+	}
+
+	return errors.New("PodVM Start Error")
+}
+
 // doTestCreateSimplePod tests a simple peer-pod can be created.
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
@@ -549,7 +637,7 @@ func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 	passwordPath := podKubeSecretsDir + passwordFileName
 	secretData := map[string][]byte{passwordFileName: []byte(password), usernameFileName: []byte(username)}
 	pod := newPod(namespace, podName, containerName, imageName, withSecretBinding(podKubeSecretsDir, secretName))
-	secret := newSecret(namespace, secretName, secretData)
+	secret := newSecret(namespace, secretName, secretData, v1.SecretTypeOpaque)
 
 	testCommands := []testCommand{
 		{
@@ -696,4 +784,58 @@ func doTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, assert CloudAssert, m
 		},
 	}
 	newTestCase(t, "PeerPodWithPVCAndCSIWrapper", assert, "PVC is created and mounted as expected").withPod(pod).withPVC(myPVC).withTestCommands(testCommands).withCustomPodState(v1.PodRunning).run()
+}
+
+func doTestCreatePeerPodWithAuthenticatedImagewithValidCredentials(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	podName := "authenticated-image-valid-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
+	secretName := "auth-json-secret"
+	authfile, err := os.ReadFile("../../install/overlays/ibmcloud/auth.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedAuthStatus := "Completed"
+	secretData := map[string][]byte{v1.DockerConfigJsonKey: authfile}
+	secret := newSecret(namespace, secretName, secretData, v1.SecretTypeDockerConfigJson)
+	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever), withImagePullSecrets(secretName))
+	newTestCase(t, "ValidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Valid Credentials has been created").withSecret(secret).withPod(pod).withAuthenticatedImage().withAuthImageStatus(expectedAuthStatus).withCustomPodState(v1.PodPending).run()
+}
+
+func doTestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	podName := "authenticated-image-invalid-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
+	secretName := "auth-json-secret"
+	data := map[string]interface{}{
+		"auths": map[string]interface{}{
+			"quay.io": map[string]interface{}{
+				"auth": "aW52YWxpZHVzZXJuYW1lOmludmFsaWRwYXNzd29yZAo=",
+			},
+		},
+	}
+	jsondata, err := json.MarshalIndent(data, "", " ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedAuthStatus := "ImagePullBackOff"
+	secretData := map[string][]byte{v1.DockerConfigJsonKey: jsondata}
+	secret := newSecret(namespace, secretName, secretData, v1.SecretTypeDockerConfigJson)
+	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever), withImagePullSecrets(secretName))
+	newTestCase(t, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Invalid Credentials has been created").withSecret(secret).withPod(pod).withAuthenticatedImage().withAuthImageStatus(expectedAuthStatus).withCustomPodState(v1.PodPending).run()
+}
+
+func doTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	podName := "authenticated-image-without-creds-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
+	expectedAuthStatus := "WithoutCredentials"
+	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever))
+	newTestCase(t, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Invalid Credentials has been created").withPod(pod).withAuthenticatedImage().withAuthImageStatus(expectedAuthStatus).withCustomPodState(v1.PodPending).run()
 }

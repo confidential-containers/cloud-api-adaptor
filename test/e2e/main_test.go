@@ -115,7 +115,6 @@ func TestMain(m *testing.M) {
 				return ctx, err
 			}
 		}
-
 		relativeInstallDirectory := "../../install"
 		if cloudAPIAdaptor, err = pv.NewCloudAPIAdaptor(cloudProvider, relativeInstallDirectory); err != nil {
 			return ctx, err
