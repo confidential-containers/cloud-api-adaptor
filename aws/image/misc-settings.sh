@@ -38,6 +38,12 @@ then
     esac
 fi
 
+if [[ "$CLOUD_PROVIDER" == "azure" && "$PODVM_DISTRO" == "ubuntu" ]]; then
+    export DEBIAN_FRONTEND=noninteractive
+    sudo apt-get update
+    sudo apt-get install -y libtss2-tctildr0
+fi
+
 # Setup oneshot systemd service for AWS and Azure to enable NAT rules
 if [ "$CLOUD_PROVIDER" == "azure" ] || [ "$CLOUD_PROVIDER" == "aws" ]
 then
