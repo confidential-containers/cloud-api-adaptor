@@ -416,3 +416,7 @@ az group delete \
   --yes --no-wait
 ```
 
+Delete the creates service principals by running:
+```bash
+az ad sp delete --id ${AZURE_CLIENT_ID}
+```
