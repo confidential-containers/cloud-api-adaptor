@@ -20,7 +20,7 @@ export AZURE_RESOURCE_GROUP="REPLACE_ME"
 export AZURE_REGION="REPLACE_ME"
 
 az group create --name "${AZURE_RESOURCE_GROUP}" \
-    --location "${AZURE_REGION}"
+  --location "${AZURE_REGION}"
 ```
 
 ### Service Principal
@@ -61,27 +61,27 @@ export GALLERY_IMAGE_DEF_NAME="cc-image"
 
 ```bash
 az sig create \
-    --gallery-name "${GALLERY_NAME}" \
-    --resource-group "${AZURE_RESOURCE_GROUP}" \
-    --location "${AZURE_REGION}"
+  --gallery-name "${GALLERY_NAME}" \
+  --resource-group "${AZURE_RESOURCE_GROUP}" \
+  --location "${AZURE_REGION}"
 ```
 
 - Define the image definition by running the following command. Do note that the flag `--features SecurityType=ConfidentialVmSupported` allows us to upload custom image and boot it up as a CVM.
 
 ```bash
 az sig image-definition create \
-    --resource-group "${AZURE_RESOURCE_GROUP}" \
-    --gallery-name "${GALLERY_NAME}" \
-    --gallery-image-definition "${GALLERY_IMAGE_DEF_NAME}" \
-    --publisher GreatPublisher \
-    --offer GreatOffer \
-    --sku GreatSku \
-    --os-type "Linux" \
-    --os-state "Generalized" \
-    --hyper-v-generation "V2" \
-    --location "${AZURE_REGION}" \
-    --architecture "x64" \
-    --features SecurityType=ConfidentialVmSupported
+  --resource-group "${AZURE_RESOURCE_GROUP}" \
+  --gallery-name "${GALLERY_NAME}" \
+  --gallery-image-definition "${GALLERY_IMAGE_DEF_NAME}" \
+  --publisher GreatPublisher \
+  --offer GreatOffer \
+  --sku GreatSku \
+  --os-type "Linux" \
+  --os-state "Generalized" \
+  --hyper-v-generation "V2" \
+  --location "${AZURE_REGION}" \
+  --architecture "x64" \
+  --features SecurityType=ConfidentialVmSupported
 ```
 
 ## Build Pod VM Image
@@ -123,12 +123,12 @@ You can also build the image using docker
 ```bash
 cd image
 docker build -t azure \
---secret id=AZURE_CLIENT_ID \
---secret id=AZURE_CLIENT_SECRET \
---secret id=AZURE_SUBSCRIPTION_ID \
---secret id=AZURE_TENANT_ID \
---build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP} \
--f Dockerfile .
+  --secret id=AZURE_CLIENT_ID \
+  --secret id=AZURE_CLIENT_SECRET \
+  --secret id=AZURE_SUBSCRIPTION_ID \
+  --secret id=AZURE_TENANT_ID \
+  --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP} \
+  -f Dockerfile .
 ```
 
 If you want to use a different base image, then you'll need to provide additional build-args:
@@ -140,7 +140,13 @@ Following [link](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/
 For example using the CentOS 8.5 image from eurolinux publisher requires a plan and license agreement.
 You'll need to first get the URN:
 ```
-az vm image list --location $AZURE_REGION --publisher eurolinuxspzoo1620639373013  --offer centos-8-5-free --sku centos-8-5-free --all --output table
+az vm image list \
+  --location ${AZURE_REGION} \
+  --publisher eurolinuxspzoo1620639373013 \
+  --offer centos-8-5-free \
+  --sku centos-8-5-free \
+  --all \
+  --output table
 ```
 Then you'll need to accept the agreement:
 ```
@@ -150,35 +156,35 @@ az vm image terms accept --urn eurolinuxspzoo1620639373013:centos-8-5-free:cento
 Then you can use the following command line to build the image:
 ```
 docker build -t azure \
---secret id=AZURE_CLIENT_ID \
---secret id=AZURE_CLIENT_SECRET \
---secret id=AZURE_SUBSCRIPTION_ID \
---secret id=AZURE_TENANT_ID \
---build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}  \
---build-arg PUBLISHER=eurolinuxspzoo1620639373013 \
---build-arg SKU=centos-8-5-free \
---build-arg OFFER=centos-8-5-free \
---build-arg PLAN_NAME=centos-8-5-free \
---build-arg PLAN_PRODUCT=centos-8-5-free \
---build-arg PLAN_PUBLISHER=eurolinuxspzoo1620639373013 \
---build-arg PODVM_DISTRO=centos \
--f Dockerfile .
+  --secret id=AZURE_CLIENT_ID \
+  --secret id=AZURE_CLIENT_SECRET \
+  --secret id=AZURE_SUBSCRIPTION_ID \
+  --secret id=AZURE_TENANT_ID \
+  --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}  \
+  --build-arg PUBLISHER=eurolinuxspzoo1620639373013 \
+  --build-arg SKU=centos-8-5-free \
+  --build-arg OFFER=centos-8-5-free \
+  --build-arg PLAN_NAME=centos-8-5-free \
+  --build-arg PLAN_PRODUCT=centos-8-5-free \
+  --build-arg PLAN_PUBLISHER=eurolinuxspzoo1620639373013 \
+  --build-arg PODVM_DISTRO=centos \
+  -f Dockerfile .
 ```
 
 Here is another example of building RHEL based image:
 
 ```
 docker build -t azure \
---secret id=AZURE_CLIENT_ID \
---secret id=AZURE_CLIENT_SECRET \
---secret id=AZURE_SUBSCRIPTION_ID \
---secret id=AZURE_TENANT_ID \
---build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}  \
---build-arg PUBLISHER=RedHat \
---build-arg SKU=9-lvm \
---build-arg OFFER=RHEL \
---build-arg PODVM_DISTRO=rhel \
--f Dockerfile .
+  --secret id=AZURE_CLIENT_ID \
+  --secret id=AZURE_CLIENT_SECRET \
+  --secret id=AZURE_SUBSCRIPTION_ID \
+  --secret id=AZURE_TENANT_ID \
+  --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}  \
+  --build-arg PUBLISHER=RedHat \
+  --build-arg SKU=9-lvm \
+  --build-arg OFFER=RHEL \
+  --build-arg PODVM_DISTRO=rhel \
+  -f Dockerfile .
 ```
 
 ## Build CAA Container Image
@@ -206,23 +212,23 @@ Deploy AKS with single worker node to the same resource group we created earlier
 
 ```bash
 az aks create \
-    --resource-group "${AZURE_RESOURCE_GROUP}" \
-    --node-resource-group "${AKS_RG}" \
-    --name "${CLUSTER_NAME}" \
-    --location "${AZURE_REGION}" \
-    --node-count 1 \
-    --node-vm-size Standard_F4s_v2 \
-    --ssh-key-value "${SSH_KEY}" \
-    --admin-username "${AKS_WORKER_USER_NAME}" \
-    --os-sku Ubuntu
+  --resource-group "${AZURE_RESOURCE_GROUP}" \
+  --node-resource-group "${AKS_RG}" \
+  --name "${CLUSTER_NAME}" \
+  --location "${AZURE_REGION}" \
+  --node-count 1 \
+  --node-vm-size Standard_F4s_v2 \
+  --ssh-key-value "${SSH_KEY}" \
+  --admin-username "${AKS_WORKER_USER_NAME}" \
+  --os-sku Ubuntu
 ```
 
 Download kubeconfig locally to access the cluster using `kubectl`:
 
 ```bash
 az aks get-credentials \
-    --resource-group "${AZURE_RESOURCE_GROUP}" \
-    --name "${CLUSTER_NAME}"
+  --resource-group "${AZURE_RESOURCE_GROUP}" \
+  --name "${CLUSTER_NAME}"
 ```
 
 Label the nodes so that CAA can be deployed on it:
@@ -247,10 +253,10 @@ following command:
 
 ```bash
 az ad sp create-for-rbac \
-    -n "caa-${AZURE_RESOURCE_GROUP}" \
-    --role Contributor \
-    --scopes "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AKS_RG}" \
-    --query "password"
+  -n "caa-${AZURE_RESOURCE_GROUP}" \
+  --role Contributor \
+  --scopes "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AKS_RG}" \
+  --query "password"
 ```
 
 From the output of the above command populate the environment variable below:
