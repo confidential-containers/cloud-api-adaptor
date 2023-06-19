@@ -311,6 +311,11 @@ func getSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 		return 0, 0, "", err
 	}
 	for _, pod := range podlist.Items {
+		if pod.ObjectMeta.Labels["job-name"] == job.Name && pod.Status.Phase == v1.PodPending {
+			if pod.Status.ContainerStatuses[0].State.Waiting.Reason == "ContainerCreating" {
+				return 0, 0, "", errors.New("Failed to Create PodVM")
+			}
+		}
 		if pod.ObjectMeta.Labels["job-name"] == job.Name && pod.Status.ContainerStatuses[0].State.Terminated.Reason == "StartError" {
 			errorPod++
 			t.Log("WARNING:", pod.ObjectMeta.Name, "-", pod.Status.ContainerStatuses[0].State.Terminated.Reason)
@@ -341,11 +346,10 @@ func getSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 					t.Log("SUCCESS:", pod.ObjectMeta.Name, "-", pod.Status.ContainerStatuses[0].State.Terminated.Reason, "- LOG:", podLogString)
 					break
 				}
-
 			}
 		}
-
 	}
+
 	return successPod, errorPod, podLogString, nil
 }
 
