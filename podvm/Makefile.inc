@@ -19,10 +19,11 @@ ARCH        ?= $(HOST_ARCH)
 # Normalise x86_64 / amd64 for input ARCH
 ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
-LIBC        ?= $(if $(findstring s390x,$(ARCH)),gnu,musl)
-RUST_TARGET := $(ARCH)-unknown-linux-$(LIBC)
 AA_KBC      ?= offline_fs_kbc
 KBC_URI     ?= null
+LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
+RUST_ARCH   ?= $(subst ppc64le,powerpc64le,$(ARCH))
+RUST_TARGET := $(RUST_ARCH)-unknown-linux-$(LIBC)
 
 ifneq ($(HOST_ARCH),$(ARCH))
     ifeq ($(CC),cc)
@@ -65,8 +66,9 @@ AGENT_PROTOCOL_FORWARDER_SRC = ../..
 KATA_AGENT_SRC = ../../../kata-containers/src/agent
 KATA_AGENT_BUILD_TYPE = release
 
-SKOPEO_SRC  = skopeo
+SKOPEO_SRC ?= skopeo
 SKOPEO_REPO = https://github.com/containers/skopeo
+SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo
 
 UMOCI_SRC   = umoci
 UMOCI_REPO  = https://github.com/opencontainers/umoci
@@ -101,11 +103,11 @@ $(KATA_AGENT): force $(STATIC_LIBSECCOMP)
 $(STATIC_LIBSECCOMP):
 	$(RUST_FLAGS) $(STATIC_LIBSECCOMP_BUILDER) $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp $(STATIC_LIBSECCOMP_DIR)/kata-gperf
 
-# Skoepo package packages are available in RHEL/CentOS 8 or later and Ubuntu 20.10 or later
+# Skopeo package packages are available in RHEL/CentOS 8 or later and Ubuntu 20.10 or later
 $(SKOPEO_SRC):
 	git clone -b "v$(SKOPEO_VERSION)" "$(SKOPEO_REPO)" "$(SKOPEO_SRC)"
 
-$(SKOPEO_SRC)/bin/skopeo: $(SKOPEO_SRC)
+$(SKOPEO_BIN): $(SKOPEO_SRC)
 	cd "$(SKOPEO_SRC)" && CC= $(MAKE) bin/skopeo
 
 # The umoci release page only publishes amd64 binaries. https://github.com/opencontainers/umoci/releases
@@ -115,8 +117,8 @@ $(UMOCI_SRC):
 $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
 	cd "$(UMOCI_SRC)" && CC= $(MAKE)
 
-$(PAUSE_SRC): $(SKOPEO_SRC)/bin/skopeo
-	$(SKOPEO_SRC)/bin/skopeo --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
+$(PAUSE_SRC): $(SKOPEO_BIN)
+	$(SKOPEO_BIN) --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
 
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
