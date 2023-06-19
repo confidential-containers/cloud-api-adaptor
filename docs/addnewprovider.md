@@ -4,13 +4,13 @@
 
 The provider-specific cloud manager should be placed under `pkg/adaptor/cloud/cloudmgr/`.
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/cloud/cloudmgr/aws.go)
+:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/pkg/adaptor/cloud/cloudmgr/aws.go)
 
 ### Step 2: Add provider specific code 
 
 Under `pkg/adaptor/cloud/<provider>`, start by adding a new file called `types.go`. This file defines a configuration struct that contains the required parameters for a cloud provider.
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/cloud/aws/types.go)
+:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/pkg/adaptor/cloud/aws/types.go)
 
 #### Step 2.1: Implement the Cloud interface
 
@@ -20,7 +20,7 @@ Create a provider-specific manager file called `manager.go`, which implements th
 - LoadEnv
 - NewProvider
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/cloud/aws/manager.go)
+:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/pkg/adaptor/cloud/aws/manager.go)
 
 #### Step 2.2: Implement the Provider interface
 
@@ -30,7 +30,7 @@ The Provider interface defines a set of methods that need to be implemented by t
  - DeleteInstance
  - Teardown
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/staging/pkg/adaptor/cloud/aws/provider.go#L76-L175)
+:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/pkg/adaptor/cloud/aws/provider.go#L76-L175)
 
 Also, consider adding additional files to modularize the code. You can refer to existing providers such as `aws`, `azure`, `ibmcloud`, and `libvirt` for guidance. Adding unit tests wherever necessary is good practice.
 
