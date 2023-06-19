@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - "staging"
+      - "main"
     paths:
       - 'test/e2e/fixtures/Dockerfile.*'
       - '.github/workflows/test-images.yaml'

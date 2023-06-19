@@ -7,7 +7,7 @@ name: image
 on:
   push:
     branches:
-      - 'staging'
+      - 'main'
 env:
   go_version: 1.19
 
