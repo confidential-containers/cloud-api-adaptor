@@ -7,7 +7,7 @@ name: webhook-build-push
 on:
   push:
     branches:
-      - staging
+      - main
     paths:
       - 'webhook/**'
 env:

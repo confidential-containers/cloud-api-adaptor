@@ -7,7 +7,7 @@ name: csi wrapper images
 on:
   push:
     branches:
-      - 'staging'
+      - 'main'
       - 'csi-wrapper-images'
     paths:
     - 'volumes/csi-wrapper/**'
