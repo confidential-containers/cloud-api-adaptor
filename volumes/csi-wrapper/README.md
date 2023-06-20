@@ -13,28 +13,16 @@ CSI Wrapper for Peer Pod Storage
 
 Follow the [README.md](../../ibmcloud/README.md) to setup a x86 based demo environment on IBM Cloud VPC.
 
-### Deploy ibm-vpc-block-csi-driver on the cluster
+### Deploy `ibm-vpc-block-csi-driver` on the cluster
 
 1. Setup kubeconfig so that you can access the cluster using `kubectl`.
 
-2. Clone the source code:
-```bash
-git clone https://github.com/kubernetes-sigs/ibm-vpc-block-csi-driver.git
-cd ibm-vpc-block-csi-driver
-git checkout v4.3.1
-```
-
-3. Apply the [ibm-vpc-block-csi-driver.patch](hack/ibm/ibm-vpc-block-csi-driver.patch) 
-```bash
-git apply /root/cloud-api-adaptor/volumes/csi-wrapper/hack/ibm/ibm-vpc-block-csi-driver.patch
-```
-
-4. Get your worker instance id
-- Check your worker node name
+2. Get the worker instance id
+- Check the worker node name
 ```bash
 kubectl get nodes -o wide
 ```
-- Check your vsi instance id for worker node
+- Check vsi instance id for the worker node
 ```bash
 export IBMCLOUD_API_KEY=<your_api_key>
 /root/cloud-api-adaptor/ibmcloud/image/login.sh
@@ -43,92 +31,97 @@ export IBMCLOUD_API_KEY=<your_api_key>
 > **Note** You can export `IBMCLOUD_API_ENDPOINT` and `IBMCLOUD_VPC_REGION` to use other regions
 - List instances
 ```bash
-ibmcloud is ins
+ibmcloud is ins |grep ${your-worker-node-name}
 ```
 The expected result should look like:
 ```bash
 ...
-Listing instances in all resource groups and region jp-tok under account DaLi Liu's Account as user liudali@cn.ibm.com...
-ID                                          Name                    Status    Reserved IP   Floating IP       Profile   Image                                VPC                       Zone       Resource group
-02e7_fce373b4-f931-47f2-b2c7-1df0bfd3680e   csi-x86-cp              running   10.244.0.11   162.133.136.92    bx2-2x8   ibm-ubuntu-20-04-3-minimal-amd64-1   liudali-csi-wrapper-vpc   jp-tok-1   default
-02e7_039e42ac-0fe2-4e94-b6a6-139e77c2db4f   csi-x86-worker          running   10.244.0.10   162.133.136.91    bx2-2x8   ibm-ubuntu-20-04-3-minimal-amd64-1   liudali-csi-wrapper-vpc   jp-tok-1   default
-02e7_9230b72f-d44e-4bd7-9c38-874e49da20bc   podvm-nginx-4c0ac057    running   10.244.0.18   -                 bx2-2x8   podvm-82ae9f8-dirty-amd64            liudali-csi-wrapper-vpc   jp-tok-1   default
+0797_162a604f-82da-4b8c-9144-1204d4c560db   liudali-csi-amd64-node-1                   running   10.242.64.19   141.125.156.56    bx2-2x8     ibm-ubuntu-20-04-3-minimal-amd64-1                se-image-e2e-test-eu-gb        eu-gb-2   Default
 ```
-In the example `02e7_039e42ac-0fe2-4e94-b6a6-139e77c2db4f` is the instanceID, `csi-x86-worker` is the `node-name`, `jp-tok` is the region, `jp-tok-2` is the zone.
+In the example `0797_162a604f-82da-4b8c-9144-1204d4c560db` is the instanceID, `liudali-csi-amd64-node-1` is the node-name, `eu-gb-2` is the zone, the region should be `eu-gb`.
 
-5. Run the script:
+3. Set providerID with correct instanceID:
+`kubectl patch node {the-worker-node-name} -p '{"spec":{"providerID":"//////${instanceID-of-the-worker-node}"}}'`
+eg:
+```
+kubectl patch node liudali-csi-amd64-node-1 -p '{"spec":{"providerID":"//////0797_162a604f-82da-4b8c-9144-1204d4c560db"}}'
+node/liudali-csi-amd64-node-1 patched
+```
+> **Note**
+> - The `providerID` for node only can be set once, if you want to update it's value again you will get follow error:
+> `The Node "liudali-csi-amd64-node-1" is invalid: spec.providerID: Forbidden: node updates may not change providerID except from "" to valid`.
+>
+> The only way is delete the node from your cluster and then run the `kubeadm join` command again.
+> - On control panel:
+> ```
+> kubectl delete node liudali-csi-amd64-node-1
+> kubeadm token create --print-join-command
+> ```
+> - On the worker node, clean env and run the join command from above output:
+> ```
+> kubeadm reset
+> rm -rf /etc/cni/net.d
+> kubeadm join 10.242.64.18:6443 --token twdudr.gkoyhki9915qh7a8 --discovery-token-ca-cert-hash sha256:445b3a713ede97dd4a0d62fafd4dee6bba0b2d42c3cb4db5fc0df215b3fd5542
+> reboot
+> ```
+> After the worker node status changed to ready, please set the work role again:
+> `kubectl label node liudali-csi-amd64-node-1 node-role.kubernetes.io/worker=`
+
+4. Add labels to worker node:
 ```bash
-bash ./scripts/apply-required-setup.sh <node-name> <instanceID> <region-of-instanceID> <zone-of-instanceID>
+cd /root/cloud-api-adaptor/volumes/csi-wrapper/
+bash ./hack/ibm/apply-required-labels.sh <node-name> <instanceID> <region-of-instanceID> <zone-of-instanceID>
 ```
 The expected result looks like:
 ```bash
-root@csi-x86-worker:~/ibm-vpc-block-csi-driver# bash ./scripts/apply-required-setup.sh csi-x86-worker 02e7_039e42ac-0fe2-4e94-b6a6-139e77c2db4f jp-tok jp-tok-1
-csi-x86-worker   Ready    <none>          2d1h   v1.26.0
-node/csi-x86-worker labeled
-node/csi-x86-worker labeled
-node/csi-x86-worker labeled
-node/csi-x86-worker labeled
-node/csi-x86-worker labeled
-node/csi-x86-worker labeled
-root@csi-x86-worker:~/ibm-vpc-block-csi-driver#
+bash ./hack/ibm/apply-required-labels.sh liudali-csi-amd64-node-1 0797_162a604f-82da-4b8c-9144-1204d4c560db eu-gb eu-gb-2
+liudali-csi-amd64-node-1   Ready    worker          2h   v1.27.3
+node/liudali-csi-amd64-node-1 labeled
+node/liudali-csi-amd64-node-1 labeled
+node/liudali-csi-amd64-node-1 labeled
+node/liudali-csi-amd64-node-1 labeled
+node/liudali-csi-amd64-node-1 labeled
 ```
 
-6. Update the [slclient_Gen2.toml](https://github.com/kubernetes-sigs/ibm-vpc-block-csi-driver/blob/master/deploy/kubernetes/driver/kubernetes/slclient_Gen2.toml) for the cluster:
+5. Create the [slclient_Gen2.toml](https://github.com/kubernetes-sigs/ibm-vpc-block-csi-driver/blob/master/deploy/kubernetes/driver/kubernetes/slclient_Gen2.toml) for the cluster:
 ```bash
 export IBMCLOUD_VPC_REGION=<the_region_name>
 export IBMCLOUD_RESOURCE_GROUP_ID=<check via `ibmcloud resource groups`>
 export IBMCLOUD_API_KEY=<your ibm cloud API key>
-cat <<END > /root/ibm-vpc-block-csi-driver/deploy/kubernetes/driver/kubernetes/slclient_Gen2.toml
-[server]
-debug_trace = false
-
-[vpc]
-iam_client_id = "bx"
-iam_client_secret = "bx"
-g2_token_exchange_endpoint_url = "https://iam.bluemix.net"
-g2_riaas_endpoint_url = "https://${IBMCLOUD_VPC_REGION}.iaas.cloud.ibm.com"
-g2_resource_group_id = "${IBMCLOUD_RESOURCE_GROUP_ID}"
-g2_api_key = "${IBMCLOUD_API_KEY}"
-provider_type = "g2"
+cat <<END > slclient_Gen2.toml
+[VPC]
+  iam_client_id = "bx"
+  iam_client_secret = "bx"
+  g2_token_exchange_endpoint_url = "https://iam.cloud.ibm.com"
+  g2_riaas_endpoint_url = "https://${IBMCLOUD_VPC_REGION}.iaas.cloud.ibm.com"
+  g2_resource_group_id = "${IBMCLOUD_RESOURCE_GROUP_ID}"
+  g2_api_key = "${IBMCLOUD_API_KEY}"
+  provider_type = "g2"
 END
-cat /root/ibm-vpc-block-csi-driver/deploy/kubernetes/driver/kubernetes/slclient_Gen2.toml
+cat slclient_Gen2.toml
 ```
 > **Note** Please export `IBMCLOUD_VPC_REGION`, `IBMCLOUD_RESOURCE_GROUP_ID`, `IBMCLOUD_API_KEY` with correct values and check what the file was updated.
 
-7. Install **kustomize** tool
+6. Deploy original `ibm-vpc-block-csi-driver`:
 ```bash
-curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
-mv kustomize /usr/local/bin
-```
-
-8. Deploy `ibm-vpc-block-csi-driver` using **stage** overlay:
-```bash
-encodeVal=$(base64 -w 0 deploy/kubernetes/driver/kubernetes/slclient_Gen2.toml)
-sed -i "s/REPLACE_ME/$encodeVal/g" deploy/kubernetes/driver/kubernetes/manifests/storage-secret-store.yaml
-kustomize build deploy/kubernetes/driver/kubernetes/overlays/stage | kubectl apply -f -
+encodeVal=$(base64 -w 0 slclient_Gen2.toml)
+sed -i "s/REPLACE_ME/$encodeVal/g" ./hack/ibm/ibm-vpc-block-csi-driver-master.yaml
+kubectl create -f ./hack/ibm/ibm-vpc-block-csi-driver-master.yaml
 ```
 Check `ibm-vpc-block-csi-driver related` pod status
 ```bash
-root@csi-x86-worker:~/cloud-api-adaptor# kubectl get po -A -o wide | grep vpc
-kube-system    ibm-vpc-block-csi-controller-0       5/5     Running            0               25m    172.20.1.4    csi-x86-worker   <none>           <none>
-kube-system    ibm-vpc-block-csi-node-r9rjl         2/3     CrashLoopBackOff   9 (4m38s ago)   25m    172.20.0.4    csi-x86-cp       <none>           <none>
-kube-system    ibm-vpc-block-csi-node-vfpq5         3/3     Running            0               25m    172.20.1.5    csi-x86-worker   <none>           <none>
-root@csi-x86-worker:~/cloud-api-adaptor#
+kubectl get po -A -o wide | grep vpc
+kube-system                      ibm-vpc-block-csi-controller-bdfdf4657-vksh2       6/6     Running            0             15s
+kube-system                      ibm-vpc-block-csi-node-2w4jf                       2/3     CrashLoopBackOff   1 (12s ago)   16s
+kube-system                      ibm-vpc-block-csi-node-pf2j6                       3/3     Running            0             16s
 ```
 > **Note**
-> - The `CrashLoopBackOff` for node plugin `ibm-vpc-block-csi-node-r9rjl` on controller node is expected
-> - Make sure the controller plugin **ibm-vpc-block-csi-controller-0** is scheduled to the VSI worker node. If not, try to add `nodeSelector` to deployment yaml for `ibm-vpc-block-csi-controller`.
-> You can check it by follow command:
-> ```bash
-> kubectl -n kube-system describe po ibm-vpc-block-csi-controller-0 |grep Node:
-> Node:             csi-x86-worker/10.244.0.10
-> ```
+> - The `CrashLoopBackOff` for node plugin `ibm-vpc-block-csi-node-2w4jf` on controller node is expected
 
 ### Deploy csi-wrapper to patch on ibm-vpc-block-csi-driver
 
 1. Create the PeerpodVolume CRD object
 ```bash
-cd /root/cloud-api-adaptor/volumes/csi-wrapper/
 kubectl create -f crd/peerpodvolume.yaml
 ```
 The output looks like:
@@ -148,27 +141,29 @@ clusterrolebinding.rbac.authorization.k8s.io/vpc-block-csi-wrapper-node-binding 
 
 3. patch ibm-vpc-block-csi-driver:
 ```bash
-kubectl patch statefulset ibm-vpc-block-csi-controller -n kube-system --patch-file hack/ibm/patch-controller.yaml
+kubectl patch Deployment ibm-vpc-block-csi-controller -n kube-system --patch-file hack/ibm/patch-controller.yaml
 kubectl patch ds ibm-vpc-block-csi-node -n kube-system --patch-file hack/ibm/patch-node.yaml
 ```
 
 4. Check pod status now:
 ```bash
 kubectl get po -A -o wide | grep vpc
-kube-system    ibm-vpc-block-csi-controller-0       6/6     Running             0             8m18s   172.20.1.6    csi-x86-worker   <none>           <none>
-kube-system    ibm-vpc-block-csi-node-7kj9b         4/4     Running             0             8m5s    172.20.1.7    csi-x86-worker   <none>           <none>
-kube-system    ibm-vpc-block-csi-node-r7b5w         0/4     ContainerCreating   0             8m5s    <none>        csi-x86-cp       <none>           <none>
+kube-system                      ibm-vpc-block-csi-controller-664ccf487d-q9zjh      7/7     Running             0             22s     172.20.3.14    liudali-csi-amd64-node-1   <none>           <none>
+kube-system                      ibm-vpc-block-csi-node-fc8lx                       4/4     Running             0             21s     172.20.3.15    liudali-csi-amd64-node-1   <none>           <none>
+kube-system                      ibm-vpc-block-csi-node-qbfhc                       0/4     ContainerCreating   0             21s     <none>         liudali-csi-amd64-node-0   <none>           <none>
 ```
-> **Note** The `ibm-vpc-block-csi-node-r7b5w` pod won't in `Running` status as it's on control node, just ignore it.
+> **Note** The `ibm-vpc-block-csi-node-qbfhc` pod won't in `Running` status as it's on control node, just ignore it.
 
 5. Create **storage class** for Peerpod:
 ```bash
 kubectl apply -f hack/ibm/ibm-vpc-block-5iopsTier-StorageClass-for-peerpod.yaml
 ```
+> **Note**
+> - One parameter `peerpod: "true"` is added, without it, csi-wrapper won't create PeerpodVolume objects, csi-requests will be processed as normal csi-requests.
 
 ## Run the `csi-wrapper for peerpod storage` demo
 
-1. Create one pvc that use `ibm-vpc-block-csi-driver`
+1. Create one pvc that use the storage class for peerpod.
 ```bash
 kubectl create -f hack/ibm/my-pvc-kube-system.yaml
 ```
@@ -177,10 +172,10 @@ kubectl create -f hack/ibm/my-pvc-kube-system.yaml
 ```bash
 kubectl -n kube-system get pvc
 NAME     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS                AGE
-my-pvc   Bound    pvc-8e258388-3493-45fd-a92b-e4576ccdce7c   10Gi       RWO            ibmc-vpc-block-5iops-tier   19s
+my-pvc   Bound    pvc-b0803078-551e-42bc-9a44-fc98d95b8010   10Gi       RWO            ibmc-vpc-block-5iops-tier   58s
 ```
 
-3. Create nginx peer-pod demo with with `podvm-wrapper` and `ibm-vpc-block-csi-driver` container
+3. Create nginx peer-pod demo with with `podvm-wrapper` and `ibm-vpc-block-csi-driver` containers
 ```bash
 kubectl create -f hack/ibm/nginx-kata-with-my-pvc-and-csi-wrapper.yaml
 ```
@@ -196,11 +191,11 @@ kube-system   nginx                                                 3/3     Runn
 ```bash
 kubectl get PeerpodVolume -A
 NAMESPACE     NAME                                        AGE
-kube-system   r022-31f30b9b-556b-4a5d-80b0-419270a8783e   11m
+kube-system   r018-1f874ae2-abed-4f37-853e-b1748acd8ced   2m35s
 ```
 - Using name get the state of the PeerpodVolume:
 ```bash
-kubectl -n kube-system get PeerpodVolume r022-31f30b9b-556b-4a5d-80b0-419270a8783e -o yaml |grep state
+kubectl -n kube-system get PeerpodVolume r018-1f874ae2-abed-4f37-853e-b1748acd8ced -o yaml |grep state
   state: nodePublishVolumeApplied
 ```
 
@@ -228,50 +223,54 @@ lost+found
 ```bash
 echo "from nignx container date:" $(date) > /mount-path/incontainer.log
 ```
-- On the development machine check the created vsi pod:
+- On the development machine check the instanceID of created vsi for nginx pod:
 ```bash
 ibmcloud is ins |grep nginx
-02e7_d9d5d4f4-d188-4c96-8f7b-c390b97f7aa4   podvm-nginx-1c0b9c12    running   10.244.0.4     -                 bx2-2x8    podvm-82ae9f8-dirty-amd64            liudali-csi-wrapper-vpc   jp-tok-1   default
+0797_aa4084b3-253b-4720-8f90-152957b29410   podvm-nginx-b3593f0a                       running   10.242.64.4    -                 bx2-2x8     podvm-e2e-test-image-amd64                        se-image-e2e-test-eu-gb        eu-gb-2   Default
 ```
-- Using the VSI pod ID, get the network interface id:
+- Create a floating ip for the nginx pod VSI
 ```bash
-ibmcloud is in 02e7_d9d5d4f4-d188-4c96-8f7b-c390b97f7aa4 | grep -A 2  "Network Interfaces"
-Network Interfaces                    Interface   Name                              ID                                          Subnet                    Subnet ID                                   Floating IP   Security Groups                   Allow source IP spoofing   Reserved IP
-                                      Primary     snowless-defamed-dolphin-caller   02e7-663133fd-94aa-4d6b-bf2f-2163280dabf1   liudali-csi-wrapper-sn1   02e7-bf2a1bf2-5f94-4290-b422-b51f449a37a3   -             castle-duchess-regalia-dynamite   false                      10.244.0.4
-```
-- With the network interface ID, create a floating ip for the pod VSI
-```bash
-ibmcloud is ipc my-ip --nic 02e7-663133fd-94aa-4d6b-bf2f-2163280dabf1
-Creating floating IP my-ip under account DaLi Liu's Account as user liudali@cn.ibm.com...
-
-ID               r022-be4950a9-1f88-45ae-be9b-bfcdbcd07b53
-Address          162.133.135.79
-...
+export vsi_name=podvm-nginx-b3593f0a
+export vsi_id=0797_aa4084b3-253b-4720-8f90-152957b29410
+nic_id=$(ibmcloud is instance ${vsi_id} --output JSON | jq -r '.network_interfaces[].id')
+floating_ip=$(ibmcloud is floating-ip-reserve ${vsi_name}-ip --nic-id ${nic_id} --output JSON | jq -r '.address')
+echo $floating_ip
+141.125.163.10
 ```
 - Login to the created vsi
 ```bash
-ssh root@162.133.135.79
+ssh root@141.125.163.10
 ```
 - Check the mount point:
 ```bash
-root@podvm-nginx-1c0b9c12:~# lsblk
+root@podvm-nginx-b3593f0a:~# lsblk
 NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
-loop0     7:0    0 91.8M  1 loop /snap/lxd/23991
-loop1     7:1    0 63.2M  1 loop /snap/core20/1695
-loop2     7:2    0 49.6M  1 loop /snap/snapd/17883
-vda     252:0    0  100G  0 disk
-├─vda1  252:1    0 99.9G  0 part /
+loop0     7:0    0 63.5M  1 loop /snap/core20/1891
+loop1     7:1    0 91.9M  1 loop /snap/lxd/24061
+loop2     7:2    0 53.3M  1 loop /snap/snapd/19361
+vda     252:0    0   10G  0 disk
+├─vda1  252:1    0  9.9G  0 part /
 ├─vda14 252:14   0    4M  0 part
 └─vda15 252:15   0  106M  0 part /boot/efi
-vdb     252:16   0  372K  0 disk
+vdb     252:16   0  374K  0 disk
 vdc     252:32   0   44K  0 disk
-vdd     252:48   0   10G  0 disk /var/lib/kubelet/pods/710bf7cb-aada-4cf1-9266-b90afd9c4921/volumes/kubernetes.io~csi/pvc-8e258388-3493-45fd-a92b-e4576ccdce7c/mount
-root@podvm-nginx-1c0b9c12:~#
+vdd     252:48   0   10G  0 disk /var/lib/kubelet/pods/d57f98fe-b6b3-48bd-900f-d565d2823032/volumes/kubernetes.io~csi/pvc-b0803078-551e-42bc-9a44-fc98d95b8010/mount
+root@podvm-nginx-b3593f0a:~#
 ```
-> **Note** We can see, the device **vdd** is mounted to `/var/lib/kubelet/pods/710bf7cb-aada-4cf1-9266-b90afd9c4921/volumes/kubernetes.io~csi/pvc-8e258388-3493-45fd-a92b-e4576ccdce7c/mount` in the vsi as expected.
+> **Note** We can see, the device **vdd** is mounted to `/var/lib/kubelet/pods/d57f98fe-b6b3-48bd-900f-d565d2823032/volumes/kubernetes.io~csi/pvc-b0803078-551e-42bc-9a44-fc98d95b8010/mount` in the vsi as expected.
 
 - Check the created file from container
 ```
-cat /var/lib/kubelet/pods/710bf7cb-aada-4cf1-9266-b90afd9c4921/volumes/kubernetes.io~csi/pvc-8e258388-3493-45fd-a92b-e4576ccdce7c/mount/incontainer.log
-from nignx container date: Wed Dec 28 16:55:16 UTC 2022
+cat /var/lib/kubelet/pods/d57f98fe-b6b3-48bd-900f-d565d2823032/volumes/kubernetes.io~csi/pvc-b0803078-551e-42bc-9a44-fc98d95b8010/mount/incontainer.log
+from nignx container date: Tue Jun 20 07:40:08 UTC 2023
+```
+
+## Debug
+- Monitor the csi-controller-wrapper log:
+```
+kubectl logs -n kube-system ibm-vpc-block-csi-controller-664ccf487d-q9zjh -c csi-controller-wrapper -f
+```
+- Monitor the cloud-api-adaptor-daemonset log:
+```
+kubectl logs -n confidential-containers-system cloud-api-adaptor-daemonset-gx69f -f
 ```

@@ -19,6 +19,9 @@ spec:
             - --v=5
             - --csi-address=/csi/csi-controller-wrapper.sock
             - --timeout=900s
+            - --worker-threads=15
+            - --kube-api-qps=5
+            - --kube-api-burst=10
 
         - name: csi-provisioner
           env:

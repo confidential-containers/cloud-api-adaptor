@@ -111,7 +111,7 @@ spec:
       name: syspath
     - name: customer-auth
       secret:
-        secretName: vpc-storage-secret-store
+        secretName: storage-secret-store
     - name: my-volume
       persistentVolumeClaim:
         claimName: my-pvc
