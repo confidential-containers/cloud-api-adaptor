@@ -22,7 +22,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
 )
@@ -32,50 +31,6 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
-
-type Provider interface {
-	CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator) (instance *Instance, err error)
-	DeleteInstance(ctx context.Context, instanceID string) error
-	Teardown() error
-}
-
-type Instance struct {
-	ID   string
-	Name string
-	IPs  []net.IP
-}
-
-type Service interface {
-	pb.HypervisorService
-	GetInstanceID(ctx context.Context, podNamespace, podName string, wait bool) (string, error)
-	Teardown() error
-}
-
-type cloudService struct {
-	provider     Provider
-	proxyFactory proxy.Factory
-	workerNode   podnetwork.WorkerNode
-	sandboxes    map[sandboxID]*sandbox
-	cond         *sync.Cond
-	podsDir      string
-	daemonPort   string
-	mutex        sync.Mutex
-	ppService    *k8sops.PeerPodService
-}
-
-type sandboxID string
-
-type sandbox struct {
-	agentProxy   proxy.AgentProxy
-	podNetwork   *tunneler.Config
-	cloudConfig  *cloudinit.CloudConfig
-	id           sandboxID
-	podName      string
-	podNamespace string
-	instanceName string
-	instanceID   string
-	netNSPath    string
-}
 
 func (s *cloudService) addSandbox(sid sandboxID, sandbox *sandbox) error {
 
@@ -211,6 +166,19 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		return nil, fmt.Errorf("namespace name %s is missing in annotations", annotations.SandboxNamespace)
 	}
 
+	// Get Pod VM instance type from annotations
+	instanceType := util.GetInstanceTypeFromAnnotation(req.Annotations)
+
+	// Get Pod VM cpu and memory from annotations
+	vcpus, memory := util.GetCPUAndMemoryFromAnnotation(req.Annotations)
+
+	// Pod VM spec
+	vmSpec := InstanceTypeSpec{
+		InstanceType: instanceType,
+		VCPUs:        vcpus,
+		Memory:       memory,
+	}
+
 	// TODO: server name is also generated in each cloud provider, and possibly inconsistent
 	serverName := util.GenerateInstanceName(pod, string(sid), 63)
 
@@ -290,6 +258,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		agentProxy:   agentProxy,
 		podNetwork:   podNetworkConfig,
 		cloudConfig:  cloudConfig,
+		spec:         vmSpec,
 	}
 
 	if err := s.addSandbox(sid, sandbox); err != nil {
@@ -316,7 +285,7 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 		return nil, fmt.Errorf("getting sandbox: %w", err)
 	}
 
-	instance, err := s.provider.CreateInstance(ctx, sandbox.podName, string(sid), sandbox.cloudConfig)
+	instance, err := s.provider.CreateInstance(ctx, sandbox.podName, string(sid), sandbox.cloudConfig, sandbox.spec)
 	if err != nil {
 		return nil, fmt.Errorf("creating an instance : %w", err)
 	}
