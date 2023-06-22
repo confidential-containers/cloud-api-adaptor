@@ -1,0 +1,50 @@
+# syntax=docker/dockerfile:1.5-labs
+
+ARG BASE_IMAGE=fedora:36
+FROM --platform=$TARGETPLATFORM ${BASE_IMAGE} as base
+
+ARG GO_VERSION=1.20.5
+ARG GO_LINUX_ARM64_SHA256=aa2fab0a7da20213ff975fa7876a66d47b48351558d98851b87d1cfef4360d09
+ARG GO_LINUX_AMD64_SHA256=d7ec48cde0d3d2be2c69203bc3e0a44de8660b9c09a6e85c4732a3f7dc442612
+ARG GO_LINUX_PPC64LE_SHA256=049b8ab07d34077b90c0642138e10207f6db14bdd1743ea994a21e228f8ca53d
+ARG GO_LINUX_S390X_SHA256=bac14667f1217ccce1d2ef4e204687fe6191e6dc19a8870cfb81a41f78b04e48
+
+FROM base AS base-amd64
+ADD --checksum=sha256:${GO_LINUX_AMD64_SHA256} https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz .
+
+FROM base AS base-arm64
+ADD --checksum=sha256:${GO_LINUX_ARM64_SHA256} https://go.dev/dl/go${GO_VERSION}.linux-arm64.tar.gz .
+
+FROM base AS base-ppc64le
+ADD --checksum=sha256:${GO_LINUX_PPC64LE_SHA256} https://go.dev/dl/go${GO_VERSION}.linux-ppc64le.tar.gz .
+
+FROM base AS base-s390x
+ADD --checksum=sha256:${GO_LINUX_S390X_SHA256} https://go.dev/dl/go${GO_VERSION}.linux-s390x.tar.gz .
+
+ARG TARGETARCH
+FROM base-${TARGETARCH}
+
+ARG TARGETARCH
+ARG GO_VERSION
+RUN tar -C /usr/local -xzf go${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
+    rm go${GO_VERSION}.linux-${TARGETARCH}.tar.gz
+
+# install cgo-related dependencies
+RUN set -eux; \
+	dnf install -y \
+		g++ \
+		gcc \
+		glibc-devel \
+		make \
+		pkg-config \
+	; \
+	dnf clean all
+
+ENV PATH /usr/local/go/bin:$PATH
+
+RUN set -eux; go version
+
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:$PATH
+RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 1777 "$GOPATH"
+WORKDIR $GOPATH
