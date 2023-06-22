@@ -10,6 +10,7 @@ import (
 
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -105,7 +106,7 @@ func TestCreateInstance(t *testing.T) {
 		serviceConfig: &Config{},
 	}
 
-	instance, err := provider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{})
+	instance, err := provider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, cloud.InstanceTypeSpec{InstanceType: "t2.small"})
 
 	assert.NoError(t, err)
 	assert.NotNil(t, instance)
