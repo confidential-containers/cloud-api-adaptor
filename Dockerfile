@@ -1,15 +1,18 @@
 ARG BUILD_TYPE=dev
-ARG GOLANG=golang:1.19
-ARG BASE=fedora:36 
+ARG BUILDER_BASE=quay.io/confidential-containers/golang-fedora:1.20.5-36
+ARG BASE=fedora:36
 
-FROM --platform=$BUILDPLATFORM $GOLANG AS builder
+
+FROM --platform=$TARGETPLATFORM $BUILDER_BASE as builder-release
+
+FROM builder-release as builder-dev
+RUN dnf install -y libvirt-devel && dnf clean all
+
+FROM builder-${BUILD_TYPE} AS builder
 ARG RELEASE_BUILD
 ARG COMMIT
 ARG VERSION
 ARG TARGETARCH
-# Install additional packages required to build libvirt provider
-# Need to use the [] syntax as default shell is /bin/sh
-RUN if [ "$RELEASE_BUILD" != true ]; then apt-get update -y && apt-get install -y libvirt-dev; fi
 WORKDIR /work
 COPY go.mod go.sum ./
 RUN go mod download
