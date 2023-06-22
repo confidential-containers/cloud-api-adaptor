@@ -6,6 +6,7 @@ package aws
 import (
 	"strings"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 )
 
@@ -20,18 +21,31 @@ func (i *securityGroupIds) Set(value string) error {
 	return nil
 }
 
+type instanceTypes []string
+
+func (i *instanceTypes) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *instanceTypes) Set(value string) error {
+	*i = append(*i, strings.Split(value, ",")...)
+	return nil
+}
+
 type Config struct {
-	AccessKeyId        string
-	SecretKey          string
-	Region             string
-	LoginProfile       string
-	LaunchTemplateName string
-	ImageId            string
-	InstanceType       string
-	KeyName            string
-	SubnetId           string
-	SecurityGroupIds   securityGroupIds
-	UseLaunchTemplate  bool
+	AccessKeyId          string
+	SecretKey            string
+	Region               string
+	LoginProfile         string
+	LaunchTemplateName   string
+	ImageId              string
+	InstanceType         string
+	KeyName              string
+	SubnetId             string
+	SecurityGroupIds     securityGroupIds
+	UseLaunchTemplate    bool
+	InstanceTypes        instanceTypes
+	InstanceTypeSpecList []cloud.InstanceTypeSpec
 }
 
 func (c Config) Redact() Config {

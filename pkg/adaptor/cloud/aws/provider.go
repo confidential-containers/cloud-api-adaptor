@@ -36,9 +36,13 @@ type ec2Client interface {
 	CreateTags(ctx context.Context,
 		params *ec2.CreateTagsInput,
 		optFns ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error)
+	// Add DescribeInstanceTypes method
+	DescribeInstanceTypes(ctx context.Context,
+		params *ec2.DescribeInstanceTypesInput,
+		optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error)
 }
-
 type awsProvider struct {
+	// Make ec2Client a mockable interface
 	ec2Client     ec2Client
 	serviceConfig *Config
 }
@@ -59,6 +63,10 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 	provider := &awsProvider{
 		ec2Client:     ec2Client,
 		serviceConfig: config,
+	}
+
+	if err = provider.updateInstanceTypeSpecList(); err != nil {
+		return nil, err
 	}
 
 	return provider, nil
@@ -86,7 +94,7 @@ func getIPs(instance types.Instance) ([]net.IP, error) {
 	return podNodeIPs, nil
 }
 
-func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator) (*cloud.Instance, error) {
+func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -97,6 +105,11 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	//Convert userData to base64
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
+
+	instanceType, err := p.selectInstanceType(ctx, spec)
+	if err != nil {
+		return nil, err
+	}
 
 	var input *ec2.RunInstancesInput
 
@@ -114,7 +127,7 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			MinCount:         aws.Int32(1),
 			MaxCount:         aws.Int32(1),
 			ImageId:          aws.String(p.serviceConfig.ImageId),
-			InstanceType:     types.InstanceType(p.serviceConfig.InstanceType),
+			InstanceType:     types.InstanceType(instanceType),
 			SecurityGroupIds: p.serviceConfig.SecurityGroupIds,
 			SubnetId:         aws.String(p.serviceConfig.SubnetId),
 			UserData:         &userDataEnc,
@@ -185,4 +198,64 @@ func (p *awsProvider) DeleteInstance(ctx context.Context, instanceID string) err
 
 func (p *awsProvider) Teardown() error {
 	return nil
+}
+
+// Add SelectInstanceType method to select an instance type based on the memory and vcpu requirements
+func (p *awsProvider) selectInstanceType(ctx context.Context, spec cloud.InstanceTypeSpec) (string, error) {
+
+	return cloud.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceTypeSpecList, p.serviceConfig.InstanceTypes, p.serviceConfig.InstanceType)
+}
+
+// Add a method to populate updateMachineTypeList for all the instanceTypes
+func (p *awsProvider) updateInstanceTypeSpecList() error {
+
+	// Get the instance types from the service config
+	instanceTypes := p.serviceConfig.InstanceTypes
+
+	// If instanceTypes is empty then populate it with the default instance type
+	if len(instanceTypes) == 0 {
+		instanceTypes = append(instanceTypes, p.serviceConfig.InstanceType)
+	}
+
+	// Create a list of instancetypespec
+	var instanceTypeSpecList []cloud.InstanceTypeSpec
+
+	// Iterate over the instance types and populate the instanceTypesTupleList
+	for _, instanceType := range instanceTypes {
+		vcpus, memory, err := p.getInstanceTypeInformation(instanceType)
+		if err != nil {
+			return err
+		}
+		instanceTypeSpecList = append(instanceTypeSpecList, cloud.InstanceTypeSpec{InstanceType: instanceType, VCPUs: vcpus, Memory: memory})
+	}
+
+	// Sort the instanceTypesTupleList by Memory and update the serviceConfig
+	p.serviceConfig.InstanceTypeSpecList = cloud.SortInstanceTypesOnMemory(instanceTypeSpecList)
+	logger.Printf("InstanceTypeSpecList (%v)", p.serviceConfig.InstanceTypeSpecList)
+	return nil
+}
+
+// Add a method to retrieve cpu, memory, and storage from the instance type
+func (p *awsProvider) getInstanceTypeInformation(instanceType string) (vcpu int64, memory int64, err error) {
+
+	// Get the instance type information from the instance type using AWS API
+	input := &ec2.DescribeInstanceTypesInput{
+		InstanceTypes: []types.InstanceType{
+			types.InstanceType(instanceType),
+		},
+	}
+	// Get the instance type information from the instance type using AWS API
+	result, err := p.ec2Client.DescribeInstanceTypes(context.Background(), input)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// Get the vcpu and memory from the result
+	if len(result.InstanceTypes) > 0 {
+		vcpu = int64(*result.InstanceTypes[0].VCpuInfo.DefaultVCpus)
+		memory = int64(*result.InstanceTypes[0].MemoryInfo.SizeInMiB)
+		return vcpu, memory, nil
+	}
+	return 0, 0, fmt.Errorf("instance type %s not found", instanceType)
+
 }
