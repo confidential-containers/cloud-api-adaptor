@@ -26,14 +26,14 @@ the tag of the kata-containers release candidate.
 - The `kata-containers/src/runtime` go module that we include in the main `cloud-api-adaptor` [`go.mod`](../go.mod),
 the `peerpod-ctl` [`go.mod`](../peerpod-ctrl/go.mod) and the `csi-wrapper` [`go.mod`](../volumes/csi-wrapper/go.mod).
 This can be done by running
-  ```
-  go get github.com/kata-containers/kata-containers/src/runtime@<release candidate branch e.g. CCv0>
-  go mod tidy
-  ```
+    ```
+    go get github.com/kata-containers/kata-containers/src/runtime@<release candidate branch e.g. CCv0>
+    go mod tidy
+    ```
 in the top-level repo directory, and the `peerpod-ctl` and `volumes/csi-wrapper` directories.
 > **Note:** If there are API changes in the kata-runtime go modules and we need to cloud-api-adaptor to implement,
 then it may be necessary to temporarily get the peerpod-ctrl and csi-wrapper to self-reference the parent folder to
-avoid compilation errors. This can be done by running 
+avoid compilation errors. This can be done by running: 
 > ```
 > go mod edit -replace github.com/confidential-containers/cloud-api-adaptor=../
 > go mod tidy
@@ -46,8 +46,48 @@ These updates should be done in a PR that is merged triggering the cloud-api-ada
 [image build workflow](../.github/workflows/image.yaml) to create a new container image in 
 [`quay.io](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags) to use in testing.
 
-We should also create a cloud-api-adaptor [pre-release](https://github.com/confidential-containers/cloud-api-adaptor/releases/new)
-to trigger the creation of the podvm build.
+#### Tags and update go submodules
+
+As mentioned above we have some go submodules with dependencies in the cloud-api-adaptor repo, so in order to allow
+people to use `go get` on these submodules, we need to ensure we create tags for each of the go modules we have in
+the correct order. The process should go something like:
+- Create a tag for the main [go module](../go.mod) pointing to the latest commit (including the version updates just
+merged) with the name `v<version>-alpha.1` (e.g. `v0.7.0-alpha.1` for the confidential containers `0.7.0` release release candidate). This can be done by running:
+    ```
+    git tag v<version>-alpha.1 main
+    git push origin v<version>-alpha.1
+    ```
+- Update the `csi-wrapper` and `peerpod-ctrl` go modules to use the tagged version of cloud-api-adapter, by running:
+    ```
+    go get github.com/confidential-containers/cloud-api-adaptor@v<version>-alpha.1
+    go mod tidy
+    ```
+    in their directories and removing the local replace references if we needed to add them earlier.
+- Merge the PR with this update to update the `main` branch
+- Create a tag for the peerpod-ctrl submodule on the new latest commit with the name
+ `peerpod-ctrl/v<version>-alpha.1`:
+    ```
+    git tag peerpod-ctrl/v<version>-alpha.1 main
+    git push origin peerpod-ctrl/v<version>-alpha.1
+    ```
+- Create a tag for the volumes/csi-wrapper submodule with the name
+ `volumes/csi-wrapper/v<version>-alpha.1`:
+    ```
+    git tag volumes/csi-wrapper/v<version>-alpha.1 main
+    git push origin volumes/csi-wrapper/v<version>-alpha.1
+    ```
+- Create a tag for the `peerpodconfig-ctrl` submodule with the name `peerpodconfig-ctrl/v<version>-alpha.1`:
+    ```
+    git tag peerpodconfig-ctrl/v<version>-alpha.1 main
+    git push origin peerpodconfig-ctrl/v<version>-alpha.1
+    ```
+- Create a tag for the `webhook` submodule with the name `webhook/v<version>-alpha.1`:
+    ```
+    git tag webhook/v<version>-alpha.1 main
+    git push origin webhook/v<version>-alpha.1
+    ```
+- After this we should create a a cloud-api-adaptor [pre-release](https://github.com/confidential-containers/cloud-api-adaptor/releases/new)
+named `v<version>-alpha.1` to trigger the creation of the podvm build.
 
 These versions should be tested to ensure that there are no breaking changes and the wider confidential-containers
 release team updated with the status. If there are any issues then this phase might be repeated until it is
@@ -61,8 +101,8 @@ instability and all these versions where tested in the release candidate testing
 
 For the cloud-api-adaptor we need to wait until the Kata Containers release tag has been created and the
 [Kata Containers runtime payload](https://github.com/kata-containers/kata-containers/actions/workflows/cc-payload.yaml)
-to have been built. We then can repeat the updates done during the release candidate phase, but this time use the
-release tags of the projects e.g. `v0.6.0`.
+to have been built. We then can repeat the steps done during the release candidate phase, but this time use the
+release tags of the project dependencies e.g. `v0.6.0` and creating the tags without the `-alpha.x` suffix.
 
 Once this has been completed and merged in we run the latest release of the cloud-api-adaptor including the auto
 generated release notes.
