@@ -34,6 +34,7 @@ configMapGenerator:
   #- DISABLECVM="" # Uncomment it if you want a generic VM
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
+  #- AZURE_INSTANCE_SIZES="" # comma separated
 ##TLS_SETTINGS
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS

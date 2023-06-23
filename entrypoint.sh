@@ -56,6 +56,7 @@ test_vars AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID AZURE_SUBSCRIPTION
 
 [[ "${SSH_USERNAME}" ]] && optionals+="-ssh-username ${SSH_USERNAME} "
 [[ "${DISABLECVM}" ]] && optionals+="-disable-cvm "
+[[ "${AZURE_INSTANCE_SIZES}" ]] && optionals+="-instance-sizes ${AZURE_INSTANCE_SIZES} "
 
 set -x
 exec cloud-api-adaptor azure \
