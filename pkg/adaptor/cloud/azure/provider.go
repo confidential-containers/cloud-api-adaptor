@@ -50,6 +50,10 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 		serviceConfig: config,
 	}
 
+	if err = provider.updateInstanceSizeSpecList(); err != nil {
+		return nil, err
+	}
+
 	return provider, nil
 }
 
@@ -152,6 +156,11 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	//Convert userData to base64
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 
+	instanceSize, err := p.selectInstanceType(ctx, spec)
+	if err != nil {
+		return nil, err
+	}
+
 	diskName := fmt.Sprintf("%s-disk", instanceName)
 	nicName := fmt.Sprintf("%s-net", instanceName)
 
@@ -208,7 +217,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		Location: to.Ptr(p.serviceConfig.Region),
 		Properties: &armcompute.VirtualMachineProperties{
 			HardwareProfile: &armcompute.HardwareProfile{
-				VMSize: to.Ptr(armcompute.VirtualMachineSizeTypes(p.serviceConfig.Size)),
+				VMSize: to.Ptr(armcompute.VirtualMachineSizeTypes(instanceSize)),
 			},
 			StorageProfile: &armcompute.StorageProfile{
 				ImageReference: &armcompute.ImageReference{
@@ -356,5 +365,54 @@ func (p *azureProvider) deleteNetworkInterface(ctx context.Context, nicName stri
 }
 
 func (p *azureProvider) Teardown() error {
+	return nil
+}
+
+// Add SelectInstanceType method to select an instance type based on the memory and vcpu requirements
+func (p *azureProvider) selectInstanceType(ctx context.Context, spec cloud.InstanceTypeSpec) (string, error) {
+
+	return cloud.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceSizeSpecList, p.serviceConfig.InstanceSizes, p.serviceConfig.Size)
+}
+
+// Add a method to populate InstanceSizeSpecList for all the instanceSizes
+// available in Azure
+func (p *azureProvider) updateInstanceSizeSpecList() error {
+
+	// Create a new instance of the Virtual Machine Sizes client
+	vmSizesClient, err := armcompute.NewVirtualMachineSizesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating VM sizes client: %w", err)
+	}
+	// Get the instance sizes from the service config
+	instanceSizes := p.serviceConfig.InstanceSizes
+
+	// If instanceTypes is empty then populate it with the default instance type
+	if len(instanceSizes) == 0 {
+		instanceSizes = append(instanceSizes, p.serviceConfig.Size)
+	}
+
+	// Create a list of instancesizespec
+	var instanceSizeSpecList []cloud.InstanceTypeSpec
+
+	// TODO: Is there an optimal method for this?
+	// Create NewListPager to iterate over the instance types
+	pager := vmSizesClient.NewListPager(p.serviceConfig.Region, &armcompute.VirtualMachineSizesClientListOptions{})
+
+	// Iterate over the page and populate the instanceSizeSpecList for all the instanceSizes
+	for pager.More() {
+		nextResult, err := pager.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("getting next page of VM sizes: %w", err)
+		}
+		for _, vmSize := range nextResult.VirtualMachineSizeListResult.Value {
+			if util.Contains(instanceSizes, *vmSize.Name) {
+				instanceSizeSpecList = append(instanceSizeSpecList, cloud.InstanceTypeSpec{InstanceType: *vmSize.Name, VCPUs: int64(*vmSize.NumberOfCores), Memory: int64(*vmSize.MemoryInMB)})
+			}
+		}
+	}
+
+	// Sort the InstanceSizeSpecList by Memory and update the serviceConfig
+	p.serviceConfig.InstanceSizeSpecList = cloud.SortInstanceTypesOnMemory(instanceSizeSpecList)
+	logger.Printf("instanceSizeSpecList (%v)", p.serviceConfig.InstanceSizeSpecList)
 	return nil
 }
