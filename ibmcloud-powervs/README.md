@@ -32,7 +32,7 @@ Add the following snippet to `image-prep.template`
 ```
 yum install -y gcc gcc-c++ git make
 git clone -b CCv0 https://github.com/kata-containers/kata-containers.git
-git clone -b staging https://github.com/confidential-containers/cloud-api-adaptor.git
+git clone https://github.com/confidential-containers/cloud-api-adaptor.git
 cd cloud-api-adaptor/ibmcloud-powervs/image
 make build
 ```
@@ -73,6 +73,6 @@ pvsadm image import -n <service-instance-name> -b <bucket-name> -o <file-name> -
 
 1. Setup necessary cloud resources such as PowerVS Service instance, network, API Key etc..
 
-2. Update [kustomization.yaml](../install/overlays/aws/kustomization.yaml) with the required details
+2. Update [kustomization.yaml](../install/overlays/ibmcloud-powervs/kustomization.yaml) with the required details
  
 3. Deploy Cloud API Adaptor by following the [install](../install/README.md) guide
