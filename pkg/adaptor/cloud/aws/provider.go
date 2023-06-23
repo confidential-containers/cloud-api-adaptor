@@ -206,7 +206,7 @@ func (p *awsProvider) selectInstanceType(ctx context.Context, spec cloud.Instanc
 	return cloud.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceTypeSpecList, p.serviceConfig.InstanceTypes, p.serviceConfig.InstanceType)
 }
 
-// Add a method to populate updateMachineTypeList for all the instanceTypes
+// Add a method to populate InstanceTypeSpecList for all the instanceTypes
 func (p *awsProvider) updateInstanceTypeSpecList() error {
 
 	// Get the instance types from the service config
@@ -220,7 +220,7 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 	// Create a list of instancetypespec
 	var instanceTypeSpecList []cloud.InstanceTypeSpec
 
-	// Iterate over the instance types and populate the instanceTypesTupleList
+	// Iterate over the instance types and populate the instanceTypeSpecList
 	for _, instanceType := range instanceTypes {
 		vcpus, memory, err := p.getInstanceTypeInformation(instanceType)
 		if err != nil {
@@ -229,7 +229,7 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 		instanceTypeSpecList = append(instanceTypeSpecList, cloud.InstanceTypeSpec{InstanceType: instanceType, VCPUs: vcpus, Memory: memory})
 	}
 
-	// Sort the instanceTypesTupleList by Memory and update the serviceConfig
+	// Sort the instanceTypeSpecList by Memory and update the serviceConfig
 	p.serviceConfig.InstanceTypeSpecList = cloud.SortInstanceTypesOnMemory(instanceTypeSpecList)
 	logger.Printf("InstanceTypeSpecList (%v)", p.serviceConfig.InstanceTypeSpecList)
 	return nil
