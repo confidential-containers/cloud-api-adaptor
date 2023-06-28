@@ -1,5 +1,6 @@
 #!/bin/bash
-# this script is for develop test only, user must prepared env via wrap-ibm-vpc-block-csi-driver.md
+# this script is for develop test only, user must prepare value of slclient.toml via README.md
+# make the `REPLACE_ME` is replaced in ibm-vpc-block-csi-driver-master.yaml
 kubectl delete po nginx
 kubectl delete pvc my-pvc
 kubectl -n kube-system delete po nginx
@@ -7,23 +8,12 @@ kubectl -n kube-system delete pvc my-pvc
 pv_name=$(kubectl get pv |grep ibmc-vpc-block-5iops-tier|awk '{print $1}')
 kubectl delete pv $pv_name
 
-if cd ~/ibm-vpc-block-csi-driver; then
-    kustomize build deploy/kubernetes/driver/kubernetes/overlays/stage | kubectl delete -f -
-    kustomize build deploy/kubernetes/driver/kubernetes/overlays/stage | kubectl apply -f -
-else
-    echo "Warning: path '~/ibm-vpc-block-csi-driver' not found"
-fi
+kubectl delete -f ./ibm-vpc-block-csi-driver-v5.2.0.yaml
+kubectl delete -f ../../crd/peerpodvolume.yaml
+kubectl delete -f ./vpc-block-csi-wrapper-runner.yaml
+kubectl create -f ./ibm-vpc-block-csi-driver-v5.2.0.yaml
+kubectl create -f ../../crd/peerpodvolume.yaml
+kubectl create -f ./vpc-block-csi-wrapper-runner.yaml
 
-if cd ~/csi-wrapper; then
-    kubectl delete -f crd/peerpodvolume.yaml
-    kubectl delete -f hack/ibm/vpc-block-csi-wrapper-runner.yaml
-    kubectl create -f crd/peerpodvolume.yaml
-    kubectl create -f hack/ibm/vpc-block-csi-wrapper-runner.yaml
-    make import-csi-controller-wrapper-docker
-    make import-csi-node-wrapper-docker
-    make import-csi-podvm-wrapper-docker
-    kubectl patch statefulset ibm-vpc-block-csi-controller -n kube-system --patch-file hack/ibm/patch-controller.yaml
-    kubectl patch ds ibm-vpc-block-csi-node -n kube-system --patch-file hack/ibm/patch-node.yaml
-else
-    echo "Warning: path '~/csi-wrapper' not found"
-fi
+kubectl patch Deployment ibm-vpc-block-csi-controller -n kube-system --patch-file ./patch-controller.yaml
+kubectl patch ds ibm-vpc-block-csi-node -n kube-system --patch-file ./patch-node.yaml

@@ -17,7 +17,7 @@ spec:
       envFrom:
         - configMapRef:
             name: ibm-vpc-block-csi-configmap
-      image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v4.3.1
+      image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v5.2.0
       imagePullPolicy: Always
       securityContext:
         privileged: true
