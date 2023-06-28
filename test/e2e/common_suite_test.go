@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
 
-const WAIT_POD_RUNNING_TIMEOUT = time.Second * 300
+const WAIT_POD_RUNNING_TIMEOUT = time.Second * 600
 const WAIT_JOB_RUNNING_TIMEOUT = time.Second * 600
 
 // testCommand is a list of commands to execute inside the pod container,
@@ -49,6 +49,7 @@ type testCase struct {
 	pod                  *v1.Pod
 	configMap            *v1.ConfigMap
 	secret               *v1.Secret
+	pvc                  *v1.PersistentVolumeClaim
 	job                  *batchv1.Job
 	testCommands         []testCommand
 	expectedPodLogString string
@@ -63,6 +64,11 @@ func (tc *testCase) withConfigMap(configMap *v1.ConfigMap) *testCase {
 
 func (tc *testCase) withSecret(secret *v1.Secret) *testCase {
 	tc.secret = secret
+	return tc
+}
+
+func (tc *testCase) withPVC(pvc *v1.PersistentVolumeClaim) *testCase {
+	tc.pvc = pvc
 	return tc
 }
 
@@ -115,6 +121,13 @@ func (tc *testCase) run() {
 					t.Fatal(err)
 				}
 			}
+
+			if tc.pvc != nil {
+				if err = client.Resources().Create(ctx, tc.pvc); err != nil {
+					t.Fatal(err)
+				}
+			}
+
 			if tc.job != nil {
 				if err = client.Resources().Create(ctx, tc.job); err != nil {
 					t.Fatal(err)
@@ -124,6 +137,7 @@ func (tc *testCase) run() {
 					t.Log(err)
 				}
 			}
+
 			if tc.pod != nil {
 				if err = client.Resources().Create(ctx, tc.pod); err != nil {
 					t.Fatal(err)
@@ -258,12 +272,21 @@ func (tc *testCase) run() {
 					}
 				}
 			}
+
 			if tc.pod != nil {
 				if err = client.Resources().Delete(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
 				log.Infof("Deleting pod... %s", tc.pod.Name)
 
+			}
+
+			if tc.pvc != nil {
+				if err = client.Resources().Delete(ctx, tc.pvc); err != nil {
+					t.Fatal(err)
+				} else {
+					log.Infof("Deleting PVC... %s", tc.pvc.Name)
+				}
 			}
 
 			return ctx
@@ -629,4 +652,23 @@ func doTestCreatePeerPodWithLargeImage(t *testing.T, assert CloudAssert) {
 	imageName := "quay.io/confidential-containers/test-images:largeimage"
 	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever))
 	newTestCase(t, "LargeImagePeerPod", assert, "Peer pod with Large Image has been created").withPod(pod).withPodWatcher().run()
+}
+
+func doTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, assert CloudAssert, myPVC *v1.PersistentVolumeClaim, pod *v1.Pod, mountPath string) {
+	testCommands := []testCommand{
+		{
+			command:       []string{"lsblk"},
+			containerName: pod.Spec.Containers[2].Name,
+			testCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if strings.Contains(stdout.String(), mountPath) {
+					log.Infof("PVC volume is mounted correctly: %s", stdout.String())
+					return true
+				} else {
+					log.Errorf("PVC volume failed to be mounted at target path: %s", stdout.String())
+					return false
+				}
+			},
+		},
+	}
+	newTestCase(t, "PeerPodWithPVCAndCSIWrapper", assert, "PVC is created and mounted as expected").withPod(pod).withPVC(myPVC).withTestCommands(testCommands).run()
 }

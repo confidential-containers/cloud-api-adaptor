@@ -547,7 +547,7 @@ spec:
         envFrom:
         - configMapRef:
             name: ibm-vpc-block-csi-configmap
-        image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master
+        image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v5.2.0
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 5
@@ -799,7 +799,7 @@ spec:
         envFrom:
         - configMapRef:
             name: ibm-vpc-block-csi-configmap
-        image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master
+        image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v5.2.0
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 5

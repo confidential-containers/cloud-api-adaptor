@@ -83,7 +83,7 @@ node/liudali-csi-amd64-node-1 labeled
 node/liudali-csi-amd64-node-1 labeled
 ```
 
-5. Create the [slclient_Gen2.toml](https://github.com/kubernetes-sigs/ibm-vpc-block-csi-driver/blob/master/deploy/kubernetes/driver/kubernetes/slclient_Gen2.toml) for the cluster:
+5. Create the [slclient_Gen2.toml](https://github.com/kubernetes-sigs/ibm-vpc-block-csi-driver/blob/v5.2.0/deploy/kubernetes/driver/kubernetes/slclient_Gen2.toml) for the cluster:
 ```bash
 export IBMCLOUD_VPC_REGION=<the_region_name>
 export IBMCLOUD_RESOURCE_GROUP_ID=<check via `ibmcloud resource groups`>
@@ -105,8 +105,8 @@ cat slclient_Gen2.toml
 6. Deploy original `ibm-vpc-block-csi-driver`:
 ```bash
 encodeVal=$(base64 -w 0 slclient_Gen2.toml)
-sed -i "s/REPLACE_ME/$encodeVal/g" ./hack/ibm/ibm-vpc-block-csi-driver-master.yaml
-kubectl create -f ./hack/ibm/ibm-vpc-block-csi-driver-master.yaml
+sed -i "s/REPLACE_ME/$encodeVal/g" ./hack/ibm/ibm-vpc-block-csi-driver-v5.2.0.yaml
+kubectl create -f ./hack/ibm/ibm-vpc-block-csi-driver-v5.2.0.yaml
 ```
 Check `ibm-vpc-block-csi-driver related` pod status
 ```bash
