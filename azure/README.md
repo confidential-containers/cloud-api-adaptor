@@ -409,10 +409,8 @@ configMapGenerator:
 secretGenerator:
 - name: peer-pods-secret
   namespace: confidential-containers-system
-  literals:
-  - AZURE_CLIENT_ID="${AZURE_CLIENT_ID}"
-  - AZURE_CLIENT_SECRET="${AZURE_CAA_CLIENT_SECRET}"
-  - AZURE_TENANT_ID="${AZURE_TENANT_ID}"
+  envs:
+  - service-principal.env
 - name: ssh-key-secret
   namespace: confidential-containers-system
   files:
@@ -425,6 +423,17 @@ The ssh public key should be accessible to the kustomization file:
 ```bash
 cp $SSH_KEY install/overlays/azure/id_rsa.pub
 ```
+
+Populate an env file w/ the service principal:
+
+```bash
+cat <<EOF > install/overlays/azure/service-principal.env
+AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+AZURE_CLIENT_SECRET=${AZURE_CAA_CLIENT_SECRET}
+AZURE_TENANT_ID=${AZURE_TENANT_ID}
+EOF
+```
+
 
 ### Deploy CAA on the Kubernetes cluster
 
