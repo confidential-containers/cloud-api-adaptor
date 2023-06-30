@@ -10,7 +10,7 @@
 UBUNTU_RELEASE     = focal
 SKOPEO_VERSION     = 1.5.0
 UMOCI_VERSION      = 0.4.7
-AA_VERSION         = v0.6.0
+GUEST_COMPONENTS_VERSION ?= "af35c0649bab2d000b5c350bc5e60db67ef9e1a5"
 
 IMAGE_PREFIX := podvm
 
@@ -87,8 +87,22 @@ STATIC_LIBSECCOMP_BUILDER = ../../../kata-containers/ci/install_libseccomp.sh
 STATIC_LIBSECCOMP_DIR     = $(abspath staticlib)
 STATIC_LIBSECCOMP         = $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp/lib/libseccomp.a
 
-ATTESTATION_AGENT_SRC = ../../../attestation-agent
-ATTESTATION_AGENT_REPO = https://github.com/confidential-containers/attestation-agent
+GUEST_COMPONENTS_SRC = ../../../guest-components
+GUEST_COMPONENTS_REPO ?= https://github.com/confidential-containers/guest-components
+
+# Clone a specific commit/tag/branch of a repo.
+# $(1) - Repository URL
+# $(2) - Destination directory
+# $(3) - Commit/tag/branch
+define git_clone_repo_ref
+	@echo "Cloning $(1) to $(2)"
+	mkdir -p "$(2)" && \
+		cd "$(2)" && \
+		git init && \
+		git remote add origin "$(1)" && \
+		git fetch --depth=1 origin "$(3)" && \
+		git reset --hard FETCH_HEAD
+endef
 
 binaries: $(BINARIES)
 
@@ -123,17 +137,16 @@ $(PAUSE_SRC): $(SKOPEO_BIN)
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
 
-$(ATTESTATION_AGENT_SRC):
-	git clone --depth=1 "$(ATTESTATION_AGENT_REPO)" "$(ATTESTATION_AGENT_SRC)"
-	cd "$(ATTESTATION_AGENT_SRC)" && git fetch --depth=1 origin "$(AA_VERSION)" && git checkout FETCH_HEAD
+$(GUEST_COMPONENTS_SRC):
+	$(call git_clone_repo_ref,$(GUEST_COMPONENTS_REPO),$(GUEST_COMPONENTS_SRC),$(GUEST_COMPONENTS_VERSION))
 
-$(ATTESTATION_AGENT): $(ATTESTATION_AGENT_SRC)
-	cd "$(ATTESTATION_AGENT_SRC)" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" ttrpc=true LIBC="$(LIBC)"
+$(ATTESTATION_AGENT): $(GUEST_COMPONENTS_SRC)
+	cd "$(GUEST_COMPONENTS_SRC)/attestation-agent" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" ttrpc=true LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
-	install --compare "$(ATTESTATION_AGENT_SRC)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
+	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
 
 clean_sources:
-	[ -d "$(ATTESTATION_AGENT_SRC)" ] && cd "$(ATTESTATION_AGENT_SRC)" && git clean -xfd
+	[ -d "$(GUEST_COMPONENTS_SRC)" ] && cd "$(GUEST_COMPONENTS_SRC)" && git clean -xfd
 	[ -d "$(KATA_AGENT_SRC)" ] && cd "$(KATA_AGENT_SRC)" && git clean -xfd
 	[ -d "$(AGENT_PROTOCOL_FORWARDER_SRC)" ] && cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && git clean -xfd -e podvm
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
