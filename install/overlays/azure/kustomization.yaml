@@ -49,10 +49,12 @@ secretGenerator:
   #- auth.json # set - path to auth.json pull credentials file
 - name: peer-pods-secret
   namespace: confidential-containers-system
-  literals:
-  - AZURE_CLIENT_ID="" # set
-  - AZURE_CLIENT_SECRET="" # set
-  - AZURE_TENANT_ID="" #set
+  # This file should look like this (w/o quotes!):
+  # AZURE_CLIENT_ID=...
+  # AZURE_CLIENT_SECRET=...
+  # AZURE_TENANT_ID=...
+  envs:
+  - service-principal.env
 - name: ssh-key-secret
   namespace: confidential-containers-system
   files: # key generation example: ssh-keygen -f ./id_rsa -N ""
