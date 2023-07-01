@@ -104,11 +104,14 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
 	if len(req.OCI.Mounts) > 0 {
 		logger.Print("    mounts:")
-		for _, m := range req.OCI.Mounts {
+		for i, m := range req.OCI.Mounts {
 			logger.Printf("        destination:%s source:%s type:%s", m.Destination, m.Source, m.Type)
 
 			if isNodePublishVolumeTargetPath(m.Source, kataDirectVolumesDir) {
-				req.OCI.Annotations[volumeTargetPathKey] = m.Source
+				if i > 0 {
+					req.OCI.Annotations[volumeTargetPathKey] += ","
+				}
+				req.OCI.Annotations[volumeTargetPathKey] += m.Source
 			}
 		}
 	}

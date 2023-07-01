@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -95,6 +96,7 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 	}
 
 	volumeTargetPath := req.OCI.Annotations[volumeTargetPathKey]
+	volumeTargetPathSlice := strings.Split(volumeTargetPath, ",")
 	if len(req.OCI.Mounts) > 0 {
 		for _, m := range req.OCI.Mounts {
 			if _, err := os.Stat(m.Source); os.IsNotExist(err) && m.Type == "bind" {
@@ -103,12 +105,13 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 					logger.Printf("Failed to create dir: %v", err)
 				}
 			}
-
-			if isTargetPath(m.Source, volumeTargetPath) {
-				logger.Printf("Waiting for device mounted to: %s", m.Source)
-				err := waitForDeviceMounted(ctx, m.Source)
-				if err != nil {
-					return nil, err
+			for _, s := range volumeTargetPathSlice {
+				if isTargetPath(m.Source, strings.TrimSpace(s)) {
+					logger.Printf("Waiting for device mounted to: %s", m.Source)
+					err := waitForDeviceMounted(ctx, m.Source)
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 		}

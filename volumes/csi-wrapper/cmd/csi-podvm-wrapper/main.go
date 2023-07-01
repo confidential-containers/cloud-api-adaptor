@@ -76,28 +76,28 @@ func main() {
 	if err != nil {
 		glog.Fatalf("Failed to get peerpodVolume crd object by podUid: %v, err: %v", podUid, err)
 	}
-	if len(peerpodVolumes.Items) != 1 {
-		glog.Fatalf("Only one peerpodVolume crd object is expected but got: %v", len(peerpodVolumes.Items))
+	glog.Infof("peerpodVolume crd object number is: %v ", len(peerpodVolumes.Items))
+	for idx, savedPeerpodvolume := range peerpodVolumes.Items {
+		glog.Infof("Index of peerpodVolumes.Items: %v ", idx)
+		glog.Infof("peerpodVolumes detail: %v ", savedPeerpodvolume)
+		savedPeerpodvolume.Spec.PodName = podName
+		savedPeerpodvolume.Spec.PodNamespace = podNamespace
+		savedPeerpodvolume.Spec.NodeName = podNodeName
+		savedPeerpodvolume.Labels["podName"] = podName
+		savedPeerpodvolume.Labels["podNamespace"] = podNamespace
+		savedPeerpodvolume.Labels["podNodeName"] = podNodeName
+		updatedPeerpodvolume, err := peerPodVolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(cfg.Namespace).Update(context.Background(), &savedPeerpodvolume, metav1.UpdateOptions{})
+		if err != nil {
+			glog.Fatalf("Error happens while Update podName and podNamespace to PeerpodVolume, err: %v", err.Error())
+		}
+		updatedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
+			State: v1alpha1.PeerPodVSIRunning,
+		}
+		_, err = peerPodVolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(cfg.Namespace).UpdateStatus(context.Background(), updatedPeerpodvolume, metav1.UpdateOptions{})
+		if err != nil {
+			glog.Fatalf("Error happens while Update PeerpodVolume status to PeerPodVSIRunning, err: %v", err.Error())
+		}
 	}
-	savedPeerpodvolume := peerpodVolumes.Items[0]
-	savedPeerpodvolume.Spec.PodName = podName
-	savedPeerpodvolume.Spec.PodNamespace = podNamespace
-	savedPeerpodvolume.Spec.NodeName = podNodeName
-	savedPeerpodvolume.Labels["podName"] = podName
-	savedPeerpodvolume.Labels["podNamespace"] = podNamespace
-	savedPeerpodvolume.Labels["podNodeName"] = podNodeName
-	updatedPeerpodvolume, err := peerPodVolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(cfg.Namespace).Update(context.Background(), &savedPeerpodvolume, metav1.UpdateOptions{})
-	if err != nil {
-		glog.Fatalf("Error happens while Update podName and podNamespace to PeerpodVolume, err: %v", err.Error())
-	}
-	updatedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
-		State: v1alpha1.PeerPodVSIRunning,
-	}
-	_, err = peerPodVolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(cfg.Namespace).UpdateStatus(context.Background(), updatedPeerpodvolume, metav1.UpdateOptions{})
-	if err != nil {
-		glog.Fatalf("Error happens while Update PeerpodVolume status to PeerPodVSIRunning, err: %v", err.Error())
-	}
-
 	if err := wrapper.Run(cfg.Endpoint, identityService, nil, podvmService); err != nil {
 		glog.Fatalf("Failed to run csi podvm plugin wrapper: %s", err.Error())
 	}
