@@ -4,10 +4,13 @@
 # Build and push container images for each cloud provider.
 ---
 name: image
+
 on:
   push:
     branches:
       - 'main'
+  workflow_dispatch:
+
 env:
   go_version: "1.20.6"
 

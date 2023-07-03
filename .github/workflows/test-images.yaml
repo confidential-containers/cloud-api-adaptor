@@ -1,9 +1,10 @@
 name: Create Test Images
+
 on:
   workflow_dispatch:
   push:
     branches:
-      - "main"
+      - 'main'
     paths:
       - 'test/e2e/fixtures/Dockerfile.*'
       - '.github/workflows/test-images.yaml'

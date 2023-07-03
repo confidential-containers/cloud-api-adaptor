@@ -4,7 +4,11 @@
 # Build binary and run unit tests
 ---
 name: build
-on: [pull_request]
+
+on:
+  pull_request:
+  workflow_dispatch:
+
 jobs:
   build_job:
     name: build
