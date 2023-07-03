@@ -4,16 +4,22 @@
 # Run end-to-end tests if any webhook source files changed.
 ---
 name: webhook-test
+
 on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'webhook/**'
   pull_request:
     paths:
       - 'webhook/**'
+
 jobs:
   test-e2e:
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash
         working-directory: webhook
     steps:
       - name: Checkout the pull request code

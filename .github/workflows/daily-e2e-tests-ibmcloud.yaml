@@ -4,15 +4,13 @@
 # Build and push container images for each cloud provider.
 ---
 name: daily e2e tests for ibmcloud
+
 on:
   schedule:
     # Runs "at 05:00(UTC time) every day" (see https://crontab.guru)
     # will base on default branch `main`
     - cron: '0 5 * * *'
-  push:
-    branches:    
-      - daily-e2e-ibmcloud
-      - develop
+  workflow_dispatch:
 
 jobs:
   daily-e2e-tests:
