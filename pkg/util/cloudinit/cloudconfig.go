@@ -14,7 +14,7 @@ import (
 const (
 	DefaultAuthfileSrcPath = "/root/containers/auth.json"
 	// image-rs fixed dst path for support at the agent, we convert it explictly to the resources file format
-	// e.g. https://github.com/confidential-containers/attestation-agent/blob/main/src/kbc_modules/offline_fs_kbc/aa-offline_fs_kbc-resources.json
+	// e.g. https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/kbc/src/offline_fs_kbc/aa-offline_fs_kbc-resources.json
 	DefaultAuthfileDstPath = "/etc/aa-offline_fs_kbc-resources.json"
 	DefaultAuthfileLimit   = 12288 // TODO: use a whole userdata limit mechanism instead of limiting authfile
 )
@@ -84,7 +84,6 @@ func splitLines(text string) []string {
 }
 
 func (config *CloudConfig) Generate() (string, error) {
-
 	tpl, err := template.New("base").Funcs(templateFuncMap).Parse(cloudInitText)
 	if err != nil {
 		return "", fmt.Errorf("Error initializing a template for cloudinit userdata: %w", err)
