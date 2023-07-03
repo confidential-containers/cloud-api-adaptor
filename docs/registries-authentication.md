@@ -8,7 +8,7 @@ Registry authentication file can be provided either statically or at runtime.
 
 ### Understanding workflow
 
-- For pulling images from authenticated registries you need the [**attestation-agent**](https://github.com/confidential-containers/attestation-agent) in the podvm. The role of the attestation-agent is to provide the registry credentials to the `kata-agent`. The podvm image that you are using should be built with `AA_KBC="offline_fs_kbc`. This ensures that [agent-config.toml](../podvm/files/etc/agent-config.toml) in podVM should have `aa_kbc_params = "offline_fs_kbc::null"` set.
+- For pulling images from authenticated registries you need the [**attestation-agent**](https://github.com/confidential-containers/guest-components/tree/main/attestation-agent) in the podvm. The role of the attestation-agent is to provide the registry credentials to the `kata-agent`. The podvm image that you are using should be built with `AA_KBC="offline_fs_kbc`. This ensures that [agent-config.toml](../podvm/files/etc/agent-config.toml) in podVM should have `aa_kbc_params = "offline_fs_kbc::null"` set.
 - The registry credentials also need to be available in a file inside the Pod VM image. The config `aa_kbc_params = "offline_fs_kbc::null` tells the attestation-agent to retrieve secrets from the **local filesystem**. The registry credentials are embedded in a resources file on a fixed path on the local filesystem: `/etc/aa-offline_fs_kbc-resources.json`.
 
 ### Statically embed authentication file in podvm image
