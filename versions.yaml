@@ -20,9 +20,9 @@ tools:
   protoc: 3.11.4
 # Referenced Git repositories
 git:
-  attestation-agent:
-    url: https://github.com/confidential-containers/attestation-agent
-    reference: v0.5.0
+  guest-components:
+    url: https://github.com/confidential-containers/guest-components
+    reference: af35c0649bab2d000b5c350bc5e60db67ef9e1a5
   kata-containers:
     url: https://github.com/kata-containers/kata-containers
     reference: CCv0
