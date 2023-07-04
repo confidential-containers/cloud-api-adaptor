@@ -151,7 +151,7 @@ linters-settings:
   gosimple:
     # Select the Go version to target.
     # Default: 1.13
-    go: "1.19"
+    go: "1.20"
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
 
@@ -190,7 +190,7 @@ linters-settings:
   staticcheck:
     # Select the Go version to target.
     # Default: 1.13
-    go: "1.19"
+    go: "1.20"
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
 
