@@ -1,0 +1,12 @@
+[Unit]
+Description=Attester Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStartPre=mkdir -p /run/confidential-containers
+ExecStart=/usr/local/bin/attester -s /run/confidential-containers/attester.sock
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

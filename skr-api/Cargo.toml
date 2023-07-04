@@ -1,0 +1,38 @@
+[package]
+name = "skr-api"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "attester"
+path = "src/attester.rs"
+
+[[bin]]
+name = "skr-api"
+path = "src/skr-api.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1.70"
+axum = "0.6.18"
+clap = { version = "4.3.10", features = ["derive"] }
+protobuf = "3.2.0"
+serde = { version = "1.0.166", features = ["derive"] }
+tokio = { version = "1.29.1", features = ["fs", "macros", "rt-multi-thread", "signal"] }
+tower-http = { version = "0.4.1", features = ["trace"] }
+tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
+kbs-types = "0.3"
+kbs_protocol = { git = "https://github.com/mkulke/image-rs.git", rev = "b64838e", default-features = false, features = ["openssl", "tdx-attester"] }
+attester = { git = "https://github.com/mkulke/image-rs.git", rev = "b64838e", default-features = false, features = ["tdx-attester"] }
+crypto = { git = "https://github.com/mkulke/image-rs.git", rev = "b64838e" }
+anyhow = "1.0.71"
+reqwest = { version = "0.11.18", features = ["json", "cookies"] }
+prost = "0.11.9"
+tokio-stream = { version = "0.1.14", features = ["net"] }
+tonic = "0.9.2"
+tower = { version = "0.4.13", features = ["tokio", "tokio-stream"] }
+
+[build-dependencies]
+tonic-build = "0.9.2"

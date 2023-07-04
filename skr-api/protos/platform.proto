@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package platform;
+
+message TeeRequest {};
+
+message TeeResponse {
+    string Tee = 1;
+}
+
+message EvidenceRequest {
+	string Challenge = 1;
+}
+
+message EvidenceResponse {
+	string Evidence = 1;
+}
+
+service Platform {
+	rpc tee (TeeRequest) returns (TeeResponse) {};
+	rpc evidence (EvidenceRequest) returns (EvidenceResponse) {};
+}

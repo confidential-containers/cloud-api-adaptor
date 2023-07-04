@@ -50,18 +50,22 @@ endif
 IMAGE_SUFFIX ?=
 IMAGE_FILE = $(IMAGE_NAME)$(IMAGE_SUFFIX)
 
+SKR_API = $(FILES_DIR)/usr/local/bin/skr-api
+ATTESTER = $(FILES_DIR)/usr/local/bin/attester
 AGENT_PROTOCOL_FORWARDER = $(FILES_DIR)/usr/local/bin/agent-protocol-forwarder
 KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
 PAUSE         = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/pause
 ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
 
 # Allow BINARIES to be overriden externally
-BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE)
+BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(SKR_API) $(ATTESTER)
 
 BINARIES += $(ATTESTATION_AGENT)
 $(shell sed -i "s/\(aa_kbc_params = \)\"[^\"]*\"/\1\"${AA_KBC}::${KBC_URI}\"/g" $(FILES_DIR)/etc/agent-config.toml)
 
 AGENT_PROTOCOL_FORWARDER_SRC = ../..
+
+SKR_API_SRC = ../../skr-api
 
 KATA_AGENT_SRC = ../../../kata-containers/src/agent
 KATA_AGENT_BUILD_TYPE = release
@@ -105,6 +109,14 @@ define git_clone_repo_ref
 endef
 
 binaries: $(BINARIES)
+
+$(SKR_API): force
+	cd "$(SKR_API_SRC)" && $(MAKE) build
+	install -D --compare "$(SKR_API_SRC)/target/release/skr-api" "$@"
+
+$(ATTESTER): force
+	cd "$(SKR_API_SRC)" && $(MAKE) build
+	install -D --compare "$(SKR_API_SRC)/target/release/attester" "$@"
 
 $(AGENT_PROTOCOL_FORWARDER): force
 	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && ARCH=$(DEB_ARCH) $(MAKE) agent-protocol-forwarder
