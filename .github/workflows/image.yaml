@@ -9,7 +9,7 @@ on:
     branches:
       - 'main'
 env:
-  go_version: 1.19
+  go_version: "1.20"
 
 jobs:
   build_push_job:
@@ -47,7 +47,7 @@ jobs:
           password: ${{ secrets.QUAY_PASSWORD }}
       - name: Build and push image
         run: |
-          if [ ${{ matrix.type }} == "release" ]; then      
+          if [ ${{ matrix.type }} == "release" ]; then
             ARCHES=${{matrix.arches}} RELEASE_BUILD=true make image
           else
             ARCHES=${{matrix.arches}} RELEASE_BUILD=false make image
