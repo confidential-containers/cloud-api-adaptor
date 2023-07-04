@@ -34,6 +34,7 @@ type vpcV1 interface {
 	CreateInstanceWithContext(context.Context, *vpcv1.CreateInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error)
 	GetInstanceWithContext(context.Context, *vpcv1.GetInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error)
 	DeleteInstanceWithContext(context.Context, *vpcv1.DeleteInstanceOptions) (*core.DetailedResponse, error)
+	GetInstanceProfileWithContext(context.Context, *vpcv1.GetInstanceProfileOptions) (*vpcv1.InstanceProfile, *core.DetailedResponse, error)
 }
 
 type ibmcloudVPCProvider struct {
@@ -111,12 +112,16 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 		}
 	}
 
-	logger.Printf("ibmcloud-vpc config: %#v", config.Redact())
-
 	provider := &ibmcloudVPCProvider{
 		vpc:           vpcV1,
 		serviceConfig: config,
 	}
+
+	if err = provider.updateInstanceProfileSpecList(); err != nil {
+		return nil, err
+	}
+
+	logger.Printf("ibmcloud-vpc config: %#v", config.Redact())
 
 	return provider, nil
 }
@@ -144,13 +149,13 @@ func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourc
 	return
 }
 
-func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData string) *vpcv1.InstancePrototype {
+func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile string) *vpcv1.InstancePrototype {
 
 	prototype := &vpcv1.InstancePrototype{
 		Name:     &instanceName,
 		Image:    &vpcv1.ImageIdentity{ID: &p.serviceConfig.ImageID},
 		UserData: &userData,
-		Profile:  &vpcv1.InstanceProfileIdentity{Name: &p.serviceConfig.ProfileName},
+		Profile:  &vpcv1.InstanceProfileIdentity{Name: &instanceProfile},
 		Zone:     &vpcv1.ZoneIdentity{Name: &p.serviceConfig.ZoneName},
 		Keys:     []vpcv1.KeyIdentityIntf{},
 		VPC:      &vpcv1.VPCIdentity{ID: &p.serviceConfig.VpcID},
@@ -234,7 +239,12 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		return nil, err
 	}
 
-	prototype := p.getInstancePrototype(instanceName, userData)
+	instanceProfile, err := p.selectInstanceProfile(ctx, spec)
+	if err != nil {
+		return nil, err
+	}
+
+	prototype := p.getInstancePrototype(instanceName, userData, instanceProfile)
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
@@ -277,6 +287,61 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	}
 
 	return instance, nil
+}
+
+// Select an instance profile based on the memory and vcpu requirements
+func (p *ibmcloudVPCProvider) selectInstanceProfile(ctx context.Context, spec cloud.InstanceTypeSpec) (string, error) {
+
+	return cloud.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceProfileSpecList, p.serviceConfig.InstanceProfiles, p.serviceConfig.ProfileName)
+}
+
+// Populate instanceProfileSpecList for all the instanceProfiles
+func (p *ibmcloudVPCProvider) updateInstanceProfileSpecList() error {
+
+	// Get the instance types from the service config
+	instanceProfiles := p.serviceConfig.InstanceProfiles
+
+	// If instanceProfiles is empty then populate it with the default instance type
+	if len(instanceProfiles) == 0 {
+		instanceProfiles = append(instanceProfiles, p.serviceConfig.ProfileName)
+	}
+
+	// Create a list of instanceProfileSpec
+	var instanceProfileSpecList []cloud.InstanceTypeSpec
+
+	// Iterate over the instance types and populate the instanceProfileSpecList
+	for _, profileType := range instanceProfiles {
+		vcpus, memory, err := p.getProfileNameInformation(profileType)
+		if err != nil {
+			return err
+		}
+		instanceProfileSpecList = append(instanceProfileSpecList, cloud.InstanceTypeSpec{InstanceType: profileType, VCPUs: vcpus, Memory: memory})
+	}
+
+	// Sort the instanceProfileSpecList by Memory and update the serviceConfig
+	p.serviceConfig.InstanceProfileSpecList = cloud.SortInstanceTypesOnMemory(instanceProfileSpecList)
+	logger.Printf("instanceProfileSpecList (%v)", p.serviceConfig.InstanceProfileSpecList)
+	return nil
+}
+
+// Add a method to retrieve cpu, memory, and storage from the profile name
+func (p *ibmcloudVPCProvider) getProfileNameInformation(profileName string) (vcpu int64, memory int64, err error) {
+
+	// Get the profile information from the instance type using IBMCloud API
+	result, details, err := p.vpc.GetInstanceProfileWithContext(context.Background(),
+		&vpcv1.GetInstanceProfileOptions{
+			Name: &profileName,
+		},
+	)
+
+	if err != nil {
+		return 0, 0, fmt.Errorf("instance profile name %s not found, due to %w\nFurther Details:\n%v", profileName, err, details)
+	}
+
+	vcpu = int64(*result.VcpuCount.(*vpcv1.InstanceProfileVcpu).Value)
+	// Value returned is in GiB, convert to MiB
+	memory = int64(*result.Memory.(*vpcv1.InstanceProfileMemory).Value) * 1024
+	return vcpu, memory, nil
 }
 
 func (p *ibmcloudVPCProvider) DeleteInstance(ctx context.Context, instanceID string) error {

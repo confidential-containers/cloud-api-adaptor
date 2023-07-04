@@ -3,7 +3,27 @@
 
 package ibmcloud
 
-import "github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+import (
+	"strings"
+
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+)
+
+type instanceProfiles []string
+
+func (i *instanceProfiles) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *instanceProfiles) Set(value string) error {
+	if len(value) == 0 {
+		*i = make(instanceProfiles, 0)
+	} else {
+		*i = append(*i, strings.Split(value, ",")...)
+	}
+	return nil
+}
 
 type Config struct {
 	ApiKey                   string
@@ -21,6 +41,8 @@ type Config struct {
 	SecondarySecurityGroupID string
 	KeyID                    string
 	VpcID                    string
+	InstanceProfiles         instanceProfiles
+	InstanceProfileSpecList  []cloud.InstanceTypeSpec
 }
 
 func (c Config) Redact() Config {

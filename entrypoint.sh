@@ -82,6 +82,7 @@ exec cloud-api-adaptor ibmcloud \
         -key-id "${IBMCLOUD_SSH_KEY_ID}" \
         -image-id "${IBMCLOUD_PODVM_IMAGE_ID}" \
         -profile-name "${IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME}" \
+        -profile-list "${IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST}" \
         -zone-name "${IBMCLOUD_ZONE}" \
         -primary-subnet-id "${IBMCLOUD_VPC_SUBNET_ID}" \
         -primary-security-group-id "${IBMCLOUD_VPC_SG_ID}" \
