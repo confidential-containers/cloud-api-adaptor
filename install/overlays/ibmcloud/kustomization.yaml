@@ -22,6 +22,7 @@ configMapGenerator:
   - IBMCLOUD_SSH_KEY_ID="" #set
   - IBMCLOUD_PODVM_IMAGE_ID="" #set
   - IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME="" #set
+  - IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST="" #optional, comma separated list
   - IBMCLOUD_ZONE="" #set
   - IBMCLOUD_VPC_SUBNET_ID="" #set
   - IBMCLOUD_VPC_SG_ID="" #set
