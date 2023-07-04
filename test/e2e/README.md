@@ -73,9 +73,9 @@ for the *libvirt* provider.
 
 Create a new Go file (.go) named `provision_<CLOUD_PROVIDER>`.go (e.g., `provision_libvirt.go`)
 that should be tagged with `//go:build <CLOUD_PROVIDER>`. That file should have the implementation
-of the `CloudProvisioner` interface (see its definition in [provision.go](./provisioner/provision.go)).
+of the `CloudProvisioner` interface (see its definition in [provision.go](../provisioner/provision.go)).
 
-Apart from that, it should be added an entry to the `GetCloudProvisioner()` factory function in [provision.go](./provisioner/provision.go).
+Apart from that, it should be added an entry to the `GetCloudProvisioner()` factory function in [provision.go](../provisioner/provision.go).
 
 ## Create the test suite
 
