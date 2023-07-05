@@ -268,7 +268,7 @@ az sig image-version create \
 On success, the command will generate the image id, which needs to be used to set the value of `AZURE_IMAGE_ID` in `peer-pods-cm` configmap.
 You can also use the following command to retrieve the image id
 ```
-AZURE_IMAGE_ID=$(az sig image-version  list --resource-group  $AZURE_RESOURCE_GROUP --gallery-name $GALLERY_NAME --gallery-image-definition $GALLERY_IMAGE_DEF_NAME_COCO --query "[].{Id: id}" --output tsv
+AZURE_IMAGE_ID=$(az sig image-version  list --resource-group  $AZURE_RESOURCE_GROUP --gallery-name $GALLERY_NAME --gallery-image-definition $GALLERY_IMAGE_DEF_NAME --query "[].{Id: id}" --output tsv)
 
 echo $AZURE_IMAGE_ID
 ```
@@ -440,7 +440,7 @@ EOF
 Run the following command to deploy CAA:
 
 ```bash
-make deploy
+CLOUD_PROVIDER=azure make deploy
 ```
 
 Generic CAA deployment instructions are also described [here](../install/README.md).
