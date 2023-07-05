@@ -231,7 +231,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 			ds = object.(*appsv1.DaemonSet)
 
 			return ds.Status.CurrentNumberScheduled > 0
-		}), wait.WithTimeout(time.Second*60)); err != nil {
+		}), wait.WithTimeout(time.Minute*5)); err != nil {
 			return err
 		}
 		pods, err := GetDaemonSetOwnedPods(ctx, cfg, ds)
