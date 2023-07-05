@@ -89,6 +89,7 @@ func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, erro
 }
 
 func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
+
 	cmd := exec.Command("/bin/bash", "-c", "./kcli_cluster.sh create")
 	cmd.Dir = l.wd
 	cmd.Stdout = os.Stdout
@@ -104,6 +105,11 @@ func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Con
 	home, _ := os.UserHomeDir()
 	kubeconfig := path.Join(home, ".kcli/clusters", clusterName, "auth/kubeconfig")
 	cfg.WithKubeconfigFile(kubeconfig)
+
+	if err := AddNodeRoleWorkerLabel(ctx, clusterName, cfg); err != nil {
+
+		return fmt.Errorf("labeling nodes: %w", err)
+	}
 
 	return nil
 }
