@@ -116,6 +116,11 @@ func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Con
 	kubeconfig := path.Join(home, ".kcli/clusters", clusterName, "auth/kubeconfig")
 	cfg.WithKubeconfigFile(kubeconfig)
 
+	if err := AddNodeRoleWorkerLabel(ctx, clusterName, cfg); err != nil {
+
+		return fmt.Errorf("labeling nodes: %w", err)
+	}
+
 	return nil
 }
 
