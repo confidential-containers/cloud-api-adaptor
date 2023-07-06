@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 	"os"
 	"time"
 
@@ -188,7 +188,7 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData string
 	return prototype
 }
 
-func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]net.IP, error) {
+func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]netip.Addr, error) {
 
 	interfaces := []*vpcv1.NetworkInterfaceInstanceContextReference{instance.PrimaryNetworkInterface}
 	for i, nic := range instance.NetworkInterfaces {
@@ -197,7 +197,7 @@ func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]n
 		}
 	}
 
-	var ips []net.IP
+	var ips []netip.Addr
 
 	for i, nic := range interfaces {
 
@@ -209,9 +209,9 @@ func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]n
 			return nil, errNotReady
 		}
 
-		ip := net.ParseIP(*addr)
-		if ip == nil {
-			return nil, fmt.Errorf("failed to parse pod node IP %q", *addr)
+		ip, err := netip.ParseAddr(*addr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse pod node IP %q: %w", *addr, err)
 		}
 		ips = append(ips, ip)
 
@@ -247,7 +247,7 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	instanceID := *vpcInstance.ID
 	numInterfaces := len(prototype.NetworkInterfaces)
 
-	var ips []net.IP
+	var ips []netip.Addr
 
 	for retries := 0; retries < maxRetries; retries++ {
 

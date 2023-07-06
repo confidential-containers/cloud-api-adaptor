@@ -6,7 +6,7 @@ package routing
 import (
 	"errors"
 	"fmt"
-	"net"
+	"net/netip"
 	"os"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
@@ -29,29 +29,7 @@ const (
 	sourceTablePriority = 505
 )
 
-func checkDefaultRoute(dst *net.IPNet) bool {
-
-	if dst == nil || dst.IP == nil {
-		return true
-	}
-
-	if !dst.IP.Equal(net.IPv4zero) {
-		return false
-	}
-
-	if dst.Mask == nil {
-		return false
-	}
-
-	ones, bits := dst.Mask.Size()
-	if bits == 0 {
-		return false
-	}
-
-	return ones == 0
-}
-
-func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunneler.Config) error {
+func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
 
 	if !config.Dedicated {
 		return errors.New("shared subnet is not supported")
@@ -63,16 +41,8 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 
 	podNodeIP := podNodeIPs[1]
 
-	podIP, podIPNet, err := net.ParseCIDR(config.PodIP)
-	if err != nil {
-		return fmt.Errorf("failed to parse pod IP %s: %w", config.PodIP, err)
-	}
-	podIPNet.IP = podIP
-
-	nodeIP, _, err := net.ParseCIDR(config.WorkerNodeIP)
-	if err != nil {
-		return fmt.Errorf("failed to parse node IP %s: %w", config.WorkerNodeIP, err)
-	}
+	podIP := config.PodIP
+	nodeIP := config.WorkerNodeIP
 
 	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
@@ -113,8 +83,8 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		return fmt.Errorf("failed to set MTU of %s to %d on %s: %w", podVEthName, mtu, nsPath, err)
 	}
 
-	if err := podVEth.AddAddr(podIPNet); err != nil {
-		return fmt.Errorf("failed to add pod IP %s to %s on %s: %w", podIPNet, podVEthName, nsPath, err)
+	if err := podVEth.AddAddr(podIP); err != nil {
+		return fmt.Errorf("failed to add pod IP %s to %s on %s: %w", podIP, podVEthName, nsPath, err)
 	}
 
 	if err := podVEth.SetUp(); err != nil {
@@ -125,7 +95,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		return fmt.Errorf("failed to set %s up on host network namespace: %w", hostVEthName, err)
 	}
 
-	var defaultRouteGateway net.IP
+	var defaultRouteGateway netip.Addr
 
 	// We need to process routes without gateway address first. Processing routes with a gateway causes an error if the gateway is not reachable.
 	// Calico sets up routes with this pattern.
@@ -133,7 +103,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 
 	var first, second []*tunneler.Route
 	for _, route := range config.Routes {
-		if route.GW == "" {
+		if !route.GW.IsValid() {
 			first = append(first, route)
 		} else {
 			second = append(second, route)
@@ -142,36 +112,20 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 	routes := append(first, second...)
 
 	for _, route := range routes {
-		var dst *net.IPNet
-		if route.Dst != "" {
-			var err error
-			_, dst, err = net.ParseCIDR(route.Dst)
-			if err != nil {
-				return fmt.Errorf("failed to add route destination %s: %w", route.Dst, err)
-			}
-		}
-		var gw net.IP
-		if route.GW != "" {
-			gw = net.ParseIP(route.GW)
-			if gw == nil {
-				return fmt.Errorf("failed to parse GW IP: %s", route.GW)
-			}
+		if err := podNS.RouteAdd(&netops.Route{Destination: route.Dst, Gateway: route.GW, Device: podVEthName}); err != nil {
+			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", route.Dst, route.GW, nsPath, err)
 		}
 
-		if err := podNS.RouteAdd(&netops.Route{Destination: dst, Gateway: gw, Device: podVEthName}); err != nil {
-			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", dst, gw, nsPath, err)
-		}
-
-		if checkDefaultRoute(dst) {
-			defaultRouteGateway = gw
+		if !route.Dst.IsValid() || route.Dst.Bits() == 0 {
+			defaultRouteGateway = route.GW
 		}
 	}
 
-	if defaultRouteGateway == nil {
+	if !defaultRouteGateway.IsValid() {
 		return errors.New("no default route gateway is specified")
 	}
 
-	if err := hostVEth.AddAddr(mask32(defaultRouteGateway)); err != nil {
+	if err := hostVEth.AddAddr(netip.PrefixFrom(defaultRouteGateway, defaultRouteGateway.BitLen())); err != nil {
 		return fmt.Errorf("failed to add GW IP %s to %s on host network namespace: %w", defaultRouteGateway, hostVEthName, err)
 	}
 
@@ -179,7 +133,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		return fmt.Errorf("failed to add route table %d to pod %s IP on host network namespace: %w", podTableID, podIP, err)
 	}
 
-	if err := hostNS.RouteAdd(&netops.Route{Gateway: nodeIP, Device: hostLink.Name(), Table: sourceTableID}); err != nil {
+	if err := hostNS.RouteAdd(&netops.Route{Gateway: nodeIP.Addr(), Device: hostLink.Name(), Table: sourceTableID}); err != nil {
 		return fmt.Errorf("failed to add route table %d to pod %s IP on host network namespace: %w", sourceTableID, podIP, err)
 	}
 

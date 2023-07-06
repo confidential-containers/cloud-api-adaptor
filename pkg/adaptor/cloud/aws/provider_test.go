@@ -6,7 +6,7 @@ package aws
 import (
 	"context"
 	"fmt"
-	"net"
+	"net/netip"
 	"reflect"
 	"testing"
 
@@ -190,7 +190,7 @@ func TestCreateInstance(t *testing.T) {
 			want: &cloud.Instance{
 				ID:   "i-1234567890abcdef0",
 				Name: "podvm-podtest-123",
-				IPs:  []net.IP{net.ParseIP("10.0.0.2")},
+				IPs:  []netip.Addr{netip.MustParseAddr("10.0.0.2")},
 			},
 			// Test should not return an error
 			wantErr: false,
@@ -257,7 +257,7 @@ func TestCreateInstance(t *testing.T) {
 			want: &cloud.Instance{
 				ID:   "i-1234567890abcdef0",
 				Name: "podvm-podemptyinstance-123",
-				IPs:  []net.IP{net.ParseIP("10.0.0.2")},
+				IPs:  []netip.Addr{netip.MustParseAddr("10.0.0.2")},
 			},
 			// Test should not return an error
 			wantErr: false,
@@ -283,7 +283,7 @@ func TestCreateInstance(t *testing.T) {
 			want: &cloud.Instance{
 				ID:   "i-1234567890abcdef0",
 				Name: "podvm-podemptyinstance-123",
-				IPs:  []net.IP{net.ParseIP("10.0.0.2")},
+				IPs:  []netip.Addr{netip.MustParseAddr("10.0.0.2")},
 			},
 			// Test should not return an error
 			wantErr: false,

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -161,8 +162,8 @@ type Link interface {
 	Type() string
 	Delete() error
 
-	GetAddr() ([]*net.IPNet, error)
-	AddAddr(addr *net.IPNet) error
+	GetAddr() ([]netip.Prefix, error)
+	AddAddr(prefix netip.Prefix) error
 	GetHardwareAddr() (string, error)
 	SetHardwareAddr(hwAddr string) error
 	GetMTU() (int, error)
@@ -191,25 +192,25 @@ func (l *link) Type() string {
 	return l.nlLink.Type()
 }
 
-func (l *link) GetAddr() ([]*net.IPNet, error) {
+func (l *link) GetAddr() ([]netip.Prefix, error) {
 
 	addrs, err := l.ns.handle.AddrList(l.nlLink, netlink.FAMILY_V4)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get IP addresses assigned to %s interface %q:  %w", l.Type(), l.Name(), err)
 	}
 
-	var ipNets []*net.IPNet
+	var prefixes []netip.Prefix
 	for _, addr := range addrs {
-		ipNets = append(ipNets, addr.IPNet)
+		prefixes = append(prefixes, toPrefix(addr.IPNet))
 	}
 
-	return ipNets, nil
+	return prefixes, nil
 }
 
-func (l *link) AddAddr(addr *net.IPNet) error {
+func (l *link) AddAddr(prefix netip.Prefix) error {
 
-	if err := l.ns.handle.AddrAdd(l.nlLink, &netlink.Addr{IPNet: addr}); err != nil {
-		return fmt.Errorf("failed to assign an IP address %q to %s: %w", addr.String(), l.Name(), err)
+	if err := l.ns.handle.AddrAdd(l.nlLink, &netlink.Addr{IPNet: toIPNet(prefix)}); err != nil {
+		return fmt.Errorf("failed to assign an IP address %q to %s: %w", prefix.String(), l.Name(), err)
 	}
 
 	return nil
@@ -322,7 +323,7 @@ func (d *Bridge) getLink() netlink.Link {
 }
 
 type VXLAN struct {
-	Group net.IP
+	Group netip.Addr
 	ID    int
 	Port  int
 }
@@ -330,7 +331,7 @@ type VXLAN struct {
 func (d *VXLAN) getLink() netlink.Link {
 
 	return &netlink.Vxlan{
-		Group:   d.Group,
+		Group:   toIP(d.Group),
 		VxlanId: d.ID,
 		Port:    d.Port,
 	}
@@ -404,10 +405,12 @@ func (ns *namespace) LinkAdd(name string, device Device) (Link, error) {
 	return link, err
 }
 
+var DefaultPrefix = netip.MustParsePrefix("0.0.0.0/0")
+
 type Route struct {
-	Destination *net.IPNet
-	Source      net.IP
-	Gateway     net.IP
+	Destination netip.Prefix
+	Source      netip.Addr
+	Gateway     netip.Addr
 	Device      string
 	Priority    int
 	Table       int
@@ -425,24 +428,22 @@ func (r1 *Route) compare(r2 *Route) bool {
 	d1 := r1.Destination
 	d2 := r2.Destination
 
-	if !(d1 == nil && d2 == nil) {
-		if d1 == nil {
-			return true
-		}
-		if d2 == nil {
-			return false
-		}
+	if !d1.IsValid() {
+		d1 = DefaultPrefix
+	}
+	if !d2.IsValid() {
+		d2 = DefaultPrefix
+	}
 
-		cmp := bytes.Compare(d1.IP.To4(), d2.IP.To4())
-		if cmp != 0 {
-			return cmp < 0
-		}
+	cmp := bytes.Compare(d1.Addr().AsSlice(), d2.Addr().AsSlice())
+	if cmp != 0 {
+		return cmp < 0
+	}
 
-		l1, _ := d1.Mask.Size()
-		l2, _ := d2.Mask.Size()
-		if l1 != l2 {
-			return l1 < l2
-		}
+	l1 := d1.Bits()
+	l2 := d2.Bits()
+	if l1 != l2 {
+		return l1 < l2
 	}
 
 	return r1.Priority < r2.Priority
@@ -453,18 +454,18 @@ func (ns *namespace) routeListFiltered(filter *Route) ([]*netlink.Route, error) 
 	var nlRoute netlink.Route
 	var filterMask uint64
 
-	if dst := filter.Destination; dst != nil {
-		if ones, bits := dst.Mask.Size(); ones > 0 && bits > 0 {
-			nlRoute.Dst = dst
+	if dst := filter.Destination; dst.IsValid() {
+		if dst.Bits() > 0 {
+			nlRoute.Dst = toIPNet(dst)
 		}
 		filterMask |= netlink.RT_FILTER_DST
 	}
-	if filter.Source != nil {
-		nlRoute.Src = filter.Source
+	if filter.Source.IsValid() {
+		nlRoute.Src = toIP(filter.Source)
 		filterMask |= netlink.RT_FILTER_SRC
 	}
-	if filter.Gateway != nil {
-		nlRoute.Gw = filter.Gateway
+	if filter.Gateway.IsValid() {
+		nlRoute.Gw = toIP(filter.Gateway)
 		filterMask |= netlink.RT_FILTER_GW
 	}
 	if dev := filter.Device; dev != "" {
@@ -535,9 +536,9 @@ func (ns *namespace) RouteList(filters ...*Route) ([]*Route, error) {
 			onlink := r.Flags&int(netlink.FLAG_ONLINK) != 0
 
 			route := &Route{
-				Destination: r.Dst,
-				Source:      r.Src,
-				Gateway:     r.Gw,
+				Destination: toPrefix(r.Dst),
+				Source:      toAddr(r.Src),
+				Gateway:     toAddr(r.Gw),
 				Device:      dev,
 				Priority:    r.Priority,
 				Table:       r.Table,
@@ -561,9 +562,9 @@ func (ns *namespace) RouteList(filters ...*Route) ([]*Route, error) {
 func (ns *namespace) RouteAdd(route *Route) error {
 
 	nlRoute := &netlink.Route{
-		Dst:      route.Destination,
-		Src:      route.Source,
-		Gw:       route.Gateway,
+		Dst:      toIPNet(route.Destination),
+		Src:      toIP(route.Source),
+		Gw:       toIP(route.Gateway),
 		Priority: route.Priority,
 		Table:    route.Table,
 		Type:     route.Type,
@@ -579,7 +580,7 @@ func (ns *namespace) RouteAdd(route *Route) error {
 	if route.Onlink {
 		nlRoute.Flags = int(netlink.FLAG_ONLINK)
 	}
-	if route.Gateway == nil {
+	if !route.Gateway.IsValid() {
 		nlRoute.Scope = netlink.SCOPE_LINK
 	}
 	if err := ns.handle.RouteAdd(nlRoute); err != nil {
@@ -609,7 +610,7 @@ func (ns *namespace) RouteDel(route *Route) error {
 }
 
 type Rule struct {
-	Src      *net.IPNet
+	Src      netip.Prefix
 	IifName  string
 	Priority int
 	Table    int
@@ -618,7 +619,7 @@ type Rule struct {
 // RuleAdd adds a new rule in the routing policy database
 func (ns *namespace) RuleAdd(rule *Rule) error {
 	nlRule := netlink.NewRule()
-	nlRule.Src = rule.Src
+	nlRule.Src = toIPNet(rule.Src)
 	nlRule.IifName = rule.IifName
 	nlRule.Priority = rule.Priority
 	nlRule.Table = rule.Table
@@ -632,7 +633,7 @@ func (ns *namespace) RuleAdd(rule *Rule) error {
 // RuleDel deletes a rule in the routing policy database
 func (ns *namespace) RuleDel(rule *Rule) error {
 	nlRule := netlink.NewRule()
-	nlRule.Src = rule.Src
+	nlRule.Src = toIPNet(rule.Src)
 	nlRule.IifName = rule.IifName
 	nlRule.Priority = rule.Priority
 	nlRule.Table = rule.Table
@@ -647,8 +648,8 @@ func (ns *namespace) RuleDel(rule *Rule) error {
 func (ns *namespace) RuleList(rule *Rule) ([]*Rule, error) {
 	nlRule := netlink.NewRule()
 	var filterMask uint64
-	if rule.Src != nil {
-		nlRule.Src = rule.Src
+	if rule.Src.IsValid() {
+		nlRule.Src = toIPNet(rule.Src)
 		filterMask |= netlink.RT_FILTER_SRC
 	}
 	if rule.IifName != "" {
@@ -667,7 +668,7 @@ func (ns *namespace) RuleList(rule *Rule) ([]*Rule, error) {
 	var rules []*Rule
 	for _, nlRule := range nlRules {
 		rule := &Rule{
-			Src:      nlRule.Src,
+			Src:      toPrefix(nlRule.Src),
 			IifName:  nlRule.IifName,
 			Priority: nlRule.Priority,
 			Table:    nlRule.Table,
@@ -756,4 +757,44 @@ func (ns *namespace) RedirectDel(src string) error {
 	}
 
 	return nil
+}
+
+func toAddr(ip net.IP) netip.Addr {
+
+	addr, _ := netip.AddrFromSlice(ip)
+
+	return addr
+}
+
+func toPrefix(ipnet *net.IPNet) netip.Prefix {
+
+	if ipnet == nil {
+		return netip.Prefix{}
+	}
+
+	addr, _ := netip.AddrFromSlice(ipnet.IP)
+	ones, _ := ipnet.Mask.Size()
+
+	return netip.PrefixFrom(addr, ones)
+}
+
+func toIP(addr netip.Addr) net.IP {
+
+	if !addr.IsValid() {
+		return nil
+	}
+	return addr.AsSlice()
+}
+
+func toIPNet(prefix netip.Prefix) *net.IPNet {
+
+	if !prefix.IsValid() {
+		return nil
+	}
+	addr := prefix.Addr()
+
+	return &net.IPNet{
+		IP:   net.IP(addr.AsSlice()),
+		Mask: net.CIDRMask(prefix.Bits(), addr.BitLen()),
+	}
 }

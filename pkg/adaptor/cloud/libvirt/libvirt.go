@@ -10,7 +10,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 	"os"
 	"os/exec"
 	"strconv"
@@ -268,7 +268,11 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	if len(domInterface) > 0 {
 		// TBD: ability to handle multiple interfaces and ips
 		logger.Printf("VM IP %s", domInterface[0].Addrs[0].Addr)
-		v.ips = append(v.ips, net.ParseIP(domInterface[0].Addrs[0].Addr))
+		addr, err := netip.ParseAddr(domInterface[0].Addrs[0].Addr)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse address: %s", err)
+		}
+		v.ips = append(v.ips, addr)
 		logger.Printf("VM IP list %v", v.ips)
 	}
 

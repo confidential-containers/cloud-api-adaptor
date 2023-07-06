@@ -6,8 +6,8 @@ package adaptor
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"testing"
@@ -181,7 +181,7 @@ func (n *mockWorkerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 	return &tunneler.Config{}, nil
 }
 
-func (n *mockWorkerNode) Setup(nsPath string, podNodeIPs []net.IP, config *tunneler.Config) error {
+func (n *mockWorkerNode) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
 	return nil
 }
 
@@ -206,13 +206,9 @@ func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID st
 		secondaryIP = "127.0.0.1"
 	}
 
-	ips := make([]net.IP, 2)
-	ips[0] = net.ParseIP(primaryIP)
-	ips[1] = net.ParseIP(secondaryIP)
-
-	if ips[0] == nil || ips[1] == nil {
-		return nil, fmt.Errorf("Could not parse IPs: primary IP %s and secondary IP %s", primaryIP, secondaryIP)
-	}
+	ips := make([]netip.Addr, 2)
+	ips[0] = netip.MustParseAddr(primaryIP)
+	ips[1] = netip.MustParseAddr(secondaryIP)
 
 	instance := &cloud.Instance{
 		ID:   "mock",

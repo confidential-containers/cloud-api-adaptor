@@ -5,7 +5,7 @@ package podnetwork
 
 import (
 	"fmt"
-	"net"
+	"net/netip"
 	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
@@ -61,7 +61,7 @@ func (n *podNode) Setup() error {
 		return err
 	}
 
-	podNodeIPs := []net.IP{primaryPodNodeIP}
+	podNodeIPs := []netip.Addr{primaryPodNodeIP}
 
 	hostInterface := n.hostInterface
 	if hostInterface == "" {
@@ -154,7 +154,7 @@ func detectPrimaryInterface(hostNS netops.Namespace, timeout time.Duration) (str
 	}
 }
 
-func detectIP(hostNS netops.Namespace, hostInterface string, timeout time.Duration) (net.IP, error) {
+func detectIP(hostNS netops.Namespace, hostInterface string, timeout time.Duration) (netip.Addr, error) {
 
 	// An IP address of the second network interface of an IBM Cloud VPC instance is assigned by DHCP
 	// several seconds after the first interface gets an IP address.
@@ -167,23 +167,23 @@ func detectIP(hostNS netops.Namespace, hostInterface string, timeout time.Durati
 
 		hostLink, err := hostNS.LinkFind(hostInterface)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find host interface %q on netns %s: %w", hostInterface, hostNS.Path(), err)
+			return netip.Addr{}, fmt.Errorf("failed to find host interface %q on netns %s: %w", hostInterface, hostNS.Path(), err)
 		}
 
-		ipNets, err := hostLink.GetAddr()
+		prefixes, err := hostLink.GetAddr()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get addresses assigned %s on netns %s: %w", hostLink.Name(), hostLink.Namespace().Path(), err)
+			return netip.Addr{}, fmt.Errorf("failed to get addresses assigned %s on netns %s: %w", hostLink.Name(), hostLink.Namespace().Path(), err)
 		}
-		if len(ipNets) > 1 {
-			return nil, fmt.Errorf("more than one IP address assigned on %s (netns: %s)", hostLink.Name(), hostLink.Namespace().Path())
+		if len(prefixes) > 1 {
+			return netip.Addr{}, fmt.Errorf("more than one IP address assigned on %s (netns: %s)", hostLink.Name(), hostLink.Namespace().Path())
 		}
-		if len(ipNets) == 1 {
-			return ipNets[0].IP, nil
+		if len(prefixes) == 1 {
+			return prefixes[0].Addr(), nil
 		}
 
 		select {
 		case <-timeoutCh:
-			return nil, fmt.Errorf("failed to identify IP address assigned to host interface %s on netns %s", hostLink.Name(), hostLink.Namespace().Path())
+			return netip.Addr{}, fmt.Errorf("failed to identify IP address assigned to host interface %s on netns %s", hostLink.Name(), hostLink.Namespace().Path())
 		case <-ticker.C:
 		}
 	}

@@ -6,7 +6,7 @@ package cloud
 import (
 	"context"
 	"fmt"
-	"net"
+	"net/netip"
 	"net/url"
 	"reflect"
 	"testing"
@@ -29,8 +29,8 @@ func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID st
 	return &Instance{
 		Name: "abc",
 		ID:   fmt.Sprintf("%s-%.8s", podName, sandboxID),
-		IPs: []net.IP{
-			net.ParseIP("192.0.2.1"),
+		IPs: []netip.Addr{
+			netip.MustParseAddr("192.0.2.1"),
 		},
 	}, nil
 }
@@ -94,7 +94,7 @@ func (n mockWorkerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 	return nil, nil
 }
 
-func (n *mockWorkerNode) Setup(nsPath string, podNodeIPs []net.IP, config *tunneler.Config) error {
+func (n *mockWorkerNode) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
 	return nil
 }
 

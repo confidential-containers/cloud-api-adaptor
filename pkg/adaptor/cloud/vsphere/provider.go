@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 	"path"
 	"strings"
 	"time"
@@ -312,8 +312,8 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	return instance, nil
 }
 
-func getIPs(vm *object.VirtualMachine) ([]net.IP, error) { // TODO Fix to get all ips
-	var podNodeIPs []net.IP
+func getIPs(vm *object.VirtualMachine) ([]netip.Addr, error) { // TODO Fix to get all ips
+	var podNodeIPs []netip.Addr
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(600*time.Second))
 	defer cancel()
@@ -325,9 +325,9 @@ func getIPs(vm *object.VirtualMachine) ([]net.IP, error) { // TODO Fix to get al
 	}
 
 	logger.Printf("VM IP = %s", ip)
-	ip_item := net.ParseIP(ip)
-	if ip_item == nil {
-		return nil, fmt.Errorf("failed to parse pod node IP %q", ip)
+	ip_item, err := netip.ParseAddr(ip)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse pod node IP %q: %w", ip, err)
 	}
 	podNodeIPs = append(podNodeIPs, ip_item)
 

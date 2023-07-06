@@ -6,7 +6,7 @@
 package libvirt
 
 import (
-	"net"
+	"net/netip"
 
 	libvirt "libvirt.org/go/libvirt"
 )
@@ -25,7 +25,7 @@ type vmConfig struct {
 	rootDiskSize uint64
 	userData     string
 	metaData     string
-	ips          []net.IP
+	ips          []netip.Addr
 	instanceId   string //keeping it consistent with sandbox.vsi
 }
 

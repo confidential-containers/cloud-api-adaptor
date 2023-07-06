@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -72,9 +72,9 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 	return provider, nil
 }
 
-func getIPs(instance types.Instance) ([]net.IP, error) {
+func getIPs(instance types.Instance) ([]netip.Addr, error) {
 
-	var podNodeIPs []net.IP
+	var podNodeIPs []netip.Addr
 	for i, nic := range instance.NetworkInterfaces {
 		addr := nic.PrivateIpAddress
 
@@ -82,9 +82,9 @@ func getIPs(instance types.Instance) ([]net.IP, error) {
 			return nil, errNotReady
 		}
 
-		ip := net.ParseIP(*addr)
-		if ip == nil {
-			return nil, fmt.Errorf("failed to parse pod node IP %q", *addr)
+		ip, err := netip.ParseAddr(*addr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse pod node IP %q: %w", *addr, err)
 		}
 		podNodeIPs = append(podNodeIPs, ip)
 

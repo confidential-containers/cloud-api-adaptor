@@ -10,12 +10,12 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
@@ -119,7 +119,7 @@ func VethAdd(t *testing.T, ns netops.Namespace, name string, peerNamespace netop
 func AddrAdd(t *testing.T, ns netops.Namespace, name, addr string) {
 	t.Helper()
 
-	ip, err := netlink.ParseIPNet(addr)
+	prefix, err := netip.ParsePrefix(addr)
 	if err != nil {
 		t.Fatalf("failed to parse IP %s: %v", addr, err)
 	}
@@ -127,7 +127,7 @@ func AddrAdd(t *testing.T, ns netops.Namespace, name, addr string) {
 	if err != nil {
 		t.Fatalf("failed to find an interface: %v", err)
 	}
-	if err := link.AddAddr(ip); err != nil {
+	if err := link.AddAddr(prefix); err != nil {
 		t.Fatalf("failed to add %s to %s: %v", addr, name, err)
 	}
 }
@@ -150,18 +150,18 @@ func RouteAdd(t *testing.T, ns netops.Namespace, dest, gw, dev string) {
 	if dest == "" {
 		dest = "0.0.0.0/0"
 	}
-	_, destNet, err := net.ParseCIDR(dest)
+	destNet, err := netip.ParsePrefix(dest)
 	if err != nil {
 		t.Fatalf("failed to parse CIDR %s: %v", dest, err)
 	}
-	var gwIP net.IP
+	var gwAddr netip.Addr
 	if gw != "" {
-		gwIP = net.ParseIP(gw)
-		if gwIP == nil {
+		gwAddr, err = netip.ParseAddr(gw)
+		if err != nil {
 			t.Fatalf("failed to parse IP %s: %v", gw, err)
 		}
 	}
-	if err := ns.RouteAdd(&netops.Route{Destination: destNet, Gateway: gwIP, Device: dev}); err != nil {
+	if err := ns.RouteAdd(&netops.Route{Destination: destNet, Gateway: gwAddr, Device: dev}); err != nil {
 		t.Fatalf("failed to add a route to %s via %s: %v", dest, gw, err)
 	}
 }
@@ -180,7 +180,7 @@ type TestHTTPServer struct {
 	server   *http.Server
 }
 
-func StartHTTPServer(t *testing.T, ns netops.Namespace, addr string) *TestHTTPServer {
+func StartHTTPServer(t *testing.T, ns netops.Namespace, addr netip.AddrPort) *TestHTTPServer {
 	t.Helper()
 	s := &TestHTTPServer{
 		ns: ns,
@@ -192,7 +192,7 @@ func StartHTTPServer(t *testing.T, ns netops.Namespace, addr string) *TestHTTPSe
 		s.server = &http.Server{
 			Handler: testHTTPHandler,
 		}
-		s.listener, err = net.Listen("tcp", addr)
+		s.listener, err = net.ListenTCP("tcp", net.TCPAddrFromAddrPort(addr))
 		if err != nil {
 			return fmt.Errorf("failed to listen on %s: %v", addr, err)
 		}
@@ -223,16 +223,12 @@ func (s *TestHTTPServer) Shutdown(t *testing.T) {
 	}
 }
 
-func ConnectToHTTPServer(t *testing.T, ns netops.Namespace, addr, localAddr string) {
+func ConnectToHTTPServer(t *testing.T, ns netops.Namespace, addr, localAddr netip.AddrPort) {
 	t.Helper()
 
 	var tcpAddr net.Addr
-	if localAddr != "" {
-		var err error
-		tcpAddr, err = net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:0", localAddr))
-		if err != nil {
-			t.Fatalf("failed to get TCP address: %s", localAddr)
-		}
+	if !localAddr.IsValid() {
+		tcpAddr = net.TCPAddrFromAddrPort(localAddr)
 	}
 
 	client := &http.Client{
