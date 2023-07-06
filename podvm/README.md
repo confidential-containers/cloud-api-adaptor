@@ -42,13 +42,19 @@ The builder image packages the cloud-api-adaptor and Kata Containers sources as 
 the binaries (e.g. *kata-agent* and *agent-protocol-forwarder*) that should be installed in the podvm image.
 
 The builder image is agnostic to cloud providers in the sense that one can be used to build for multiple providers, however it is
-dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)), CentOS Stream 8 ([Dockerfile.podvm_builder.centos](./Dockerfile.podvm_builder.centos)), and RHEL 8.7 ([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
+dependent on the Linux distribution the image is built for. Therefore, you need to specify one of the values shown below to the `PODVM_DISTRO` build argument.
+
+
+|                 | `PODVM_DISTRO` |
+|-----------------|----------------|
+| Ubuntu 20.04    | `ubuntu`       |
+| CentOS Stream 8 | `centos`       |
+| RHEL 8.7        | `rhel`         |
 
 As an example, to build the builder image for Ubuntu, run:
 
 ```bash
-$ docker build -t podvm_builder \
-         -f Dockerfile.podvm_builder .
+$ docker buildx build -t podvm_builder - < Dockerfile.podvm_builder
 ```
 
 Use `--build-arg` to pass build arguments to docker to overwrite default values if needed. Following are the arguments
@@ -65,17 +71,15 @@ currently accepted:
 |RUST\_VERSION | 1.66.0 | Rust version |
 
 As it can be noted in the table above the cloud-api-adaptor repository is cloned within the builder image, so rather than
-copying the local source tree, it will be using the upstream source. But if you want to test local changes then you should:
-
-* Push the changes to your fork in github (e.g. https://github.com/$USER/cloud-api-adaptor/tree/my-changes-in-a-branch).
-* Overwrite the *CAA_SRC* and *CAA_SRC_REF* arguments as shown below:
+copying the local source tree, it will be using the upstream source. But if you want to test local changes then you can do it by specifying the top directory of the source code tree as the build context with build argument `SOURCE_FROM=local` as follows.
 
 ```bash
-$ docker build -t podvm_builder \
-         --build-arg CAA_SRC=https://github.com/$USER/cloud-api-adaptor \
-         --build-arg CAA_SRC_REF=my-changes-in-a-branch \
-         -f Dockerfile.podvm_builder .
+$ docker buildx build -t podvm_builder \
+         --build-arg SOURCE_FROM=local \
+         -f Dockerfile.podvm_builder ..
 ```
+
+This option is also available in the following steps described below.
 
 ## Building the image containing the podvm binaries
 
@@ -88,10 +92,9 @@ Assuming you have built the podvm_builder image for Ubuntu as explained in the p
 running the following command will build the image with the podvm binaries.
 
 ```bash
-$ docker build -t podvm_binaries \
+$ docker buildx build -t podvm_binaries \
          --build-arg BUILDER_IMG=podvm_builder \
-         -f Dockerfile.podvm_binaries .
-
+         - < Dockerfile.podvm_binaries
 ```
 The build process can take significant time.
 
@@ -99,10 +102,10 @@ The binaries can be built for other architectures than `x86_64` by passing the `
 argument to docker. Currently this is only supported for Ubuntu `s390x` as shown below:
 
 ```bash
-$ docker build -t podvm_binaries_s390x \
+$ docker buildx build -t podvm_binaries_s390x \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg ARCH=s390x \
-         -f Dockerfile.podvm_binaries .
+         - < Dockerfile.podvm_binaries
 ```
 
 ## Building the podvm qcow2 image
@@ -120,10 +123,10 @@ Below command will build the qcow2 image that can be used for all cloud provider
 based on Ubuntu distro.
 
 ```bash
-$ docker build -t podvm \
+$ docker buildx build -t podvm \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries \
-         -f Dockerfile.podvm .
+         - < Dockerfile.podvm
 ```
 
 This step will take several minutes to complete, mostly because `packer` will
@@ -146,13 +149,13 @@ Ubuntu `s390x`, which also needs the `UBUNTU_IMAGE_URL` and
 `UBUNTU_IMAGE_CHECKSUM` to be overridden with build arguments as shown below:
 
 ```bash
-$ docker build -t podvm_s390x \
+$ docker buildx build -t podvm_s390x \
          --build-arg ARCH=s390x \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries_s390x \
          --build-arg UBUNTU_IMAGE_URL="" \
          --build-arg UBUNTU_IMAGE_CHECKSUM="" \
-         -f Dockerfile.podvm .
+         - < Dockerfile.podvm
 ```
 
 The Secure Execution enabled podvm image can be built by passing the `SE_BOOT` build argument to docker. Currently this is only supported for Ubutu `s390x`, which also needs put the `HOST KEY documents` to the [files](files) folder, please follow the `Download host key document from Resource Link` section at [this document](../ibmcloud/SECURE_EXECUTION.md) to download `HOST KEY documents`.
@@ -165,27 +168,27 @@ files
 ```
 Running below command will build the Secure Execution enabled qcow2 image:
 ```bash
-$ docker build -t se_podvm_s390x \
+$ docker buildx build -t se_podvm_s390x \
          --build-arg ARCH=s390x \
          --build-arg SE_BOOT=1 \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries_s390x \
          --build-arg UBUNTU_IMAGE_URL="" \
          --build-arg UBUNTU_IMAGE_CHECKSUM="" \
-         -f Dockerfile.podvm .
+         -f Dockerfile.podvm ..
 ```
 
 The podvm image can also be built using UEFI based images. For example if you want to build a
 RHEL podvm image using UEFI based qcow2 image, then run the build using as shown below:
 
 ```
-$ docker build -t podvm-uefi \
+$ docker buildx build -t podvm-uefi \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries \
          --build-arg RHEL_IMAGE_URL="_url_to_uefi_based_qcow2_" \
          --build-arg RHEL_IMAGE_CHECKSUM="_qcow2_image_checksum" \
-	 --build-arg UEFI=true \
-         -f Dockerfile.podvm.rhel .
+	      --build-arg UEFI=true \
+         - < Dockerfile.podvm
 ```
 
 ## Extracting the qcow2 image
@@ -211,17 +214,13 @@ $ ./hack/download-image.sh se_podvm_s390x:latest . -o se_podvm.qcow2
 
 # How to add support for a new Linux distribution
 
-In order to add a new Linux distribution essentially it is needed to create some dockerfiles and add the packer configuration files.
+In order to add a new Linux distribution essentially it is needed to update Dockerfile.podvm_builder and Dockerfile.podvm,
+and add the packer configuration files.
 
 Follow the steps below, replacing `DISTRO` with the name of the distribution being added:
 
-1. Create the builder dockerfile by copying `Dockerfile.podvm_builder` to `Dockerfile.podvm_builder.DISTRO` and
-   adjusting the file properly (e.g. replace `FROM ubuntu:20.04` with `FROM DISTRO`). Try to keep the same
-   software versions (e.g. Golang, Rust) as much as possible.
-2. Create the podvm image dockerfile by copying `Dockerfile.podvm` to `Dockerfile.podvm.DISTRO` and adjusting the file
-   properly likewise. In particular, the *PODVM_DISTRO* and *BUILDER_IMG* arguments should be changed.
-3. Create the podvm binaries dockerfile by copying `Dockerfile.podvm_binaries`
-   to `Dockerfile.podvm_binaries.DISTRO` and adjusting the file as needed.
+1. Add a section to build an intermediate `DISTRO-base` image into `Dockerfile.podvm_builder` to set up build dependencies.
+2. Add build arguments `DISTRO_IMAGE_URL` and `DISTRO_IMAGE_CHECKSUM` into `Dockerfile.podvm` to specify a cloud VM image of the distribution.
 4. Create the packer directory (`mkdir qcow2/DISTRO`) where the
    `qemu-DISTRO.pkr.hcl` and `variables.pkr.hcl` files should be placed. Also on
    this step you can also use an existing configuration (e.g. `qcow2/ubuntu`) as a
