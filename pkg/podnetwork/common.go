@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"net"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/routing"
@@ -26,11 +25,7 @@ func init() {
 // An interface is considered to be primary if it is attached to the default route.
 func findPrimaryInterface(ns netops.Namespace) (string, error) {
 
-	dst := &net.IPNet{
-		IP:   net.IPv4zero,
-		Mask: make(net.IPMask, net.IPv4len),
-	}
-	routes, err := ns.RouteList(&netops.Route{Destination: dst})
+	routes, err := ns.RouteList(&netops.Route{Destination: netops.DefaultPrefix})
 	if err != nil {
 		return "", fmt.Errorf("failed to get routes on namespace %q: %w", ns.Path(), err)
 	}
@@ -39,13 +34,7 @@ func findPrimaryInterface(ns netops.Namespace) (string, error) {
 	var dev string
 
 	for _, r := range routes {
-		var flag bool
-		if r.Destination == nil {
-			flag = true
-		} else if ones, bits := r.Destination.Mask.Size(); ones == 0 && bits > 0 {
-			flag = true
-		}
-		if flag && r.Priority < priority {
+		if r.Destination.Bits() == 0 && r.Priority < priority {
 			dev = r.Device
 		}
 	}

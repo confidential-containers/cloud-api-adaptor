@@ -8,7 +8,7 @@ package libvirt
 import (
 	"context"
 	"log"
-	"net"
+	"net/netip"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
@@ -42,7 +42,7 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 	return provider, nil
 }
 
-func getIPs(instance *vmConfig) ([]net.IP, error) {
+func getIPs(instance *vmConfig) ([]netip.Addr, error) {
 	return instance.ips, nil
 }
 

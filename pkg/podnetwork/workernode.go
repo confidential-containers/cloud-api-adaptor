@@ -5,7 +5,7 @@ package podnetwork
 
 import (
 	"fmt"
-	"net"
+	"net/netip"
 	"sync"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
@@ -16,7 +16,7 @@ const DefaultTunnelType = "vxlan"
 
 type WorkerNode interface {
 	Inspect(nsPath string) (*tunneler.Config, error)
-	Setup(nsPath string, podNodeIPs []net.IP, config *tunneler.Config) error
+	Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error
 	Teardown(nsPath string, config *tunneler.Config) error
 }
 
@@ -98,7 +98,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 	}
 	// Use the first IP as the workerNodeIP
 	// TBD: Might be faster to retrieve using K8s downward API
-	config.WorkerNodeIP = addrs[0].String()
+	config.WorkerNodeIP = addrs[0]
 
 	podNS, err := netops.OpenNamespace(nsPath)
 	if err != nil {
@@ -123,12 +123,12 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 	logger.Printf("routes on netns %s", nsPath)
 	for _, r := range routes {
 		var dst, gw, dev string
-		if r.Destination != nil {
+		if r.Destination.IsValid() {
 			dst = r.Destination.String()
 		} else {
 			dst = "default"
 		}
-		if r.Gateway != nil {
+		if r.Gateway.IsValid() {
 			gw = "via " + r.Gateway.String()
 		}
 		if r.Device != "" {
@@ -164,13 +164,9 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	for _, route := range routes {
 		r := &tunneler.Route{
+			Dst: route.Destination,
 			Dev: route.Device,
-		}
-		if route.Destination != nil {
-			r.Dst = route.Destination.String()
-		}
-		if route.Gateway != nil {
-			r.GW = route.Gateway.String()
+			GW:  route.Gateway,
 		}
 		config.Routes = append(config.Routes, r)
 	}
@@ -183,7 +179,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 	return config, nil
 }
 
-func (n *workerNode) Setup(nsPath string, podNodeIPs []net.IP, config *tunneler.Config) error {
+func (n *workerNode) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
 
 	tun, err := tunneler.WorkerNodeTunneler(n.tunnelType)
 	if err != nil {
@@ -230,24 +226,24 @@ func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
 	return nil
 }
 
-func getPodIP(podLink netops.Link) (string, error) {
+func getPodIP(podLink netops.Link) (netip.Prefix, error) {
 
-	ipNets, err := podLink.GetAddr()
+	prefixes, err := podLink.GetAddr()
 	if err != nil {
-		return "", fmt.Errorf("failed to get IP address on %s of netns %s: %w", podLink.Name(), podLink.Namespace().Path(), err)
+		return netip.Prefix{}, fmt.Errorf("failed to get IP address on %s of netns %s: %w", podLink.Name(), podLink.Namespace().Path(), err)
 	}
 
-	var ips []string
-	for _, ipNet := range ipNets {
-		if ipNet.IP.To4() != nil {
-			ips = append(ips, ipNet.String())
+	var ips []netip.Prefix
+	for _, prefix := range prefixes {
+		if prefix.IsValid() && prefix.Addr().Is4() {
+			ips = append(ips, prefix)
 		}
 	}
 	if len(ips) < 1 {
-		return "", fmt.Errorf("no IPv4 address found on %s of netns %s", podLink.Name(), podLink.Namespace().Path())
+		return netip.Prefix{}, fmt.Errorf("no IPv4 address found on %s of netns %s", podLink.Name(), podLink.Namespace().Path())
 	}
 	if len(ips) > 1 {
-		return "", fmt.Errorf("more than one IPv4 addresses found on %s of netns %s", podLink.Name(), podLink.Namespace().Path())
+		return netip.Prefix{}, fmt.Errorf("more than one IPv4 addresses found on %s of netns %s", podLink.Name(), podLink.Namespace().Path())
 	}
 	return ips[0], nil
 }

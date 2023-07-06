@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 	"os"
 	"regexp"
 
@@ -57,8 +57,8 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 	return provider, nil
 }
 
-func getIPs(nic *armnetwork.Interface) ([]net.IP, error) {
-	var podNodeIPs []net.IP
+func getIPs(nic *armnetwork.Interface) ([]netip.Addr, error) {
+	var podNodeIPs []netip.Addr
 
 	for i, ipc := range nic.Properties.IPConfigurations {
 		addr := ipc.Properties.PrivateIPAddress
@@ -67,9 +67,9 @@ func getIPs(nic *armnetwork.Interface) ([]net.IP, error) {
 			return nil, errNotReady
 		}
 
-		ip := net.ParseIP(*addr)
-		if ip == nil {
-			return nil, fmt.Errorf("parsing pod node IP %q", *addr)
+		ip, err := netip.ParseAddr(*addr)
+		if err == nil {
+			return nil, fmt.Errorf("parsing pod node IP %q: %w", *addr, err)
 		}
 
 		podNodeIPs = append(podNodeIPs, ip)

@@ -5,7 +5,7 @@ package vxlan
 
 import (
 	"fmt"
-	"net"
+	"net/netip"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/netops"
@@ -23,18 +23,18 @@ func NewPodNodeTunneler() tunneler.Tunneler {
 	return &podNodeTunneler{}
 }
 
-func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunneler.Config) error {
+func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
 
-	nodeIP, _, err := net.ParseCIDR(config.WorkerNodeIP)
-	if err != nil {
-		return fmt.Errorf("failed to parse node IP %s: %w", config.WorkerNodeIP, err)
+	nodeAddr := config.WorkerNodeIP
+
+	if !nodeAddr.IsValid() {
+		return fmt.Errorf("WorkerNodeIP is not specified: %#v", config.WorkerNodeIP)
 	}
 
-	podIP, podIPNet, err := net.ParseCIDR(config.PodIP)
-	if err != nil {
-		return fmt.Errorf("failed to parse pod IP %s: %w", config.PodIP, err)
+	podAddr := config.PodIP
+	if !podAddr.IsValid() {
+		return fmt.Errorf("PodIP is not specified: %#v", config.PodIP)
 	}
-	podIPNet.IP = podIP
 
 	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
@@ -49,7 +49,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 	defer podNS.Close()
 
 	vxlanDevice := &netops.VXLAN{
-		Group: nodeIP,
+		Group: nodeAddr.Addr(),
 		ID:    config.VXLANID,
 		Port:  config.VXLANPort,
 	}
@@ -74,8 +74,8 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 		return fmt.Errorf("failed to set MTU of %s to %d on %s: %w", podVxlanInterface, mtu, nsPath, err)
 	}
 
-	if err := vxlan.AddAddr(podIPNet); err != nil {
-		return fmt.Errorf("failed to add pod IP %s to %s on %s: %w", podIPNet, podVxlanInterface, nsPath, err)
+	if err := vxlan.AddAddr(podAddr); err != nil {
+		return fmt.Errorf("failed to add pod IP %s to %s on %s: %w", podAddr, podVxlanInterface, nsPath, err)
 	}
 
 	if err := vxlan.SetUp(); err != nil {
@@ -88,7 +88,7 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 
 	var first, second []*tunneler.Route
 	for _, route := range config.Routes {
-		if route.GW == "" {
+		if !route.GW.IsValid() {
 			first = append(first, route)
 		} else {
 			second = append(second, route)
@@ -97,24 +97,8 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunn
 	routes := append(first, second...)
 
 	for _, route := range routes {
-		var dst *net.IPNet
-		if route.Dst != "" {
-			var err error
-			_, dst, err = net.ParseCIDR(route.Dst)
-			if err != nil {
-				return fmt.Errorf("failed to add route destination %s: %w", route.Dst, err)
-			}
-		}
-		var gw net.IP
-		if route.GW != "" {
-			gw = net.ParseIP(route.GW)
-			if gw == nil {
-				return fmt.Errorf("failed to parse GW IP: %s", route.GW)
-			}
-		}
-
-		if err := podNS.RouteAdd(&netops.Route{Destination: dst, Gateway: gw, Device: podVxlanInterface}); err != nil {
-			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", dst, gw, nsPath, err)
+		if err := podNS.RouteAdd(&netops.Route{Destination: route.Dst, Gateway: route.GW, Device: podVxlanInterface}); err != nil {
+			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", route.Dst, route.GW, nsPath, err)
 		}
 	}
 

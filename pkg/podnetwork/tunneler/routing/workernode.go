@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 	"os"
 	"time"
 
@@ -44,7 +44,7 @@ func NewWorkerNodeTunneler() tunneler.Tunneler {
 	return &workerNodeTunneler{}
 }
 
-func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunneler.Config) error {
+func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
 
 	if !config.Dedicated {
 		return errors.New("shared subnet is not supported")
@@ -66,11 +66,11 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		}
 	}()
 
-	workerNodeIP, _, err := net.ParseCIDR(config.WorkerNodeIP)
-	if err != nil {
-		return fmt.Errorf("failed to parse worker node IP %q", config.WorkerNodeIP)
+	workerNodeIP := config.WorkerNodeIP
+	if !workerNodeIP.IsValid() {
+		return fmt.Errorf("WorkerNodeIP is not valid: %#v", config.WorkerNodeIP)
 	}
-	hostLink, err := findLinkByAddr(hostNS, workerNodeIP)
+	hostLink, err := findLinkByAddr(hostNS, workerNodeIP.Addr())
 	if err != nil {
 		return fmt.Errorf("failed to find an interface that has IP address %s on netns %s: %w", workerNodeIP.String(), hostNS.Path(), err)
 	}
@@ -142,9 +142,9 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 	logger.Printf("    Host: %s", veth.Name())
 	logger.Printf("    Pod:  %s", secondPodInterface)
 
-	podIP, _, err := net.ParseCIDR(config.PodIP)
-	if err != nil {
-		return fmt.Errorf("failed to parse PodIP: %w", err)
+	podIP := config.PodIP
+	if !config.PodIP.IsValid() {
+		return fmt.Errorf("PodIP is not valid: %#v", podIP)
 	}
 
 	podInterface := config.InterfaceName
@@ -208,7 +208,7 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *t
 		if err != nil {
 			return err
 		}
-		if err := hostNS.RouteAdd(&netops.Route{Gateway: net.ParseIP(config.Routes[0].GW), Device: veth.Name(), Table: tableID, Onlink: true}); err == nil {
+		if err := hostNS.RouteAdd(&netops.Route{Gateway: config.Routes[0].GW, Device: veth.Name(), Table: tableID, Onlink: true}); err == nil {
 			break
 		} else if !errors.Is(err, os.ErrExist) {
 			return fmt.Errorf("failed to add a route from a pod VM to a pod proxy: %w", err)
@@ -261,9 +261,9 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 		}
 	}()
 
-	podIP, _, err := net.ParseCIDR(config.PodIP)
-	if err != nil {
-		return fmt.Errorf("failed to parse pod IP: %w", err)
+	podIP := config.PodIP
+	if !podIP.IsValid() {
+		return fmt.Errorf("PodIP is not valid: %#v", podIP)
 	}
 
 	logger.Printf("Delete routing table entries for Pod IP %s", podIP)

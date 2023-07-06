@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 	"time"
 
 	"github.com/IBM-Cloud/power-go-client/power/models"
@@ -142,8 +142,8 @@ func (p *ibmcloudPowerVSProvider) Teardown() error {
 	return nil
 }
 
-func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instance *models.PVMInstance) ([]net.IP, error) {
-	var ips []net.IP
+func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instance *models.PVMInstance) ([]netip.Addr, error) {
+	var ips []netip.Addr
 	ins, err := p.powervsService.instanceClient(ctx).Get(*instance.PvmInstanceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the instance: %v", err)
@@ -151,9 +151,9 @@ func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instance *models
 
 	for i, network := range ins.Networks {
 		if ins.Networks[i].Type == "fixed" {
-			ip := net.ParseIP(network.IPAddress)
-			if ip == nil {
-				return nil, fmt.Errorf("failed to parse pod node IP: %q", network.IPAddress)
+			ip, err := netip.ParseAddr(network.IPAddress)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse pod node IP %q: %w", network.IPAddress, err)
 			}
 
 			ips = append(ips, ip)
@@ -180,9 +180,9 @@ func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instance *models
 			return fmt.Errorf("failed to get IP from DHCP server: %v", err)
 		}
 
-		addr := net.ParseIP(*ip)
-		if addr == nil {
-			return fmt.Errorf("failed to parse pod node IP: %q", *ip)
+		addr, err := netip.ParseAddr(*ip)
+		if err != nil {
+			return fmt.Errorf("failed to parse pod node IP %q: %w", *ip, err)
 		}
 
 		ips = append(ips, addr)

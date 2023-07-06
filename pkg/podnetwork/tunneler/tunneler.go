@@ -5,31 +5,31 @@ package tunneler
 
 import (
 	"fmt"
-	"net"
+	"net/netip"
 )
 
 type Tunneler interface {
-	Setup(nsPath string, podNodeIPs []net.IP, config *Config) error
+	Setup(nsPath string, podNodeIPs []netip.Addr, config *Config) error
 	Teardown(nsPath, hostInterface string, config *Config) error
 }
 
 type Config struct {
-	PodIP         string   `json:"podip"`
-	PodHwAddr     string   `json:"pod-hw-addr"`
-	InterfaceName string   `json:"interface"`
-	WorkerNodeIP  string   `json:"worker-node-ip"`
-	TunnelType    string   `json:"tunnel-type"`
-	Routes        []*Route `json:"routes"`
-	MTU           int      `json:"mtu"`
-	Index         int      `json:"index"`
-	VXLANPort     int      `json:"vxlan-port,omitempty"`
-	VXLANID       int      `json:"vxlan-id,omitempty"`
-	Dedicated     bool     `json:"dedicated"`
+	PodIP         netip.Prefix `json:"podip"`
+	PodHwAddr     string       `json:"pod-hw-addr"`
+	InterfaceName string       `json:"interface"`
+	WorkerNodeIP  netip.Prefix `json:"worker-node-ip"`
+	TunnelType    string       `json:"tunnel-type"`
+	Routes        []*Route     `json:"routes"`
+	MTU           int          `json:"mtu"`
+	Index         int          `json:"index"`
+	VXLANPort     int          `json:"vxlan-port,omitempty"`
+	VXLANID       int          `json:"vxlan-id,omitempty"`
+	Dedicated     bool         `json:"dedicated"`
 }
 
 type Route struct {
-	Dst string
-	GW  string
+	Dst netip.Prefix
+	GW  netip.Addr
 	Dev string
 }
 

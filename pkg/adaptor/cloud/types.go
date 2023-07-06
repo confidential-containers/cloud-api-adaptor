@@ -5,7 +5,7 @@ package cloud
 
 import (
 	"context"
-	"net"
+	"net/netip"
 	"sync"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/k8sops"
@@ -25,7 +25,7 @@ type Provider interface {
 type Instance struct {
 	ID   string
 	Name string
-	IPs  []net.IP
+	IPs  []netip.Addr
 }
 
 type Service interface {

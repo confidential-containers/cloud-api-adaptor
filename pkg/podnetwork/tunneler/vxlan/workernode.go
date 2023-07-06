@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 	"os"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
@@ -30,9 +30,9 @@ func NewWorkerNodeTunneler() tunneler.Tunneler {
 	return &workerNodeTunneler{}
 }
 
-func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []net.IP, config *tunneler.Config) error {
+func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
 
-	var dstAddr net.IP
+	var dstAddr netip.Addr
 
 	if config.Dedicated {
 		dstAddr = podNodeIPs[1]

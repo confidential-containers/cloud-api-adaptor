@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"testing"
 
 	testutils "github.com/confidential-containers/cloud-api-adaptor/pkg/internal/testing"
@@ -29,15 +30,15 @@ type testPod struct {
 	hostInterface        string
 }
 
-func getIP(t *testing.T, addr string) string {
+func getIP(t *testing.T, addr string) netip.Addr {
 	t.Helper()
 
-	ip, _, err := net.ParseCIDR(addr)
+	prefix, err := netip.ParsePrefix(addr)
 	if err != nil {
 		t.Fatalf("Expect no error, got %v", err)
 	}
 
-	return ip.String()
+	return prefix.Addr()
 }
 
 func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPodNodeTunneler func() tunneler.Tunneler, dedicated bool) {
@@ -128,9 +129,9 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 	for i, pod := range pods {
 
 		pod.config = &tunneler.Config{
-			PodIP:         pod.podAddr,
+			PodIP:         netip.MustParsePrefix(pod.podAddr),
 			PodHwAddr:     pod.podHwAddr,
-			Routes:        []*tunneler.Route{{Dst: "", GW: "10.128.0.1", Dev: ""}},
+			Routes:        []*tunneler.Route{{GW: netip.MustParseAddr("10.128.0.1")}},
 			InterfaceName: "eth0",
 			MTU:           1500,
 			TunnelType:    tunnelType,
@@ -143,15 +144,15 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 			pod.config.VXLANID = 555000 + i // vxlan.DefaultVXLANMinID + index
 		}
 
-		podNodeIPs := []net.IP{net.ParseIP(getIP(t, pod.podNodePrimaryAddr))}
+		podNodeIPs := []netip.Addr{getIP(t, pod.podNodePrimaryAddr)}
 
 		if dedicated {
-			podNodeIPs = append(podNodeIPs, net.ParseIP(getIP(t, pod.podNodeSecondaryAddr)))
+			podNodeIPs = append(podNodeIPs, getIP(t, pod.podNodeSecondaryAddr))
 			pod.hostInterface = "enc1"
-			pod.config.WorkerNodeIP = workerSecondaryAddr
+			pod.config.WorkerNodeIP = netip.MustParsePrefix(workerSecondaryAddr)
 		} else {
 			pod.hostInterface = "enc0"
-			pod.config.WorkerNodeIP = workerPrimaryAddr
+			pod.config.WorkerNodeIP = netip.MustParsePrefix(workerPrimaryAddr)
 		}
 
 		if err := workerNS.Run(func() error {
@@ -182,13 +183,13 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 	}
 
 	for _, pod := range pods {
-		httpServer := StartHTTPServer(t, pod.podNS, fmt.Sprintf("%s:8080", getIP(t, pod.podAddr)))
+		httpServer := StartHTTPServer(t, pod.podNS, netip.AddrPortFrom(getIP(t, pod.podAddr), 8080))
 		defer httpServer.Shutdown(t)
 	}
 
 	for i, pod := range pods {
-		ConnectToHTTPServer(t, workerNS, fmt.Sprintf("%s:8080", getIP(t, pod.podAddr)), getIP(t, gatewayAddr))
-		ConnectToHTTPServer(t, pod.podNS, fmt.Sprintf("%s:8080", getIP(t, pods[(i+1)%len(pods)].podAddr)), getIP(t, pod.podAddr))
+		ConnectToHTTPServer(t, workerNS, netip.AddrPortFrom(getIP(t, pod.podAddr), 8080), netip.AddrPortFrom(getIP(t, gatewayAddr), 0))
+		ConnectToHTTPServer(t, pod.podNS, netip.AddrPortFrom(getIP(t, pods[(i+1)%len(pods)].podAddr), 8080), netip.AddrPortFrom(getIP(t, pod.podAddr), 0))
 	}
 
 	for _, pod := range pods {
