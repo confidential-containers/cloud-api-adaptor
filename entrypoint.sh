@@ -18,66 +18,66 @@ optionals+=""
 [[ "${PROXY_TIMEOUT}" ]] && optionals+="-proxy-timeout ${PROXY_TIMEOUT} "
 
 test_vars() {
-        for i in "$@"; do
-                [ -z "${!i}" ] && echo "\$$i is NOT set" && EXT=1
-        done
-        [[ -n $EXT ]] && exit 1
+    for i in "$@"; do
+        [ -z "${!i}" ] && echo "\$$i is NOT set" && EXT=1
+    done
+    [[ -n $EXT ]] && exit 1
 }
 
 one_of() {
-        for i in "$@"; do
-                [ -n "${!i}" ] && echo "\$$i is SET" && EXIST=1
-        done
-        [[ -z $EXIST ]] && echo "At least one of these must be SET: $*" && exit 1
+    for i in "$@"; do
+        [ -n "${!i}" ] && echo "\$$i is SET" && EXIST=1
+    done
+    [[ -z $EXIST ]] && echo "At least one of these must be SET: $*" && exit 1
 }
 
 aws() {
-test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+    test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 
-[[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]] && optionals+="-use-lt -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME} " # has precedence if set
-[[ "${AWS_SG_IDS}" ]] && optionals+="-securitygroupids ${AWS_SG_IDS} " # MUST if template is not used
-[[ "${PODVM_AMI_ID}" ]] && optionals+="-imageid ${PODVM_AMI_ID} " # MUST if template is not used
-[[ "${PODVM_INSTANCE_TYPE}" ]] && optionals+="-instance-type ${PODVM_INSTANCE_TYPE} " # default t3.small
-[[ "${PODVM_INSTANCE_TYPES}" ]] && optionals+="-instance-types ${PODVM_INSTANCE_TYPES} "
-[[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} " # if not retrieved from IMDS
-[[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} " # if not set retrieved from IMDS
-[[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} " # if not set retrieved from IMDS
+    [[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]] && optionals+="-use-lt -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME} " # has precedence if set
+    [[ "${AWS_SG_IDS}" ]] && optionals+="-securitygroupids ${AWS_SG_IDS} "                                  # MUST if template is not used
+    [[ "${PODVM_AMI_ID}" ]] && optionals+="-imageid ${PODVM_AMI_ID} "                                       # MUST if template is not used
+    [[ "${PODVM_INSTANCE_TYPE}" ]] && optionals+="-instance-type ${PODVM_INSTANCE_TYPE} "                   # default t3.small
+    [[ "${PODVM_INSTANCE_TYPES}" ]] && optionals+="-instance-types ${PODVM_INSTANCE_TYPES} "
+    [[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} "      # if not retrieved from IMDS
+    [[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} " # if not set retrieved from IMDS
+    [[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} "     # if not set retrieved from IMDS
 
-set -x
-exec cloud-api-adaptor aws \
-	-aws-region "${AWS_REGION}" \
-	-pods-dir /run/peerpod/pods \
-	${optionals} \
-	-socket /run/peerpod/hypervisor.sock
+    set -x
+    exec cloud-api-adaptor aws \
+        -aws-region "${AWS_REGION}" \
+        -pods-dir /run/peerpod/pods \
+        ${optionals} \
+        -socket /run/peerpod/hypervisor.sock
 }
 
 azure() {
-test_vars AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_SUBNET_ID AZURE_IMAGE_ID
+    test_vars AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_SUBNET_ID AZURE_IMAGE_ID
 
-[[ "${SSH_USERNAME}" ]] && optionals+="-ssh-username ${SSH_USERNAME} "
-[[ "${DISABLECVM}" ]] && optionals+="-disable-cvm "
-[[ "${AZURE_INSTANCE_SIZES}" ]] && optionals+="-instance-sizes ${AZURE_INSTANCE_SIZES} "
+    [[ "${SSH_USERNAME}" ]] && optionals+="-ssh-username ${SSH_USERNAME} "
+    [[ "${DISABLECVM}" ]] && optionals+="-disable-cvm "
+    [[ "${AZURE_INSTANCE_SIZES}" ]] && optionals+="-instance-sizes ${AZURE_INSTANCE_SIZES} "
 
-set -x
-exec cloud-api-adaptor azure \
-  -subscriptionid "${AZURE_SUBSCRIPTION_ID}" \
-  -region "${AZURE_REGION}" \
-  -instance-size "${AZURE_INSTANCE_SIZE}" \
-  -resourcegroup "${AZURE_RESOURCE_GROUP}" \
-  -vxlan-port 8472 \
-  -subnetid "${AZURE_SUBNET_ID}" \
-  -securitygroupid "${AZURE_NSG_ID}" \
-  -imageid "${AZURE_IMAGE_ID}" \
-  ${optionals}
+    set -x
+    exec cloud-api-adaptor azure \
+        -subscriptionid "${AZURE_SUBSCRIPTION_ID}" \
+        -region "${AZURE_REGION}" \
+        -instance-size "${AZURE_INSTANCE_SIZE}" \
+        -resourcegroup "${AZURE_RESOURCE_GROUP}" \
+        -vxlan-port 8472 \
+        -subnetid "${AZURE_SUBNET_ID}" \
+        -securitygroupid "${AZURE_NSG_ID}" \
+        -imageid "${AZURE_IMAGE_ID}" \
+        ${optionals}
 }
 
 ibmcloud() {
-one_of IBMCLOUD_API_KEY IBMCLOUD_IAM_PROFILE_ID
+    one_of IBMCLOUD_API_KEY IBMCLOUD_IAM_PROFILE_ID
 
-set -x
-exec cloud-api-adaptor ibmcloud \
+    set -x
+    exec cloud-api-adaptor ibmcloud \
         -iam-service-url "${IBMCLOUD_IAM_ENDPOINT}" \
-        -vpc-service-url  "${IBMCLOUD_VPC_ENDPOINT}" \
+        -vpc-service-url "${IBMCLOUD_VPC_ENDPOINT}" \
         -resource-group-id "${IBMCLOUD_RESOURCE_GROUP_ID}" \
         -key-id "${IBMCLOUD_SSH_KEY_ID}" \
         -image-id "${IBMCLOUD_PODVM_IMAGE_ID}" \
@@ -88,65 +88,64 @@ exec cloud-api-adaptor ibmcloud \
         -primary-security-group-id "${IBMCLOUD_VPC_SG_ID}" \
         -vpc-id "${IBMCLOUD_VPC_ID}" \
         -pods-dir /run/peerpod/pods \
-	${optionals} \
+        ${optionals} \
         -socket /run/peerpod/hypervisor.sock
 }
 
-
 ibmcloud_powervs() {
-test_vars IBMCLOUD_API_KEY
+    test_vars IBMCLOUD_API_KEY
 
-[[ "${POWERVS_MEMORY}" ]] && optionals+="-memory ${POWERVS_MEMORY} "
-[[ "${POWERVS_PROCESSORS}" ]] && optionals+="-cpu ${POWERVS_PROCESSORS} "
-[[ "${POWERVS_PROCESSOR_TYPE}" ]] && optionals+="-proc-type ${POWERVS_PROCESSOR_TYPE} "
-[[ "${POWERVS_SYSTEM_TYPE}" ]] && optionals+="-sys-type ${POWERVS_SYSTEM_TYPE} "
+    [[ "${POWERVS_MEMORY}" ]] && optionals+="-memory ${POWERVS_MEMORY} "
+    [[ "${POWERVS_PROCESSORS}" ]] && optionals+="-cpu ${POWERVS_PROCESSORS} "
+    [[ "${POWERVS_PROCESSOR_TYPE}" ]] && optionals+="-proc-type ${POWERVS_PROCESSOR_TYPE} "
+    [[ "${POWERVS_SYSTEM_TYPE}" ]] && optionals+="-sys-type ${POWERVS_SYSTEM_TYPE} "
 
-set -x
-exec cloud-api-adaptor ibmcloud-powervs \
+    set -x
+    exec cloud-api-adaptor ibmcloud-powervs \
         -service-instance-id ${POWERVS_SERVICE_INSTANCE_ID} \
         -zone ${POWERVS_ZONE} \
         -image-id ${POWERVS_IMAGE_ID} \
         -network-id ${POWERVS_NETWORK_ID} \
         -ssh-key ${POWERVS_SSH_KEY_NAME} \
         -pods-dir /run/peerpod/pods \
- 	${optionals} \
- 	-socket /run/peerpod/hypervisor.sock
+        ${optionals} \
+        -socket /run/peerpod/hypervisor.sock
 }
 
 libvirt() {
-test_vars LIBVIRT_URI
+    test_vars LIBVIRT_URI
 
-set -x
-exec cloud-api-adaptor libvirt \
-	-uri "${LIBVIRT_URI}" \
-	-data-dir /opt/data-dir \
-	-pods-dir /run/peerpod/pods \
-	-network-name "${LIBVIRT_NET:-default}" \
-	-pool-name "${LIBVIRT_POOL:-default}" \
-	${optionals} \
-	-socket /run/peerpod/hypervisor.sock
+    set -x
+    exec cloud-api-adaptor libvirt \
+        -uri "${LIBVIRT_URI}" \
+        -data-dir /opt/data-dir \
+        -pods-dir /run/peerpod/pods \
+        -network-name "${LIBVIRT_NET:-default}" \
+        -pool-name "${LIBVIRT_POOL:-default}" \
+        ${optionals} \
+        -socket /run/peerpod/hypervisor.sock
 }
 
 vsphere() {
-test_vars GOVC_USERNAME GOVC_PASSWORD GOVC_URL GOVC_DATACENTER
+    test_vars GOVC_USERNAME GOVC_PASSWORD GOVC_URL GOVC_DATACENTER
 
-[[ "${GOVC_TEMPLATE}" ]] && optionals+="-template ${GOVC_TEMPLATE} "
-[[ "${GOVC_VCLUSTER}" ]] && optionals+="-cluster ${GOVC_VCLUSTER} "
-[[ "${GOVC_FOLDER}" ]] && optionals+="-deploy-folder ${GOVC_FOLDER} "
-[[ "${GOVC_HOST}" ]] && optionals+="-host ${GOVC_HOST} "
-[[ "${GOVC_DRS}" ]] && optionals+="-drs ${GOVC_DRS} "
-[[ "${GOVC_DATASTORE}" ]] && optionals+="-data-store ${GOVC_DATASTORE} "
+    [[ "${GOVC_TEMPLATE}" ]] && optionals+="-template ${GOVC_TEMPLATE} "
+    [[ "${GOVC_VCLUSTER}" ]] && optionals+="-cluster ${GOVC_VCLUSTER} "
+    [[ "${GOVC_FOLDER}" ]] && optionals+="-deploy-folder ${GOVC_FOLDER} "
+    [[ "${GOVC_HOST}" ]] && optionals+="-host ${GOVC_HOST} "
+    [[ "${GOVC_DRS}" ]] && optionals+="-drs ${GOVC_DRS} "
+    [[ "${GOVC_DATASTORE}" ]] && optionals+="-data-store ${GOVC_DATASTORE} "
 
-set -x
-exec cloud-api-adaptor vsphere \
-	-vcenter-url ${GOVC_URL}  \
-	-data-center ${GOVC_DATACENTER} \
-	${optionals} \
-	-socket /run/peerpod/hypervisor.sock
+    set -x
+    exec cloud-api-adaptor vsphere \
+        -vcenter-url ${GOVC_URL} \
+        -data-center ${GOVC_DATACENTER} \
+        ${optionals} \
+        -socket /run/peerpod/hypervisor.sock
 }
 
 help_msg() {
-	cat <<EOF
+    cat <<EOF
 Usage:
 	CLOUD_PROVIDER=aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere $0
 or
@@ -157,17 +156,17 @@ EOF
 }
 
 if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
-	aws
+    aws
 elif [[ "$CLOUD_PROVIDER" == "azure" ]]; then
-	azure
+    azure
 elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then
-	ibmcloud
+    ibmcloud
 elif [[ "$CLOUD_PROVIDER" == "ibmcloud-powervs" ]]; then
- 	ibmcloud_powervs
+    ibmcloud_powervs
 elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
-	libvirt
+    libvirt
 elif [[ "$CLOUD_PROVIDER" == "vsphere" ]]; then
-	vsphere
+    vsphere
 else
-	help_msg
+    help_msg
 fi
