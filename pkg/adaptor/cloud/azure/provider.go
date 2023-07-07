@@ -68,7 +68,7 @@ func getIPs(nic *armnetwork.Interface) ([]netip.Addr, error) {
 		}
 
 		ip, err := netip.ParseAddr(*addr)
-		if err == nil {
+		if err != nil {
 			return nil, fmt.Errorf("parsing pod node IP %q: %w", *addr, err)
 		}
 
