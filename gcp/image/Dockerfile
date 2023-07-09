@@ -1,0 +1,61 @@
+# Copyright Confidential Containers Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Builds pod vm image inside container
+#
+# syntax=docker/dockerfile:1.3
+ARG BUILDER_IMG="quay.io/confidential-containers/podvm-builder-ubuntu"
+ARG BINARIES_IMG="quay.io/confidential-containers/podvm-binaries-ubuntu-amd64"
+
+FROM ${BINARIES_IMG} AS podvm_binaries
+FROM ${BUILDER_IMG} AS podvm_builder
+
+ARG CLOUD_PROVIDER=gcp
+ARG PODVM_DISTRO=ubuntu
+# If not provided, uses system architecture
+ARG ARCH=x86_64
+ARG CAA_SRC=""
+ARG CAA_SRC_REF=""
+
+ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
+ENV PODVM_DISTRO ${PODVM_DISTRO}
+
+RUN if [ -n "${CAA_SRC}" ]; then \
+      rm -rf cloud-api-adaptor && \
+      git clone ${CAA_SRC} cloud-api-adaptor;\
+    fi && \
+    if [ -n "${CAA_SRC_REF}" ]; then \
+      cd cloud-api-adaptor && \
+      git fetch origin ${CAA_SRC_REF} && \
+      git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
+    fi
+
+# Copy the binaries to podvm/files folder
+COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/cloud-api-adaptor/podvm/files
+
+# Copy the pause_bundle to podvm/files folder
+COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files
+RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
+
+# Uncomment for development.
+COPY . cloud-api-adaptor/gcp/image
+
+ARG GCP_PROJECT_ID
+ARG GCP_ZONE
+ARG GCP_MACHINE_TYPE=e2-medium
+ARG GCP_NETWORK=default
+ARG IMAGE_NAME=peer-pod-vmimage
+
+ENV GCP_PROJECT_ID ${GCP_PROJECT_ID}
+ENV GCP_ZONE ${GCP_ZONE}
+ENV GCP_MACHINE_TYPE ${GCP_MACHINE_TYPE}
+ENV GCP_NETWORK ${GCP_NETWORK}
+ENV IMAGE_NAME ${IMAGE_NAME}
+
+RUN --mount=type=secret,id=APPLICATION_KEY \
+    export GOOGLE_APPLICATION_CREDENTIALS="/run/secrets/APPLICATION_KEY" && \
+    cd cloud-api-adaptor/gcp/image && \
+    packer init ${PODVM_DISTRO}/ && \
+    BINARIES= PAUSE_BUNDLE= CLOUD_PROVIDER=gcp PODVM_DISTRO=$PODVM_DISTRO make image
