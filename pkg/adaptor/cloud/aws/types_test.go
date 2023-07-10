@@ -32,3 +32,14 @@ func TestAWSMasking(t *testing.T) {
 		t.Errorf("Original SecretKey field value has been overwritten")
 	}
 }
+
+func TestEmptyList(t *testing.T) {
+	var list instanceTypes
+	err := list.Set("")
+	if err != nil {
+		t.Errorf("List Set failed, %v", err)
+	}
+	if len(list) != 0 {
+		t.Errorf("Expect 0 length, got %d", len(list))
+	}
+}
