@@ -77,7 +77,7 @@ Ensure SAN contains `podvm-server`.
 ```
 openssl genrsa -out tls.key 2048
 
-openssl req -new -key tls.key -days 30 -out tls.csr \
+openssl req -new -key tls.key -out tls.csr \
   -subj "/C=IN/ST=KA/L=BLR/O=Self/OU=Self/CN=podvm-server"
 
 openssl x509  -req -in tls.csr \
@@ -91,7 +91,7 @@ openssl x509  -req -in tls.csr \
 ```
   openssl genrsa -out client.key 2048
 
-  openssl req -new -key client.key -days 30 -out client.csr \
+  openssl req -new -key client.key -out client.csr \
     -subj "/C=IN/ST=KA/L=BLR/O=Self/OU=Self/CN=podvm_client"
 
   openssl x509  -req -in client.csr \
