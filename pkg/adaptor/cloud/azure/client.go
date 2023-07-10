@@ -9,12 +9,11 @@ import (
 )
 
 func NewAzureClient(config Config) (azcore.TokenCredential, error) {
-
-	cred, err := azidentity.NewClientSecretCredential(config.TenantId, config.ClientId, config.ClientSecret, nil)
-	if err != nil {
-		return nil, err
+	// Use workload identity if the client secret is empty.
+	if config.ClientSecret == "" {
+		logger.Printf("using workload identity")
+		return azidentity.NewWorkloadIdentityCredential(nil)
 	}
-	//azidentity.ClientSecretCredential
-	return cred, nil
 
+	return azidentity.NewClientSecretCredential(config.TenantId, config.ClientId, config.ClientSecret, nil)
 }
