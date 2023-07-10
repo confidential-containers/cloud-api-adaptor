@@ -20,6 +20,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/go-autorest/autorest"
@@ -217,6 +218,49 @@ func (p *AzureCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Conf
 	return deleteResourceImpl()
 }
 
+// CAA pods will use this identity to talk to the Azure API. This ensures we don't need to pass secrets.
+func createFederatedIdentityCredential(aksOIDCIssuer string) error {
+	namespace := "confidential-containers-system"
+	serviceAccountName := "cloud-api-adaptor"
+
+	if _, err := AzureProps.FederatedIdentityCredentialsClient.CreateOrUpdate(
+		context.Background(),
+		AzureProps.ResourceGroupName,
+		AzureProps.ManagedIdentityName,
+		AzureProps.federatedIdentityCredentialName,
+		armmsi.FederatedIdentityCredential{
+			Properties: &armmsi.FederatedIdentityCredentialProperties{
+				Audiences: []*string{to.Ptr("api://AzureADTokenExchange")},
+				Issuer:    to.Ptr(aksOIDCIssuer),
+				Subject:   to.Ptr(fmt.Sprintf("system:serviceaccount:%s:%s", namespace, serviceAccountName)),
+			},
+		},
+		nil,
+	); err != nil {
+		return fmt.Errorf("creating federated identity credential: %w", err)
+	}
+
+	log.Infof("Successfully created federated identity credential %q in resource group %q", AzureProps.federatedIdentityCredentialName, AzureProps.ResourceGroupName)
+
+	return nil
+}
+
+func deleteFederatedIdentityCredential() error {
+	if _, err := AzureProps.FederatedIdentityCredentialsClient.Delete(
+		context.Background(),
+		AzureProps.ResourceGroupName,
+		AzureProps.ManagedIdentityName,
+		AzureProps.federatedIdentityCredentialName,
+		nil,
+	); err != nil {
+		return fmt.Errorf("deleting federated identity credential: %w", err)
+	}
+
+	log.Infof("Successfully deleted federated identity credential %q in resource group %q", AzureProps.federatedIdentityCredentialName, AzureProps.ResourceGroupName)
+
+	return nil
+}
+
 func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("CreateCluster()")
 
@@ -241,6 +285,14 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 				ClientID: to.Ptr(AzureProps.ClientID),
 				Secret:   to.Ptr(AzureProps.ClientSecret),
 			},
+			OidcIssuerProfile: &armcontainerservice.ManagedClusterOIDCIssuerProfile{
+				Enabled: to.Ptr(true),
+			},
+			SecurityProfile: &armcontainerservice.ManagedClusterSecurityProfile{
+				WorkloadIdentity: &armcontainerservice.ManagedClusterSecurityProfileWorkloadIdentity{
+					Enabled: to.Ptr(true),
+				},
+			},
 		},
 		Identity: &armcontainerservice.ManagedClusterIdentity{
 			Type: to.Ptr(armcontainerservice.ResourceIdentityTypeSystemAssigned),
@@ -262,6 +314,14 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 						OSType:             to.Ptr(armcontainerservice.OSType(AzureProps.OsType)),
 						EnableNodePublicIP: to.Ptr(false),
 						VnetSubnetID:       &AzureProps.SubnetID,
+					},
+				},
+				OidcIssuerProfile: &armcontainerservice.ManagedClusterOIDCIssuerProfile{
+					Enabled: to.Ptr(true),
+				},
+				SecurityProfile: &armcontainerservice.ManagedClusterSecurityProfile{
+					WorkloadIdentity: &armcontainerservice.ManagedClusterSecurityProfileWorkloadIdentity{
+						Enabled: to.Ptr(true),
 					},
 				},
 			},
@@ -289,6 +349,16 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 		return fmt.Errorf("waiting for cluster to be ready %w", err)
 	}
 
+	cluster, err := pollerResp.Result(ctx)
+	if err != nil {
+		return fmt.Errorf("getting cluster object: %w", err)
+	}
+
+	aksOIDCIssuer := *cluster.Properties.OidcIssuerProfile.IssuerURL
+	if err := createFederatedIdentityCredential(aksOIDCIssuer); err != nil {
+		return fmt.Errorf("creating federated identity credential: %w", err)
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user home directory: %w", err)
@@ -311,6 +381,11 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 func (p *AzureCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("DeleteCluster()")
 	log.Infof("Deleting Cluster %s.\n", AzureProps.ClusterName)
+
+	if err := deleteFederatedIdentityCredential(); err != nil {
+		return fmt.Errorf("deleting federated identity credential: %w", err)
+	}
+
 	pollerResp, err := AzureProps.ManagedAksClient.BeginDelete(context.Background(), AzureProps.ResourceGroupName, AzureProps.ClusterName, nil)
 	if err != nil {
 		return fmt.Errorf("Failed deleting cluster %s: %w", AzureProps.ResourceGroupName, err)
