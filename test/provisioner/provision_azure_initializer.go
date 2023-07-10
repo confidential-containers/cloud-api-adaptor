@@ -11,39 +11,43 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	log "github.com/sirupsen/logrus"
 )
 
 type AzureProperties struct {
-	ResourceGroup     *armresources.ResourceGroup
-	CloudProvider     string
-	SubscriptionID    string
-	ClientID          string
-	ClientSecret      string
-	TenantID          string
-	ResourceGroupName string
-	ClusterName       string
-	Location          string
-	SshPrivateKey     string
-	SubnetName        string
-	VnetName          string
-	SubnetID          string
-	ImageID           string
-	SshUserName       string
-	IsAzCliAuth       bool
-	IsCIManaged       bool
+	ResourceGroup       *armresources.ResourceGroup
+	CloudProvider       string
+	SubscriptionID      string
+	ClientID            string
+	ClientSecret        string
+	TenantID            string
+	ResourceGroupName   string
+	ClusterName         string
+	Location            string
+	SshPrivateKey       string
+	SubnetName          string
+	VnetName            string
+	SubnetID            string
+	ImageID             string
+	SshUserName         string
+	ManagedIdentityName string
+	IsAzCliAuth         bool
+	IsCIManaged         bool
 
 	InstanceSize string
 	NodeName     string
 	OsType       string
 
-	ResourceGroupClient *armresources.ResourceGroupsClient
-	ManagedVnetClient   *armnetwork.VirtualNetworksClient
-	ManagedSubnetClient *armnetwork.SubnetsClient
-	ManagedAksClient    *armcontainerservice.ManagedClustersClient
-	ManagedVmClient     *armcompute.VirtualMachinesClient
+	ResourceGroupClient                *armresources.ResourceGroupsClient
+	ManagedVnetClient                  *armnetwork.VirtualNetworksClient
+	ManagedSubnetClient                *armnetwork.SubnetsClient
+	ManagedAksClient                   *armcontainerservice.ManagedClustersClient
+	ManagedVmClient                    *armcompute.VirtualMachinesClient
+	FederatedIdentityCredentialsClient *armmsi.FederatedIdentityCredentialsClient
+	federatedIdentityCredentialName    string
 }
 
 var AzureProps = &AzureProperties{}
@@ -51,18 +55,19 @@ var AzureProps = &AzureProperties{}
 func initAzureProperties(properties map[string]string) error {
 	log.Trace("initazureProperties()")
 	AzureProps = &AzureProperties{
-		SubscriptionID:    properties["AZURE_SUBSCRIPTION_ID"],
-		ClientID:          properties["AZURE_CLIENT_ID"],
-		ClientSecret:      properties["AZURE_CLIENT_SECRET"],
-		TenantID:          properties["AZURE_TENANT_ID"],
-		ResourceGroupName: properties["RESOURCE_GROUP_NAME"],
-		ClusterName:       properties["CLUSTER_NAME"],
-		Location:          properties["LOCATION"],
-		SshPrivateKey:     properties["SSH_KEY_ID"],
-		CloudProvider:     properties["CLOUD_PROVIDER"],
-		ImageID:           properties["AZURE_IMAGE_ID"],
-		SubnetID:          properties["AZURE_SUBNET_ID"],
-		SshUserName:       properties["SSH_USERNAME"],
+		SubscriptionID:      properties["AZURE_SUBSCRIPTION_ID"],
+		ClientID:            properties["AZURE_CLIENT_ID"],
+		ClientSecret:        properties["AZURE_CLIENT_SECRET"],
+		TenantID:            properties["AZURE_TENANT_ID"],
+		ResourceGroupName:   properties["RESOURCE_GROUP_NAME"],
+		ClusterName:         properties["CLUSTER_NAME"],
+		Location:            properties["LOCATION"],
+		SshPrivateKey:       properties["SSH_KEY_ID"],
+		CloudProvider:       properties["CLOUD_PROVIDER"],
+		ImageID:             properties["AZURE_IMAGE_ID"],
+		SubnetID:            properties["AZURE_SUBNET_ID"],
+		SshUserName:         properties["SSH_USERNAME"],
+		ManagedIdentityName: properties["MANAGED_IDENTITY_NAME"],
 	}
 
 	CIManagedStr := properties["IS_CI_MANAGED_CLUSTER"]
@@ -119,6 +124,8 @@ func initAzureProperties(properties map[string]string) error {
 		return fmt.Errorf("Failed initialising managed clients:%w", err)
 	}
 
+	AzureProps.federatedIdentityCredentialName = fmt.Sprintf("%sFederatedIdentityCredential", AzureProps.ClusterName)
+
 	return nil
 }
 
@@ -154,6 +161,11 @@ func initManagedClients() error {
 		return fmt.Errorf("Failed creating container service client factory:%w", err)
 	}
 	managedClustersClient := containerserviceClientFactory.NewManagedClustersClient()
+
+	AzureProps.FederatedIdentityCredentialsClient, err = armmsi.NewFederatedIdentityCredentialsClient(AzureProps.SubscriptionID, cred, nil)
+	if err != nil {
+		return fmt.Errorf("creating federated identity credentials client: %w", err)
+	}
 
 	AzureProps.ResourceGroupClient = resourceGroupClient
 	AzureProps.ManagedAksClient = managedClustersClient
