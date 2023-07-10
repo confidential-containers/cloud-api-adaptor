@@ -28,7 +28,11 @@ func (i *instanceTypes) String() string {
 }
 
 func (i *instanceTypes) Set(value string) error {
-	*i = append(*i, strings.Split(value, ",")...)
+	if len(value) == 0 {
+		*i = make(instanceTypes, 0)
+	} else {
+		*i = append(*i, strings.Split(value, ",")...)
+	}
 	return nil
 }
 
