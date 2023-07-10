@@ -97,9 +97,6 @@ func initAzureProperties(properties map[string]string) error {
 	if AzureProps.ClientSecret == "" && !AzureProps.IsAzCliAuth {
 		return errors.New("AZURE_CLIENT_SECRET was not set")
 	}
-	if AzureProps.TenantID == "" {
-		return errors.New("AZURE_TENANT_ID was not set")
-	}
 	if AzureProps.Location == "" {
 		return errors.New("LOCATION was not set.")
 	}
@@ -121,7 +118,7 @@ func initAzureProperties(properties map[string]string) error {
 
 	err := initManagedClients()
 	if err != nil {
-		return fmt.Errorf("Failed initialising managed clients:%w", err)
+		return fmt.Errorf("initializing managed clients: %w", err)
 	}
 
 	AzureProps.federatedIdentityCredentialName = fmt.Sprintf("%sFederatedIdentityCredential", AzureProps.ClusterName)
@@ -131,46 +128,39 @@ func initAzureProperties(properties map[string]string) error {
 
 func initManagedClients() error {
 	log.Trace("initManagedClients()")
+
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating azure credential: %w", err)
 	}
 
-	resourcesClientFactory, err := armresources.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
+	AzureProps.ResourceGroupClient, err = armresources.NewResourceGroupsClient(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
-		return fmt.Errorf("Failed creating resource client factory:%w", err)
+		return fmt.Errorf("creating resource group client: %w", err)
 	}
-	resourceGroupClient := resourcesClientFactory.NewResourceGroupsClient()
 
+	// Use a client factory when creating multiple of these clients.
 	networkClientFactory, err := armnetwork.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
-		return fmt.Errorf("Failed creating network client factory:%w", err)
+		return fmt.Errorf("creating network client factory: %w", err)
 	}
-	virtualNetworksClient := networkClientFactory.NewVirtualNetworksClient()
-	subnetsClient := networkClientFactory.NewSubnetsClient()
+	AzureProps.ManagedVnetClient = networkClientFactory.NewVirtualNetworksClient()
+	AzureProps.ManagedSubnetClient = networkClientFactory.NewSubnetsClient()
 
-	computeClientFactory, err := armcompute.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
+	AzureProps.ManagedVmClient, err = armcompute.NewVirtualMachinesClient(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
-		return fmt.Errorf("Failed creating compute client factory:%w", err)
+		return fmt.Errorf("creating virtual machine client: %w", err)
 	}
 
-	virtualMachinesClient := computeClientFactory.NewVirtualMachinesClient()
-
-	containerserviceClientFactory, err := armcontainerservice.NewClientFactory(AzureProps.SubscriptionID, cred, nil)
+	AzureProps.ManagedAksClient, err = armcontainerservice.NewManagedClustersClient(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
-		return fmt.Errorf("Failed creating container service client factory:%w", err)
+		return fmt.Errorf("creating managed cluster client: %w", err)
 	}
-	managedClustersClient := containerserviceClientFactory.NewManagedClustersClient()
 
 	AzureProps.FederatedIdentityCredentialsClient, err = armmsi.NewFederatedIdentityCredentialsClient(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
 		return fmt.Errorf("creating federated identity credentials client: %w", err)
 	}
 
-	AzureProps.ResourceGroupClient = resourceGroupClient
-	AzureProps.ManagedAksClient = managedClustersClient
-	AzureProps.ManagedVmClient = virtualMachinesClient
-	AzureProps.ManagedSubnetClient = subnetsClient
-	AzureProps.ManagedVnetClient = virtualNetworksClient
 	return nil
 }
