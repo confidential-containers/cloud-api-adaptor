@@ -15,7 +15,7 @@ cloudimg:
         url: https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20200113.0.x86_64.qcow2
         checksum: "sha256:b80ca9ccad8715aa1aeee582906096d3190b91cebe05fcb3ac7cb197fd68a7fe"
 tools:
-  golang: 1.20.5
+  golang: 1.20.6
   rust: 1.66.0
   protoc: 3.11.4
 # Referenced Git repositories
