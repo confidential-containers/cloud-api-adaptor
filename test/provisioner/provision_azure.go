@@ -7,13 +7,13 @@ package provisioner
 
 import (
 	"context"
-	"path/filepath"
-
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -462,7 +462,36 @@ func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, p
 		}
 	}
 
+	// Replace the contents of the `workload-identity.yaml` with the client id
+	workloadIdentity := filepath.Join(lio.overlay.configDir, "workload-identity.yaml")
+	if err = replaceTextInFile(workloadIdentity, "00000000-0000-0000-0000-000000000000", AzureProps.ClientID); err != nil {
+		return fmt.Errorf("replacing client id in workload-identity.yaml: %w", err)
+	}
+
+	if err = lio.overlay.AddToPatchesStrategicMerge("workload-identity.yaml"); err != nil {
+		return err
+	}
+
 	if err = lio.overlay.YamlReload(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func replaceTextInFile(filePath, oldText, newText string) error {
+	// Read the file content
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	// Replace the old text with the new text
+	newContent := strings.ReplaceAll(string(content), oldText, newText)
+
+	// Write the modified content back to the file
+	err = os.WriteFile(filePath, []byte(newContent), 0)
+	if err != nil {
 		return err
 	}
 
