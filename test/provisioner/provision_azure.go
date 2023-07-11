@@ -379,12 +379,10 @@ func (p *AzureCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.
 }
 
 func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
-	return map[string]string{
+	props := map[string]string{
 		"CLOUD_PROVIDER":        "azure",
 		"AZURE_SUBSCRIPTION_ID": AzureProps.SubscriptionID,
 		"AZURE_CLIENT_ID":       AzureProps.ClientID,
-		"AZURE_CLIENT_SECRET":   AzureProps.ClientSecret,
-		"AZURE_TENANT_ID":       AzureProps.TenantID,
 		"AZURE_RESOURCE_GROUP":  AzureProps.ResourceGroupName,
 		"CLUSTER_NAME":          AzureProps.ClusterName,
 		"AZURE_REGION":          AzureProps.Location,
@@ -394,6 +392,16 @@ func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.
 		"AZURE_SUBNET_ID":       AzureProps.SubnetID,
 		"AZURE_INSTANCE_SIZE":   AzureProps.InstanceSize,
 	}
+
+	if AzureProps.ClientSecret != "" {
+		props["AZURE_CLIENT_SECRET"] = AzureProps.ClientSecret
+	}
+
+	if AzureProps.TenantID != "" {
+		props["AZURE_TENANT_ID"] = AzureProps.TenantID
+	}
+
+	return props
 }
 
 func (p *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
