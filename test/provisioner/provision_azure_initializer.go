@@ -19,7 +19,6 @@ import (
 
 type AzureProperties struct {
 	ResourceGroup       *armresources.ResourceGroup
-	CloudProvider       string
 	SubscriptionID      string
 	ClientID            string
 	ClientSecret        string
@@ -63,7 +62,6 @@ func initAzureProperties(properties map[string]string) error {
 		ClusterName:         properties["CLUSTER_NAME"],
 		Location:            properties["LOCATION"],
 		SshPrivateKey:       properties["SSH_KEY_ID"],
-		CloudProvider:       properties["CLOUD_PROVIDER"],
 		ImageID:             properties["AZURE_IMAGE_ID"],
 		SubnetID:            properties["AZURE_SUBNET_ID"],
 		SshUserName:         properties["SSH_USERNAME"],
@@ -99,9 +97,6 @@ func initAzureProperties(properties map[string]string) error {
 	}
 	if AzureProps.Location == "" {
 		return errors.New("LOCATION was not set.")
-	}
-	if AzureProps.CloudProvider == "" {
-		return errors.New("CLOUD_PROVIDER was not set.")
 	}
 	if AzureProps.SshPrivateKey == "" {
 		return errors.New("SSH_KEY_ID was not set.")
