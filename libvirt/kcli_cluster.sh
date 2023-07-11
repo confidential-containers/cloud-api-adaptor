@@ -52,7 +52,7 @@ create () {
 		-P disk_size="$CLUSTER_DISK_SIZE" \
 		"$CLUSTER_NAME"
 
-	export KUBECONFIG=$HOME/.kcli/clusters/peer-pods/auth/kubeconfig
+	export KUBECONFIG=$HOME/.kcli/clusters/$CLUSTER_NAME/auth/kubeconfig
 
 	local cmd="kubectl get nodes | grep '\<Ready\>.*worker'"
 	echo "Wait at least one worker be Ready"

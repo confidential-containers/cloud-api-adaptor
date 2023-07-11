@@ -63,6 +63,7 @@ Use the properties on the table below for Libvirt:
 |libvirt_ssh_key_file|Path to SSH private key||
 |pause_image|k8s pause image||
 |vxlan_port| VXLAN port number||
+|cluster_name|Cluster Name| "peer-pods"|
 
 # Adding support for a new cloud provider
 

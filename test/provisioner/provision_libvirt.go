@@ -32,6 +32,7 @@ type LibvirtProvisioner struct {
 	uri          string           // Libvirt URI
 	wd           string           // libvirt's directory path on this repository
 	volumeName   string           // Podvm volume name
+	clusterName  string           // Cluster name
 }
 
 // LibvirtInstallOverlay implements the InstallOverlay interface
@@ -76,6 +77,11 @@ func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, erro
 		return nil, err
 	}
 
+	clusterName := "peer-pods"
+	if properties["cluster_name"] != "" {
+		clusterName = properties["cluster_name"]
+	}
+
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
 		conn:         conn,
@@ -85,22 +91,27 @@ func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, erro
 		uri:          uri,
 		wd:           wd,
 		volumeName:   vol_name,
+		clusterName:  clusterName,
 	}, nil
 }
 
 func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
+
 	cmd := exec.Command("/bin/bash", "-c", "./kcli_cluster.sh create")
 	cmd.Dir = l.wd
 	cmd.Stdout = os.Stdout
 	// TODO: better handle stderr. Messages getting out of order.
 	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "CLUSTER_NAME="+l.clusterName)
+	cmd.Env = append(cmd.Env, "LIBVIRT_NETWORK="+l.network)
+	cmd.Env = append(cmd.Env, "LIBVIRT_POOL="+l.storage)
 	err := cmd.Run()
 	if err != nil {
 		return err
 	}
 
-	// TODO: cluster name should be customized.
-	clusterName := "peer-pods"
+	clusterName := l.clusterName
 	home, _ := os.UserHomeDir()
 	kubeconfig := path.Join(home, ".kcli/clusters", clusterName, "auth/kubeconfig")
 	cfg.WithKubeconfigFile(kubeconfig)
