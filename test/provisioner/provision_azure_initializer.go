@@ -89,7 +89,11 @@ func initAzureProperties(properties map[string]string) error {
 	if AzureProps.SubscriptionID == "" {
 		return errors.New("AZURE_SUBSCRIPTION_ID was not set.")
 	}
-	if AzureProps.ClientID == "" && !AzureProps.IsAzCliAuth {
+
+	// TODO: Right now AZURE_CLIENT_ID can be used by the provisioner
+	// application and the same value is passed on to the CAA app inside the
+	// daemonset. Figure out a way to separate these two.
+	if AzureProps.ClientID == "" {
 		return errors.New("AZURE_CLIENT_ID was not set.")
 	}
 	if AzureProps.ClientSecret == "" && !AzureProps.IsAzCliAuth {
