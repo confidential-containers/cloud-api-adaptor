@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path"
 	"time"
 
@@ -235,6 +234,7 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 					OSType:             to.Ptr(armcontainerservice.OSType(AzureProps.OsType)),
 					EnableNodePublicIP: to.Ptr(false),
 					VnetSubnetID:       &AzureProps.SubnetID,
+					NodeLabels:         map[string]*string{"node.kubernetes.io/worker": to.Ptr("")},
 				},
 			},
 			ServicePrincipalProfile: &armcontainerservice.ManagedClusterServicePrincipalProfile{
@@ -304,16 +304,6 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 	}
 
 	cfg.WithKubeconfigFile(kubeconfigPath)
-
-	// Update this to use label while provisioning cluster
-	cmd := exec.Command("kubectl", "label", "nodes", "--all", fmt.Sprintf("%s=%s", "node.kubernetes.io/worker", ""))
-	cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG="+kubeconfigPath))
-
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("labeling nodes: %w", err)
-	}
-	log.Info("Nodes labeled successfully.")
 
 	return nil
 }
