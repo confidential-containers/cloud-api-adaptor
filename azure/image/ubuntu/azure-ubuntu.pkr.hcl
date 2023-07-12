@@ -35,7 +35,7 @@ build {
   }
 
   provisioner "file" {
-    source      = "./toupload"
+    source      = "toupload"
     destination = "/tmp/"
   }
 
