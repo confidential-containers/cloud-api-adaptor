@@ -19,23 +19,31 @@ variable "resource_group" {
 }
 
 variable "client_id" {
-  type    = string
-  default = ""
+  type = string
+  # This can be empty when using local authentication enabled by setting `use_azure_cli_auth` to true.
+  default   = ""
+  sensitive = true
 }
 
 variable "client_secret" {
-  type    = string
-  default = ""
+  type = string
+  # This can be empty when using local authentication enabled by setting `use_azure_cli_auth` to true.
+  default   = ""
+  sensitive = true
 }
 
 variable "subscription_id" {
-  type    = string
-  default = ""
+  type = string
+  # This can be empty when using local authentication enabled by setting `use_azure_cli_auth` to true.
+  default   = ""
+  sensitive = true
 }
 
 variable "tenant_id" {
-  type    = string
-  default = ""
+  type = string
+  # This can be empty when using local authentication enabled by setting `use_azure_cli_auth` to true.
+  default   = ""
+  sensitive = true
 }
 
 variable "use_azure_cli_auth" {
