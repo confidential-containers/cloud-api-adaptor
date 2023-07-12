@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"golang.org/x/exp/slices"
 	"os"
+	"strings"
+
+	"golang.org/x/exp/slices"
 	"sigs.k8s.io/e2e-framework/klient/decoder"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/kustomize/api/krusty"
@@ -14,7 +16,6 @@ import (
 	"sigs.k8s.io/kustomize/pkg/fs"
 	"sigs.k8s.io/kustomize/pkg/image"
 	ktypes "sigs.k8s.io/kustomize/pkg/types"
-	"strings"
 )
 
 type KustomizeOverlay struct {
@@ -203,7 +204,11 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorFile(sgName string, file 
 	gs := &m.SecretGenerator[i]
 
 	newFiles := gs.GeneratorArgs.DataSources.FileSources
-	newFiles = append(newFiles, file)
+
+	if !slices.Contains(newFiles, file) {
+		newFiles = append(newFiles, file)
+	}
+
 	gs.GeneratorArgs.DataSources.FileSources = newFiles
 
 	if err = kf.Write(m); err != nil {
