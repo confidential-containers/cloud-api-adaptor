@@ -205,7 +205,11 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorFile(sgName string, file 
 	gs := &m.SecretGenerator[i]
 
 	newFiles := gs.GeneratorArgs.DataSources.FileSources
-	newFiles = append(newFiles, file)
+
+	if !slices.Contains(newFiles, file) {
+		newFiles = append(newFiles, file)
+	}
+
 	gs.GeneratorArgs.DataSources.FileSources = newFiles
 
 	if err = kf.Write(m); err != nil {
