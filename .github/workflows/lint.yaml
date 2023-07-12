@@ -6,7 +6,7 @@
 name: lint
 on: [workflow_dispatch, pull_request]
 env:
-  GO_VERSION: "1.20"
+  GO_VERSION: "1.20.6"
 jobs:
   vet-and-fmt:
     name: vet and fmt
