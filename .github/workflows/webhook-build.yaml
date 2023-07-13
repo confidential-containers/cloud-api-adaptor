@@ -26,7 +26,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup Golang version ${{ env.go_version }}
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ env.go_version }}
       - name: Set up Docker Buildx
