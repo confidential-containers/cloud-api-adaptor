@@ -40,8 +40,11 @@ fi
 
 if [[ "$CLOUD_PROVIDER" == "azure" && "$PODVM_DISTRO" == "ubuntu" ]]; then
     export DEBIAN_FRONTEND=noninteractive
+    curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+    echo "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+
     sudo apt-get update
-    sudo apt-get install -y libtss2-tctildr0
+    sudo apt-get install -y --no-install-recommends libtss2-tctildr0 libtdx-attest
 fi
 
 # Setup oneshot systemd service for AWS and Azure to enable NAT rules
