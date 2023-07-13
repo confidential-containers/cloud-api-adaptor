@@ -2,7 +2,7 @@
 
 ## Set up a demo environment on your development machine
 
-Follow the [README.md](../../../../ibmcloud/README.md) to setup a x86 based demo environment on IBM Cloud VPC.
+Follow the [README.md](../../../../ibmcloud/README.md) to setup a x86_64 based demo environment on IBM Cloud VPC.
 
 ## Deploy `ibm-vpc-block-csi-driver` on the cluster
 
