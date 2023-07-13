@@ -1,11 +1,5 @@
 # Azure File CSI Wrapper for Peer Pod Storage
 
-## High Level Design
-
-![design](../../images/csi-wrapper.png)
-
-> **Note** Edited via https://excalidraw.com/
-
 ## Peer Pod example using CSI Wrapper with azurefiles-csi-driver
 
 ### Set up a demo environment on your development machine
