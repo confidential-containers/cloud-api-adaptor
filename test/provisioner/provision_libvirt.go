@@ -73,8 +73,11 @@ func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, erro
 		vol_name = properties["libvirt_vol_name"]
 	}
 
-	// TODO: accept a different URI.
-	conn, err := libvirt.NewConnect("qemu:///system")
+	conn_uri := "qemu:///system"
+	if properties["libvirt_conn_uri"] != "" {
+		conn_uri = properties["libvirt_conn_uri"]
+	}
+	conn, err := libvirt.NewConnect(conn_uri)
 	if err != nil {
 		return nil, err
 	}

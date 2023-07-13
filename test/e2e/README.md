@@ -58,8 +58,9 @@ Use the properties on the table below for Libvirt:
 |---|---|---|
 |libvirt_network|Libvirt Network|"default"|
 |libvirt_storage|Libvirt storage pool|"default"|
-|libvirt_url|Libvirt connection URI|"qemu+ssh://root@192.168.122.1/system?no_verify=1"|
 |libvirt_vol_name|Volume name|"podvm-base.qcow2"|
+|libvirt_uri|Libvirt pod URI|"qemu+ssh://root@192.168.122.1/system?no_verify=1"|
+|libvirt_conn_uri|Libvirt host URI|"qemu:///system"|
 |libvirt_ssh_key_file|Path to SSH private key||
 |pause_image|k8s pause image||
 |vxlan_port| VXLAN port number||
