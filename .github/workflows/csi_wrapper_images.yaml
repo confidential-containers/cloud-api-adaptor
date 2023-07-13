@@ -11,9 +11,6 @@ on:
       - 'main'
     paths:
       - 'volumes/csi-wrapper/**'
-  pull_request:
-    paths:
-    - 'volumes/csi-wrapper/**'
   workflow_dispatch:
 
 env:
