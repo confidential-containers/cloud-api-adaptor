@@ -4,6 +4,8 @@
 
 include ../../podvm/Makefile.inc
 
+BINARIES += $(ATTESTATION_AGENT_GRPC)
+
 .PHONY: image clean
 
 image: $(IMAGE_FILE)

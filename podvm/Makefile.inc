@@ -54,6 +54,7 @@ AGENT_PROTOCOL_FORWARDER = $(FILES_DIR)/usr/local/bin/agent-protocol-forwarder
 KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
 PAUSE         = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/pause
 ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
+ATTESTATION_AGENT_GRPC = $(FILES_DIR)/usr/local/bin/attestation-agent.grpc
 
 # Allow BINARIES to be overriden externally
 BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE)
@@ -140,13 +141,22 @@ $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 $(GUEST_COMPONENTS_SRC):
 	$(call git_clone_repo_ref,$(GUEST_COMPONENTS_REPO),$(GUEST_COMPONENTS_SRC),$(GUEST_COMPONENTS_VERSION))
 
+$(GUEST_COMPONENTS_SRC).grpc: $(GUEST_COMPONENTS_SRC)
+	git clone --depth=1 $< $@
+
 $(ATTESTATION_AGENT): $(GUEST_COMPONENTS_SRC)
-	cd "$(GUEST_COMPONENTS_SRC)/attestation-agent" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" ttrpc=true LIBC="$(LIBC)"
+	cd "$(<)/attestation-agent" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" ttrpc=true LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
-	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
+	install --compare "$(<)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
+
+$(ATTESTATION_AGENT_GRPC): $(GUEST_COMPONENTS_SRC).grpc
+	cd "$(<)/attestation-agent" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" grpc=true LIBC="$(LIBC)"
+	mkdir -p "$(@D)"
+	install --compare "$(<)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
 
 clean_sources:
 	[ -d "$(GUEST_COMPONENTS_SRC)" ] && cd "$(GUEST_COMPONENTS_SRC)" && git clean -xfd
+	[ -d "$(GUEST_COMPONENTS_SRC).grpc" ] && cd "$(GUEST_COMPONENTS_SRC).grpc" && git clean -xfd
 	[ -d "$(KATA_AGENT_SRC)" ] && cd "$(KATA_AGENT_SRC)" && git clean -xfd
 	[ -d "$(AGENT_PROTOCOL_FORWARDER_SRC)" ] && cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && git clean -xfd -e podvm
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
