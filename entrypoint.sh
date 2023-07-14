@@ -60,11 +60,13 @@ aws() {
 }
 
 azure() {
-    test_vars AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_SUBNET_ID AZURE_IMAGE_ID
+    test_vars AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_IMAGE_ID
 
     [[ "${SSH_USERNAME}" ]] && optionals+="-ssh-username ${SSH_USERNAME} "
     [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
     [[ "${AZURE_INSTANCE_SIZES}" ]] && optionals+="-instance-sizes ${AZURE_INSTANCE_SIZES} "
+    [[ "${AZURE_SUBNET_ID}" ]] && optionals+="-subnetid ${AZURE_SUBNET_ID} "
+    [[ "${AZURE_NSG_ID}" ]] && optionals+="-securitygroupid ${AZURE_NSG_ID} "
     [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
     [[ "${DISABLE_CLOUD_CONFIG}" == "true" ]] && optionals+="-disable-cloud-config "
 
@@ -75,8 +77,6 @@ azure() {
         -instance-size "${AZURE_INSTANCE_SIZE}" \
         -resourcegroup "${AZURE_RESOURCE_GROUP}" \
         -vxlan-port 8472 \
-        -subnetid "${AZURE_SUBNET_ID}" \
-        -securitygroupid "${AZURE_NSG_ID}" \
         -imageid "${AZURE_IMAGE_ID}" \
         ${optionals}
 }

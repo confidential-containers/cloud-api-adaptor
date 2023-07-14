@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/avast/retry-go/v4"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
@@ -38,10 +39,38 @@ type azureProvider struct {
 	serviceConfig *Config
 }
 
+// TODO: Add support for managed K8s - AKS and ARO
+// AKS and ARO creates a separate resource group for the cluster resources and current code needs to be adapted to handle retrieving the cluster resource group and related settings
+func (p *azureProvider) fetchConfigMapValues() error {
+	config := p.serviceConfig
+
+	if config.ResourceGroupName == "" {
+		err := p.GetResourceGroup()
+		if err != nil {
+			return fmt.Errorf("getting ResourceGroup from azure: %w", err)
+		}
+	}
+
+	if config.SecurityGroupId == "" {
+		err := p.GetNSG(config.ResourceGroupName)
+		if err != nil {
+			return fmt.Errorf("getting NSG_ID from azure: %w", err)
+		}
+	}
+
+	if config.SubnetId == "" {
+		err := p.GetVirtualNetwork(config.ResourceGroupName)
+		if err != nil {
+			return fmt.Errorf("getting SubnetID from azure: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func NewProvider(config *Config) (cloud.Provider, error) {
 
-	logger.Printf("azure config %+v", config.Redact())
-
+	// Requires config.TenantId, config.ClientId and config.ClientSecret to be set
 	azureClient, err := NewAzureClient(*config)
 	if err != nil {
 		logger.Printf("creating azure client: %v", err)
@@ -53,6 +82,15 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 		serviceConfig: config,
 	}
 
+	// Uses Azure sdk to get config.ResourceGroupName, config.SecurityGroupId,
+	// config.ImageId and config.SubnetId
+	if err = provider.fetchConfigMapValues(); err != nil {
+		return nil, err
+	}
+
+	logger.Printf("azure config %+v", config.Redact())
+
+	// Uses Azure sdk to get config.InstanceTypeSpecList
 	if err = provider.updateInstanceSizeSpecList(); err != nil {
 		return nil, err
 	}
@@ -508,4 +546,172 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, b64EncData strin
 	}
 
 	return &vmParameters, nil
+}
+
+func _from_user_rg(managedBy string, userRg string) bool {
+	parts := strings.Split(managedBy, "/")
+	if len(parts) > 5 && parts[3] == "resourceGroups" {
+		return parts[4] == userRg
+	}
+	return false
+}
+
+func (p *azureProvider) GetResourceGroup() error {
+
+	resourcesClientFactory, err := armresources.NewClientFactory(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating resource client factory:%w", err)
+	}
+
+	rgClient := resourcesClientFactory.NewResourceGroupsClient()
+	pager := rgClient.NewListPager(nil)
+	found := 0
+
+	for pager.More() {
+		nextResult, err := pager.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("getting ResourceGroup NextPage: %w", err)
+		}
+		if nextResult.ResourceGroupListResult.Value != nil {
+			for _, ResourceGroup := range nextResult.ResourceGroupListResult.Value {
+				if ResourceGroup.ManagedBy != nil {
+					rg_matches := _from_user_rg(*ResourceGroup.ManagedBy, p.serviceConfig.ResourceGroupName)
+					if rg_matches {
+						logger.Printf("ResourceGroup found: %v", (*ResourceGroup.Name))
+						if found == 0 {
+							p.serviceConfig.ResourceGroupName = *ResourceGroup.Name
+							logger.Printf("Using ResourceGroup %v", (*ResourceGroup.Name))
+						}
+						found++
+					}
+				}
+			}
+		}
+	}
+
+	if found > 1 {
+		logger.Printf("[warning] more than a ResourceGroup found! Defaulting to %v", p.serviceConfig.ResourceGroupName)
+	}
+
+	if found == 0 {
+		return fmt.Errorf("no ResourceGroup found! Please provide it manually with AZURE_RESOURCE_GROUP")
+	}
+
+	return nil
+}
+
+func (p *azureProvider) GetVirtualNetwork(resourceGroupName string) error {
+
+	virtualNetworksClient, err := armnetwork.NewVirtualNetworksClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("getting virtualNetworksClient: %w", err)
+	}
+
+	found := 0
+	virtnet := ""
+
+	virtualNetworksClientNewListPager := virtualNetworksClient.NewListPager(resourceGroupName, nil)
+	for virtualNetworksClientNewListPager.More() {
+		nextResult, err := virtualNetworksClientNewListPager.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("getting virtual networks NextPage: %w", err)
+		}
+		if nextResult.VirtualNetworkListResult.Value != nil {
+			for _, VirtualNetwork := range nextResult.VirtualNetworkListResult.Value {
+				logger.Printf("Virtual network found: %v", *VirtualNetwork.Name)
+				if found == 0 {
+					virtnet = *VirtualNetwork.Name
+					logger.Printf("Using Virtual network %v", virtnet)
+				}
+				found++
+			}
+		}
+	}
+
+	if found > 1 {
+		logger.Printf("[warning] more than a Virtual network found! Defaulting to %v", virtnet)
+	}
+
+	if found == 0 {
+		return fmt.Errorf("no Virtual network found in ResourceGroup %v", resourceGroupName)
+	}
+
+	return p.GetSubnetID(resourceGroupName, virtnet)
+}
+
+func (p *azureProvider) GetSubnetID(resourceGroupName string, virtualNetworkName string) error {
+
+	subnetsClient, err := armnetwork.NewSubnetsClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("getting NewSubnetsClient: %w", err)
+	}
+
+	found := 0
+
+	subnetsClientNewListPager := subnetsClient.NewListPager(resourceGroupName, virtualNetworkName, nil)
+	for subnetsClientNewListPager.More() {
+		nextResult, err := subnetsClientNewListPager.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("getting subnets NextPage: %w", err)
+		}
+		if nextResult.SubnetListResult.Value != nil {
+			for _, Subnet := range nextResult.SubnetListResult.Value {
+				logger.Printf("Subnet found: %v", *Subnet.Name)
+				if found == 0 {
+					p.serviceConfig.SubnetId = *Subnet.ID
+					logger.Printf("Using Subnet ID %v", *Subnet.ID)
+				}
+				found++
+			}
+
+		}
+	}
+
+	if found > 1 {
+		logger.Printf("[warning] more than a Subnet ID found for Virtual network %v! Defaulting to %v", virtualNetworkName, p.serviceConfig.SubnetId)
+	}
+
+	if found == 0 {
+		return fmt.Errorf("no Subnet ID found in Virtual network %v! Please provide it manually with AZURE_SUBNET_ID", virtualNetworkName)
+	}
+
+	return nil
+}
+
+func (p *azureProvider) GetNSG(resourceGroupName string) error {
+
+	securityGroupsClient, err := armnetwork.NewSecurityGroupsClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("getting NewSecurityGroupsClient: %w", err)
+	}
+
+	found := 0
+
+	securityGroupsClientNewListPager := securityGroupsClient.NewListPager(resourceGroupName, nil)
+	for securityGroupsClientNewListPager.More() {
+		nextResult, err := securityGroupsClientNewListPager.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("getting NSG NextPage: %w", err)
+		}
+		if nextResult.SecurityGroupListResult.Value != nil {
+			for _, SecurityGroup := range nextResult.SecurityGroupListResult.Value {
+				logger.Printf("NSG found: %v", *SecurityGroup.ID)
+				if found == 0 {
+					p.serviceConfig.SecurityGroupId = *SecurityGroup.ID
+					logger.Printf("Using NSG %v", *SecurityGroup.ID)
+				}
+				found++
+			}
+		}
+	}
+
+	if found > 1 {
+		logger.Printf("[warning] more than a NSG found! Defaulting to %v", p.serviceConfig.SecurityGroupId)
+	}
+
+	if found == 0 {
+		return fmt.Errorf("no NSG found in ResourceGroup %v! Please provide it manually with AZURE_NSG_ID", resourceGroupName)
+	}
+
+	return nil
 }
