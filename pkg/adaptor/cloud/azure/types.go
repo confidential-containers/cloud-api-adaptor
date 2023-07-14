@@ -34,7 +34,6 @@ type Config struct {
 	Zone                 string
 	Region               string
 	SubnetId             string
-	SecurityGroupName    string
 	SecurityGroupId      string
 	Size                 string
 	ImageId              string
