@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
@@ -213,6 +214,15 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		securityProfile = nil
 	}
 
+	imgRef := &armcompute.ImageReference{
+		ID: to.Ptr(p.serviceConfig.ImageId),
+	}
+	if strings.HasPrefix(p.serviceConfig.ImageId, "/CommunityGalleries/") {
+		imgRef = &armcompute.ImageReference{
+			CommunityGalleryImageID: to.Ptr(p.serviceConfig.ImageId),
+		}
+	}
+
 	vmParameters := armcompute.VirtualMachine{
 		Location: to.Ptr(p.serviceConfig.Region),
 		Properties: &armcompute.VirtualMachineProperties{
@@ -220,9 +230,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 				VMSize: to.Ptr(armcompute.VirtualMachineSizeTypes(instanceSize)),
 			},
 			StorageProfile: &armcompute.StorageProfile{
-				ImageReference: &armcompute.ImageReference{
-					ID: to.Ptr(p.serviceConfig.ImageId),
-				},
+				ImageReference: imgRef,
 				OSDisk: &armcompute.OSDisk{
 					Name:         to.Ptr(diskName),
 					CreateOption: to.Ptr(armcompute.DiskCreateOptionTypesFromImage),
