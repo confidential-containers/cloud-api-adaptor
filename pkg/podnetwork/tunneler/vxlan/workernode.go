@@ -34,7 +34,15 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, confi
 
 	var dstAddr netip.Addr
 
+	numIPs := len(podNodeIPs)
+	if numIPs == 0 {
+		return fmt.Errorf("pod node has no IPs")
+	}
+
 	if config.Dedicated {
+		if numIPs < 2 {
+			return fmt.Errorf("dedicated tunnel missing destination address")
+		}
 		dstAddr = podNodeIPs[1]
 	} else {
 		dstAddr = podNodeIPs[0]
