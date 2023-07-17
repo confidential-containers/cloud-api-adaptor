@@ -17,7 +17,7 @@ SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 # End-to-end tests overall run timeout.
-TEST_E2E_TIMEOUT ?= 20m
+TEST_E2E_TIMEOUT ?= 60m
 
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
