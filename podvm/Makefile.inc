@@ -20,7 +20,7 @@ ARCH        ?= $(HOST_ARCH)
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
 AA_KBC      ?= offline_fs_kbc
 KBC_URI     ?= null
-LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
+LIBC        := gnu
 RUST_ARCH   ?= $(subst ppc64le,powerpc64le,$(ARCH))
 RUST_TARGET := $(RUST_ARCH)-unknown-linux-$(LIBC)
 
@@ -112,7 +112,7 @@ $(AGENT_PROTOCOL_FORWARDER): force
 	install -D --compare "$(AGENT_PROTOCOL_FORWARDER_SRC)/agent-protocol-forwarder" "$@"
 
 $(KATA_AGENT): force $(STATIC_LIBSECCOMP)
-	cd "$(KATA_AGENT_SRC)" && $(RUST_FLAGS) $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
+	cd "$(KATA_AGENT_SRC)" && $(RUST_FLAGS) $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBC=$(LIBC) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
 	install -D --compare "$(KATA_AGENT_SRC)/target/$(RUST_TARGET)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
 
 $(STATIC_LIBSECCOMP):
