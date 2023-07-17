@@ -1,0 +1,56 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+- ../../yamls
+
+images:
+- name: cloud-api-adaptor
+  newName: 192.168.122.1:5000/cloud-api-adaptor # change image if needed
+  newTag: 47dcc2822b6c2489a02db83c520cf9fdcc833b3f-dirty # change tag if needed
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="gcp"
+  #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
+  - PODVM_IMAGE_NAME="" # set from step "Build Pod VM Image" in gcp/README.md
+  - GCP_PROJECT_ID="" # set
+  - GCP_ZONE="" # set e.g. "us-west1-a"
+  - GCP_MACHINE_TYPE="e2-medium" # replace if needed. caa defaults to e2-medium
+  - GCP_NETWORK="global/networks/default" # replace if needed.
+##TLS_SETTINGS
+  #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
+  #- CERT_FILE="/etc/certificates/client.crt" # for TLS
+  #- CERT_KEY="/etc/certificates/client.key" # for TLS
+  #- TLS_SKIP_VERIFY="" # for testing only
+##TLS_SETTINGS
+
+secretGenerator:
+- name: auth-json-secret
+  namespace: confidential-containers-system
+  files:
+  #- auth.json # set - path to auth.json pull credentials file
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  files:
+  - GCP_CREDENTIALS # make sure this file has the application credentials. You can reuse the Packer creds created in "Build Pod VM Image"
+##TLS_SETTINGS
+#- name: certs-for-tls
+#  namespace: confidential-containers-system
+#  files:
+#  - <path_to_ca.crt> # set - path to ca.crt
+#  - <path_to_client.crt> # set - path to client.crt
+#  - <path_to_client.key> # set - path to client.key
+##TLS_SETTINGS
+
+patchesStrategicMerge:
+  #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
+##TLS_SETTINGS
+  #- tls_certs_volume_mount.yaml # set (for tls)
+##TLS_SETTINGS
