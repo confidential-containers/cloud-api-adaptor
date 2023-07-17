@@ -17,7 +17,6 @@ IMAGE_PREFIX := podvm
 HOST_ARCH   := $(shell uname -m)
 ARCH        ?= $(HOST_ARCH)
 # Normalise x86_64 / amd64 for input ARCH
-ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
 AA_KBC      ?= offline_fs_kbc
 KBC_URI     ?= null
@@ -25,12 +24,14 @@ LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
 RUST_ARCH   ?= $(subst ppc64le,powerpc64le,$(ARCH))
 RUST_TARGET := $(RUST_ARCH)-unknown-linux-$(LIBC)
 
+$(info Building for target ARCH $(ARCH)/$(DEB_ARCH) on HOST_ARCH $(HOST_ARCH))
 ifneq ($(HOST_ARCH),$(ARCH))
     ifeq ($(CC),cc)
 		CC := $(ARCH)-linux-$(LIBC)-gcc
         $(warning A foreign ARCH was passed, but no CC alternative. Using $(CC) as best guess)
 	endif
-RUST_FLAGS := CC=$(CC) ARCH=$(ARCH)
+    RUST_FLAGS := CC=$(CC) ARCH=$(ARCH)
+    $(info Using RUST_FLAGS $(RUST_FLAGS))
 endif
 
 FILES_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/files
