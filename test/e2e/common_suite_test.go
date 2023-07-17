@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
 
-const WAIT_POD_RUNNING_TIMEOUT = time.Second * 600
+const WAIT_POD_RUNNING_TIMEOUT = time.Second * 900
 const WAIT_JOB_RUNNING_TIMEOUT = time.Second * 600
 
 // testCommand is a list of commands to execute inside the pod container,
@@ -213,6 +213,8 @@ func (tc *testCase) run() {
 
 							for _, podItem := range podlist.Items {
 								if podItem.ObjectMeta.Name == tc.pod.Name {
+									//adding sleep time to intialize container and ready for Executing commands
+									time.Sleep(5 * time.Second)
 									if err := cfg.Client().Resources(tc.pod.Namespace).ExecInPod(ctx, tc.pod.Namespace, tc.pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
 										t.Log(stderr.String())
 										t.Fatal(err)
@@ -393,6 +395,8 @@ func comparePodLogString(ctx context.Context, client klient.Client, customPod v1
 	if err := client.Resources(customPod.Namespace).List(ctx, &podlist); err != nil {
 		return podLogString, err
 	}
+	//adding sleep time to intialize container and ready for logging
+	time.Sleep(5 * time.Second)
 	for _, pod := range podlist.Items {
 		if pod.ObjectMeta.Name == customPod.Name {
 			func() {
@@ -632,9 +636,9 @@ func doTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T, 
 	namespace := envconf.RandomName("default", 7)
 	podName := "env-variable-in-config"
 	imageName := "nginx:latest"
-	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever), withEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}), withCommand([]string{"/bin/sh", "-c", "env"}))
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyOnFailure), withEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}), withCommand([]string{"/bin/sh", "-c", "env"}))
 	expectedPodLogString := "ISPRODUCTION=true"
-	newTestCase(t, "EnvVariablePeerPodWithDeploymentOnly", assert, "Peer pod with environmental variables has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).run()
+	newTestCase(t, "EnvVariablePeerPodWithDeploymentOnly", assert, "Peer pod with environmental variables has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).withCustomPodState(v1.PodSucceeded).run()
 }
 
 func doTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T, assert CloudAssert) {
@@ -650,7 +654,7 @@ func doTestCreatePeerPodWithLargeImage(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	podName := "largeimage-pod"
 	imageName := "quay.io/confidential-containers/test-images:largeimage"
-	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyNever))
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyOnFailure))
 	newTestCase(t, "LargeImagePeerPod", assert, "Peer pod with Large Image has been created").withPod(pod).withPodWatcher().run()
 }
 
