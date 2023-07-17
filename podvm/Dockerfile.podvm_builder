@@ -47,16 +47,22 @@ WORKDIR /src
 
 ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
 ARG CAA_SRC_REF="main"
+RUN echo "Cloning ${CAA_SRC} @ ${CAA_SRC_REF}" && \
+    mkdir -p "cloud-api-adaptor" && \
+    cd "cloud-api-adaptor" && \
+    git init && \
+    git remote add origin "${CAA_SRC}" && \
+    git fetch --depth=1 origin "${CAA_SRC_REF}" && \
+    git reset --hard FETCH_HEAD
 
 ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
-ARG KATA_SRC_BRANCH="CCv0"
-
-RUN echo $CAA_SRC
-
-RUN echo $CAA_SRC_REF
-
-RUN git clone ${CAA_SRC} -b ${CAA_SRC_REF} cloud-api-adaptor
-RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH} kata-containers
-
+ARG KATA_SRC_REF="CCv0"
+RUN echo "Cloning ${KATA_SRC} @ ${KATA_SRC_REF}" && \
+    mkdir -p "kata-containers" && \
+    cd "kata-containers" && \
+    git init && \
+    git remote add origin "${KATA_SRC}" && \
+    git fetch --depth=1 origin "${KATA_SRC_REF}" && \
+    git reset --hard FETCH_HEAD
 
 ENV GOPATH /src
