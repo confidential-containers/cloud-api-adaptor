@@ -165,14 +165,6 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	diskName := fmt.Sprintf("%s-disk", instanceName)
 	nicName := fmt.Sprintf("%s-net", instanceName)
 
-	// Get NIC using subnet and allow ports on the ssh group
-	vmNIC, err := p.createNetworkInterface(ctx, nicName)
-	if err != nil {
-		err = fmt.Errorf("creating VM network interface: %w", err)
-		logger.Printf("%v", err)
-		return nil, err
-	}
-
 	// require ssh key for authentication on linux
 	sshPublicKeyPath := os.ExpandEnv(p.serviceConfig.SSHKeyPath)
 	var sshBytes []byte
@@ -185,6 +177,14 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		}
 	} else {
 		err = fmt.Errorf("ssh public key: %w", err)
+		logger.Printf("%v", err)
+		return nil, err
+	}
+
+	// Get NIC using subnet and allow ports on the ssh group
+	vmNIC, err := p.createNetworkInterface(ctx, nicName)
+	if err != nil {
+		err = fmt.Errorf("creating VM network interface: %w", err)
 		logger.Printf("%v", err)
 		return nil, err
 	}
