@@ -2,13 +2,13 @@
 # Sources for a base cloud os images
 cloudimg:
   ubuntu:
-    focal:
+    jammy:
       amd64:
-        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-amd64.img
-        checksum: "sha256:3895e38566e5c2c019f5c6f825ab7570ee34dac6b9142fab0c7e5a78084c4280"
+        url: https://cloud-images.ubuntu.com/releases/jammy/release-20230712/ubuntu-22.04-server-cloudimg-amd64.img
+        checksum: "sha256:d6be2e196cdfea144d0b75f7dec0c5a0970603f01f0365d265be28438ed03352"
       s390x:
-        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-s390x.img
-        checksum: "sha256:24673aa86785573d3a92e15166ff81beff88cbb0abc01938f156eb1332e87cd3"
+        url: https://cloud-images.ubuntu.com/releases/jammy/release-20230712/ubuntu-22.04-server-cloudimg-s390x.img
+        checksum: "sha256:f5cb629c9550e127f4d5ec2c35b16ce7e4da4497925237eee871d9596d3ca589"
   centos:
     stream-8:
       amd64:

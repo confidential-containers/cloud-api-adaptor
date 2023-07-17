@@ -21,7 +21,7 @@ export VPC_ID=vpc-01234567890abcdef # optional, otherwise, it creates and uses t
 export SUBNET_ID=subnet-01234567890abcdef # must be set if VPC_ID is set
 ```
 
-- Create a custom AWS VM image based on Ubuntu 20.04 having kata-agent and other dependencies
+- Create a custom AWS VM image based on Ubuntu 22.04 having kata-agent and other dependencies
 
 > **NOTE**: For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
 

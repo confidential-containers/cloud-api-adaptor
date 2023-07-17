@@ -7,8 +7,8 @@ include ../../podvm/Makefile.inc
 
 .PHONY: build push verify ubuntu clean
 
-UBUNTU_RELEASE     = focal
-UBUNTU_IMAGE_URL  := https://cloud-images.ubuntu.com/$(UBUNTU_RELEASE)/current/$(UBUNTU_RELEASE)-server-cloudimg-$(DEB_ARCH).img
+UBUNTU_RELEASE     = jammy
+UBUNTU_IMAGE_URL  := https://cloud-images.ubuntu.com/releases/jammy/release-20230712/ubuntu-22.04-server-cloudimg-$(DEB_ARCH).img
 UBUNTU_IMAGE_FILE := $(notdir $(UBUNTU_IMAGE_URL))
 
 UBUNTU_PACKAGES = jq

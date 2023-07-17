@@ -43,6 +43,6 @@ RUN cd cloud-api-adaptor/podvm && \
 RUN tar czvf /podvm-binaries.tar.gz -C /src/cloud-api-adaptor/podvm/files usr/ etc/
 RUN tar czvf /pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files pause_bundle/
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 COPY --from=podvm_builder /podvm-binaries.tar.gz /
 COPY --from=podvm_builder /pause-bundle.tar.gz /

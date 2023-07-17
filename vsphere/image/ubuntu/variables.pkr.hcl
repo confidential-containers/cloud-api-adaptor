@@ -1,6 +1,6 @@
 /*
     DESCRIPTION:
-    Ubuntu Server 20.04 LTS variables using the Packer Builder for VMware vSphere (vsphere-iso).
+    Ubuntu Server 22.04 LTS variables using the Packer Builder for VMware vSphere (vsphere-iso).
 */
 
 // vSphere Credentials

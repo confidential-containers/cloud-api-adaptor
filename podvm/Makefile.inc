@@ -7,7 +7,7 @@
 # It is to be included via `include ../../podvm/Makefile.inc` in
 # each of the cloud provider podvm image Makefiles
 
-UBUNTU_RELEASE     = focal
+UBUNTU_RELEASE     = jammy
 SKOPEO_VERSION     = 1.5.0
 UMOCI_VERSION      = 0.4.7
 GUEST_COMPONENTS_VERSION ?= "af35c0649bab2d000b5c350bc5e60db67ef9e1a5"

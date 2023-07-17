@@ -6,7 +6,7 @@ NOCOLOR='\033[0m'
 default_guest_config=$(cat <<EOF
 /*
     DESCRIPTION:
-    Ubuntu Server 20.04 LTS variables used by the Packer Plugin for VMware vSphere (vsphere-iso).
+    Ubuntu Server 22.04 LTS variables used by the Packer Plugin for VMware vSphere (vsphere-iso).
 */
 
 // Guest Operating System Metadata
@@ -28,8 +28,8 @@ vm_network_name           = "VM Network"
 vm_hostname		  = "podvm"
 
 // Removable Media Settings
-iso_url            = "https://releases.ubuntu.com/focal/ubuntu-20.04.5-live-server-amd64.iso"
-iso_checksum_value = "5035be37a7e9abbdc09f0d257f3e33416c1a0fb322ba860d42d74aa75c3468d4"
+iso_url            = "https://releases.ubuntu.com/jammy/ubuntu-22.04.2-live-server-amd64.iso"
+iso_checksum_value = "5e38b55d57d94ff029719342357325ed3bda38fa80054f9330dc789cd2d43931"
 
 // Boot Settings
 vm_boot_wait  = "2s"

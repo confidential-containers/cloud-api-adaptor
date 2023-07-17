@@ -25,7 +25,7 @@ variable "cloud_image_checksum" {
 
 variable "cloud_image_url" {
   type    = string
-  default = "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
+  default = "https://cloud-images.ubuntu.com/releases/jammy/release-20230712/ubuntu-22.04-server-cloudimg-amd64.img"
 }
 
 variable "memory" {

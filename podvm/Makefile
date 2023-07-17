@@ -7,9 +7,9 @@ include Makefile.inc
 .PHONY: image clean clean_sources
 
 # Check for set but empty or unset URL and CHECKSUM
-UBUNTU_IMAGE_URL := $(or $(UBUNTU_IMAGE_URL),https://cloud-images.ubuntu.com/$(UBUNTU_RELEASE)/current/$(UBUNTU_RELEASE)-server-cloudimg-$(DEB_ARCH).img)
-UBUNTU_IMAGE_CHECKSUM := $(or $(UBUNTU_IMAGE_CHECKSUM),$(shell curl -LO  https://cloud-images.ubuntu.com/"$(UBUNTU_RELEASE)"/current/SHA256SUMS && \
-				grep "$(UBUNTU_RELEASE)"-server-cloudimg-"$(DEB_ARCH)".img SHA256SUMS | awk '{print $$1}' && \
+UBUNTU_IMAGE_URL := $(or $(UBUNTU_IMAGE_URL),https://cloud-images.ubuntu.com/releases/jammy/release-20230712/ubuntu-22.04-server-cloudimg-$(DEB_ARCH).img)
+UBUNTU_IMAGE_CHECKSUM := $(or $(UBUNTU_IMAGE_CHECKSUM),$(shell curl -LO  https://cloud-images.ubuntu.com/releases/jammy/release-20230712/SHA256SUMS && \
+				grep "server-cloudimg-$(DEB_ARCH)".img SHA256SUMS | awk '{print $$1}' && \
 				rm -f SHA256SUMS))
 
 IMAGE_SUFFIX := .qcow2
