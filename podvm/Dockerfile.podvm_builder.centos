@@ -7,7 +7,7 @@
 #
 FROM quay.io/centos/centos:stream8
 
-ARG GO_VERSION="1.19.6"
+ARG GO_VERSION="1.20.6"
 ARG PROTOC_VERSION="3.11.4"
 ARG RUST_VERSION="1.66.0"
 

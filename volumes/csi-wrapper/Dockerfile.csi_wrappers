@@ -7,7 +7,7 @@
 ARG SOURCE_FROM=remote
 
 ##### Builder Dev Image #####
-FROM --platform=${BUILDPLATFORM} golang:1.19 AS builder-local
+FROM --platform=${BUILDPLATFORM} golang:1.20 AS builder-local
 WORKDIR /src
 COPY go.mod go.sum ./cloud-api-adaptor/volumes/csi-wrapper/
 COPY Makefile ./cloud-api-adaptor/volumes/csi-wrapper/
@@ -16,7 +16,7 @@ COPY pkg   ./cloud-api-adaptor/volumes/csi-wrapper/pkg
 COPY entrypoint.sh   ./cloud-api-adaptor/volumes/csi-wrapper/entrypoint.sh
 
 ##### Builder Release Image #####
-FROM --platform=${BUILDPLATFORM} golang:1.19 AS builder-remote
+FROM --platform=${BUILDPLATFORM} golang:1.20 AS builder-remote
 ARG BINARY
 ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
 ARG CAA_SRC_REF="main"

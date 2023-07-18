@@ -1,6 +1,6 @@
 #!/bin/bash
 
-GO_VERSION="1.19.6"
+GO_VERSION="1.20.6"
 RUST_VERSION="1.66.0"
 SKOPEO_VERSION="1.5.0"
 

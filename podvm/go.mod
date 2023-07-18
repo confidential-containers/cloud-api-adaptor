@@ -4,4 +4,4 @@
 
 module github.com/confidential-containers/cloud-api-adaptor/podvm
 
-go 1.19
+go 1.20
