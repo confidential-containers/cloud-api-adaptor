@@ -1,6 +1,6 @@
 module github.com/confidential-containers/cloud-api-adaptor/webhook
 
-go 1.19
+go 1.20
 
 require (
 	k8s.io/api v0.24.2
