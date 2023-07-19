@@ -13,11 +13,13 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/avast/retry-go/v4"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
@@ -270,13 +272,13 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
-	result, err := p.create(context.TODO(), &vmParameters)
+	result, err := p.create(ctx, &vmParameters)
 	if err != nil {
 		if err := p.deleteDisk(ctx, diskName); err != nil {
 			logger.Printf("deleting disk (%s): %s", diskName, err)
 		}
-		if err := p.deleteNetworkInterface(ctx, nicName); err != nil {
-			logger.Printf("deleting nic (%s): %s", nicName, err)
+		if err := p.deleteNetworkInterfaceAsync(context.Background(), nicName); err != nil {
+			logger.Printf("deleting nic async (%s): %s", nicName, err)
 		}
 		return nil, fmt.Errorf("Creating instance (%v): %s", result, err)
 	}
@@ -348,23 +350,38 @@ func (p *azureProvider) deleteDisk(ctx context.Context, diskName string) error {
 	return nil
 }
 
-func (p *azureProvider) deleteNetworkInterface(ctx context.Context, nicName string) error {
+func (p *azureProvider) deleteNetworkInterfaceAsync(ctx context.Context, nicName string) error {
 	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
 	if err != nil {
 		return fmt.Errorf("creating network interface client: %w", err)
 	}
+	rg := p.serviceConfig.ResourceGroupName
 
-	pollerResponse, err := nicClient.BeginDelete(ctx, p.serviceConfig.ResourceGroupName, nicName, nil)
-	if err != nil {
-		return fmt.Errorf("beginning network interface deletion: %w", err)
-	}
-
-	_, err = pollerResponse.PollUntilDone(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("waiting for network interface deletion: %w", err)
-	}
-
-	logger.Printf("deleted network interface successfully: %s", nicName)
+	// retry with exponential backoff
+	go func() {
+		err := retry.Do(func() error {
+			pollerResponse, err := nicClient.BeginDelete(ctx, rg, nicName, nil)
+			if err != nil {
+				return fmt.Errorf("beginning network interface deletion: %w", err)
+			}
+			_, err = pollerResponse.PollUntilDone(ctx, nil)
+			if err != nil {
+				return fmt.Errorf("waiting for network interface deletion: %w", err)
+			}
+			return nil
+		},
+			retry.Context(ctx),
+			retry.Attempts(4),
+			retry.Delay(180*time.Second),
+			retry.MaxDelay(180*time.Second),
+			retry.LastErrorOnly(true),
+		)
+		if err != nil {
+			logger.Printf("deleting network interface in background (%s): %s", nicName, err)
+		} else {
+			logger.Printf("successfully deleted nic (%s) in background", nicName)
+		}
+	}()
 
 	return nil
 }
