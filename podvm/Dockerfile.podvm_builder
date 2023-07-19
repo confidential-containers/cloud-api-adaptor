@@ -19,12 +19,29 @@ ENV PROTOC_VERSION ${PROTOC_VERSION}
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update -y && \
-    apt-get install --no-install-recommends -y build-essential cloud-image-utils curl git gnupg \
-        libdevmapper-dev libgpgme-dev lsb-release pkg-config qemu-kvm \
-        musl-tools unzip wget git && \
+    apt-get install --no-install-recommends -y \
+        build-essential \
+        clang \
+        cloud-image-utils \
+        curl \
+        git \
+        gnupg \
+        libdevmapper-dev \
+        libgpgme-dev \
+        libtss2-dev \
+        lsb-release \
+        musl-tools \
+        pkg-config \
+        qemu-kvm   \
+        unzip \
+        wget \
+    && \
     curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - && \
     echo "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee -a /etc/apt/sources.list && \
     apt-get update && apt-get install --no-install-recommends -y packer && \
+    curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add - && \
+    echo "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu $(lsb_release -cs) main" | tee -a /etc/apt/sources.list.d/intel-sgx.list && \
+    apt-get update && apt-get install --no-install-recommends -y libtdx-attest-dev && \
     apt-get clean && \
     curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
