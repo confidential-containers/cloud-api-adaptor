@@ -7,7 +7,6 @@ package provisioner
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -21,7 +20,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/go-autorest/autorest"
 	log "github.com/sirupsen/logrus"
@@ -85,67 +83,13 @@ func deleteResourceGroup() error {
 	return nil
 }
 
-func createVnetSubnet() error {
-	addressPrefix := "10.2.0.0/16"
-	subnetAddressPrefix := "10.2.0.0/24"
-	vnetParams := armnetwork.VirtualNetwork{
-		Location: &AzureProps.Location,
-		Name:     &AzureProps.VnetName,
-		Properties: &armnetwork.VirtualNetworkPropertiesFormat{
-			AddressSpace: &armnetwork.AddressSpace{
-				AddressPrefixes: []*string{to.Ptr(addressPrefix)},
-			},
-			Subnets: []*armnetwork.Subnet{
-				{
-					Name: to.Ptr(AzureProps.SubnetName),
-					Properties: &armnetwork.SubnetPropertiesFormat{
-						AddressPrefix: to.Ptr(subnetAddressPrefix),
-					},
-				},
-			},
-		},
-	}
-
-	// Create the virtual network
-	log.Infof("Creating vnet %q in resource group %q with address prefix: %q and subnet address prefix: %q.", AzureProps.VnetName, AzureProps.ResourceGroupName, addressPrefix, subnetAddressPrefix)
-	pollerResponse, err := AzureProps.ManagedVnetClient.BeginCreateOrUpdate(context.Background(), AzureProps.ResourceGroupName, AzureProps.VnetName, vnetParams, nil)
-	if err != nil {
-		return fmt.Errorf("creating vnet %s: %w", AzureProps.VnetName, err)
-	}
-
-	_, err = pollerResponse.PollUntilDone(context.Background(), nil)
-	if err != nil {
-		return err
-	}
-
-	subnet, err := AzureProps.ManagedSubnetClient.Get(context.Background(), AzureProps.ResourceGroupName, AzureProps.VnetName, AzureProps.SubnetName, nil)
-	if err != nil {
-		return fmt.Errorf("fetching subnet after creating vnet: %w", err)
-	}
-
-	if subnet.ID == nil || *subnet.ID == "" {
-		return errors.New("SubnetID is empty, unknown error happened when creating subnet.")
-	}
-
-	AzureProps.SubnetID = *subnet.ID
-
-	log.Infof("Successfully created vnet %q with Subnet %q in resource group %q.", AzureProps.VnetName, AzureProps.SubnetID, AzureProps.ResourceGroupName)
-
-	return nil
-}
-
 func createResourceImpl() error {
 	err := createResourceGroup()
 	if err != nil {
 		return fmt.Errorf("creating resource group: %w", err)
 	}
 
-	// rg creation takes few seconds to complete keeping it as 60 second to be on safe side.
-	// TODO: Implement a better way of waiting.
-	const sleeptime = time.Duration(60) * time.Second
-	log.Info("Waiting for the resource group to be available before creating vnet.")
-	time.Sleep(sleeptime)
-	return createVnetSubnet()
+	return nil
 }
 
 func deleteResourceImpl() error {
@@ -279,7 +223,6 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 					Mode:               to.Ptr(armcontainerservice.AgentPoolModeSystem),
 					OSType:             to.Ptr(armcontainerservice.OSType(AzureProps.OsType)),
 					EnableNodePublicIP: to.Ptr(false),
-					VnetSubnetID:       &AzureProps.SubnetID,
 					NodeLabels:         map[string]*string{"node.kubernetes.io/worker": to.Ptr("")},
 				},
 			},
@@ -336,6 +279,36 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 		return fmt.Errorf("creating federated identity credential: %w", err)
 	}
 
+	// Fetch aks-rg details
+	aks_rg := *cluster.Properties.NodeResourceGroup
+
+	// Fetch default vnet name
+	vnetName := ""
+	pager := AzureProps.ManagedVnetClient.NewListPager(aks_rg, nil)
+	for pager.More() {
+		nextResult, err := pager.NextPage(ctx)
+		if err != nil {
+			return fmt.Errorf("getting VNETs of AKS: %q: %w", AzureProps.ClusterName, err)
+		}
+		for _, v := range nextResult.Value {
+			vnetName = *v.Name
+		}
+	}
+
+	virtualNetwork, err := AzureProps.ManagedVnetClient.Get(ctx, aks_rg, vnetName, nil)
+	if err != nil {
+		return fmt.Errorf("failed to fetch vnet: %q: %v", vnetName, err)
+	}
+
+	SubnetsPtr := &virtualNetwork.Properties.Subnets
+	if SubnetsPtr == nil || len(*SubnetsPtr) == 0 {
+		return fmt.Errorf("no subnet found in the specified VNET: %q: %v", vnetName, err)
+	}
+
+	// Get the ID of the first subnet
+	subnetID := (*SubnetsPtr)[0].ID
+	AzureProps.SubnetID = *subnetID
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("getting user home directory: %w", err)
@@ -351,7 +324,6 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 	}
 
 	cfg.WithKubeconfigFile(kubeconfigPath)
-
 	return nil
 }
 
