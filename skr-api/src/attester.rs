@@ -1,16 +1,15 @@
 use anyhow::{anyhow, Context, Result};
 use attester::{detect_tee_type, Attester, Tee};
 use clap::Parser;
-use std::path::Path;
-use std::sync::Arc;
-use tokio::fs::remove_file;
-use tokio::sync::Mutex;
-
 use platform::{
     platform_server::{Platform, PlatformServer},
     EvidenceRequest, EvidenceResponse, TeeRequest, TeeResponse,
 };
+use std::path::Path;
+use std::sync::Arc;
+use tokio::fs::remove_file;
 use tokio::net::UnixListener;
+use tokio::sync::Mutex;
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
@@ -27,7 +26,7 @@ struct Config {
     #[arg(
         short,
         long,
-        default_value = "/run/confidential-containers/skr-api.sock"
+        default_value = "/run/confidential-containers/attester.sock"
     )]
     socket_path: String,
 }
