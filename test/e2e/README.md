@@ -14,7 +14,7 @@ $ CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
 The above command run tests on an existing cluster. It will look for the kubeconf file exported on the
-`KUBECONFIG` variable, and then in `$HOME/.kube/config` if not found. 
+`KUBECONFIG` variable, and then in `$HOME/.kube/config` if not found.
 
 You can instruct the tool to provision a test environment though, as shown below:
 
@@ -86,13 +86,18 @@ Create another Go file named `<CLOUD_PROVIDER>_test.go` to host the test suite a
 Likewise the provision file, you should tag the test file with `//go:build <CLOUD_PROVIDER>`.
 
 You can have tests specific for the cloud provider or re-use the existing suite found in
-[common_suite_test.go](./common_suite_test.go) (or mix both). In the later cases, you must first implement the `CloudAssert` interface (see its definition in [common.go](./common.go)) because some tests will need to do assertions on the cloud side, so there should provider-specific asserts implementations.   
+[common_suite_test.go](./common_suite_test.go) (or mix both). In the later cases, you must first implement the `CloudAssert` interface (see its definition in [common.go](./common.go)) because some tests will need to do assertions on the cloud side, so there should provider-specific asserts implementations.
 
-Once you got the assertions done, create the test function which wrap the common suite function. For example, suppose there is a re-usable `doTestCreateSimplePod` test then you can wrap it in test function like shown below:  
+Once you got the assertions done, create the test function which wrap the common suite function. For example, suppose there is a re-usable `doTestCreateSimplePod` test then you can wrap it in test function like shown below:
 
 ```go
 func TestCloudProviderCreateSimplePod(t *testing.T) {
-	assert := MyAssert{}
-	doTestCreateSimplePod(t, assert)
+    assert := MyAssert{}
+    doTestCreateSimplePod(t, assert)
 }
 ```
+## Running tests for PodVM with Authenticated Registry
+
+For running e2e test cases specifically for checking PodVM with Image from Authenticated Registry, we need to export following two variables
+- `AUTHENTICATED_REGISTRY_IMAGE` - Name of the image along with the tag from authenticated registry (example: quay.io/kata-containers/confidential-containers-auth:test)
+- `REGISTRY_CREDENTIAL_ENCODED` - Credentials of registry encrypted as BASE64ENCODED(USERNAME:PASSWORD). If you're using quay registry, we can get the encrypted credentials from Account Settings >> Generate Encrypted Password >> Docker Configuration
