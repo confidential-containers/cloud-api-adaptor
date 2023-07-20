@@ -21,7 +21,7 @@ require (
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
-	github.com/opencontainers/runtime-spec v1.0.3-0.20211214071223-8958f93039ab
+	github.com/opencontainers/runtime-spec v1.1.0-rc.1
 	github.com/stretchr/testify v1.8.1
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
@@ -47,7 +47,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
 	github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl v0.0.0-20230329054732-0d6eda047e81
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230606170044-338e18e4fd46
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230720145636-9e036108b4d5
 	github.com/moby/sys/mountinfo v0.6.2
 	github.com/sirupsen/logrus v1.9.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
