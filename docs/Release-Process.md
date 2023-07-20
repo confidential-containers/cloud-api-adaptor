@@ -17,7 +17,7 @@ lists the tasks involved in doing a release and these largely break down to thre
 In the release candidate selection and testing phase, we ensure that the dependencies we have within the
 confidential-containers projects are updated and that Kata Containers is updated to use these new versions, the
 [Kata Containers Runtime Payload CI](https://github.com/kata-containers/kata-containers/actions/workflows/cc-payload-after-push.yaml)
-image is updated, the operator is updated and the tests pass with all of these. 
+image is updated, the operator is updated and the tests pass with all of these.
 
 At this point, we should update the cloud-api-adaptor versions to use these release candidate versions of:
 - The kata-containers source branch that we use in the [podvm_builder `Dockerfiles`](../podvm/) and the
@@ -33,13 +33,13 @@ This can be done by running
 in the top-level repo directory, and the `peerpod-ctl` and `volumes/csi-wrapper` directories.
 > **Note:** If there are API changes in the kata-runtime go modules and we need to cloud-api-adaptor to implement,
 then it may be necessary to temporarily get the peerpod-ctrl and csi-wrapper to self-reference the parent folder to
-avoid compilation errors. This can be done by running: 
+avoid compilation errors. This can be done by running:
 > ```
 > go mod edit -replace github.com/confidential-containers/cloud-api-adaptor=../
 > go mod tidy
 > ```
 > from in the `peerpod-ctrl` and `volumes/csi-wrapper` directories.
-- The attestation-agent that is built into the peer pod vm image, by updating the `GUEST_COMPONENTS_VERSION` in 
+- The attestation-agent that is built into the peer pod vm image, by updating the `GUEST_COMPONENTS_VERSION` in
   - [`Makefile.inc`](../podvm/Makefile.inc)
   - [Dockerfile.podvm_binaries](../podvm/Dockerfile.podvm_binaries)
   - [Dockerfile.podvm_binaries.centos](../podvm/Dockerfile.podvm_binaries.centos)
@@ -47,7 +47,7 @@ avoid compilation errors. This can be done by running:
   - [versions.yaml](../versions.yaml)
 
 These updates should be done in a PR that is merged triggering the cloud-api-adaptor
-[image build workflow](../.github/workflows/image.yaml) to create a new container image in 
+[image build workflow](../.github/workflows/image.yaml) to create a new container image in
 [`quay.io](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags) to use in testing.
 
 #### Tags and update go submodules
