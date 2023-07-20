@@ -162,8 +162,8 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=
 github.com/jstemmer/go-junit-report v0.9.1/go.mod h1:Brl9GWCQeLvo8nXZwPNNblvFj/XSXhF0NWZEnDohbsk=
-github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230606170044-338e18e4fd46 h1:/CTt5/9wHr23Hr4BSBdRXGfY62CWGffYbN6L+d1GJNQ=
-github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230606170044-338e18e4fd46/go.mod h1:f8hqJ37sSBHBPniJepBjFKeW1Utim9vtcrkyuIDqH/E=
+github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230720145636-9e036108b4d5 h1:VgyQ1rbxtk3dGeqYBB7yBNiBpoA6qlfOdNAWMaVZ9EA=
+github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230720145636-9e036108b4d5/go.mod h1:4i+EBdCeAg34WOxQMjiJ9e7ZtwtI7C5ZSK4tg70hoeE=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
