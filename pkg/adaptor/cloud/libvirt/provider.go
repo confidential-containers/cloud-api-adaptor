@@ -56,7 +56,25 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	}
 
 	// TODO: Specify the maximum instance name length in Libvirt
-	vm := &vmConfig{name: instanceName, userData: userData}
+	vm := &vmConfig{name: instanceName, userData: userData, firmware: p.serviceConfig.Firmware}
+
+	if p.serviceConfig.DisableCVM {
+		vm.launchSecurityType = NoLaunchSecurity
+	} else if p.serviceConfig.LaunchSecurity != "" {
+		switch p.serviceConfig.LaunchSecurity {
+		case "sev":
+			vm.launchSecurityType = SEV
+		case "s390-pv":
+			vm.launchSecurityType = S390PV
+		}
+	} else {
+		vm.launchSecurityType, err = GetLaunchSecurityType()
+		if err != nil {
+			logger.Printf("unable to determine launch security type [%v]", err)
+			return nil, err
+		}
+	}
+
 	result, err := CreateDomain(ctx, p.libvirtClient, vm)
 	if err != nil {
 		logger.Printf("failed to create an instance : %v", err)

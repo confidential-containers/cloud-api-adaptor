@@ -98,7 +98,9 @@ func TestCreateDomainXMLs390x(t *testing.T) {
 		cidataDisk:  "/var/lib/libvirt/images/cidata.iso",
 	}
 
-	domCfg, err := createDomainXML(client, &domainCfg)
+	vm := vmConfig{}
+
+	domCfg, err := createDomainXML(client, &domainCfg, &vm)
 	if err != nil {
 		t.Error(err)
 	}

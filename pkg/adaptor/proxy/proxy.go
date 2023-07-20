@@ -122,6 +122,7 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		func() error {
 			var err error
 			conn, err = dialer.DialContext(ctx, "tcp", address)
+			logger.Printf("%+v", err)
 			return err
 		},
 		retry.Attempts(0),
