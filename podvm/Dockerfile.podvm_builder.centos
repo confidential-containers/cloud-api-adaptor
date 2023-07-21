@@ -59,6 +59,7 @@ RUN echo $CAA_SRC
 RUN echo $CAA_SRC_REF
 
 RUN git clone ${CAA_SRC} -b ${CAA_SRC_REF} cloud-api-adaptor
-RUN git clone ${KATA_SRC} -b ${KATA_SRC_BRANCH} kata-containers
+RUN git clone ${KATA_SRC} kata-containers
+RUN cd kata-containers && git checkout ${KATA_SRC_BRANCH}
 
 ENV GOPATH /src
