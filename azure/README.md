@@ -506,7 +506,7 @@ az vm list \
   --output table
 ```
 
-Here you should see the vm associated with the pod `nginx`.
+Here you should see the vm associated with the pod `nginx`. If you run into problems then check the troubleshooting guide [here](../docs/troubleshooting/README.md).
 
 ## Cleanup
 
