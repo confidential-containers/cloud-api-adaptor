@@ -21,8 +21,6 @@ if [ -e /tmp/files/etc/certificates/ca.crt ]; then
 	sudo cp -a /tmp/files/etc/certificates/ca.crt /etc/certificates/
 fi
 
-sudo cp /tmp/files/etc/skr-api.resolv.conf /etc/
-
 sudo mkdir -p /usr/local/bin
 sudo cp -a /tmp/files/usr/* /usr/
 
