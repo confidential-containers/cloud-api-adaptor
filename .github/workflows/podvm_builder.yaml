@@ -63,4 +63,4 @@ jobs:
           "CAA_SRC=https://github.com/confidential-containers/cloud-api-adaptor"
           "CAA_SRC_REF=main"
           "KATA_SRC=https://github.com/kata-containers/kata-containers"
-          "KATA_SRC_BRANCH=9e036108b4d5d9344eedcd2a5dac78d316b79cac
+          "KATA_SRC_BRANCH=9e036108b4d5d9344eedcd2a5dac78d316b79cac"
