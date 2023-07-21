@@ -47,7 +47,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
 	github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl v0.0.0-20230329054732-0d6eda047e81
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230720145636-9e036108b4d5
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230721195217-16d6e37196cb
 	github.com/moby/sys/mountinfo v0.6.2
 	github.com/sirupsen/logrus v1.9.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
