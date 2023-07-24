@@ -7,7 +7,7 @@ bases:
 images:
 - name: cloud-api-adaptor
   newName: quay.io/confidential-containers/cloud-api-adaptor # change image if needed
-  newTag: latest
+  newTag: 6d7d2a3fe8243809b3c3a710792c8498292e2fc3
 
 generatorOptions:
   disableNameSuffixHash: true
