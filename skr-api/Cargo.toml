@@ -1,35 +1,15 @@
-[package]
-name = "skr-api"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = [
+	"attester",
+	"skr-api",
+]
 
-[[bin]]
-name = "attester"
-path = "src/attester.rs"
-
-[[bin]]
-name = "skr-api"
-path = "src/skr-api.rs"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-async-trait = "0.1.70"
-axum = "0.6.18"
+[workspace.dependencies]
+anyhow = "1.0.71"
 clap = { version = "4.3.10", features = ["derive"] }
-protobuf = "3.2.0"
-serde = { version = "1.0.166", features = ["derive"] }
+prost = "0.11.9"
 tokio = { version = "1.29.1", features = ["fs", "macros", "rt-multi-thread", "signal"] }
-tower-http = { version = "0.4.1", features = ["trace"] }
+tonic = "0.9.2"
+tonic-build = "0.9.2"
 tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
-kbs_protocol = { git = "https://github.com/mkulke/guest-components.git", rev = "cf13add" }
-attester = { git = "https://github.com/mkulke/guest-components.git", rev = "cf13add" }
-anyhow = "1.0.71"
-prost = "0.11.9"
-tokio-stream = { version = "0.1.14", features = ["net"] }
-tonic = "0.9.2"
-tower = { version = "0.4.13", features = ["tokio", "tokio-stream"] }
-
-[build-dependencies]
-tonic-build = "0.9.2"

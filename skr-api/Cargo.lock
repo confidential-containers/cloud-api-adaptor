@@ -139,6 +139,22 @@ dependencies = [
 [[package]]
 name = "attester"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "attester 0.1.0 (git+https://github.com/mkulke/guest-components.git?rev=cf13add)",
+ "clap 4.3.19",
+ "prost",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-build",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "attester"
+version = "0.1.0"
 source = "git+https://github.com/mkulke/guest-components.git?rev=cf13add#cf13adde903d038f6321e116c700ab69054708b3"
 dependencies = [
  "anyhow",
@@ -1115,7 +1131,7 @@ source = "git+https://github.com/mkulke/guest-components.git?rev=cf13add#cf13add
 dependencies = [
  "anyhow",
  "async-trait",
- "attester",
+ "attester 0.1.0 (git+https://github.com/mkulke/guest-components.git?rev=cf13add)",
  "base64 0.13.1",
  "crypto",
  "kbs-types",
@@ -1710,26 +1726,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protobuf"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b55bad9126f378a853655831eb7363b7b01b81d19f8cb1218861086ca4a1a61e"
-dependencies = [
- "once_cell",
- "protobuf-support",
- "thiserror",
-]
-
-[[package]]
-name = "protobuf-support"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5d4d7b8601c814cfb36bcebb79f0e61e45e1e93640cf778837833bbed05c372"
-dependencies = [
- "thiserror",
-]
-
-[[package]]
 name = "psl-types"
 version = "2.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2067,9 +2063,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.174"
+version = "1.0.175"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b88756493a5bd5e5395d53baa70b194b05764ab85b59e43e4b8f4e1192fa9b1"
+checksum = "5d25439cd7397d044e2748a6fe2432b5e85db703d6d097bd014b3c0ad1ebff0b"
 dependencies = [
  "serde_derive",
 ]
@@ -2094,9 +2090,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.174"
+version = "1.0.175"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e5c3a298c7f978e53536f95a63bdc4c4a64550582f31a0359a9afda6aede62e"
+checksum = "b23f7ade6f110613c0d63858ddb8b94c1041f550eab58a16b371bdf2c9c80ab4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2234,15 +2230,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "attester",
+ "attester 0.1.0 (git+https://github.com/mkulke/guest-components.git?rev=cf13add)",
  "axum",
  "clap 4.3.19",
  "kbs_protocol",
  "prost",
- "protobuf",
  "serde",
  "tokio",
- "tokio-stream",
  "tonic",
  "tonic-build",
  "tower",
