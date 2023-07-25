@@ -46,8 +46,8 @@ github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4/go.mod h1:6pvJx4me5XP
 github.com/cncf/xds/go v0.0.0-20210922020428-25de7278fc84/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
 github.com/cncf/xds/go v0.0.0-20211001041855-01bcc9b48dfe/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
 github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
-github.com/confidential-containers/cloud-api-adaptor v0.7.0-alpha.1 h1:31xAxEvFLj3ZIfdecXyrFgG8K0YiII4UKVaAm4wapfY=
-github.com/confidential-containers/cloud-api-adaptor v0.7.0-alpha.1/go.mod h1:9sa2AlO2/vaeaVGgmfWwCaLA7ah6nk8gFJJQXQYQKxA=
+github.com/confidential-containers/cloud-api-adaptor v0.7.0 h1:b25nekl7ZRO+61ZEL2YQMtZnLIBIxNzpsqHsg1FULEY=
+github.com/confidential-containers/cloud-api-adaptor v0.7.0/go.mod h1:huzOXeTtonxU9LJlT7266sTVsi9n3m4va3MHG8X9jKI=
 github.com/container-storage-interface/spec v1.8.0 h1:D0vhF3PLIZwlwZEf2eNbpujGCNwspwTYf2idJRJx4xI=
 github.com/container-storage-interface/spec v1.8.0/go.mod h1:ROLik+GhPslwwWRNFF1KasPzroNARibH2rfz1rkg4H0=
 github.com/containerd/ttrpc v1.1.0 h1:GbtyLRxb0gOLR0TYQWt3O6B0NvT8tMdorEHqIQo/lWI=
