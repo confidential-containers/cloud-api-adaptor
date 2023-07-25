@@ -325,8 +325,8 @@ github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/codahale/rfc6979 v0.0.0-20141003034818-6a90f24967eb/go.mod h1:ZjrT6AXHbDs86ZSdt/osfBi5qfexBrKUdONk989Wnk4=
-github.com/confidential-containers/cloud-api-adaptor v0.7.0-alpha.1 h1:31xAxEvFLj3ZIfdecXyrFgG8K0YiII4UKVaAm4wapfY=
-github.com/confidential-containers/cloud-api-adaptor v0.7.0-alpha.1/go.mod h1:9sa2AlO2/vaeaVGgmfWwCaLA7ah6nk8gFJJQXQYQKxA=
+github.com/confidential-containers/cloud-api-adaptor v0.7.0 h1:b25nekl7ZRO+61ZEL2YQMtZnLIBIxNzpsqHsg1FULEY=
+github.com/confidential-containers/cloud-api-adaptor v0.7.0/go.mod h1:huzOXeTtonxU9LJlT7266sTVsi9n3m4va3MHG8X9jKI=
 github.com/container-orchestrated-devices/container-device-interface v0.4.0/go.mod h1:E1zcucIkq9P3eyNmY+68dBQsTcsXJh9cgRo2IVNScKQ=
 github.com/containerd/aufs v0.0.0-20200908144142-dab0cbea06f4/go.mod h1:nukgQABAEopAHvB6j7cnP5zJ+/3aVcE7hCYqvIwAHyE=
 github.com/containerd/aufs v0.0.0-20201003224125-76a6863f2989/go.mod h1:AkGGQs9NM2vtYHaUen+NljV0/baGCAPELGm2q9ZXpWU=
