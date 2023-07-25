@@ -41,7 +41,7 @@ usage() {
 
 	Use the following environment variables to change the installation
 	parameters:
-	LIBVIRT_IP    (required)
+	LIBVIRT_IP    (default determined from LIBVIRT_NET)
 	LIBVIRT_USER  (default "$LIBVIRT_USER")
 	LIBVIRT_NET   (default "$LIBVIRT_NET")
 	LIBVIRT_POOL  (default "$LIBVIRT_POOL")
@@ -72,14 +72,22 @@ main() {
 		esac
 	fi
 
-	local var
-	for var in KUBECONFIG LIBVIRT_IP; do
-		if eval "[ -z \${${var}:-} ]"; then
-			echo "ERROR: variable '$var' is not exported"
-			usage
+	if eval "[ -z ${KUBECONFIG:-} ]"; then
+		echo "ERROR: variable 'KUBECONFIG' is not exported"
+		usage
+		exit 1
+	fi
+
+	if eval "[ -z ${LIBVIRT_IP:-} ]"; then
+		echo "WARNING: LIBVIRT_IP is not exported. Finding ip from network ($LIBVIRT_NET) XML configuration"
+		LIBVIRT_IP=$(virsh -c qemu:///system net-dumpxml $LIBVIRT_NET | sed -n "s/.*ip address='\(.*\)' .*/\1/p")
+		if eval "[ -z ${LIBVIRT_IP:-} ]"; then
+			echo "ERROR: Static Route not defined in network XML configuration"
 			exit 1
 		fi
-	done
+		echo "Using LIBVIRT_IP: $LIBVIRT_IP"
+	fi
+
 
 	label_workers
 
