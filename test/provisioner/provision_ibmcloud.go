@@ -393,6 +393,17 @@ func deleteSubnet() error {
 	if err != nil {
 		return err
 	}
+	log.Infof("Waiting for Subnet  %s to be removed...", IBMCloudProps.SubnetName)
+	for i := 0; i <= waitMinutes; i++ {
+		foundsb, _ := findSubnet(IBMCloudProps.SubnetName)
+		if foundsb == nil {
+			log.Infof("Subnet %s is removed  ...", IBMCloudProps.SubnetName)
+			break
+		}
+		log.Infof("Waiting for %s to be removed.", *foundsb.Name)
+		log.Infof("Waited %d minutes...", i)
+		time.Sleep(60 * time.Second)
+	}
 	log.Infof("Deleted subnet with ID %s.", IBMCloudProps.SubnetID)
 	return nil
 }
