@@ -45,7 +45,7 @@ if [[ "$CLOUD_PROVIDER" == "azure" && "$PODVM_DISTRO" == "ubuntu" ]]; then
 	sudo echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' \
 		| sudo tee /etc/apt/sources.list.d/intel-sgx.list
 	sudo apt-get update
-	sudo apt-get install -y libtss2-tctildr0 libtdx-attest
+	sudo apt-get install -y libtss2-tctildr0 libtdx-attest socat
 fi
 
 if [ -e /etc/certificates/tls.crt ] && [ -e /etc/certificates/tls.key ] && [ -e /etc/certificates/ca.crt ]; then

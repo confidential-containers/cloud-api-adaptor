@@ -1,0 +1,14 @@
+[Unit]
+Description=Socat bridge for Attester service into podns
+BindsTo=netns@podns.service attester.service
+After=network.target attester.service netns@podns.service
+
+[Service]
+Type=simple
+Environment=SOCKET_PATH=/run/confidential-containers/attester.sock
+NetworkNamespacePath=/run/netns/podns
+ExecStart=/usr/bin/socat -dd ABSTRACT-LISTEN:${SOCKET_PATH},fork UNIX-CONNECT:${SOCKET_PATH}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
