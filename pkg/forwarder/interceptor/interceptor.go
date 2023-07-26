@@ -80,33 +80,20 @@ func NewInterceptor(agentSocket, nsPath string) Interceptor {
 	}
 }
 
-func (i *interceptor) processOCISpec(spec *pb.Spec) {
+func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*types.Empty, error) {
+
+	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
 
 	// Specify the network namespace path in the container spec
-	spec.Linux.Namespaces = append(spec.Linux.Namespaces, pb.LinuxNamespace{
+	req.OCI.Linux.Namespaces = append(req.OCI.Linux.Namespaces, pb.LinuxNamespace{
 		Type: string(specs.NetworkNamespace),
 		Path: i.nsPath,
 	})
 
 	logger.Printf("    namespaces:")
-	for _, ns := range spec.Linux.Namespaces {
+	for _, ns := range req.OCI.Linux.Namespaces {
 		logger.Printf("    %s: %q", ns.Type, ns.Path)
 	}
-
-	// Mount /run/confidential-containers/attester.sock in the container
-	spec.Mounts = append(spec.Mounts, pb.Mount{
-		Source:      "/run/confidential-containers/attester.sock",
-		Destination: "/run/confidential-containers/attester.sock",
-		Type:        "bind",
-		Options:     []string{"bind"},
-	})
-}
-
-func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*types.Empty, error) {
-
-	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
-
-	i.processOCISpec(req.OCI)
 
 	volumeTargetPath := req.OCI.Annotations[volumeTargetPathKey]
 	volumeTargetPathSlice := strings.Split(volumeTargetPath, ",")
