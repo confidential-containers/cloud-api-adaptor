@@ -111,8 +111,16 @@ sed -i 's#\(github.com/confidential-containers/operator/config/default\)#\1?ref=
 sed -i 's#\(github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods\)#\1?ref=v0.7.0#' Makefile
 ```
 
-Once this has been completed and merged in we run the latest release of the cloud-api-adaptor including the auto
-generated release notes.
+Once this has been completed and merged in we should pin the cloud-api-adaptor image used on the deployment files. You should use the commit SHA-1 of the last built `quay.io/confidentil-containers/cloud-api-image` image to update the overlays kustomization files. For example, suppose the release image is `quay.io/confidential-containers/cloud-api-adaptor:6d7d2a3fe8243809b3c3a710792c8498292e2fc3`:
+```
+cd install/overlays/
+for p in aws azure ibmcloud ibmcloud-powervs vsphere; do cd aws; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:6d7d2a3fe8243809b3c3a710792c8498292e2fc3; cd -; done
+
+# Note that the libvirt use the tag with prefix 'dev-'
+cd libvirt; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:dev-6d7d2a3fe8243809b3c3a710792c8498292e2fc3; cd -
+```
+
+After these version updates have been merged via new PR, we can run the latest release of the cloud-api-adaptor including the auto generated release notes.
 
 This will trigger the podvm builds to happen again and we should re-test the release code before updating the
 confidential-containers release team to let them know it has completed successfully
@@ -128,6 +136,12 @@ any local replace references, and be updated to use the release version of the `
 from in the `peerpod-ctrl` and `volumes/csi-wrapper` directories.
 
 The CoCo operator URLs on the [Makefile](../Makefile) should be reverted to use the latest version.
+
+The changes on the overlay kustomization files should be reverted to start using the latest cloud-api-adaptor images again:
+```
+cd install/overlays/
+for p in aws azure ibmcloud ibmcloud-powervs libvirt vsphere; do cd aws; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:latest; cd -; done
+```
 
 ## Improvements
 
