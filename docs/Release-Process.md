@@ -46,9 +46,11 @@ avoid compilation errors. This can be done by running:
   - [Dockerfile.podvm_binaries.rhel](../podvm/Dockerfile.podvm_binaries.rhel)
   - [versions.yaml](../versions.yaml)
 
+Currently there isn't automation to build the podvm images at this phase. They should be built manually to ensure they don't break.
+
 These updates should be done in a PR that is merged triggering the cloud-api-adaptor
 [image build workflow](../.github/workflows/image.yaml) to create a new container image in
-[`quay.io](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags) to use in testing.
+[`quay.io/confidential-containers/cloud-api-adaptor`](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags) to use in testing.
 
 #### Tags and update go submodules
 
@@ -131,4 +133,5 @@ The `CITATION.cff` needs to be updated with the dates from the release.
 Issues that we have to improve the release process that will impact this doc:
 
 - Create tags for the cloud-api-adaptor and webhook images on release and update the overlays to point to these
-versions in the tag [Issue #1109](https://github.com/confidential-containers/cloud-api-adaptor/issues/1109)
+versions in the tag ([Issue #1109](https://github.com/confidential-containers/cloud-api-adaptor/issues/1109))
+- Build the podvm images on the [release candidate testing](#release-candidate-testing) phase ([Issue #1253](https://github.com/confidential-containers/cloud-api-adaptor/issues/1253))
