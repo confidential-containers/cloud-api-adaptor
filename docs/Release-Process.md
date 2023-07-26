@@ -41,9 +41,11 @@ avoid compilation errors. This can be done by running:
 > from in the `peerpod-ctrl` and `volumes/csi-wrapper` directories.
 - The attestation-agent that is built into the peer pod vm image, by updating the `GUEST_COMPONENTS_VERSION` in the [`Makefile.inc`](../podvm/Makefile.inc)
 
+Currently there isn't automation to build the podvm images at this phase. They should be built manually to ensure they don't break.
+
 These updates should be done in a PR that is merged triggering the cloud-api-adaptor
 [image build workflow](../.github/workflows/image.yaml) to create a new container image in 
-[`quay.io](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags) to use in testing.
+[`quay.io/confidential-containers/cloud-api-adaptor`](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags) to use in testing.
 
 #### Tags and update go submodules
 
@@ -124,4 +126,5 @@ from in the `peerpod-ctrl` and `volumes/csi-wrapper` directories.
 Issues that we have to improve the release process that will impact this doc:
 
 - Create tags for the cloud-api-adaptor and webhook images on release and update the overlays to point to these
-versions in the tag [Issue #1109](https://github.com/confidential-containers/cloud-api-adaptor/issues/1109)
+versions in the tag ([Issue #1109](https://github.com/confidential-containers/cloud-api-adaptor/issues/1109))
+- Build the podvm images on the [release candidate testing](#release-candidate-testing) phase ([Issue #1253](https://github.com/confidential-containers/cloud-api-adaptor/issues/1253))
