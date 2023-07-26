@@ -110,6 +110,12 @@ For the cloud-api-adaptor we need to wait until the Kata Containers release tag 
 to have been built. We then can repeat the steps done during the release candidate phase, but this time use the
 release tags of the project dependencies e.g. `v0.6.0` and creating the tags without the `-alpha.x` suffix.
 
+Also we need to wait until the [CoCo operator](https://github.com/confidential-containers/operator/) release tag has been create to pin the URLs used by the make `deploy` target to install the operator. So edit the [Makefile](../Makefile) to replace the *github.com/confidential-containers/operator/config/default* and *github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods* URLs, e.g.:
+```
+sed -i 's#\(github.com/confidential-containers/operator/config/default\)#\1?ref=v0.7.0#' Makefile
+sed -i 's#\(github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods\)#\1?ref=v0.7.0#' Makefile
+```
+
 Once this has been completed and merged in we run the latest release of the cloud-api-adaptor including the auto
 generated release notes.
 
@@ -125,6 +131,8 @@ any local replace references, and be updated to use the release version of the `
   go mod tidy
   ```
 from in the `peerpod-ctrl` and `volumes/csi-wrapper` directories.
+
+The CoCo operator URLs on the [Makefile](../Makefile) should be reverted to use the latest version.
 
 The `CITATION.cff` needs to be updated with the dates from the release.
 
