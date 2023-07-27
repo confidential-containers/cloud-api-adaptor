@@ -24,7 +24,7 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&ibmcloudVPCConfig.ProfileName, "profile-name", "", "Default instance profile name to be used for the Pod VMs")
 	flags.Var(&ibmcloudVPCConfig.InstanceProfiles, "profile-list", "List of instance profile names to be used for the Pod VMs, comma separated")
 	flags.StringVar(&ibmcloudVPCConfig.ZoneName, "zone-name", "", "Zone name")
-	flags.StringVar(&ibmcloudVPCConfig.ImageID, "image-id", "", "Image ID")
+	flags.Var(&ibmcloudVPCConfig.Images, "image-id", "List of Image IDs, comma separated")
 	flags.StringVar(&ibmcloudVPCConfig.PrimarySubnetID, "primary-subnet-id", "", "Primary subnet ID")
 	flags.StringVar(&ibmcloudVPCConfig.PrimarySecurityGroupID, "primary-security-group-id", "", "Primary security group ID")
 	flags.StringVar(&ibmcloudVPCConfig.SecondarySubnetID, "secondary-subnet-id", "", "Secondary subnet ID")

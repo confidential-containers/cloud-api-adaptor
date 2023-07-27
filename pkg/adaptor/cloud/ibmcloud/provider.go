@@ -35,6 +35,7 @@ type vpcV1 interface {
 	GetInstanceWithContext(context.Context, *vpcv1.GetInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error)
 	DeleteInstanceWithContext(context.Context, *vpcv1.DeleteInstanceOptions) (*core.DetailedResponse, error)
 	GetInstanceProfileWithContext(context.Context, *vpcv1.GetInstanceProfileOptions) (*vpcv1.InstanceProfile, *core.DetailedResponse, error)
+	GetImageWithContext(ctx context.Context, getImageOptions *vpcv1.GetImageOptions) (*vpcv1.Image, *core.DetailedResponse, error)
 }
 
 type ibmcloudVPCProvider struct {
@@ -121,6 +122,10 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 		return nil, err
 	}
 
+	if err = provider.updateImageList(context.TODO()); err != nil {
+		return nil, err
+	}
+
 	logger.Printf("ibmcloud-vpc config: %#v", config.Redact())
 
 	return provider, nil
@@ -149,11 +154,11 @@ func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourc
 	return
 }
 
-func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile string) *vpcv1.InstancePrototype {
+func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageId string) *vpcv1.InstancePrototype {
 
 	prototype := &vpcv1.InstancePrototype{
 		Name:     &instanceName,
-		Image:    &vpcv1.ImageIdentity{ID: &p.serviceConfig.ImageID},
+		Image:    &vpcv1.ImageIdentity{ID: &imageId},
 		UserData: &userData,
 		Profile:  &vpcv1.InstanceProfileIdentity{Name: &instanceProfile},
 		Zone:     &vpcv1.ZoneIdentity{Name: &p.serviceConfig.ZoneName},
@@ -244,7 +249,12 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		return nil, err
 	}
 
-	prototype := p.getInstancePrototype(instanceName, userData, instanceProfile)
+	imageID, err := p.selectImage(ctx, spec)
+	if err != nil {
+		return nil, err
+	}
+
+	prototype := p.getInstancePrototype(instanceName, userData, instanceProfile, imageID)
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
@@ -342,6 +352,49 @@ func (p *ibmcloudVPCProvider) getProfileNameInformation(profileName string) (vcp
 	// Value returned is in GiB, convert to MiB
 	memory = int64(*result.Memory.(*vpcv1.InstanceProfileMemory).Value) * 1024
 	return vcpu, memory, nil
+}
+
+// Select Image from list, invalid image IDs should have already been removed
+func (p *ibmcloudVPCProvider) selectImage(ctx context.Context, spec cloud.InstanceTypeSpec) (string, error) {
+	for _, image := range p.serviceConfig.Images {
+		if spec.Arch != "" && image.Arch != spec.Arch {
+			continue
+		}
+		logger.Printf("selected image with ID <%s> out of %d images", image.ID, len(p.serviceConfig.Images))
+		return image.ID, nil
+	}
+	return "", fmt.Errorf("unable to find matching image to use")
+}
+
+// Remove Images that are not valid (e.g. not found in this region)
+func (p *ibmcloudVPCProvider) updateImageList(ctx context.Context) error {
+	i := 0
+	for _, image := range p.serviceConfig.Images {
+		arch, os, err := p.getImageDetails(ctx, image.ID)
+		if err != nil {
+			logger.Printf("skipping image (%s), due to %v", image.ID, err)
+			continue
+		}
+		image.Arch = arch
+		image.OS = os
+		p.serviceConfig.Images[i] = image
+		i++
+	}
+	if i == 0 {
+		return fmt.Errorf("no images valid images found")
+	}
+	p.serviceConfig.Images = p.serviceConfig.Images[:i]
+	return nil
+}
+
+func (p *ibmcloudVPCProvider) getImageDetails(ctx context.Context, imageID string) (arch, os string, err error) {
+	result, _, err := p.vpc.GetImageWithContext(ctx, &vpcv1.GetImageOptions{
+		ID: &imageID,
+	})
+	if err != nil {
+		return "", "", err
+	}
+	return *result.OperatingSystem.Architecture, *result.OperatingSystem.Name, nil
 }
 
 func (p *ibmcloudVPCProvider) DeleteInstance(ctx context.Context, instanceID string) error {

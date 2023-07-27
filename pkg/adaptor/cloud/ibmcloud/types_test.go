@@ -45,3 +45,26 @@ func TestEmptyList(t *testing.T) {
 		t.Errorf("Expect 0 length, got %d", len(list))
 	}
 }
+
+func TestImageIDs(t *testing.T) {
+	var images Images
+	err := images.Set("abc,xyz")
+	if err != nil {
+		t.Errorf("Image Set failed, %v", err)
+	}
+	if len(images) != 2 {
+		t.Errorf("Expect 2 length, got %d", len(images))
+	}
+}
+
+func TestImagesToString(t *testing.T) {
+	var images Images
+	ids := "123-1231-123,adasd-ada-adad,asd-123-asd"
+	err := images.Set(ids)
+	if err != nil {
+		t.Errorf("Image Set failed, %v", err)
+	}
+	if ids != images.String() {
+		t.Errorf("Expect %v, got %v", ids, images.String())
+	}
+}
