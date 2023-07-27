@@ -17,12 +17,46 @@ func (i *instanceProfiles) String() string {
 }
 
 func (i *instanceProfiles) Set(value string) error {
-	if len(value) == 0 {
-		*i = make(instanceProfiles, 0)
-	} else {
-		*i = append(*i, strings.Split(value, ",")...)
+	*i = append(*i, toList(value, ",")...)
+	return nil
+}
+
+type Images []Image
+type Image struct {
+	ID   string
+	Arch string
+	OS   string
+}
+
+func (i *Images) String() string {
+	switch len(*i) {
+	case 0:
+		return ""
+	case 1:
+		return (*i)[0].ID
+	}
+	var b strings.Builder
+	b.WriteString((*i)[0].ID)
+	for _, image := range (*i)[1:] {
+		b.WriteString(",")
+		b.WriteString(image.ID)
+	}
+	return b.String()
+}
+
+func (i *Images) Set(value string) error {
+	IDs := toList(value, ",")
+	for _, id := range IDs {
+		*i = append(*i, Image{ID: id})
 	}
 	return nil
+}
+
+func toList(value, sep string) []string {
+	if len(value) == 0 {
+		return make([]string, 0)
+	}
+	return strings.Split(value, sep)
 }
 
 type Config struct {
@@ -34,7 +68,7 @@ type Config struct {
 	ResourceGroupID          string
 	ProfileName              string
 	ZoneName                 string
-	ImageID                  string
+	Images                   Images
 	PrimarySubnetID          string
 	PrimarySecurityGroupID   string
 	SecondarySubnetID        string
