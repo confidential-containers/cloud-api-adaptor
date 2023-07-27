@@ -39,10 +39,18 @@ Please refer to the instructions mentioned in the following [doc](./docs/addnewp
 
 ## Contribution
 
-This project uses [the Apache 2.0 license](./LICENSE). Contribution to this project requires the [DCO 1.1](./DCO1.1.txt) process to be followed.
+This project uses [the Apache 2.0 license](./LICENSE). Contribution to this
+project requires the [DCO 1.1](./DCO1.1.txt) process to be followed.
+
+Furthermore, it's important to familiarize yourself with our project standards
+and guidelines. Ensure that you've thoroughly reviewed the [Confidential
+Containers Project Contribution Guide][contributing]. This guide will provide
+you with vital information to contribute effectively to our project.
 
 ## Collaborations
 
 * Slack: [#confidential-containers-peerpod](https://cloud-native.slack.com/archives/C04A2EJ70BX) in [CNCF](https://communityinviter.com/apps/cloud-native/cncf) 
 * Zoom meeting: https://zoom.us/j/94601737867?pwd=MEF5NkN5ZkRDcUtCV09SQllMWWtzUT09
     * 8:00 - 9:00 UTC on each `Wednesday`
+
+[contributing]: https://github.com/confidential-containers/confidential-containers/blob/main/CONTRIBUTING.md
