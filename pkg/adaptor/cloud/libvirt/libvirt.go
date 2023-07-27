@@ -20,6 +20,9 @@ import (
 	libvirtxml "libvirt.org/go/libvirtxml"
 )
 
+// architecture value for the s390x architecture
+const archS390x = "s390x"
+
 type domainConfig struct {
 	name        string
 	cpu         uint
@@ -191,12 +194,12 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig) (*libvirtxml
 		return nil, err
 	}
 
-	guest, err := getGuestForArchType(caps, "s390x", "hvm")
+	guest, err := getGuestForArchType(caps, archS390x, "hvm")
 	if err != nil {
 		return nil, err
 	}
 
-	canonicalmachine, err := getCanonicalMachineName(caps, "s390x", "hvm", "s390-ccw-virtio")
+	canonicalmachine, err := getCanonicalMachineName(caps, archS390x, "hvm", "s390-ccw-virtio")
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +250,7 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig) (*libvirtxml
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{
 				Type:    "hvm",
-				Arch:    "s390x",
+				Arch:    archS390x,
 				Machine: canonicalmachine,
 			},
 		},
@@ -384,7 +387,7 @@ func createDomainXML(client *libvirtClient, cfg *domainConfig) (*libvirtxml.Doma
 		return nil, fmt.Errorf("error retrieving node info: %w", err)
 	}
 	switch node.Model {
-	case "s390x":
+	case archS390x:
 		return createDomainXMLs390x(client, cfg)
 	default:
 		return createDomainXMLx86_64(client, cfg)
