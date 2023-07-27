@@ -9,6 +9,7 @@ import (
 	"net/netip"
 
 	libvirt "libvirt.org/go/libvirt"
+	libvirtxml "libvirt.org/go/libvirtxml"
 )
 
 type Config struct {
@@ -48,4 +49,10 @@ type libvirtClient struct {
 	dataDir string
 
 	volName string
+
+	// information about the target node
+	nodeInfo *libvirt.NodeInfo
+
+	// host capabilities
+	caps *libvirtxml.Caps
 }
