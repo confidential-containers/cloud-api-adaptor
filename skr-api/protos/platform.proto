@@ -9,7 +9,7 @@ message TeeResponse {
 }
 
 message EvidenceRequest {
-	string Challenge = 1;
+	bytes Challenge = 1;
 }
 
 message EvidenceResponse {

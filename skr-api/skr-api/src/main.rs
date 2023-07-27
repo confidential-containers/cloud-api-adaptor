@@ -81,7 +81,7 @@ struct IpcAttester {
 
 #[async_trait::async_trait]
 impl Attester for IpcAttester {
-    async fn get_evidence(&self, report_data: String) -> Result<String> {
+    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String> {
         let request = tonic::Request::new(EvidenceRequest {
             challenge: report_data,
         });

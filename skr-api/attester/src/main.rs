@@ -49,7 +49,10 @@ impl Platform for PlatformService {
         request: Request<EvidenceRequest>,
     ) -> Result<Response<EvidenceResponse>, Status> {
         let challenge = request.into_inner().challenge;
-        tracing::info!(message = "Evidence request", %challenge);
+        tracing::info!(
+            message = "Evidence request",
+            challenge = format!("{challenge:x?}")
+        );
         let evidence = self
             .client
             .lock()
@@ -78,7 +81,7 @@ impl TeeClient {
         self.tee.to_string()
     }
 
-    async fn evidence(&self, challenge: String) -> Result<String> {
+    async fn evidence(&self, challenge: Vec<u8>) -> Result<String> {
         let tee_evidence = self
             .attester
             .get_evidence(challenge)
