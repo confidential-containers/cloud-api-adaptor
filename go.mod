@@ -21,6 +21,7 @@ require (
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
+	github.com/kdomanski/iso9660 v0.3.5
 	github.com/opencontainers/runtime-spec v1.1.0-rc.1
 	github.com/stretchr/testify v1.8.1
 	github.com/vishvananda/netlink v1.2.1-beta.2
@@ -32,7 +33,6 @@ require (
 	k8s.io/cri-api v0.23.1
 	libvirt.org/go/libvirt v1.8002.0
 	libvirt.org/go/libvirtxml v1.8002.0
-	github.com/kdomanski/iso9660 v0.3.5
 )
 
 require (

@@ -22,7 +22,7 @@ func createCloudInit(userData, metaData []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer writer.Cleanup()
+	defer writer.Cleanup() //nolint:errcheck // no need to check exit error during deferal here
 
 	err = writer.AddFile(bytes.NewReader(userData), userDataFilename)
 	if err != nil {

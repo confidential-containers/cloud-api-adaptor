@@ -79,8 +79,8 @@ func TestInMemoryCopier(t *testing.T) {
 
 	var otherBuf []byte
 	err = img.importImage(func(rdr io.Reader) error {
-		buf, err := io.ReadAll(rdr)
-		otherBuf = buf
+		readBuf, err := io.ReadAll(rdr)
+		otherBuf = readBuf
 		return err
 	}, libvirtxml.StorageVolume{})
 	require.NoError(t, err)
