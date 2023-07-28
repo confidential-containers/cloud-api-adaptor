@@ -6,8 +6,10 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait = "0.1.70"
+attester = { git = "https://github.com/confidential-containers/guest-components.git", default-features = false, rev = "709a6b0" }
 axum = "0.6.18"
 clap.workspace = true
+kbs_protocol = { git = "https://github.com/confidential-containers/guest-components.git", rev = "709a6b0", default-features = false, features =[ "rust-crypto" ] }
 prost.workspace = true
 serde = { version = "1.0.166", features = ["derive"] }
 tokio.workspace = true
@@ -15,8 +17,6 @@ tonic.workspace = true
 tower-http = { version = "0.4.1", features = ["trace"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
-kbs_protocol = { git = "https://github.com/mkulke/guest-components.git", rev = "05136ae", default-features = false, features =[ "rust-crypto" ] }
-attester = { git = "https://github.com/mkulke/guest-components.git", rev = "05136ae", default-features = false }
 tower = { version = "0.4.13", features = ["tokio", "tokio-stream"] }
 
 [build-dependencies]

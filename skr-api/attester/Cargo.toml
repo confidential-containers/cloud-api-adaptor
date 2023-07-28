@@ -5,11 +5,11 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
+attester = { git = "https://github.com/confidential-containers/guest-components.git", rev = "709a6b0" }
 clap.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-attester = { git = "https://github.com/mkulke/guest-components.git", rev = "05136ae" }
 prost.workspace = true
 tokio-stream = { version = "0.1.14", features = ["net"] }
 tonic.workspace = true

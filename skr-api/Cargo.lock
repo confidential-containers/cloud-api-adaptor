@@ -141,7 +141,7 @@ name = "attester"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "attester 0.1.0 (git+https://github.com/mkulke/guest-components.git?rev=05136ae)",
+ "attester 0.1.0 (git+https://github.com/confidential-containers/guest-components.git?rev=709a6b0)",
  "clap 4.3.19",
  "prost",
  "tokio",
@@ -155,7 +155,7 @@ dependencies = [
 [[package]]
 name = "attester"
 version = "0.1.0"
-source = "git+https://github.com/mkulke/guest-components.git?rev=05136ae#05136ae19c5a6d5f21ead8d9a2176f632c434508"
+source = "git+https://github.com/confidential-containers/guest-components.git?rev=709a6b0#709a6b08803965b3581b7526413de1d0a9d9506e"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -556,7 +556,7 @@ dependencies = [
 [[package]]
 name = "crypto"
 version = "0.1.0"
-source = "git+https://github.com/mkulke/guest-components.git?rev=05136ae#05136ae19c5a6d5f21ead8d9a2176f632c434508"
+source = "git+https://github.com/confidential-containers/guest-components.git?rev=709a6b0#709a6b08803965b3581b7526413de1d0a9d9506e"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -565,6 +565,8 @@ dependencies = [
  "kbs-types",
  "rand",
  "rsa 0.9.2",
+ "serde",
+ "serde_json",
  "sha2",
  "strum",
  "zeroize",
@@ -1155,11 +1157,11 @@ dependencies = [
 [[package]]
 name = "kbs_protocol"
 version = "0.1.0"
-source = "git+https://github.com/mkulke/guest-components.git?rev=05136ae#05136ae19c5a6d5f21ead8d9a2176f632c434508"
+source = "git+https://github.com/confidential-containers/guest-components.git?rev=709a6b0#709a6b08803965b3581b7526413de1d0a9d9506e"
 dependencies = [
  "anyhow",
  "async-trait",
- "attester 0.1.0 (git+https://github.com/mkulke/guest-components.git?rev=05136ae)",
+ "attester 0.1.0 (git+https://github.com/confidential-containers/guest-components.git?rev=709a6b0)",
  "base64 0.21.2",
  "crypto",
  "kbs-types",
@@ -2086,9 +2088,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.101.1"
+version = "0.101.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15f36a6828982f422756984e47912a7a51dcbc2a197aa791158f8ca61cd8204e"
+checksum = "513722fd73ad80a71f72b61009ea1b584bcfa1483ca93949c8f290298837fa59"
 dependencies = [
  "ring",
  "untrusted",
@@ -2189,9 +2191,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.175"
+version = "1.0.177"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d25439cd7397d044e2748a6fe2432b5e85db703d6d097bd014b3c0ad1ebff0b"
+checksum = "63ba2516aa6bf82e0b19ca8b50019d52df58455d3cf9bdaf6315225fdd0c560a"
 dependencies = [
  "serde_derive",
 ]
@@ -2216,9 +2218,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.175"
+version = "1.0.177"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b23f7ade6f110613c0d63858ddb8b94c1041f550eab58a16b371bdf2c9c80ab4"
+checksum = "401797fe7833d72109fedec6bfcbe67c0eed9b99772f26eb8afd261f0abc6fd3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2227,9 +2229,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.103"
+version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d03b412469450d4404fe8499a268edd7f8b79fecb074b0d812ad64ca21f4031b"
+checksum = "076066c5f1078eac5b722a31827a8832fe108bed65dfa75e233c89f8206e976c"
 dependencies = [
  "itoa",
  "ryu",
@@ -2282,7 +2284,7 @@ dependencies = [
 [[package]]
 name = "sev"
 version = "1.2.1"
-source = "git+https://github.com/virtee/sev#009b7ff43806ef5362fd9ed35fc9d117c929d9a7"
+source = "git+https://github.com/virtee/sev#088d45d68a543ffc29fb6598f54f71112f3469f6"
 dependencies = [
  "bincode",
  "bitfield",
@@ -2356,7 +2358,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "attester 0.1.0 (git+https://github.com/mkulke/guest-components.git?rev=05136ae)",
+ "attester 0.1.0 (git+https://github.com/confidential-containers/guest-components.git?rev=709a6b0)",
  "axum",
  "clap 4.3.19",
  "kbs_protocol",
