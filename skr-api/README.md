@@ -17,8 +17,8 @@ A process that can be deployed as a sidecar in a pod, it'll access the `attester
 The attester component is built as part of the podvm image build. skr-api can be via Docker:
 
 ```bash
-export $my_kbs="https://mykbs.com"
-export $my_image="example.com/image:tag"
+export my_kbs="https://mykbs.com"
+export my_image="example.com/image:tag"
 docker build -t "$my_image" .
 docker push "$my_image" 
 cat << EOF > nginx-caa.yaml
