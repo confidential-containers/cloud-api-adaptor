@@ -8,6 +8,7 @@ package libvirt
 // Code copied from https://github.com/openshift/cluster-api-provider-libvirt
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -83,6 +84,11 @@ type localImage struct {
 	path string
 }
 
+// inMemoryImage represents an image backed by a byte array in memory
+type inMemoryImage struct {
+	data []byte
+}
+
 func newImage(source string) (image, error) {
 	url, err := url.Parse(source)
 	if err != nil {
@@ -96,6 +102,11 @@ func newImage(source string) (image, error) {
 	} else {
 		return nil, fmt.Errorf("don't know how to read from %q: %s", url.String(), err)
 	}
+}
+
+// newImageFromBytes creates a new image implementation backed by an in-memory byte array
+func newImageFromBytes(source []byte) (image, error) {
+	return &inMemoryImage{data: source}, nil
 }
 
 func (i *localImage) string() string {
@@ -130,4 +141,16 @@ func (i *localImage) importImage(copier func(io.Reader) error, vol libvirtxml.St
 	}
 
 	return copier(file)
+}
+
+func (i *inMemoryImage) string() string {
+	return fmt.Sprintf("plain bytes of size [%d]", len(i.data))
+}
+
+func (i *inMemoryImage) size() (uint64, error) {
+	return uint64(len(i.data)), nil
+}
+
+func (i *inMemoryImage) importImage(copier func(io.Reader) error, vol libvirtxml.StorageVolume) error {
+	return copier(bytes.NewReader(i.data))
 }
