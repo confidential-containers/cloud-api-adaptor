@@ -9,10 +9,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"log"
 	"net/netip"
-	"os"
-	"os/exec"
 	"strconv"
 	"time"
 
@@ -20,45 +17,14 @@ import (
 	libvirtxml "libvirt.org/go/libvirtxml"
 )
 
-func createCloudInitISO(v *vmConfig, libvirtClient *libvirtClient) string {
-	logger.Printf("Create cloudInit iso\n")
-	cloudInitIso := libvirtClient.dataDir + "/" + v.name + "-cloudinit.iso"
+// createCloudInitISO creates an ISO file with a userdata and a metadata file. The ISO image will be created in-memory since it is small
+func createCloudInitISO(v *vmConfig) ([]byte, error) {
+	logger.Println("Create cloudInit iso")
 
-	if _, err := os.Stat("/usr/bin/genisoimage"); os.IsNotExist(err) {
-		log.Fatal("'genisoimage' command doesn't exist.Please install the command before.")
-	}
+	userData := v.userData
+	metaData := fmt.Sprintf("local-hostname: %s", v.name)
 
-	// Set VM Hostname
-	if err := os.MkdirAll(libvirtClient.dataDir, os.ModePerm); err != nil {
-		log.Fatalf("Failed to create data-dir path %s: %s", v.metaData, err)
-	}
-	v.metaData = libvirtClient.dataDir + "/" + "meta-data"
-	metaFile, _ := os.Create(v.metaData)
-	if _, err := metaFile.WriteString("local-hostname: " + v.name); err != nil {
-		metaFile.Close()
-		log.Fatalf("Failed to write to %s: %s", v.metaData, err)
-	}
-	metaFile.Close()
-
-	// Write the userData to a file
-	userDataFile := libvirtClient.dataDir + "/" + "user-data"
-	udf, _ := os.Create(userDataFile)
-	if _, err := udf.WriteString(v.userData); err != nil {
-		udf.Close()
-		log.Fatalf("Failed to write to %s: %s", userDataFile, err)
-	}
-	udf.Close()
-
-	fmt.Printf("Executing genisoimage\n")
-	// genisoimage -output cloudInitIso.iso -volid cidata -joliet -rock user-data meta-data
-	cmd := exec.Command("genisoimage", "-output", cloudInitIso, "-volid", "cidata", "-joliet", "-rock", userDataFile, v.metaData)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-	logger.Printf("Created cloudInit iso\n")
-	return cloudInitIso
+	return createCloudInit([]byte(userData), []byte(metaData))
 }
 
 func checkDomainExistsByName(name string, libvirtClient *libvirtClient) (exist bool, err error) {
@@ -93,12 +59,12 @@ func checkDomainExistsById(id uint32, libvirtClient *libvirtClient) (exist bool,
 
 }
 
-func uploadIso(isoFile string, isoVolName string, libvirtClient *libvirtClient) (string, error) {
+func uploadIso(isoFile []byte, isoVolName string, libvirtClient *libvirtClient) (string, error) {
 
 	fmt.Printf("Uploading iso file: %s\n", isoFile)
 	volumeDef := newDefVolume(isoVolName)
 
-	img, err := newImage(isoFile)
+	img, err := newImageFromBytes(isoFile)
 	if err != nil {
 		return "", err
 	}
@@ -139,7 +105,10 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 		return nil, fmt.Errorf("Error in creating volume: %s", err)
 	}
 
-	cloudInitIso := createCloudInitISO(v, libvirtClient)
+	cloudInitIso, err := createCloudInitISO(v)
+	if err != nil {
+		return nil, fmt.Errorf("error in creating cloud init ISO file, cause: %w", err)
+	}
 
 	isoVolName := v.name + "-cloudinit.iso"
 	isoVolFile, err := uploadIso(cloudInitIso, isoVolName, libvirtClient)

@@ -32,6 +32,7 @@ require (
 	k8s.io/cri-api v0.23.1
 	libvirt.org/go/libvirt v1.8002.0
 	libvirt.org/go/libvirtxml v1.8002.0
+	github.com/kdomanski/iso9660 v0.3.5
 )
 
 require (
