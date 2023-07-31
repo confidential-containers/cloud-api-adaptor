@@ -52,15 +52,6 @@ func (m mockEC2Client) RunInstances(ctx context.Context,
 	}, nil
 }
 
-// Create a mock CreateTags method
-func (m mockEC2Client) CreateTags(ctx context.Context,
-	params *ec2.CreateTagsInput,
-	optFns ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error) {
-
-	// Return a mock CreateTagsOutput
-	return &ec2.CreateTagsOutput{}, nil
-}
-
 // Create a mock EC2 TerminateInstances method
 func (m mockEC2Client) TerminateInstances(ctx context.Context,
 	params *ec2.TerminateInstancesInput,

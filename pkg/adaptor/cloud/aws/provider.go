@@ -33,9 +33,6 @@ type ec2Client interface {
 	TerminateInstances(ctx context.Context,
 		params *ec2.TerminateInstancesInput,
 		optFns ...func(*ec2.Options)) (*ec2.TerminateInstancesOutput, error)
-	CreateTags(ctx context.Context,
-		params *ec2.CreateTagsInput,
-		optFns ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error)
 	// Add DescribeInstanceTypes method
 	DescribeInstanceTypes(ctx context.Context,
 		params *ec2.DescribeInstanceTypesInput,
@@ -111,6 +108,29 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		return nil, err
 	}
 
+	instanceTags := []types.Tag{
+		{
+			Key:   aws.String("Name"),
+			Value: aws.String(instanceName),
+		},
+	}
+
+	// Add custom tags (k=v) from serviceConfig.Tags to the instance
+	for k, v := range p.serviceConfig.Tags {
+		instanceTags = append(instanceTags, types.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		})
+	}
+
+	// Create TagSpecifications for the instance
+	tagSpecifications := []types.TagSpecification{
+		{
+			ResourceType: types.ResourceTypeInstance,
+			Tags:         instanceTags,
+		},
+	}
+
 	var input *ec2.RunInstancesInput
 
 	if p.serviceConfig.UseLaunchTemplate {
@@ -120,17 +140,19 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			LaunchTemplate: &types.LaunchTemplateSpecification{
 				LaunchTemplateName: aws.String(p.serviceConfig.LaunchTemplateName),
 			},
-			UserData: &userDataEnc,
+			UserData:          &userDataEnc,
+			TagSpecifications: tagSpecifications,
 		}
 	} else {
 		input = &ec2.RunInstancesInput{
-			MinCount:         aws.Int32(1),
-			MaxCount:         aws.Int32(1),
-			ImageId:          aws.String(p.serviceConfig.ImageId),
-			InstanceType:     types.InstanceType(instanceType),
-			SecurityGroupIds: p.serviceConfig.SecurityGroupIds,
-			SubnetId:         aws.String(p.serviceConfig.SubnetId),
-			UserData:         &userDataEnc,
+			MinCount:          aws.Int32(1),
+			MaxCount:          aws.Int32(1),
+			ImageId:           aws.String(p.serviceConfig.ImageId),
+			InstanceType:      types.InstanceType(instanceType),
+			SecurityGroupIds:  p.serviceConfig.SecurityGroupIds,
+			SubnetId:          aws.String(p.serviceConfig.SubnetId),
+			UserData:          &userDataEnc,
+			TagSpecifications: tagSpecifications,
 		}
 		if p.serviceConfig.KeyName != "" {
 			input.KeyName = aws.String(p.serviceConfig.KeyName)
@@ -145,21 +167,6 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	}
 
 	logger.Printf("created an instance %s for sandbox %s", *result.Instances[0].PublicDnsName, sandboxID)
-
-	tagInput := &ec2.CreateTagsInput{
-		Resources: []string{*result.Instances[0].InstanceId},
-		Tags: []types.Tag{
-			{
-				Key:   aws.String("Name"),
-				Value: aws.String(instanceName),
-			},
-		},
-	}
-
-	_, err = p.ec2Client.CreateTags(ctx, tagInput)
-	if err != nil {
-		logger.Printf("Adding tags to the instance failed with error: %s", err)
-	}
 
 	instanceID := *result.Instances[0].InstanceId
 

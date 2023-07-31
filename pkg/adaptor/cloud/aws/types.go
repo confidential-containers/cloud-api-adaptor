@@ -50,6 +50,7 @@ type Config struct {
 	UseLaunchTemplate    bool
 	InstanceTypes        instanceTypes
 	InstanceTypeSpecList []cloud.InstanceTypeSpec
+	Tags                 cloud.KeyValueFlag
 }
 
 func (c Config) Redact() Config {
