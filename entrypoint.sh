@@ -42,6 +42,7 @@ aws() {
     [[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} "      # if not retrieved from IMDS
     [[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} " # if not set retrieved from IMDS
     [[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} "     # if not set retrieved from IMDS
+    [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
 
     set -x
     exec cloud-api-adaptor aws \
@@ -57,6 +58,7 @@ azure() {
     [[ "${SSH_USERNAME}" ]] && optionals+="-ssh-username ${SSH_USERNAME} "
     [[ "${DISABLECVM}" ]] && optionals+="-disable-cvm "
     [[ "${AZURE_INSTANCE_SIZES}" ]] && optionals+="-instance-sizes ${AZURE_INSTANCE_SIZES} "
+    [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
 
     set -x
     exec cloud-api-adaptor azure \

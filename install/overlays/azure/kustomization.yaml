@@ -35,6 +35,7 @@ configMapGenerator:
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
   #- AZURE_INSTANCE_SIZES="" # comma separated
+  #- TAGS="" # Uncomment and add key1=value1,key2=value2 etc if you want to use specific tags for podvm
 ##TLS_SETTINGS
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS
