@@ -1,0 +1,82 @@
+name: (Callable) Build and push cloud-api-adaptor image
+
+on:
+  workflow_call:
+    inputs:
+      registry:
+        default: 'quay.io/confidential-containers'
+        description: 'Image registry (e.g. "ghcr.io/confidential-containers") where the built image will be pushed to'
+        required: false
+        type: string
+      dev_arches:
+        default: 'linux/amd64'
+        description: 'Dev build arches. Expected a docker buildx "--platform" string format'
+        required: false
+        type: string
+      release_arches:
+        default: 'linux/amd64,linux/s390x,linux/ppc64le'
+        description: 'Release build arches. Expected a docker buildx "--platform" string format'
+        required: false
+        type: string
+
+env:
+  GO_VERSION: "1.20.6"
+
+jobs:
+  build_push_job:
+    name: build and push
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - type: dev
+            arches: ${{ inputs.dev_arches }}
+          - type: release
+            arches: ${{ inputs.release_arches }}
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Install build dependencies
+        if: matrix.type == 'dev'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libvirt-dev
+      - name: Login to quay Container Registry
+        if: ${{ startsWith(inputs.registry, 'quay.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Login to Github Container Registry
+        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: nick-fields/retry@v2
+        with:
+          # We are not interested in timeout but this field is required
+          # so setting to 4x the time it usually take to complete.
+          timeout_minutes: 60
+          retry_wait_seconds: 120
+          max_attempts: 3
+          command: |
+            if [ ${{ matrix.type }} == "release" ]; then
+              ARCHES=${{matrix.arches}} RELEASE_BUILD=true make image registry=${{ inputs.registry }}
+            else
+              ARCHES=${{matrix.arches}} RELEASE_BUILD=false make image registry=${{ inputs.registry }}
+            fi
