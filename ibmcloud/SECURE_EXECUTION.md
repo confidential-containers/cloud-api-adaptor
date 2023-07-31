@@ -35,7 +35,7 @@ $ docker build -t podvm_binaries_s390x \
 The host key must match the host system for which the podvm image is prepared. You can download a host key document from Resource Link.
 
 As a registered user, access the search page:
-[https://www.ibm.com/servers/resourcelink/hom03010.nsf/pages/HKDSearch?OpenDocument](https://www.ibm.com/servers/resourcelink/hom03010.nsf/pages/HKDSearch?OpenDocument)
+[Host key document search](https://www.ibm.com/servers/resourcelink/hom03010.nsf/pages/HKDSearch?OpenDocument)
 
 If you have never signed in to Resource Link, you need to register before you can access the host key document search page. Please refer to document [Obtaining a host key document from Resource Link](https://www.ibm.com/docs/en/linux-on-systems?topic=execution-obtain-host-key-document#lxse_obtain_hkd) for details.
 
