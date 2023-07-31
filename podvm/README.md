@@ -54,15 +54,15 @@ $ docker build -t podvm_builder \
 Use `--build-arg` to pass build arguments to docker to overwrite default values if needed. Following are the arguments
 currently accepted:
 
-|Argument|Default value|Description|
-|--------|-------------|-----------|
-|CAA\_SRC |https://github.com/confidential-containers/cloud-api-adaptor | The cloud-api-adaptor source repository |
-|CAA\_SRC\_REF|main| cloud-api-adaptor repository branch or commit |
-|KATA\_SRC | https://github.com/kata-containers/kata-containers | The Kata Containers source repository |
-|KATA\_SRC\_BRANCH | CCv0 | The Kata Containers repository branch |
-|GO\_VERSION | 1.18.7 | Go version |
-|PROTOC\_VERSION | 3.11.4 | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
-|RUST\_VERSION | 1.66.0 | Rust version |
+| Argument          | Default value                                                | Description                                                     |
+| ----------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
+| CAA\_SRC          | https://github.com/confidential-containers/cloud-api-adaptor | The cloud-api-adaptor source repository                         |
+| CAA\_SRC\_REF     | main                                                         | cloud-api-adaptor repository branch or commit                   |
+| KATA\_SRC         | https://github.com/kata-containers/kata-containers           | The Kata Containers source repository                           |
+| KATA\_SRC\_BRANCH | CCv0                                                         | The Kata Containers repository branch                           |
+| GO\_VERSION       | 1.18.7                                                       | Go version                                                      |
+| PROTOC\_VERSION   | 3.11.4                                                       | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
+| RUST\_VERSION     | 1.69.0                                                       | Rust version                                                    |
 
 As it can be noted in the table above the cloud-api-adaptor repository is cloned within the builder image, so rather than
 copying the local source tree, it will be using the upstream source. But if you want to test local changes then you should:
