@@ -9,6 +9,7 @@ tools for development and testing.
 ### Build provisioner-cli
 In the root directory of `test/tools`, run command as below to build the cli program:
 ```bash
+apt-get install libvirt-dev
 make all
 ```
 
