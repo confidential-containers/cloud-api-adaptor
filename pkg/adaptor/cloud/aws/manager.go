@@ -28,6 +28,8 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&awscfg.SubnetId, "subnetid", "", "Subnet ID to be used for the Pod VMs")
 	// Add a List parameter to indicate differet type of instance types to be used for the Pod VMs
 	flags.Var(&awscfg.InstanceTypes, "instance-types", "Instance types to be used for the Pod VMs, comma separated")
+	// Add a key value list parameter to indicate custom tags to be used for the Pod VMs
+	flags.Var(&awscfg.Tags, "tags", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
 
 }
 
