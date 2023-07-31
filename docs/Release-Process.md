@@ -148,6 +148,12 @@ cd install/overlays/
 for p in aws azure ibmcloud ibmcloud-powervs libvirt vsphere; do cd aws; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:latest; cd -; done
 ```
 
+References to Kata Containers should be reverted to the CCv0 branch in:
+
+* [podvm_builder.yaml workflow](../.github/workflows/podvm_builder.yaml)
+* [podvm_builder `Dockerfiles`](../podvm/)
+* go modules (`cloud-api-adaptor` [`go.mod`](../go.mod), the `peerpod-ctl` [`go.mod`](../peerpod-ctrl/go.mod) and the `csi-wrapper` [`go.mod`](../volumes/csi-wrapper/go.mod))
+
 The `CITATION.cff` needs to be updated with the dates from the release.
 
 ## Improvements
