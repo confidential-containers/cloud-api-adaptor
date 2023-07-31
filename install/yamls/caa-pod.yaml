@@ -9,6 +9,10 @@ spec:
   selector:
     matchLabels:
       app: cloud-api-adaptor
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   template:
     metadata:
       labels:
