@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"crypto/sha256"
+
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	"github.com/confidential-containers/cloud-api-adaptor/test/utils"
@@ -479,8 +480,22 @@ func deleteSshKey() error {
 	if err != nil {
 		return err
 	}
-	log.Infof("SSH Key %s with ID %s is deleted.", IBMCloudProps.SshKeyName, IBMCloudProps.SshKeyID)
-	return nil
+	waitMinutes := 5
+	log.Infof("Waiting for SSH key  %s to be removed...", IBMCloudProps.SshKeyID)
+	for i := 0; i <= waitMinutes; i++ {
+		foundSsh, err := findSshKey(IBMCloudProps.SshKeyID)
+		if foundSsh == nil {
+			log.Infof("SSH Key %s with ID %s is deleted.", IBMCloudProps.SshKeyName, IBMCloudProps.SshKeyID)
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		log.Infof("Waiting for SSH %s to be removed.", *foundSsh.Name)
+		log.Infof("Waited %d minutes...", i)
+		time.Sleep(60 * time.Second)
+	}
+	return errors.New("Failed to Delete SSH Key")
 }
 
 func isClusterReady(clrName string) (bool, error) {
