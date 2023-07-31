@@ -9,7 +9,7 @@ FROM ubuntu:20.04
 
 ARG GO_VERSION="1.20.6"
 ARG PROTOC_VERSION="3.11.4"
-ARG RUST_VERSION="1.66.0"
+ARG RUST_VERSION="1.69.0"
 
 # Without setting ENV gh-action is failing to use the correct values
 ENV GO_VERSION ${GO_VERSION}

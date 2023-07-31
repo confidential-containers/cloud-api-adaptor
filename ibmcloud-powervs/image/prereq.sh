@@ -1,7 +1,7 @@
 #!/bin/bash
 
 GO_VERSION="1.20.6"
-RUST_VERSION="1.66.0"
+RUST_VERSION="1.69.0"
 SKOPEO_VERSION="1.5.0"
 
 # Install dependencies

@@ -59,7 +59,7 @@ jobs:
         build-args: |
           "GO_VERSION=1.20.6"
           "PROTOC_VERSION=3.11.4"
-          "RUST_VERSION=1.66.0"
+          "RUST_VERSION=1.69.0"
           "CAA_SRC=https://github.com/confidential-containers/cloud-api-adaptor"
           "CAA_SRC_REF=main"
           "KATA_SRC=https://github.com/kata-containers/kata-containers"
