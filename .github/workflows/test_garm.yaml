@@ -1,0 +1,11 @@
+name: test garm
+on:
+  pull_request:
+jobs:
+  simple_job:
+    name: Run on AZ VM 
+    runs-on: az-ubuntu-2204
+    steps:
+      - name: run uname
+        run: |
+          uname -a
