@@ -34,6 +34,16 @@ func init() {
 func createResourceGroup() error {
 	if AzureProps.IsCIManaged {
 		log.Infof("Resource group %q is CI managed. No need to create new one manually.", AzureProps.ResourceGroupName)
+
+		resp, err := AzureProps.ResourceGroupClient.Get(context.Background(), AzureProps.ResourceGroupName, nil)
+		if err != nil {
+			err = fmt.Errorf("getting resource group %s: %w", AzureProps.ResourceGroupName, err)
+			log.Errorf("%v", err)
+			return err
+		}
+
+		AzureProps.ResourceGroup = &resp.ResourceGroup
+
 		return nil
 	}
 
