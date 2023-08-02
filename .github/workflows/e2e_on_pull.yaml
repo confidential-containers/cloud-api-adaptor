@@ -16,7 +16,47 @@ on:
       - reopened
       - labeled
 jobs:
+  # Build the podvm images.
+  #
+  # Currently it will not build the podvm, instead it downloads the qcow2 file
+  # from the built image. The file will be archived so that downstream jobs can
+  # just download the file on their runners.
+  podvm:
+    name: podvm
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu
+        provider:
+          - generic
+        arch:
+          - amd64
+    env:
+      registry: quay.io/confidential-containers
+      podvm_image: podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}
+      qcow2: podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}.qcow2
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Extract the podvm qcow2
+        run: ./hack/download-image.sh ${{ env.registry }}/${{ env.podvm_image }} . -o ${{ env.qcow2 }}
+        working-directory: podvm
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.qcow2 }}
+          path: podvm/${{ env.qcow2 }}
+          retention-days: 1
+
+  # Run libvirt e2e tests if pull request labeled 'test_e2e_libvirt'
   libvirt:
     name: libvirt
     if: ${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}
+    needs: [podvm]
     uses: ./.github/workflows/e2e_libvirt.yaml
+    with:
+      qcow2_artifact: podvm-generic-ubuntu-amd64.qcow2
