@@ -1,0 +1,19 @@
+# (C) Copyright Confidential Containers Contributors 2023.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Run libvirt e2e tests.
+name: (Callable) libvirt e2e tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: run tests
+        run: |
+          echo "do nothing"

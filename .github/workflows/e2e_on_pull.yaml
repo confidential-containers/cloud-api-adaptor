@@ -1,0 +1,22 @@
+# (C) Copyright Confidential Containers Contributors 2023.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Run end-to-end (e2e) tests on pull request.
+---
+name: e2e tests
+
+on:
+  pull_request:
+    types:
+      # This workflow will be run if the pull request is labeled test_e2e_libvirt, so
+      # adding 'labeled' to the list of activity types.
+      #
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+jobs:
+  libvirt:
+    name: libvirt
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}
+    uses: ./.github/workflows/e2e_libvirt.yaml
