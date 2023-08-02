@@ -82,7 +82,7 @@ func initAzureProperties(properties map[string]string) error {
 
 	AzureProps.VnetName = AzureProps.ClusterName + "_vnet"
 	AzureProps.SubnetName = AzureProps.ClusterName + "_subnet"
-	AzureProps.InstanceSize = "Standard_D2as_v5"
+	AzureProps.InstanceSize = "Standard_DC2as_v5"
 	AzureProps.NodeName = "caaaks"
 	AzureProps.OsType = "Ubuntu"
 
