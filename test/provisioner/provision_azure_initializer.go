@@ -35,6 +35,7 @@ type AzureProperties struct {
 	ManagedIdentityName string
 	IsAzCliAuth         bool
 	IsCIManaged         bool
+	CaaImage            string
 
 	InstanceSize string
 	NodeName     string
@@ -66,6 +67,7 @@ func initAzureProperties(properties map[string]string) error {
 		SubnetID:            properties["AZURE_SUBNET_ID"],
 		SshUserName:         properties["SSH_USERNAME"],
 		ManagedIdentityName: properties["MANAGED_IDENTITY_NAME"],
+		CaaImage:            properties["CAA_IMAGE"],
 	}
 
 	CIManagedStr := properties["IS_CI_MANAGED_CLUSTER"]
