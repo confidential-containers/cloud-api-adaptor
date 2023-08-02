@@ -59,7 +59,7 @@ ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
 BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE)
 
 BINARIES += $(ATTESTATION_AGENT)
-$(shell sed -i "s/\(aa_kbc_params = \)\"[^\"]*\"/\1\"${AA_KBC}::${KBC_URI}\"/g" $(FILES_DIR)/etc/agent-config.toml)
+$(shell sed -i "s|\(aa_kbc_params = \)\"[^\"]*\"|\1\"${AA_KBC}::${KBC_URI}\"|g" $(FILES_DIR)/etc/agent-config.toml)
 
 AGENT_PROTOCOL_FORWARDER_SRC = ../..
 
