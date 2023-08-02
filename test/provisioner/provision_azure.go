@@ -15,15 +15,17 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
+
+	"github.com/containerd/containerd/reference"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/go-autorest/autorest"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 func init() {
@@ -431,6 +433,36 @@ func (lio *AzureInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config)
 
 func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
 	var err error
+
+	// If a custom image is defined then update it in the kustomization file.
+	if AzureProps.CaaImage != "" {
+		spec, err := reference.Parse(AzureProps.CaaImage)
+		if err != nil {
+			return fmt.Errorf("parsing image: %w", err)
+		}
+
+		log.Infof("Updating CAA image with %q", spec.Locator)
+		if err = lio.overlay.SetKustomizeImage("cloud-api-adaptor", "newName", spec.Locator); err != nil {
+			return err
+		}
+
+		tag, digest := reference.SplitObject(spec.Object)
+
+		if tag != "" && strings.HasSuffix(tag, "@") {
+			tag = tag[:len(tag)-1]
+		}
+
+		log.Infof("Updating CAA image tag with %q", tag)
+		if err = lio.overlay.SetKustomizeImage("cloud-api-adaptor", "newTag", tag); err != nil {
+			return err
+		}
+
+		log.Infof("Updating CAA image digest with %q", digest)
+		if err = lio.overlay.SetKustomizeImage("cloud-api-adaptor", "digest", digest.String()); err != nil {
+			return err
+		}
+	}
+
 	for k, v := range properties {
 		// configMapGenerator
 		if isAzureKustomizeConfigMapKey(k) {
