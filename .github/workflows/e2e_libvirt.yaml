@@ -16,12 +16,22 @@ on:
         required: false
         type: string
 
+env:
+  CLOUD_PROVIDER: libvirt
+  GO_VERSION: "1.20.7"
+  DEBIAN_FRONTEND: noninteractive
+
 jobs:
   test:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
 
       - uses: actions/download-artifact@v3
         with:
@@ -35,8 +45,102 @@ jobs:
           name: ${{ inputs.install_directory_artifact }}
           path: install
 
+      - name: Install Libvirt
+        run: |
+          set -o pipefail
+          echo "::group::Install packages"
+          sudo apt-get update
+          sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-dev
+          echo "::endgroup::"
+          kvm-ok
+          # Create the default storage pool if not defined.
+          echo "::group::Setup Libvirt default storage pool"
+          if ! sudo virsh pool-list --all | grep default >/dev/null; then
+            sudo virsh pool-define-as default dir - - - - "/var/lib/libvirt/images"
+            sudo virsh pool-build default
+          fi
+          sudo virsh pool-start default || true
+          echo "::endgroup::"
+
+          sudo setfacl -m "u:${USER}:rwx" /var/lib/libvirt/images
+          sudo adduser "$USER" libvirt
+          # Although it adds the runner user to libvirt's group, it is getting
+          # hard to re-load the actual session so that it takes effect. As
+          # an alternative, let's set the permission on the libvirt's socket
+          # file directly.
+          sudo setfacl -m "u:${USER}:rwx" /var/run/libvirt/libvirt-sock
+
+      - name: Install kcli
+        run: |
+          echo "::group::Install dependencies"
+          sudo apt-get install -y genisoimage
+          echo "::endgroup::"
+
+          echo "::group::Install kcli"
+          curl https://raw.githubusercontent.com/karmab/kcli/main/install.sh | sudo bash
+          echo "::endgroup::"
+
+          # kcli needs a pair of keys to setup the VMs
+          [ -f ~/.ssh/id_rsa ] || \
+            ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+
+          # Newest version of kcli does not index old Ubuntu images like 20.04
+          echo "::group::Download Ubuntu 20.04 image"
+          kcli download image -u https://cloud-images.ubuntu.com/releases/20.04/release/ubuntu-20.04-server-cloudimg-amd64.img ubuntu2004
+          echo "::endgroup::"
+
+        # This is the key used by cloud-api-adaptor to connect to libvirt
+      - name: Generate the SSH key
+        run: |
+          ssh-keygen -f ./id_rsa -N ""
+          mkdir -p ~/.ssh
+          cat id_rsa.pub >> ~/.ssh/authorized_keys
+          chmod 600 ~/.ssh/authorized_keys
+        working-directory: install/overlays/libvirt
+
+      - name: Verify the connection with Libvirt
+        id: verify_libvirt_connection
+        run: |
+          IP="$(hostname -I | cut -d' ' -f1)"
+          echo "ip=${IP}" >> "$GITHUB_OUTPUT"
+
+          virsh -c "qemu+ssh://$USER@${IP}/system?keyfile=$(pwd)/id_rsa&no_verify=1" nodeinfo
+        working-directory: install/overlays/libvirt
+
+      - name: Create the e2e properties file
+        run: |
+          IP=${{ steps.verify_libvirt_connection.outputs.ip }}
+          [[ -n "$IP" ]] || exit 1
+          echo "libvirt_uri=\"qemu+ssh://$USER@${IP}/system?no_verify=1\"" >> libvirt.properties
+          echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
+          # For debugging
+          cat libvirt.properties
+
+      - name: Install tests dependencies
+        run: |
+          K8S_VERSION="v1.27.1"
+          KUSTOMIZE_VERSION="3.8.7"
+
+          if ! command -v kubectl >/dev/null; then
+            sudo curl "https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl" \
+              -o /usr/local/bin/kubectl
+            sudo chmod +x /usr/local/bin/kubectl
+          fi
+
+          if ! command -v kustomize >/dev/null; then
+          curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | \
+            sudo bash -s -- "${KUSTOMIZE_VERSION}" /usr/local/bin
+            sudo chmod +x /usr/local/bin/kustomize
+          fi
+
+          sudo apt-get install -y build-essential
+
       - name: run tests
         run: |
-          ls podvm
-          tree install
-          git diff
+          export TEST_PROVISION="yes"
+          export TEST_TEARDOWN="no"
+          export TEST_PROVISION_FILE="$PWD/libvirt.properties"
+          export TEST_PODVM_IMAGE="${PWD}/podvm/${{ inputs.qcow2_artifact }}"
+          export TEST_E2E_TIMEOUT="50m"
+
+          make test-e2e
