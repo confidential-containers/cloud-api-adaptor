@@ -13,9 +13,19 @@ on:
         description: 'Dev build arches. Expected a docker buildx "--platform" string format'
         required: false
         type: string
+      dev_tags:
+        default: ''
+        description: 'Comma-separated list of tags for the dev built image (e.g. latest,ci-dev). By default uses the values from hack/build.sh'
+        required: false
+        type: string
       release_arches:
         default: 'linux/amd64,linux/s390x,linux/ppc64le'
         description: 'Release build arches. Expected a docker buildx "--platform" string format'
+        required: false
+        type: string
+      release_tags:
+        default: ''
+        description: 'Likewise but for the release built image'
         required: false
         type: string
 
@@ -76,7 +86,7 @@ jobs:
           max_attempts: 3
           command: |
             if [ ${{ matrix.type }} == "release" ]; then
-              ARCHES=${{matrix.arches}} RELEASE_BUILD=true make image registry=${{ inputs.registry }}
+              ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image registry=${{ inputs.registry }}
             else
-              ARCHES=${{matrix.arches}} RELEASE_BUILD=false make image registry=${{ inputs.registry }}
+              ARCHES=${{matrix.arches}} RELEASE_BUILD=false DEV_TAGS=${{ inputs.dev_tags }} make image registry=${{ inputs.registry }}
             fi
