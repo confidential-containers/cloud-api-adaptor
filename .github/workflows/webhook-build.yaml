@@ -12,7 +12,7 @@ on:
       - 'webhook/**'
 
 env:
-  go_version: "1.20.6"
+  go_version: "1.20.7"
 
 jobs:
   build_push_webhook:

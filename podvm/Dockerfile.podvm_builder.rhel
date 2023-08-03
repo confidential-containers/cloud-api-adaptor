@@ -7,7 +7,7 @@
 #
 FROM registry.access.redhat.com/ubi9/ubi:9.1
 
-ARG GO_VERSION="1.20.6"
+ARG GO_VERSION="1.20.7"
 ARG PROTOC_VERSION="3.11.4"
 ARG RUST_VERSION="1.69.0"
 
