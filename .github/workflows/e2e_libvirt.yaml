@@ -10,6 +10,11 @@ on:
       qcow2_artifact:
         required: true
         type: string
+      install_directory_artifact:
+        description: The archive name of the install directory
+        default: ''
+        required: false
+        type: string
 
 jobs:
   test:
@@ -22,6 +27,16 @@ jobs:
         with:
           name: ${{ inputs.qcow2_artifact }}
           path: podvm
+
+      - name: Get the install directory
+        if: ${{ inputs.install_directory_artifact != '' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.install_directory_artifact }}
+          path: install
+
       - name: run tests
         run: |
           ls podvm
+          tree install
+          git diff
