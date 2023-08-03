@@ -803,6 +803,10 @@ func getSha256sum(imagePath string) (string, error) {
 func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("UploadPodvm()")
 
+	if len(IBMCloudProps.ApiKey) <= 0 {
+		return errors.New("APIKEY must be set to upload podvm image")
+	}
+
 	filePath, err := filepath.Abs(imagePath)
 	if err != nil {
 		return err
@@ -941,6 +945,7 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"IBMCLOUD_VPC_ID":                      IBMCloudProps.VpcID,
 		"CRI_RUNTIME_ENDPOINT":                 "/run/cri-runtime/containerd.sock",
 		"IBMCLOUD_API_KEY":                     IBMCloudProps.ApiKey,
+		"IBMCLOUD_IAM_PROFILE_ID":              IBMCloudProps.IamProfileID,
 		"IBMCLOUD_IAM_ENDPOINT":                IBMCloudProps.IamServiceURL,
 	}
 }
