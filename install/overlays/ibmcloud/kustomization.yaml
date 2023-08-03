@@ -46,7 +46,7 @@ secretGenerator:
   namespace: confidential-containers-system
   literals:
 ##IAM PROFILE SETTINGS
-# - IBMCLOUD_IAM_PROFILE_ID="" # set
+  - IBMCLOUD_IAM_PROFILE_ID="" # set
 ##/IAM PROFILE SETTINGS
   - IBMCLOUD_API_KEY="" # set if not using IAM profile ID
   - IBMCLOUD_IAM_ENDPOINT="" #set
@@ -64,7 +64,7 @@ patchesStrategicMerge:
   - cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
   - kata_direct_volumes_mount.yaml # set (for volumes/csi-wrapper)
 ##IAM PROFILE SETTINGS
-# - cr_token_projection.yaml
+  - cr_token_projection.yaml
 ##/IAM PROFILE SETTINGS
 ##TLS_SETTINGS
 # - tls_certs_volume_mount.yaml # set (for tls)

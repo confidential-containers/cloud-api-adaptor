@@ -72,6 +72,8 @@ func isKustomizeSecretKey(key string) bool {
 	switch key {
 	case "IBMCLOUD_API_KEY":
 		return true
+	case "IBMCLOUD_IAM_PROFILE_ID":
+		return true
 	case "IBMCLOUD_IAM_ENDPOINT":
 		return true
 	case "IBMCLOUD_ZONE":
