@@ -22,7 +22,7 @@ jobs:
         runner:
           - ubuntu-latest
         go_version:
-          - "1.20.6"
+          - "1.20.7"
 
     steps:
       - name: Checkout the pull request code
