@@ -595,12 +595,14 @@ func doTestCreatePeerPodWithJob(t *testing.T, assert CloudAssert) {
 }
 
 func doTestCreatePeerPodAndCheckUserLogs(t *testing.T, assert CloudAssert) {
-	namespace := envconf.RandomName("default", 7)
-	podName := "user-pod"
-	imageName := "quay.io/confidential-containers/test-images:testuser"
-	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyOnFailure))
-	expectedPodLogString := "otheruser"
-	newTestCase(t, "UserPeerPod", assert, "Peer pod with user has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).withCustomPodState(v1.PodSucceeded).run()
+	// namespace := envconf.RandomName("default", 7)
+	// podName := "user-pod"
+	// imageName := "quay.io/confidential-containers/test-images:testuser"
+	// pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyOnFailure))
+	// expectedPodLogString := "otheruser"
+	// newTestCase(t, "UserPeerPod", assert, "Peer pod with user has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).withCustomPodState(v1.PodSucceeded).run()
+	t.Skip("Skipping Test until issue kata-containers/kata-containers#5732 is Fixed")
+	//Reference - https://github.com/kata-containers/kata-containers/issues/5732
 }
 
 // doTestCreateConfidentialPod verify a confidential peer-pod can be created.
