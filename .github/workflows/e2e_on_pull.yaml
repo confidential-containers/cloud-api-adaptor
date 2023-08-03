@@ -15,6 +15,15 @@ on:
       - synchronize
       - reopened
       - labeled
+
+env:
+  # cloud-api-adaptor image registry
+  E2E_IMG_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  # cloud-api-adaptor: image release tag
+  E2E_IMG_RELEASE_TAG: ci-pr${{ github.event.number  }}
+  # cloud-api-adaptor image dev tag
+  E2E_IMG_DEV_TAG: ci-pr${{ github.event.number  }}-dev
+
 jobs:
   # Build the podvm images.
   #
@@ -52,11 +61,85 @@ jobs:
           path: podvm/${{ env.qcow2 }}
           retention-days: 1
 
+  # Build and push the cloud-api-adaptor image
+  #
+  # By using a reusable `workflow_call` workflow we are hitting two
+  # GHA limitations here:
+  #
+  # - Cannot access the `env` context from the `with` so that it cannot
+  #   reuse the E2E_IMG_* environment variables set at this workflow level.
+  # - Cannot call a reusable workflow from a job's step, so the we cannot
+  #   merge the `image` and `prep_env` into a single one (unless we create
+  #   another reusable workflow and, well, likely hit another limitation...).
+  #
+  # Reference: https://docs.github.com/en/actions/using-workflows/reusing-workflows#limitations
+  #
+  image:
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}
+    uses: ./.github/workflows/caa_build_and_push.yaml
+    with:
+      registry: ghcr.io/${{ github.repository_owner }}
+      dev_tags: ci-pr${{ github.event.number  }}-dev
+      release_tags: ci-pr${{ github.event.number  }}
+    secrets: inherit
+
+  # Edit the kustomize files under the install directory to reference the
+  # built cloud-api-adaptor images. The entire directory is archived so that
+  # downstream jobs can simply download and use the prepared installation
+  # files.
+  #
+  # IMPORTANT: If you are enabling e2e tests for a given provider,
+  # then please update the PROVIDERS list (space-separated names, e.g.,
+  # "aws libvirt").
+  prep_install:
+    needs: [image]
+    runs-on: ubuntu-latest
+    env:
+      PROVIDERS: "libvirt"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install kustomize
+        run: |
+          command -v kustomize >/dev/null || \
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
+            bash -s /usr/local/bin
+
+      - name: Update kustomization configuration
+        run: |
+          providers=(${{ env.PROVIDERS }})
+          # If there aren't providers then something is wrong
+          [[ ${#providers[@]} -gt 0 ]] || exit 1
+
+          for provider in ${providers[@]}; do
+            img="${E2E_IMG_REGISTRY}/cloud-api-adaptor"
+            tag="${E2E_IMG_RELEASE_TAG}"
+            [[ "$provider" = "libvirt" ]] && tag="${E2E_IMG_DEV_TAG}"
+            echo "::group::Update ${provider}"
+            pushd "install/overlays/${provider}"
+            kustomize edit set image "cloud-api-adaptor=${img}:${tag}"
+            # Print for debugging
+            cat kustomization.yaml
+            echo "::endgroup::"
+            # Validate the file to avoid it silently testing with a wrong image
+            grep "newName: ${img}" kustomization.yaml
+            grep "newTag: ${tag}" kustomization.yaml
+            popd
+          done
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: install_directory
+          path: install/
+          retention-days: 7
+
   # Run libvirt e2e tests if pull request labeled 'test_e2e_libvirt'
   libvirt:
     name: libvirt
     if: ${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}
-    needs: [podvm]
+    needs: [podvm, image, prep_install]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       qcow2_artifact: podvm-generic-ubuntu-amd64.qcow2
+      install_directory_artifact: install_directory
