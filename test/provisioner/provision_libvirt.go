@@ -126,8 +126,6 @@ func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Con
 }
 
 func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) error {
-	// TODO: create a temporary Network and storage pool to use on
-	// the tests.
 	var (
 		sPool *libvirt.StoragePool
 		err   error
@@ -190,12 +188,11 @@ func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config)
 	}
 
 	if sPool, err = l.conn.LookupStoragePoolByName(l.storage); err != nil {
-
-		defined_storage, err := l.conn.ListDefinedStoragePools()
+		definedStorage, err := l.conn.ListDefinedStoragePools()
 		if err != nil {
 			return err
 		}
-		if slices.Contains(defined_storage, l.storage) {
+		if slices.Contains(definedStorage, l.storage) {
 			return fmt.Errorf("%s is defined but not enabled. Change to an enabled storage pool, or to create a temporary storage pool, use an undefined network name", l.storage)
 		}
 		log.Printf("Storage %s is not defined. Creating a new temporary storage pool", l.storage)
@@ -205,21 +202,20 @@ func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config)
 			return err
 		}
 
-		poolXML := fmt.Sprintf(
-			`<pool type='dir'>
-				<name>%s</name>
-				<source>
-				</source>
-				<target>
-					<path>%s</path>
-					<permissions>
-						<mode>0771</mode>
-						<owner>0</owner>
-						<group>0</group>
-						<label>system_u:object_r:virt_image_t:s0</label>
-					</permissions>
-				</target>
-			</pool>`, l.storage, dirPath)
+		poolCfg := &libvirtxml.StoragePool{
+			Type: "dir",
+			Name: l.storage,
+			Target: &libvirtxml.StoragePoolTarget{
+				Path: dirPath,
+				Permissions: &libvirtxml.StoragePoolTargetPermissions{
+					Mode: "0771",
+				},
+			},
+		}
+		poolXML, err := poolCfg.Marshal()
+		if err != nil {
+			return fmt.Errorf("Failed to create temp pool XML: %s", err)
+		}
 
 		sPool, err = l.conn.StoragePoolCreateXML(poolXML, libvirt.STORAGE_POOL_CREATE_WITH_BUILD)
 
@@ -304,13 +300,29 @@ func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config)
 			log.Errorf("Cannot determine whether storage %s is persistent", l.storage)
 		} else {
 			if !persistent {
-				if err := storage.Delete(libvirt.STORAGE_POOL_DELETE_NORMAL); err != nil {
+				// Delete Storage function only works on inactive storage volumes
+				// Transient storage volumes can only be active afaik
+				// Going to Delete each of the volumes instead
+				volumes, err := storage.ListAllStorageVolumes(0)
+
+				if err != nil {
+					log.Errorf("Failed to delete volumes associated with temporary pool %s", l.storage)
+				} else {
+					for _, v := range volumes {
+						err = v.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+						if err != nil {
+							log.Errorf("Unable to delete volume: %s", err)
+						}
+					}
+					log.Printf("Destroyed volumes associated with %s", l.storage)
+				}
+
+				if err := storage.Destroy(); err != nil {
 					log.Errorf("Failed to destroy storage %s, %s", l.storage, err)
 
 				} else {
 					log.Printf("Destroyed temp storage %s", l.storage)
 				}
-
 			}
 		}
 		if err = storage.Free(); err != nil {
