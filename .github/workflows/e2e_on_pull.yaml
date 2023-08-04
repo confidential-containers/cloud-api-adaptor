@@ -38,6 +38,7 @@ jobs:
       fail-fast: true
       matrix:
         os:
+          - centos
           - ubuntu
         provider:
           - generic
@@ -139,7 +140,17 @@ jobs:
     name: libvirt
     if: ${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}
     needs: [podvm, image, prep_install]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - centos
+          - ubuntu
+        provider:
+          - generic
+        arch:
+          - amd64
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
-      qcow2_artifact: podvm-generic-ubuntu-amd64.qcow2
+      qcow2_artifact: podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}.qcow2
       install_directory_artifact: install_directory
