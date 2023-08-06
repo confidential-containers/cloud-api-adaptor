@@ -1,12 +1,12 @@
 # Build the manager binary
-FROM golang:1.20 as builder
+FROM quay.io/confidential-containers/golang-fedora:1.20.7-36 as builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG CGO_ENABLED=1
 ARG GOFLAGS
 
 WORKDIR /workspace
-RUN if [ "$CGO_ENABLED" = 1 ] ; then apt-get update -y && apt-get install -y libvirt-dev; fi
+RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-devel; fi
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
