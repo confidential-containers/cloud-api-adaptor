@@ -39,7 +39,7 @@
 You can either deploy the CoCo operator and cloud-api-adaptor with the `Makefile` by running
 * set CLOUD_PROVIDER
     ```
-    export CLOUD_PROVIDER=<aws|azure|ibmcloud|libvirt>
+    export CLOUD_PROVIDER=<aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere>
     ```
 
 * `make deploy` deploys operator, runtime and cloud-api-adaptor pod in the configured cluster
@@ -121,7 +121,7 @@ Alternatively the manual approach, if you want to pick a specific CoCo release/r
 
 * Set CLOUD_PROVIDER
     ```
-    export CLOUD_PROVIDER=<aws|azure|ibmcloud|libvirt>
+    export CLOUD_PROVIDER=<aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere>
     ```
 
 * Set container registry and image name
