@@ -1,16 +1,16 @@
 # Copyright Confidential Containers Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Run tests for peer-pod controller.
+# Run tests for peerpod and peerpodconfig controllers.
 ---
-name: controller
+name: controllers
 
 on:
   pull_request:
   workflow_dispatch:
 
 jobs:
-  controller_job:
+  peerpodconfig_job:
     name: peerpodconfig-ctrl
     runs-on: ubuntu-latest
     defaults:
@@ -32,6 +32,33 @@ jobs:
       - name: Verify go generated code
         run: make verify-gen
       - name: Build the controller manager
+        run: make build
+      - name: Run unit tests
+        run: make test
+      - name: Build the controller image
+        run: make docker-build
+  peerpod_job:
+    name: peerpod-ctrl
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: peerpod-ctrl
+    strategy:
+      matrix:
+        go_version:
+          - "1.20.7"
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@v3
+      - name: Install build dependencies
+        run: |
+         sudo apt-get update -y
+         sudo apt-get install -y libvirt-dev
+      - name: Setup Golang version ${{ matrix.go_version }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go_version }}
+      - name: Verify go modules
         run: make build
       - name: Run unit tests
         run: make test
