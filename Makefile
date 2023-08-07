@@ -19,6 +19,8 @@ SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 # End-to-end tests overall run timeout.
 TEST_E2E_TIMEOUT ?= 60m
 
+RESOURCE_CTRL ?= false
+
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
 	BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere
@@ -146,9 +148,15 @@ ifneq ($(CLOUD_PROVIDER),)
 else
 	$(error CLOUD_PROVIDER is not set)
 endif
+ifeq ($(RESOURCE_CTRL),true)
+	$(MAKE) -C ./peerpod-ctrl deploy
+endif
 
 .PHONY: delete
 delete: ## Delete cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
+ifeq ($(RESOURCE_CTRL),true)
+	$(MAKE) -C ./peerpod-ctrl undeploy
+endif
 ifneq ($(CLOUD_PROVIDER),)
 	kubectl delete -k install/overlays/$(CLOUD_PROVIDER)
 else
