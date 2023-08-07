@@ -23,6 +23,7 @@ Make sure to [install cloud-api-adaptor](../install/README.md) first
 ```sh
 make deploy
 ```
+**Note:** alternatively you can deploy the peerpod-ctrl along with [cloud-api-adaptor installtion](../install/README.md) by setting `RESOURCE_CTRL=true`
 
 ### Uninstall CRDs
 To delete the CRDs from the cluster:
