@@ -28,13 +28,8 @@ type IBMCloudInstallOverlay struct {
 
 type QuayTagsResponse struct {
 	Tags []struct {
-		Name       string `json:"name"`
-		ModifiedAt string `json:"last_modified"`
-		Digest     string `json:"manifest_digest"`
-		Size       string `json:"size"`
-		Manifest   bool   `json:"is_manifest_list"`
-		Reversion  bool   `json:"reversion"`
-		StartTime  int    `json:"start_ts"`
+		Name     string `json:"name"`
+		Manifest bool   `json:"is_manifest_list"`
 	} `json:"tags"`
 	Others map[string]interface{} `json:"-"`
 }
