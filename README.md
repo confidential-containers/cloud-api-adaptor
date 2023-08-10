@@ -13,8 +13,7 @@ virtualization support.
 
 ## Architecture
 
-The high level architecture is described in the picture below
-![Architecture](./docs/architecture.png)
+The background and description of the components involved in 'peer pods' can be found in the [architecture documentation](./docs/architecture.md).
 
 ## Components
 
