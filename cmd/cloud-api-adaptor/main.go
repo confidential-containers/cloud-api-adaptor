@@ -19,6 +19,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/probe"
 )
 
 const programName = "cloud-api-adaptor"
@@ -136,10 +137,9 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	return cmd.NewStarter(server), nil
 }
 
-var config cmd.Config = &daemonConfig{}
+var config = &daemonConfig{}
 
 func main() {
-
 	starter, err := config.Setup()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], err)
@@ -148,6 +148,8 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	go probe.Start(config.serverConfig.SocketPath)
 
 	if err := starter.Start(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], err)
