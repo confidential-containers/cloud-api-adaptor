@@ -142,11 +142,9 @@ func (tc *testCase) run() {
 				if err = client.Resources().Create(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
-
 				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
 					t.Fatal(err)
 				}
-
 				if tc.podState == v1.PodRunning {
 					clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 					if err != nil {
@@ -505,12 +503,16 @@ func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 
 func doTestCreatePodWithConfigMap(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
-	configMapName := "nginx-config"
+	podName := "nginx-configmap-pod"
+	containerName := "nginx-configmap-container"
+	imageName := "nginx:latest"
+	configMapName := "nginx-configmap"
 	configMapFileName := "example.txt"
-	configMapPath := "/etc/config/" + configMapFileName
+	podKubeConfigmapDir := "/etc/config/"
+	configMapPath := podKubeConfigmapDir + configMapFileName
 	configMapContents := "Hello, world"
 	configMapData := map[string]string{configMapFileName: configMapContents}
-	pod := newNginxPodWithConfigMap(namespace, configMapName)
+	pod := newPod(namespace, podName, containerName, imageName, withConfigMapBinding(podKubeConfigmapDir, configMapName))
 	configMap := newConfigMap(namespace, configMapName, configMapData)
 	testCommands := []testCommand{
 		{
@@ -528,12 +530,15 @@ func doTestCreatePodWithConfigMap(t *testing.T, assert CloudAssert) {
 		},
 	}
 
-	newTestCase(t, "ConfigMapPeerPod", assert, "Configmap is created and contains data").withPod(pod).withConfigMap(configMap).withTestCommands(testCommands).run()
+	newTestCase(t, "ConfigMapPeerPod", assert, "Configmap is created and contains data").withPod(pod).withConfigMap(configMap).withTestCommands(testCommands).withCustomPodState(v1.PodRunning).run()
 }
 
 func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 	//doTestCreatePod(t, assert, "Secret is created and contains data", pod)
 	namespace := envconf.RandomName("default", 7)
+	podName := "nginx-secret-pod"
+	containerName := "nginx-secret-container"
+	imageName := "nginx:latest"
 	secretName := "nginx-secret"
 	podKubeSecretsDir := "/etc/secret/"
 	usernameFileName := "username"
@@ -543,7 +548,7 @@ func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 	password := "password"
 	passwordPath := podKubeSecretsDir + passwordFileName
 	secretData := map[string][]byte{passwordFileName: []byte(password), usernameFileName: []byte(username)}
-	pod := newNginxPodWithSecret(namespace, secretName)
+	pod := newPod(namespace, podName, containerName, imageName, withSecretBinding(podKubeSecretsDir, secretName))
 	secret := newSecret(namespace, secretName, secretData)
 
 	testCommands := []testCommand{
@@ -575,7 +580,7 @@ func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 		},
 	}
 
-	newTestCase(t, "SecretPeerPod", assert, "Secret has been created and contains data").withPod(pod).withSecret(secret).withTestCommands(testCommands).run()
+	newTestCase(t, "SecretPeerPod", assert, "Secret has been created and contains data").withPod(pod).withSecret(secret).withTestCommands(testCommands).withCustomPodState(v1.PodRunning).run()
 }
 
 func doTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, assert CloudAssert) {
@@ -690,5 +695,5 @@ func doTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, assert CloudAssert, m
 			},
 		},
 	}
-	newTestCase(t, "PeerPodWithPVCAndCSIWrapper", assert, "PVC is created and mounted as expected").withPod(pod).withPVC(myPVC).withTestCommands(testCommands).run()
+	newTestCase(t, "PeerPodWithPVCAndCSIWrapper", assert, "PVC is created and mounted as expected").withPod(pod).withPVC(myPVC).withTestCommands(testCommands).withCustomPodState(v1.PodRunning).run()
 }

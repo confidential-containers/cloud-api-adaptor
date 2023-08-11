@@ -149,12 +149,13 @@ func TestCreatePeerPodWithPVC(t *testing.T) {
 		storageClassName := "ibmc-vpc-block-5iops-tier"
 		storageSize := "10Gi"
 		podName := "nginx-pvc-pod"
-		imageName := "nginx"
+		imageName := "nginx:latest"
+		containerName := "nginx-pvc-container"
 		csiContainerName := "ibm-vpc-block-podvm-node-driver"
 		csiImageName := "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v5.2.0"
 
 		myPVC := newPVC(nameSpace, pvcName, storageClassName, storageSize, corev1.ReadWriteOnce)
-		myPodwithPVC := newPodWithPVCFromIBMVPCBlockDriver(nameSpace, podName, imageName, imageName, csiContainerName, csiImageName, withRestartPolicy(corev1.RestartPolicyNever), withPVCBinding(mountPath, pvcName))
+		myPodwithPVC := newPodWithPVCFromIBMVPCBlockDriver(nameSpace, podName, containerName, imageName, csiContainerName, csiImageName, withPVCBinding(mountPath, pvcName))
 		doTestCreatePeerPodWithPVCAndCSIWrapper(t, assert, myPVC, myPodwithPVC, mountPath)
 	} else {
 		log.Infof("Ignore PeerPod with PVC (CSI wrapper) test")
