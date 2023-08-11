@@ -147,6 +147,20 @@ func (tc *testCase) run() {
 					t.Fatal(err)
 				}
 
+				if tc.podState == v1.PodRunning {
+					clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+					if err != nil {
+						t.Fatal(err)
+					}
+					pod, err := clientset.CoreV1().Pods(tc.pod.Namespace).Get(ctx, tc.pod.Name, metav1.GetOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
+					//Included logs for debugging nightly tests
+					t.Logf("Expected Pod State: %v", tc.podState)
+					t.Logf("Current Pod State: %v", pod.Status.Phase)
+				}
+
 			}
 			return ctx
 		}).
