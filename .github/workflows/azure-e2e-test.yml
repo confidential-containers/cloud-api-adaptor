@@ -8,7 +8,7 @@ env:
   PODVM_IMAGE_NAME: "peerpod-image-${{ github.run_id }}-${{ github.run_attempt }}"
   SSH_USERNAME: "peerpod"
   # VM size used for building image.
-  VM_SIZE: "Standard_D2as_v5"
+  VM_SIZE: "Standard_D2as_v4"
   CLUSTER_NAME: "e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
 
 on:
@@ -46,7 +46,7 @@ jobs:
     - name: Clone kata repository
       uses: actions/checkout@v3
       with:
-        repository: kata-containers/kata-containers 
+        repository: kata-containers/kata-containers
         path: kata-containers
         ref: CC-0.7.0
 
