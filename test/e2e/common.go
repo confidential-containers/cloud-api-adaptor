@@ -81,14 +81,6 @@ func newBusyboxPod(namespace string) *corev1.Pod {
 	return newPod(namespace, "busybox-pod", "busybox", "quay.io/prometheus/busybox:latest", withCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 }
 
-func newNginxPodWithConfigMap(namespace string, configMapName string) *corev1.Pod {
-	return newPod(namespace, "nginx-configmap-pod", "nginx-configmap", "nginx", withRestartPolicy(corev1.RestartPolicyNever), withConfigMapBinding("/etc/config", configMapName))
-}
-
-func newNginxPodWithSecret(namespace string, secretName string) *corev1.Pod {
-	return newPod(namespace, "nginx-secret-pod", "nginx-secret", "nginx", withRestartPolicy(corev1.RestartPolicyNever), withSecretBinding("/etc/secret", secretName))
-}
-
 // newConfigMap returns a new config map object.
 func newConfigMap(namespace string, name string, configMapData map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
