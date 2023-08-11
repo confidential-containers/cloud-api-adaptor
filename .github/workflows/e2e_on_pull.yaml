@@ -6,7 +6,7 @@
 name: e2e tests
 
 on:
-  pull_request:
+  pull_request_target:
     types:
       # This workflow will be run if the pull request is labeled test_e2e_libvirt, so
       # adding 'labeled' to the list of activity types.
@@ -15,6 +15,8 @@ on:
       - synchronize
       - reopened
       - labeled
+    branches:
+      - 'main'
 
 env:
   # cloud-api-adaptor image registry
@@ -25,6 +27,12 @@ env:
   E2E_IMG_DEV_TAG: ci-pr${{ github.event.number  }}-dev
 
 jobs:
+  authorize:
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}
+    steps:
+      - run: "true"
+
   # Build the podvm images.
   #
   # Currently it will not build the podvm, instead it downloads the qcow2 file
@@ -32,7 +40,7 @@ jobs:
   # just download the file on their runners.
   podvm:
     name: podvm
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}
+    needs: [authorize]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -76,8 +84,8 @@ jobs:
   # Reference: https://docs.github.com/en/actions/using-workflows/reusing-workflows#limitations
   #
   image:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}
     uses: ./.github/workflows/caa_build_and_push.yaml
+    needs: [authorize]
     with:
       registry: ghcr.io/${{ github.repository_owner }}
       dev_tags: ci-pr${{ github.event.number  }}-dev
