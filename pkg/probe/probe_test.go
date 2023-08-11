@@ -1,0 +1,275 @@
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+package probe
+
+import (
+	"errors"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
+	k8stesting "k8s.io/client-go/testing"
+
+	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+)
+
+// Mock a successful clientset
+func getFakeClientSetWithParas(podnamePrefix, namespace, nodeName, runtimeClass string, phase corev1.PodPhase) *fake.Clientset {
+	clientset := fake.NewSimpleClientset(&corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podnamePrefix + "-1",
+			Namespace: namespace,
+		},
+		Spec: corev1.PodSpec{
+			NodeName:         nodeName,
+			RuntimeClassName: &runtimeClass,
+		},
+		Status: corev1.PodStatus{
+			Phase: phase,
+		},
+	}, &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podnamePrefix + "-2",
+			Namespace: namespace,
+		},
+		Spec: corev1.PodSpec{
+			NodeName:         nodeName,
+			RuntimeClassName: &runtimeClass,
+		},
+		Status: corev1.PodStatus{
+			Phase: phase,
+		},
+	})
+
+	return clientset
+}
+
+func Test_GetRuntimeclassName_Default(t *testing.T) {
+	os.Setenv("RUNTIMECLASS_NAME", "")
+	ret := GetRuntimeclassName()
+	assert.Equal(t, ret, DEFAULT_CC_RUNTIMECLASS_NAME)
+}
+
+func Test_GetRuntimeclassName_Env(t *testing.T) {
+	os.Setenv("RUNTIMECLASS_NAME", "runtimeclass-customized")
+	ret := GetRuntimeclassName()
+	assert.Equal(t, ret, "runtimeclass-customized")
+}
+
+func Test_GetAllPeerPods_BeTrue(t *testing.T) {
+	os.Setenv("NODE_NAME", "node-name-1")
+
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodRunning)
+	checker = Checker{
+		Clientset:        clientset,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       "",
+	}
+	result, err := checker.GetAllPeerPods()
+
+	assert.NoError(t, err)
+	assert.True(t, result)
+
+	clientset = getFakeClientSetWithParas("pod", "default", "node-name-1", "", corev1.PodRunning)
+	checker = Checker{
+		Clientset:        clientset,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       "",
+	}
+	result, err = checker.GetAllPeerPods()
+
+	assert.NoError(t, err)
+	assert.True(t, result)
+}
+
+func Test_GetAllPeerPods_BeFalse(t *testing.T) {
+	os.Setenv("NODE_NAME", "node-name-1")
+
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodUnknown)
+	checker = Checker{
+		Clientset:        clientset,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       "",
+	}
+	result, err := checker.GetAllPeerPods()
+
+	assert.NotNil(t, err)
+	assert.False(t, result)
+}
+
+func Test_GetAllPeerPods_BeError(t *testing.T) {
+	os.Setenv("NODE_NAME", "")
+
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodUnknown)
+	checker = Checker{
+		Clientset:        clientset,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       "",
+	}
+	result, err := checker.GetAllPeerPods()
+
+	assert.NotNil(t, err)
+	assert.False(t, result)
+}
+
+func Test_IsSocketOpen_BeOpen(t *testing.T) {
+	socketPath := "/tmp/caa-probe-test-socket.sock"
+	socket, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer socket.Close()
+
+	checker = Checker{
+		Clientset:        nil,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       socketPath,
+	}
+
+	assert.Nil(t, err)
+
+	opened, err := checker.IsSocketOpen()
+	assert.Nil(t, err)
+	assert.True(t, opened)
+}
+
+func Test_IsSocketOpen_BeNotOpen(t *testing.T) {
+	socketPath := "/tmp/caa-probe-test-socket.sock"
+	checker = Checker{
+		Clientset:        nil,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       socketPath,
+	}
+
+	opened, err := checker.IsSocketOpen()
+	assert.NotNil(t, err)
+	assert.False(t, opened)
+}
+
+func Test_StartupHandler_BeReady(t *testing.T) {
+	os.Setenv("NODE_NAME", "node-name-1")
+
+	socketPath := "/tmp/caa-probe-test-socket.sock"
+	socket, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer socket.Close()
+
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodUnknown)
+	checker = Checker{
+		Clientset:        clientset,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       socketPath,
+	}
+
+	req, err := http.NewRequest("GET", "/startup", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	podsReadizProbesDone = true
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(StartupHandler).ServeHTTP(rr, req)
+
+	assert.Equal(t, rr.Code, http.StatusOK)
+}
+
+func Test_StartupHandler_NotBeAllPodsReady(t *testing.T) {
+	os.Setenv("NODE_NAME", "node-name-1")
+
+	socketPath := "/tmp/caa-probe-test-socket.sock"
+	socket, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer socket.Close()
+
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodUnknown)
+	checker = Checker{
+		Clientset:        clientset,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       socketPath,
+	}
+
+	req, err := http.NewRequest("GET", "/startup", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	podsReadizProbesDone = false
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(StartupHandler).ServeHTTP(rr, req)
+
+	assert.Equal(t, rr.Code, http.StatusInternalServerError)
+}
+
+func Test_StartupHandler_BeAllPodsReady(t *testing.T) {
+	os.Setenv("NODE_NAME", "node-name-1")
+
+	socketPath := "/tmp/caa-probe-test-socket.sock"
+	socket, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer socket.Close()
+
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodRunning)
+	checker = Checker{
+		Clientset:        clientset,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       socketPath,
+	}
+
+	req, err := http.NewRequest("GET", "/startup", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	podsReadizProbesDone = false
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(StartupHandler).ServeHTTP(rr, req)
+
+	assert.Equal(t, rr.Code, http.StatusOK)
+}
+
+func Test_StartupHandler_BeErrorListPods(t *testing.T) {
+	os.Setenv("NODE_NAME", "node-name-1")
+
+	socketPath := "/tmp/caa-probe-test-socket.sock"
+	socket, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer socket.Close()
+
+	clientset := fake.NewSimpleClientset()
+	clientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("list", "pods", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, nil, errors.New("Error creating secret")
+	})
+
+	checker = Checker{
+		Clientset:        clientset,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       socketPath,
+	}
+
+	req, err := http.NewRequest("GET", "/startup", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	podsReadizProbesDone = false
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(StartupHandler).ServeHTTP(rr, req)
+
+	assert.Equal(t, rr.Code, http.StatusInternalServerError)
+}
