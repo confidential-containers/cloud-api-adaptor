@@ -11,3 +11,4 @@ CSI Wrapper for Peer Pod Storage
 
 * [Azure](examples/azure/README.md)
 * [IBM Cloud](examples/ibm/README.md)
+* [AWS](examples/aws/README.md)

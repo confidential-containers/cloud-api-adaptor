@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app
+spec:
+  runtimeClassName: kata-remote
+  serviceAccountName: csi-ebs-podvm-sa
+  volumes:
+  - name: persistent-storage
+    persistentVolumeClaim:
+      claimName: ebs-claim
+  - name: kubelet-data-dir
+    hostPath:
+      path: /var/lib/kubelet
+      type: Directory
+  - emptyDir: {}
+    name: plugin-dir
+
+  containers:
+  - name: app
+    image: centos
+    command: ["/bin/sh"]
+    args: ["-c", "while true; do echo $(date -u) >> /data/out.txt; sleep 5; done"]
+    volumeMounts:
+    - name: persistent-storage
+      mountPath: /data
+
+  - name: csi-podvm-node-driver
+    env:
+      - name: KUBE_NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
+      - name: CSI_NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
+     # set when IMDS isn't accessible from the podvm
+     # - name: AWS_REGION
+     #   value: "us-east-1"
+
+    image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.21.0
+    imagePullPolicy: Always
+    securityContext:
+      privileged: true
+      runAsNonRoot: false
+      runAsUser: 0
+    ports:
+      - containerPort: 9808
+        name: healthz
+        protocol: TCP
+    volumeMounts:
+      - name: kubelet-data-dir
+        mountPath: /var/lib/kubelet
+        mountPropagation: Bidirectional
+      - mountPath: /tmp
+        name: plugin-dir
+
+  - name: csi-podvm-wrapper
+    env:
+      - name: BINARY
+        value: "csi-podvm-wrapper"
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+      - name: POD_NAME_SPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+      - name: POD_UID
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.uid
+      - name: POD_NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
+    image: quay.io/confidential-containers/csi-podvm-wrapper:latest
+    imagePullPolicy: Always
+    command: ["/usr/bin/csi-podvm-wrapper"] # TODO: using default entrypoint seems to fail with peer-pods
+    args:
+    - --v=2
+    - --endpoint=/tmp/csi-podvm-wrapper.sock
+    - --target-endpoint=/tmp/csi.sock
+    - --namespace=kube-system
+    volumeMounts:
+      - mountPath: /tmp
+        name: plugin-dir

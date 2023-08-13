@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-ebs-podvm-sa
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-csi-wrapper-podvm
+rules:
+  - apiGroups: ["confidentialcontainers.org"]
+    resources: ["peerpodvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete", "update", "patch"]
+  - apiGroups: ["confidentialcontainers.org"]
+    resources: ["peerpodvolumes/status"]
+    verbs: ["update"]
+ # required by the ebs-csi-driver - https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/deploy/kubernetes/base/clusterrole-csi-node.yaml
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "watch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-csi-wrapper-podvm-binding
+subjects:
+  - kind: ServiceAccount
+    name: csi-ebs-podvm-sa
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: ebs-csi-wrapper-podvm
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-csi-wrapper-podvm
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-csi-wrapper-podvm-binding
+subjects:
+  - kind: ServiceAccount
+    name: csi-ebs-podvm-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: ebs-csi-wrapper-podvm
+  apiGroup: rbac.authorization.k8s.io
