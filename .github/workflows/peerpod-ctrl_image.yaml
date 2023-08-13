@@ -31,6 +31,10 @@ jobs:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
+      - name: Validate build args contains the essentials
+        run: |
+           make list-build-args | grep -e 'CGO_ENABLED=[0|1]' && \
+           make list-build-args | grep 'GOFLAGS=' | grep -E '\-tags=[a-z,]*'
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
@@ -40,6 +44,5 @@ jobs:
           push: true
           context: .
           build-args: |
-            "GOFLAGS=-tags=aws,libvirt,azure"
-            "CGO_ENABLED=1"
+            "$(make list-build-args)"
 
