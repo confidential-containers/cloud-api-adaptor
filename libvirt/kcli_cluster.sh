@@ -13,6 +13,7 @@ CLUSTER_DISK_SIZE="${CLUSTER_DISK_SIZE:-20}"
 CLUSTER_CONTROL_NODES="${CLUSTER_CONTROL_NODES:-1}"
 CLUSTER_NAME="${CLUSTER_NAME:-peer-pods}"
 CLUSTER_IMAGE="${CLUSTER_IMAGE:-ubuntu2004}"
+CLUSTER_VERSION="${CLUSTER_VERSION:-1.26.7}"
 CLUSTER_WORKERS="${CLUSTER_WORKERS:-1}"
 LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-default}"
 LIBVIRT_POOL="${LIBVIRT_POOL:-default}"
@@ -50,6 +51,7 @@ create () {
 		-P sdn=flannel \
 		-P nfs=false \
 		-P disk_size="$CLUSTER_DISK_SIZE" \
+		-P version="$CLUSTER_VERSION" \
 		"$CLUSTER_NAME"
 
 	export KUBECONFIG=$HOME/.kcli/clusters/$CLUSTER_NAME/auth/kubeconfig
@@ -90,6 +92,7 @@ usage () {
 	          CLUSTER_IMAGE           (default "${CLUSTER_IMAGE}")
 	          CLUSTER_CONTROL_NODES   (default "${CLUSTER_CONTROL_NODES}")
 	          CLUSTER_NAME            (default "${CLUSTER_NAME}")
+	          CLUSTER_VERSION         (default "${CLUSTER_VERSION}")
 	          LIBVIRT_NETWORK         (default "${LIBVIRT_NETWORK}")
 	          LIBVIRT_POOL            (default "${LIBVIRT_POOL}")
 	          CLUSTER_WORKERS         (default "${CLUSTER_WORKERS}").
