@@ -136,6 +136,7 @@ jobs:
           sudo apt-get install -y build-essential
 
       - name: run tests
+        id: runTests
         run: |
           export TEST_PROVISION="yes"
           export TEST_TEARDOWN="no"
@@ -144,3 +145,44 @@ jobs:
           export TEST_E2E_TIMEOUT="50m"
 
           make test-e2e
+
+      - name: Debug tests failure
+        if: failure() && steps.runTests.outcome == 'failure'
+        run: |
+          export KUBECONFIG="${HOME}/.kcli/clusters/peer-pods/auth/kubeconfig"
+
+          echo "::group::CoCo and Peer Pods installation"
+          kubectl get pods -n confidential-containers-system
+          echo "::endgroup::"
+
+          echo "::group::cloud-api-adaptor logs"
+          kubectl logs -l app=cloud-api-adaptor -n confidential-containers-system
+          echo "::endgroup::"
+
+          for pod in $(kubectl get pods -o name 2>/dev/null); do
+            echo "::group::Describe $pod"
+            kubectl describe "$pod"
+            echo "::endgroup::"
+          done
+
+          echo "::group::Libvirt domains"
+          sudo virsh list
+          echo "::endgroup::"
+
+          for podvm in $(sudo virsh list --name | grep "podvm-"); do
+            echo "::group::podvm $podvm"
+            sudo virsh dominfo "$podvm"
+            sudo virsh domifaddr "$podvm"
+            echo "::endgroup::"
+          done
+
+          echo "::group::podvm base volume"
+          sudo virsh vol-info --pool default podvm-base.qcow2
+          ls -lh /var/lib/libvirt/images/podvm-base.qcow2
+          echo "::endgroup::"
+
+          echo "::group::Check podvm base volume integrity"
+          sudo qemu-img check /var/lib/libvirt/images/podvm-base.qcow2
+          echo "::endgroup::"
+        # Avoid running with `set -e` as command fails should be allowed
+        shell: bash {0}
