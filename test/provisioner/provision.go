@@ -140,10 +140,10 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	cmd := exec.Command("kubectl", "delete", "-k", "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
 	stdoutStderr, err := cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		return err
 	}
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 
 	for _, pods := range []*corev1.PodList{ccPods, caaPods} {
 		if err != nil {
@@ -160,10 +160,10 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	cmd = exec.Command("kubectl", "delete", "-k", "github.com/confidential-containers/operator/config/default")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
 	stdoutStderr, err = cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		return err
 	}
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 
 	log.Infof("Wait for the %s deployment be deleted\n", p.controllerDeployment.GetName())
 	if err = wait.For(conditions.New(resources).ResourcesDeleted(deployments),
@@ -187,10 +187,10 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	cmd := exec.Command("kubectl", "apply", "-k", "github.com/confidential-containers/operator/config/default")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
 	stdoutStderr, err := cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		return err
 	}
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 
 	fmt.Printf("Wait for the %s deployment be available\n", p.controllerDeployment.GetName())
 	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(p.controllerDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
@@ -206,10 +206,10 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	cmd = exec.Command("kubectl", "apply", "-k", "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
 	stdoutStderr, err = cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		return err
 	}
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 
 	log.Info("Install the cloud-api-adaptor")
 	if err := p.installOverlay.Apply(ctx, cfg); err != nil {
