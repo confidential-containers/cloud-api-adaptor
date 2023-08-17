@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	libvirt "libvirt.org/go/libvirt"
 	libvirtxml "libvirt.org/go/libvirtxml"
 )
@@ -25,6 +26,10 @@ const (
 	archS390x = "s390x"
 	// hvm indicates that the OS is one designed to run on bare metal, so requires full virtualization.
 	typeHardwareVirtualMachine = "hvm"
+	// The amount of retries to get the domain IP addresses
+	GetDomainIPsRetries = 20
+	// The sleep time between retries to get the domain IP addresses
+	GetDomainIPsSleep = time.Second * 3
 )
 
 type domainConfig struct {
@@ -501,12 +506,29 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	logger.Printf("VM id %s", v.instanceId)
 
 	// Wait for sometime for the IP to be visible
-	// TBD: Figure out a better mechanism
-	time.Sleep(30 * time.Second)
+	if err := retry.Do(
+		func() error {
+			ips, err := getDomainIPs(dom)
+			if err != nil {
+				// Something went completely wrong so it should return immediately
+				return retry.Unrecoverable(fmt.Errorf("Internal error on getting domain IPs: %s", err))
+			}
 
-	v.ips, err = getDomainIPs(dom)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get domain IPs: %s", err)
+			if len(ips) > 0 {
+				return nil
+			}
+			return fmt.Errorf("Domain has not IPs assigned yet")
+		},
+		retry.Attempts(GetDomainIPsRetries),
+		retry.Delay(GetDomainIPsSleep),
+	); err != nil {
+		logger.Printf("Unable to get IP addresses after %d retries (sleep time=%ds): %s",
+			GetDomainIPsRetries, GetDomainIPsSleep, err)
+		return nil, fmt.Errorf("Domain (id=%d) IP addresses not found", id)
+	}
+
+	if v.ips, err = getDomainIPs(dom); err != nil {
+		return nil, fmt.Errorf("Internal error on getting domain IPs: %s", err)
 	}
 
 	logger.Printf("Instance created successfully")
