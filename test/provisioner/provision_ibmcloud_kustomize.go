@@ -51,6 +51,8 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME":
 		return true
+	case "IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST":
+		return true
 	case "IBMCLOUD_ZONE":
 		return true
 	case "IBMCLOUD_VPC_SUBNET_ID":

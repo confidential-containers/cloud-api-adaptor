@@ -7,14 +7,16 @@ package e2e
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"strings"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
@@ -434,6 +436,46 @@ func TestDeletePod(t *testing.T) {
 	doTestDeleteSimplePod(t, assert)
 }
 
+func TestPodVMwithNoAnnotations(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestPodVMwithNoAnnotations(t, assert, getProfileType("b", "2x8"))
+}
+
+func TestPodVMwithAnnotationsInstanceType(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestPodVMwithAnnotationsInstanceType(t, assert, getProfileType("c", "2x4"))
+}
+
+func TestPodVMwithAnnotationsCPUMemory(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestPodVMwithAnnotationsCPUMemory(t, assert, getProfileType("m", "2x16"))
+}
+
+func TestPodVMwithAnnotationsInvalidInstanceType(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestPodVMwithAnnotationsInvalidInstanceType(t, assert, getProfileType("b", "2x4"))
+}
+func TestPodVMwithAnnotationsLargerMemory(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestPodVMwithAnnotationsLargerMemory(t, assert)
+}
+func TestPodVMwithAnnotationsLargerCPU(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestPodVMwithAnnotationsLargerCPU(t, assert)
+}
+
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
 type IBMCloudAssert struct {
 	vpc *vpcv1.VpcV1
@@ -501,4 +543,32 @@ func (c *IBMRollingUpdateAssert) VerifyOldVmDeleted(t *testing.T) {
 			t.Fatalf("Instance %s still exists", id)
 		}
 	}
+}
+
+func (c IBMCloudAssert) getInstanceType(t *testing.T, podName string) (string, error) {
+	options := &vpcv1.ListInstancesOptions{}
+	instances, _, err := c.vpc.ListInstances(options)
+
+	if err != nil {
+		return "", err
+	}
+	for _, instance := range instances.Instances {
+		name := *instance.Name
+		if strings.HasPrefix(name, strings.Join([]string{"podvm", podName, ""}, "-")) {
+			profile := instance.Profile.Name
+			return *profile, nil
+		}
+	}
+	return "", errors.New("Failed to Create PodVM Instance")
+}
+
+func getProfileType(prefix string, config string) string {
+	if strings.EqualFold("s390x", pv.IBMCloudProps.PodvmImageArch) {
+		if strings.Contains(pv.IBMCloudProps.InstanceProfile, "e-") {
+			return prefix + "z2e-" + config
+		} else {
+			return prefix + "z2-" + config
+		}
+	}
+	return prefix + "x2-" + config
 }

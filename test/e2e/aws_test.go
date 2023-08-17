@@ -65,6 +65,11 @@ func (aa AWSAssert) HasPodVM(t *testing.T, id string) {
 	}
 }
 
+func (aa AWSAssert) getInstanceType(t *testing.T, podName string) (string, error) {
+	// Get Instance Type of PodVM
+	return "", nil
+}
+
 func TestAwsCreateSimplePod(t *testing.T) {
 	assert := NewAWSAssert()
 

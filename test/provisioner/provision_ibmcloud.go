@@ -946,6 +946,21 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	return nil
 }
 
+func getProfileList() string {
+	var profileList string
+	if strings.EqualFold("s390x", IBMCloudProps.PodvmImageArch) {
+		if strings.Contains(IBMCloudProps.InstanceProfile, "e-") {
+			profileList = "bz2e-2x8,cz2e-2x4,mz2e-2x16"
+		} else {
+			profileList = "bz2-2x8,cz2-2x4,mz2-2x16"
+		}
+	} else {
+		profileList = "bx2-2x8,cx2-2x4,mx2-2x16"
+
+	}
+	return profileList
+}
+
 func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
 		"CLOUD_PROVIDER":                       IBMCloudProps.IBMCloudProvider,
@@ -962,6 +977,7 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"IBMCLOUD_API_KEY":                     IBMCloudProps.ApiKey,
 		"IBMCLOUD_IAM_PROFILE_ID":              IBMCloudProps.IamProfileID,
 		"IBMCLOUD_IAM_ENDPOINT":                IBMCloudProps.IamServiceURL,
+		"IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST": getProfileList(),
 	}
 }
 
