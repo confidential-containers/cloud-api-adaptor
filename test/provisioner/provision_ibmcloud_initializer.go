@@ -31,6 +31,7 @@ type IBMCloudProperties struct {
 	CosServiceURL     string
 	SecurityGroupID   string
 	IamServiceURL     string
+	IksServiceURL     string
 	InstanceProfile   string
 	KubeVersion       string
 	PodvmImageID      string
@@ -72,6 +73,7 @@ func initProperties(properties map[string]string) error {
 		CosInstanceID:     properties["COS_INSTANCE_ID"],
 		CosServiceURL:     properties["COS_SERVICE_URL"],
 		IamServiceURL:     properties["IAM_SERVICE_URL"],
+		IksServiceURL:     properties["IKS_SERVICE_URL"],
 		InstanceProfile:   properties["INSTANCE_PROFILE_NAME"],
 		KubeVersion:       properties["KUBE_VERSION"],
 		PodvmImageID:      properties["PODVM_IMAGE_ID"],
@@ -160,6 +162,12 @@ func initProperties(properties map[string]string) error {
 	}
 	log.Infof("VpcServiceURL is: %s.", IBMCloudProps.VpcServiceURL)
 
+	// IKS_SERVICE_URL can overwrite the default IksServiceURL IKS_SERVICE_URL=https://containers.cloud.ibm.com/global, for example IKS_SERVICE_URL="https://containers.test.cloud.ibm.com/global"
+	if len(IBMCloudProps.IksServiceURL) <= 0 {
+		IBMCloudProps.IksServiceURL = "https://containers.cloud.ibm.com/global"
+	}
+	log.Infof("IksServiceURL is: %s.", IBMCloudProps.IksServiceURL)
+
 	needProvisionStr := os.Getenv("TEST_PROVISION")
 	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") {
 		if len(IBMCloudProps.ApiKey) <= 0 {
@@ -246,10 +254,21 @@ func initVpcV1() error {
 func initClustersAPI() error {
 	log.Trace("initClustersAPI()")
 
-	cfg := &bx.Config{
-		BluemixAPIKey: IBMCloudProps.ApiKey,
-		Region:        IBMCloudProps.Region,
+	iamServiceURLParts := strings.Split(IBMCloudProps.IamServiceURL, "/")
+	if len(iamServiceURLParts) < 3 || len(iamServiceURLParts[1]) != 0 {
+		return errors.New("IAM service endpoint is malformed")
 	}
+
+	tokenProviderEndpoint := iamServiceURLParts[0] + "//" + iamServiceURLParts[2]
+	log.Tracef("IAM token provider endpoint for bx config is %s.", tokenProviderEndpoint)
+
+	cfg := &bx.Config{
+		BluemixAPIKey:         IBMCloudProps.ApiKey,
+		Region:                IBMCloudProps.Region,
+		Endpoint:              &IBMCloudProps.IksServiceURL,
+		TokenProviderEndpoint: &tokenProviderEndpoint,
+	}
+
 	sess, err := bxsession.New(cfg)
 	if err != nil {
 		return err
