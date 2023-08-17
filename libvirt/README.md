@@ -91,8 +91,13 @@ $ cat id_rsa.pub >> ~/.ssh/authorized_keys
 **Note**: ensure that `~/.ssh/authorized_keys` has the right permissions (read/write for the user only) otherwise the
 authentication can silently fail. You can run `chmod 600 ~/.ssh/authorized_keys` to set the right permissions.
 
-You will need to figure out the IP address of your local host (e.g. 192.168.122.1). Then try to remote connect with
-libvirt to check the keys setup is fine, for example:
+You will need to figure out the IP address of your local host (e.g. 192.168.122.1). This can be determined by looking at the ip address field from the network xml.
+
+```
+virsh -c qemu:///system net-dumpxml default
+```
+
+Then try to remote connect with libvirt to check the keys setup is fine, for example:
 
 ```
 $ virsh -c "qemu+ssh://$USER@192.168.122.1/system?keyfile=$(pwd)/id_rsa" nodeinfo
@@ -232,22 +237,54 @@ cc-operator-daemon-install-fkkzz                 1/1     Running   0          20
 cloud-api-adaptor-daemonset-libvirt-lxj7v        1/1     Running   0          20h
 ```
 
-In order to remove the *\*-daemon-install-\** and *\*-cloud-api-adaptor-daemonset-\** pods, run the following command from the
+In order to remove the *\*-cloud-api-adaptor-daemonset-\** pod, run the following command from the
 root directory:
 
 ```
 $ CLOUD_PROVIDER=libvirt make delete
+
+kubectl delete -k install/overlays/libvirt
+serviceaccount "cloud-api-adaptor" deleted
+clusterrole.rbac.authorization.k8s.io "node-viewer" deleted
+clusterrole.rbac.authorization.k8s.io "peerpod-editor" deleted
+clusterrole.rbac.authorization.k8s.io "pod-viewer" deleted
+clusterrolebinding.rbac.authorization.k8s.io "node-viewer" deleted
+clusterrolebinding.rbac.authorization.k8s.io "peerpod-editor" deleted
+clusterrolebinding.rbac.authorization.k8s.io "pod-viewer" deleted
+configmap "peer-pods-cm" deleted
+secret "auth-json-secret" deleted
+secret "peer-pods-secret" deleted
+secret "ssh-key-secret" deleted
+daemonset.apps "cloud-api-adaptor-daemonset" deleted
 ```
 
-It can take some minutes to get those pods deleted, afterwards you will notice that only the *controller-manager* is
-still up. Below is shown how to delete that pod and associated resources as well:
+This can be useful if one needs to update kustomization.yaml. After making changes, one can re-apply the cloud-api-adaptor with:
+```
+kubectl apply -k install/overlays/libvirt/
+```
+
+To delete Confidential Containers, (the ccruntime resource, the cc-operator-daemon-install and cc-operator-pre-install-daemon pods) run:
 
 ```
-$ kubectl get pods -n confidential-containers-system
-NAME                                             READY   STATUS    RESTARTS   AGE
-cc-operator-controller-manager-fbb5dcf9d-h42nn   2/2     Running   0          20h
-$ kubectl delete -f install/yamls/deploy.yaml
+$ kubectl delete -k "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods"
+
+ccruntime.confidentialcontainers.org "ccruntime-peer-pods" deleted
+```
+
+It can take some minutes to get those pods deleted. Afterwards you will notice that only the *controller-manager* pod is
+still up. The ccruntime resource will also be deleted. This can be verified with:
+```
+kubectl get ccruntime
+```
+which should return nothing.
+
+To delete the *controller-manager*:
+
+```
+$ kubectl delete -k "github.com/confidential-containers/operator/config/default"
+
 namespace "confidential-containers-system" deleted
+customresourcedefinition.apiextensions.k8s.io "ccruntimes.confidentialcontainers.org" deleted
 serviceaccount "cc-operator-controller-manager" deleted
 role.rbac.authorization.k8s.io "cc-operator-leader-election-role" deleted
 clusterrole.rbac.authorization.k8s.io "cc-operator-manager-role" deleted
@@ -259,7 +296,15 @@ clusterrolebinding.rbac.authorization.k8s.io "cc-operator-proxy-rolebinding" del
 configmap "cc-operator-manager-config" deleted
 service "cc-operator-controller-manager-metrics-service" deleted
 deployment.apps "cc-operator-controller-manager" deleted
-customresourcedefinition.apiextensions.k8s.io "ccruntimes.confidentialcontainers.org" deleted
-$ kubectl get pods -n confidential-containers-system
-No resources found in confidential-containers-system namespace.
 ```
+
+Verify that all pods and the namespace has been destroyed.
+```
+kubectl get pods -n confidential-containers-system
+```
+should return nothing. Additionally,
+
+```
+kubectl get namespaces
+```
+should show that there is no longer a confidential-containers-system namespace.
