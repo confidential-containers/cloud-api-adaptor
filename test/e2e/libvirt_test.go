@@ -98,3 +98,8 @@ func (l LibvirtAssert) HasPodVM(t *testing.T, id string) {
 	// It didn't find the PodVM if it reached here.
 	t.Error("PodVM was not created")
 }
+
+func (l LibvirtAssert) getInstanceType(t *testing.T, podName string) (string, error) {
+	// Get Instance Type of PodVM
+	return "", nil
+}

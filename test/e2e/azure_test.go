@@ -71,3 +71,8 @@ func (c AzureCloudAssert) HasPodVM(t *testing.T, id string) {
 		t.Error("PodVM was not created")
 	}
 }
+
+func (c AzureCloudAssert) getInstanceType(t *testing.T, podName string) (string, error) {
+	// Get Instance Type of PodVM
+	return "", nil
+}

@@ -62,6 +62,12 @@ func withPVCBinding(mountPath string, pvcName string) podOption {
 	}
 }
 
+func withAnnotations(data map[string]string) podOption {
+	return func(p *corev1.Pod) {
+		p.ObjectMeta.Annotations = data
+	}
+}
+
 func newPod(namespace string, podName string, containerName string, imageName string, options ...podOption) *corev1.Pod {
 	runtimeClassName := "kata-remote"
 	pod := &corev1.Pod{
@@ -160,7 +166,8 @@ func newPVC(namespace, name, storageClassName, diskSize string, accessModel core
 
 // CloudAssert defines assertions to perform on the cloud provider.
 type CloudAssert interface {
-	HasPodVM(t *testing.T, id string) // Assert there is a PodVM with `id`.
+	HasPodVM(t *testing.T, id string)                             // Assert there is a PodVM with `id`.
+	getInstanceType(t *testing.T, podName string) (string, error) // Get Instance Type of PodVM
 }
 
 // RollingUpdateAssert defines assertions for rolling update test
