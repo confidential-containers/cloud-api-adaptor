@@ -91,8 +91,13 @@ $ cat id_rsa.pub >> ~/.ssh/authorized_keys
 **Note**: ensure that `~/.ssh/authorized_keys` has the right permissions (read/write for the user only) otherwise the
 authentication can silently fail. You can run `chmod 600 ~/.ssh/authorized_keys` to set the right permissions.
 
-You will need to figure out the IP address of your local host (e.g. 192.168.122.1). Then try to remote connect with
-libvirt to check the keys setup is fine, for example:
+You will need to figure out the IP address of your local host (e.g. 192.168.122.1). This can be determined by looking at the ip address field from the network xml.
+
+```
+virsh -c qemu:///system net-dumpxml default
+```
+
+Then try to remote connect with libvirt to check the keys setup is fine, for example:
 
 ```
 $ virsh -c "qemu+ssh://$USER@192.168.122.1/system?keyfile=$(pwd)/id_rsa" nodeinfo
@@ -237,17 +242,39 @@ root directory:
 
 ```
 $ CLOUD_PROVIDER=libvirt make delete
+
+kubectl delete -k install/overlays/libvirt
+serviceaccount "cloud-api-adaptor" deleted
+clusterrole.rbac.authorization.k8s.io "node-viewer" deleted
+clusterrole.rbac.authorization.k8s.io "peerpod-editor" deleted
+clusterrole.rbac.authorization.k8s.io "pod-viewer" deleted
+clusterrolebinding.rbac.authorization.k8s.io "node-viewer" deleted
+clusterrolebinding.rbac.authorization.k8s.io "peerpod-editor" deleted
+clusterrolebinding.rbac.authorization.k8s.io "pod-viewer" deleted
+configmap "peer-pods-cm" deleted
+secret "auth-json-secret" deleted
+secret "peer-pods-secret" deleted
+secret "ssh-key-secret" deleted
+daemonset.apps "cloud-api-adaptor-daemonset" deleted
+```
+We must delete the other Kustomization resources applied by the Makefile.
+
+To delete the ccruntime (ccruntime-peer-pods), the cc-operator-daemon-install and cc-operator-pre-install-daemon pods run:
+
+```
+$ kubectl delete -k "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods"
+
+ccruntime.confidentialcontainers.org "ccruntime-peer-pods" deleted
 ```
 
 It can take some minutes to get those pods deleted, afterwards you will notice that only the *controller-manager* is
 still up. Below is shown how to delete that pod and associated resources as well:
 
 ```
-$ kubectl get pods -n confidential-containers-system
-NAME                                             READY   STATUS    RESTARTS   AGE
-cc-operator-controller-manager-fbb5dcf9d-h42nn   2/2     Running   0          20h
-$ kubectl delete -f install/yamls/deploy.yaml
+$ kubectl delete -k "github.com/confidential-containers/operator/config/default"
+
 namespace "confidential-containers-system" deleted
+customresourcedefinition.apiextensions.k8s.io "ccruntimes.confidentialcontainers.org" deleted
 serviceaccount "cc-operator-controller-manager" deleted
 role.rbac.authorization.k8s.io "cc-operator-leader-election-role" deleted
 clusterrole.rbac.authorization.k8s.io "cc-operator-manager-role" deleted
@@ -259,7 +286,48 @@ clusterrolebinding.rbac.authorization.k8s.io "cc-operator-proxy-rolebinding" del
 configmap "cc-operator-manager-config" deleted
 service "cc-operator-controller-manager-metrics-service" deleted
 deployment.apps "cc-operator-controller-manager" deleted
-customresourcedefinition.apiextensions.k8s.io "ccruntimes.confidentialcontainers.org" deleted
-$ kubectl get pods -n confidential-containers-system
-No resources found in confidential-containers-system namespace.
 ```
+
+Verify that the namespace has been destroyed
+
+```
+kubectl get namespaces
+```
+
+if confidential-containers-system is still active, look for resources that may not have been destroyed. Check what resources
+may have not been properly destroyed with.
+
+```
+kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n confidential-containers-system
+```
+
+A likely cause is that resources may have remaining [finalizers](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers) that have not been removed.
+
+
+# Remote Connection
+
+It is possible to connect to a remote kubernetes cluster.
+
+## Set up Remote kubectl configuration
+
+First, ensure that you can ssh to where the remote cluster is being controlled.
+
+Copy the config file locally using scp.
+
+```
+scp -r <user>@<remote>:<path-to-kubeconfig-file> .
+```
+
+Export the KUBECONFIG variable to this new file.
+
+## Set up the public key
+The remote machine must have the pubic key corresponding to the private key used on the local machine.
+
+```
+scp -r install/overlays/libvirt/id_rsa.pub <user>@<remote>:<path-to-repo>/install/overlays/libvirt/id_rsa.pub
+```
+
+## Set up remote uri
+Set both libvirt_uri and libvirt_conn_uri to `qemu+ssh:///<user>@<remote>`
+
+You should be able to remotely install the operator or run tests. 
