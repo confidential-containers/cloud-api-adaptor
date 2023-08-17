@@ -391,6 +391,33 @@ func createDomainXML(client *libvirtClient, cfg *domainConfig) (*libvirtxml.Doma
 	}
 }
 
+// getDomainIPs get all IP addresses of all domain network interfaces
+//
+// Note that at the time this function is called the domain might
+// not get IP addresses yet, so the list will be empty and none
+// error is returned.
+func getDomainIPs(dom *libvirt.Domain) ([]netip.Addr, error) {
+	ips := []netip.Addr{}
+
+	domIfList, err := dom.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
+	if err != nil {
+		domName, _ := dom.GetName()
+		return nil, fmt.Errorf("Failed to get domain %s interfaces: %s", domName, err)
+	}
+
+	for _, domIf := range domIfList {
+		for _, addr := range domIf.Addrs {
+			parsedAddr, err := netip.ParseAddr(addr.Addr)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to parse address: %s", err)
+			}
+			ips = append(ips, parsedAddr)
+		}
+	}
+
+	return ips, nil
+}
+
 func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig) (result *createDomainOutput, err error) {
 
 	v.cpu = uint(2)
@@ -477,22 +504,9 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	// TBD: Figure out a better mechanism
 	time.Sleep(30 * time.Second)
 
-	domInterface, err := dom.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
+	v.ips, err = getDomainIPs(dom)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get domain interfaces: %s", err)
-	}
-
-	logger.Printf("domain IP details %v", domInterface)
-
-	if len(domInterface) > 0 {
-		// TBD: ability to handle multiple interfaces and ips
-		logger.Printf("VM IP %s", domInterface[0].Addrs[0].Addr)
-		addr, err := netip.ParseAddr(domInterface[0].Addrs[0].Addr)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to parse address: %s", err)
-		}
-		v.ips = append(v.ips, addr)
-		logger.Printf("VM IP list %v", v.ips)
+		return nil, fmt.Errorf("Failed to get domain IPs: %s", err)
 	}
 
 	logger.Printf("Instance created successfully")
