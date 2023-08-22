@@ -33,3 +33,7 @@ output "AZURE_PODVM_IMAGE_DEF_NAME" {
 output "AZURE_MANAGED_IDENTITY_NAME" {
   value = azurerm_user_assigned_identity.gh_action_user_identity.name
 }
+
+output "AZURE_COMMUNITY_GALLERY_NAME" {
+  value = azurerm_shared_image_gallery.podvm_image_gallery.sharing[0].community_gallery[0].name
+}
