@@ -79,7 +79,7 @@ resource "azurerm_shared_image_gallery" "podvm_image_gallery" {
 	prefix = "cocopodvm"
 	eula   = "https://raw.githubusercontent.com/confidential-containers/confidential-containers/main/LICENSE"
 	publisher_uri = "https://github.com/confidential-containers/confidential-containers"
-	publisher_email = "kartikjoshi@microsoft.com"
+	publisher_email = "cocoatmsft@outlook.com"
     }
   }
 }
@@ -97,5 +97,4 @@ resource "azurerm_shared_image" "podvm_image" {
   }
   hyper_v_generation        = "V2"
   confidential_vm_supported = true
-
 }
