@@ -1,0 +1,151 @@
+name: Azure PodVM image build
+
+on:
+  workflow_call:
+    inputs:
+      image-version:
+        type: string
+        required: true
+    outputs:
+      image-id:
+        description: "The PodVM image id"
+        value: ${{ jobs.build-podvm-image.outputs.image-id }}
+
+  workflow_dispatch:
+    inputs:
+      image-version:
+        type: string
+        description: x.y.z
+      git-ref:
+        type: string
+        default: 'main'
+        description: tag, branch, sha
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_PODVM_IMAGE_DEF_NAME: "podvm_image0"
+  AZURE_PODVM_IMAGE_VERSION: "${{ inputs.image-version }}"
+  COMMUNITY_GALLERY_PREFIX: "/CommunityGalleries/cocopodvm-d0e4f35f-5530-4b9c-8596-112487cdea85"
+  GO_VERSION: "1.20"
+  KATA_AGENT_VERSION: "CC-0.7.0"
+  PODVM_IMAGE_NAME: "peerpod-image-${{ github.run_id }}-${{ github.run_attempt }}"
+  RUST_VERSION: "1.70.0"
+  SSH_USERNAME: "peerpod"
+  VM_SIZE: "Standard_D2as_v5"
+
+jobs:
+  build-podvm-image:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloud-api-adaptor/azure/image
+    outputs:
+      image-id: "${{ steps.create-image.outputs.image-id }}"
+    steps:
+    - name: Clone cloud-api-adaptor repository
+      uses: actions/checkout@v3
+      with:
+        path: cloud-api-adaptor
+        ref: "${{ inputs.git-ref || 'main' }}"
+
+    - name: Set up Go environment
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache-dependency-path: cloud-api-adaptor/go.sum
+
+    - name: Install build dependencies
+      run: sudo apt-get install -y musl-tools libdevmapper-dev libgpgme-dev
+
+    - name: Build agent-protocol-forwarder
+      env:
+        GOPATH: /home/runner/go
+      run: make "$(realpath -m ../../podvm/files/usr/local/bin/agent-protocol-forwarder)"
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: ${{ env.RUST_VERSION }}
+        target: x86_64-unknown-linux-musl
+        default: true
+
+    - name: Set up kata-agent cache
+      id: kata-agent-cache
+      uses: actions/cache@v3
+      with:
+        path: cloud-api-adaptor/podvm/files/usr/local/bin/kata-agent
+        key: kata-agent-${{ env.KATA_AGENT_VERSION }}_rust${{ env.RUST_VERSION }}
+
+    - name: Clone kata-containers repository
+      if: steps.kata-agent-cache.outputs.cache-hit != 'true'
+      uses: actions/checkout@v3
+      with:
+        repository: kata-containers/kata-containers
+        path: kata-containers
+        ref: ${{ env.KATA_AGENT_VERSION }}
+
+    - name: Build kata-agent
+      env:
+        GOPATH: /home/runner/go
+      if: steps.kata-agent-cache.outputs.cache-hit != 'true'
+      run: make "$(realpath -m ../../podvm/files/usr/local/bin/kata-agent)"
+
+    - name: Set up pause cache
+      id: pause-cache
+      uses: actions/cache@v3
+      with:
+        path: cloud-api-adaptor/podvm/files/pause_bundle
+        key: pause-${{ hashFiles('cloud-api-adaptor/podvm/Makefile.inc') }}
+
+    - name: Build pause bundle
+      if: steps.pause-cache.outputs.cache-hit != 'true'
+      run: make "$(realpath -m ../../podvm/files/pause_bundle/rootfs/pause)"
+
+    - name: Set up attestation-agent cache
+      id: aa-cache
+      uses: actions/cache@v3
+      with:
+        path: cloud-api-adaptor/podvm/files/usr/local/bin/attestation-agent
+        key: aa-${{ hashFiles('cloud-api-adaptor/podvm/Makefile.inc') }}
+
+    - name: Build attestation-agent
+      if: steps.aa-cache.outputs.cache-hit != 'true'
+      run: make "$(realpath -m ../../podvm/files/usr/local/bin/attestation-agent)"
+
+    - uses: azure/login@v1
+      name: 'Az CLI login'
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Create image
+      id: create-image
+      env:
+        IMAGE_ID: "${{ env.COMMUNITY_GALLERY_PREFIX }}/images/${{ env.AZURE_PODVM_IMAGE_DEF_NAME }}/versions/${{ env.AZURE_PODVM_IMAGE_VERSION }}"
+        PKR_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        PKR_VAR_resource_group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        PKR_VAR_location: ${{ secrets.AZURE_REGION }}
+        PKR_VAR_az_image_name: ${{ env.PODVM_IMAGE_NAME }}
+        PKR_VAR_vm_size: ${{ env.VM_SIZE }}
+        PKR_VAR_ssh_username: ${{ env.SSH_USERNAME }}
+        PKR_VAR_az_gallery_name: ${{ secrets.AZURE_PODVM_GALLERY_NAME }}
+        PKR_VAR_az_gallery_image_name: ${{ env.AZURE_PODVM_IMAGE_DEF_NAME }}
+        PKR_VAR_az_gallery_image_version: ${{ env.AZURE_PODVM_IMAGE_VERSION }}
+        PKR_VAR_use_azure_cli_auth: "true"
+        PODVM_DISTRO: "ubuntu"
+      run: |
+        make image BINARIES=
+        echo "successfully built $IMAGE_ID"
+        echo "image-id=${IMAGE_ID}" >> "$GITHUB_OUTPUT"
+
+    - name: Cleanup intermediate image
+      if: always()
+      run: |
+        # Delete intermediate image
+        az image delete \
+          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --name ${{ env.PODVM_IMAGE_NAME }}
