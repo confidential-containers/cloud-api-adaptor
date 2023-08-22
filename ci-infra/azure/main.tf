@@ -72,6 +72,16 @@ resource "azurerm_shared_image_gallery" "podvm_image_gallery" {
   name                = "${var.image_gallery}${var.ver}"
   resource_group_name = azurerm_resource_group.ci_rg.name
   location            = azurerm_resource_group.ci_rg.location
+
+  sharing {
+    permission = "Community"
+    community_gallery {
+	prefix = "cocopodvm"
+	eula   = "https://raw.githubusercontent.com/confidential-containers/confidential-containers/main/LICENSE"
+	publisher_uri = "https://github.com/confidential-containers/confidential-containers"
+	publisher_email = "cocoatmsft@outlook.com"
+    }
+  }
 }
 
 resource "azurerm_shared_image" "podvm_image" {
