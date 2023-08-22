@@ -61,11 +61,11 @@ node/liudali-csi-amd64-node-1 patched
 4. Add labels to worker node:
 ```bash
 cd /root/cloud-api-adaptor/volumes/csi-wrapper/
-bash ./hack/ibm/apply-required-labels.sh <node-name> <instanceID> <region-of-instanceID> <zone-of-instanceID>
+bash ./examples/ibm/apply-required-labels.sh <node-name> <instanceID> <region-of-instanceID> <zone-of-instanceID>
 ```
 The expected result looks like:
 ```bash
-bash ./hack/ibm/apply-required-labels.sh liudali-csi-amd64-node-1 0797_162a604f-82da-4b8c-9144-1204d4c560db eu-gb eu-gb-2
+bash ./examples/ibm/apply-required-labels.sh liudali-csi-amd64-node-1 0797_162a604f-82da-4b8c-9144-1204d4c560db eu-gb eu-gb-2
 liudali-csi-amd64-node-1   Ready    worker          2h   v1.27.3
 node/liudali-csi-amd64-node-1 labeled
 node/liudali-csi-amd64-node-1 labeled
@@ -96,8 +96,8 @@ cat slclient_Gen2.toml
 6. Deploy original `ibm-vpc-block-csi-driver`:
 ```bash
 encodeVal=$(base64 -w 0 slclient_Gen2.toml)
-sed -i "s/REPLACE_ME/$encodeVal/g" ./hack/ibm/ibm-vpc-block-csi-driver-v5.2.0.yaml
-kubectl create -f ./hack/ibm/ibm-vpc-block-csi-driver-v5.2.0.yaml
+sed -i "s/REPLACE_ME/$encodeVal/g" ./examples/ibm/ibm-vpc-block-csi-driver-v5.2.0.yaml
+kubectl create -f ./examples/ibm/ibm-vpc-block-csi-driver-v5.2.0.yaml
 ```
 Check `ibm-vpc-block-csi-driver related` pod status
 ```bash
@@ -121,7 +121,7 @@ customresourcedefinition.apiextensions.k8s.io/peerpodvolumes.confidentialcontain
 ```
 2. Create vpc-block-csi-wrapper-runner role  bind to ibm-vpc-block-controller-sa account
 ```bash
-kubectl create -f hack/ibm/vpc-block-csi-wrapper-runner.yaml
+kubectl create -f examples/ibm/vpc-block-csi-wrapper-runner.yaml
 ```
 The output looks like:
 ```
@@ -132,8 +132,8 @@ clusterrolebinding.rbac.authorization.k8s.io/vpc-block-csi-wrapper-node-binding 
 
 3. patch ibm-vpc-block-csi-driver:
 ```bash
-kubectl patch Deployment ibm-vpc-block-csi-controller -n kube-system --patch-file hack/ibm/patch-controller.yaml
-kubectl patch ds ibm-vpc-block-csi-node -n kube-system --patch-file hack/ibm/patch-node.yaml
+kubectl patch Deployment ibm-vpc-block-csi-controller -n kube-system --patch-file examples/ibm/patch-controller.yaml
+kubectl patch ds ibm-vpc-block-csi-node -n kube-system --patch-file examples/ibm/patch-node.yaml
 ```
 
 4. Check pod status now:
@@ -147,7 +147,7 @@ kube-system                      ibm-vpc-block-csi-node-qbfhc                   
 
 5. Create **storage class** for Peerpod:
 ```bash
-kubectl apply -f hack/ibm/ibm-vpc-block-5iopsTier-StorageClass-for-peerpod.yaml
+kubectl apply -f examples/ibm/ibm-vpc-block-5iopsTier-StorageClass-for-peerpod.yaml
 ```
 > **Note**
 > - One parameter `peerpod: "true"` is added, without it, csi-wrapper won't create PeerpodVolume objects, csi-requests will be processed as normal csi-requests.
@@ -156,7 +156,7 @@ kubectl apply -f hack/ibm/ibm-vpc-block-5iopsTier-StorageClass-for-peerpod.yaml
 
 1. Create one pvc that use the storage class for peerpod.
 ```bash
-kubectl create -f hack/ibm/my-pvc-kube-system.yaml
+kubectl create -f examples/ibm/my-pvc-kube-system.yaml
 ```
 
 2. Wait for the pvc status to become `bound`
@@ -168,7 +168,7 @@ my-pvc   Bound    pvc-b0803078-551e-42bc-9a44-fc98d95b8010   10Gi       RWO     
 
 3. Create nginx peer-pod demo with with `podvm-wrapper` and `ibm-vpc-block-csi-driver` containers
 ```bash
-kubectl create -f hack/ibm/nginx-kata-with-my-pvc-and-csi-wrapper.yaml
+kubectl create -f examples/ibm/nginx-kata-with-my-pvc-and-csi-wrapper.yaml
 ```
 
 4. Wait 2 minutes, check if the `nginx` pod is running:
