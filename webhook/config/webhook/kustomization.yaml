@@ -4,3 +4,12 @@ resources:
 
 configurations:
 - kustomizeconfig.yaml
+
+patches:
+- path: namespace_selector_patch.yaml
+- patch: |-
+    - op: add
+      path: /webhooks/0/rules/0/scope
+      value: Namespaced
+  target:
+    kind: MutatingWebhookConfiguration
