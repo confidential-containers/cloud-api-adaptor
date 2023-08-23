@@ -19,8 +19,8 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
-# Currently supported architectures are amd64/x86_64 and s390x
-ARCHES ?= amd64,s390x
+# Currently supported architectures are amd64/x86_64, s390x and ppc64le
+ARCHES ?= amd64,s390x,ppc64le
 
 .PHONY: all
 all: build
