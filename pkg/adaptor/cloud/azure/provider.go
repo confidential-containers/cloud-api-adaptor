@@ -191,100 +191,14 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
-	var managedDiskParams *armcompute.ManagedDiskParameters
-	var securityProfile *armcompute.SecurityProfile
-	if !p.serviceConfig.DisableCVM {
-		managedDiskParams = &armcompute.ManagedDiskParameters{
-			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesStandardLRS),
-			SecurityProfile: &armcompute.VMDiskSecurityProfile{
-				SecurityEncryptionType: to.Ptr(armcompute.SecurityEncryptionTypesVMGuestStateOnly),
-			},
-		}
-
-		securityProfile = &armcompute.SecurityProfile{
-			SecurityType: to.Ptr(armcompute.SecurityTypesConfidentialVM),
-			UefiSettings: &armcompute.UefiSettings{
-				SecureBootEnabled: to.Ptr(true),
-				VTpmEnabled:       to.Ptr(true),
-			},
-		}
-	} else {
-		managedDiskParams = &armcompute.ManagedDiskParameters{
-			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesStandardLRS),
-		}
-
-		securityProfile = nil
-	}
-
-	imgRef := &armcompute.ImageReference{
-		ID: to.Ptr(p.serviceConfig.ImageId),
-	}
-	if strings.HasPrefix(p.serviceConfig.ImageId, "/CommunityGalleries/") {
-		imgRef = &armcompute.ImageReference{
-			CommunityGalleryImageID: to.Ptr(p.serviceConfig.ImageId),
-		}
-	}
-
-	// Add tags to the instance
-	tags := map[string]*string{
-		"Name": to.Ptr(instanceName),
-	}
-
-	// Add custom tags from serviceConfig.Tags to the instance
-	for k, v := range p.serviceConfig.Tags {
-		tags[k] = to.Ptr(v)
-	}
-
-	vmParameters := armcompute.VirtualMachine{
-		Location: to.Ptr(p.serviceConfig.Region),
-		Properties: &armcompute.VirtualMachineProperties{
-			HardwareProfile: &armcompute.HardwareProfile{
-				VMSize: to.Ptr(armcompute.VirtualMachineSizeTypes(instanceSize)),
-			},
-			StorageProfile: &armcompute.StorageProfile{
-				ImageReference: imgRef,
-				OSDisk: &armcompute.OSDisk{
-					Name:         to.Ptr(diskName),
-					CreateOption: to.Ptr(armcompute.DiskCreateOptionTypesFromImage),
-					Caching:      to.Ptr(armcompute.CachingTypesReadWrite),
-					DeleteOption: to.Ptr(armcompute.DiskDeleteOptionTypesDelete),
-					ManagedDisk:  managedDiskParams,
-				},
-			},
-			OSProfile: &armcompute.OSProfile{
-				AdminUsername: to.Ptr(p.serviceConfig.SSHUserName),
-				ComputerName:  to.Ptr(instanceName),
-				CustomData:    to.Ptr(userDataEnc),
-				LinuxConfiguration: &armcompute.LinuxConfiguration{
-					DisablePasswordAuthentication: to.Ptr(true),
-					//TBD: replace with a suitable mechanism to use precreated SSH key
-					SSH: &armcompute.SSHConfiguration{
-						PublicKeys: []*armcompute.SSHPublicKey{{
-							Path:    to.Ptr(fmt.Sprintf("/home/%s/.ssh/authorized_keys", p.serviceConfig.SSHUserName)),
-							KeyData: to.Ptr(string(sshBytes)),
-						}},
-					},
-				},
-			},
-			NetworkProfile: &armcompute.NetworkProfile{
-				NetworkInterfaces: []*armcompute.NetworkInterfaceReference{
-					{
-						ID: vmNIC.ID,
-						Properties: &armcompute.NetworkInterfaceReferenceProperties{
-							DeleteOption: to.Ptr(armcompute.DeleteOptionsDelete),
-						},
-					},
-				},
-			},
-			SecurityProfile: securityProfile,
-		},
-		// Add tags to the instance
-		Tags: tags,
+	vmParameters, err := p.getVMParameters(instanceSize, diskName, userDataEnc, sshBytes, instanceName, vmNIC)
+	if err != nil {
+		return nil, err
 	}
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
-	result, err := p.create(ctx, &vmParameters)
+	result, err := p.create(ctx, vmParameters)
 	if err != nil {
 		if err := p.deleteDisk(ctx, diskName); err != nil {
 			logger.Printf("deleting disk (%s): %s", diskName, err)
@@ -449,4 +363,109 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 	p.serviceConfig.InstanceSizeSpecList = cloud.SortInstanceTypesOnMemory(instanceSizeSpecList)
 	logger.Printf("instanceSizeSpecList (%v)", p.serviceConfig.InstanceSizeSpecList)
 	return nil
+}
+
+func (p *azureProvider) getVMParameters(instanceSize, diskName, b64EncData string, sshBytes []byte, instanceName string, vmNIC *armnetwork.Interface) (*armcompute.VirtualMachine, error) {
+	var managedDiskParams *armcompute.ManagedDiskParameters
+	var securityProfile *armcompute.SecurityProfile
+	if !p.serviceConfig.DisableCVM {
+		managedDiskParams = &armcompute.ManagedDiskParameters{
+			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesStandardLRS),
+			SecurityProfile: &armcompute.VMDiskSecurityProfile{
+				SecurityEncryptionType: to.Ptr(armcompute.SecurityEncryptionTypesVMGuestStateOnly),
+			},
+		}
+
+		securityProfile = &armcompute.SecurityProfile{
+			SecurityType: to.Ptr(armcompute.SecurityTypesConfidentialVM),
+			UefiSettings: &armcompute.UefiSettings{
+				SecureBootEnabled: to.Ptr(true),
+				VTpmEnabled:       to.Ptr(true),
+			},
+		}
+	} else {
+		managedDiskParams = &armcompute.ManagedDiskParameters{
+			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesStandardLRS),
+		}
+
+		securityProfile = nil
+	}
+
+	imgRef := &armcompute.ImageReference{
+		ID: to.Ptr(p.serviceConfig.ImageId),
+	}
+	if strings.HasPrefix(p.serviceConfig.ImageId, "/CommunityGalleries/") {
+		imgRef = &armcompute.ImageReference{
+			CommunityGalleryImageID: to.Ptr(p.serviceConfig.ImageId),
+		}
+	}
+
+	// Add tags to the instance
+	tags := map[string]*string{}
+
+	// Add custom tags from serviceConfig.Tags to the instance
+	for k, v := range p.serviceConfig.Tags {
+		tags[k] = to.Ptr(v)
+	}
+
+	vmParameters := armcompute.VirtualMachine{
+		Location: to.Ptr(p.serviceConfig.Region),
+		Properties: &armcompute.VirtualMachineProperties{
+			HardwareProfile: &armcompute.HardwareProfile{
+				VMSize: to.Ptr(armcompute.VirtualMachineSizeTypes(instanceSize)),
+			},
+			StorageProfile: &armcompute.StorageProfile{
+				ImageReference: imgRef,
+				OSDisk: &armcompute.OSDisk{
+					Name:         to.Ptr(diskName),
+					CreateOption: to.Ptr(armcompute.DiskCreateOptionTypesFromImage),
+					Caching:      to.Ptr(armcompute.CachingTypesReadWrite),
+					DeleteOption: to.Ptr(armcompute.DiskDeleteOptionTypesDelete),
+					ManagedDisk:  managedDiskParams,
+				},
+			},
+			OSProfile: &armcompute.OSProfile{
+				AdminUsername: to.Ptr(p.serviceConfig.SSHUserName),
+				ComputerName:  to.Ptr(instanceName),
+				LinuxConfiguration: &armcompute.LinuxConfiguration{
+					DisablePasswordAuthentication: to.Ptr(true),
+					//TBD: replace with a suitable mechanism to use precreated SSH key
+					SSH: &armcompute.SSHConfiguration{
+						PublicKeys: []*armcompute.SSHPublicKey{{
+							Path:    to.Ptr(fmt.Sprintf("/home/%s/.ssh/authorized_keys", p.serviceConfig.SSHUserName)),
+							KeyData: to.Ptr(string(sshBytes)),
+						}},
+					},
+				},
+			},
+			NetworkProfile: &armcompute.NetworkProfile{
+				NetworkInterfaces: []*armcompute.NetworkInterfaceReference{
+					{
+						ID: vmNIC.ID,
+						Properties: &armcompute.NetworkInterfaceReferenceProperties{
+							DeleteOption: to.Ptr(armcompute.DeleteOptionsDelete),
+						},
+					},
+				},
+			},
+			SecurityProfile: securityProfile,
+		},
+		// Add tags to the instance
+		Tags: tags,
+	}
+
+	// If EnableUserData is set to false then set OSProfile.CustomData to b64EncData and
+	// armcompute.VirtualMachine.Properties.UserData to nil
+	// If EnableUserData is set to true then set armcompute.VirtualMachine.Properties.UserData to b64EncData and
+	// OSProfile.CustomData to nil
+
+	if !p.serviceConfig.EnableUserData {
+		vmParameters.Properties.OSProfile.CustomData = to.Ptr(b64EncData)
+		vmParameters.Properties.UserData = nil
+	} else {
+		vmParameters.Properties.UserData = to.Ptr(b64EncData)
+		vmParameters.Properties.OSProfile.CustomData = nil
+	}
+
+	return &vmParameters, nil
 }
