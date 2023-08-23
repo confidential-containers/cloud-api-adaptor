@@ -12,23 +12,11 @@ env:
   CLUSTER_NAME: "e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
 
 on:
-  pull_request_target:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
-  authorize:
-    environment:
-      ${{ (github.event_name == 'pull_request_target' &&
-      github.event.pull_request.head.repo.full_name != github.repository) &&
-      'external' || 'internal' }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: true
-
   build-podvm-image:
     runs-on: ubuntu-latest
-    needs: authorize
     outputs:
       pod-image-version: "${{ steps.generate_image_version.outputs.pod_image_version }}"
     steps:
@@ -134,7 +122,6 @@ jobs:
 
   build-caa-container-image:
     runs-on: ubuntu-latest
-    needs: authorize
     steps:
     - uses: actions/checkout@v3
 
@@ -175,7 +162,6 @@ jobs:
   run-e2e-test:
     runs-on: ubuntu-latest
     needs:
-    - authorize
     - build-podvm-image
     - build-caa-container-image
     steps:
@@ -245,7 +231,6 @@ jobs:
   cleanup-resources:
     runs-on: ubuntu-latest
     needs:
-    - authorize
     - build-podvm-image
     - build-caa-container-image
     - run-e2e-test
