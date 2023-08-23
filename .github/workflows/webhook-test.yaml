@@ -38,6 +38,8 @@ jobs:
           git clone https://github.com/bats-core/bats-core.git
           cd bats-core
           ./install.sh ~/.local
+      - name: Verify go modules and manifests
+        run: make verify
       - name: Run end-to-end tests
         run: |
           make test-e2e
