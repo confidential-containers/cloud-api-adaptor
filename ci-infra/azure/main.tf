@@ -30,7 +30,7 @@ resource "azurerm_federated_identity_credential" "gh_action_federated_credential
   parent_id           = azurerm_user_assigned_identity.gh_action_user_identity.id
 
   # TODO: What should be the subject when we are not testing just main but the respective PR?
-  subject = "repo:${var.gh_repo}:pull_request"
+  subject = "repo:${var.gh_repo}:ref:refs/heads/main"
 }
 
 resource "azurerm_role_assignment" "ci_rg_role_binding" {
