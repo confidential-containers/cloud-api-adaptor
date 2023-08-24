@@ -39,8 +39,12 @@ avoid compilation errors. This can be done by running:
 > go mod tidy
 > ```
 > from in the `peerpod-ctrl` and `volumes/csi-wrapper` directories.
-- The attestation-agent that is built into the peer pod vm image, by updating the `AA_VERSION` in the 
-[`Makefile.inc`](../podvm/Makefile.inc)
+- The attestation-agent that is built into the peer pod vm image, by updating the `GUEST_COMPONENTS_VERSION` in 
+  - [`Makefile.inc`](../podvm/Makefile.inc)
+  - [Dockerfile.podvm_binaries](../podvm/Dockerfile.podvm_binaries)
+  - [Dockerfile.podvm_binaries.centos](../podvm/Dockerfile.podvm_binaries.centos)
+  - [Dockerfile.podvm_binaries.rhel](../podvm/Dockerfile.podvm_binaries.rhel)
+  - [versions.yaml](../versions.yaml)
 
 These updates should be done in a PR that is merged triggering the cloud-api-adaptor
 [image build workflow](../.github/workflows/image.yaml) to create a new container image in 
