@@ -1,7 +1,8 @@
 [Unit]
 Description=Kata Agent
 BindsTo=netns@podns.service
-After=network.target netns@podns.service
+Wants=process-user-data.service
+After=netns@podns.service process-user-data.service
 
 [Service]
 ExecStart=/usr/local/bin/kata-agent --config /etc/agent-config.toml

@@ -83,6 +83,22 @@ TLS_OPTIONS=-cert-file /etc/certificates/tls.crt -cert-key /etc/certificates/tls
 END
 fi
 
+# If DISABLE_CLOUD_CONFIG is not set or not set to true, then add cloud-init.target as a dependency for process-user-data.service
+# so that required files via cloud-config are available before kata-agent starts
+if [ -z "$DISABLE_CLOUD_CONFIG" ] || [ "$DISABLE_CLOUD_CONFIG" != "true" ]
+then
+# Add cloud-init.target as a dependency for process-user-data.service so that
+# required files via cloud-config are available before kata-agent starts
+    mkdir -p /etc/systemd/system/process-user-data.service.d
+    cat <<END >> /etc/systemd/system/process-user-data.service.d/10-override.conf
+[Unit]
+After=cloud-config.service
+
+[Service]
+ExecStartPre=
+END
+fi
+
 # Disable unnecessary systemd services
 
 case $PODVM_DISTRO in

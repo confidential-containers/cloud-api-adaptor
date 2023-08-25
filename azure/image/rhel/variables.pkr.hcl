@@ -95,3 +95,8 @@ variable "plan_publisher" {
   type    = string
   default = ""
 }
+
+variable "disable_cloud_config" {
+  type    = string
+  default = env("DISABLE_CLOUD_CONFIG")
+}
