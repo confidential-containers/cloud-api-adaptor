@@ -23,7 +23,7 @@ import (
 
 const (
 	// architecture value for the s390x architecture
-	archS390x = "s390x"
+	ArchS390x = "s390x"
 	// hvm indicates that the OS is one designed to run on bare metal, so requires full virtualization.
 	typeHardwareVirtualMachine = "hvm"
 	// The amount of retries to get the domain IP addresses
@@ -186,7 +186,7 @@ func getHostCapabilities(conn *libvirt.Connect) (*libvirtxml.Caps, error) {
 	return caps, nil
 }
 
-func getDomainCapabilities(conn *libvirt.Connect, emulatorbin string, arch string, machine string, virttype string, flags uint32) (*libvirtxml.DomainCaps, error) {
+func GetDomainCapabilities(conn *libvirt.Connect, emulatorbin string, arch string, machine string, virttype string, flags uint32) (*libvirtxml.DomainCaps, error) {
 	capsXML, err := conn.GetDomainCapabilities(emulatorbin, arch, machine, virttype, flags)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get domain capabilities, cause: %w", err)
@@ -238,12 +238,12 @@ func getCanonicalMachineName(caps *libvirtxml.Caps, arch string, virttype string
 
 func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig) (*libvirtxml.Domain, error) {
 
-	guest, err := getGuestForArchType(client.caps, archS390x, typeHardwareVirtualMachine)
+	guest, err := getGuestForArchType(client.caps, ArchS390x, typeHardwareVirtualMachine)
 	if err != nil {
 		return nil, err
 	}
 
-	canonicalmachine, err := getCanonicalMachineName(client.caps, archS390x, typeHardwareVirtualMachine, "s390-ccw-virtio")
+	canonicalmachine, err := getCanonicalMachineName(client.caps, ArchS390x, typeHardwareVirtualMachine, "s390-ccw-virtio")
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +294,7 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{
 				Type:    typeHardwareVirtualMachine,
-				Arch:    archS390x,
+				Arch:    ArchS390x,
 				Machine: canonicalmachine,
 			},
 		},
@@ -456,7 +456,7 @@ func enableSEV(client *libvirtClient, cfg *domainConfig, vm *vmConfig, domain *l
 	if err != nil {
 		return nil, fmt.Errorf("unable to find guest machine to determine SEV capabilities")
 	}
-	domCaps, err := getDomainCapabilities(client.connection, guest.Arch.Emulator, arch, sevMachine, virttype, domCapflags)
+	domCaps, err := GetDomainCapabilities(client.connection, guest.Arch.Emulator, arch, sevMachine, virttype, domCapflags)
 	if err != nil {
 		return nil, fmt.Errorf("unable to determine guest domain capabilities: %+v", err)
 	}
@@ -535,7 +535,7 @@ func enableSEV(client *libvirtClient, cfg *domainConfig, vm *vmConfig, domain *l
 // createDomainXML detects the machine type of the libvirt host and will return a libvirt XML for that machine type
 func createDomainXML(client *libvirtClient, cfg *domainConfig, vm *vmConfig) (*libvirtxml.Domain, error) {
 	switch client.nodeInfo.Model {
-	case archS390x:
+	case ArchS390x:
 		return createDomainXMLs390x(client, cfg, vm)
 	default:
 		return createDomainXMLx86_64(client, cfg, vm)

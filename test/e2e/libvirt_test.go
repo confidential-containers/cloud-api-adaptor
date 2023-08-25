@@ -3,6 +3,8 @@
 package e2e
 
 import (
+	libvirtAdaptor "github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/libvirt"
+
 	"libvirt.org/go/libvirt"
 	"strings"
 	"testing"
@@ -13,6 +15,24 @@ func TestLibvirtCreateSimplePod(t *testing.T) {
 	doTestCreateSimplePod(t, assert)
 }
 
+func TestLibvirtCreateConfidentialPod(t *testing.T) {
+	assert := LibvirtAssert{}
+
+	launchSecurity, err := libvirtAdaptor.GetLaunchSecurityType()
+	if err != nil {
+		t.Errorf("Unable to determine machine confidentiality capabilities: [%v]", err)
+	}
+	switch launchSecurity {
+	case libvirtAdaptor.SEV:
+		testCommands := []testCommand{}
+		doTestCreateConfidentialPod(t, assert, testCommands)
+	case libvirtAdaptor.S390PV:
+		t.Skip("Unimplemented")
+	default:
+		t.Skip("No confidential hardware detected on the machine")
+	}
+
+}
 func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
 	assert := LibvirtAssert{}
 	doTestCreatePodWithConfigMap(t, assert)

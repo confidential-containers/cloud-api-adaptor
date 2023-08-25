@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"testing"
 
+	"strings"
+
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/stretchr/testify/assert"
 	libvirtxml "libvirt.org/go/libvirtxml"
@@ -19,6 +21,8 @@ func init() {
 	cloud.DefaultToEnv(&testCfg.PoolName, "LIBVIRT_POOL", defaultPoolName)
 	cloud.DefaultToEnv(&testCfg.NetworkName, "LIBVIRT_NET", defaultNetworkName)
 	cloud.DefaultToEnv(&testCfg.VolName, "LIBVIRT_VOL_NAME", defaultVolName)
+	cloud.DefaultToEnv(&testCfg.LaunchSecurity, "LIBVIRT_LAUNCH_SECURITY", defaultLaunchSecurity)
+	cloud.DefaultToEnv(&testCfg.Firmware, "LIBVIRT_FIRMWARE", defaultFirmware)
 }
 
 func checkConfig(t *testing.T) {
@@ -60,11 +64,7 @@ func TestGetArchitecture(t *testing.T) {
 	}
 }
 
-func verifyDomainXML(domXML *libvirtxml.Domain) error {
-	arch := domXML.OS.Type.Arch
-	if arch != archS390x {
-		return nil
-	}
+func verifyVirtioIOMMU(domXML *libvirtxml.Domain) error {
 	// verify we have iommu on the disks
 	for i, disk := range domXML.Devices.Disks {
 		if disk.Driver.IOMMU != "on" {
@@ -78,6 +78,61 @@ func verifyDomainXML(domXML *libvirtxml.Domain) error {
 		}
 	}
 	return nil
+}
+
+func verifyDomainXMLs390x(domXML *libvirtxml.Domain) error {
+	err := verifyVirtioIOMMU(domXML)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func verifyDomainXMLx86_64(domXML *libvirtxml.Domain) error {
+
+	if domXML.LaunchSecurity.SEV != nil {
+		return verifySEVSettings(domXML)
+	}
+
+	return nil
+}
+
+func verifySEVSettings(domXML *libvirtxml.Domain) error {
+	if domXML.LaunchSecurity.SEV == nil {
+		return fmt.Errorf("Launch Security is not enabled")
+	}
+
+	const q35 = "q35"
+	const i440fx = "i440fx"
+
+	machine := domXML.OS.Type.Machine
+	if !(strings.Contains(machine, q35) || strings.Contains(machine, i440fx)) {
+		return fmt.Errorf("Machine does not support machine type %s", machine)
+	}
+	if !strings.Contains(machine, q35) {
+		fmt.Printf("Only q35 machines are recommended for SEV\n")
+	}
+
+	// SEV only works on OVMF (UEFI)
+	if !strings.Contains(domXML.OS.Loader.Path, "OVMF_CODE") {
+		return fmt.Errorf("Boot Loader must be OVMF (UEFI) [%s]", domXML.OS.Loader.Path)
+	}
+
+	err := verifyVirtioIOMMU(domXML)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func verifyDomainXML(domXML *libvirtxml.Domain) error {
+	arch := domXML.OS.Type.Arch
+	switch arch {
+	case ArchS390x:
+		return verifyDomainXMLs390x(domXML)
+	default:
+		return verifyDomainXMLx86_64(domXML)
+	}
 }
 
 func TestCreateDomainXMLs390x(t *testing.T) {
@@ -106,8 +161,63 @@ func TestCreateDomainXMLs390x(t *testing.T) {
 	}
 
 	arch := domCfg.OS.Type.Arch
-	if domCfg.OS.Type.Arch != archS390x {
-		t.Skipf("Skipping because architecture is [%s] and not [%s].", arch, archS390x)
+	if domCfg.OS.Type.Arch != ArchS390x {
+		t.Skipf("Skipping because architecture is [%s] and not [%s].", arch, ArchS390x)
+	}
+
+	// verify the config
+	err = verifyDomainXML(domCfg)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestCreateDomainXMLSEV(t *testing.T) {
+	checkConfig(t)
+
+	client, err := NewLibvirtClient(testCfg)
+	if err != nil {
+		t.Error(err)
+	}
+	defer client.connection.Close()
+
+	vm := vmConfig{
+		name:               "TestCreateDomainS390x",
+		cpu:                2,
+		mem:                2,
+		launchSecurityType: SEV,
+	}
+
+	domainCfg := domainConfig{
+		name:        vm.name,
+		cpu:         vm.cpu,
+		mem:         vm.mem,
+		networkName: client.networkName,
+		bootDisk:    "/var/lib/libvirt/images/root.qcow2",
+		cidataDisk:  "/var/lib/libvirt/images/cidata.iso",
+	}
+
+	arch := client.nodeInfo.Model
+	if arch != "x86_64" {
+		t.Skipf("SEV is supported on q35 machines which run x86_64, not %s", arch)
+	}
+	guest, err := getGuestForArchType(client.caps, arch, "hvm")
+	if err != nil {
+		t.Skipf("unable to find guest machine to determine SEV capabilities")
+	}
+
+	var domCapflags uint32 = 0
+	domCaps, err := GetDomainCapabilities(client.connection, guest.Arch.Emulator, arch, "q35", "qemu", domCapflags)
+	if err != nil {
+		t.Skipf("unable to determine guest domain capabilities: %+v", err)
+	}
+	if domCaps.Features.SEV.Supported != "yes" {
+		t.Skipf("SEV is not supported for this domain")
+	}
+
+	domCfg, err := createDomainXML(client, &domainCfg, &vm)
+	if err != nil {
+		t.Error(err)
 	}
 
 	// verify the config
