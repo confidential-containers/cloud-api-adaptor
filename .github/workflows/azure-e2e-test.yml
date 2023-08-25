@@ -10,6 +10,9 @@ env:
   # VM size used for building image.
   VM_SIZE: "Standard_D2as_v5"
   CLUSTER_NAME: "e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
+  KATA_AGENT_VERSION: "CC-0.7.0"
+  RUST_VERSION: "1.70.0"
+  GO_VERSION: "1.20"
 
 on:
   workflow_dispatch:
@@ -21,84 +24,86 @@ on:
 jobs:
   build-podvm-image:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloud-api-adaptor/azure/image
     outputs:
       pod-image-version: "${{ steps.generate_image_version.outputs.pod_image_version }}"
     if: github.event.inputs.podvm-image-id == ''
     steps:
+    - name: Clone cloud-api-adaptor repository
+      uses: actions/checkout@v3
+      with:
+        path: cloud-api-adaptor
+
     - name: Generate version for pod vm image
       id: generate_image_version
       run: |
         unique_version="$(date '+%m.%d.%H%M%S')${{ github.run_attempt }}"
         echo "Generated unique version for the image as: ${unique_version}"
-        echo "pod_image_version=${unique_version}" >> $GITHUB_OUTPUT
-
-    - uses: actions/checkout@v3
-      with:
-        path: cloud-api-adaptor
-
-    - name: Clone kata repository
-      uses: actions/checkout@v3
-      with:
-        repository: kata-containers/kata-containers 
-        path: kata-containers
-        ref: CC-0.7.0
-
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: 1.69.0
-        default: true
-
-    - name: Set up rust build cache
-      uses: actions/cache@v3
-      continue-on-error: false
-      with:
-        # The paths to cache are documented here: https://doc.rust-lang.org/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
-        path: |
-          ~/.cargo/.crates.toml
-          ~/.cargo/.crates2.json
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-        key: rust
+        echo "pod_image_version=${unique_version}" >> "$GITHUB_OUTPUT"
 
     - name: Set up Go environment
       uses: actions/setup-go@v4
       with:
-        go-version: '1.20'
+        go-version: ${{ env.GO_VERSION }}
         cache-dependency-path: cloud-api-adaptor/go.sum
 
-    - name: Install Dependencies
-      run: |
-        rustup target add x86_64-unknown-linux-musl
-        sudo apt-get install -y musl-tools libdevmapper-dev libgpgme-dev
-      shell: bash
+    - name: Install build dependencies
+      run: sudo apt-get install -y musl-tools libdevmapper-dev libgpgme-dev
 
-    - name: Set up rust cache for kata-containers repository
-      uses: actions/cache@v3
-      with:
-        path: |
-          kata-containers/src/agent/target
-          cloud-api-adaptor/podvm/files/usr/local/bin/kata-agent
-        key: rust-${{ hashFiles('kata-containers/src/agent/Cargo.lock') }}
-
-    - name: Set up umoci, skopeo cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          cloud-api-adaptor/azure/image/umoci
-          cloud-api-adaptor/azure/image/skopeo
-          guest-components/
-        key: umoci-${{ hashFiles('cloud-api-adaptor/podvm/Makefile.inc') }}
-
-    - name: Build binaries
+    - name: Build agent-protocol-forwarder
       env:
         GOPATH: /home/runner/go
-      run: |
-        pushd cloud-api-adaptor/azure/image
-        make binaries
-        popd
+      run: make "$(realpath -m ../../podvm/files/usr/local/bin/agent-protocol-forwarder)"
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: ${{ env.RUST_VERSION }}
+        target: x86_64-unknown-linux-musl
+        default: true
+
+    - name: Set up kata-agent cache
+      id: kata-agent-cache
+      uses: actions/cache@v3
+      with:
+        path: cloud-api-adaptor/podvm/files/usr/local/bin/kata-agent
+        key: kata-agent-${{ env.KATA_AGENT_VERSION }}_rust${{ env.RUST_VERSION }}
+
+    - name: Clone kata-containers repository
+      if: steps.kata-agent-cache.outputs.cache-hit != 'true'
+      uses: actions/checkout@v3
+      with:
+        repository: kata-containers/kata-containers 
+        path: kata-containers
+        ref: ${{ env.KATA_AGENT_VERSION }}
+
+    - name: Build kata-agent
+      if: steps.kata-agent-cache.outputs.cache-hit != 'true'
+      run: make "$(realpath -m ../../podvm/files/usr/local/bin/kata-agent)"
+
+    - name: Set up pause cache
+      id: pause-cache
+      uses: actions/cache@v3
+      with:
+        path: cloud-api-adaptor/podvm/files/pause_bundle
+        key: pause-${{ hashFiles('cloud-api-adaptor/podvm/Makefile.inc') }}
+
+    - name: Build pause bundle
+      if: steps.pause-cache.outputs.cache-hit != 'true'
+      run: make "$(realpath -m ../../podvm/files/pause_bundle/rootfs/pause)"
+
+    - name: Set up attestation-agent cache
+      id: aa-cache
+      uses: actions/cache@v3
+      with:
+        path: cloud-api-adaptor/podvm/files/usr/local/bin/attestation-agent
+        key: aa-${{ hashFiles('cloud-api-adaptor/podvm/Makefile.inc') }}
+
+    - name: Build attestation-agent
+      if: steps.aa-cache.outputs.cache-hit != 'true'
+      run: make "$(realpath -m ../../podvm/files/usr/local/bin/attestation-agent)"
 
     - uses: azure/login@v1
       name: 'Az CLI login'
@@ -106,6 +111,7 @@ jobs:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
     - name: Create podvm image
       id: create-podvm-image
       env:
@@ -120,10 +126,8 @@ jobs:
         PKR_VAR_az_gallery_image_version: ${{ steps.generate_image_version.outputs.pod_image_version }}
         PKR_VAR_use_azure_cli_auth: "true"
         PODVM_DISTRO: "ubuntu"
-      run: |
-        pushd cloud-api-adaptor/azure/image
-        make image
-        popd
+      # Skip building of binaries
+      run: make image BINARIES=
 
   build-caa-container-image:
     runs-on: ubuntu-latest
