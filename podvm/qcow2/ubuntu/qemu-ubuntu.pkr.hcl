@@ -92,7 +92,8 @@ build {
     remote_folder = "~"
     environment_vars = [
       "CLOUD_PROVIDER=${var.cloud_provider}",
-      "PODVM_DISTRO=${var.podvm_distro}"
+      "PODVM_DISTRO=${var.podvm_distro}",
+      "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}"
     ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"

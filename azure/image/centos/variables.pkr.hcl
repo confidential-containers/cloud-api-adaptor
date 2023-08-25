@@ -95,3 +95,8 @@ variable "plan_publisher" {
   type    = string
   default = "eurolinuxspzoo1620639373013"
 }
+
+variable "disable_cloud_config" {
+  type    = string
+  default = env("DISABLE_CLOUD_CONFIG")
+}

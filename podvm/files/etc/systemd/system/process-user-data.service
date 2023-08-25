@@ -1,0 +1,17 @@
+# One-shot systemd service for running the process-user-data binary
+# It must run before kata-agent.service
+
+[Unit]
+Description=Process user data
+After=network.target
+DefaultDependencies=no
+
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/local/bin/process-user-data provision-files
+ExecStart=/usr/local/bin/process-user-data update-agent-config
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

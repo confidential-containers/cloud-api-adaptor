@@ -107,3 +107,8 @@ variable "uefi_firmware" {
   type    = string
   default = "/usr/share/OVMF/OVMF_CODE.fd"
 }
+
+variable "disable_cloud_config" {
+  type    = string
+  default = env("DISABLE_CLOUD_CONFIG")
+}

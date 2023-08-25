@@ -1,7 +1,7 @@
 [Unit]
 Description=Agent Protocol Forwarder
-After=cloud-init.target kata-agent.service
-Wants=cloud-init.target kata-agent.service
+After=kata-agent.service
+Wants=kata-agent.service
 DefaultDependencies=no
 
 
