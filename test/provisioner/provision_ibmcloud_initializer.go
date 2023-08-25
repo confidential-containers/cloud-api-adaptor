@@ -135,10 +135,6 @@ func initProperties(properties map[string]string) error {
 
 	log.Debugf("%+v", IBMCloudProps)
 
-	if len(IBMCloudProps.ApiKey) <= 0 && len(IBMCloudProps.IamProfileID) <= 0 {
-		return errors.New("APIKEY or IAM_PROFILE_ID must be set")
-	}
-
 	if len(IBMCloudProps.ResourceGroupID) <= 0 {
 		log.Info("[warning] RESOURCE_GROUP_ID was not set.")
 	}
@@ -169,13 +165,16 @@ func initProperties(properties map[string]string) error {
 	log.Infof("IksServiceURL is: %s.", IBMCloudProps.IksServiceURL)
 
 	needProvisionStr := os.Getenv("TEST_PROVISION")
-	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") {
+	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") || Action == "uploadimage" {
 		if len(IBMCloudProps.ApiKey) <= 0 {
 			return errors.New("APIKEY is required for provisioning")
 		}
 		if len(IBMCloudProps.Region) <= 0 {
 			return errors.New("REGION was not set.")
 		}
+	}
+
+	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") {
 		if len(IBMCloudProps.KubeVersion) <= 0 {
 			return errors.New("KUBE_VERSION was not set, get it via command: ibmcloud cs versions")
 		}
@@ -213,6 +212,10 @@ func initProperties(properties map[string]string) error {
 		}
 	} else if len(IBMCloudProps.PodvmImageID) <= 0 {
 		return errors.New("PODVM_IMAGE_ID was not set, set it with existing custom image id in VPC")
+	}
+
+	if len(IBMCloudProps.ApiKey) <= 0 && len(IBMCloudProps.IamProfileID) <= 0 {
+		return errors.New("APIKEY or IAM_PROFILE_ID must be set")
 	}
 
 	if len(IBMCloudProps.ApiKey) > 0 {

@@ -21,6 +21,8 @@ type patchLabel struct {
 	Value string `json:"value"`
 }
 
+var Action string
+
 // Adds the worker label to all workers nodes in a given cluster
 func AddNodeRoleWorkerLabel(ctx context.Context, clusterName string, cfg *envconf.Config) error {
 	fmt.Printf("Adding worker label to nodes belonging to: %s\n", clusterName)
