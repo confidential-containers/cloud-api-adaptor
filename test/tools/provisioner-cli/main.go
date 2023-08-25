@@ -43,15 +43,17 @@ func main() {
 		installDirectory = "../../install"
 	}
 
+	action := flag.String("action", "provision", "string")
+	flag.Parse()
+
+	pv.Action = *action
+
 	cfg := envconf.New()
 
 	provisioner, err := pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	action := flag.String("action", "provision", "string")
-	flag.Parse()
 
 	if *action == "provision" {
 		log.Info("Creating VPC...")
@@ -97,6 +99,9 @@ func main() {
 
 	if *action == "uploadimage" {
 		log.Info("Uploading PodVM Image...")
+		if len(podvmImage) <= 0 {
+			log.Fatal("Environment variable TEST_PODVM_IMAGE must be set")
+		}
 		if _, err := os.Stat(podvmImage); os.IsNotExist(err) {
 			log.Fatal(err)
 		}
