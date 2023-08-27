@@ -1,0 +1,13 @@
+# this should be enabled by misc-settings.sh
+[Unit]
+Description=Setup NAT for IMDS
+After=agent-protocol-forwarder.service
+Wants=agent-protocol-forwarder.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/setup-nat-for-imds.sh
+
+[Install]
+WantedBy=multi-user.target
