@@ -15,7 +15,7 @@ trap 'echo "Error: $0:$LINENO stopped"; exit 1' ERR INT
 # Function to setup veth pair
 function setup_proxy_arp() {
   local pod_ip
-  pod_ip=$(ip netns exec podns ip route get "$IMDS_IP" | awk 'NR == 1 { print $7 }')
+  pod_ip=$(ip netns exec podns ip route get "$IMDS_IP" | awk '{ for(i=1; i<=NF; i++) { if($i == "src") { print $(i+1); break; } } }')
 
   ip link add veth2 type veth peer name veth1
   # Proxy arp does not get enabled when no IP address is assigned
