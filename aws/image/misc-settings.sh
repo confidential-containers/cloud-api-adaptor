@@ -47,8 +47,25 @@ fi
 # Setup oneshot systemd service for AWS and Azure to enable NAT rules
 if [ "$CLOUD_PROVIDER" == "azure" ] || [ "$CLOUD_PROVIDER" == "aws" ]
 then
-# Add a link to the service in multi-user.target.wants
-ln -s /etc/systemd/system/setup-nat-for-imds.service /etc/systemd/system/multi-user.target.wants/setup-nat-for-imds.service
+    if [ ! -x "$(command -v iptables)" ]; then
+        case $PODVM_DISTRO in
+        centos)
+            #fallthrough
+            ;&
+        rhel)
+            dnf -q install iptables -y
+            ;;
+        ubuntu)
+            apt-get -qq update && apt-get -qq install iptables -y
+            ;;
+        *)
+            echo "\"iptables\" is missing and cannot be installed, setup-nat-for-imds.sh is likely to fail 1>&2"
+            ;;
+        esac
+    fi
+
+    # Add a link to the service in multi-user.target.wants
+    ln -s /etc/systemd/system/setup-nat-for-imds.service /etc/systemd/system/multi-user.target.wants/setup-nat-for-imds.service
 fi
 
 if [ -e /etc/certificates/tls.crt ] && [ -e /etc/certificates/tls.key ] && [ -e /etc/certificates/ca.crt ]; then
