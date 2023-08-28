@@ -48,7 +48,7 @@ if [[ "$CLOUD_PROVIDER" == "azure" && "$PODVM_DISTRO" == "ubuntu" ]]; then
 fi
 
 # Setup oneshot systemd service for AWS and Azure to enable NAT rules
-if [ "$CLOUD_PROVIDER" == "azure" ] || [ "$CLOUD_PROVIDER" == "aws" ]
+if [ "$CLOUD_PROVIDER" == "azure" ] || [ "$CLOUD_PROVIDER" == "aws" ] || [ "$CLOUD_PROVIDER" == "generic" ]
 then
     if [ ! -x "$(command -v iptables)" ]; then
         case $PODVM_DISTRO in
