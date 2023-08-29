@@ -45,6 +45,7 @@ require (
 	github.com/IBM/ibm-cos-sdk-go v1.9.4
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
+	github.com/aws/aws-sdk-go-v2/service/eks v1.29.5
 	github.com/aws/aws-sdk-go-v2/service/iam v1.22.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.38.5
 	github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl v0.0.0-20230329054732-0d6eda047e81
