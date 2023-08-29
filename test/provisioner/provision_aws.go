@@ -56,9 +56,11 @@ type Vpc struct {
 	Client            *ec2.Client
 	ID                string
 	InternetGatewayId string
+	Region            string
 	RouteTableId      string
 	SecurityGroupId   string
 	SubnetId          string
+	SecondarySubnetId string
 }
 
 // AWSProvisioner implements the CloudProvision interface.
@@ -90,6 +92,8 @@ func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
 
 	if properties["aws_region"] != "" {
 		cfg.Region = properties["aws_region"]
+	} else {
+		properties["aws_region"] = cfg.Region
 	}
 
 	ec2Client := ec2.NewFromConfig(cfg)
@@ -270,6 +274,7 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 		CidrBlock:         cidrBlock,
 		Client:            client,
 		ID:                properties["aws_vpc_id"],
+		Region:            properties["aws_region"],
 		SecurityGroupId:   properties["aws_vpc_sg_id"],
 		SubnetId:          properties["aws_vpc_subnet_id"],
 		InternetGatewayId: properties["aws_vpc_igw_id"],
@@ -336,6 +341,55 @@ func (v *Vpc) createSubnet() error {
 		}); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (v *Vpc) createSecondarySubnet() error {
+	if v.SecondarySubnetId != "" {
+		return nil
+	}
+
+	// EKS requires at least two subnets and they should be on different
+	// Availability zones on the same region. So let's ensure this secondary
+	// subnet's AZ don't clash with the primary's.
+	subnets, err := v.Client.DescribeSubnets(context.TODO(),
+		&ec2.DescribeSubnetsInput{
+			SubnetIds: []string{v.SubnetId},
+		})
+	if err != nil {
+		return err
+	}
+
+	primarySubnetAz := *subnets.Subnets[0].AvailabilityZone
+	secondarySubnetAz := v.Region + "a"
+	if secondarySubnetAz == primarySubnetAz {
+		secondarySubnetAz = v.Region + "b"
+	}
+
+	subnet, err := v.Client.CreateSubnet(context.TODO(),
+		&ec2.CreateSubnetInput{
+			AvailabilityZone: aws.String(secondarySubnetAz),
+			VpcId:            aws.String(v.ID),
+			CidrBlock:        aws.String("10.0.0.0/24"),
+			TagSpecifications: []ec2types.TagSpecification{
+				{
+					ResourceType: ec2types.ResourceTypeSubnet,
+					Tags: []ec2types.Tag{
+						{
+							Key:   aws.String("Name"),
+							Value: aws.String(v.BaseName + "-subnet-2"),
+						},
+					},
+				},
+			},
+		})
+
+	if err != nil {
+		return err
+	}
+
+	v.SecondarySubnetId = *subnet.Subnet.SubnetId
 
 	return nil
 }
