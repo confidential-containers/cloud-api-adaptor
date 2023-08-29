@@ -6,7 +6,13 @@
 ARCH                    ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere libvirt
 GOFLAGS                 ?=
-GOOPTIONS               ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
+GOOS 					?= $(shell uname)
+ifeq ($(GOOS), Linux)
+	GOOS := linux 
+else ifeq ($(GOOS), Darwin)
+	GOOS := darwin 
+endif
+GOOPTIONS               ?= GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=0
 BINARIES                := caa-provisioner-cli
 
 space := $() $()
