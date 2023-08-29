@@ -6,7 +6,7 @@
 ARCH                    ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere libvirt
 GOFLAGS                 ?=
-GOOS 					?= $(shell uname)
+GOOS                    ?= $(shell uname)
 ifeq ($(GOOS), Linux)
 	GOOS := linux 
 else ifeq ($(GOOS), Darwin)
