@@ -12,8 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
-	"strings"
 	"time"
 
 	libvirt "libvirt.org/go/libvirt"
@@ -105,18 +103,6 @@ func newDefVolumeFromXML(s string) (libvirtxml.StorageVolume, error) {
 		return libvirtxml.StorageVolume{}, err
 	}
 	return volumeDef, nil
-}
-
-func timeFromEpoch(str string) time.Time {
-	var s, ns int
-
-	ts := strings.Split(str, ".")
-	if len(ts) == 2 {
-		ns, _ = strconv.Atoi(ts[1])
-	}
-	s, _ = strconv.Atoi(ts[0])
-
-	return time.Unix(int64(s), int64(ns))
 }
 
 func uploadVolume(libvirtClient *libvirtClient, volumeDef libvirtxml.StorageVolume, img image) (volumeKey string, err error) {

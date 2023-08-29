@@ -29,7 +29,6 @@ type vmConfig struct {
 	mem                uint
 	rootDiskSize       uint64
 	userData           string
-	metaData           string
 	ips                []netip.Addr
 	instanceId         string //keeping it consistent with sandbox.vsi
 	launchSecurityType LaunchSecurityType
