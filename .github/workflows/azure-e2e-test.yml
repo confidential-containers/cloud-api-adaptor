@@ -113,7 +113,6 @@ jobs:
           SSH_KEY_ID="id_rsa.pub"
           AZURE_IMAGE_ID="$AZURE_IMAGE_ID"
           IS_CI_MANAGED_CLUSTER="true"
-          AZURE_CLI_AUTH="true"
           MANAGED_IDENTITY_NAME="${{ secrets.AZURE_MANAGED_IDENTITY_NAME}}"
           CAA_IMAGE="${CAA_IMAGE}"
         EOF
