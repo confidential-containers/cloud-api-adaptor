@@ -13,12 +13,17 @@ env:
 
 on:
   workflow_dispatch:
+    inputs:
+      podvm-image-id:
+        type: string
+        description: prebuilt podvm image
 
 jobs:
   build-podvm-image:
     runs-on: ubuntu-latest
     outputs:
       pod-image-version: "${{ steps.generate_image_version.outputs.pod_image_version }}"
+    if: github.event.inputs.podvm-image-id == ''
     steps:
     - name: Generate version for pod vm image
       id: generate_image_version
@@ -164,6 +169,7 @@ jobs:
     needs:
     - build-podvm-image
     - build-caa-container-image
+    if: always() && !cancelled() && needs.build-podvm-image.result != 'failure'
     steps:
     - uses: actions/checkout@v3
 
@@ -175,7 +181,7 @@ jobs:
     - name: Create provisioner file
       env:
         TEST_E2E_CREATE_RG: "no"
-        PODVM_IMAGE_VERSION: "${{ needs.build-podvm-image.outputs.pod-image-version }}"
+        PODVM_IMAGE_ID: "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Compute/galleries/${{ secrets.AZURE_PODVM_GALLERY_NAME }}/images/${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }}/versions/${{ needs.build-podvm-image.outputs.pod-image-version }}"
       run: |
         cat << EOF > /tmp/provision_azure.properties
           AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
@@ -184,7 +190,7 @@ jobs:
           CLUSTER_NAME="$CLUSTER_NAME"
           LOCATION="${{ secrets.AZURE_REGION }}"
           SSH_KEY_ID="id_rsa.pub"
-          AZURE_IMAGE_ID="/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Compute/galleries/${{ secrets.AZURE_PODVM_GALLERY_NAME }}/images/${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }}/versions/${PODVM_IMAGE_VERSION}"
+          AZURE_IMAGE_ID="${{ github.event.inputs.podvm-image-id || env.PODVM_IMAGE_ID }}"
           SSH_USERNAME="${{ env.SSH_USERNAME }}"
           IS_CI_MANAGED_CLUSTER="true"
           AZURE_CLI_AUTH="true"
@@ -247,6 +253,7 @@ jobs:
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
     - name: Remove podvm image
+      if: github.event.inputs.podvm-image-id == ''
       env:
         PODVM_IMAGE_VERSION: "${{ needs.build-podvm-image.outputs.pod-image-version }}"
       run: |
@@ -261,6 +268,8 @@ jobs:
           --gallery-image-definition ${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }} \
           --gallery-image-version "${PODVM_IMAGE_VERSION}" || true
 
+    - name: Remove container image 
+      run: |
         # Delete the CAA container image built for this run.
         suffix=".azurecr.io"
         acr_url=${{ secrets.ACR_URL }}
@@ -271,6 +280,8 @@ jobs:
           --image "${{ secrets.ACR_URL }}/cloud-api-adaptor:dev-${GITHUB_SHA}" \
           --yes || true
 
+    - name: Remove AKS cluster
+      run: |
         # Delete the cluster even if it has been deleted already or does not exists.
         az aks delete \
           --name "${CLUSTER_NAME}" \
