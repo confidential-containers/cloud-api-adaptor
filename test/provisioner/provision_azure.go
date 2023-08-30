@@ -37,14 +37,12 @@ func createResourceGroup() error {
 	if AzureProps.IsCIManaged {
 		log.Infof("Resource group %q is CI managed. No need to create new one manually.", AzureProps.ResourceGroupName)
 
-		resp, err := AzureProps.ResourceGroupClient.Get(context.Background(), AzureProps.ResourceGroupName, nil)
+		_, err := AzureProps.ResourceGroupClient.Get(context.Background(), AzureProps.ResourceGroupName, nil)
 		if err != nil {
 			err = fmt.Errorf("getting resource group %s: %w", AzureProps.ResourceGroupName, err)
 			log.Errorf("%v", err)
 			return err
 		}
-
-		AzureProps.ResourceGroup = &resp.ResourceGroup
 
 		return nil
 	}
@@ -54,14 +52,12 @@ func createResourceGroup() error {
 	}
 
 	log.Infof("Creating Resource group %s.\n", AzureProps.ResourceGroupName)
-	resourceGroupResp, err := AzureProps.ResourceGroupClient.CreateOrUpdate(context.Background(), AzureProps.ResourceGroupName, newRG, nil)
+	_, err := AzureProps.ResourceGroupClient.CreateOrUpdate(context.Background(), AzureProps.ResourceGroupName, newRG, nil)
 	if err != nil {
 		err = fmt.Errorf("creating resource group %s: %w", AzureProps.ResourceGroupName, err)
 		log.Errorf("%v", err)
 		return err
 	}
-
-	AzureProps.ResourceGroup = &resourceGroupResp.ResourceGroup
 
 	log.Infof("Successfully Created Resource group %s.\n", AzureProps.ResourceGroupName)
 	return nil
@@ -252,16 +248,6 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 		},
 	}
 
-	// Enable service principal when not using the az CLI authentication method.
-	if !AzureProps.IsAzCliAuth {
-		spProfile := &armcontainerservice.ManagedClusterServicePrincipalProfile{
-			ClientID: to.Ptr(AzureProps.ClientID),
-			Secret:   to.Ptr(AzureProps.ClientSecret),
-		}
-
-		managedcluster.Properties.ServicePrincipalProfile = spProfile
-	}
-
 	pollerResp, err := AzureProps.ManagedAksClient.BeginCreateOrUpdate(
 		context.Background(),
 		AzureProps.ResourceGroupName,
@@ -370,19 +356,11 @@ func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.
 		"AZURE_RESOURCE_GROUP":  AzureProps.ResourceGroupName,
 		"CLUSTER_NAME":          AzureProps.ClusterName,
 		"AZURE_REGION":          AzureProps.Location,
-		"SSH_KEY_ID":            AzureProps.SshPrivateKey,
+		"SSH_KEY_ID":            AzureProps.SSHKeyID,
 		"SSH_USERNAME":          AzureProps.SshUserName,
 		"AZURE_IMAGE_ID":        AzureProps.ImageID,
 		"AZURE_SUBNET_ID":       AzureProps.SubnetID,
 		"AZURE_INSTANCE_SIZE":   AzureProps.InstanceSize,
-	}
-
-	if AzureProps.ClientSecret != "" {
-		props["AZURE_CLIENT_SECRET"] = AzureProps.ClientSecret
-	}
-
-	if AzureProps.TenantID != "" {
-		props["AZURE_TENANT_ID"] = AzureProps.TenantID
 	}
 
 	return props
@@ -404,12 +382,7 @@ func isAzureKustomizeConfigMapKey(key string) bool {
 }
 
 func isAzureKustomizeSecretKey(key string) bool {
-	switch key {
-	case "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_TENANT_ID":
-		return true
-	default:
-		return false
-	}
+	return key == "AZURE_CLIENT_ID"
 }
 
 func NewAzureInstallOverlay(installDir string) (InstallOverlay, error) {

@@ -18,22 +18,18 @@ import (
 )
 
 type AzureProperties struct {
-	ResourceGroup       *armresources.ResourceGroup
 	SubscriptionID      string
 	ClientID            string
-	ClientSecret        string
-	TenantID            string
 	ResourceGroupName   string
 	ClusterName         string
 	Location            string
-	SshPrivateKey       string
+	SSHKeyID            string
 	SubnetName          string
 	VnetName            string
 	SubnetID            string
 	ImageID             string
 	SshUserName         string
 	ManagedIdentityName string
-	IsAzCliAuth         bool
 	IsCIManaged         bool
 	CaaImage            string
 
@@ -53,16 +49,15 @@ type AzureProperties struct {
 var AzureProps = &AzureProperties{}
 
 func initAzureProperties(properties map[string]string) error {
-	log.Trace("initazureProperties()")
+	log.Trace("initAzureProperties()")
+
 	AzureProps = &AzureProperties{
 		SubscriptionID:      properties["AZURE_SUBSCRIPTION_ID"],
 		ClientID:            properties["AZURE_CLIENT_ID"],
-		ClientSecret:        properties["AZURE_CLIENT_SECRET"],
-		TenantID:            properties["AZURE_TENANT_ID"],
 		ResourceGroupName:   properties["RESOURCE_GROUP_NAME"],
 		ClusterName:         properties["CLUSTER_NAME"],
 		Location:            properties["LOCATION"],
-		SshPrivateKey:       properties["SSH_KEY_ID"],
+		SSHKeyID:            properties["SSH_KEY_ID"],
 		ImageID:             properties["AZURE_IMAGE_ID"],
 		SubnetID:            properties["AZURE_SUBNET_ID"],
 		SshUserName:         properties["SSH_USERNAME"],
@@ -76,18 +71,6 @@ func initAzureProperties(properties map[string]string) error {
 		AzureProps.IsCIManaged = true
 	}
 
-	CliAuthStr := properties["AZURE_CLI_AUTH"]
-	AzureProps.IsAzCliAuth = false
-	if strings.EqualFold(CliAuthStr, "yes") || strings.EqualFold(CliAuthStr, "true") {
-		AzureProps.IsAzCliAuth = true
-	}
-
-	AzureProps.VnetName = AzureProps.ClusterName + "_vnet"
-	AzureProps.SubnetName = AzureProps.ClusterName + "_subnet"
-	AzureProps.InstanceSize = "Standard_DC2as_v5"
-	AzureProps.NodeName = "caaaks"
-	AzureProps.OsType = "Ubuntu"
-
 	if AzureProps.SubscriptionID == "" {
 		return errors.New("AZURE_SUBSCRIPTION_ID was not set.")
 	}
@@ -98,14 +81,8 @@ func initAzureProperties(properties map[string]string) error {
 	if AzureProps.ClientID == "" {
 		return errors.New("AZURE_CLIENT_ID was not set.")
 	}
-	if AzureProps.ClientSecret == "" && !AzureProps.IsAzCliAuth {
-		return errors.New("AZURE_CLIENT_SECRET was not set")
-	}
 	if AzureProps.Location == "" {
 		return errors.New("LOCATION was not set.")
-	}
-	if AzureProps.SshPrivateKey == "" {
-		return errors.New("SSH_KEY_ID was not set.")
 	}
 	if AzureProps.ImageID == "" {
 		return errors.New("AZURE_IMAGE_ID was not set.")
@@ -113,6 +90,13 @@ func initAzureProperties(properties map[string]string) error {
 	if AzureProps.ClusterName == "" {
 		AzureProps.ClusterName = "e2e_test_cluster"
 	}
+
+	AzureProps.VnetName = AzureProps.ClusterName + "_vnet"
+	AzureProps.SubnetName = AzureProps.ClusterName + "_subnet"
+	AzureProps.InstanceSize = "Standard_DC2as_v5"
+	AzureProps.NodeName = "caaaks"
+	AzureProps.OsType = "Ubuntu"
+
 	if AzureProps.ResourceGroupName == "" {
 		AzureProps.ResourceGroupName = AzureProps.ClusterName + "_rg"
 	}
