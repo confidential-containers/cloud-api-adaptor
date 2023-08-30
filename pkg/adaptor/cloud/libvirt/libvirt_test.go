@@ -64,6 +64,14 @@ func TestGetArchitecture(t *testing.T) {
 	}
 }
 
+func TestGetLaunchSecurity(t *testing.T) {
+	launchSecurity, err := GetLaunchSecurityType("qemu:///system")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("%s", launchSecurity.String())
+}
+
 func verifyVirtioIOMMU(domXML *libvirtxml.Domain) error {
 	// verify we have iommu on the disks
 	for i, disk := range domXML.Devices.Disks {

@@ -18,7 +18,7 @@ func TestLibvirtCreateSimplePod(t *testing.T) {
 func TestLibvirtCreateConfidentialPod(t *testing.T) {
 	assert := LibvirtAssert{}
 
-	launchSecurity, err := libvirtAdaptor.GetLaunchSecurityType()
+	launchSecurity, err := libvirtAdaptor.GetLaunchSecurityType("qemu:///system")
 	if err != nil {
 		t.Errorf("Unable to determine machine confidentiality capabilities: [%v]", err)
 	}

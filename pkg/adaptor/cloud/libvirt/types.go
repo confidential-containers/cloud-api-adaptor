@@ -73,7 +73,7 @@ const (
 func (l LaunchSecurityType) String() string {
 	switch l {
 	case NoLaunchSecurity:
-		return ""
+		return "None"
 	case SEV:
 		return "SEV"
 	case S390PV:

@@ -415,10 +415,6 @@ func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfi
 					Source: &libvirtxml.DomainInterfaceSource{Network: &libvirtxml.DomainInterfaceSourceNetwork{Network: cfg.networkName}},
 					Model:  &libvirtxml.DomainInterfaceModel{Type: "virtio"},
 				},
-				//{
-				//	Source: &libvirtxml.DomainInterfaceSource{Bridge: &libvirtxml.DomainInterfaceSourceBridge{Bridge: "virbr0"}},
-				//	Model:  &libvirtxml.DomainInterfaceModel{Type: "virtio"},
-				//},
 			},
 			// Serial Console Devices.
 			Consoles: []libvirtxml.DomainConsole{
@@ -486,17 +482,14 @@ func enableSEV(client *libvirtClient, cfg *domainConfig, vm *vmConfig, domain *l
 
 	domain.OS.Type.Machine = sevMachine
 	domain.OS.Loader = &libvirtxml.DomainLoader{
-		Path:     vm.firmware,
-		Readonly: "yes",
-		//Secure:    "yes",
-		//Stateless: "yes",
-		Type: "pflash", // ??
+		Path:      vm.firmware,
+		Readonly:  "yes",
+		Stateless: "yes",
+		Type:      "pflash",
 	}
 
-	domain.OS.NVRam = &libvirtxml.DomainNVRam{NVRam: "/usr/share/edk2/ovmf/OVMF_VARS.fd"}
-
-	// Secure boot requires SMM feature enabled
-	//domain.Features.SMM = &libvirtxml.DomainFeatureSMM{State: "on"}
+	nvramPath := fmt.Sprintf("/var/lib/libvirt/qemu/nvram/%s_VARS.fd", cfg.name)
+	domain.OS.NVRam = &libvirtxml.DomainNVRam{NVRam: nvramPath}
 
 	// Must allocate memory (8 GiB) + extra for qemu to use to calculate total memory limit
 	domain.MemoryTune = &libvirtxml.DomainMemoryTune{
@@ -507,26 +500,28 @@ func enableSEV(client *libvirtClient, cfg *domainConfig, vm *vmConfig, domain *l
 	}
 
 	// IDE controllers are unsupported for q35 machines.
-	// Bus can be SCSI and SATA. However, having multiple SATA errors (bug?)
-	for diskNum := range domain.Devices.Disks {
-		if domain.Devices.Disks[diskNum].Target.Bus == "ide" {
-			domain.Devices.Disks[diskNum].Target.Bus = "scsi"
-		}
-	}
+	cidataDiskIndex := 1
+	var cidataDiskAddr uint = 1
+	domain.Devices.Disks[cidataDiskIndex].Target.Bus = "sata"
+	domain.Devices.Disks[cidataDiskIndex].Target.Dev = "sdb"
+	domain.Devices.Disks[cidataDiskIndex].Address.Drive.Unit = &cidataDiskAddr
 
+	// Devices with type virtio must have IOMMU turned on
 	for devInterfaceNum := range domain.Devices.Interfaces {
 		deviceInterface := domain.Devices.Interfaces[devInterfaceNum]
 		if deviceInterface.Model.Type == "virtio" {
-			if deviceInterface.Source.Network != nil /*|| deviceInterface.Source.Bridge != nil*/ {
+			if deviceInterface.Source.Network != nil {
 				// Disable ROM for virtio-nets
 				domain.Devices.Interfaces[devInterfaceNum].ROM = &libvirtxml.DomainROM{Enabled: "no"}
 			}
-			// IOMMU required to enable DMA API
 			domain.Devices.Interfaces[devInterfaceNum].Driver = &libvirtxml.DomainInterfaceDriver{IOMMU: "on"}
-
 		}
 	}
-
+	for devControllerNum := range domain.Devices.Controllers {
+		if domain.Devices.Controllers[devControllerNum].Type == "virtio" {
+			domain.Devices.Controllers[devControllerNum].Driver = &libvirtxml.DomainControllerDriver{IOMMU: "on"}
+		}
+	}
 	domain.Devices.MemBalloon = &libvirtxml.DomainMemBalloon{Model: "virtio", Driver: &libvirtxml.DomainMemBalloonDriver{IOMMU: "on"}}
 
 	return domain, nil
@@ -813,11 +808,15 @@ func freeDomain(domain *libvirt.Domain, errCtx *error) {
 
 // Attempts to determine launchSecurity Type from domain capabilities and hardware
 // Currently only supports SEV and S390PV
-func GetLaunchSecurityType() (LaunchSecurityType, error) {
-	conn, err := libvirt.NewConnect("qemu:///system")
+func GetLaunchSecurityType(uri string) (LaunchSecurityType, error) {
+	conn, err := libvirt.NewConnect(uri)
 	if err != nil {
 		return NoLaunchSecurity, fmt.Errorf("unable to get libvirt connection [%v]", err)
 	}
+
+	// TODO get emulator
+	//caps, err := getHostCapabilities(conn)
+	emulator := "/usr/bin/qemu-system-x86_64"
 
 	nodeInfo, err := conn.GetNodeInfo()
 	if err != nil {
@@ -827,9 +826,9 @@ func GetLaunchSecurityType() (LaunchSecurityType, error) {
 	switch nodeInfo.Model {
 	case ArchS390x:
 		return S390PV, nil
-	case "x86-64":
+	case "x86_64":
 		domCapflags := uint32(0)
-		domCaps, err := GetDomainCapabilities(conn, "qemu", nodeInfo.Model, "q35", "qemu", domCapflags)
+		domCaps, err := GetDomainCapabilities(conn, emulator, nodeInfo.Model, "q35", "qemu", domCapflags)
 		if err != nil {
 			return NoLaunchSecurity, fmt.Errorf("unable to get domain capabilities [%v]", err)
 		}
