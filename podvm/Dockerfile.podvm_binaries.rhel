@@ -10,7 +10,7 @@ FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG CLOUD_PROVIDER
 ARG PODVM_DISTRO=rhel
-ARG GUEST_COMPONENTS_VERSION="3d8192f8d3efab041916ea4d60e32248ac6ec43d"
+ARG GUEST_COMPONENTS_VERSION="53ddd632424432077e95d3901deb64727be0b4c1"
 ARG GUEST_COMPONENTS_REPO="https://github.com/confidential-containers/guest-components"
 ARG AA_KBC="offline_fs_kbc"
 # If not provided, uses system architecture
