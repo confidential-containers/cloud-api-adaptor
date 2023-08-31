@@ -34,11 +34,11 @@ RUN if [ -n "${CAA_SRC}" ]; then \
        git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
      fi
 
-ARG RHEL_IMAGE_URL="/tmp/rhel.qcow2"
-ARG RHEL_IMAGE_CHECKSUM
+ARG IMAGE_URL="/tmp/rhel.qcow2"
+ARG IMAGE_CHECKSUM
 
-ENV RHEL_IMAGE_URL ${RHEL_IMAGE_URL}
-ENV RHEL_IMAGE_CHECKSUM ${RHEL_IMAGE_CHECKSUM}
+ENV IMAGE_URL ${IMAGE_URL}
+ENV IMAGE_CHECKSUM ${IMAGE_CHECKSUM}
 
 # workaround to ensure hashicorp packer is called instead
 # of cracklib packer which is installed by default

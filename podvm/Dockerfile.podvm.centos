@@ -37,11 +37,11 @@ RUN if [ -n "${CAA_SRC}" ]; then \
      fi
 
 # Defaults to CentOS 8-stream x86_64 image. These variables can be overriden as needed
-ARG CENTOS_IMAGE_URL=https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
-ARG CENTOS_IMAGE_CHECKSUM=8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c
+ARG IMAGE_URL=
+ARG IMAGE_CHECKSUM=
 
-ENV CENTOS_IMAGE_URL ${CENTOS_IMAGE_URL}
-ENV CENTOS_IMAGE_CHECKSUM ${CENTOS_IMAGE_CHECKSUM}
+ENV IMAGE_URL ${IMAGE_URL}
+ENV IMAGE_CHECKSUM ${IMAGE_CHECKSUM}
 
 # workaround to ensure hashicorp packer is called instead
 # of cracklib packer which is installed by default
