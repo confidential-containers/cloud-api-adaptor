@@ -21,7 +21,7 @@ RUN dnf install -y 'dnf-command(config-manager)' && dnf config-manager --set-ena
     dnf groupinstall -y 'Development Tools' && \
     dnf install -y yum-utils gnupg git curl pkg-config libseccomp-devel gpgme-devel \
         device-mapper-devel qemu-kvm unzip wget libassuan-devel golang-github-cpuguy83-md2man \
-	genisoimage cloud-utils-growpart cloud-init && \
+	genisoimage cloud-utils-growpart cloud-init clang && \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     dnf install -y packer && \
     dnf clean all && \

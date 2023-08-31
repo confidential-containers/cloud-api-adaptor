@@ -17,7 +17,7 @@ ARG RUST_VERSION="1.69.0"
 RUN dnf groupinstall -y 'Development Tools' && \
     dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
         device-mapper-devel qemu-kvm unzip wget libassuan-devel \
-	genisoimage cloud-utils-growpart cloud-init && \
+	genisoimage cloud-utils-growpart cloud-init clang && \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     dnf install -y packer && \
     dnf clean all && \
