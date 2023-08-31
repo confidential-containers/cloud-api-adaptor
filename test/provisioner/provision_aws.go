@@ -75,6 +75,13 @@ type Vpc struct {
 	SecondarySubnetId string
 }
 
+// Cluster defines create/delete/access interfaces to Kubernetes clusters
+type Cluster interface {
+	CreateCluster() error               // Create the Kubernetes cluster
+	DeleteCluster() error               // Delete the Kubernetes cluster
+	GetKubeconfigFile() (string, error) // Get the path to the kubeconfig file
+}
+
 // EKSCluster represents an EKS cluster
 type EKSCluster struct {
 	AwsConfig       aws.Config
@@ -90,10 +97,15 @@ type EKSCluster struct {
 	Vpc             *Vpc
 }
 
+// OnPremCluster represents an existing and running cluster
+type OnPremCluster struct {
+}
+
 // AWSProvisioner implements the CloudProvision interface.
 type AWSProvisioner struct {
 	AwsConfig  aws.Config
 	iamClient  *iam.Client
+	Cluster    Cluster
 	ec2Client  *ec2.Client
 	s3Client   *s3.Client
 	Bucket     *S3Bucket
@@ -111,6 +123,8 @@ type AwsInstallOverlay struct {
 
 // NewAWSProvisioner instantiates the AWS provisioner
 func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
+	var cluster Cluster
+
 	cfg, err := awsConfig.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Error("Failed to load AWS config")
@@ -121,6 +135,14 @@ func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
 		cfg.Region = properties["aws_region"]
 	} else {
 		properties["aws_region"] = cfg.Region
+	}
+
+	if properties["cluster_type"] == "" ||
+		properties["cluster_type"] == "onprem" {
+		cluster = NewOnPremCluster()
+	} else {
+		return nil, fmt.Errorf("Cluster type '%s' not implemented",
+			properties["cluster_type"])
 	}
 
 	ec2Client := ec2.NewFromConfig(cfg)
@@ -134,6 +156,7 @@ func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
 			Name:   "peer-pods-tests",
 			Key:    "", // To be defined when the file is uploaded
 		},
+		Cluster:    cluster,
 		Image:      NewAMIImage(ec2Client, properties),
 		PauseImage: properties["pause_image"],
 		Vpc:        NewVpc(ec2Client, properties),
@@ -143,9 +166,14 @@ func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
 }
 
 func (a *AWSProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
-	kubeconfigPath := kconf.ResolveKubeConfigFile()
-	if kubeconfigPath == "" {
-		return fmt.Errorf("Unabled to find a kubeconfig file")
+	err := a.Cluster.CreateCluster()
+	if err != nil {
+		return err
+	}
+
+	kubeconfigPath, err := a.Cluster.GetKubeconfigFile()
+	if err != nil {
+		return err
 	}
 	*cfg = *envconf.NewWithKubeConfig(kubeconfigPath)
 
@@ -1325,4 +1353,32 @@ users:
 	}
 
 	return targetFile, nil
+}
+
+func NewOnPremCluster() *OnPremCluster {
+	return &OnPremCluster{}
+}
+
+// CreateCluster does nothing as the cluster should exist already.
+func (o *OnPremCluster) CreateCluster() error {
+	log.Info("On-prem cluster type selected. Nothing to do.")
+
+	return nil
+}
+
+// DeleteCluster does nothing.
+func (o *OnPremCluster) DeleteCluster() error {
+	log.Info("On-prem cluster type selected. Nothing to do.")
+
+	return nil
+}
+
+// GetKubeconfigFile looks for the kubeconfig on the default locations
+func (o *OnPremCluster) GetKubeconfigFile() (string, error) {
+	kubeconfigPath := kconf.ResolveKubeConfigFile()
+	if kubeconfigPath == "" {
+		return "", fmt.Errorf("Unabled to find a kubeconfig file")
+	}
+
+	return kubeconfigPath, nil
 }
