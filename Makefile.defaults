@@ -1,0 +1,37 @@
+ifeq (, $(shell command -v yq))
+$(error "No yq on PATH, consider doing snap install yq")
+endif
+
+YQ_COMMAND     := yq
+VERSIONS_SRC := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/versions.yaml
+
+define query
+$(or $(shell $(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
+	$(error $(1) is not set, and could not be automatically set from $(VERSIONS_SRC)))
+endef
+
+ubuntu_RELEASE ?= focal
+centos_RELEASE ?= stream-8
+
+ubuntu_amd64_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.url)
+ubuntu_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.checksum)
+ubuntu_s390x_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).s390x.url)
+ubuntu_s390x_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).s390x.checksum)
+centos_amd64_IMAGE_URL := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.url)
+centos_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.checksum)
+
+CAA_SRC := $(or $(CAA_SRC),$(call query,git.cloud-api-adaptor.url))
+CAA_SRC_REF := $(or $(CAA_SRC_REF),$(call query,git.cloud-api-adaptor.reference))
+KATA_SRC := $(or $(KATA_SRC),$(call query,git.kata-containers.url))
+KATA_SRC_REF := $(or $(KATA_SRC_REF),$(call query,git.kata-containers.reference))
+GO_VERSION := $(or $(GO_VERSION),$(call query,tools.golang))
+PROTOC_VERSION := $(or $(PROTOC_VERSION),$(call query,tools.protoc))
+RUST_VERSION := $(or $(RUST_VERSION),$(call query,tools.rust))
+SKOPEO_REPO := $(or $(SKOPEO_REPO),$(call query,git.skopeo.url))
+SKOPEO_VERSION := $(or $(SKOPEO_VERSION),$(call query,git.skopeo.reference))
+UMOCI_REPO := $(or $(UMOCI_REPO),$(call query,git.umoci.url))
+UMOCI_VERSION := $(or $(UMOCI_VERSION),$(call query,git.umoci.reference))
+GUEST_COMPONENTS_REPO := $(or $(GUEST_COMPONENTS_REPO),$(call query,git.guest-components.url))
+GUEST_COMPONENTS_VERSION := $(or $(GUEST_COMPONENTS_VERSION),$(call query,git.guest-components.reference))
+PAUSE_REPO :=  $(or $(PAUSE_REPO),$(call query,oci.pause.registry))
+PAUSE_VERSION := $(or $(PAUSE_VERSION),$(call query,oci.pause.tag))
