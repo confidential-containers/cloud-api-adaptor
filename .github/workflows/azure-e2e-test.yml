@@ -80,6 +80,8 @@ jobs:
         ref: ${{ env.KATA_AGENT_VERSION }}
 
     - name: Build kata-agent
+      env:
+        GOPATH: /home/runner/go
       if: steps.kata-agent-cache.outputs.cache-hit != 'true'
       run: make "$(realpath -m ../../podvm/files/usr/local/bin/kata-agent)"
 
