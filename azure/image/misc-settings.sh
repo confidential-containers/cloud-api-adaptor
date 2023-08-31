@@ -67,8 +67,8 @@ then
         esac
     fi
 
-    # Add a link to the service in multi-user.target.wants
-    ln -s /etc/systemd/system/setup-nat-for-imds.service /etc/systemd/system/multi-user.target.wants/setup-nat-for-imds.service
+    # Enable oneshot serivce
+    systemctl enable setup-nat-for-imds
 fi
 
 if [ -e /etc/certificates/tls.crt ] && [ -e /etc/certificates/tls.key ] && [ -e /etc/certificates/ca.crt ]; then
