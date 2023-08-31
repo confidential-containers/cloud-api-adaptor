@@ -12,8 +12,8 @@ cloudimg:
   centos:
     stream-8:
       amd64:
-        url: https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20200113.0.x86_64.qcow2
-        checksum: "sha256:b80ca9ccad8715aa1aeee582906096d3190b91cebe05fcb3ac7cb197fd68a7fe"
+        url: https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
+        checksum: "sha256:8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c"
 tools:
   golang: 1.20.7
   rust: 1.69.0
@@ -29,3 +29,13 @@ git:
   cloud-api-adaptor:
     url: https://github.com/confidential-containers/cloud-api-adaptor
     reference: main
+  umoci:
+    url: https://github.com/opencontainers/umoci
+    reference: v0.4.7
+  skopeo:
+    url: https://github.com/containers/skopeo
+    reference: v1.5.0
+oci:
+  pause:
+    registry: docker://registry.k8s.io/pause
+    tag: 3.6
