@@ -416,6 +416,13 @@ func TestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
 	}
 }
 
+func TestDeletePod(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestDeleteSimplePod(t, assert)
+}
+
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
 type IBMCloudAssert struct {
 	vpc *vpcv1.VpcV1

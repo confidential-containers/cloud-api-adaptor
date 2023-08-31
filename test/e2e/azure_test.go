@@ -15,6 +15,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func TestDeletePodAzure(t *testing.T) {
+	assert := AzureCloudAssert{
+		group: pv.AzureProps.ResourceGroup,
+	}
+	doTestDeleteSimplePod(t, assert)
+}
+
 func TestCreateSimplePodAzure(t *testing.T) {
 	assert := AzureCloudAssert{
 		group: pv.AzureProps.ResourceGroup,
