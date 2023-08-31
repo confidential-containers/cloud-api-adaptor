@@ -19,9 +19,9 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -48,6 +48,7 @@ const (
 	CloudApiAdaptorImageEnvName = "RELATED_IMAGE_CAA"
 	DefaultCloudApiAdaptorImage = "quay.io/confidential-containers/cloud-api-adaptor"
 	defaultNodeSelectorLabel    = "node.kubernetes.io/worker"
+	defaultPeerPodsLimitPerNode = "1"
 )
 
 // PeerPodConfigReconciler reconciles a PeerPodConfig object
@@ -316,26 +317,27 @@ func (r *PeerPodConfigReconciler) advertiseExtendedResources() error {
 		return nil
 	}
 
-	// FIXME distribute remainder among nodes
-	var limitInt int64
-	limitInt, err = strconv.ParseInt(r.peerPodConfig.Spec.Limit, 0, 64)
-	if err != nil {
-		r.Log.Error(err, "spec.Limit in PeerPodConfig must be an integer")
+	// Parse limit from PeerPodConfig.Spec.Limit.
+	// If not set or in case of error, use defaultPeerPodsLimitPerNode
+	limitPerNode := defaultPeerPodsLimitPerNode
+	if r.peerPodConfig.Spec.Limit != "" {
+		limitPerNode = r.peerPodConfig.Spec.Limit
 	}
 
-	limitPerNode := limitInt / int64(len(nodesList.Items))
+	patch := append([]JsonPatch{}, NewJsonPatch("add", "/status/capacity", "kata.peerpods.io~1vm", limitPerNode))
+
+	cli, err := r.GetClient()
+	if err != nil {
+		return fmt.Errorf("failed to get k8s client: %v", err)
+	}
 
 	for _, node := range nodesList.Items {
-		patches := append([]JsonPatch{}, NewJsonPatch("add", "/status/capacity", "kata.peerpods.io~1vm",
-			strconv.Itoa(int(limitPerNode))))
-		cli, err := r.GetClient()
+		err = r.PatchNodeStatus(cli, node.Name, patch)
 		if err != nil {
-			r.Log.Error(err, "failed to get k8s client")
+			r.Log.Info("Failed to set extended resource for node", "node name", node.Name)
+			continue
 		}
-		err = r.PatchNodeStatus(cli, node.Name, patches)
-		if err != nil {
-			r.Log.Error(err, "Failed to set extended resource for node", "node name", node.Name)
-		}
+		r.Log.Info("Successfully set extended resource for node", "node name", node.Name)
 	}
 	return nil
 }

@@ -50,8 +50,8 @@ spec:
                   of the chosen cloud provider
                 type: string
               limit:
-                description: Limit is the max number of peer pods. This is exposed
-                  as extended resource on nodes
+                description: Limit is the max number of peer pods per node. This is
+                  exposed as extended resource on the node
                 type: string
               nodeSelector:
                 additionalProperties:
