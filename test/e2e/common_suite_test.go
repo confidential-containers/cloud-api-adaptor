@@ -61,6 +61,7 @@ type testCase struct {
 	imagePullTimer       bool
 	isAuth               bool
 	AuthImageStatus      string
+	deletionWithin       *time.Duration
 }
 
 func (tc *testCase) withConfigMap(configMap *v1.ConfigMap) *testCase {
@@ -85,6 +86,11 @@ func (tc *testCase) withJob(job *batchv1.Job) *testCase {
 
 func (tc *testCase) withPod(pod *v1.Pod) *testCase {
 	tc.pod = pod
+	return tc
+}
+
+func (tc *testCase) withDeleteAssertion(duration *time.Duration) *testCase {
+	tc.deletionWithin = duration
 	return tc
 }
 
@@ -337,8 +343,17 @@ func (tc *testCase) run() {
 				if err = client.Resources().Delete(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
-				log.Infof("Deleting pod... %s", tc.pod.Name)
+				log.Infof("Deleting pod %s...", tc.pod.Name)
 
+				if tc.deletionWithin != nil {
+					if err = wait.For(conditions.New(
+						client.Resources()).ResourceDeleted(tc.pod),
+						wait.WithInterval(5*time.Second),
+						wait.WithTimeout(*tc.deletionWithin)); err != nil {
+						t.Fatal(err)
+					}
+					log.Infof("Pod %s has been successfully deleted within %.0fs", tc.pod.Name, tc.deletionWithin.Seconds())
+				}
 			}
 
 			if tc.pvc != nil {
@@ -587,6 +602,13 @@ func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	pod := newNginxPod(namespace)
 	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).run()
+}
+
+func doTestDeleteSimplePod(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	pod := newNginxPodWithName(namespace, "deletion-test")
+	duration := 1 * time.Minute
+	newTestCase(t, "DeletePod", assert, "Deletion complete").withPod(pod).withDeleteAssertion(&duration).run()
 }
 
 func doTestCreatePodWithConfigMap(t *testing.T, assert CloudAssert) {
