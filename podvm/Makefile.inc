@@ -7,15 +7,14 @@
 # It is to be included via `include ../../podvm/Makefile.inc` in
 # each of the cloud provider podvm image Makefiles
 
-UBUNTU_RELEASE     = focal
-SKOPEO_VERSION     = 1.5.0
-UMOCI_VERSION      = 0.4.7
-GUEST_COMPONENTS_VERSION ?= "53ddd632424432077e95d3901deb64727be0b4c1"
+FILES_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/files
+
+include ../Makefile.defaults
 
 IMAGE_PREFIX := podvm
 
 HOST_ARCH   := $(shell uname -m)
-ARCH        ?= $(HOST_ARCH)
+ARCH        := $(or $(ARCH),$(HOST_ARCH))
 # Normalise x86_64 / amd64 for input ARCH
 ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
@@ -32,8 +31,6 @@ ifneq ($(HOST_ARCH),$(ARCH))
 	endif
 RUST_FLAGS := CC=$(CC) ARCH=$(ARCH)
 endif
-
-FILES_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/files
 
 ifndef IMAGE_NAME
 COMMIT := $(shell	commit=$$(git describe --match '' --dirty --always) && \
@@ -67,17 +64,13 @@ KATA_AGENT_SRC = ../../../kata-containers/src/agent
 KATA_AGENT_BUILD_TYPE = release
 
 SKOPEO_SRC ?= skopeo
-SKOPEO_REPO = https://github.com/containers/skopeo
 SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo
 
 UMOCI_SRC   = umoci
-UMOCI_REPO  = https://github.com/opencontainers/umoci
 
 # Embed the pause container image
 # https://github.com/arronwy/kata-containers/commit/75b9f3fa3caaae62f49b4733f65cbab0cc87dbee
 PAUSE_SRC     = pause
-PAUSE_REPO    = docker://registry.k8s.io/pause
-PAUSE_VERSION = 3.6
 # Allows to override
 PAUSE_BUNDLE  ?= pause_bundle
 
@@ -88,7 +81,6 @@ STATIC_LIBSECCOMP_DIR     = $(abspath staticlib)
 STATIC_LIBSECCOMP         = $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp/lib/libseccomp.a
 
 GUEST_COMPONENTS_SRC = ../../../guest-components
-GUEST_COMPONENTS_REPO ?= https://github.com/confidential-containers/guest-components
 
 # Clone a specific commit/tag/branch of a repo.
 # $(1) - Repository URL
@@ -119,14 +111,14 @@ $(STATIC_LIBSECCOMP):
 
 # Skopeo package packages are available in RHEL/CentOS 8 or later and Ubuntu 20.10 or later
 $(SKOPEO_SRC):
-	git clone -b "v$(SKOPEO_VERSION)" "$(SKOPEO_REPO)" "$(SKOPEO_SRC)"
+	$(call git_clone_repo_ref,$(SKOPEO_REPO),$(SKOPEO_SRC),$(SKOPEO_VERSION))
 
 $(SKOPEO_BIN): $(SKOPEO_SRC)
 	cd "$(SKOPEO_SRC)" && CC= $(MAKE) bin/skopeo
 
 # The umoci release page only publishes amd64 binaries. https://github.com/opencontainers/umoci/releases
 $(UMOCI_SRC):
-	git clone -b "v$(UMOCI_VERSION)" "$(UMOCI_REPO)" "$(UMOCI_SRC)"
+	$(call git_clone_repo_ref,$(UMOCI_REPO),$(UMOCI_SRC),$(UMOCI_VERSION))
 
 $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
 	cd "$(UMOCI_SRC)" && CC= $(MAKE)
