@@ -19,9 +19,10 @@ You may need to link the agent with the musl C library. In this case, you should
 Finally run the following commands to build the qcow2 image:
 
 ```bash
-$ export CLOUD_PROVIDER=[aws|azure|ibmcloud|libvirt]
+$ export CLOUD_PROVIDER=[aws|azure|ibmcloud|libvirt|vsphere|generic]
 $ make image
 ```
+**NOTE:** "generic" is a best-effort provider agnostic image creation
 
 # How to build within container
 
