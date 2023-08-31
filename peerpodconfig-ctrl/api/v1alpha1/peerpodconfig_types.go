@@ -28,7 +28,7 @@ type PeerPodConfigSpec struct {
 	// InstanceType describes the name of the instance type of the chosen cloud provider
 	InstanceType string `json:"instanceType,omitempty"`
 
-	// Limit is the max number of peer pods. This is exposed as extended resource on nodes
+	// Limit is the max number of peer pods per node. This is exposed as extended resource on the node
 	Limit string `json:"limit,omitempty"`
 
 	// CloudSecretName is the name of the secret that holds the credentials for the cloud provider
