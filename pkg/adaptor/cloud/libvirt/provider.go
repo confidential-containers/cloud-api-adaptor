@@ -7,6 +7,7 @@ package libvirt
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/netip"
 
@@ -56,7 +57,28 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	}
 
 	// TODO: Specify the maximum instance name length in Libvirt
-	vm := &vmConfig{name: instanceName, userData: userData}
+	vm := &vmConfig{name: instanceName, userData: userData, firmware: p.serviceConfig.Firmware}
+
+	if p.serviceConfig.DisableCVM {
+		vm.launchSecurityType = NoLaunchSecurity
+	} else if p.serviceConfig.LaunchSecurity != "" {
+		switch p.serviceConfig.LaunchSecurity {
+		case "sev":
+			vm.launchSecurityType = SEV
+		case "s390-pv":
+			vm.launchSecurityType = S390PV
+		default:
+			return nil, fmt.Errorf("[%s] is not a known launch security setting", p.serviceConfig.LaunchSecurity)
+		}
+	} else {
+		vm.launchSecurityType, err = GetLaunchSecurityType(p.serviceConfig.URI)
+		if err != nil {
+			logger.Printf("unable to determine launch security type [%v]", err)
+			return nil, err
+		}
+	}
+	logger.Printf("LaunchSecurityType: %s", vm.launchSecurityType.String())
+
 	result, err := CreateDomain(ctx, p.libvirtClient, vm)
 	if err != nil {
 		logger.Printf("failed to create an instance : %v", err)

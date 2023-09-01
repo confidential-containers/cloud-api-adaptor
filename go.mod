@@ -31,7 +31,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/cri-api v0.23.1
 	libvirt.org/go/libvirt v1.8002.0
-	libvirt.org/go/libvirtxml v1.8002.0
+	libvirt.org/go/libvirtxml v1.9004.0
 )
 
 require (

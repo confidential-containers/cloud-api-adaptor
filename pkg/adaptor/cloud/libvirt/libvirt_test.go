@@ -89,6 +89,8 @@ func TestCreateDomainXMLs390x(t *testing.T) {
 	}
 	defer client.connection.Close()
 
+	vm := vmConfig{}
+
 	domainCfg := domainConfig{
 		name:        "TestCreateDomainS390x",
 		cpu:         2,
@@ -98,7 +100,7 @@ func TestCreateDomainXMLs390x(t *testing.T) {
 		cidataDisk:  "/var/lib/libvirt/images/cidata.iso",
 	}
 
-	domCfg, err := createDomainXML(client, &domainCfg)
+	domCfg, err := createDomainXML(client, &domainCfg, &vm)
 	if err != nil {
 		t.Error(err)
 	}
