@@ -117,6 +117,7 @@ ibmcloud_powervs() {
 libvirt() {
     test_vars LIBVIRT_URI
 
+    [[ "${DISABLECVM}" = "true" ]] && optionals+="-disable-cvm "
     set -x
     exec cloud-api-adaptor libvirt \
         -uri "${LIBVIRT_URI}" \
