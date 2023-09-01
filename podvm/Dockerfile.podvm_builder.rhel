@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.5-labs
 # Copyright Confidential Containers Contributors
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -10,6 +11,8 @@ FROM registry.access.redhat.com/ubi9/ubi:9.1
 ARG GO_VERSION="1.20.7"
 ARG PROTOC_VERSION="3.11.4"
 ARG RUST_VERSION="1.69.0"
+ARG YQ_VERSION="v4.35.1"
+ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 
 # This must be running on subscribed RHEL host !!!
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
@@ -24,6 +27,9 @@ RUN dnf groupinstall -y 'Development Tools' && \
     curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -f go${GO_VERSION}.linux-amd64.tar.gz
+
+ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 /usr/local/bin/yq
+RUN chmod a+x /usr/local/bin/yq
 
 # set a correspond qemu-system-* named link to qemu-kvm
 RUN ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-$(uname -m)

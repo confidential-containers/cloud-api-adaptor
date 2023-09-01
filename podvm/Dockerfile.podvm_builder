@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.5-labs
 # Copyright Confidential Containers Contributors
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -10,6 +11,8 @@ FROM ubuntu:20.04
 ARG GO_VERSION="1.20.7"
 ARG PROTOC_VERSION="3.11.4"
 ARG RUST_VERSION="1.69.0"
+ARG YQ_VERSION="v4.35.1"
+ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 
 # Without setting ENV gh-action is failing to use the correct values
 ENV GO_VERSION ${GO_VERSION}
@@ -33,6 +36,8 @@ RUN apt-get update -y && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
     rm -f go${GO_VERSION}.linux-amd64.tar.gz
 
+ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 /usr/local/bin/yq
+RUN chmod a+x /usr/local/bin/yq
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${RUST_VERSION}
 
