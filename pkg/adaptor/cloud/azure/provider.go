@@ -149,15 +149,40 @@ func (p *azureProvider) createNetworkInterface(ctx context.Context, nicName stri
 
 func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
 
+	var b64EncData string
+
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
-	userData, err := cloudConfig.Generate()
+	cloudConfigData, err := cloudConfig.Generate()
 	if err != nil {
 		return nil, err
 	}
 
-	//Convert userData to base64
-	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
+	// Copy the data in {} after content: from customData
+	/*
+		#cloud-config
+		write_files:
+		  - path: /peerpod/daemon.json
+		    content: |
+		      {
+		       ...
+			  }
+		  - path: other files
+	*/
+
+	if !p.serviceConfig.DisableCloudConfig {
+		//Convert cloudConfigData to base64
+		b64EncData = base64.StdEncoding.EncodeToString([]byte(cloudConfigData))
+	} else {
+		userData := strings.Split(cloudConfigData, "content: |")[1]
+		// Take the data in {} after content: and ignore the rest
+		// ToDo: use a regex
+		userData = strings.Split(userData, "- path")[0]
+		userData = strings.TrimSpace(userData)
+
+		//Convert userData to base64
+		b64EncData = base64.StdEncoding.EncodeToString([]byte(userData))
+	}
 
 	instanceSize, err := p.selectInstanceType(ctx, spec)
 	if err != nil {
@@ -191,7 +216,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
-	vmParameters, err := p.getVMParameters(instanceSize, diskName, userDataEnc, sshBytes, instanceName, vmNIC)
+	vmParameters, err := p.getVMParameters(instanceSize, diskName, b64EncData, sshBytes, instanceName, vmNIC)
 	if err != nil {
 		return nil, err
 	}
@@ -454,12 +479,12 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, b64EncData strin
 		Tags: tags,
 	}
 
-	// If EnableUserData is set to false then set OSProfile.CustomData to b64EncData and
+	// If DisableCloudConfig is set to false then set OSProfile.CustomData to b64EncData and
 	// armcompute.VirtualMachine.Properties.UserData to nil
-	// If EnableUserData is set to true then set armcompute.VirtualMachine.Properties.UserData to b64EncData and
+	// If DisableCloudConfig is set to true then set armcompute.VirtualMachine.Properties.UserData to b64EncData and
 	// OSProfile.CustomData to nil
 
-	if !p.serviceConfig.EnableUserData {
+	if !p.serviceConfig.DisableCloudConfig {
 		vmParameters.Properties.OSProfile.CustomData = to.Ptr(b64EncData)
 		vmParameters.Properties.UserData = nil
 	} else {

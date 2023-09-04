@@ -38,6 +38,7 @@ type ServerConfig struct {
 	PodsDir       string
 	ForwarderPort string
 	ProxyTimeout  time.Duration
+	AAKBCParams   string
 }
 
 type Server interface {
@@ -62,7 +63,7 @@ func NewServer(provider cloud.Provider, cfg *ServerConfig, workerNode podnetwork
 	logger.Printf("server config: %#v", cfg)
 
 	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.CriSocketPath, cfg.TLSConfig, cfg.ProxyTimeout)
-	cloudService := cloud.NewService(provider, agentFactory, workerNode, cfg.PodsDir, cfg.ForwarderPort)
+	cloudService := cloud.NewService(provider, agentFactory, workerNode, cfg.PodsDir, cfg.ForwarderPort, cfg.AAKBCParams)
 	vmInfoService := vminfo.NewService(cloudService)
 
 	return &server{

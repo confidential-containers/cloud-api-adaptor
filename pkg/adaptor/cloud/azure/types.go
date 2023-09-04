@@ -44,6 +44,7 @@ type Config struct {
 	InstanceSizes        instanceSizes
 	InstanceSizeSpecList []cloud.InstanceTypeSpec
 	Tags                 cloud.KeyValueFlag
+	DisableCloudConfig   bool
 }
 
 func (c Config) Redact() Config {

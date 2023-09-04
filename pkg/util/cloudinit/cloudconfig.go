@@ -17,6 +17,7 @@ const (
 	// e.g. https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/kbc/src/offline_fs_kbc/aa-offline_fs_kbc-resources.json
 	DefaultAuthfileDstPath = "/etc/aa-offline_fs_kbc-resources.json"
 	DefaultAuthfileLimit   = 12288 // TODO: use a whole userdata limit mechanism instead of limiting authfile
+	DefaultAAKBCParamsPath = "/etc/attestation-agent/kbc-params.json"
 )
 
 // https://cloudinit.readthedocs.io/en/latest/topics/format.html#cloud-config-data
