@@ -39,7 +39,8 @@ config:
 	./${OPTS}/scripts/createconfig.sh "guest" "${OPTS}/$(GUESTCONFIG)"
 	./${OPTS}/scripts/createconfig.sh "vcenter" "${OPTS}/$(VCENTERCONFIG)"
 # Ensure the vcenter credentials user input target is run first
-include ../../podvm/Makefile.inc
+ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
+include $(ROOT_DIR)podvm/Makefile.inc
 
 build: | config $(BINARIES) $(FILES)
 	rm -rf files.tar
