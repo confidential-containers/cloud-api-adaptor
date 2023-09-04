@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-include Makefile.inc
+SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
+include $(SELF_DIR)Makefile.inc
 
 .PHONY: image clean clean_sources
 

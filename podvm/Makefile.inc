@@ -4,12 +4,17 @@
 
 # This file contains the common build steps across the providers
 # Including building the required binaries from source
-# It is to be included via `include ../../podvm/Makefile.inc` in
-# each of the cloud provider podvm image Makefiles
+# It can be included via
+# ```
+# ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
+# include $(ROOT_DIR)podvm/Makefile.inc
+# ```
+# in each of the cloud provider podvm image Makefiles
 
+ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../
 FILES_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/files
 
-include ../Makefile.defaults
+include $(ROOT_DIR)Makefile.defaults
 
 IMAGE_PREFIX := podvm
 
