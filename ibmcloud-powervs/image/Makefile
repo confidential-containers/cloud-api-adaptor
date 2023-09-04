@@ -5,7 +5,8 @@
 SKOPEO_SRC =
 SKOPEO_BIN = /usr/bin/skopeo
 
-include ../../podvm/Makefile.inc
+ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
+include $(ROOT_DIR)podvm/Makefile.inc
 
 export PATH := $(PATH):/usr/local/go/bin:$(HOME)/.cargo/bin
 
