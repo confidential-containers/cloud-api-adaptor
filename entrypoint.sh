@@ -16,6 +16,7 @@ optionals+=""
 [[ "${CERT_FILE}" ]] && [[ "${CERT_KEY}" ]] && optionals+="-cert-file ${CERT_FILE} -cert-key ${CERT_KEY} "
 [[ "${TLS_SKIP_VERIFY}" ]] && optionals+="-tls-skip-verify "
 [[ "${PROXY_TIMEOUT}" ]] && optionals+="-proxy-timeout ${PROXY_TIMEOUT} "
+[[ "${AA_KBC_PARAMS}" ]] && optionals+="-aa-kbc-params ${AA_KBC_PARAMS} "
 
 test_vars() {
     for i in "$@"; do
@@ -62,6 +63,7 @@ azure() {
     [[ "${DISABLECVM}" ]] && optionals+="-disable-cvm "
     [[ "${AZURE_INSTANCE_SIZES}" ]] && optionals+="-instance-sizes ${AZURE_INSTANCE_SIZES} "
     [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
+    [[ "${DISABLE_CLOUD_CONFIG}" == "true" ]] && optionals+="-disable-cloud-config "
 
     set -x
     exec cloud-api-adaptor azure \
