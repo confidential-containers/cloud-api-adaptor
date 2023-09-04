@@ -111,7 +111,7 @@ func TestCloudService(t *testing.T) {
 		podsDir: dir,
 	}
 
-	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, dir, forwarder.DefaultListenPort)
+	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, dir, forwarder.DefaultListenPort, "")
 
 	assert.NotNil(t, s)
 

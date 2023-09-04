@@ -70,7 +70,8 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 	return nil
 }
 
-func NewService(provider Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode, podsDir, daemonPort string) Service {
+func NewService(provider Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
+	podsDir, daemonPort, aaKBCParams string) Service {
 	var err error
 
 	s := &cloudService{
@@ -80,6 +81,7 @@ func NewService(provider Provider, proxyFactory proxy.Factory, workerNode podnet
 		podsDir:      podsDir,
 		daemonPort:   daemonPort,
 		workerNode:   workerNode,
+		aaKBCParams:  aaKBCParams,
 	}
 	s.cond = sync.NewCond(&s.mutex)
 	s.ppService, err = k8sops.NewPeerPodService()
@@ -213,6 +215,10 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 		daemonConfig.TLSServerCert = string(certPEM)
 		daemonConfig.TLSServerKey = string(keyPEM)
+	}
+
+	if s.aaKBCParams != "" {
+		daemonConfig.AAKBCParams = s.aaKBCParams
 	}
 
 	daemonJSON, err := json.MarshalIndent(daemonConfig, "", "    ")

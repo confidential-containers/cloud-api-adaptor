@@ -111,6 +111,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.StringVar(&cfg.networkConfig.HostInterface, "host-interface", "", "Host Interface")
 		flags.IntVar(&cfg.networkConfig.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
 		flags.IntVar(&cfg.networkConfig.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
+		flags.StringVar(&cfg.serverConfig.AAKBCParams, "aa-kbc-params", "", "attestation-agent KBC parameters")
 
 		cloud.ParseCmd(flags)
 	})
