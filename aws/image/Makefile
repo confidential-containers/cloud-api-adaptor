@@ -1,7 +1,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-include ../../podvm/Makefile.inc
+ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
+include $(ROOT_DIR)podvm/Makefile.inc
 
 
 .PHONY: image clean default-vpc
