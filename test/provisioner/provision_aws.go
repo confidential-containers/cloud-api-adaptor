@@ -521,6 +521,17 @@ func (v *Vpc) setupSecurityGroup() error {
 					},
 					ToPort: aws.Int32(6443),
 				},
+				{
+					FromPort:   aws.Int32(15150),
+					IpProtocol: aws.String("tcp"),
+					IpRanges: []ec2types.IpRange{
+						{
+							CidrIp:      aws.String("0.0.0.0/0"),
+							Description: aws.String("ingress rule for CAA proxy traffic"),
+						},
+					},
+					ToPort: aws.Int32(15150),
+				},
 			},
 			GroupId: aws.String(v.SecurityGroupId),
 		}); err != nil {
