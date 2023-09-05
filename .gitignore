@@ -16,6 +16,7 @@ cloud-api-adaptor
 cluster-provisioner
 kata-agent
 caa-provisioner-cli
+process-user-data
 # The code files under cmd are not ignored
 !/cmd/*
 
