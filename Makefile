@@ -12,7 +12,7 @@ RELEASE_BUILD ?= false
 CLOUD_PROVIDER ?=
 GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
 GOFLAGS     ?=
-BINARIES    := cloud-api-adaptor agent-protocol-forwarder
+BINARIES    := cloud-api-adaptor agent-protocol-forwarder process-user-data
 SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
@@ -73,7 +73,7 @@ cloud-api-adaptor: GOOPTIONS := $(subst CGO_ENABLED=0,CGO_ENABLED=1,$(GOOPTIONS)
 endif
 
 $(BINARIES): .git-commit $(SOURCES)
-	$(GOOPTIONS) go build $(GOFLAGS) -o "$@" "cmd/$@/main.go"
+	$(GOOPTIONS) go build $(GOFLAGS) -o "$@" ./cmd/$@
 
 ##@ Development
 
