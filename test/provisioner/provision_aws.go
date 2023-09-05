@@ -137,15 +137,19 @@ func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
 		properties["aws_region"] = cfg.Region
 	}
 
+	ec2Client := ec2.NewFromConfig(cfg)
+	vpc := NewVpc(ec2Client, properties)
+
 	if properties["cluster_type"] == "" ||
 		properties["cluster_type"] == "onprem" {
 		cluster = NewOnPremCluster()
+	} else if properties["cluster_type"] == "eks" {
+		cluster = NewEKSCluster(cfg, vpc, properties["ssh_kp_name"])
 	} else {
 		return nil, fmt.Errorf("Cluster type '%s' not implemented",
 			properties["cluster_type"])
 	}
 
-	ec2Client := ec2.NewFromConfig(cfg)
 	return &AWSProvisioner{
 		AwsConfig: cfg,
 		iamClient: iam.NewFromConfig(cfg),
@@ -159,7 +163,7 @@ func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
 		Cluster:    cluster,
 		Image:      NewAMIImage(ec2Client, properties),
 		PauseImage: properties["pause_image"],
-		Vpc:        NewVpc(ec2Client, properties),
+		Vpc:        vpc,
 		VxlanPort:  properties["vxlan_port"],
 		SshKpName:  properties["ssh_kp_name"],
 	}, nil
