@@ -11,7 +11,6 @@ resource "azurerm_container_registry" "acr" {
   sku                    = "Standard"
   anonymous_pull_enabled = true
 
-  # TODO: Is there a way to push images without logging in?
   admin_enabled = true
 }
 
@@ -29,7 +28,6 @@ resource "azurerm_federated_identity_credential" "gh_action_federated_credential
   issuer              = "https://token.actions.githubusercontent.com"
   parent_id           = azurerm_user_assigned_identity.gh_action_user_identity.id
 
-  # TODO: What should be the subject when we are not testing just main but the respective PR?
   subject = "repo:${var.gh_repo}:ref:refs/heads/main"
 }
 
@@ -67,7 +65,6 @@ resource "azurerm_role_assignment" "ci_custom_role_binding" {
 }
 
 # This is needed in case of storing the podvm images.
-# TODO: Following is needed only when the Azure support has moved to use CVM as default.
 resource "azurerm_shared_image_gallery" "podvm_image_gallery" {
   name                = "${var.image_gallery}${var.ver}"
   resource_group_name = azurerm_resource_group.ci_rg.name
@@ -76,10 +73,10 @@ resource "azurerm_shared_image_gallery" "podvm_image_gallery" {
   sharing {
     permission = "Community"
     community_gallery {
-	prefix = "cocopodvm"
-	eula   = "https://raw.githubusercontent.com/confidential-containers/confidential-containers/main/LICENSE"
-	publisher_uri = "https://github.com/confidential-containers/confidential-containers"
-	publisher_email = "cocoatmsft@outlook.com"
+      prefix          = "cocopodvm"
+      eula            = "https://raw.githubusercontent.com/confidential-containers/confidential-containers/main/LICENSE"
+      publisher_uri   = "https://github.com/confidential-containers/confidential-containers"
+      publisher_email = "cocoatmsft@outlook.com"
     }
   }
 }
