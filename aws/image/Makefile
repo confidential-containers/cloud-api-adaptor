@@ -9,6 +9,8 @@ include $(ROOT_DIR)podvm/Makefile.inc
 
 INSTANCE_TYPE ?= t3.small
 
+VOLUME_SIZE ?= 30
+
 image: $(IMAGE_FILE)
 
 $(IMAGE_FILE): setopts $(BINARIES) $(FILES)
@@ -16,6 +18,7 @@ $(IMAGE_FILE): setopts $(BINARIES) $(FILES)
 	packer build ${OPTS} \
 		-var region=${AWS_REGION} \
 		-var instance_type=${INSTANCE_TYPE} \
+		-var volume_size=${VOLUME_SIZE} \
 		-var ami_name=${IMAGE_NAME} ./${PODVM_DISTRO}/
 	rm -fr toupload
 

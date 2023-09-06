@@ -36,3 +36,10 @@ variable "cloud_provider" {
   type    = string
   default = env("CLOUD_PROVIDER")
 }
+
+variable "volume_size" {
+  type = string
+  // Size in GiBs
+  default = 30
+}
+

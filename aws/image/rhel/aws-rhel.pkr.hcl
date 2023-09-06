@@ -24,6 +24,12 @@ source "amazon-ebs" "rhel" {
     most_recent = true
     owners      = ["309956199498"]
   }
+  ami_block_device_mappings {
+    device_name = "/dev/sda1"
+    delete_on_termination = "true"
+    volume_size = "${var.volume_size}"
+  }
+
   ssh_username = "ec2-user"
 }
 
