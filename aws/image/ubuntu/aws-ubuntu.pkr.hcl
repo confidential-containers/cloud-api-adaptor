@@ -15,7 +15,7 @@ source "amazon-ebs" "ubuntu" {
   subnet_id     = "${var.subnet_id}"
   source_ami_filter {
     filters = {
-      name                = "ubuntu/images/*ubuntu*focal*"
+      name                = "ubuntu/images/*ubuntu*jammy*"
       root-device-type    = "ebs"
       virtualization-type = "hvm"
       architecture        = "x86_64"
