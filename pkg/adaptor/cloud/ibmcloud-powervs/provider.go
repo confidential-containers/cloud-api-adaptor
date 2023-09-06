@@ -142,6 +142,14 @@ func (p *ibmcloudPowerVSProvider) Teardown() error {
 	return nil
 }
 
+func (p *ibmcloudPowerVSProvider) ConfigVerifier() error {
+	ImageId := p.serviceConfig.ImageID
+	if len(ImageId) == 0 {
+		return fmt.Errorf("ImageId is empty")
+	}
+	return nil
+}
+
 func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instance *models.PVMInstance) ([]netip.Addr, error) {
 	var ips []netip.Addr
 	ins, err := p.powervsService.instanceClient(ctx).Get(*instance.PvmInstanceID)

@@ -414,3 +414,11 @@ func (p *ibmcloudVPCProvider) DeleteInstance(ctx context.Context, instanceID str
 func (p *ibmcloudVPCProvider) Teardown() error {
 	return nil
 }
+
+func (p *ibmcloudVPCProvider) ConfigVerifier() error {
+	images := p.serviceConfig.Images.String()
+	if len(images) == 0 {
+		return fmt.Errorf("image-id is empty")
+	}
+	return nil
+}

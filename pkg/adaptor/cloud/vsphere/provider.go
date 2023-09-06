@@ -406,3 +406,11 @@ func (p *vsphereProvider) Teardown() error {
 	logger.Printf("Logout user %s", p.serviceConfig.UserName)
 	return DeleteGovmomiClient(p.gclient)
 }
+
+func (p *vsphereProvider) ConfigVerifier() error {
+	template := p.serviceConfig.Template
+	if len(template) == 0 {
+		return fmt.Errorf("Template is empty")
+	}
+	return nil
+}

@@ -219,6 +219,21 @@ var serviceConfigEmptyInstanceTypes = &Config{
 	InstanceTypes: []string{},
 }
 
+// Create a serviceConfig with emtpy ImageId
+var serviceConfigEmptyImageId = &Config{
+	Region: "us-east-1",
+	// Add instance type to serviceConfig
+	InstanceType: "t2.small",
+	// Add subnet ID to serviceConfig
+	SubnetId: "subnet-1234567890abcdef0",
+	// Add security group ID to serviceConfig
+	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
+	// Add image ID to serviceConfig
+	ImageId: "",
+	// Add InstanceTypes to serviceConfig
+	InstanceTypes: []string{"t2.large", "t2.medium"},
+}
+
 type mockCloudConfig struct{}
 
 func (c *mockCloudConfig) Generate() (string, error) {
@@ -529,6 +544,52 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 			}
 			if gotMemory != tt.wantMemory {
 				t.Errorf("awsProvider.getInstanceTypeInformation() gotMemory = %v, want %v", gotMemory, tt.wantMemory)
+			}
+		})
+	}
+}
+
+func TestConfigVerifier(t *testing.T) {
+	type fields struct {
+		serviceConfig *Config
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		// Test check with valid ImageId
+		{
+			name: "checkValidImageId",
+			fields: fields{
+				serviceConfig: serviceConfig,
+			},
+			wantErr: false,
+		},
+		// Test check with invalid ImageId
+		{
+			name: "checkInvalidImageId",
+			fields: fields{
+				serviceConfig: serviceConfigEmptyImageId,
+			},
+			// Test should return an error
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &awsProvider{
+				serviceConfig: tt.fields.serviceConfig,
+			}
+			err := p.ConfigVerifier()
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("awsProvider.ConfigVerifier() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("awsProvider.ConfigVerifier() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

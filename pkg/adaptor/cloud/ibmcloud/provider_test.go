@@ -342,3 +342,56 @@ func TestGetImageDetails(t *testing.T) {
 		})
 	}
 }
+
+func TestConfigVerifier(t *testing.T) {
+
+	validImageList := make(Images, 0)
+	err := validImageList.Set("valid-id-1,valid-id-2,valid-id-3")
+	if err != nil {
+		t.Errorf("Images.Set() error %v", err)
+	}
+	emptyImageList := make(Images, 0)
+
+	tests := []struct {
+		name     string
+		provider *ibmcloudVPCProvider
+		wantErr  bool
+	}{
+		// Test selecting an image from a valid image list
+		{
+			name: "checkValidImageId",
+			provider: &ibmcloudVPCProvider{
+				vpc: &mockVPC{},
+				serviceConfig: &Config{
+					Images: validImageList,
+				},
+			},
+			wantErr: false,
+		},
+		// Test selecting an image from an empty image list
+		{
+			name: "checkInvalidImageId",
+			provider: &ibmcloudVPCProvider{
+				vpc: &mockVPC{},
+				serviceConfig: &Config{
+					Images: emptyImageList,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.provider.ConfigVerifier()
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("ibmcloudProvider.ConfigVerifier() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("ibmcloudProvider.ConfigVerifier() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
