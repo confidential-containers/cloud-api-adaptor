@@ -597,6 +597,15 @@ func getAuthenticatedImageStatus(ctx context.Context, client klient.Client, expe
 	return errors.New("PodVM Start Error")
 }
 
+// skipTestOnCI skips the test if running on CI
+func skipTestOnCI(t *testing.T) {
+	ci := os.Getenv("CI")
+
+	if ci == "true" {
+		t.Skip("Failing on CI")
+	}
+}
+
 // doTestCreateSimplePod tests a simple peer-pod can be created.
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
