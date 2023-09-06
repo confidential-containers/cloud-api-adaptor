@@ -15,6 +15,11 @@ on:
         default: ''
         required: false
         type: string
+      git_ref:
+        default: 'main'
+        description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
+        required: false
+        type: string
 
 env:
   CLOUD_PROVIDER: libvirt
@@ -27,6 +32,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.git_ref }}
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
         uses: actions/setup-go@v4

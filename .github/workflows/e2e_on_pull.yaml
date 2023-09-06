@@ -6,6 +6,14 @@
 name: e2e tests
 
 on:
+  # Note on repository checkout: pull_request_target sets `GITHUB_SHA` to the
+  # "last commit on the PR base branch", meaning that by default `actions/checkout`
+  # is going to checkout the repository main branch. In order to pick up the pull
+  # request code, this workflow uses the `github.event.pull_request.head.sha`
+  # property to get the last commit on the HEAD branch. One limitation of this approach
+  # is that, unlike the `pull_request` event, the checked pull request isn't necessarily
+  # rebased to main (so it is up to users ensure the pull request is rebased **before*
+  # triggering this workflow).
   pull_request_target:
     types:
       # This workflow will be run if the pull request is labeled test_e2e_libvirt, so
@@ -59,6 +67,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Extract the podvm qcow2
         run: ./hack/download-image.sh ${{ env.registry }}/${{ env.podvm_image }} . -o ${{ env.qcow2 }}
@@ -90,6 +101,7 @@ jobs:
       registry: ghcr.io/${{ github.repository_owner }}
       dev_tags: ci-pr${{ github.event.number  }}-dev
       release_tags: ci-pr${{ github.event.number  }}
+      git_ref: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
 
   # Edit the kustomize files under the install directory to reference the
@@ -108,6 +120,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Install kustomize
         run: |
@@ -162,3 +177,4 @@ jobs:
     with:
       qcow2_artifact: podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}.qcow2
       install_directory_artifact: install_directory
+      git_ref: ${{ github.event.pull_request.head.sha }}
