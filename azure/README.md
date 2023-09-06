@@ -6,69 +6,47 @@ application image, deploy one worker AKS, deploy CAA on that Kubernetes cluster
 and finally deploy a sample application that will run as a pod backed by CAA
 pod VM.
 
-
 ## Pre-requisites
+
+### Azure Login
+
+The image build will use your local credentials, so make sure you have
+logged into your account via `az login`. Retrieve your Subscription ID
+and set your preferred region:
+
+```bash
+export AZURE_SUBSCRIPTION_ID=$(az account show --query id --output tsv)
+export AZURE_REGION="REPLACE_ME"
+```
 
 ### Resource Group
 
 We will use this resource group for all of our deployments.
 Create an Azure resource group by running the following command:
 
-
 ```bash
 export AZURE_RESOURCE_GROUP="REPLACE_ME"
-export AZURE_REGION="REPLACE_ME"
-
-az group create --name "${AZURE_RESOURCE_GROUP}" \
-  --location "${AZURE_REGION}"
+az group create --name "${AZURE_RESOURCE_GROUP}" --location "${AZURE_REGION}"
 ```
-
-### Service Principal
-
-Create a service principal that will be used for building image and its
-credentials will be provided when deploying Cloud API Adaptor daemonset:
-
-
-```bash
-export AZURE_SUBSCRIPTION_ID=$(az account show --query id --output tsv)
-
-az ad sp create-for-rbac \
-  --name "caa-${AZURE_RESOURCE_GROUP}"  \
-  --role "Contributor"   \
-  --scopes /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP} \
-  --query "{ AZURE_CLIENT_ID: appId, AZURE_CLIENT_SECRET: password, AZURE_TENANT_ID: tenant }"
-```
-
-Set the environment variables by copying the env vars `AZURE_CLIENT_ID`,
-`AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` from the output of the last command:
-
-```bash
-export AZURE_CLIENT_ID="REPLACE_ME"
-export AZURE_CLIENT_SECRET="REPLACE_ME"
-export AZURE_TENANT_ID="REPLACE_ME"
-```
-
-> **NOTE:** The following environment variables `GALLERY_NAME` and `GALLERY_IMAGE_DEF_NAME` should match with the packer input `az_gallery_name` and `az_gallery_image_name` respectively.
 
 ### Shared Image Gallery
-Create shared image gallery to host the built pod vm image.
+
+Create a shared image gallery:
+
 ```bash
 export GALLERY_NAME="caaubntcvmsGallery"
-export GALLERY_IMAGE_DEF_NAME="cc-image"
-```
-
-- Create shared image gallery by running the following commands:
-
-```bash
 az sig create \
   --gallery-name "${GALLERY_NAME}" \
   --resource-group "${AZURE_RESOURCE_GROUP}" \
   --location "${AZURE_REGION}"
 ```
 
-- Define the image definition by running the following command. Do note that the flag `--features SecurityType=ConfidentialVmSupported` allows us to upload custom image and boot it up as a CVM.
+Create the Image Definition by running the following command. Do
+note that the flag `--features SecurityType=ConfidentialVmSupported`
+allows us to a upload custom image and boot it up as a CVM.
 
 ```bash
+export GALLERY_IMAGE_DEF_NAME="cc-image"
 az sig image-definition create \
   --resource-group "${AZURE_RESOURCE_GROUP}" \
   --gallery-name "${GALLERY_NAME}" \
@@ -86,28 +64,28 @@ az sig image-definition create \
 
 ## Build Pod VM Image
 
-### Option-1: Modifying existing marketplace image
+There are three options:
+
+- Customize an existing marketplace image
+- Customize an existing marketplace image with pre-built binaries
+- Convert and upload a pre-built QCOW2 image
+
+### Option 1: Modifying an Existing Marketplace Image
+
 - Install packer by following [these instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
 
-> **NOTE**: For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
-
-- Create a custom Azure VM image based on Ubuntu 22.04 having kata-agent, agent-protocol-forwarder and other dependencies.
+- Create a custom Azure VM image based on Ubuntu 22.04 adding kata-agent, agent-protocol-forwarder and other dependencies for CAA:
 
 ```bash
 cd image
 export PKR_VAR_resource_group="${AZURE_RESOURCE_GROUP}"
+export PKR_VAR_location="${AZURE_REGION}"
 export PKR_VAR_subscription_id="${AZURE_SUBSCRIPTION_ID}"
-export PKR_VAR_client_id="${AZURE_CLIENT_ID}"
-export PKR_VAR_client_secret="${AZURE_CLIENT_SECRET}"
-export PKR_VAR_tenant_id="${AZURE_TENANT_ID}"
-
-# Optional
-# export PKR_VAR_az_image_name="REPLACE_ME"
-# export PKR_VAR_vm_size="REPLACE_ME"
-# export PKR_VAR_ssh_username="REPLACE_ME"
-# export PKR_VAR_az_gallery_name="${GALLERY_NAME}"
-# export PKR_VAR_az_gallery_image_name="${GALLERY_IMAGE_DEF_NAME}"
-
+export PKR_VAR_use_azure_cli_auth=true
+export PKR_VAR_az_gallery_name="${GALLERY_NAME}"
+export PKR_VAR_az_gallery_image_name="${GALLERY_IMAGE_DEF_NAME}"
+export PKR_VAR_offer=0001-com-ubuntu-confidential-vm-jammy
+export PKR_VAR_sku=22_04-lts-cvm
 export CLOUD_PROVIDER=azure
 PODVM_DISTRO=ubuntu make image && cd -
 ```
@@ -122,21 +100,24 @@ Use the `ManagedImageSharedImageGalleryId` field from output of the above comman
 export AZURE_IMAGE_ID="REPLACE_ME"
 ```
 
+### Option 2: Customize an Image Using Prebuilt Binaries via Docker
 
-You can also build the image using docker
 ```bash
 cd image
-docker build -t azure \
-  --secret id=AZURE_CLIENT_ID \
-  --secret id=AZURE_CLIENT_SECRET \
-  --secret id=AZURE_SUBSCRIPTION_ID \
-  --secret id=AZURE_TENANT_ID \
-  --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP} \
-  -f Dockerfile .
+docker build -t azure-podvm-builder .
 ```
 
-If you want to use a different base image, then you'll need to provide additional build-args:
-`PUBLISHER`, `OFFER`, `SKU`
+```bash
+docker run --rm \
+  -v "$HOME/.azure:/root/.azure" \
+  -e AZURE_SUBSCRIPTION_ID \
+  -e AZURE_RESOURCE_GROUP \
+  -e GALLERY_NAME \
+  -e GALLERY_IMAGE_DEF_NAME \
+  azure-podvm-builder
+```
+
+If you want to use a different base image, then you'll need to provide additional envs: `PUBLISHER`, `OFFER`, `SKU`
 
 Sometimes using the marketplace image requires accepting a licensing agreement and also using a published plan.
 Following [link](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage) provides more detail.
@@ -159,39 +140,35 @@ az vm image terms accept --urn eurolinuxspzoo1620639373013:centos-8-5-free:cento
 
 Then you can use the following command line to build the image:
 ```
-docker build -t azure \
-  --secret id=AZURE_CLIENT_ID \
-  --secret id=AZURE_CLIENT_SECRET \
-  --secret id=AZURE_SUBSCRIPTION_ID \
-  --secret id=AZURE_TENANT_ID \
-  --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}  \
-  --build-arg PUBLISHER=eurolinuxspzoo1620639373013 \
-  --build-arg SKU=centos-8-5-free \
-  --build-arg OFFER=centos-8-5-free \
-  --build-arg PLAN_NAME=centos-8-5-free \
-  --build-arg PLAN_PRODUCT=centos-8-5-free \
-  --build-arg PLAN_PUBLISHER=eurolinuxspzoo1620639373013 \
-  --build-arg PODVM_DISTRO=centos \
-  -f Dockerfile .
+docker run --rm \
+  -v "$HOME/.azure:/root/.azure" \
+  -e AZURE_SUBSCRIPTION_ID \
+  -e AZURE_RESOURCE_GROUP  \
+  -e PUBLISHER=eurolinuxspzoo1620639373013 \
+  -e SKU=centos-8-5-free \
+  -e OFFER=centos-8-5-free \
+  -e PLAN_NAME=centos-8-5-free \
+  -e PLAN_PRODUCT=centos-8-5-free \
+  -e PLAN_PUBLISHER=eurolinuxspzoo1620639373013 \
+  -e PODVM_DISTRO=centos \
+  azure-podvm-builder
 ```
 
 Here is another example of building RHEL based image:
 
 ```
-docker build -t azure \
-  --secret id=AZURE_CLIENT_ID \
-  --secret id=AZURE_CLIENT_SECRET \
-  --secret id=AZURE_SUBSCRIPTION_ID \
-  --secret id=AZURE_TENANT_ID \
-  --build-arg AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}  \
-  --build-arg PUBLISHER=RedHat \
-  --build-arg SKU=9-lvm \
-  --build-arg OFFER=RHEL \
-  --build-arg PODVM_DISTRO=rhel \
-  -f Dockerfile .
+docker run --rm \
+  -v "$HOME/.azure:/root/.azure" \
+  -e AZURE_SUBSCRIPTION_ID \
+  -e AZURE_RESOURCE_GROUP  \
+  -e PUBLISHER=RedHat \
+  -e SKU=9-lvm \
+  -e OFFER=RHEL \
+  -e PODVM_DISTRO=rhel \
+  azure-podvm-builder
 ```
 
-### Option-2: Using precreated QCOW2 image
+### Option 3: Using a precreated QCOW2 image
 
 The precreated images are available as container images from `quay.io/confidential-containers`
 
@@ -268,6 +245,7 @@ az sig image-version create \
    --os-vhd-uri "$VHD_URI" \
    --os-vhd-storage-account $AZURE_STORAGE_ACCOUNT
 ```
+
 On success, the command will generate the image id, which needs to be used to set the value of `AZURE_IMAGE_ID` in `peer-pods-cm` configmap.
 You can also use the following command to retrieve the image id
 ```
@@ -297,13 +275,22 @@ export SSH_KEY=~/.ssh/id_rsa.pub
 export AKS_RG="${AZURE_RESOURCE_GROUP}-aks"
 ```
 
+**Optional:** deploy the worker nodes into an existing VNet and Subnet:
+
+```bash
+export SUBNET_ID="REPLACE_ME"
+```
+
 Deploy AKS with single worker node to the same resource group we created earlier:
 
 ```bash
 az aks create \
   --resource-group "${AZURE_RESOURCE_GROUP}" \
   --node-resource-group "${AKS_RG}" \
+  "${SUBNET_ID+--vnet-subnet-id $SUBNET_ID}" \
   --name "${CLUSTER_NAME}" \
+  --enable-oidc-issuer \
+  --enable-workload-identity \
   --location "${AZURE_REGION}" \
   --node-count 1 \
   --node-vm-size Standard_F4s_v2 \
@@ -333,25 +320,68 @@ kubectl label nodes --all node.kubernetes.io/worker=
 > [configure](https://projectcalico.docs.tigera.io/networking/vxlan-ipip#configure-vxlan-encapsulation-for-all-inter-workload-traffic)
 > VXLAN encapsulation for all inter workload traffic.
 
-### AKS Resource Group permissions
+### User Assigned Identity and Federated Credentials
 
-AKS deploys the actual resources like the worker nodes in another resource
-group named in environment variable `AKS_RG`. For the CAA to be able to create
-pod VM in the same subnet as the worker nodes of the AKS cluster, run the
-following command:
+We will use a Workload Identity to provide the CAA DaemonSet with the
+privileges it requires to manage virtual machines in our resource group.
+Note: if you use an existing AKS cluster it might need to be configured
+to support Workload Identity and OIDC, please refer to the instructions
+in [this guide](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster#update-an-existing-aks-cluster).
 
 ```bash
-az ad sp create-for-rbac \
-  -n "caa-${AZURE_RESOURCE_GROUP}" \
-  --role Contributor \
-  --scopes "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AKS_RG}" \
-  --query "password"
+az identity create --name caa-identity -g "$AZURE_RESOURCE_GROUP" -l "$AZURE_REGION"
+export USER_ASSIGNED_CLIENT_ID="$(az identity show --resource-group "$AZURE_RESOURCE_GROUP" --name caa-identity --query 'clientId' -otsv)"
 ```
 
-From the output of the above command populate the environment variable below:
+We'll annotate the CAA Service Account with the Workload Identity's
+`CLIENT_ID` and make the CAA DaemonSet use Workload Identity
+for authentication:
 
 ```bash
-export AZURE_CAA_CLIENT_SECRET="REPLACE_ME"
+cat <<EOF > install/overlays/azure/workload-identity.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cloud-api-adaptor-daemonset
+  namespace: confidential-containers-system
+spec:
+  template:
+    metadata:
+      labels:
+        azure.workload.identity/use: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-api-adaptor
+  namespace: confidential-containers-system
+  annotations:
+    azure.workload.identity/client-id: "$USER_ASSIGNED_CLIENT_ID"
+EOF
+```
+
+### AKS Resource Group permissions
+
+For CAA to be able to manage VMs we need to assign the identity
+VM and Network contributor roles: privileges to spawn VMs in
+`$AZURE_RESOURCE_GROUP` and attach to a VNet in `$AKS_RG`.
+
+```bash
+az role assignment create --role "Virtual Machine Contributor" --assignee "$USER_ASSIGNED_CLIENT_ID" --scope "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourcegroups/${AZURE_RESOURCE_GROUP}"
+az role assignment create --role "Network Contributor" --assignee "$USER_ASSIGNED_CLIENT_ID" --scope "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourcegroups/${AKS_RG}"
+```
+
+We then create the federated credential for the CAA ServiceAccount
+using the OIDC endpoint from the AKS cluster:
+
+```bash
+export AKS_OIDC_ISSUER="$(az aks show -n "$CLUSTER_NAME" -g "$AZURE_RESOURCE_GROUP" --query "oidcIssuerProfile.issuerUrl" -otsv)"
+az identity federated-credential create --name caa-fedcred \
+	--identity-name caa-identity \
+	--resource-group "$AZURE_RESOURCE_GROUP" \
+	--issuer "${AKS_OIDC_ISSUER}" \
+	--subject system:serviceaccount:confidential-containers-system:cloud-api-adaptor \
+	--audience api://AzureADTokenExchange
 ```
 
 ### AKS Subnet ID
@@ -412,12 +442,13 @@ configMapGenerator:
 secretGenerator:
 - name: peer-pods-secret
   namespace: confidential-containers-system
-  envs:
-  - service-principal.env
+  literals: []
 - name: ssh-key-secret
   namespace: confidential-containers-system
   files:
   - id_rsa.pub
+patchesStrategicMerge:
+- workload-identity.yaml
 EOF
 ```
 
@@ -426,17 +457,6 @@ The ssh public key should be accessible to the kustomization file:
 ```bash
 cp $SSH_KEY install/overlays/azure/id_rsa.pub
 ```
-
-Populate an env file w/ the service principal:
-
-```bash
-cat <<EOF > install/overlays/azure/service-principal.env
-AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
-AZURE_CLIENT_SECRET=${AZURE_CAA_CLIENT_SECRET}
-AZURE_TENANT_ID=${AZURE_TENANT_ID}
-EOF
-```
-
 
 ### Deploy CAA on the Kubernetes cluster
 
@@ -518,9 +538,4 @@ If you wish to clean up the whole set up, you can delete the resource group by r
 az group delete \
   --name "${AZURE_RESOURCE_GROUP}" \
   --yes --no-wait
-```
-
-Delete the creates service principals by running:
-```bash
-az ad sp delete --id ${AZURE_CLIENT_ID}
 ```
