@@ -31,6 +31,9 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	// Add a key value list parameter to indicate custom tags to be used for the Pod VMs
 	flags.Var(&awscfg.Tags, "tags", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
 	flags.BoolVar(&awscfg.UsePublicIP, "use-public-ip", false, "Use Public IP for connecting to the kata-agent inside the Pod VM")
+	// Add a parameter to indicate the root volume size for the Pod VMs
+	// Default is 30GiBs for free tier. Hence use it as default
+	flags.IntVar(&awscfg.RootVolumeSize, "root-volume-size", 30, "Root volume size (in GiB) for the Pod VMs")
 
 }
 

@@ -52,6 +52,8 @@ type Config struct {
 	InstanceTypeSpecList []cloud.InstanceTypeSpec
 	Tags                 cloud.KeyValueFlag
 	UsePublicIP          bool
+	RootVolumeSize       int
+	RootDeviceName       string
 }
 
 func (c Config) Redact() Config {
