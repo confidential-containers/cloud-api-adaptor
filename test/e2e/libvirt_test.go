@@ -15,7 +15,7 @@ func TestLibvirtCreateSimplePod(t *testing.T) {
 }
 
 func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
-	t.Skip("Failing on CI")
+	skipTestOnCI(t)
 	assert := LibvirtAssert{}
 	doTestCreatePodWithConfigMap(t, assert)
 }
@@ -26,7 +26,7 @@ func TestLibvirtCreatePodWithSecret(t *testing.T) {
 }
 
 func TestLibvirtCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
-	t.Skip("Failing on CI")
+	skipTestOnCI(t)
 	assert := LibvirtAssert{}
 	doTestCreatePeerPodContainerWithExternalIPAccess(t, assert)
 
