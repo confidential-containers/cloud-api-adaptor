@@ -45,8 +45,10 @@ type ec2Client interface {
 	DescribeInstances(ctx context.Context,
 		params *ec2.DescribeInstancesInput,
 		optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error)
-	// Add DescribeInstancesAPI method
-
+	// Add DescribeImages method
+	DescribeImages(ctx context.Context,
+		params *ec2.DescribeImagesInput,
+		optFns ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error)
 }
 
 // Make instanceRunningWaiter as an interface
@@ -84,6 +86,27 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 		ec2Client:     ec2Client,
 		waiter:        waiter,
 		serviceConfig: config,
+	}
+
+	// If root volume size is set, then get the device name from the AMI and update the serviceConfig
+	if config.RootVolumeSize > 0 {
+		// Get the device name from the AMI
+		deviceName, deviceSize, err := provider.getDeviceNameAndSize(config.ImageId)
+		if err != nil {
+			return nil, err
+		}
+
+		// If RootVolumeSize < deviceSize, then update the RootVolumeSize to deviceSize
+		if config.RootVolumeSize < int(deviceSize) {
+			logger.Printf("RootVolumeSize %d is less than deviceSize %d, hence updating RootVolumeSize to deviceSize",
+				config.RootVolumeSize, deviceSize)
+			config.RootVolumeSize = int(deviceSize)
+		}
+
+		// Update the serviceConfig with the device name
+		config.RootDeviceName = deviceName
+
+		logger.Printf("RootDeviceName and RootVolumeSize of the image %s is %s, %d", config.ImageId, config.RootDeviceName, config.RootVolumeSize)
 	}
 
 	if err = provider.updateInstanceTypeSpecList(); err != nil {
@@ -202,6 +225,18 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			// Remove the security group IDs from the input
 			input.SecurityGroupIds = nil
 
+		}
+	}
+
+	// Add block device mappings to the instance to set the root volume size
+	if p.serviceConfig.RootVolumeSize > 0 {
+		input.BlockDeviceMappings = []types.BlockDeviceMapping{
+			{
+				DeviceName: aws.String(p.serviceConfig.RootDeviceName),
+				Ebs: &types.EbsBlockDevice{
+					VolumeSize: aws.Int32(int32(p.serviceConfig.RootVolumeSize)),
+				},
+			},
 		}
 	}
 
@@ -375,4 +410,42 @@ func (p *awsProvider) getPublicIP(ctx context.Context, instanceID string) (netip
 	}
 
 	return publicIPAddr, nil
+}
+
+func (p *awsProvider) getDeviceNameAndSize(imageID string) (string, int32, error) {
+	// Add describe images input
+	describeImagesInput := &ec2.DescribeImagesInput{
+		ImageIds: []string{imageID},
+	}
+
+	// Add describe images output
+	describeImagesOutput, err := p.ec2Client.DescribeImages(context.Background(), describeImagesInput)
+	if err != nil {
+		logger.Printf("failed to describe the image : %v ", err)
+		return "", 0, err
+	}
+
+	// Get the device name
+	deviceName := describeImagesOutput.Images[0].RootDeviceName
+
+	// Check if the device name is nil
+	if deviceName == nil {
+		return "", 0, fmt.Errorf("device name is nil")
+	}
+	// If the device name is empty, return an error
+	if *deviceName == "" {
+		return "", 0, fmt.Errorf("device name is empty")
+	}
+
+	// Get the device size if it is set
+	deviceSize := describeImagesOutput.Images[0].BlockDeviceMappings[0].Ebs.VolumeSize
+
+	if deviceSize == nil {
+		logger.Printf("device size of the image %s is not set", imageID)
+		return *deviceName, 0, nil
+	}
+
+	logger.Printf("device name and size of the image %s is %s, %d", imageID, *deviceName, *deviceSize)
+
+	return *deviceName, *deviceSize, nil
 }

@@ -140,6 +140,23 @@ func newMockAWSInstanceWaiter() *MockAWSInstanceWaiter {
 	return &MockAWSInstanceWaiter{}
 }
 
+// Create a mock EC2 DescribeImages method
+func (m mockEC2Client) DescribeImages(ctx context.Context,
+	params *ec2.DescribeImagesInput,
+	optFns ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error) {
+
+	// Create a mock image ID
+	mockImageID := "ami-1234567890abcdef0"
+	// Return a mock DescribeImagesOutput
+	return &ec2.DescribeImagesOutput{
+		Images: []types.Image{
+			{
+				ImageId: &mockImageID,
+			},
+		},
+	}, nil
+}
+
 // Create a serviceConfig struct without public IP
 var serviceConfig = &Config{
 	Region: "us-east-1",
