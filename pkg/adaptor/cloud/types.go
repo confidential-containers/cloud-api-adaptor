@@ -23,6 +23,7 @@ type Provider interface {
 	CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec InstanceTypeSpec) (instance *Instance, err error)
 	DeleteInstance(ctx context.Context, instanceID string) error
 	Teardown() error
+	ConfigVerifier() error
 }
 
 type Instance struct {
@@ -34,6 +35,7 @@ type Instance struct {
 type Service interface {
 	pb.HypervisorService
 	GetInstanceID(ctx context.Context, podNamespace, podName string, wait bool) (string, error)
+	ConfigVerifier() error
 	Teardown() error
 }
 

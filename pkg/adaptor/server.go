@@ -77,6 +77,13 @@ func NewServer(provider cloud.Provider, cfg *ServerConfig, workerNode podnetwork
 }
 
 func (s *server) Start(ctx context.Context) (err error) {
+	// Only verify cloud service config when `CLOUD_CONFIG_VERIFY` env be set to `yes`
+	if os.Getenv("CLOUD_CONFIG_VERIFY") == "yes" {
+		verifierErr := s.cloudService.ConfigVerifier()
+		if verifierErr != nil {
+			return err
+		}
+	}
 
 	ttRpc, err := ttrpc.NewServer()
 	if err != nil {

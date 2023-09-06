@@ -96,6 +96,10 @@ func (s *cloudService) Teardown() error {
 	return s.provider.Teardown()
 }
 
+func (s *cloudService) ConfigVerifier() error {
+	return s.provider.ConfigVerifier()
+}
+
 func (s *cloudService) setInstance(sid sandboxID, instanceID, instanceName string) error {
 
 	s.mutex.Lock()

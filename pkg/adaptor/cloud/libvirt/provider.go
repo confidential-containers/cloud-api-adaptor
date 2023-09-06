@@ -119,3 +119,11 @@ func (p *libvirtProvider) DeleteInstance(ctx context.Context, instanceID string)
 func (p *libvirtProvider) Teardown() error {
 	return nil
 }
+
+func (p *libvirtProvider) ConfigVerifier() error {
+	VolName := p.serviceConfig.VolName
+	if len(VolName) == 0 {
+		return fmt.Errorf("VolName is empty")
+	}
+	return nil
+}

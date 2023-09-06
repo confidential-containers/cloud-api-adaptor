@@ -303,6 +303,14 @@ func (p *awsProvider) Teardown() error {
 	return nil
 }
 
+func (p *awsProvider) ConfigVerifier() error {
+	ImageId := p.serviceConfig.ImageId
+	if len(ImageId) == 0 {
+		return fmt.Errorf("ImageId is empty")
+	}
+	return nil
+}
+
 // Add SelectInstanceType method to select an instance type based on the memory and vcpu requirements
 func (p *awsProvider) selectInstanceType(ctx context.Context, spec cloud.InstanceTypeSpec) (string, error) {
 
