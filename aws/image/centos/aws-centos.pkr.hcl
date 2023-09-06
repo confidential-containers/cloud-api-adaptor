@@ -24,6 +24,12 @@ source "amazon-ebs" "centos" {
     most_recent = true
     owners      = ["679593333241"]
   }
+  ami_block_device_mappings {
+    device_name = "/dev/sda1"
+    delete_on_termination = "true"
+    volume_size = "${var.volume_size}"
+  }
+
   ssh_username = "cloud-user"
 }
 

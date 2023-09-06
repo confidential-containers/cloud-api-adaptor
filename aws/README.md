@@ -21,7 +21,13 @@ export VPC_ID=vpc-01234567890abcdef # optional, otherwise, it creates and uses t
 export SUBNET_ID=subnet-01234567890abcdef # must be set if VPC_ID is set
 ```
 
-- Create a custom AWS VM image based on Ubuntu 20.04 having kata-agent and other dependencies
+If you want to change the volume size of the generated AMI, then set the `VOLUME_SIZE` environment variable.
+For example if you want to set the volume size to 40 GiB, then do the following:
+```
+export VOLUME_SIZE=40
+```
+
+- Create a custom AWS VM image based on Ubuntu 22.04 having kata-agent and other dependencies
 
 > **NOTE**: For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
 
