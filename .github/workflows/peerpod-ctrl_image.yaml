@@ -42,7 +42,7 @@ jobs:
             quay.io/confidential-containers/peerpod-ctrl:latest
             quay.io/confidential-containers/peerpod-ctrl:${{ github.sha }}
           push: true
-          context: .
+          context: peerpod-ctrl
           build-args: |
             "$(make list-build-args)"
 
