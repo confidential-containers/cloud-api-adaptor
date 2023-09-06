@@ -58,9 +58,8 @@ PAUSE         = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/pause
 ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
 
 # Allow BINARIES to be overriden externally
-BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE)
+BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGENT)
 
-BINARIES += $(ATTESTATION_AGENT)
 $(shell sed -i "s|\(aa_kbc_params = \)\"[^\"]*\"|\1\"${AA_KBC}::${KBC_URI}\"|g" $(FILES_DIR)/etc/agent-config.toml)
 
 AGENT_PROTOCOL_FORWARDER_SRC = ../..
