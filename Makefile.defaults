@@ -1,4 +1,4 @@
-ifeq (, $(shell command -v yq))
+ifeq (, $(shell command -v yq 2> /dev/null))
 $(error "No yq on PATH, consider doing snap install yq")
 endif
 
