@@ -14,10 +14,10 @@ IMAGE_URL ?= $($(PODVM_DISTRO)_$(DEB_ARCH)_IMAGE_URL)
 IMAGE_CHECKSUM ?= $($(PODVM_DISTRO)_$(DEB_ARCH)_IMAGE_CHECKSUM)
 
 ifndef IMAGE_URL
-	$(error "IMAGE_URL is not defined")
+$(error "IMAGE_URL is not defined")
 endif
 ifndef IMAGE_CHECKSUM
-	$(error "IMAGE_CHECKSUM is not defined")
+$(error "IMAGE_CHECKSUM is not defined")
 endif
 
 KATA_AGENT_SRC := ../../kata-containers/src/agent
