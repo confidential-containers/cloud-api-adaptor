@@ -25,6 +25,36 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
+    - name: Read properties from versions.yaml
+      run: |
+        go_version="$(yq '.tools.golang' versions.yaml)"
+        [ -n "$go_version" ]
+        echo "GO_VERSION=${go_version}" >> $GITHUB_ENV
+
+        protoc_version="$(yq '.tools.protoc' versions.yaml)"
+        [ -n "$protoc_version" ]
+        echo "PROTOC_VERSION=${protoc_version}" >> $GITHUB_ENV
+
+        rust_version="$(yq '.tools.rust' versions.yaml)"
+        [ -n "$rust_version" ]
+        echo "RUST_VERSION=${rust_version}" >> $GITHUB_ENV
+
+        caa_src="$(yq '.git.cloud-api-adaptor.url' versions.yaml)"
+        [ -n "$caa_src" ]
+        echo "CAA_SRC=${caa_src}" >> $GITHUB_ENV
+
+        caa_src_ref="$(yq '.git.cloud-api-adaptor.reference' versions.yaml)"
+        [ -n "$caa_src_ref" ]
+        echo "CAA_SRC_REF=${caa_src_ref}" >> $GITHUB_ENV
+
+        kata_src="$(yq '.git.kata-containers.url' versions.yaml)"
+        [ -n "$kata_src" ]
+        echo "KATA_SRC=${kata_src}" >> $GITHUB_ENV
+
+        kata_src_branch="$(yq '.git.kata-containers.reference' versions.yaml)"
+        [ "$kata_src_branch" ]
+        echo "KATA_SRC_BRANCH=${kata_src_branch}" >> $GITHUB_ENV
+
     #- name: Set up QEMU
     #  uses: docker/setup-qemu-action@v2
 
@@ -57,10 +87,10 @@ jobs:
         file: |
           podvm/${{ matrix.dockerfile }}
         build-args: |
-          "GO_VERSION=1.20.8"
-          "PROTOC_VERSION=3.11.4"
-          "RUST_VERSION=1.69.0"
-          "CAA_SRC=https://github.com/confidential-containers/cloud-api-adaptor"
-          "CAA_SRC_REF=main"
-          "KATA_SRC=https://github.com/kata-containers/kata-containers"
-          "KATA_SRC_BRANCH=CCv0"
+          "GO_VERSION=${{ env.GO_VERSION }}"
+          "PROTOC_VERSION=${{ env.PROTOC_VERSION }}"
+          "RUST_VERSION=${{ env.RUST_VERSION }}"
+          "CAA_SRC=${{ env.CAA_SRC }}"
+          "CAA_SRC_REF=${{ env.CAA_SRC_REF }}"
+          "KATA_SRC=${{ env.KATA_SRC }}"
+          "KATA_SRC_BRANCH=${{ env.KATA_SRC_BRANCH }}"
