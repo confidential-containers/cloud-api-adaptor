@@ -11,7 +11,7 @@ variable "az_image_name" {
 // instance type
 variable "vm_size" {
   type    = string
-  default = "Standard_A2_v2"
+  default = "Standard_D2as_v5"
 }
 
 variable "resource_group" {
@@ -99,4 +99,22 @@ variable "plan_publisher" {
 variable "disable_cloud_config" {
   type    = string
   default = env("DISABLE_CLOUD_CONFIG")
+}
+
+# shared gallery name
+variable "az_gallery_name" {
+  type    = string
+  default = ""
+}
+
+# shared gallery image name
+variable "az_gallery_image_name" {
+  type    = string
+  default = ""
+}
+
+# shared gallery image version
+variable "az_gallery_image_version" {
+  type    = string
+  default = ""
 }
