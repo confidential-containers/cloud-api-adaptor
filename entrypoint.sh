@@ -45,6 +45,7 @@ aws() {
     [[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} "     # if not set retrieved from IMDS
     [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip " # Use public IP for pod vm
+    [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
 
     set -x
     exec cloud-api-adaptor aws \
