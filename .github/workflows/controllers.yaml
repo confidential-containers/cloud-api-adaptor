@@ -16,17 +16,18 @@ jobs:
     defaults:
       run:
         working-directory: peerpodconfig-ctrl
-    strategy:
-      matrix:
-        go_version:
-          - "1.20.8"
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v3
-      - name: Setup Golang version ${{ matrix.go_version }}
+      - name: Read properties from versions.yaml
+        run: |
+          go_version="$(yq '.tools.golang' ../versions.yaml)"
+          [ -n "$go_version" ]
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+      - name: Setup Golang version ${{ env.GO_VERSION }}
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ matrix.go_version }}
+          go-version: ${{ env.GO_VERSION }}
       - name: Verify go modules and manifests
         run: make verify
       - name: Build the controller manager
@@ -41,21 +42,22 @@ jobs:
     defaults:
       run:
         working-directory: peerpod-ctrl
-    strategy:
-      matrix:
-        go_version:
-          - "1.20.8"
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v3
+      - name: Read properties from versions.yaml
+        run: |
+          go_version="$(yq '.tools.golang' ../versions.yaml)"
+          [ -n "$go_version" ]
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
       - name: Install build dependencies
         run: |
          sudo apt-get update -y
          sudo apt-get install -y libvirt-dev
-      - name: Setup Golang version ${{ matrix.go_version }}
+      - name: Setup Golang version ${{ env.GO_VERSION }}
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ matrix.go_version }}
+          go-version: ${{ env.GO_VERSION }}
       - name: Verify go modules and manifests
         run: make verify
       - name: Build the controller manager
