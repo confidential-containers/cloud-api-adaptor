@@ -34,9 +34,6 @@ on:
         required: false
         type: string
 
-env:
-  GO_VERSION: "1.20.6"
-
 jobs:
   build_push_job:
     name: build and push
@@ -55,6 +52,12 @@ jobs:
         with:
           fetch-depth: 0
           ref: "${{ inputs.git_ref }}"
+
+      - name: Read properties from versions.yaml
+        run: |
+          go_version="$(yq '.tools.golang' versions.yaml)"
+          [ -n "$go_version" ]
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
         uses: actions/setup-go@v4
