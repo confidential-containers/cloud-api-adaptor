@@ -1,14 +1,10 @@
 name: Create Pod VM Binaries Image
 on:
-  workflow_run:
-    workflows: ["Create Pod VM Builder Image"]
-    types:
-      - completed
+  workflow_call:
 
 jobs:
   build:
     name: Create pod vm binaries image
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

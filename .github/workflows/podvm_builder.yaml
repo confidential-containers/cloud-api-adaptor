@@ -1,7 +1,6 @@
 name: Create Pod VM Builder Image
 on:
-  release:
-    types: [created]
+  workflow_call:
 
 jobs:
   build:

@@ -1,0 +1,27 @@
+# Copyright Confidential Containers Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build and push the pod VM images.
+---
+name: Publish pod VM Images
+on:
+  # Create release Pod VM Images
+  release:
+    types: [created]
+
+  workflow_dispatch:
+
+jobs:
+  podvm_builder:
+    uses: ./.github/workflows/podvm_builder.yaml
+    secrets: inherit
+
+  podvm_binaries:
+    needs: [podvm_builder]
+    uses: ./.github/workflows/podvm_binaries.yaml
+    secrets: inherit
+
+  podvm:
+    needs: [podvm_binaries]
+    uses: ./.github/workflows/podvm.yaml
+    secrets: inherit
