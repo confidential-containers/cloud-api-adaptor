@@ -1,6 +1,11 @@
 name: Create Pod VM Builder Image
 on:
   workflow_call:
+    inputs:
+      registry:
+        default: 'quay.io/confidential-containers'
+        required: false
+        type: string
 
 jobs:
   build:
@@ -30,14 +35,24 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Login to Quay container Registry
+      if: ${{ startsWith(inputs.registry, 'quay.io') }}
       uses: docker/login-action@v2
       with:
         registry: quay.io
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
+    - name: Login to Github Container Registry
+      if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Build and push
       run: make podvm-builder
       env:
           PUSH: true
+          REGISTRY: ${{ inputs.registry }}
           PODVM_DISTRO: ${{ matrix.os }}
