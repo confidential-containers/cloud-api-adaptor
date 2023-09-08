@@ -23,7 +23,7 @@ on:
 
 env:
   CLOUD_PROVIDER: libvirt
-  GO_VERSION: "1.20.7"
+  GO_VERSION: "1.20.8"
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
