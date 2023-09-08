@@ -11,9 +11,6 @@ on:
       - 'main'
   workflow_dispatch:
 
-env:
-  go_version: "1.20.8"
-
 jobs:
   build_push_job:
     name: build and push
