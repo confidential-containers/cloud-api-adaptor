@@ -184,6 +184,13 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		b64EncData = base64.StdEncoding.EncodeToString([]byte(userData))
 	}
 
+	// Azure limits the base64 encrypted userData to 64KB.
+	// Ref: https://learn.microsoft.com/en-us/azure/virtual-machines/user-data
+	// If the b64EncData is greater than 64KB then return an error
+	if len(b64EncData) > 64*1024 {
+		return nil, fmt.Errorf("base64 encoded userData is greater than 64KB")
+	}
+
 	instanceSize, err := p.selectInstanceType(ctx, spec)
 	if err != nil {
 		return nil, err
