@@ -13,7 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.21.0
 	github.com/aws/aws-sdk-go-v2/config v1.15.11
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.6
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.114.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.117.0
 	github.com/containerd/containerd v1.6.8
 	github.com/containerd/ttrpc v1.1.0
 	github.com/containernetworking/plugins v1.1.1

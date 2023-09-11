@@ -54,6 +54,7 @@ type Config struct {
 	UsePublicIP          bool
 	RootVolumeSize       int
 	RootDeviceName       string
+	DisableCVM           bool
 }
 
 func (c Config) Redact() Config {
