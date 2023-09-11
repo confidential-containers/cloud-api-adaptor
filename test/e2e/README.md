@@ -50,6 +50,32 @@ To leave the cluster untouched by the execution finish you should export `TEST_T
 
 As mentioned on the previous section, a properties file can be passed to the cloud provisioner that will be used to controll the provisioning operations. The properties are specific of each cloud provider though, see on the sections below.
 
+### AWS provision properties
+
+Use the properties on the table below for AWS:
+
+|Property|Description|Default|
+|---|---|---|
+|aws_region|AWS region|Account default|
+|aws_vpc_cidrblock|AWS VPC CIDR block|10.0.0.0/24|
+|aws_vpc_id|AWS VPC ID||
+|aws_vpc_igw_id|AWS VPC Internet Gateway ID||
+|aws_vpc_rt_id|AWS VPC Route Table ID||
+|aws_vpc_sg_id|AWS VPC Security Groups ID||
+|aws_vpc_subnet_id|AWS VPC Subnet ID||
+|cluster_type|Kubernetes cluster type. Either **onprem** or **eks** (see Notes below) |onprem|
+|pause_image|Kubernetes pause image||
+|podvm_aws_ami_id|AWS AMI ID of the podvm||
+|ssh_kp_name|AWS SSH key-pair name ||
+|vxlan_port|VXLAN port number||
+
+>Notes:
+ * The AWS credentials are obtained from the CLI [configuration files](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html). **Important**: the access key and secret are recorded in plain-text in [install/overlays/aws/kustomization.yaml](https://github.com/confidential-containers/cloud-api-adaptor/tree/main/install/overlays/aws/kustomization.yaml)
+ * The subnet is created with CIDR IPv4 block 10.0.0.0/25. In case of deploying an EKS cluster,
+a secondary (private) subnet is created with CIDR IPv4 block 10.0.0.128/25
+ * The cluster type **onprem** assumes Kubernetes is already provisioned and its kubeconfig file path can be found at the `KUBECONFIG` environment variable or in the `~/.kube/config` file. Whereas **eks** type instructs to create an [AWS EKS](https://aws.amazon.com/eks/) cluster on the VPC
+ * You must have `qemu-img` installed in your workstation or CI runner because it is used to convert an qcow2 disk to raw.
+
 ### Libvirt provision properties
 
 Use the properties on the table below for Libvirt:
