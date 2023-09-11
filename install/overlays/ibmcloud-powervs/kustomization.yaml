@@ -46,8 +46,11 @@ secretGenerator:
   #- auth.json # set - path to auth.json pull credentials file
 - name: peer-pods-secret
   namespace: confidential-containers-system
-  literals:
-  - IBMCLOUD_API_KEY="" # set
+  # the below file should be in this format
+  # $ cat cloud-credentials.env
+  # IBMCLOUD_API_KEY=...
+  envs:
+  - cloud-credentials.env
 
 ##TLS_SETTINGS
 #- name: certs-for-tls
