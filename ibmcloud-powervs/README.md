@@ -72,7 +72,15 @@ pvsadm image import -n <service-instance-name> -b <bucket-name> -o <file-name> -
 ## Running cloud-api-adaptor
 
 1. Setup necessary cloud resources such as PowerVS Service instance, network, API Key etc..
+   
+2. Populate an env file with the IBM Cloud API key
 
-2. Update [kustomization.yaml](../install/overlays/ibmcloud-powervs/kustomization.yaml) with the required details
+   ```bash
+   cat <<EOF > install/overlays/ibmcloud-powervs/cloud-credentials.env
+   IBMCLOUD_API_KEY=${IBMCLOUD_API_KEY}
+   EOF
+   ```
+
+3. Update [kustomization.yaml](../install/overlays/ibmcloud-powervs/kustomization.yaml) with the required details
  
-3. Deploy Cloud API Adaptor by following the [install](../install/README.md) guide
+4. Deploy Cloud API Adaptor by following the [install](../install/README.md) guide
