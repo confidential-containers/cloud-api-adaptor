@@ -64,10 +64,6 @@ BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGE
 
 $(shell sed -i "s|\(aa_kbc_params = \)\"[^\"]*\"|\1\"${AA_KBC}::${KBC_URI}\"|g" $(FILES_DIR)/etc/agent-config.toml)
 
-AGENT_PROTOCOL_FORWARDER_SRC = ../..
-
-PROCESS_USER_DATA_SRC = ../..
-
 KATA_AGENT_SRC = ../../../kata-containers/src/agent
 KATA_AGENT_BUILD_TYPE = release
 
@@ -107,12 +103,12 @@ endef
 binaries: $(BINARIES)
 
 $(AGENT_PROTOCOL_FORWARDER): force
-	cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && ARCH=$(DEB_ARCH) $(MAKE) agent-protocol-forwarder
-	install -D --compare "$(AGENT_PROTOCOL_FORWARDER_SRC)/agent-protocol-forwarder" "$@"
+	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) agent-protocol-forwarder
+	install -D --compare "$(ROOT_DIR)/agent-protocol-forwarder" "$@"
 
 $(PROCESS_USER_DATA): force
-	cd "$(PROCESS_USER_DATA_SRC)" && ARCH=$(DEB_ARCH) $(MAKE) process-user-data
-	install -D --compare "$(PROCESS_USER_DATA_SRC)/process-user-data" "$@"
+	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) process-user-data
+	install -D --compare "$(ROOT_DIR)/process-user-data" "$@"
 
 $(KATA_AGENT): force $(STATIC_LIBSECCOMP)
 	cd "$(KATA_AGENT_SRC)" && $(RUST_FLAGS) $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
@@ -152,7 +148,6 @@ $(ATTESTATION_AGENT): $(GUEST_COMPONENTS_SRC)
 clean_sources:
 	[ -d "$(GUEST_COMPONENTS_SRC)" ] && cd "$(GUEST_COMPONENTS_SRC)" && git clean -xfd
 	[ -d "$(KATA_AGENT_SRC)" ] && cd "$(KATA_AGENT_SRC)" && git clean -xfd
-	[ -d "$(AGENT_PROTOCOL_FORWARDER_SRC)" ] && cd "$(AGENT_PROTOCOL_FORWARDER_SRC)" && git clean -xfd -e podvm
-	[ -d "$(PROCESS_USER_DATA_SRC)" ] && cd "$(PROCESS_USER_DATA_SRC)" && git clean -xfd
+	[ -d "$(ROOT_DIR)" ] && cd "$(ROOT_DIR)" && git clean -xfd -e podvm
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci
