@@ -43,43 +43,29 @@ jobs:
 
   # Build the podvm images.
   #
-  # Currently it will not build the podvm, instead it downloads the qcow2 file
-  # from the built image. The file will be archived so that downstream jobs can
-  # just download the file on their runners.
-  podvm:
-    name: podvm
+  podvm_builder:
     needs: [authorize]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        os:
-          - centos
-          - ubuntu
-        provider:
-          - generic
-        arch:
-          - amd64
-    env:
-      registry: quay.io/confidential-containers
-      podvm_image: podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}
-      qcow2: podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}.qcow2
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+    uses: ./.github/workflows/podvm_builder.yaml
+    with:
+      registry: ghcr.io/${{ github.repository_owner }}
+      image_tag: ci-pr${{ github.event.number }}
+    secrets: inherit
 
-      - name: Extract the podvm qcow2
-        run: ./hack/download-image.sh ${{ env.registry }}/${{ env.podvm_image }} . -o ${{ env.qcow2 }}
-        working-directory: podvm
+  podvm_binaries:
+    needs: [podvm_builder]
+    uses: ./.github/workflows/podvm_binaries.yaml
+    with:
+      registry: ghcr.io/${{ github.repository_owner }}
+      image_tag: ci-pr${{ github.event.number }}
+    secrets: inherit
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.qcow2 }}
-          path: podvm/${{ env.qcow2 }}
-          retention-days: 1
+  podvm:
+    needs: [podvm_binaries]
+    uses: ./.github/workflows/podvm.yaml
+    with:
+      registry: ghcr.io/${{ github.repository_owner }}
+      image_tag: ci-pr${{ github.event.number }}
+    secrets: inherit
 
   # Build and push the cloud-api-adaptor image
   #
@@ -175,6 +161,6 @@ jobs:
           - amd64
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
-      qcow2_artifact: podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}.qcow2
+      podvm_image: ghcr.io/${{ github.repository_owner }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:ci-pr${{ github.event.number  }}
       install_directory_artifact: install_directory
       git_ref: ${{ github.event.pull_request.head.sha }}
