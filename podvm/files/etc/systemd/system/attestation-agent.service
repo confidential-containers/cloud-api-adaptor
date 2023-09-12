@@ -6,7 +6,10 @@ After=network.target kata-agent.service netns@podns.service
 [Service]
 Type=simple
 NetworkNamespacePath=/run/netns/podns
-ExecStart=/usr/local/bin/attestation-agent --getresource_sock 127.0.0.1:50001
+ExecStart=/usr/local/bin/attestation-agent \
+--getresource_sock unix:///run/confidential-containers/attestation-agent/getresource.sock \
+--attestation_sock unix:///run/confidential-containers/attestation-agent/attestation-agent.sock
+
 Restart=always
 
 [Install]

@@ -1,0 +1,14 @@
+[Unit]
+Description=Confidential Data Hub Service
+BindsTo=netns@podns.service
+After=network.target attestation-agent.service netns@podns.service
+
+[Service]
+Type=simple
+NetworkNamespacePath=/run/netns/podns
+ExecStart=/usr/local/bin/confidential-data-hub
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
