@@ -16,7 +16,7 @@ cloudimg:
         checksum: "sha256:8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c"
 tools:
   golang: 1.20.8
-  rust: 1.69.0
+  rust: 1.72.0
   protoc: 3.11.4
 # Referenced Git repositories
 git:
