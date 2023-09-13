@@ -29,10 +29,7 @@ env:
   AZURE_PODVM_IMAGE_DEF_NAME: "podvm_image0"
   AZURE_PODVM_IMAGE_VERSION: "${{ inputs.image-version }}"
   COMMUNITY_GALLERY_PREFIX: "/CommunityGalleries/cocopodvm-d0e4f35f-5530-4b9c-8596-112487cdea85"
-  GO_VERSION: "1.20"
-  KATA_AGENT_VERSION: "CC-0.7.0"
   PODVM_IMAGE_NAME: "peerpod-image-${{ github.run_id }}-${{ github.run_attempt }}"
-  RUST_VERSION: "1.70.0"
   SSH_USERNAME: "peerpod"
   VM_SIZE: "Standard_D2as_v5"
 
@@ -50,6 +47,20 @@ jobs:
       with:
         path: cloud-api-adaptor
         ref: "${{ inputs.git-ref || 'main' }}"
+
+    - name: Read properties from versions.yaml
+      run: |
+        go_version="$(yq '.tools.golang' versions.yaml)"
+        [ -n "$go_version" ]
+        echo "GO_VERSION=${go_version}" >> $GITHUB_ENV
+
+        rust_version="$(yq '.tools.rust' versions.yaml)"
+        [ -n "$rust_version" ]
+        echo "RUST_VERSION=${rust_version}" >> $GITHUB_ENV
+
+        kata_src_branch="$(yq '.git.kata-containers.reference' versions.yaml)"
+        [ "$kata_src_branch" ]
+        echo "KATA_SRC_BRANCH=${kata_src_branch}" >> $GITHUB_ENV
 
     - name: Set up Go environment
       uses: actions/setup-go@v4
@@ -77,7 +88,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: cloud-api-adaptor/podvm/files/usr/local/bin/kata-agent
-        key: kata-agent-${{ env.KATA_AGENT_VERSION }}_rust${{ env.RUST_VERSION }}
+        key: kata-agent-${{ env.KATA_SRC_BRANCH }}_rust${{ env.RUST_VERSION }}
 
     - name: Clone kata-containers repository
       if: steps.kata-agent-cache.outputs.cache-hit != 'true'
@@ -85,7 +96,7 @@ jobs:
       with:
         repository: kata-containers/kata-containers
         path: kata-containers
-        ref: ${{ env.KATA_AGENT_VERSION }}
+        ref: ${{ env.KATA_SRC_BRANCH }}
 
     - name: Build kata-agent
       env:
