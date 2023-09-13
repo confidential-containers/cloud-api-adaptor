@@ -26,6 +26,14 @@ func TestCreateSimplePod(t *testing.T) {
 	doTestCreateSimplePod(t, assert)
 }
 
+func TestCaaDaemonsetRollingUpdate(t *testing.T) {
+	if os.Getenv("TEST_CAA_ROLLING_UPDATE") == "yes" {
+		doTestCaaDaemonsetRollingUpdate(t)
+	} else {
+		log.Infof("Ignore CAA DaemonSet upgrade  test")
+	}
+}
+
 func TestCreateConfidentialPod(t *testing.T) {
 	instanceProfile := pv.IBMCloudProps.InstanceProfile
 	if strings.HasPrefix(instanceProfile, "bz2e") {
