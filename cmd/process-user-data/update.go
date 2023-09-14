@@ -106,6 +106,25 @@ func updateAgentConfig(cmd *cobra.Command, args []string) error {
 		agentConfig.AaKbcParams = config.AAKBCParams
 	}
 
+	if config.AuthJson != "" {
+
+		fmt.Printf("Updating image_registry_auth_file in agent config file with value\n")
+
+		// Check if authJsonFilePath exists. If it doesn't exists create the file
+
+		if _, err := os.Stat(defaultAuthJsonFilePath); err != nil && os.IsNotExist(err) {
+			// Write the authJson to the defaultAuthJsonFilePath
+			err = os.WriteFile(defaultAuthJsonFilePath, []byte(config.AuthJson), 0644)
+			if err != nil {
+				return fmt.Errorf("failed to write auth.json file: %s", err)
+			}
+		}
+
+		// Update the file path in the agent config
+		agentConfig.ImageRegistryAuthFile = "file://" + defaultAuthJsonFilePath
+
+	}
+
 	// Write the updated agent config file
 	err = writeAgentConfig(*agentConfig, cfg.agentConfigPath)
 	if err != nil {
