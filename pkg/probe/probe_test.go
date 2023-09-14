@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,8 +22,12 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+var timeBefore time.Time = time.Now()
+var timeStart time.Time = timeBefore.Add(time.Second * 10)
+var timeAfter time.Time = timeStart.Add(time.Second * 10)
+
 // Mock a successful clientset
-func getFakeClientSetWithParas(podnamePrefix, namespace, nodeName, runtimeClass string, phase corev1.PodPhase) *fake.Clientset {
+func getFakeClientSetWithParas(podnamePrefix, namespace, nodeName, runtimeClass string, status corev1.ConditionStatus, transitionTime time.Time) *fake.Clientset {
 	clientset := fake.NewSimpleClientset(&corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podnamePrefix + "-1",
@@ -33,7 +38,13 @@ func getFakeClientSetWithParas(podnamePrefix, namespace, nodeName, runtimeClass 
 			RuntimeClassName: &runtimeClass,
 		},
 		Status: corev1.PodStatus{
-			Phase: phase,
+			Conditions: []corev1.PodCondition{
+				{
+					Type:               corev1.PodReady,
+					Status:             status,
+					LastTransitionTime: metav1.Time{Time: transitionTime},
+				},
+			},
 		},
 	}, &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -45,7 +56,13 @@ func getFakeClientSetWithParas(podnamePrefix, namespace, nodeName, runtimeClass 
 			RuntimeClassName: &runtimeClass,
 		},
 		Status: corev1.PodStatus{
-			Phase: phase,
+			Conditions: []corev1.PodCondition{
+				{
+					Type:               corev1.PodReady,
+					Status:             status,
+					LastTransitionTime: metav1.Time{Time: transitionTime},
+				},
+			},
 		},
 	})
 
@@ -67,24 +84,24 @@ func Test_GetRuntimeclassName_Env(t *testing.T) {
 func Test_GetAllPeerPods_BeTrue(t *testing.T) {
 	os.Setenv("NODE_NAME", "node-name-1")
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodRunning)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionTrue, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
 		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
 		SocketPath:       "",
 	}
-	result, err := checker.GetAllPeerPods()
+	result, err := checker.GetAllPeerPods(timeStart)
 
 	assert.NoError(t, err)
 	assert.True(t, result)
 
-	clientset = getFakeClientSetWithParas("pod", "default", "node-name-1", "", corev1.PodRunning)
+	clientset = getFakeClientSetWithParas("pod", "default", "node-name-1", "", corev1.ConditionTrue, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
 		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
 		SocketPath:       "",
 	}
-	result, err = checker.GetAllPeerPods()
+	result, err = checker.GetAllPeerPods(timeStart)
 
 	assert.NoError(t, err)
 	assert.True(t, result)
@@ -93,13 +110,28 @@ func Test_GetAllPeerPods_BeTrue(t *testing.T) {
 func Test_GetAllPeerPods_BeFalse(t *testing.T) {
 	os.Setenv("NODE_NAME", "node-name-1")
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodUnknown)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionFalse, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
 		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
 		SocketPath:       "",
 	}
-	result, err := checker.GetAllPeerPods()
+	result, err := checker.GetAllPeerPods(timeStart)
+
+	assert.NotNil(t, err)
+	assert.False(t, result)
+}
+
+func Test_GetAllPeerPods_BeFalse_time_before(t *testing.T) {
+	os.Setenv("NODE_NAME", "node-name-1")
+
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionTrue, timeBefore)
+	checker = Checker{
+		Clientset:        clientset,
+		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		SocketPath:       "",
+	}
+	result, err := checker.GetAllPeerPods(timeStart)
 
 	assert.NotNil(t, err)
 	assert.False(t, result)
@@ -108,13 +140,13 @@ func Test_GetAllPeerPods_BeFalse(t *testing.T) {
 func Test_GetAllPeerPods_BeError(t *testing.T) {
 	os.Setenv("NODE_NAME", "")
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodUnknown)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionFalse, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
 		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
 		SocketPath:       "",
 	}
-	result, err := checker.GetAllPeerPods()
+	result, err := checker.GetAllPeerPods(timeStart)
 
 	assert.NotNil(t, err)
 	assert.False(t, result)
@@ -164,7 +196,7 @@ func Test_StartupHandler_BeReady(t *testing.T) {
 	}
 	defer socket.Close()
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodUnknown)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionFalse, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
 		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
@@ -193,7 +225,7 @@ func Test_StartupHandler_NotBeAllPodsReady(t *testing.T) {
 	}
 	defer socket.Close()
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodUnknown)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionFalse, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
 		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
@@ -222,7 +254,7 @@ func Test_StartupHandler_BeAllPodsReady(t *testing.T) {
 	}
 	defer socket.Close()
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.PodRunning)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionTrue, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
 		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
