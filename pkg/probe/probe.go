@@ -7,11 +7,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 var logger = log.New(log.Writer(), "[probe/probe] ", log.LstdFlags|log.Lmsgprefix)
 var podsReadizProbesDone bool
 var checker Checker
+var startTime time.Time
 
 const DEFAULT_CC_RUNTIMECLASS_NAME string = "kata-remote"
 
@@ -29,7 +31,7 @@ func StartupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !podsReadizProbesDone {
-		ret, err := checker.GetAllPeerPods()
+		ret, err := checker.GetAllPeerPods(startTime)
 		podsReadizProbesDone = ret
 		if err != nil || !podsReadizProbesDone {
 			logger.Printf("Not all PeerPods ready, because %s", err)
@@ -42,6 +44,8 @@ func StartupHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func Start(socketPath string) {
+	startTime = time.Now()
+
 	port := os.Getenv("PROBE_PORT")
 	if port == "" {
 		port = "8000"

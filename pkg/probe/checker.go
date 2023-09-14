@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -32,7 +33,7 @@ func (c *Checker) GetAllPods(selector string) (result *corev1.PodList, err error
 	})
 }
 
-func (c *Checker) GetAllPeerPods() (ready bool, err error) {
+func (c *Checker) GetAllPeerPods(startTime time.Time) (ready bool, err error) {
 	nodeName := c.GetNodeName()
 	logger.Printf("nodeName: %s", nodeName)
 
@@ -46,9 +47,17 @@ func (c *Checker) GetAllPeerPods() (ready bool, err error) {
 	for _, pod := range pods.Items {
 		if pod.Spec.RuntimeClassName != nil && *pod.Spec.RuntimeClassName == c.RuntimeclassName {
 			// peer-pods
-			logger.Printf("Dealing with PeerPod: %s, in phase: %s", pod.ObjectMeta.Name, pod.Status.Phase)
-			if pod.Status.Phase != corev1.PodRunning {
-				return false, fmt.Errorf("PeerPod %s is in %s phase.", pod.ObjectMeta.Name, pod.Status.Phase)
+			for _, condition := range pod.Status.Conditions {
+				if condition.Type == corev1.PodReady {
+					logger.Printf("Dealing with PeerPod: %s, with Ready condition: %v", pod.ObjectMeta.Name, condition)
+					if condition.Status != corev1.ConditionTrue {
+						return false, fmt.Errorf("PeerPod %s is not Ready.", pod.ObjectMeta.Name)
+					}
+
+					if condition.LastTransitionTime.Time.Before(startTime) {
+						return false, fmt.Errorf("PeerPod %s has not been restarted.", pod.ObjectMeta.Name)
+					}
+				}
 			}
 		} else {
 			// standard pods
