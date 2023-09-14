@@ -1,12 +1,12 @@
 # Build the manager binary
-FROM quay.io/confidential-containers/golang-fedora:1.20.7-36 as builder
+FROM --platform=$TARGETPLATFORM quay.io/confidential-containers/golang-fedora:1.20.8-36 as builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG CGO_ENABLED=1
 ARG GOFLAGS
 
 WORKDIR /workspace
-RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-devel; fi
+RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-devel && dnf clean all; fi
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
@@ -24,11 +24,14 @@ COPY controllers/ controllers/
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
 # the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
-RUN CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build ${GOFLAGS} -a -o manager main.go
+# CC=gcc because the cgo compiler will always be gcc in image golang-fedora, even for s390x and ppc64le
+RUN CC=gcc CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build ${GOFLAGS} -a -o manager main.go
 
-FROM fedora:36
-RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-libs /usr/bin/ssh && dnf clean all; fi
-RUN dnf install -y libvirt-libs /usr/bin/ssh
+# Target Image
+FROM --platform=$TARGETPLATFORM fedora:36
+ARG CGO_ENABLED=1
+
+RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-libs && dnf clean all; fi
 WORKDIR /
 COPY --from=builder /workspace/manager .
 
