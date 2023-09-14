@@ -37,6 +37,8 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	// Setting disable-cvm to true as there are still some rough edges with CVMs.
 	// Once the issues are fixed, we can set it to false by default
 	flags.BoolVar(&awscfg.DisableCVM, "disable-cvm", true, "Use non-CVMs for peer pods")
+	// Add a flag to disable cloud config and use userdata via metadata service
+	flags.BoolVar(&awscfg.DisableCloudConfig, "disable-cloud-config", false, "Disable cloud config and use userdata via metadata service")
 
 }
 

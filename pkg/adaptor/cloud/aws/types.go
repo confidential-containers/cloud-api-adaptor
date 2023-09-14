@@ -55,6 +55,7 @@ type Config struct {
 	RootVolumeSize       int
 	RootDeviceName       string
 	DisableCVM           bool
+	DisableCloudConfig   bool
 }
 
 func (c Config) Redact() Config {

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -144,15 +145,28 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	// Public IP address
 	var publicIPAddr netip.Addr
 
+	var b64EncData string
+
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
-	userData, err := cloudConfig.Generate()
+	cloudConfigData, err := cloudConfig.Generate()
 	if err != nil {
 		return nil, err
 	}
 
-	//Convert userData to base64
-	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
+	if !p.serviceConfig.DisableCloudConfig {
+		//Convert userData to base64
+		b64EncData = base64.StdEncoding.EncodeToString([]byte(cloudConfigData))
+	} else {
+		userData := strings.Split(cloudConfigData, "content: |")[1]
+		// Take the data in {} after content: and ignore the rest
+		// ToDo: use a regex
+		userData = strings.Split(userData, "- path")[0]
+		userData = strings.TrimSpace(userData)
+
+		//Convert userData to base64
+		b64EncData = base64.StdEncoding.EncodeToString([]byte(userData))
+	}
 
 	instanceType, err := p.selectInstanceType(ctx, spec)
 	if err != nil {
@@ -191,7 +205,7 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			LaunchTemplate: &types.LaunchTemplateSpecification{
 				LaunchTemplateName: aws.String(p.serviceConfig.LaunchTemplateName),
 			},
-			UserData:          &userDataEnc,
+			UserData:          &b64EncData,
 			TagSpecifications: tagSpecifications,
 		}
 	} else {
@@ -202,7 +216,7 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			InstanceType:      types.InstanceType(instanceType),
 			SecurityGroupIds:  p.serviceConfig.SecurityGroupIds,
 			SubnetId:          aws.String(p.serviceConfig.SubnetId),
-			UserData:          &userDataEnc,
+			UserData:          &b64EncData,
 			TagSpecifications: tagSpecifications,
 		}
 		if p.serviceConfig.KeyName != "" {
