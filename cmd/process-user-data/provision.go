@@ -148,5 +148,23 @@ func provisionFiles(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Copy the authJson to the authJsonFilePath
+	config := getConfigFromUserData(cfg.userData)
+	if config.AuthJson != "" {
+		// Create the file
+		file, err := os.Create(defaultAuthJsonFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to create file: %s", err)
+		}
+		defer file.Close()
+
+		// Write the authJson to the file
+		_, err = file.WriteString(config.AuthJson)
+		if err != nil {
+			return fmt.Errorf("failed to write authJson to file: %s", err)
+		}
+
+	}
+
 	return nil
 }

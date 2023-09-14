@@ -5,7 +5,9 @@ const (
 	providerAzure = "azure"
 	providerAws   = "aws"
 
-	defaultAgentConfigPath = "/etc/agent-config.toml"
+	defaultAgentConfigPath  = "/etc/agent-config.toml"
+	defaultAuthJsonFilePath = "/etc/auth.json"
+	offlineKbcAuthFile      = "/etc/aa-offline_fs_kbc-resources.json"
 )
 
 type Config struct {
