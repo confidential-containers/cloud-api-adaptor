@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
+	toml "github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -94,14 +95,61 @@ func updateAgentConfig(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get daemon config from local file")
 	}
 
-	// Replace the value of aa_kbc_params in the agent config file - default: /etc/agent-config.toml
-	// with the value of aa-kbc-params
-	if err := updateAAKBCParams(config.AAKBCParams, cfg.agentConfigPath); err != nil {
-		fmt.Printf("Error: Failed to update agent config file with aa-kbc-params: %s\n", err)
-		return err
+	// Parse the agent config file
+	agentConfig, err := parseAgentConfig(cfg.agentConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to parse agent config file: %s", err)
 	}
 
-	// TODO: Add code to update the agent config file with the values of the other fields in daemon.Config
+	if config.AAKBCParams != "" {
+		fmt.Printf("Updating aa_kbc_params in agent config file")
+		agentConfig.AaKbcParams = config.AAKBCParams
+	}
 
+	// Write the updated agent config file
+	err = writeAgentConfig(*agentConfig, cfg.agentConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to write agent config file: %s", err)
+	}
+
+	return nil
+}
+
+// Kata agent config is a TOML file, parse it and return the AgentConfig struct
+func parseAgentConfig(agentConfigFile string) (agentConfig *AgentConfig, err error) {
+
+	agentConfig = &AgentConfig{}
+
+	data, err := os.ReadFile(agentConfigFile)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return nil, err
+	}
+
+	// Parse the agent config file data
+	err = toml.Unmarshal(data, agentConfig)
+	if err != nil {
+		fmt.Println("Error parsing agent config file:", err)
+		return nil, err
+	}
+
+	return agentConfig, nil
+}
+
+// Write the agent config file
+func writeAgentConfig(agentConfig AgentConfig, agentConfigFile string) error {
+
+	data, err := toml.Marshal(agentConfig)
+	if err != nil {
+		return fmt.Errorf("error marshalling agent config: %s", err)
+	}
+
+	// Write the newAgentConfig to the agentConfigFile
+	err = os.WriteFile(agentConfigFile, data, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write agent config file: %s", err)
+	}
+
+	fmt.Printf("Updated agent config file: %s\n", agentConfigFile)
 	return nil
 }

@@ -22,7 +22,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
 	github.com/opencontainers/runtime-spec v1.1.0-rc.1
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.4
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
 	github.com/vmware/govmomi v0.29.0
@@ -53,6 +53,7 @@ require (
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230721195217-16d6e37196cb
 	github.com/kdomanski/iso9660 v0.3.5
 	github.com/moby/sys/mountinfo v0.6.2
+	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
