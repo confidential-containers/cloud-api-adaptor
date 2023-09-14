@@ -11,7 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/azure"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
+	"github.com/stretchr/testify/assert"
 )
 
 // Test server to simulate the metadata service
@@ -96,7 +98,7 @@ func TestGetUserData(t *testing.T) {
 
 	reqPath := srv.URL + "/metadata/instance/compute/userData"
 	// Call the getUserData function
-	userData, _ := getUserData(ctx, reqPath)
+	userData, _ := azure.GetUserData(ctx, reqPath)
 
 	// Check that the userData is not empty
 	if userData == "" {
@@ -144,7 +146,7 @@ func TestInvalidGetUserDataInvalidUrl(t *testing.T) {
 	// Send request to invalid URL
 	reqPath := "invalidURL"
 	// Call the getUserData function
-	userData, _ := getUserData(ctx, reqPath)
+	userData, _ := azure.GetUserData(ctx, reqPath)
 
 	// Check that the userData is empty
 	if userData != "" {
@@ -161,7 +163,7 @@ func TestInvalidGetUserDataEmptyUrl(t *testing.T) {
 	// Send request to empty URL
 	reqPath := ""
 	// Call the getUserData function
-	userData, _ := getUserData(ctx, reqPath)
+	userData, _ := azure.GetUserData(ctx, reqPath)
 
 	// Check that the userData is empty
 	if userData != "" {
@@ -250,7 +252,7 @@ func TestParsePlainTextUserData(t *testing.T) {
 
 	reqPath := srv.URL + "/metadata/instance/compute/userData"
 	// Call the getUserData function
-	userData, _ := getUserData(ctx, reqPath)
+	userData, _ := azure.GetUserData(ctx, reqPath)
 
 	// Check that the userData is empty. Since plain text userData is not supported
 	if userData != "" {
@@ -414,4 +416,138 @@ func TestGetConfigFromLocalFile(t *testing.T) {
 	if config != expectedConfig {
 		t.Fatalf("Expected %+v, but got %+v", expectedConfig, config)
 	}
+}
+
+// Test the writeAgentConfig function
+func TestWriteAgentConfig(t *testing.T) {
+	// Create a temporary directory for the test
+	tmpDir, err := os.MkdirTemp("", "test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create a temporary file for the test
+	tmpFile, err := os.CreateTemp(tmpDir, "agent-config.json")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	defer os.Remove(tmpFile.Name())
+
+	// Create an instance of AgentConfig
+	agentConfig := AgentConfig{
+		// Set the fields of AgentConfig
+		EnableSignatureVerification: true,
+		ServerAddr:                  "unix:///run/kata-containers/agent.sock",
+		AaKbcParams:                 "cc_kbc::http://192.168.1.2:8080",
+		ImageRegistryAuthFile:       "/etc/attestation-agent/auth.json",
+		Endpoints:                   Endpoints{Allowed: []string{"AddARPNeighborsRequest", "AddSwapRequest"}},
+	}
+
+	// Call the writeAgentConfig function
+	err = writeAgentConfig(agentConfig, tmpFile.Name())
+	assert.NoError(t, err)
+
+	// Parse the agent config file data
+	tmpAgentConfig, err := parseAgentConfig(tmpFile.Name())
+	if err != nil {
+		t.Fatalf("failed to parse agent config file: %v", err)
+	}
+
+	// Use deepequal to match agentConfig and tmpAgentConfig
+	assert.Equal(t, agentConfig, *tmpAgentConfig)
+
+}
+
+// Test the parseAgentConfig function
+func TestParseAgentConfig(t *testing.T) {
+
+	// Parse the agent config file data
+	agentConfig, err := parseAgentConfig("test-data/sample-agent-config.toml")
+	if err != nil {
+		t.Fatalf("failed to parse agent config file: %v", err)
+	}
+
+	// Verify that the config fields match the test data
+	if agentConfig.EnableSignatureVerification != false {
+		t.Fatalf("agentConfig.EnableSignatureVerification does not match test data: expected %v, got %v", false, agentConfig.EnableSignatureVerification)
+	}
+
+	if agentConfig.ServerAddr != "unix:///run/kata-containers/agent.sock" {
+		t.Fatalf("agentConfig.ServerAddr does not match test data: expected %v, got %v", "unix:///run/kata-containers/agent.sock", agentConfig.ServerAddr)
+	}
+
+	if agentConfig.AaKbcParams != "" {
+		t.Fatalf("agentConfig.AaKbcParams does not match test data: expected %v, got %v", "", agentConfig.AaKbcParams)
+	}
+
+	if agentConfig.ImageRegistryAuthFile != "file:///etc/attestation-agent/auth.json" {
+		t.Fatalf("agentConfig.ImageRegistryAuthFile does not match test data: expected %v, got %v", "/etc/attestation-agent/auth.json", agentConfig.ImageRegistryAuthFile)
+	}
+
+	if agentConfig.Endpoints.Allowed[0] != "AddARPNeighborsRequest" {
+		t.Fatalf("agentConfig.Endpoints does not match test data: expected %v, got %v", "AddARPNeighborsRequest", agentConfig.Endpoints.Allowed[0])
+	}
+
+	if agentConfig.Endpoints.Allowed[1] != "AddSwapRequest" {
+		t.Fatalf("agentConfig.Endpoints does not match test data: expected %v, got %v", "AddSwapRequest", agentConfig.Endpoints.Allowed[1])
+	}
+
+}
+
+// Test the writeAgentConfig function with non existent toml entry in agent config file
+func TestWriteAgentConfigNonExistentTomlEntry(t *testing.T) {
+	// Create a temporary directory for the test
+	tmpDir, err := os.MkdirTemp("", "test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create a temporary file for the test
+	tmpFile, err := os.CreateTemp(tmpDir, "agent-config.json")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	defer os.Remove(tmpFile.Name())
+
+	// Create an instance of AgentConfig
+	agentConfig := AgentConfig{
+		// Set the fields of AgentConfig
+		EnableSignatureVerification: true,
+		ServerAddr:                  "unix:///run/kata-containers/agent.sock",
+		AaKbcParams:                 "cc_kbc::http://192.168.1.2:8080",
+	}
+
+	// Call the writeAgentConfig function
+	err = writeAgentConfig(agentConfig, tmpFile.Name())
+	assert.NoError(t, err)
+
+	// Parse the agent config file data
+	newAgentConfig, err := parseAgentConfig(tmpFile.Name())
+	if err != nil {
+		t.Fatalf("failed to parse agent config file: %v", err)
+	}
+
+	// Add the missing field to the agentConfig
+	newAgentConfig.ImageRegistryAuthFile = "file:///etc/attestation-agent/auth.json"
+	newAgentConfig.Endpoints.Allowed = []string{""}
+
+	// Update existing field
+	newAgentConfig.AaKbcParams = "cc_kbc::offline_kbc"
+
+	// Call the writeAgentConfig function
+	err = writeAgentConfig(*newAgentConfig, tmpFile.Name())
+	assert.NoError(t, err)
+
+	// Parse the agent config file data
+	tmpAgentConfig, err := parseAgentConfig(tmpFile.Name())
+	if err != nil {
+		t.Fatalf("failed to parse agent config file: %v", err)
+	}
+
+	// Check if tmpAgentConfig has the new fields
+	assert.Equal(t, newAgentConfig, tmpAgentConfig)
 }

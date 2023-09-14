@@ -1,0 +1,51 @@
+# This disables signature verification which now defaults to true.
+# We should consider a better solution. See #331 for more info
+enable_signature_verification=false
+
+# When using the agent-config.toml the KATA_AGENT_SERVER_ADDR env var seems to be ignored, so set it here
+server_addr="unix:///run/kata-containers/agent.sock"
+
+# This field sets up the KBC that attestation agent uses
+# This is replaced in the makefile steps so do not set it manually
+aa_kbc_params = ""
+
+# This field sets up the container registry auth 
+image_registry_auth_file="file:///etc/attestation-agent/auth.json"
+
+# temp workaround for kata-containers/kata-containers#5590
+[endpoints]
+allowed = [
+"AddARPNeighborsRequest",
+"AddSwapRequest",
+"CloseStdinRequest",
+"CopyFileRequest",
+"CreateContainerRequest",
+"CreateSandboxRequest",
+"DestroySandboxRequest",
+"ExecProcessRequest",
+"GetMetricsRequest",
+"GetOOMEventRequest",
+"GuestDetailsRequest",
+"ListInterfacesRequest",
+"ListRoutesRequest",
+"MemHotplugByProbeRequest",
+"OnlineCPUMemRequest",
+"PauseContainerRequest",
+"PullImageRequest",
+"ReadStreamRequest",
+"RemoveContainerRequest",
+"ReseedRandomDevRequest",
+"ResumeContainerRequest",
+"SetGuestDateTimeRequest",
+"SignalProcessRequest",
+"StartContainerRequest",
+"StartTracingRequest",
+"StatsContainerRequest",
+"StopTracingRequest",
+"TtyWinResizeRequest",
+"UpdateContainerRequest",
+"UpdateInterfaceRequest",
+"UpdateRoutesRequest",
+"WaitProcessRequest",
+"WriteStreamRequest"
+]
