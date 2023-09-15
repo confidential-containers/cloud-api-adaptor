@@ -11,12 +11,15 @@ volumes/csi-wrapper/vendor
 
 # Binaries
 agent-protocol-forwarder
+api-server-rest
 attestation-agent
+caa-provisioner-cli
 cloud-api-adaptor
 cluster-provisioner
+confidential-data-hub
 kata-agent
-caa-provisioner-cli
 process-user-data
+
 # The code files under cmd are not ignored
 !/cmd/*
 
