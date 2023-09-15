@@ -17,6 +17,7 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="azure"
+  - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
   - AZURE_SUBSCRIPTION_ID="" #set
   - AZURE_REGION="eastus" #set
   - AZURE_INSTANCE_SIZE="Standard_D8as_v5" #set

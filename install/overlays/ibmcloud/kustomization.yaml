@@ -17,6 +17,7 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="ibmcloud"
+  - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
   - IBMCLOUD_VPC_ENDPOINT="" #set
   - IBMCLOUD_RESOURCE_GROUP_ID="" #set
   - IBMCLOUD_SSH_KEY_ID="" #set
