@@ -1,0 +1,27 @@
+# (C) Copyright Confidential Containers Contributors 2023.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Run clean up routines periodically.
+---
+name: CI house keeping
+
+on:
+  schedule:
+    # Runs at 04:00 (UTC time) every Sunday
+    - cron: '0 4 * * 0'
+
+  workflow_dispatch:
+
+jobs:
+  cleanup_images:
+    name: Clean up CI generated images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Delete unused CAA images
+        run: |
+          ./hack/ci/gh_cleanup_images.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
