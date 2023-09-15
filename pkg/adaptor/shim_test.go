@@ -87,10 +87,11 @@ func TestShim(t *testing.T) {
 	}
 
 	serverConfig := &ServerConfig{
-		SocketPath:    helperSocketPath,
-		PodsDir:       podsDir,
-		ForwarderPort: port,
-		ProxyTimeout:  5 * time.Second,
+		SocketPath:              helperSocketPath,
+		PodsDir:                 podsDir,
+		ForwarderPort:           port,
+		ProxyTimeout:            5 * time.Second,
+		EnableCloudConfigVerify: false,
 	}
 
 	provider := &mockProvider{primaryIP: primaryIP, secondaryIP: secondaryIP}

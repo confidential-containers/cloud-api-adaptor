@@ -17,6 +17,7 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="ibmcloud-powervs"
+  - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
   - POWERVS_SERVICE_INSTANCE_ID="" #set
   - POWERVS_NETWORK_ID="" #set
   - POWERVS_SSH_KEY_NAME="" #set

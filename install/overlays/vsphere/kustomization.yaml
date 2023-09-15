@@ -17,6 +17,7 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="vsphere"
+  - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
   - GOVC_URL=""        # Setting the vCenter URL is required.
   - GOVC_DATACENTER="" # Setting the vCenter datacenter is required.
 

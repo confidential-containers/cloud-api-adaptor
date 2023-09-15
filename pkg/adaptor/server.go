@@ -31,14 +31,15 @@ const (
 )
 
 type ServerConfig struct {
-	TLSConfig     *tlsutil.TLSConfig
-	SocketPath    string
-	CriSocketPath string
-	PauseImage    string
-	PodsDir       string
-	ForwarderPort string
-	ProxyTimeout  time.Duration
-	AAKBCParams   string
+	TLSConfig               *tlsutil.TLSConfig
+	SocketPath              string
+	CriSocketPath           string
+	PauseImage              string
+	PodsDir                 string
+	ForwarderPort           string
+	ProxyTimeout            time.Duration
+	AAKBCParams             string
+	EnableCloudConfigVerify bool
 }
 
 type Server interface {
@@ -48,14 +49,15 @@ type Server interface {
 }
 
 type server struct {
-	cloudService  cloud.Service
-	vmInfoService pbPodVMInfo.PodVMInfoService
-	workerNode    podnetwork.WorkerNode
-	ttRpc         *ttrpc.Server
-	readyCh       chan struct{}
-	stopCh        chan struct{}
-	socketPath    string
-	stopOnce      sync.Once
+	cloudService            cloud.Service
+	vmInfoService           pbPodVMInfo.PodVMInfoService
+	workerNode              podnetwork.WorkerNode
+	ttRpc                   *ttrpc.Server
+	readyCh                 chan struct{}
+	stopCh                  chan struct{}
+	socketPath              string
+	stopOnce                sync.Once
+	enableCloudConfigVerify bool
 }
 
 func NewServer(provider cloud.Provider, cfg *ServerConfig, workerNode podnetwork.WorkerNode) Server {
@@ -67,18 +69,18 @@ func NewServer(provider cloud.Provider, cfg *ServerConfig, workerNode podnetwork
 	vmInfoService := vminfo.NewService(cloudService)
 
 	return &server{
-		socketPath:    cfg.SocketPath,
-		cloudService:  cloudService,
-		vmInfoService: vmInfoService,
-		workerNode:    workerNode,
-		readyCh:       make(chan struct{}),
-		stopCh:        make(chan struct{}),
+		socketPath:              cfg.SocketPath,
+		cloudService:            cloudService,
+		vmInfoService:           vmInfoService,
+		workerNode:              workerNode,
+		readyCh:                 make(chan struct{}),
+		stopCh:                  make(chan struct{}),
+		enableCloudConfigVerify: cfg.EnableCloudConfigVerify,
 	}
 }
 
 func (s *server) Start(ctx context.Context) (err error) {
-	// Only verify cloud service config when `CLOUD_CONFIG_VERIFY` env be set to `yes`
-	if os.Getenv("CLOUD_CONFIG_VERIFY") == "yes" {
+	if s.enableCloudConfigVerify {
 		verifierErr := s.cloudService.ConfigVerifier()
 		if verifierErr != nil {
 			return err

@@ -17,6 +17,7 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="libvirt"
+  - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
   - LIBVIRT_URI="qemu+ssh://root@192.168.122.1/system?no_verify=1" #set
   - LIBVIRT_NET="default" # set
   - LIBVIRT_POOL="default" # set
