@@ -64,6 +64,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+      command: ["csi-podvm-wrapper"]
       args:
         - --v=5
         - --endpoint=/tmp/csi-podvm-wrapper.sock
