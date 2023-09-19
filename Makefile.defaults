@@ -30,8 +30,6 @@ centos_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.centos.$(centos_RELEASE).am
 rhel_amd64_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.url)
 rhel_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.checksum)
 
-CAA_SRC := $(or $(CAA_SRC),$(call query,git.cloud-api-adaptor.url))
-CAA_SRC_REF := $(or $(CAA_SRC_REF),$(call query,git.cloud-api-adaptor.reference))
 KATA_SRC := $(or $(KATA_SRC),$(call query,git.kata-containers.url))
 KATA_SRC_REF := $(or $(KATA_SRC_REF),$(call query,git.kata-containers.reference))
 GO_VERSION := $(or $(GO_VERSION),$(call query,tools.golang))
