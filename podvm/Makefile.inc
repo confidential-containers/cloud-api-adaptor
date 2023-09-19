@@ -69,7 +69,8 @@ BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGE
 
 $(shell sed -i "s|\(aa_kbc_params = \)\"[^\"]*\"|\1\"${AA_KBC}::${KBC_URI}\"|g" $(FILES_DIR)/etc/agent-config.toml)
 
-KATA_AGENT_SRC = ../../../kata-containers/src/agent
+KATA_CONTAINERS_SRC = $(ROOT_DIR)/../kata-containers
+KATA_AGENT_SRC = $(KATA_CONTAINERS_SRC)/src/agent
 KATA_AGENT_BUILD_TYPE = release
 
 SKOPEO_SRC ?= skopeo
@@ -85,7 +86,7 @@ PAUSE_BUNDLE  ?= pause_bundle
 
 # Static libseccomp is necessary for kata-agent
 # https://github.com/kata-containers/kata-containers/issues/5044#issuecomment-1239773921
-STATIC_LIBSECCOMP_BUILDER = ../../../kata-containers/ci/install_libseccomp.sh
+STATIC_LIBSECCOMP_BUILDER = $(KATA_CONTAINERS_SRC)/ci/install_libseccomp.sh
 STATIC_LIBSECCOMP_DIR     = $(abspath staticlib)
 STATIC_LIBSECCOMP         = $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp/lib/libseccomp.a
 
@@ -119,8 +120,11 @@ $(KATA_AGENT): force $(STATIC_LIBSECCOMP)
 	cd "$(KATA_AGENT_SRC)" && $(RUST_FLAGS) $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) SEALED_SECRET=${SEALED_SECRET} LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
 	install -D --compare "$(KATA_AGENT_SRC)/target/$(RUST_TARGET)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
 
-$(STATIC_LIBSECCOMP):
+$(STATIC_LIBSECCOMP): $(KATA_CONTAINERS_SRC)
 	$(RUST_FLAGS) $(STATIC_LIBSECCOMP_BUILDER) $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp $(STATIC_LIBSECCOMP_DIR)/kata-gperf
+
+$(KATA_CONTAINERS_SRC):
+	$(call git_clone_repo_ref,$(KATA_SRC),$(KATA_CONTAINERS_SRC),$(KATA_SRC_REF))
 
 # Skopeo package packages are available in RHEL/CentOS 8 or later and Ubuntu 20.10 or later
 $(SKOPEO_SRC):
@@ -166,3 +170,4 @@ clean_sources:
 	[ -d "$(ROOT_DIR)" ] && cd "$(ROOT_DIR)" && git clean -xfd -e podvm
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci
+	[ -d "$(KATA_CONTAINERS_SRC)" ] && cd "$(KATA_CONTAINERS_SRC)" && git clean -xfd
