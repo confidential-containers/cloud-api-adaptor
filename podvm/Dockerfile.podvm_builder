@@ -31,40 +31,23 @@ RUN apt-get update -y && \
     curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - && \
     echo "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee -a /etc/apt/sources.list && \
     apt-get update && apt-get install --no-install-recommends -y packer && \
-    apt-get clean && \
-    curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -f go${GO_VERSION}.linux-amd64.tar.gz
+    apt-get clean
+
+ADD https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz go${GO_VERSION}.linux-amd64.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && rm -f go${GO_VERSION}.linux-amd64.tar.gz
 
 ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 /usr/local/bin/yq
 RUN chmod a+x /usr/local/bin/yq
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${RUST_VERSION}
-
 ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
-RUN echo $PATH
+ADD https://sh.rustup.rs rustup
+RUN chmod a+x rustup && ./rustup -y --default-toolchain ${RUST_VERSION} \
+    && rustup target add x86_64-unknown-linux-musl && ln -sf /usr/bin/g++ /bin/musl-g++
 
-RUN rustup target add x86_64-unknown-linux-musl && ln -sf /usr/bin/g++ /bin/musl-g++
-
-
-RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
-    unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
+ADD https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip protoc-${PROTOC_VERSION}-linux-x86_64.zip 
+RUN unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
 
 WORKDIR /src
-
-ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
-ARG CAA_SRC_REF="main"
-
-ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
-ARG KATA_SRC_BRANCH="CCv0"
-
-RUN echo $CAA_SRC
-
-RUN echo $CAA_SRC_REF
-
-RUN git clone ${CAA_SRC} -b ${CAA_SRC_REF} cloud-api-adaptor
-RUN git clone ${KATA_SRC} kata-containers
-RUN cd kata-containers && git checkout ${KATA_SRC_BRANCH}
 
 ENV GOPATH /src
