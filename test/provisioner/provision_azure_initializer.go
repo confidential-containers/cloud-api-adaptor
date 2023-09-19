@@ -32,6 +32,7 @@ type AzureProperties struct {
 	ManagedIdentityName string
 	IsCIManaged         bool
 	CaaImage            string
+	IsSelfManaged       bool
 
 	InstanceSize string
 	NodeName     string
@@ -69,6 +70,12 @@ func initAzureProperties(properties map[string]string) error {
 	AzureProps.IsCIManaged = false
 	if strings.EqualFold(CIManagedStr, "yes") || strings.EqualFold(CIManagedStr, "true") {
 		AzureProps.IsCIManaged = true
+	}
+
+	selfManagedStr := properties["IS_SELF_MANAGED_CLUSTER"]
+	AzureProps.IsSelfManaged = false
+	if strings.EqualFold(selfManagedStr, "yes") || strings.EqualFold(selfManagedStr, "true") {
+		AzureProps.IsSelfManaged = true
 	}
 
 	if AzureProps.SubscriptionID == "" {
