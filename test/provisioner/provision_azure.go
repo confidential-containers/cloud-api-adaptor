@@ -159,6 +159,10 @@ func NewAzureCloudProvisioner(properties map[string]string) (CloudProvisioner, e
 		return nil, err
 	}
 
+	if AzureProps.IsSelfManaged {
+		return &AzureSelfManagedClusterProvisioner{}, nil
+	}
+
 	return &AzureCloudProvisioner{}, nil
 }
 
@@ -176,6 +180,7 @@ func (p *AzureCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Conf
 func createFederatedIdentityCredential(aksOIDCIssuer string) error {
 	namespace := "confidential-containers-system"
 	serviceAccountName := "cloud-api-adaptor"
+	log.Infof("Successfully created federated identity credential %q in resource group %q", AzureProps.federatedIdentityCredentialName, AzureProps.ResourceGroupName)
 
 	if _, err := AzureProps.FederatedIdentityCredentialsClient.CreateOrUpdate(
 		context.Background(),
@@ -348,7 +353,7 @@ func (p *AzureCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.
 	return nil
 }
 
-func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
+func getPropertiesImpl() map[string]string {
 	props := map[string]string{
 		"CLOUD_PROVIDER":        "azure",
 		"AZURE_SUBSCRIPTION_ID": AzureProps.SubscriptionID,
@@ -364,6 +369,11 @@ func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.
 	}
 
 	return props
+}
+
+func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
+	log.Trace("GetProperties()")
+	return getPropertiesImpl()
 }
 
 func (p *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
