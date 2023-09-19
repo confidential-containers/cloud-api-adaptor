@@ -1,6 +1,8 @@
 # (C) Copyright Confidential Containers Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+include Makefile.defaults
+
 .PHONY: all build check fmt vet clean image deploy delete
 
 SHELL = bash -o pipefail
@@ -183,3 +185,46 @@ ifneq ($(CLOUD_PROVIDER),)
 else
 	$(error CLOUD_PROVIDER is not set)
 endif
+
+### PODVM IMAGE BUILDING ###
+
+REGISTRY ?= quay.io/confidential-containers
+
+PODVM_DISTRO ?= ubuntu
+
+PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(VERSIONS_HASH)
+PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
+PODVM_IMAGE ?= $(REGISTRY)/podvm-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
+
+PUSH ?= false
+# Always import (--load) the image into the local docker images for use in future
+# steps, otherwise it just stays in the builder cache
+DOCKER_OPTS := --load $(if $(filter $(PUSH),true),--push) $(EXTRA_DOCKER_OPTS)
+
+DOCKERFILE_SUFFIX := $(if $(filter $(PODVM_DISTRO),ubuntu),,.$(PODVM_DISTRO))
+BUILDER_DOCKERFILE := Dockerfile.podvm_builder$(DOCKERFILE_SUFFIX)
+BINARIES_DOCKERFILE := Dockerfile.podvm_binaries$(DOCKERFILE_SUFFIX)
+PODVM_DOCKERFILE := Dockerfile.podvm$(DOCKERFILE_SUFFIX)
+
+podvm-builder:
+	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
+	--build-arg GO_VERSION=$(GO_VERSION) \
+	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
+	--build-arg RUST_VERSION=$(RUST_VERSION) \
+	$(DOCKER_OPTS) .
+
+podvm-binaries:
+	docker buildx build -t $(PODVM_BINARIES_IMAGE) -f podvm/$(BINARIES_DOCKERFILE) \
+	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
+	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
+	--build-arg ARCH=$(ARCH) \
+	--build-arg AA_KBC=$(AA_KBC) \
+	$(DOCKER_OPTS) .
+
+podvm-image:
+	docker buildx build -t $(PODVM_IMAGE) -f podvm/$(PODVM_DOCKERFILE) \
+	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
+	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
+	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
+	--build-arg ARCH=$(ARCH) \
+	$(DOCKER_OPTS) .
