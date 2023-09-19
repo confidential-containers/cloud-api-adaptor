@@ -32,6 +32,8 @@ RUST_TARGET := $(RUST_ARCH)-unknown-linux-$(LIBC)
 CDH_RESOURCE_PROVIDER ?= kbs
 SEALED_SECRET ?= yes
 
+FORCE_TARGET := $(if $(FORCE),force,)
+
 ifneq ($(HOST_ARCH),$(ARCH))
     ifeq ($(CC),cc)
 		CC := $(ARCH)-linux-$(LIBC)-gcc
@@ -108,15 +110,15 @@ endef
 
 binaries: $(BINARIES)
 
-$(AGENT_PROTOCOL_FORWARDER): force
+$(AGENT_PROTOCOL_FORWARDER): always
 	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) agent-protocol-forwarder
 	install -D --compare "$(ROOT_DIR)/agent-protocol-forwarder" "$@"
 
-$(PROCESS_USER_DATA): force
+$(PROCESS_USER_DATA): always
 	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) process-user-data
 	install -D --compare "$(ROOT_DIR)/process-user-data" "$@"
 
-$(KATA_AGENT): force $(STATIC_LIBSECCOMP)
+$(KATA_AGENT): $(FORCE_TARGET) | $(STATIC_LIBSECCOMP)
 	cd "$(KATA_AGENT_SRC)" && $(RUST_FLAGS) $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) SEALED_SECRET=${SEALED_SECRET} LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
 	install -D --compare "$(KATA_AGENT_SRC)/target/$(RUST_TARGET)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
 
@@ -149,7 +151,7 @@ $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 $(GUEST_COMPONENTS_SRC):
 	$(call git_clone_repo_ref,$(GUEST_COMPONENTS_REPO),$(GUEST_COMPONENTS_SRC),$(GUEST_COMPONENTS_VERSION))
 
-$(ATTESTATION_AGENT): $(GUEST_COMPONENTS_SRC)
+$(ATTESTATION_AGENT): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
 	cd "$(GUEST_COMPONENTS_SRC)/attestation-agent" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" ttrpc=true LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
 	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
@@ -171,3 +173,6 @@ clean_sources:
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci
 	[ -d "$(KATA_CONTAINERS_SRC)" ] && cd "$(KATA_CONTAINERS_SRC)" && git clean -xfd
+
+.PHONY: force always
+always force:
