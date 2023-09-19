@@ -49,6 +49,7 @@ jobs:
         ref: "${{ inputs.git-ref || 'main' }}"
 
     - name: Read properties from versions.yaml
+      working-directory: cloud-api-adaptor
       run: |
         go_version="$(yq '.tools.golang' versions.yaml)"
         [ -n "$go_version" ]
