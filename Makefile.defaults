@@ -10,6 +10,7 @@ YQ_MAJOR_VERSION := $(shell $(YQ_COMMAND) --version | sed -nE 's/.* v?([0-9]+).*
 ifneq (4, $(YQ_MAJOR_VERSION))
 $(error "yq major version should be 4, is: $(YQ_MAJOR_VERSION)")
 endif
+VERSIONS_HASH := $(firstword $(shell sha256sum $(VERSIONS_SRC)))
 
 define query
 $(or $(shell $(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
