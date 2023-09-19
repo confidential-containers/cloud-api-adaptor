@@ -12,10 +12,8 @@ ibmcloud/
 libvirt/
 peerpod-ctrl/
 peerpodconfig-ctrl/
-podvm/
 volumes/
 webwook/
 
-.git*
 **/*.qcow2
 **/*.img
