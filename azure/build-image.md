@@ -2,6 +2,8 @@
 
 This documentation will walk you through building the pod VM image for Azure.
 
+> **Note**: Run the following commands from the directory `azure/image`.
+
 ## Pre-requisites
 
 ### Azure login
@@ -10,15 +12,17 @@ The image build will use your local credentials, so make sure you have logged in
 
 ```bash
 export AZURE_SUBSCRIPTION_ID=$(az account show --query id --output tsv)
-export AZURE_REGION="REPLACE_ME"
+export AZURE_REGION="eastus"
 ```
 
 ### Resource group
 
+> **Note**: Skip this step if you already have a resource group you want to use. Please, export the resource group name in the `AZURE_RESOURCE_GROUP` environment variable.
+
 Create an Azure resource group by running the following command:
 
 ```bash
-export AZURE_RESOURCE_GROUP="REPLACE_ME"
+export AZURE_RESOURCE_GROUP="caa-rg-$(date '+%Y%m%b%d%H%M%S')"
 
 az group create \
   --name "${AZURE_RESOURCE_GROUP}" \
@@ -73,17 +77,17 @@ The Pod-VM image can be built in three ways:
 - Create a custom Azure VM image based on Ubuntu 22.04 adding kata-agent, agent-protocol-forwarder and other dependencies for Cloud API Adaptor (CAA):
 
 ```bash
-cd image
 export PKR_VAR_resource_group="${AZURE_RESOURCE_GROUP}"
 export PKR_VAR_location="${AZURE_REGION}"
 export PKR_VAR_subscription_id="${AZURE_SUBSCRIPTION_ID}"
 export PKR_VAR_use_azure_cli_auth=true
 export PKR_VAR_az_gallery_name="${GALLERY_NAME}"
 export PKR_VAR_az_gallery_image_name="${GALLERY_IMAGE_DEF_NAME}"
+export PKR_VAR_az_gallery_image_version="0.0.1"
 export PKR_VAR_offer=0001-com-ubuntu-confidential-vm-jammy
 export PKR_VAR_sku=22_04-lts-cvm
 export CLOUD_PROVIDER=azure
-PODVM_DISTRO=ubuntu make image && cd -
+PODVM_DISTRO=ubuntu make image
 ```
 
 > **Note**: If you want to disable cloud config then `export DISABLE_CLOUD_CONFIG=true` before building the image.
@@ -91,14 +95,13 @@ PODVM_DISTRO=ubuntu make image && cd -
 Use the `ManagedImageSharedImageGalleryId` field from output of the above command to populate the following environment variable. It's used while deploying cloud-api-adaptor:
 
 ```bash
-# e.g. format: /subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/galleries/.../images/.../versions/..
-export AZURE_IMAGE_ID="REPLACE_ME"
+# e.g. format: /subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/galleries/.../images/.../versions/../
+export AZURE_IMAGE_ID="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Compute/galleries/${GALLERY_NAME}/images/${GALLERY_IMAGE_DEF_NAME}/versions/${PKR_VAR_az_gallery_image_version}"
 ```
 
 ### Option 2: Customize an image using prebuilt binaries via Docker
 
 ```bash
-cd image
 docker build -t azure-podvm-builder .
 ```
 
