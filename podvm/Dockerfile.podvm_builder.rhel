@@ -8,9 +8,9 @@
 #
 FROM registry.access.redhat.com/ubi9/ubi:9.2
 
-ARG GO_VERSION="1.20.10"
-ARG PROTOC_VERSION="3.11.4"
-ARG RUST_VERSION="1.72.0"
+ARG GO_VERSION
+ARG PROTOC_VERSION
+ARG RUST_VERSION
 ARG YQ_VERSION="v4.35.1"
 ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 
@@ -43,26 +43,9 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VER
 
 ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
-RUN echo $PATH
-
-
 RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
     unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
 
 WORKDIR /src
-
-ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
-ARG CAA_SRC_REF="main"
-
-ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
-ARG KATA_SRC_BRANCH="CCv0"
-
-RUN echo $CAA_SRC
-
-RUN echo $CAA_SRC_REF
-
-RUN git clone ${CAA_SRC} -b ${CAA_SRC_REF} cloud-api-adaptor
-RUN git clone ${KATA_SRC} kata-containers
-RUN cd kata-containers && git checkout ${KATA_SRC_BRANCH}
 
 ENV GOPATH /src
