@@ -1,9 +1,12 @@
 # Cloud API Adaptor (CAA) on Azure
 
 This documentation will walk you through setting up CAA (a.k.a. Peer Pods) on Azure Kubernetes Service (AKS). It explains how to deploy:
+
 - One worker AKS
 - CAA on that Kubernetes cluster
 - An Nginx pod backed by CAA pod VM
+
+> **Note**: Run the following commands from the root of this repository.
 
 ## Pre-requisites
 
@@ -18,10 +21,12 @@ export AZURE_REGION="eastus"
 
 ### Resource group
 
+> **Note**: Skip this step if you already have a resource group you want to use. Please, export the resource group name in the `AZURE_RESOURCE_GROUP` environment variable.
+
 Create an Azure resource group by running the following command:
 
 ```bash
-export AZURE_RESOURCE_GROUP="REPLACE_ME"
+export AZURE_RESOURCE_GROUP="caa-rg-$(date '+%Y%m%b%d%H%M%S')"
 
 az group create \
   --name "${AZURE_RESOURCE_GROUP}" \
@@ -55,14 +60,13 @@ export registry="quay.io/confidential-containers"
 Make changes to the following environment variable as you see fit:
 
 ```bash
-export CLUSTER_NAME="REPLACE_ME"
+export CLUSTER_NAME="caa-$(date '+%Y%m%b%d%H%M%S')"
 export AKS_WORKER_USER_NAME="azuser"
 export SSH_KEY=~/.ssh/id_rsa.pub
 export AKS_RG="${AZURE_RESOURCE_GROUP}-aks"
 ```
 
 > **Note**: Optionally, deploy the worker nodes into an existing Azure Virtual Network (VNet) and Subnet by adding the following flag: `--vnet-subnet-id $SUBNET_ID`.
-
 
 Deploy AKS with single worker node to the same resource group you created earlier:
 
@@ -206,11 +210,7 @@ export AZURE_SUBNET_ID=$(az network vnet subnet list \
 
 Replace the values as needed for the following environment variables:
 
-> **Note**: For regular VMs use something like: `Standard_D2as_v5`.
-
-```bash
-export AZURE_INSTANCE_SIZE="Standard_DC2as_v5"
-```
+> **Note**: For regular VMs use `Standard_D2as_v5` for the `AZURE_INSTANCE_SIZE`.
 
 Run the following command to update the [`kustomization.yaml`](../install/overlays/azure/kustomization.yaml) file:
 
@@ -233,7 +233,7 @@ configMapGenerator:
   - CLOUD_PROVIDER="azure"
   - AZURE_SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
   - AZURE_REGION="${AZURE_REGION}"
-  - AZURE_INSTANCE_SIZE="${AZURE_INSTANCE_SIZE}"
+  - AZURE_INSTANCE_SIZE="Standard_DC2as_v5"
   - AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP}"
   - AZURE_SUBNET_ID="${AZURE_SUBNET_ID}"
   - AZURE_IMAGE_ID="${AZURE_IMAGE_ID}"
@@ -316,6 +316,7 @@ spec:
 ```
 
 Ensure that the pod is up and running:
+
 ```bash
 kubectl get pods -n default
 ```
@@ -333,6 +334,7 @@ Here you should see the VM associated with the pod `nginx`. If you run into prob
 ## Cleanup
 
 If you wish to clean up the whole set up, you can delete the resource group by running the following command:
+
 ```bash
 az group delete \
   --name "${AZURE_RESOURCE_GROUP}" \
