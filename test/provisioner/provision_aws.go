@@ -37,6 +37,8 @@ const (
 	EksVersion         = "1.26"
 )
 
+var AWSProps = &AWSProvisioner{}
+
 func init() {
 	// Add this implementation to the list of provisioners.
 	newProvisionerFunctions["aws"] = NewAWSProvisioner
@@ -150,7 +152,7 @@ func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
 			properties["cluster_type"])
 	}
 
-	return &AWSProvisioner{
+	AWSProps = &AWSProvisioner{
 		AwsConfig: cfg,
 		iamClient: iam.NewFromConfig(cfg),
 		ec2Client: ec2.NewFromConfig(cfg),
@@ -166,7 +168,9 @@ func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
 		Vpc:        vpc,
 		VxlanPort:  properties["vxlan_port"],
 		SshKpName:  properties["ssh_kp_name"],
-	}, nil
+	}
+
+	return AWSProps, nil
 }
 
 func (a *AWSProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
