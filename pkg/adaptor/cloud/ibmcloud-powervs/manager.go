@@ -5,6 +5,7 @@ package ibmcloud_powervs
 
 import (
 	"flag"
+	"strconv"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 )
@@ -29,7 +30,27 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 }
 
 func (_ *Manager) LoadEnv() {
+	// overwrite config set by cmd parameters in oci image with env might come from orchastration platform
 	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.ApiKey, "IBMCLOUD_API_KEY", "")
+
+	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.Zone, "POWERVS_ZONE", "")
+	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.ServiceInstanceID, "POWERVS_SERVICE_INSTANCE_ID", "")
+	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.NetworkID, "POWERVS_NETWORK_ID", "")
+	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.ImageID, "POWERVS_IMAGE_ID", "")
+	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.SSHKey, "POWERVS_SSH_KEY_NAME", "")
+	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.ProcessorType, "POWERVS_PROCESSOR_TYPE", "")
+	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.SystemType, "POWERVS_SYSTEM_TYPE", "")
+
+	var memoryStr, processorsStr string
+	cloud.DefaultToEnv(&memoryStr, "POWERVS_MEMORY", "")
+	if memoryStr != "" {
+		ibmcloudPowerVSConfig.Memory, _ = strconv.ParseFloat(memoryStr, 64)
+	}
+
+	cloud.DefaultToEnv(&processorsStr, "POWERVS_MEMORY", "")
+	if processorsStr != "" {
+		ibmcloudPowerVSConfig.Processors, _ = strconv.ParseFloat(processorsStr, 64)
+	}
 }
 
 func (_ *Manager) NewProvider() (cloud.Provider, error) {
