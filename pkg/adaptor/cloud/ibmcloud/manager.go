@@ -35,8 +35,31 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 }
 
 func (*Manager) LoadEnv() {
+	// overwrite config set by cmd parameters in oci image with env might come from orchastration platform
 	cloud.DefaultToEnv(&ibmcloudVPCConfig.ApiKey, "IBMCLOUD_API_KEY", "")
 	cloud.DefaultToEnv(&ibmcloudVPCConfig.IAMProfileID, "IBMCLOUD_IAM_PROFILE_ID", "")
+
+	cloud.DefaultToEnv(&ibmcloudVPCConfig.IamServiceURL, "IBMCLOUD_IAM_ENDPOINT", "")
+	cloud.DefaultToEnv(&ibmcloudVPCConfig.VpcServiceURL, "IBMCLOUD_VPC_ENDPOINT", "")
+	cloud.DefaultToEnv(&ibmcloudVPCConfig.ResourceGroupID, "IBMCLOUD_RESOURCE_GROUP_ID", "")
+	cloud.DefaultToEnv(&ibmcloudVPCConfig.ProfileName, "IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME", "")
+	cloud.DefaultToEnv(&ibmcloudVPCConfig.ZoneName, "IBMCLOUD_ZONE", "")
+	cloud.DefaultToEnv(&ibmcloudVPCConfig.PrimarySubnetID, "IBMCLOUD_VPC_SUBNET_ID", "")
+	cloud.DefaultToEnv(&ibmcloudVPCConfig.PrimarySecurityGroupID, "IBMCLOUD_VPC_SG_ID", "")
+	cloud.DefaultToEnv(&ibmcloudVPCConfig.KeyID, "IBMCLOUD_SSH_KEY_ID", "")
+	cloud.DefaultToEnv(&ibmcloudVPCConfig.VpcID, "IBMCLOUD_VPC_ID", "")
+
+	var instanceProfilesStr string
+	cloud.DefaultToEnv(&instanceProfilesStr, "IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST", "")
+	if instanceProfilesStr != "" {
+		_ = ibmcloudVPCConfig.InstanceProfiles.Set(instanceProfilesStr)
+	}
+
+	var imageIDsStr string
+	cloud.DefaultToEnv(&imageIDsStr, "IBMCLOUD_PODVM_IMAGE_ID", "")
+	if imageIDsStr != "" {
+		_ = ibmcloudVPCConfig.Images.Set(imageIDsStr)
+	}
 }
 
 func (*Manager) NewProvider() (cloud.Provider, error) {
