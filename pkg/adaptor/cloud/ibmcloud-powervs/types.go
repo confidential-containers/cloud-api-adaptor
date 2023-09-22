@@ -16,6 +16,7 @@ type Config struct {
 	Processors        float64
 	ProcessorType     string
 	SystemType        string
+	UsePublicIP       bool
 }
 
 func (c Config) Redact() Config {
