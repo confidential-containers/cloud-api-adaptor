@@ -1,9 +1,15 @@
-ifeq (, $(shell command -v yq 2> /dev/null))
-$(error "No yq on PATH, consider doing snap install yq")
+YQ_COMMAND ?= yq
+VERSIONS_SRC := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/versions.yaml
+
+ifeq (, $(shell command -v $(YQ_COMMAND) 2> /dev/null))
+$(error "$(YQ_COMMAND) not found, consider doing snap install yq")
 endif
 
-YQ_COMMAND     := yq
-VERSIONS_SRC := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/versions.yaml
+YQ_MAJOR_VERSION := $(shell $(YQ_COMMAND) --version | sed -nE 's/.* v?([0-9]+).*/\1/p')
+
+ifneq (4, $(YQ_MAJOR_VERSION))
+$(error "yq major version should be 4, is: $(YQ_MAJOR_VERSION)")
+endif
 
 define query
 $(or $(shell $(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
