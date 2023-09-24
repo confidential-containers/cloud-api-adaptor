@@ -124,6 +124,8 @@ any local replace references, and be updated to use the release version of the `
   ```
 from in the `peerpod-ctrl` and `volumes/csi-wrapper` directories.
 
+The `CITATION.cff` needs to be updated with the dates from the release.
+
 ## Improvements
 
 Issues that we have to improve the release process that will impact this doc:

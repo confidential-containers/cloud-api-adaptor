@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: If you write about this software, please cite it as below.
+authors:
+  - name: The Confidential Containers Contributors
+title: Cloud API Adaptor
+abstract: Ability to create Kata pods using cloud provider APIs aka the peer-pods approach
+license: Apache-2.0
+version: 0.7.0
+date-released: 2023-07-25
+commit: aac894721b23c07b83dd2d36abba9f94b9b36a2c
