@@ -63,6 +63,14 @@ jobs:
         [ "$kata_src_branch" ]
         echo "KATA_SRC_BRANCH=${kata_src_branch}" >> $GITHUB_ENV
 
+        guest_components_ref="$(yq '.git.guest-components.reference' versions.yaml)"
+        [ -n "$guest_components_ref" ]
+        echo "GUEST_COMPONENTS_REF=${guest_components_ref}" >> $GITHUB_ENV
+
+        pause_tag="$(yq '.oci.pause.tag' versions.yaml)"
+        [ -n "$pause_tag" ]
+        echo "PAUSE_TAG=${pause_tag}" >> $GITHUB_ENV
+
     - name: Set up Go environment
       uses: actions/setup-go@v4
       with:
@@ -72,10 +80,12 @@ jobs:
     - name: Install build dependencies
       run: sudo apt-get install -y musl-tools libdevmapper-dev libgpgme-dev
 
-    - name: Build agent-protocol-forwarder
+    - name: Build CAA binaries
       env:
         GOPATH: /home/runner/go
-      run: make "$(realpath -m ../../podvm/files/usr/local/bin/agent-protocol-forwarder)"
+      run: |
+        make "$(realpath -m ../../podvm/files/usr/local/bin/agent-protocol-forwarder)"
+        make "$(realpath -m ../../podvm/files/usr/local/bin/process-user-data)"
 
     - uses: actions-rs/toolchain@v1
       with:
@@ -112,7 +122,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: cloud-api-adaptor/podvm/files/pause_bundle
-        key: pause-${{ hashFiles('cloud-api-adaptor/podvm/Makefile.inc') }}
+        key: pause-${{ env.PAUSE_TAG }}
 
     - name: Build pause bundle
       if: steps.pause-cache.outputs.cache-hit != 'true'
@@ -123,7 +133,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: cloud-api-adaptor/podvm/files/usr/local/bin/attestation-agent
-        key: aa-${{ hashFiles('cloud-api-adaptor/podvm/Makefile.inc') }}
+        key: aa-${{ env.GUEST_COMPONENTS_REF }}
 
     - name: Build attestation-agent
       if: steps.aa-cache.outputs.cache-hit != 'true'
