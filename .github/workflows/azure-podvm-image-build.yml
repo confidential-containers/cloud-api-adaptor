@@ -54,23 +54,23 @@ jobs:
       run: |
         go_version="$(yq '.tools.golang' versions.yaml)"
         [ -n "$go_version" ]
-        echo "GO_VERSION=${go_version}" >> $GITHUB_ENV
+        echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
         rust_version="$(yq '.tools.rust' versions.yaml)"
         [ -n "$rust_version" ]
-        echo "RUST_VERSION=${rust_version}" >> $GITHUB_ENV
+        echo "RUST_VERSION=${rust_version}" >> "$GITHUB_ENV"
 
         kata_src_branch="$(yq '.git.kata-containers.reference' versions.yaml)"
         [ "$kata_src_branch" ]
-        echo "KATA_SRC_BRANCH=${kata_src_branch}" >> $GITHUB_ENV
+        echo "KATA_SRC_BRANCH=${kata_src_branch}" >> "$GITHUB_ENV"
 
         guest_components_ref="$(yq '.git.guest-components.reference' versions.yaml)"
         [ -n "$guest_components_ref" ]
-        echo "GUEST_COMPONENTS_REF=${guest_components_ref}" >> $GITHUB_ENV
+        echo "GUEST_COMPONENTS_REF=${guest_components_ref}" >> "$GITHUB_ENV"
 
         pause_tag="$(yq '.oci.pause.tag' versions.yaml)"
         [ -n "$pause_tag" ]
-        echo "PAUSE_TAG=${pause_tag}" >> $GITHUB_ENV
+        echo "PAUSE_TAG=${pause_tag}" >> "$GITHUB_ENV"
 
     - name: Set up Go environment
       uses: actions/setup-go@v4
@@ -91,12 +91,15 @@ jobs:
           libssl-dev \
           libtss2-dev
 
+    - name: Set PodVM files base
+      run: echo "PODVM_FILES_BASE=$(realpath -m ../../podvm/files)" >> "$GITHUB_ENV"
+
     - name: Build CAA binaries
       env:
         GOPATH: /home/runner/go
       run: |
-        make "$(realpath -m ../../podvm/files/usr/local/bin/agent-protocol-forwarder)"
-        make "$(realpath -m ../../podvm/files/usr/local/bin/process-user-data)"
+        make "${PODVM_FILES_BASE}/usr/local/bin/agent-protocol-forwarder"
+        make "${PODVM_FILES_BASE}/usr/local/bin/process-user-data"
 
     - uses: actions-rs/toolchain@v1
       with:
@@ -125,7 +128,7 @@ jobs:
         GOPATH: /home/runner/go
       if: steps.kata-agent-cache.outputs.cache-hit != 'true'
       run: |
-        make "$(realpath -m ../../podvm/files/usr/local/bin/kata-agent)"
+        make "${PODVM_FILES_BASE}/usr/local/bin/kata-agent"
         rm -f "${GOPATH}/bin/yq"
 
     - name: Set up pause cache
@@ -137,18 +140,24 @@ jobs:
 
     - name: Build pause bundle
       if: steps.pause-cache.outputs.cache-hit != 'true'
-      run: make "$(realpath -m ../../podvm/files/pause_bundle/rootfs/pause)"
+      run: make "${PODVM_FILES_BASE}/pause_bundle/rootfs/pause"
 
-    - name: Set up attestation-agent cache
-      id: aa-cache
+    - name: Set up guest-components cache
+      id: guest-components-cache
       uses: actions/cache@v3
       with:
-        path: cloud-api-adaptor/podvm/files/usr/local/bin/attestation-agent
-        key: aa-${{ env.AA_KBC }}_${{ env.GUEST_COMPONENTS_REF }}_rust${{ env.RUST_VERSION }}
+        path: |
+          ${{ env.PODVM_FILES_BASE }}/usr/local/bin/attestation-agent
+          ${{ env.PODVM_FILES_BASE }}/usr/local/bin/confidential-data-hub
+          ${{ env.PODVM_FILES_BASE }}/usr/local/bin/api-server-rest
+        key: guest-components-${{ env.AA_KBC }}_${{ env.GUEST_COMPONENTS_REF }}_rust${{ env.RUST_VERSION }}
 
-    - name: Build attestation-agent
-      if: steps.aa-cache.outputs.cache-hit != 'true'
-      run: make "$(realpath -m ../../podvm/files/usr/local/bin/attestation-agent)" LIBC=gnu
+    - name: Build guest-components
+      if: steps.guest-components-cache.outputs.cache-hit != 'true'
+      run: |
+        make "${PODVM_FILES_BASE}/usr/local/bin/attestation-agent" LIBC=gnu
+        make "${PODVM_FILES_BASE}/usr/local/bin/confidential-data-hub" LIBC=gnu
+        make "${PODVM_FILES_BASE}/usr/local/bin/api-server-rest" LIBC=gnu
 
     - uses: azure/login@v1
       name: 'Az CLI login'
