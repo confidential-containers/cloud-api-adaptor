@@ -99,6 +99,24 @@ ExecStartPre=
 END
 fi
 
+# enable FIPS mode
+if [ "$BOOT_FIPS" == "true" ]; then
+# Add vsphere specific commands to execute on remote
+    case $PODVM_DISTRO in
+    centos)
+        #fallthrough
+        ;&
+    rhel)
+        fips-mode-setup --enable
+        ;;
+    ubuntu)
+        # TODO: configure the bootloader to add kernel options "fips=1"
+        ;;
+    *)
+        ;;
+    esac
+fi
+
 # Disable unnecessary systemd services
 
 case $PODVM_DISTRO in

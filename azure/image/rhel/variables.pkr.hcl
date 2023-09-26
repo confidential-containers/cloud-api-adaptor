@@ -118,3 +118,8 @@ variable "az_gallery_image_version" {
   type    = string
   default = ""
 }
+
+variable "boot_fips" {
+  type    = string
+  default = env("BOOT_FIPS")
+}
