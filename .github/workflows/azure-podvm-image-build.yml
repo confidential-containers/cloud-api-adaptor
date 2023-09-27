@@ -26,9 +26,9 @@ permissions:
   contents: read
 
 env:
-  AZURE_PODVM_IMAGE_DEF_NAME: "podvm_image0"
+  AZURE_PODVM_IMAGE_DEF_NAME: "${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
   AZURE_PODVM_IMAGE_VERSION: "${{ inputs.image-version }}"
-  COMMUNITY_GALLERY_PREFIX: "/CommunityGalleries/cocopodvm-d0e4f35f-5530-4b9c-8596-112487cdea85"
+  COMMUNITY_GALLERY_PREFIX: "/CommunityGalleries/${{ vars.AZURE_COMMUNITY_GALLERY_NAME }}"
   PODVM_IMAGE_NAME: "peerpod-image-${{ github.run_id }}-${{ github.run_attempt }}"
   SSH_USERNAME: "peerpod"
   VM_SIZE: "Standard_D2as_v5"
