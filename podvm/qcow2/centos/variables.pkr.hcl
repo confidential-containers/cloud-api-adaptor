@@ -93,3 +93,8 @@ variable "disable_cloud_config" {
   type    = string
   default = env("DISABLE_CLOUD_CONFIG")
 }
+
+variable "boot_fips" {
+  type    = string
+  default = env("BOOT_FIPS")
+}

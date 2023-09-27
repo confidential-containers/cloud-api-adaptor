@@ -93,7 +93,8 @@ build {
     environment_vars = [
       "CLOUD_PROVIDER=${var.cloud_provider}",
       "PODVM_DISTRO=${var.podvm_distro}",
-      "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}"
+      "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}",
+      "BOOT_FIPS=${var.boot_fips}"
     ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"
