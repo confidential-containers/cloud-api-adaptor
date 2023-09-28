@@ -200,7 +200,7 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T) {
 			if err = client.Resources().Get(ctx, verifyPodName, namespace, verifyPod); err != nil {
 				t.Fatal(err)
 			}
-			log.Printf("verify pod status: %#v", verifyPod.Status)
+			log.Printf("verify pod status: %s", verifyPod.Status.Phase)
 			if verifyPod.Status.Phase != v1.PodRunning {
 				clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 				if err != nil {
@@ -262,13 +262,8 @@ func waitForDeploymentAvailable(t *testing.T, client klient.Client, deployment *
 			return false
 		}
 
-		log.Printf("Current deployment status: %#v", deployObj.Status)
-		if deployObj.Status.AvailableReplicas != rc {
-			log.Printf("Not all replicas available")
-			return false
-		}
-
-		return true
+		log.Printf("Current deployment available replicas: %d", deployObj.Status.AvailableReplicas)
+		return deployObj.Status.AvailableReplicas == rc
 	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
 		t.Fatal(err)
 	}
