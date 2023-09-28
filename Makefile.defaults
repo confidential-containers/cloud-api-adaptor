@@ -18,6 +18,7 @@ endef
 
 ubuntu_RELEASE ?= focal
 centos_RELEASE ?= stream-8
+rhel_RELEASE ?= 9.2
 
 ubuntu_amd64_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.url)
 ubuntu_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.checksum)
@@ -25,6 +26,8 @@ ubuntu_s390x_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).s390x.u
 ubuntu_s390x_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).s390x.checksum)
 centos_amd64_IMAGE_URL := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.url)
 centos_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.checksum)
+rhel_amd64_IMAGE_URL := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.url)
+rhel_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.checksum)
 
 CAA_SRC := $(or $(CAA_SRC),$(call query,git.cloud-api-adaptor.url))
 CAA_SRC_REF := $(or $(CAA_SRC_REF),$(call query,git.cloud-api-adaptor.reference))
