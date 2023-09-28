@@ -67,6 +67,7 @@ azure() {
     [[ "${AZURE_INSTANCE_SIZES}" ]] && optionals+="-instance-sizes ${AZURE_INSTANCE_SIZES} "
     [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
     [[ "${DISABLE_CLOUD_CONFIG}" == "true" ]] && optionals+="-disable-cloud-config "
+    [[ "${ENABLE_SECURE_BOOT}" == "true" ]] && optionals+="-enable-secure-boot "
 
     set -x
     exec cloud-api-adaptor azure \
