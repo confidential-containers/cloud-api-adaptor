@@ -13,6 +13,9 @@ on:
       podvm-image-id:
         type: string
         description: prebuilt podvm image
+      caa-image:
+        type: string
+        description: prebuilt caa image
 
 jobs:
   generate-podvm-image-version:
@@ -38,7 +41,10 @@ jobs:
       image-version: ${{ needs.generate-podvm-image-version.outputs.image-version }}
 
   build-caa-container-image:
+    if: github.event.inputs.caa-image == ''
     runs-on: ubuntu-latest
+    outputs:
+      caa-image: "${{ steps.build-container.outputs.caa-image }}"
     steps:
     - uses: actions/checkout@v3
 
@@ -64,6 +70,7 @@ jobs:
         sudo apt-get install -y libvirt-dev
 
     - name: Build container image
+      id: build-container
       env:
         ARCHES: "linux/amd64"
         RELEASE_BUILD: "false"
@@ -75,6 +82,7 @@ jobs:
         # This builds image in the following format:
         # ACR_URL/cloud-api-adaptor:dev-COMMIT
         make image
+        echo "caa-image=${{ secrets.ACR_URL }}/cloud-api-adaptor:dev-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
   run-e2e-test:
     runs-on: ubuntu-latest
@@ -94,6 +102,7 @@ jobs:
       env:
         TEST_E2E_CREATE_RG: "no"
         AZURE_IMAGE_ID: "${{ github.event.inputs.podvm-image-id || needs.build-podvm-image.outputs.image-id }}"
+        CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
       run: |
         cat << EOF > /tmp/provision_azure.properties
           AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
@@ -106,7 +115,7 @@ jobs:
           IS_CI_MANAGED_CLUSTER="true"
           AZURE_CLI_AUTH="true"
           MANAGED_IDENTITY_NAME="${{ secrets.AZURE_MANAGED_IDENTITY_NAME}}"
-          CAA_IMAGE="${{ secrets.ACR_URL }}/cloud-api-adaptor:dev-${GITHUB_SHA}"
+          CAA_IMAGE="${CAA_IMAGE}"
         EOF
         cat /tmp/provision_azure.properties
 
@@ -174,12 +183,13 @@ jobs:
           --gallery-image-definition ${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }} \
           --gallery-image-version "${{ needs.generate-podvm-image-version.outputs.image-version }}"
 
-    - name: Remove container image 
+    - name: Remove container image
+      if: github.event.inputs.caa-image == ''
       run: |
         # Delete the CAA container image built for this run.
         suffix=".azurecr.io"
         acr_url=${{ secrets.ACR_URL }}
-        registry_name="${acr_url%$suffix}"
+        registry_name="${acr_url%"${suffix}"}"
 
         az acr repository delete \
           --name "${registry_name}" \
