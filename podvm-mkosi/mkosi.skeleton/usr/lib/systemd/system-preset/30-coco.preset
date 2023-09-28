@@ -1,0 +1,8 @@
+enable attestation-protocol-forwarder.service
+enable api-server-rest.service
+enable kata-agent.service
+enable netns@.service
+enable process-user-data.service
+enable run-image.mount
+enable run-kata\x2dcontainers.mount
+enable setup-nat-for-imds.service
