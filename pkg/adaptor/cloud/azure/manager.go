@@ -34,6 +34,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.Var(&azurecfg.Tags, "tags", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
 	// Add a flag to disable cloud config and use userdata via metadata service
 	flags.BoolVar(&azurecfg.DisableCloudConfig, "disable-cloud-config", false, "Disable cloud config and use userdata via metadata service")
+	flags.BoolVar(&azurecfg.EnableSecureBoot, "enable-secure-boot", false, "Enable secure boot for the VMs")
 }
 
 func (_ *Manager) LoadEnv() {
