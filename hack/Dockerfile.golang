@@ -27,16 +27,16 @@ FROM base-${TARGETARCH}
 ARG TARGETARCH
 ARG GO_VERSION
 RUN tar -C /usr/local -xzf go${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
-    rm go${GO_VERSION}.linux-${TARGETARCH}.tar.gz
+	rm go${GO_VERSION}.linux-${TARGETARCH}.tar.gz
 
 # install cgo-related dependencies
 RUN set -eux; \
 	dnf install -y \
-		g++ \
-		gcc \
-		glibc-devel \
-		make \
-		pkg-config \
+	g++ \
+	gcc \
+	glibc-devel \
+	make \
+	pkg-config \
 	; \
 	dnf clean all
 
