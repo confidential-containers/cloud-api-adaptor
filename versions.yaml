@@ -14,6 +14,12 @@ cloudimg:
       amd64:
         url: https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
         checksum: "sha256:8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c"
+  rhel:
+    9: # dummy link, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
+      amd64:
+        url: https://access.redhat.com/downloads/content/479/ver=/rhel---9/9.2/x86_64/product-software
+        checksum: "sha256:34ff41b5274692c984e3860b21136af8b6ae502744c6c7578dda82002fba0287"
+
 tools:
   golang: 1.20.8
   rust: 1.72.0
