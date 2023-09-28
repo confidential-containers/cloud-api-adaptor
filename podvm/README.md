@@ -23,6 +23,7 @@ $ export CLOUD_PROVIDER=[aws|azure|ibmcloud|libvirt|vsphere|generic]
 $ make image
 ```
 **NOTE:** "generic" is a best-effort provider agnostic image creation
+**NOTE:** set BOOT_FIPS to make podvm which boot in FIPS mode (if supported by the DISTRO)
 
 # How to build within container
 
