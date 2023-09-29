@@ -24,6 +24,7 @@ $(IMAGE_FILE): $(BINARIES) $(FILES)
 	# export PKR_VAR_az_gallery_image_name="${GALLERY_IMAGE_NAME}"
 	# export PKR_VAR_az_gallery_image_version="${GALLERY_IMAGE_VERSION}"
 
+	packer init ./${PODVM_DISTRO}/
 	packer build ./${PODVM_DISTRO}/
 	rm -fr toupload
 
