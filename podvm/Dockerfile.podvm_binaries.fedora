@@ -1,0 +1,34 @@
+# Copyright Confidential Containers Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Builds pod vm image inside container
+#
+ARG BUILDER_IMG
+
+FROM ${BUILDER_IMG} AS podvm_builder
+
+ARG CLOUD_PROVIDER
+ARG PODVM_DISTRO=rhel
+ARG GUEST_COMPONENTS_VERSION
+ARG GUEST_COMPONENTS_REPO
+ARG AA_KBC="offline_fs_kbc"
+# If not provided, uses system architecture
+ARG ARCH
+
+ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
+ENV PODVM_DISTRO ${PODVM_DISTRO}
+ENV GUEST_COMPONENTS_VERSION ${GUEST_COMPONENTS_VERSION}
+ENV GUEST_COMPONENTS_REPO ${GUEST_COMPONENTS_REPO}
+ENV AA_KBC ${AA_KBC}
+ENV ARCH ${ARCH}
+
+# Set these as they are required in the Makefile
+ENV IMAGE_URL "none"
+ENV IMAGE_CHECKSUM "none"
+
+RUN cd cloud-api-adaptor/podvm && \
+     LIBC=gnu make binaries
+
+FROM scratch
+COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/files /
