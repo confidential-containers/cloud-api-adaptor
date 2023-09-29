@@ -89,7 +89,8 @@ jobs:
           libtdx-attest-dev \
           musl-tools \
           libssl-dev \
-          libtss2-dev
+          libtss2-dev \
+          protobuf-compiler
 
     - name: Set PodVM files base
       run: echo "PODVM_FILES_BASE=$(realpath -m ../../podvm/files)" >> "$GITHUB_ENV"
