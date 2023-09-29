@@ -31,11 +31,11 @@ source "azure-arm" "rhel" {
   build_resource_group_name         = "${var.resource_group}"
 
   shared_image_gallery_destination {
-    subscription         = "${var.subscription_id}"
-    resource_group       = "${var.resource_group}"
-    gallery_name         = "${var.az_gallery_name}"
-    image_name           = "${var.az_gallery_image_name}"
-    image_version        = "${var.az_gallery_image_version}"
+    subscription   = "${var.subscription_id}"
+    resource_group = "${var.resource_group}"
+    gallery_name   = "${var.az_gallery_name}"
+    image_name     = "${var.az_gallery_image_name}"
+    image_version  = "${var.az_gallery_image_version}"
   }
 }
 
