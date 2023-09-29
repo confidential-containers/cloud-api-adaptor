@@ -18,6 +18,7 @@ import (
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 )
 
@@ -313,6 +314,17 @@ func newPodWithPVCFromIBMVPCBlockDriver(namespace, podName, containerName, image
 					Name:            containerName,
 					Image:           imageName,
 					ImagePullPolicy: corev1.PullAlways,
+					Ports:           []corev1.ContainerPort{{ContainerPort: 80}},
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/",
+								Port: intstr.FromInt(80),
+							},
+						},
+						InitialDelaySeconds: 10,
+						PeriodSeconds:       5,
+					},
 				},
 			},
 			ServiceAccountName: "ibm-vpc-block-node-sa",
