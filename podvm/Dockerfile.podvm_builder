@@ -8,9 +8,9 @@
 #
 FROM ubuntu:20.04
 
-ARG GO_VERSION="1.20.10"
-ARG PROTOC_VERSION="3.11.4"
-ARG RUST_VERSION="1.72.0"
+ARG GO_VERSION
+ARG PROTOC_VERSION
+ARG RUST_VERSION
 ARG YQ_VERSION="v4.35.1"
 ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 
@@ -45,7 +45,7 @@ ADD https://sh.rustup.rs rustup
 RUN chmod a+x rustup && ./rustup -y --default-toolchain ${RUST_VERSION} \
     && rustup target add x86_64-unknown-linux-musl && ln -sf /usr/bin/g++ /bin/musl-g++
 
-ADD https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip protoc-${PROTOC_VERSION}-linux-x86_64.zip 
+ADD https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip protoc-${PROTOC_VERSION}-linux-x86_64.zip
 RUN unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
 
 WORKDIR /src
