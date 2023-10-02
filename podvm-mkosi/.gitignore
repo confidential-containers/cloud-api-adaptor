@@ -4,5 +4,6 @@ mkosi.cache/*
 !mkosi.cache/.gitkeep
 mkosi.workspace/*
 !mkosi.workspace/.gitkeep
-
+uplosi.conf.d
+uplosi.conf
 resources/binaries-tree
