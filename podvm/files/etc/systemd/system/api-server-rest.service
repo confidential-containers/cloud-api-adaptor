@@ -1,13 +1,13 @@
 [Unit]
 Description=CDH API Server Rest Service
 BindsTo=netns@podns.service
-After=network.target confidential-data-hub.service attestation-agent.service netns@podns.service
+After=network.target kata-agent.service netns@podns.service
 
 [Service]
 Type=simple
 NetworkNamespacePath=/run/netns/podns
-ExecStart=/usr/local/bin/api-server-rest --features all 
-RestartSec=0.5
+ExecStart=/usr/local/bin/api-server-rest --features all
+RestartSec=1
 Restart=always
 
 [Install]
