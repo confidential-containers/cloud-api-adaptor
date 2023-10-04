@@ -21,12 +21,12 @@ variable "disk_size" {
 
 variable "cloud_image_checksum" {
   type    = string
-  default = "b80ca9ccad8715aa1aeee582906096d3190b91cebe05fcb3ac7cb197fd68a7fe"
+  default = "d12bb6934dd207e242d6aa13f6a4ca4969449c14c3bbdd88a5ce5f5203597a40"
 }
 
 variable "cloud_image_url" {
   type    = string
-  default = "https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20200113.0.x86_64.qcow2"
+  default = "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20231002.0.x86_64.qcow2"
 }
 
 variable "memory" {

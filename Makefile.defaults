@@ -17,7 +17,7 @@ $(or $(shell $(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
 endef
 
 ubuntu_RELEASE ?= focal
-centos_RELEASE ?= stream-8
+centos_RELEASE ?= stream-9
 rhel_RELEASE ?= 9
 
 ubuntu_amd64_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.url)
