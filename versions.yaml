@@ -10,10 +10,10 @@ cloudimg:
         url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-s390x.img
         checksum: "sha256:24673aa86785573d3a92e15166ff81beff88cbb0abc01938f156eb1332e87cd3"
   centos:
-    stream-8:
+    stream-9:
       amd64:
-        url: https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-20220913.0.x86_64.qcow2
-        checksum: "sha256:8717251f8e4d2fe3e5032799caae89358c1ba68d65a16b5128a59ec6003aac1c"
+        url: https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20231002.0.x86_64.qcow2
+        checksum: "sha256:d12bb6934dd207e242d6aa13f6a4ca4969449c14c3bbdd88a5ce5f5203597a40"
   rhel:
     9: # dummy link, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
       amd64:
