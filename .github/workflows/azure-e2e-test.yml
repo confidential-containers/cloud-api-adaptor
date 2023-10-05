@@ -6,6 +6,10 @@ permissions:
 
 env:
   CLUSTER_NAME: "e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
+  TEST_PROVISION_FILE: "${{ github.workspace }}/provision_azure${{ github.run_id }}.properties"
+  CLOUD_PROVIDER: "azure"
+  BUILTIN_CLOUD_PROVIDERS: "azure"
+  TEST_E2E_CREATE_RG: "no"
 
 on:
   workflow_dispatch:
@@ -84,12 +88,12 @@ jobs:
         make image
         echo "caa-image=${{ secrets.ACR_URL }}/cloud-api-adaptor:dev-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
-  run-e2e-test:
+  install-aks:
     runs-on: ubuntu-latest
     needs:
-    - build-podvm-image
+    - generate-podvm-image-version
     - build-caa-container-image
-    if: always() && !cancelled() && needs.build-podvm-image.result != 'failure'
+    if: always() && !cancelled() && needs.build-caa-container-image.result != 'failure'
     steps:
     - uses: actions/checkout@v3
 
@@ -100,11 +104,10 @@ jobs:
 
     - name: Create provisioner file
       env:
-        TEST_E2E_CREATE_RG: "no"
-        AZURE_IMAGE_ID: "${{ github.event.inputs.podvm-image-id || needs.build-podvm-image.outputs.image-id }}"
+        AZURE_IMAGE_ID: "/CommunityGalleries/${{ secrets.AZURE_COMMUNITY_GALLERY_NAME }}/images/${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }}/Versions/${{ needs.generate-podvm-image-version.outputs.image-version }}"
         CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
       run: |
-        cat << EOF > /tmp/provision_azure.properties
+        cat << EOF > ${{ env.TEST_PROVISION_FILE }}
           AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           AZURE_CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
           RESOURCE_GROUP_NAME="${{ secrets.AZURE_RESOURCE_GROUP }}"
@@ -116,13 +119,56 @@ jobs:
           MANAGED_IDENTITY_NAME="${{ secrets.AZURE_MANAGED_IDENTITY_NAME}}"
           CAA_IMAGE="${CAA_IMAGE}"
         EOF
-        cat /tmp/provision_azure.properties
+        cat ${{ env.TEST_PROVISION_FILE }}
 
     - name: Create public ssh key and secrets
       run: |
         # TODO: This is a temporary fix to create an empty file for env.
         touch install/overlays/azure/service-principal.env
         ssh-keygen -t rsa -b 4096 -f install/overlays/azure/id_rsa -N "" -C dev@coco.io
+
+    - name: Save the configuration created here
+      uses: actions/upload-artifact@v3
+      with:
+        path: |
+          install/overlays/azure
+          ${{ env.TEST_PROVISION_FILE }}
+        name: e2e-configuration
+
+    - uses: azure/login@v1
+      name: 'Az CLI login'
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+    # Install AKS cluster in parallel with the podvm image build.
+    - name: Run provisioner
+      working-directory: test/tools
+      run: |
+        make caa-provisioner-cli
+        ./caa-provisioner-cli -action=provision
+
+  run-e2e-test:
+    runs-on: ubuntu-latest
+    needs:
+    - build-podvm-image
+    - build-caa-container-image
+    - install-aks
+    - generate-podvm-image-version
+    if: always() && !cancelled() && needs.build-podvm-image.result != 'failure'
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go environment
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+
+    - name: Restore the configuration created before
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-configuration
 
     - uses: azure/login@v1
       name: 'Az CLI login'
@@ -133,25 +179,13 @@ jobs:
 
     - name: Run e2e test
       env:
-        TEST_PROVISION_FILE: "/tmp/provision_azure.properties"
-        TEST_PROVISION: "yes"
-        CLOUD_PROVIDER: "azure"
-        BUILTIN_CLOUD_PROVIDERS: "azure"
-      run: make test-e2e
-
-    # Clean up step, run regardless of the failure state.
-    - name: Run deprovisioner
-      if: ${{ always() }}
-      env:
-        TEST_PROVISION_FILE: "/tmp/provision_azure.properties"
-        CLOUD_PROVIDER: "azure"
-        BUILTIN_CLOUD_PROVIDERS: "azure"
+        TEST_PROVISION: "no"
       run: |
-        cd test/tools
-        make caa-provisioner-cli
-
-        # Ignore the error if the deprovision fails.
-        ./caa-provisioner-cli -action=deprovision || true
+        # Since we install the cluster in parallel, we need to get the credentials here.
+        az aks get-credentials \
+          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --name "${CLUSTER_NAME}"
+        make test-e2e
 
   cleanup-resources:
     runs-on: ubuntu-latest
@@ -165,12 +199,30 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Set up Go environment
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+
+    - name: Restore the configuration created before
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-configuration
+
     - uses: azure/login@v1
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+    # Clean up step, run regardless of the failure state.
+    - name: Run deprovisioner
+      working-directory: test/tools
+      run: |
+        make caa-provisioner-cli
+        # Ignore the error if the deprovision fails.
+        ./caa-provisioner-cli -action=deprovision || true
 
     - name: Remove podvm image
       if: github.event.inputs.podvm-image-id == ''
@@ -180,7 +232,7 @@ jobs:
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
           --gallery-name ${{ secrets.AZURE_PODVM_GALLERY_NAME }} \
           --gallery-image-definition ${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }} \
-          --gallery-image-version "${{ needs.generate-podvm-image-version.outputs.image-version }}"
+          --gallery-image-version "${{ needs.generate-podvm-image-version.outputs.image-version }}" || true
 
     - name: Remove container image
       if: github.event.inputs.caa-image == ''
