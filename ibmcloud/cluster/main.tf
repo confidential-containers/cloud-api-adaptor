@@ -46,8 +46,8 @@ resource "ibm_is_instance_template" "node_template" {
 }
 
 module "nodes" {
-  source                      = "./node"
-  count                       = var.nodes
+  source                    = "./node"
+  count                     = var.nodes
   node_name                 = "${var.cluster_name}-node-${count.index}"
   node_instance_template_id = ibm_is_instance_template.node_template.id
 }
