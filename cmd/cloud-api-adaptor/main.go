@@ -12,7 +12,7 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/cmd"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/cloudmgr"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
@@ -41,7 +41,7 @@ func printHelp(out io.Writer) {
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Supported cloud providers are:")
 
-	for _, name := range cloudmgr.List() {
+	for _, name := range cloud.List() {
 		fmt.Fprintf(out, "\t%s\n", name)
 	}
 	fmt.Fprintln(out)
@@ -74,7 +74,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		cmd.Exit(1)
 	}
 
-	cloud := cloudmgr.Get(cloudName)
+	cloud := cloud.Get(cloudName)
 
 	if cloud == nil {
 		fmt.Fprintf(os.Stderr, "%s: Unsupported cloud provider: %s\n\n", programName, cloudName)
