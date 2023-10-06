@@ -25,6 +25,10 @@ const (
 	defaultFirmware       = "/usr/share/edk2/ovmf/OVMF_CODE.fd"
 )
 
+func init() {
+	cloud.AddCloud("libvirt", &Manager{})
+}
+
 func (*Manager) ParseCmd(flags *flag.FlagSet) {
 
 	flags.StringVar(&libvirtcfg.URI, "uri", defaultURI, "libvirt URI")

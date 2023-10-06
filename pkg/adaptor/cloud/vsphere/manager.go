@@ -13,6 +13,10 @@ var vspherecfg Config
 
 type Manager struct{}
 
+func init() {
+	cloud.AddCloud("vsphere", &Manager{})
+}
+
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 	flags.StringVar(&vspherecfg.VcenterURL, "vcenter-url", "", "URL of vCenter instance to connect to")

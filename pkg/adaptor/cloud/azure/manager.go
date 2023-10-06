@@ -13,6 +13,10 @@ var azurecfg Config
 
 type Manager struct{}
 
+func init() {
+	cloud.AddCloud("azure", &Manager{})
+}
+
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&azurecfg.ClientId, "clientid", "", "Client Id, defaults to `AZURE_CLIENT_ID`")
 	flags.StringVar(&azurecfg.ClientSecret, "secret", "", "Client Secret, defaults to `AZURE_CLIENT_SECRET`")
