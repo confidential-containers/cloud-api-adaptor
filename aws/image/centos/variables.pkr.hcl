@@ -14,16 +14,16 @@ variable "instance_type" {
 }
 
 variable "region" {
-  type    = string
+  type = string
 }
 
 variable "vpc_id" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "subnet_id" {
-  type = string
+  type    = string
   default = null
 }
 

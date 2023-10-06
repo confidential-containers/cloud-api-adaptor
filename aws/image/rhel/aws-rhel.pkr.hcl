@@ -25,9 +25,9 @@ source "amazon-ebs" "rhel" {
     owners      = ["309956199498"]
   }
   ami_block_device_mappings {
-    device_name = "/dev/sda1"
+    device_name           = "/dev/sda1"
     delete_on_termination = "true"
-    volume_size = "${var.volume_size}"
+    volume_size           = "${var.volume_size}"
   }
 
   ssh_username = "ec2-user"
@@ -67,8 +67,8 @@ build {
     ]
   }
 
-# relabel copied files right after copy-files.sh
-# to prevent other commands from failing
+  # relabel copied files right after copy-files.sh
+  # to prevent other commands from failing
   provisioner "file" {
     source      = "selinux_relabel.sh"
     destination = "~/selinux_relabel.sh"
@@ -89,9 +89,9 @@ build {
   provisioner "shell" {
     remote_folder = "~"
     environment_vars = [
-        "CLOUD_PROVIDER=${var.cloud_provider}",
-        "PODVM_DISTRO=${var.podvm_distro}",
-        "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}"
+      "CLOUD_PROVIDER=${var.cloud_provider}",
+      "PODVM_DISTRO=${var.podvm_distro}",
+      "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}"
     ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"
