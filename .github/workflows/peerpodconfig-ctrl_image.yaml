@@ -1,0 +1,49 @@
+# Copyright Confidential Containers Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Push peerpodconfig-ctrl image
+---
+name: peerpodconfig-ctrl image push
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'peerpodconfig-ctrl/**'
+
+jobs:
+  peerpod_push:
+    name: Push peerpodconfig-ctrl image
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: peerpodconfig-ctrl
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Quay container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+      - name: Validate build args contains the essentials
+        run: |
+           make list-build-args | grep -e 'CGO_ENABLED=[0|1]' && \
+           make list-build-args | grep 'GOFLAGS=' | grep -E '\-tags=[a-z,]*'
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          tags: |
+            quay.io/confidential-containers/peerpodconfig-ctrl:latest
+            quay.io/confidential-containers/peerpodconfig-ctrl:${{ github.sha }}
+          push: true
+          context: peerpodconfig-ctrl
+          platforms: linux/amd64, linux/s390x, linux/ppc64le
+          build-args: |
+            GOFLAGS=-tags=aws,azure,ibmcloud,vsphere,libvirt
+
