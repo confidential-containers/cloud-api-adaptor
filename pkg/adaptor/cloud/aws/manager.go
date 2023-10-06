@@ -13,6 +13,10 @@ var awscfg Config
 
 type Manager struct{}
 
+func init() {
+	cloud.AddCloud("aws", &Manager{})
+}
+
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 	flags.StringVar(&awscfg.AccessKeyId, "aws-access-key-id", "", "Access Key ID, defaults to `AWS_ACCESS_KEY_ID`")

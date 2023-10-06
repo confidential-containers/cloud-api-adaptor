@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -31,6 +32,33 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
+
+type Cloud interface {
+	ParseCmd(flags *flag.FlagSet)
+	LoadEnv()
+	NewProvider() (Provider, error)
+}
+
+var cloudTable map[string]Cloud = make(map[string]Cloud)
+
+func Get(name string) Cloud {
+	return cloudTable[name]
+}
+
+func AddCloud(name string, cloud Cloud) {
+	cloudTable[name] = cloud
+}
+
+func List() []string {
+
+	var list []string
+
+	for name := range cloudTable {
+		list = append(list, name)
+	}
+
+	return list
+}
 
 func (s *cloudService) addSandbox(sid sandboxID, sandbox *sandbox) error {
 
