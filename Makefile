@@ -95,8 +95,9 @@ else
 	$(error CLOUD_PROVIDER is not set)
 endif
 
+ ## Run formatters and linters against the code.
 .PHONY: check
-check: fmt vet golangci-lint shellcheck tidy-check govulncheck ## Run formatters and linters against the code.
+check: fmt vet golangci-lint shellcheck tidy-check govulncheck packer-check
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -125,6 +126,14 @@ tidy-check:
 .PHONY: govulncheck
 govulncheck:
 	./hack/govulncheck.sh -v
+
+.PHONY: packer-format
+packer-format:
+	./hack/packer-check.sh
+
+.PHONY: packer-check
+packer-check:
+	./hack/packer-check.sh --check
 
 .PHONY: clean
 clean: ## Remove binaries.
