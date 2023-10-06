@@ -14,6 +14,10 @@ var ibmcloudPowerVSConfig Config
 
 type Manager struct{}
 
+func init() {
+	cloud.AddCloud("ibmcloud-powervs", &Manager{})
+}
+
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 	flags.StringVar(&ibmcloudPowerVSConfig.ApiKey, "api-key", "", "IBM Cloud API key, defaults to `IBMCLOUD_API_KEY`")
