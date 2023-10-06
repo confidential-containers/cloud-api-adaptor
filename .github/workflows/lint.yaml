@@ -132,3 +132,12 @@ jobs:
         uses: actions/checkout@v3
       - name: Run packer check
         run: make packer-check
+
+  terraform:
+    name: Terraform check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@v3
+      - name: Run terraform check
+        run: make terraform-check

@@ -97,7 +97,7 @@ endif
 
  ## Run formatters and linters against the code.
 .PHONY: check
-check: fmt vet golangci-lint shellcheck tidy-check govulncheck packer-check
+check: fmt vet golangci-lint shellcheck tidy-check govulncheck packer-check terraform-check
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -134,6 +134,14 @@ packer-format:
 .PHONY: packer-check
 packer-check:
 	./hack/packer-check.sh --check
+
+.PHONY: terraform-format
+terraform-format:
+	./hack/terraform-check.sh
+
+.PHONY: terraform-check
+terraform-check:
+	./hack/terraform-check.sh --check
 
 .PHONY: clean
 clean: ## Remove binaries.
