@@ -14,7 +14,7 @@ variable "cpus" {
 }
 
 variable "disk_size" {
-  type    = string
+  type = string
   # This is the default virtual size of CentOS cloud image (qcow2)
   default = "10240"
 }
@@ -45,7 +45,7 @@ variable "ssh_username" {
 }
 
 variable "ssh_timeout" {
-  type = string
+  type    = string
   default = "15m"
 }
 
@@ -65,7 +65,7 @@ variable "cloud_provider" {
 }
 
 variable "machine_type" {
-  type = string
+  type    = string
   default = "pc"
 }
 
@@ -75,8 +75,8 @@ variable "os_arch" {
 }
 
 variable "is_uefi" {
-  type        = bool
-  default     = false
+  type    = bool
+  default = false
 }
 
 variable "uefi_firmware" {
@@ -85,7 +85,7 @@ variable "uefi_firmware" {
 }
 
 variable "boot_wait" {
-  type = string
+  type    = string
   default = "10s"
 }
 

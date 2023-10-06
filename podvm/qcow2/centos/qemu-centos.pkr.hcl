@@ -1,30 +1,30 @@
 locals {
-   machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
-   use_pflash = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
-   firmware = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}"  : ""
+  machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
+  use_pflash   = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
+  firmware     = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
 }
 
 source "qemu" "centos" {
-  disable_vnc       = true
-  disk_compression  = true
-  disk_image        = true
-  disk_size         = "${var.disk_size}"
-  format            = "qcow2"
-  headless          = true
-  iso_checksum      = "${var.cloud_image_checksum}"
-  iso_url           = "${var.cloud_image_url}"
-  output_directory  = "output"
-  qemuargs          = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"]]
-  ssh_password      = "${var.ssh_password}"
-  ssh_port          = 22
-  ssh_username      = "${var.ssh_username}"
-  ssh_timeout       = "${var.ssh_timeout}"
-  boot_wait         = "${var.boot_wait}"
-  vm_name           = "${var.qemu_image_name}"
-  shutdown_command  = "sudo shutdown -h now"
-  machine_type      = "${local.machine_type}"
-  use_pflash        = "${local.use_pflash}"
-  firmware          = "${local.firmware}"
+  disable_vnc      = true
+  disk_compression = true
+  disk_image       = true
+  disk_size        = "${var.disk_size}"
+  format           = "qcow2"
+  headless         = true
+  iso_checksum     = "${var.cloud_image_checksum}"
+  iso_url          = "${var.cloud_image_url}"
+  output_directory = "output"
+  qemuargs         = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"]]
+  ssh_password     = "${var.ssh_password}"
+  ssh_port         = 22
+  ssh_username     = "${var.ssh_username}"
+  ssh_timeout      = "${var.ssh_timeout}"
+  boot_wait        = "${var.boot_wait}"
+  vm_name          = "${var.qemu_image_name}"
+  shutdown_command = "sudo shutdown -h now"
+  machine_type     = "${local.machine_type}"
+  use_pflash       = "${local.use_pflash}"
+  firmware         = "${local.firmware}"
 }
 
 build {
@@ -78,10 +78,10 @@ build {
   provisioner "shell" {
     remote_folder = "~"
     environment_vars = [
-        "CLOUD_PROVIDER=${var.cloud_provider}",
-        "PODVM_DISTRO=${var.podvm_distro}",
-        "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}"
-	]
+      "CLOUD_PROVIDER=${var.cloud_provider}",
+      "PODVM_DISTRO=${var.podvm_distro}",
+      "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}"
+    ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"
     ]

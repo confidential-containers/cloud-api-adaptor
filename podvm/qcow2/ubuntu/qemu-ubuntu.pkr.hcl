@@ -2,7 +2,7 @@ locals {
   machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
   use_pflash   = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
   firmware     = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
-  se_qemuargs  = [
+  se_qemuargs = [
     ["-drive", "file=se-${var.qemu_image_name},if=none,cache=writeback,discard=ignore,format=qcow2,id=se-virtio-drive"],
     ["-device", "virtio-blk,drive=se-virtio-drive,id=virtio-disk1"]
   ]
@@ -117,7 +117,7 @@ build {
   }
 
   post-processor "shell-local" {
-    name = "post-build-se-image"
+    name   = "post-build-se-image"
     script = "qcow2/build-s390x-se-image-post.sh"
     environment_vars = [
       "SE_BOOT=${var.se_boot}",

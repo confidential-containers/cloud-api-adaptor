@@ -14,16 +14,16 @@ variable "instance_type" {
 }
 
 variable "region" {
-  type    = string
+  type = string
 }
 
 variable "vpc_id" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "subnet_id" {
-  type = string
+  type    = string
   default = null
 }
 
@@ -40,7 +40,7 @@ variable "cloud_provider" {
 variable "volume_size" {
   type = string
   // Size in GiBs
-  default = 30 
+  default = 30
 }
 
 variable "disable_cloud_config" {
