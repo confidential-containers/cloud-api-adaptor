@@ -1,0 +1,92 @@
+name: Create a Pod VM image with mkosi
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-binaries:
+    name: Build binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build builder
+        uses: docker/build-push-action@v5
+        with:
+          tags: ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}
+          file: podvm/Dockerfile.podvm_builder.fedora
+          push: true
+
+      - name: Build binaries
+        uses: docker/build-push-action@v5
+        with:
+          tags: ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}
+          file: podvm/Dockerfile.podvm_binaries.fedora
+          push: true
+          build-args:
+            "BUILDER_IMG=ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}"
+
+  build-image:
+    name: Build image
+    needs: [build-binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v22
+
+      - name: Build nix shell to cache dependencies
+        run: nix build .#devShells.x86_64-linux.podvm-mkosi
+
+      - name: Install crane
+        run: nix profile install nixpkgs#crane
+
+        # This removes the checkout and creates a btrfs volume with maximized
+        # build space.
+      - name: Maximize build space
+        uses: katexochen/maximize-build-space@btrfs
+        with:
+          swap-size-mb: 1024
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-docker-images: "true"
+
+      - name: Second checkout
+        uses: actions/checkout@v3
+
+      - name: Download binaries and unpack into binaries-tree
+        run: |
+          crane export \
+            ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }} \
+            podvm-binaries.tar
+          mkdir -p podvm-mkosi/resources/binaries-tree
+          tar xf podvm-binaries.tar -C podvm-mkosi/resources/binaries-tree
+          rm podvm-binaries.tar
+
+      - name: Build image
+        working-directory: podvm-mkosi
+        run: make image-debug
+
+      - name: Upload image
+        uses: actions/upload-artifact@v2
+        with:
+          name: podvm-mkosi-${{ github.sha }}
+          path: podvm-mkosi/build/system.raw
