@@ -11,8 +11,8 @@ FROM registry.access.redhat.com/ubi9/ubi:9.2
 ARG GO_VERSION
 ARG PROTOC_VERSION
 ARG RUST_VERSION
-ARG YQ_VERSION="v4.35.1"
-ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
+ARG YQ_VERSION
+ARG YQ_CHECKSUM
 
 # This must be running on subscribed RHEL host !!!
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container

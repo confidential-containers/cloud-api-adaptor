@@ -5,10 +5,17 @@ ifeq (, $(shell command -v $(YQ_COMMAND) 2> /dev/null))
 $(error "$(YQ_COMMAND) not found, consider doing snap install yq")
 endif
 
-YQ_MAJOR_VERSION := $(shell $(YQ_COMMAND) --version | sed -nE 's/.* v?([0-9]+).*/\1/p')
+# As we need `yq` to be installed to fetch the values from versions.yaml
+# these values are hardcoded here, all other versions/references should be
+# stored in versions.yaml
+YQ_VERSION := v4.35.1
+YQ_CHECKSUM := "sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 
-ifneq (4, $(YQ_MAJOR_VERSION))
-$(error "yq major version should be 4, is: $(YQ_MAJOR_VERSION)")
+MINIMUM_YQ_MAJOR_VERSION := 4
+INSTALLED_YQ_MAJOR_VERSION := $(shell $(YQ_COMMAND) --version | sed -nE 's/.* v?([0-9]+).*/\1/p')
+
+ifneq ($(MINIMUM_YQ_MAJOR_VERSION), $(INSTALLED_YQ_MAJOR_VERSION))
+$(error "yq major version should be $(MINIMUM_YQ_MAJOR_VERSION), is: $(INSTALLED_YQ_MAJOR_VERSION)")
 endif
 VERSIONS_HASH := $(firstword $(shell sha256sum $(VERSIONS_SRC)))
 
