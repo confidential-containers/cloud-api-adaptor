@@ -211,6 +211,8 @@ podvm-builder:
 	--build-arg GO_VERSION=$(GO_VERSION) \
 	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
 	--build-arg RUST_VERSION=$(RUST_VERSION) \
+	--build-arg YQ_VERSION=$(YQ_VERSION) \
+	--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
 	$(DOCKER_OPTS) .
 
 podvm-binaries:
