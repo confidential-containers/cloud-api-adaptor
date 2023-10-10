@@ -28,7 +28,10 @@ func TestCreateSimplePod(t *testing.T) {
 
 func TestCaaDaemonsetRollingUpdate(t *testing.T) {
 	if os.Getenv("TEST_CAA_ROLLING_UPDATE") == "yes" {
-		doTestCaaDaemonsetRollingUpdate(t)
+		assert := IBMRollingUpdateAssert{
+			vpc: pv.IBMCloudProps.VPC,
+		}
+		doTestCaaDaemonsetRollingUpdate(t, &assert)
 	} else {
 		log.Infof("Ignore CAA DaemonSet upgrade  test")
 	}
@@ -456,4 +459,46 @@ func (c IBMCloudAssert) HasPodVM(t *testing.T, id string) {
 	}
 	// It didn't find the PodVM if it reached here.
 	t.Error("PodVM was not created")
+}
+
+type IBMRollingUpdateAssert struct {
+	vpc *vpcv1.VpcV1
+	// cache Pod VM instance IDs for rolling update test
+	instanceIDs [2]string
+}
+
+func (c *IBMRollingUpdateAssert) CachePodVmIDs(t *testing.T, deploymentName string) {
+	options := &vpcv1.ListInstancesOptions{
+		VPCID: &pv.IBMCloudProps.VpcID,
+	}
+	instances, _, err := c.vpc.ListInstances(options)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	index := 0
+	for i, instance := range instances.Instances {
+		name := *instance.Name
+		log.Debugf("Instance number: %d, Instance id: %s, Instance name: %s", i, *instance.ID, name)
+		if strings.Contains(name, deploymentName) {
+			c.instanceIDs[index] = *instance.ID
+			index++
+		}
+	}
+}
+
+func (c *IBMRollingUpdateAssert) VerifyOldVmDeleted(t *testing.T) {
+	for _, id := range c.instanceIDs {
+		options := &vpcv1.GetInstanceOptions{
+			ID: &id,
+		}
+		_, _, err := c.vpc.GetInstance(options)
+
+		if err != nil {
+			log.Printf("Instance %s has been deleted: %v", id, err)
+		} else {
+			t.Fatalf("Instance %s still exists", id)
+		}
+	}
 }
