@@ -2,6 +2,7 @@ locals {
   machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
   use_pflash   = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
   firmware     = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
+  cpu_model    = "${var.os_arch}" == "x86_64" ? "Skylake-Client" : ""
 }
 
 source "qemu" "centos" {
@@ -23,6 +24,7 @@ source "qemu" "centos" {
   vm_name          = "${var.qemu_image_name}"
   shutdown_command = "sudo shutdown -h now"
   machine_type     = "${local.machine_type}"
+  cpu_model        = "${local.cpu_model}"
   use_pflash       = "${local.use_pflash}"
   firmware         = "${local.firmware}"
 }
