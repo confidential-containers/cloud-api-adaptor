@@ -162,3 +162,9 @@ func newPVC(namespace, name, storageClassName, diskSize string, accessModel core
 type CloudAssert interface {
 	HasPodVM(t *testing.T, id string) // Assert there is a PodVM with `id`.
 }
+
+// RollingUpdateAssert defines assertions for rolling update test
+type RollingUpdateAssert interface {
+	CachePodVmIDs(t *testing.T, deploymentName string) // Cache Pod VM IDs before rolling update
+	VerifyOldVmDeleted(t *testing.T)                   // Verify old Pod VMs have been deleted
+}

@@ -27,8 +27,9 @@ import (
 )
 
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
+const OLD_VM_DELETION_TIMEOUT = time.Second * 15
 
-func doTestCaaDaemonsetRollingUpdate(t *testing.T) {
+func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 	runtimeClassName := "kata-remote"
 	namespace := envconf.RandomName("default", 7)
 	deploymentName := "nginx-deployment"
@@ -145,6 +146,9 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T) {
 			waitForDeploymentAvailable(t, client, deployment, rc)
 			log.Info("nginx deployment is available now")
 
+			// Cache Pod VM instance IDs before upgrade
+			assert.CachePodVmIDs(t, deploymentName)
+
 			log.Info("Creating nginx Service")
 			if err = client.Resources().Create(ctx, svc); err != nil {
 				t.Fatal(err)
@@ -247,6 +251,10 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T) {
 			if err = client.Resources().Delete(ctx, deployment); err != nil {
 				t.Fatal(err)
 			}
+
+			time.Sleep(OLD_VM_DELETION_TIMEOUT)
+			log.Info("Verify old VM instances have been deleted:")
+			assert.VerifyOldVmDeleted(t)
 
 			return ctx
 		}).Feature()
