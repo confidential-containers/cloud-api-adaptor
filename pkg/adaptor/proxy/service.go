@@ -32,6 +32,7 @@ const (
 	kataDirectVolumesDir         = "/run/kata-containers/shared/direct-volumes"
 	volumeTargetPathKey          = "io.confidentialcontainers.org.peerpodvolumes.target_path"
 	csiPluginEscapeQualifiedName = "kubernetes.io~csi"
+	imageGuestPull               = "image_guest_pull"
 )
 
 func newProxyService(dialer func(context.Context) (net.Conn, error), criClient *criClient, pauseImage string) *proxyService {
@@ -100,7 +101,7 @@ func (s *proxyService) getImageName(annotations map[string]string) (string, erro
 // AgentServiceService methods
 
 func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*types.Empty, error) {
-
+	var pullImageInGuest bool
 	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
 	if len(req.OCI.Mounts) > 0 {
 		logger.Print("    mounts:")
@@ -125,6 +126,11 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 		logger.Print("    storages:")
 		for _, s := range req.Storages {
 			logger.Printf("        mount_point:%s source:%s fstype:%s driver:%s", s.MountPoint, s.Source, s.Fstype, s.Driver)
+			// remote-snapshotter in contanerd appends image_guest_pull drivers for image layer will be pulled in guest.
+			// Image will be pull in guest via image-rs according to the driver info.
+			if s.Driver == imageGuestPull {
+				pullImageInGuest = true
+			}
 		}
 	}
 	if len(req.Devices) > 0 {
@@ -133,46 +139,51 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 			logger.Printf("        container_path:%s vm_path:%s type:%s", d.ContainerPath, d.VmPath, d.Type)
 		}
 	}
-	imageName, err := s.getImageName(req.OCI.Annotations)
-	if err != nil {
-		logger.Printf("CreateContainer: image name is not available in CreateContainerRequest: %v", err)
+
+	if pullImageInGuest {
+		logger.Printf("CreateContainer: Ignoring PullImage before CreateContainer (cid: %q)", req.ContainerId)
 	} else {
-		// Get the imageName from digest
-		if strings.HasPrefix(imageName, "sha256:") {
-			digest := imageName
-			logger.Printf("CreateContainer: get imageName from digest %q", digest)
-			imageName, err = s.getImageFromDigest(ctx, digest)
+		imageName, err := s.getImageName(req.OCI.Annotations)
+		if err != nil {
+			logger.Printf("CreateContainer: image name is not available in CreateContainerRequest: %v", err)
+		} else {
+			// Get the imageName from digest
+			if strings.HasPrefix(imageName, "sha256:") {
+				digest := imageName
+				logger.Printf("CreateContainer: get imageName from digest %q", digest)
+				imageName, err = s.getImageFromDigest(ctx, digest)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			logger.Printf("CreateContainer: calling PullImage for %q before CreateContainer (cid: %q)", imageName, req.ContainerId)
+
+			pullImageReq := &pb.PullImageRequest{
+				Image:       imageName,
+				ContainerId: req.ContainerId,
+			}
+
+			err = retry.Do(
+				func() error {
+					pullImageRes, pullImageErr := s.Redirector.PullImage(ctx, pullImageReq)
+					if pullImageErr != nil {
+						logger.Printf("CreateContainer: failed to call PullImage, probably because the image has already been pulled. ignored: %v", pullImageErr)
+						return pullImageErr
+					}
+					logger.Printf("CreateContainer: successfully pulled image %q", pullImageRes.ImageRef)
+					return nil
+				},
+			)
+
 			if err != nil {
+				logger.Printf("PullImage fails: %v", err)
 				return nil, err
 			}
+			// kata-agent uses this annotation to fix the image bundle path
+			// https://github.com/kata-containers/kata-containers/blob/8ad86e2ec9d26d2ef07f3bf794352a3fda7597e5/src/agent/src/rpc.rs#L694-L696
+			req.OCI.Annotations[cri.ImageName] = imageName
 		}
-
-		logger.Printf("CreateContainer: calling PullImage for %q before CreateContainer (cid: %q)", imageName, req.ContainerId)
-
-		pullImageReq := &pb.PullImageRequest{
-			Image:       imageName,
-			ContainerId: req.ContainerId,
-		}
-
-		err = retry.Do(
-			func() error {
-				pullImageRes, pullImageErr := s.Redirector.PullImage(ctx, pullImageReq)
-				if pullImageErr != nil {
-					logger.Printf("CreateContainer: failed to call PullImage, probably because the image has already been pulled. ignored: %v", pullImageErr)
-					return pullImageErr
-				}
-				logger.Printf("CreateContainer: successfully pulled image %q", pullImageRes.ImageRef)
-				return nil
-			},
-		)
-
-		if err != nil {
-			logger.Printf("PullImage fails: %v", err)
-			return nil, err
-		}
-		// kata-agent uses this annotation to fix the image bundle path
-		// https://github.com/kata-containers/kata-containers/blob/8ad86e2ec9d26d2ef07f3bf794352a3fda7597e5/src/agent/src/rpc.rs#L694-L696
-		req.OCI.Annotations[cri.ImageName] = imageName
 	}
 
 	res, err := s.Redirector.CreateContainer(ctx, req)
