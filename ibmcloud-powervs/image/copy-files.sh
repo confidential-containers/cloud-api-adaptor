@@ -24,3 +24,9 @@ if [ -e ${PODVM_DIR}/files/auth.json ]; then
        sudo mkdir -p /root/.config/containers/
        sudo cp -a ${PODVM_DIR}/files/auth.json /root/.config/containers/auth.json
 fi
+
+# Use the policy file providing the same agent enpoint restrictions as agent-config.toml
+default_policy="/etc/kata-opa/default-policy.rego"
+if [ -f "${default_policy}" ]; then
+	ln -sf "coco-default.rego" "${default_policy}"
+fi

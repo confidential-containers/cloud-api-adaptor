@@ -26,3 +26,9 @@ sudo mkdir -p /usr/local/bin
 sudo cp -a /tmp/files/usr/* /usr/
 
 sudo cp -a /tmp/files/pause_bundle /
+
+# Use the policy file providing the same agent enpoint restrictions as agent-config.toml
+default_policy="/etc/kata-opa/default-policy.rego"
+if [ -f "${default_policy}" ]; then
+	ln -sf "coco-default.rego" "${default_policy}"
+fi
