@@ -3,6 +3,8 @@
 ARG BASE_IMAGE=registry.fedoraproject.org/fedora:38
 FROM --platform=$TARGETPLATFORM ${BASE_IMAGE} as base
 
+# DO NOT UPDATE THIS BY HAND !!
+# Use hack/update-go-container.sh to update the version and hashes.
 ARG GO_VERSION=1.20.10
 ARG GO_LINUX_ARM64_SHA256=fb3c7e15fc4413c5b81eb9f26dbd7cd4faedd5c720b30fa8e2ff77457f74cab6
 ARG GO_LINUX_AMD64_SHA256=80d34f1fd74e382d86c2d6102e0e60d4318461a7c2f457ec1efc4042752d4248
