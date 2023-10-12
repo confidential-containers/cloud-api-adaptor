@@ -113,6 +113,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.IntVar(&cfg.networkConfig.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
 		flags.StringVar(&cfg.serverConfig.AAKBCParams, "aa-kbc-params", "", "attestation-agent KBC parameters")
 		flags.BoolVar(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "Enable cloud config verify - should use it for production")
+		flags.BoolVar(&cfg.serverConfig.EnableStartupProbe, "startup-probe", true, "Enable startup probe, default true")
 
 		cloud.ParseCmd(flags)
 	})
@@ -151,7 +152,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go probe.Start(config.serverConfig.SocketPath)
+	if config.serverConfig.EnableStartupProbe {
+		go probe.Start(config.serverConfig.SocketPath)
+	}
 
 	if err := starter.Start(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], err)
