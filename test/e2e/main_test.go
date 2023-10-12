@@ -20,6 +20,10 @@ var (
 	testEnv       env.Environment
 	cloudProvider string
 	provisioner   pv.CloudProvisioner
+	testEnv         env.Environment
+	cloudProvider   string
+	provisioner     pv.CloudProvisioner
+	keyBrokerService *pv.KeyBrokerService
 )
 
 func init() {
@@ -80,6 +84,9 @@ func TestMain(m *testing.M) {
 	// the VPC images storage.
 	podvmImage := os.Getenv("TEST_PODVM_IMAGE")
 
+	kbsImage := os.Getenv("TEST_KBS_IMAGE")
+	kbsImageTag := os.Getenv("TEST_KBS_IMAGE_TAG")
+
 	// The TEST_PROVISION_FILE is an optional variable which specifies the path
 	// to the provision properties file. The file must have the format:
 	//
@@ -91,6 +98,12 @@ func TestMain(m *testing.M) {
 	provisioner, err = pv.GetCloudProvisioner(cloudProvider, provisionPropsFile)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// The DEPLOY_KBS is exported then provisioner will install kbs before installing CAA
+	shouldDeployKbs := false
+	if os.Getenv("DEPLOY_KBS") == "yes" {
+		shouldDeployKbs = true
 	}
 
 	if !shouldProvisionCluster {
@@ -116,6 +129,18 @@ func TestMain(m *testing.M) {
 			}
 
 			if err = provisioner.CreateCluster(ctx, cfg); err != nil {
+				return ctx, err
+			}
+		}
+
+		if shouldDeployKbs {
+			log.Info("Deploying kbs")
+
+			if keyBrokerService, err = pv.NewKeyBrokerService(cloudProvider); err != nil {
+				return ctx, err
+			}
+
+			if err = keyBrokerService.Deploy(ctx, kbsImage, kbsImageTag); err != nil {
 				return ctx, err
 			}
 		}
@@ -169,6 +194,12 @@ func TestMain(m *testing.M) {
 		if shouldInstallCAA {
 			log.Info("Delete the Cloud API Adaptor installation")
 			if err = cloudAPIAdaptor.Delete(ctx, cfg); err != nil {
+				return ctx, err
+			}
+		}
+
+		if shouldDeployKbs {
+			if err = keyBrokerService.Delete(ctx); err != nil {
 				return ctx, err
 			}
 		}
