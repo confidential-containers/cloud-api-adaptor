@@ -10,6 +10,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"time"
+	"strings"
+	"path/filepath"
+	"io/ioutil"
 
 	"github.com/BurntSushi/toml"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +55,10 @@ type CloudAPIAdaptor struct {
 
 type NewInstallOverlayFunc func(installDir, provider string) (InstallOverlay, error)
 
+type KeyBrokerService struct {
+        cloudProvider        string               // Cloud provider
+}
+
 var NewInstallOverlayFunctions = make(map[string]NewInstallOverlayFunc)
 
 // InstallOverlay defines common operations to an install overlay (install/overlays/*)
@@ -62,6 +69,42 @@ type InstallOverlay interface {
 	Delete(ctx context.Context, cfg *envconf.Config) error
 	// Edit changes overlay files
 	Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
+}
+
+func NewKeyBrokerService(provider string) (*KeyBrokerService, error) {
+	// Clone kbs repo
+	repoURL := "https://github.com/confidential-containers/kbs"
+	cmd := exec.Command("git", "clone", repoURL)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("Error running git clone: %v\n", err)
+		return nil, err
+	}
+
+	// Create secret
+	content := []byte("This is my super secret")
+	filePath := "kbs/config/kubernetes/overlays/key.bin"
+	// Create the file.
+	file, err := os.Create(filePath)
+	if err != nil {
+		fmt.Printf("Error creating file: %v\n", err)
+		return nil, err
+	}
+	defer file.Close()
+
+	// Write the content to the file.
+	_, err = file.Write(content)
+	if err != nil {
+		fmt.Printf("Error writing to file: %v\n", err)
+		return nil, err
+	}
+
+	return &KeyBrokerService{
+		cloudProvider:        provider,
+	}, nil
 }
 
 func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, error) {
@@ -120,6 +163,143 @@ func GetInstallOverlay(provider string, installDir string) (InstallOverlay, erro
 
 	return overlayFunc(installDir, provider)
 }
+
+// TODO: Use kustomize overlay to update this file
+func UpdateKbsKustomizationFile(imagePath string, imageTag string) error {
+	// Read the content of the existing kustomization.yaml file.
+	filePath := "base/kustomization.yaml"
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		fmt.Printf("Error reading kustomization file: %v\n", err)
+		return err
+	}
+
+	// Convert the content to a string.
+	kustomizationContent := string(content)
+
+	// Define the values to update.
+	kustomizationContent = strings.Replace(kustomizationContent, "newName: ghcr.io/confidential-containers/key-broker-service", "newName: "+imagePath, -1)
+	kustomizationContent = strings.Replace(kustomizationContent, "newTag: built-in-as-v0.7.0", "newTag: "+imageTag, -1)
+
+	// Write the updated content back to the same file.
+	err = ioutil.WriteFile(filePath, []byte(kustomizationContent), 0644)
+	if err != nil {
+		fmt.Printf("Error writing to kustomization file: %v\n", err)
+		return err
+	}
+
+	fmt.Println("Kustomization file updated successfully.")
+	return nil
+
+}
+
+func (p *KeyBrokerService) Deploy(ctx context.Context, imagePath string, imageTag string) error {
+	originalDir, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("Error getting the current working directory: %v\n", err)
+		return err
+	}
+
+	// jump to kbs kubernetes config directory
+	newDirectory := "kbs/config/kubernetes/"
+	err = os.Chdir(newDirectory)
+	if err != nil {
+		fmt.Printf("Error changing the working directory: %v\n", err)
+		return err
+	}
+
+	// Note: Use kustomize overlay to update this
+	err = UpdateKbsKustomizationFile(imagePath, imageTag)
+	if err != nil {
+		fmt.Printf("Error updating kustomization file: %v\n", err)
+		return err
+	}
+
+	// Deploy kbs
+	k8sCnfDir, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("Error getting the current working directory: %v\n", err)
+		return err
+	}
+	fmt.Println(k8sCnfDir)
+
+	keyFile := filepath.Join(k8sCnfDir, "overlays/key.bin")
+	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		fmt.Println("key.bin file does not exist")
+		//return err
+	}
+
+	kbsCert := filepath.Join(k8sCnfDir, "base/kbs.pem")
+	if _, err := os.Stat(kbsCert); os.IsNotExist(err) {
+		kbsKey := filepath.Join(k8sCnfDir, "base/kbs.key")
+		keyOutputFile, err := os.Create(kbsKey)
+		if err != nil {
+			fmt.Printf("Error creating key file: %v\n", err)
+			os.Exit(1)
+		}
+		defer keyOutputFile.Close()
+
+		opensslGenPKeyCmd := exec.Command("openssl", "genpkey", "-algorithm", "ed25519")
+		opensslGenPKeyCmd.Stdout = keyOutputFile
+		opensslGenPKeyCmd.Stderr = os.Stderr
+		fmt.Printf("Running command: %v\n", opensslGenPKeyCmd.Args)
+		if err := opensslGenPKeyCmd.Run(); err != nil {
+			fmt.Printf("Error generating key: %v\n", err)
+			return err
+		}
+
+		opensslPKeyCmd := exec.Command("openssl", "pkey", "-in", kbsKey, "-pubout", "-out", kbsCert)
+		opensslPKeyCmd.Stdout = os.Stdout
+		opensslPKeyCmd.Stderr = os.Stderr
+		if err := opensslPKeyCmd.Run(); err != nil {
+			fmt.Printf("Error creating kbs.pem: %v\n", err)
+			return err
+		}
+	}
+
+	kubectlApplyCmd := exec.Command("kubectl", "apply", "-k", k8sCnfDir+"/overlays")
+	kubectlApplyCmd.Stdout = os.Stdout
+	kubectlApplyCmd.Stderr = os.Stderr
+	if err := kubectlApplyCmd.Run(); err != nil {
+		fmt.Printf("Error running 'kubectl apply': %v\n", err)
+		return err
+	}
+
+	// Return to the original working directory.
+	err = os.Chdir(originalDir)
+	if err != nil {
+		fmt.Printf("Error changing back to the original working directory: %v\n", err)
+		return err
+	}
+
+	// remove kbs repo
+	directoryPath := "kbs"
+
+	err = os.RemoveAll(directoryPath)
+	if err != nil {
+		fmt.Printf("Error deleting directory: %v\n", err)
+		return err
+	}
+
+	return nil
+}
+
+func (p *KeyBrokerService) Delete(ctx context.Context) error {
+	// Remove kbs deployment
+	k8sCnfDir := "kbs/config/kubernetes"
+	kubectlDeleteCmd := exec.Command("kubectl", "delete", "-k", k8sCnfDir+"/overlays")
+	kubectlDeleteCmd.Stdout = os.Stdout
+	kubectlDeleteCmd.Stderr = os.Stderr
+
+	err := kubectlDeleteCmd.Run()
+	if err != nil {
+		fmt.Printf("Error running 'kubectl delete': %v\n", err)
+		return err
+	}
+
+	return nil
+}
+
 
 // Deletes the peer pods installation including the controller manager.
 func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error {
