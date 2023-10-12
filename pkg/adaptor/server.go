@@ -40,7 +40,6 @@ type ServerConfig struct {
 	ProxyTimeout            time.Duration
 	AAKBCParams             string
 	EnableCloudConfigVerify bool
-	EnableStartupProbe      bool
 }
 
 type Server interface {
