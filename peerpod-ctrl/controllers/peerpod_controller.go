@@ -82,6 +82,25 @@ func (r *PeerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if pp.ObjectMeta.GetDeletionTimestamp() == nil { // TODO: consider filter events
+		// Create or Update events without DeletionTimestamp
+		// Check if existing old PeerPod owned by current Pod,
+		// and delete it to clean the dangling VM.
+		// It may caused by CAA update, unplanned down or crashes
+		ppList := confidentialcontainersorgv1alpha1.PeerPodList{}
+		if err := r.List(ctx, &ppList); err != nil {
+			logger.Info("Failed to get PeerPod list", "error", err)
+			return ctrl.Result{}, err
+		}
+
+		for _, item := range ppList.Items {
+			if isOldPeerPod(item, pp) {
+				logger.Info("Found old PeerPod object owned by the same Pod", "old PeerPod", item)
+				if err := r.Delete(ctx, &item); err != nil {
+					logger.Info("Failed to delete old PeerPod", "error", err)
+				}
+			}
+		}
+
 		return ctrl.Result{}, nil
 	}
 
@@ -153,4 +172,10 @@ func SetProvider() (cloud.Provider, error) {
 	}
 
 	return nil, fmt.Errorf("cloudmgr: %s cloud provider not supported", cloudName)
+}
+
+func isOldPeerPod(pp, cur confidentialcontainersorgv1alpha1.PeerPod) bool {
+	return pp.OwnerReferences[0].UID == cur.OwnerReferences[0].UID && // Same owner
+		pp.UID != cur.UID && // Not cur itself
+		pp.CreationTimestamp.Before(&cur.CreationTimestamp) // Created before cur
 }

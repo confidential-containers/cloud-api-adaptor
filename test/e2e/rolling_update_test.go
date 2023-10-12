@@ -27,7 +27,7 @@ import (
 )
 
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
-const OLD_VM_DELETION_TIMEOUT = time.Second * 15
+const OLD_VM_DELETION_TIMEOUT = time.Second * 60
 
 func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 	runtimeClassName := "kata-remote"
@@ -229,6 +229,10 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 				t.Fatal(fmt.Errorf("verify pod is not running"))
 			}
 
+			time.Sleep(OLD_VM_DELETION_TIMEOUT)
+			log.Info("Verify old VM instances have been deleted:")
+			assert.VerifyOldVmDeleted(t)
+
 			return ctx
 		}).
 		Teardown(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -251,10 +255,6 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 			if err = client.Resources().Delete(ctx, deployment); err != nil {
 				t.Fatal(err)
 			}
-
-			time.Sleep(OLD_VM_DELETION_TIMEOUT)
-			log.Info("Verify old VM instances have been deleted:")
-			assert.VerifyOldVmDeleted(t)
 
 			return ctx
 		}).Feature()
