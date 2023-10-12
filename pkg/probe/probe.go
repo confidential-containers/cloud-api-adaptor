@@ -55,7 +55,8 @@ func Start(socketPath string) {
 
 	clientset, err := CreateClientset()
 	if err != nil {
-		logger.Fatal(err)
+		logger.Printf("failed to CreateClientset, error %s", err)
+		return
 	}
 	checker = Checker{
 		Clientset:        clientset,
@@ -63,5 +64,9 @@ func Start(socketPath string) {
 		SocketPath:       socketPath,
 	}
 	http.HandleFunc("/startup", StartupHandler)
-	logger.Fatal(http.ListenAndServe(":"+port, nil))
+	err = http.ListenAndServe(":"+port, nil)
+
+	if err != nil {
+		logger.Printf("failed to start startup probe server, error %s", err)
+	}
 }
