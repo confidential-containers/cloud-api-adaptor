@@ -5,3 +5,10 @@ enable cloud-init.service
 enable cloud-final.service
 enable cloud-init-hotplugd.service
 enable cloud-init-local.service
+
+# For debug images.
+# This units are not part of the production image.
+
+enable sshd.service
+enable sshd-keygen@.service
+enable ssh-host-keys-migration.service

@@ -17,27 +17,34 @@ binaries:
 		-o type=local,dest="./resources/binaries-tree" \
 		- < ../podvm/Dockerfile.podvm_binaries.fedora
 
+define build-image =
+docker buildx use default
+@echo "Building mkosi-builder..."
+docker buildx build \
+	-t mkosi-builder \
+	--load \
+	--no-cache \
+	.
+rm -rf ./build
+mkdir -p build
+@echo "Building image..."
+docker run \
+	--rm \
+	--privileged \
+	-v $(PWD)/build:/mkosi/build \
+	mkosi-builder \
+	mkosi
+endef
+
 PHONY: image
-image: image-builder image-build
+image:
+	@echo "Enabling production preset..."
+	rm -rf resources/buildDebugImage
+	$(build-image)
 
-PHONY: image-builder
-image-builder:
-	docker buildx use default
-	@echo "Building mkosi-builder..."
-	docker buildx build \
-		-t mkosi-builder \
-		--load \
-		--no-cache \
-		.
 
-PHONY: image-build
-image-build:
-	rm -rf ./build
-	mkdir -p build
-	@echo "Building image..."
-	docker run \
-		--rm \
-		--privileged \
-		-v $(PWD)/build:/mkosi/build \
-		mkosi-builder \
-		mkosi
+PHONY: image-debug
+image-debug:
+	@echo "Enabling debug preset..."
+	touch resources/buildDebugImage
+	$(build-image)
