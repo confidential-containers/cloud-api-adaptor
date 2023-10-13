@@ -14,5 +14,5 @@ on:
 jobs:
   build_push_job:
     name: build and push
-    uses: ./.github/workflows/caa_build_and_push.yaml
+    uses: ./.github/workflows/caa_build_and_push_per_arch.yaml
     secrets: inherit

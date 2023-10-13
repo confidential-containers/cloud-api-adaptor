@@ -2,12 +2,7 @@ ARG BUILD_TYPE=dev
 ARG BUILDER_BASE=quay.io/confidential-containers/golang-fedora:1.20.8-36
 ARG BASE=registry.fedoraproject.org/fedora:38
 
-# This dockerfile uses Go cross-compilation to build the binary,
-# we build on the host platform ($BUILDPLATFORM) and then copy the
-# binary into the container image of the target platform ($TARGETPLATFORM)
-# that was specified with --platform. For more details see:
-# https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
-FROM --platform=$BUILDPLATFORM $BUILDER_BASE as builder-release
+FROM --platform=$TARGETPLATFORM $BUILDER_BASE as builder-release
 
 FROM builder-release as builder-dev
 RUN dnf install -y libvirt-devel && dnf clean all
@@ -24,7 +19,7 @@ COPY entrypoint.sh Makefile ./
 COPY cmd   ./cmd
 COPY pkg   ./pkg
 COPY proto ./proto
-RUN make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
+RUN CC=gcc make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
 
 FROM --platform=$TARGETPLATFORM $BASE as base-release
 

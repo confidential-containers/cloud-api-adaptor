@@ -1,0 +1,160 @@
+name: (Callable) Build and push cloud-api-adaptor image
+
+on:
+  workflow_call:
+    inputs:
+      registry:
+        default: 'quay.io/confidential-containers'
+        description: 'Image registry (e.g. "ghcr.io/confidential-containers") where the built image will be pushed to'
+        required: false
+        type: string
+      dev_tags:
+        default: ''
+        description: 'Comma-separated list of tags for the dev built image (e.g. latest,ci-dev). By default uses the values from hack/build.sh'
+        required: false
+        type: string
+      release_tags:
+        default: ''
+        description: 'Likewise but for the release built image'
+        required: false
+        type: string
+      git_ref:
+        default: 'main'
+        description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
+        required: false
+        type: string
+
+jobs:
+  build_push_job:
+    name: build and push
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - type: dev-amd64
+            arches: "linux/amd64"
+          - type: dev-s390x
+            arches: "linux/s390x"
+          - type: dev-ppc64le
+            arches: "linux/ppc64le"
+          - type: release-amd64
+            arches: "linux/amd64"
+          - type: release-s390x
+            arches: "linux/s390x"
+          - type: release-ppc64le
+            arches: "linux/ppc64le"
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
+
+      - name: Read properties from versions.yaml
+        run: |
+          go_version="$(yq '.tools.golang' versions.yaml)"
+          [ -n "$go_version" ]
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Install build dependencies
+        if: ${{ startsWith(matrix.type, 'dev-') }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libvirt-dev
+      - name: Login to quay Container Registry
+        if: ${{ startsWith(inputs.registry, 'quay.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Login to Github Container Registry
+        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push dev image
+        if: ${{ startsWith(matrix.type, 'dev-') }}
+        uses: nick-fields/retry@v2
+        with:
+          # We are not interested in timeout but this field is required
+          # so setting to 4x the time it usually take to complete.
+          timeout_minutes: 60
+          retry_wait_seconds: 120
+          max_attempts: 3
+          command: |
+            echo "Build and push dev image with libvirt"
+            ARCHES=${{matrix.arches}} RELEASE_BUILD=false DEV_TAGS=${{ inputs.dev_tags}} make image-with-arch registry=${{ inputs.registry }}
+
+      - name: Build and push release image
+        if: ${{ startsWith(matrix.type, 'release-') }}
+        uses: nick-fields/retry@v2
+        with:
+          # We are not interested in timeout but this field is required
+          # so setting to 4x the time it usually take to complete.
+          timeout_minutes: 60
+          retry_wait_seconds: 120
+          max_attempts: 3
+          command: |
+            echo "Build and push release image without libvirt"
+            ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: image-artifacts
+          retention-days: 1
+          path: |
+            tags.txt
+            tags-architectures-*
+      
+  manifest_job:
+    name: generate images manifest
+    runs-on: ubuntu-latest
+    needs: [build_push_job]
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
+
+      - name: Download release commits file
+        uses: actions/download-artifact@v3
+        with:
+          name: image-artifacts
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to quay Container Registry
+        if: ${{ startsWith(inputs.registry, 'quay.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Login to Github Container Registry
+        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image manifest
+        run:  |
+          hack/image-manifest.sh
+
