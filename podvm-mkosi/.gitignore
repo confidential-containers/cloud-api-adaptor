@@ -7,3 +7,4 @@ mkosi.workspace/*
 uplosi.conf.d
 uplosi.conf
 resources/binaries-tree
+mkosi.presets/**/*-extra.conf
