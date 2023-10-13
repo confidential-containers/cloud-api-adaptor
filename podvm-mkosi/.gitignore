@@ -6,5 +6,5 @@ mkosi.workspace/*
 !mkosi.workspace/.gitkeep
 uplosi.conf.d
 uplosi.conf
-resources/binaries-tree
+resources/*
 mkosi.presets/**/*-extra.conf
