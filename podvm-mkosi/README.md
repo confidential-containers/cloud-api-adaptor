@@ -29,6 +29,17 @@ You can easily place additional files in `resources/binaries-tree` after it has 
 binaries build step. Notice that systemd units need to be enabled in the presets and links in the tree
 won't be copied into the image.
 
+If you want to add additional packages to the image, you can define `mkosi.presets/system/mkosi.conf.d/fedora-extra.conf`:
+
+```ini
+[Match]
+Distribution=fedora
+
+[Content]
+Packages=
+    cowsay
+```
+
 ## Limitations
 
 The following limitations apply to these images. Notice that the limitations are intentional to
