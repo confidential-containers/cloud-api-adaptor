@@ -49,6 +49,8 @@ const (
 	DefaultCloudApiAdaptorImage = "quay.io/confidential-containers/cloud-api-adaptor"
 	defaultNodeSelectorLabel    = "node.kubernetes.io/worker"
 	defaultPeerPodsLimitPerNode = "1"
+	// cloud-api-adaptor (CAA) daemonset name
+	caaDsName = "peerpodconfig-ctrl-caa-daemon"
 )
 
 // PeerPodConfigReconciler reconciles a PeerPodConfig object
@@ -67,6 +69,8 @@ type PeerPodConfigReconciler struct {
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=create;get;update;list;watch
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=create;get;update;list;watch
 //+kubebuilder:rbac:groups="";machineconfiguration.openshift.io,resources=nodes;machineconfigs;machineconfigpools;containerruntimeconfigs;pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=daemonsets,resourceNames=peerpodconfig-ctrl-caa-daemon,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=daemonsets/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -136,9 +140,8 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset() *appsv1.DaemonSet {
 		nodeSelector                 = map[string]string{defaultNodeSelectorLabel: ""}
 	)
 
-	dsName := "peerpodconfig-ctrl-caa-daemon"
 	dsLabelSelectors := map[string]string{
-		"name": dsName,
+		"name": caaDsName,
 	}
 
 	if r.peerPodConfig.Spec.NodeSelector != nil {
@@ -157,7 +160,7 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset() *appsv1.DaemonSet {
 			Kind:       "DaemonSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dsName,
+			Name:      caaDsName,
 			Namespace: os.Getenv("PEERPODS_NAMESPACE"),
 		},
 		Spec: appsv1.DaemonSetSpec{
@@ -183,7 +186,7 @@ func (r *PeerPodConfigReconciler) createCaaDaemonset() *appsv1.DaemonSet {
 					HostNetwork:        true,
 					Containers: []corev1.Container{
 						{
-							Name:            "cc-runtime-install-pod",
+							Name:            "caa-pod",
 							Image:           imageString,
 							ImagePullPolicy: "Always",
 							SecurityContext: &corev1.SecurityContext{
