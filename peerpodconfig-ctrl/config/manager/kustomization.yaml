@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/confidential-containers/peerpodconfig-ctrl
-  newTag: 0.2.0
+  newTag: latest
