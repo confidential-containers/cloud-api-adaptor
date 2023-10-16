@@ -56,6 +56,26 @@ rules:
   - update
   - watch
 - apiGroups:
+  - apps
+  resourceNames:
+  - peerpodconfig-ctrl-caa-daemon
+  resources:
+  - daemonsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets/finalizers
+  verbs:
+  - update
+- apiGroups:
   - confidentialcontainers.org
   resources:
   - peerpodconfigs
