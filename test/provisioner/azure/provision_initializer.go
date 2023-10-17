@@ -33,6 +33,8 @@ type AzureProperties struct {
 	IsCIManaged         bool
 	CaaImage            string
 	IsSelfManaged       bool
+	KbsImage            string
+	KbsImageTag         string
 
 	InstanceSize string
 	NodeName     string
@@ -64,6 +66,8 @@ func initAzureProperties(properties map[string]string) error {
 		SshUserName:         properties["SSH_USERNAME"],
 		ManagedIdentityName: properties["MANAGED_IDENTITY_NAME"],
 		CaaImage:            properties["CAA_IMAGE"],
+		KbsImage:            properties["KBS_IMAGE"],
+		KbsImageTag:         properties["KBS_IMAGE_TAG"],
 	}
 
 	CIManagedStr := properties["IS_CI_MANAGED_CLUSTER"]
