@@ -56,7 +56,14 @@ These updates should be done in a PR that is merged triggering the cloud-api-ada
 
 As mentioned above we have some go submodules with dependencies in the cloud-api-adaptor repo, so in order to allow
 people to use `go get` on these submodules, we need to ensure we create tags for each of the go modules we have in
-the correct order. The process should go something like:
+the correct order.
+
+> [!IMPORTANT]\
+> After a tag has been set, it cannot be moved!
+> The Go module proxy caches the hash of the first tag and will refuse any update.
+> If you mess up, you need to restart the tagging with the next patch version.
+
+The process should go something like:
 - Create a tag for the main [go module](../go.mod) pointing to the latest commit (including the version updates just
 merged) with the name `v<version>-alpha.1` (e.g. `v0.7.0-alpha.1` for the confidential containers `0.7.0` release release candidate). This can be done by running:
     ```
