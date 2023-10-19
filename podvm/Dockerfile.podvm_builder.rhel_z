@@ -8,6 +8,7 @@
 FROM registry.access.redhat.com/ubi9/ubi:9.2
 
 ARG ARCH="s390x"
+ARG PLATFORM="Linux"
 ARG GO_VERSION="1.20.8"
 ARG PROTOC_VERSION="24.3"
 ARG PROTOC_ARCH="s390_64"
@@ -37,6 +38,17 @@ RUN chmod a+x /usr/local/bin/yq
 RUN curl https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz -o go${GO_VERSION}.linux-${ARCH}.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && \
     rm -f go${GO_VERSION}.linux-${ARCH}.tar.gz
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+# Install packer. Packer doesn't does not have prebuilt s390x arch binaries above Packer version 0.1.5 
+RUN git clone --depth 1 --single-branch https://github.com/hashicorp/packer.git -b v1.9.4 && \
+    cd packer && \
+    sed -i -- "s/ALL_XC_ARCH=.*/ALL_XC_ARCH=\"${ARCH}\"/g" scripts/build.sh && \
+	sed -i -- "s/ALL_XC_OS=.*/ALL_XC_OS=\"${PLATFORM}\"/g" scripts/build.sh && \
+    make bin && cp bin/packer /usr/local/bin/ && \
+    cd $OLDPWD
+
+RUN packer version
 
 # set a corrspond qemu-system-* named link to qemu-kvm
 RUN ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-$(uname -m)
@@ -54,8 +66,10 @@ RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC
 
 WORKDIR /src
 
-ARG CAA_SRC="https://github.com/redobed/cloud-api-adaptor"
-ARG CAA_SRC_BRANCH="rhel"
+# ARG CAA_SRC="https://github.com/redobed/cloud-api-adaptor"
+# ARG CAA_SRC_BRANCH="rhel"
+ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
+ARG CAA_SRC_REF="main"
 
 ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
 ARG KATA_SRC_BRANCH="CCv0"
