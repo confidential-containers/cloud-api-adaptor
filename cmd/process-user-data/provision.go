@@ -37,7 +37,7 @@ func getProviderAndUserDataURL(ctx context.Context) (provider string, userDataUr
 func parseAndCopyUserData(userData string, dstFilePath string) error {
 
 	// Write userData to file specified in the dstFilePath var
-	// Create the directory and the file. Default is /peerpod/daemon.json
+	// Create the directory and the file.
 
 	// Split the dstFilePath into directory and file name
 	splitPath := strings.Split(dstFilePath, "/")
