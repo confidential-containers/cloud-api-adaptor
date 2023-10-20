@@ -232,7 +232,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 
 	result, err := p.create(ctx, vmParameters)
 	if err != nil {
-		if err := p.deleteDisk(ctx, diskName); err != nil {
+		if err := p.deleteDisk(context.Background(), diskName); err != nil {
 			logger.Printf("deleting disk (%s): %s", diskName, err)
 		}
 		if err := p.deleteNetworkInterfaceAsync(context.Background(), nicName); err != nil {
