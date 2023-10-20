@@ -1,10 +1,7 @@
 enable systemd-networkd.service
 enable systemd-resolved.service
 enable dbus.service
-enable cloud-init.service
-enable cloud-final.service
-enable cloud-init-hotplugd.service
-enable cloud-init-local.service
+enable afterburn-checkin.service
 
 # For debug images.
 # This units are not part of the production image.

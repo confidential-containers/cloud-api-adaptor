@@ -65,5 +65,6 @@ Packages=
 The following limitations apply to these images. Notice that the limitations are intentional to
 reduce complexity of configuration and CI and shall not be seen as open to-dos.
 
-- `DISABLE_CLOUD_CONFIG=false` is implied. The mkosi images are currently using
-    cloud init/cloud config, and there is no possibility to disable it.
+- `DISABLE_CLOUD_CONFIG=true` is implied. The mkosi images are using
+    our own mechanism to fetch metadata from the IMDS API. Cloud init is not supported.
+    Ensure that `DISABLE_CLOUD_CONFIG=true` in your `install/overlay/${CSP}/kustomization.yaml`.
