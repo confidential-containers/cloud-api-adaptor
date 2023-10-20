@@ -9,7 +9,7 @@ FROM registry.access.redhat.com/ubi9/ubi:9.2
 
 ARG ARCH="s390x"
 ARG PLATFORM="Linux"
-ARG GO_VERSION="1.20.8"
+ARG GO_VERSION="1.21.3"
 ARG PROTOC_VERSION="24.3"
 ARG PROTOC_ARCH="s390_64"
 ARG RUST_VERSION="1.72.0"
@@ -66,8 +66,6 @@ RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC
 
 WORKDIR /src
 
-# ARG CAA_SRC="https://github.com/redobed/cloud-api-adaptor"
-# ARG CAA_SRC_BRANCH="rhel"
 ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
 ARG CAA_SRC_REF="main"
 
