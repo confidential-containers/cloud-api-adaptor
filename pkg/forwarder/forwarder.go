@@ -27,8 +27,8 @@ const (
 	DefaultListenHost          = "0.0.0.0"
 	DefaultListenPort          = "15150"
 	DefaultListenAddr          = DefaultListenHost + ":" + DefaultListenPort
-	DefaultConfigPath          = "/peerpod/daemon.json"
-	DefaultPodNetworkSpecPath  = "/peerpod/podnetwork.json"
+	DefaultConfigPath          = "/run/peerpod/daemon.json"
+	DefaultPodNetworkSpecPath  = "/run/peerpod/podnetwork.json"
 	DefaultKataAgentSocketPath = "/run/kata-containers/agent.sock"
 	DefaultKataAgentNamespace  = ""
 	AgentURLPath               = "/agent"
