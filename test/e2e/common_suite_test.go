@@ -412,7 +412,10 @@ func doTestPodVMwithAnnotationsLargerCPU(t *testing.T, assert CloudAssert) {
 	podName := "annotations-too-big-cpu"
 	containerName := "busybox"
 	imageName := "busybox:latest"
-	expectedErrorMessage := "no instance type found for the given vcpus (3) and memory (12288)"
+	expectedErrorMessage := []string{
+		"no instance type found for the given vcpus (3) and memory (12288)",
+		"Number of cpus 3 specified in annotation default_vcpus is greater than the number of CPUs 2 on the system",
+	}
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.default_vcpus":  "3",
 		"io.katacontainers.config.hypervisor.default_memory": "12288",
@@ -421,13 +424,14 @@ func doTestPodVMwithAnnotationsLargerCPU(t *testing.T, assert CloudAssert) {
 	testInstanceTypes := instanceValidatorFunctions{
 		testSuccessfn: testStringEmpty,
 		testFailurefn: func(errorMsg error) bool {
-			if strings.Contains(errorMsg.Error(), expectedErrorMessage) {
-				log.Infof("Got Expected Error: %v", errorMsg.Error())
-				return true
-			} else {
-				log.Infof("Failed to Get Expected Error: %v", errorMsg.Error())
-				return false
+			for _, i := range expectedErrorMessage {
+				if strings.Contains(errorMsg.Error(), i) {
+					log.Infof("Got Expected Error: %v", errorMsg.Error())
+					return true
+				}
 			}
+			log.Infof("Failed to Get Expected Error: %v", errorMsg.Error())
+			return false
 		},
 	}
 	newTestCase(t, "PodVMwithAnnotationsLargerCPU", assert, "Failed to Create PodVM with Annotations Larger CPU").withPod(pod).withInstanceTypes(testInstanceTypes).withCustomPodState(v1.PodPending).run()

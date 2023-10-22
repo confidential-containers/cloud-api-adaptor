@@ -369,20 +369,21 @@ func (tc *testCase) run() {
 			}
 
 			if tc.pod != nil {
+				duration := 1 * time.Minute
+				if tc.deletionWithin == nil {
+					tc.deletionWithin = &duration
+				}
 				if err = client.Resources().Delete(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
 				log.Infof("Deleting pod %s...", tc.pod.Name)
-
-				if tc.deletionWithin != nil {
-					if err = wait.For(conditions.New(
-						client.Resources()).ResourceDeleted(tc.pod),
-						wait.WithInterval(5*time.Second),
-						wait.WithTimeout(*tc.deletionWithin)); err != nil {
-						t.Fatal(err)
-					}
-					log.Infof("Pod %s has been successfully deleted within %.0fs", tc.pod.Name, tc.deletionWithin.Seconds())
+				if err = wait.For(conditions.New(
+					client.Resources()).ResourceDeleted(tc.pod),
+					wait.WithInterval(5*time.Second),
+					wait.WithTimeout(*tc.deletionWithin)); err != nil {
+					t.Fatal(err)
 				}
+				log.Infof("Pod %s has been successfully deleted within %.0fs", tc.pod.Name, tc.deletionWithin.Seconds())
 			}
 
 			if tc.pvc != nil {
