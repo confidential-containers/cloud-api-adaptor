@@ -5,9 +5,8 @@ const (
 	providerAzure = "azure"
 	providerAws   = "aws"
 
-	defaultAgentConfigPath  = "/etc/agent-config.toml"
-	defaultAuthJsonFilePath = "/etc/auth.json"
-	offlineKbcAuthFile      = "/etc/aa-offline_fs_kbc-resources.json"
+	defaultAgentConfigPath  = "/run/peerpod/agent-config.toml"
+	defaultAuthJsonFilePath = "/run/peerpod/auth.json"
 )
 
 type Config struct {
