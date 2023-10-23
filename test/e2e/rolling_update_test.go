@@ -27,19 +27,19 @@ import (
 )
 
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
-const OLD_VM_DELETION_TIMEOUT = time.Second * 60
+const OLD_VM_DELETION_TIMEOUT = time.Second * 30
 
 func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 	runtimeClassName := "kata-remote"
 	namespace := envconf.RandomName("default", 7)
-	deploymentName := "nginx-deployment"
-	containerName := "nginx"
-	imageName := "nginx"
-	serviceName := "nginx-service"
+	deploymentName := "webserver-deployment"
+	containerName := "webserver"
+	imageName := "python:3"
+	serviceName := "webserver-service"
 	portName := "port80"
 	rc := int32(2)
 	labelsMap := map[string]string{
-		"app": "nginx",
+		"app": "webserver-app",
 	}
 	verifyPodName := "verify-pod"
 	verifyContainerName := "verify-container"
@@ -66,6 +66,11 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 							Name:            containerName,
 							Image:           imageName,
 							ImagePullPolicy: v1.PullAlways,
+							Command: []string{
+								"python",
+								"-m",
+								"http.server",
+							},
 						},
 					},
 					RuntimeClassName: &runtimeClassName,
@@ -78,7 +83,7 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 											{
 												Key:      "app",
 												Operator: metav1.LabelSelectorOpIn,
-												Values:   []string{"nginx"},
+												Values:   []string{"webserver-app"},
 											},
 										},
 									},
@@ -103,7 +108,7 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 				{
 					Name:       portName,
 					Port:       int32(80),
-					TargetPort: intstr.FromInt(80),
+					TargetPort: intstr.FromInt(8000),
 					Protocol:   v1.ProtocolTCP,
 				},
 			},
@@ -133,28 +138,28 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 	}
 
 	upgradeFeature := features.New("CAA DaemonSet upgrade test").
-		WithSetup("Create nginx deployment and service", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+		WithSetup("Create webserver deployment and service", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			client, err := cfg.NewClient()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			log.Info("Creating nginx deployment...")
+			log.Info("Creating webserver deployment...")
 			if err = client.Resources().Create(ctx, deployment); err != nil {
 				t.Fatal(err)
 			}
 			waitForDeploymentAvailable(t, client, deployment, rc)
-			log.Info("nginx deployment is available now")
+			log.Info("webserver deployment is available now")
 
 			// Cache Pod VM instance IDs before upgrade
 			assert.CachePodVmIDs(t, deploymentName)
 
-			log.Info("Creating nginx Service")
+			log.Info("Creating webserver Service")
 			if err = client.Resources().Create(ctx, svc); err != nil {
 				t.Fatal(err)
 			}
 			clusterIP := waitForClusterIP(t, client, svc)
-			log.Printf("nginx service is available on cluster IP: %s", clusterIP)
+			log.Printf("webserver service is available on cluster IP: %s", clusterIP)
 
 			// Update verify command
 			verifyPod.Spec.Containers[0].Command = append(
@@ -198,7 +203,9 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 				t.Fatal(err)
 			}
 
-			// Wait for nginx deployment available again
+			waitForCaaDaemonSetUpdated(t, client, ds, rc)
+
+			// Wait for webserver deployment available again
 			waitForDeploymentAvailable(t, client, deployment, rc)
 
 			if err = client.Resources().Get(ctx, verifyPodName, namespace, verifyPod); err != nil {
@@ -246,12 +253,12 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 				t.Fatal(err)
 			}
 
-			log.Info("Deleting nginx service...")
+			log.Info("Deleting webserver service...")
 			if err = client.Resources().Delete(ctx, svc); err != nil {
 				t.Fatal(err)
 			}
 
-			log.Info("Deleting nginx deployment...")
+			log.Info("Deleting webserver deployment...")
 			if err = client.Resources().Delete(ctx, deployment); err != nil {
 				t.Fatal(err)
 			}
@@ -260,6 +267,22 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 		}).Feature()
 
 	testEnv.Test(t, upgradeFeature)
+}
+
+func waitForCaaDaemonSetUpdated(t *testing.T, client klient.Client, ds *appsv1.DaemonSet, rc int32) {
+	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(ds, func(object k8s.Object) bool {
+		dsObj, ok := object.(*appsv1.DaemonSet)
+		if !ok {
+			log.Printf("Not a DaemonSet object: %v", object)
+			return false
+		}
+
+		log.Printf("Current CAA DaemonSet UpdatedNumberScheduled: %d", dsObj.Status.UpdatedNumberScheduled)
+		log.Printf("Current CAA DaemonSet NumberAvailable: %d", dsObj.Status.NumberAvailable)
+		return dsObj.Status.UpdatedNumberScheduled == rc && dsObj.Status.NumberAvailable == rc
+	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func waitForDeploymentAvailable(t *testing.T, client klient.Client, deployment *appsv1.Deployment, rc int32) {
