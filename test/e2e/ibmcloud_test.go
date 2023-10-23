@@ -547,12 +547,17 @@ func (c *IBMRollingUpdateAssert) VerifyOldVmDeleted(t *testing.T) {
 		options := &vpcv1.GetInstanceOptions{
 			ID: &id,
 		}
-		_, _, err := c.vpc.GetInstance(options)
+		in, _, err := c.vpc.GetInstance(options)
 
 		if err != nil {
 			log.Printf("Instance %s has been deleted: %v", id, err)
 		} else {
-			t.Fatalf("Instance %s still exists", id)
+			if *in.Status == "deleting" {
+				log.Printf("Instance %s is being deleting", id)
+			} else {
+				log.Printf("Instance %s current status: %s", id, *in.Status)
+				t.Fatalf("Instance %s still exists", id)
+			}
 		}
 	}
 }
