@@ -6,3 +6,6 @@ enable process-user-data.service
 enable run-image.mount
 enable run-kata\x2dcontainers.mount
 enable setup-nat-for-imds.service
+
+enable gen-issue.service
+enable image-env.service

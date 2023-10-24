@@ -1,0 +1,10 @@
+[Unit]
+Description=Generate issue to print to serial console at startup
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/gen-issue
+
+[Install]
+WantedBy=multi-user.target
