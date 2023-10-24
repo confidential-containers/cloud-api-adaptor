@@ -489,6 +489,11 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, b64EncData strin
 				},
 			},
 			SecurityProfile: securityProfile,
+			DiagnosticsProfile: &armcompute.DiagnosticsProfile{
+				BootDiagnostics: &armcompute.BootDiagnostics{
+					Enabled: to.Ptr(true),
+				},
+			},
 		},
 		// Add tags to the instance
 		Tags: tags,
