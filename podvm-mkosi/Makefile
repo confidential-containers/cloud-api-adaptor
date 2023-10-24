@@ -19,6 +19,7 @@ PHONY: binaries
 binaries:
 	docker buildx use default
 	@echo "Building binaries..."
+	rm -rf ./resources/binaries-tree
 	docker buildx build \
 		--build-arg BUILDER_IMG=fedora-binaries-builder \
 		--build-arg AA_KBC=$(AA_KBC) \
@@ -31,15 +32,15 @@ image:
 	rm -rf resources/buildDebugImage
 	rm -rf ./build
 	@echo "Building image..."
-	nix develop ..#podvm-mkosi --command "mkosi"
+	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
 
 PHONY: image-debug
 image-debug:
 	@echo "Enabling debug preset..."
 	touch resources/buildDebugImage
 	rm -rf ./build
-	@echo "Building image..."
-	nix develop ..#podvm-mkosi --command "mkosi"
+	@echo "Building debug image..."
+	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
 
 PHONY: clean
 clean:

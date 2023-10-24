@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -euxo pipefail
+
+# move issue files away from /etc
+# to allow /run/issue and /run/issue.d to take precedence
+mv "${BUILDROOT}/etc/issue.d" "${BUILDROOT}/usr/lib/issue.d" || true
+
+# update /etc/os-release
+{
+  echo "IMAGE_ID=\"podvm\""
+  echo "IMAGE_VERSION=\"${IMAGE_VERSION-v0.0.0}\""
+  echo "VARIANT_ID=\"${VARIANT_ID}\""
+} >> "${BUILDROOT}/etc/os-release"
