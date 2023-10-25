@@ -1,4 +1,5 @@
 enable systemd-networkd.service
+enable systemd-networkd.socket
 enable systemd-resolved.service
 enable dbus.service
 enable afterburn-checkin.service
