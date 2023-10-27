@@ -57,6 +57,8 @@ function build_caa_payload_image() {
 		--build-arg BUILD_TYPE="${build_type}" \
 		--build-arg VERSION="${version}" \
 		--build-arg COMMIT="${commit}" \
+		--build-arg YQ_VERSION="${YQ_VERSION}" \
+		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
 		-f Dockerfile \
 		${tag_string} \
 		--push \
@@ -76,7 +78,7 @@ function get_arch_specific_tag_string() {
 	echo "$tag_string"
 }
 
-# accept one arch as --platform 
+# accept one arch as --platform
 function build_caa_payload_arch_specific() {
 	pushd "${script_dir}/.."
 
@@ -100,6 +102,8 @@ function build_caa_payload_arch_specific() {
 		--build-arg BUILD_TYPE="${build_type}" \
 		--build-arg VERSION="${version}" \
 		--build-arg COMMIT="${commit}" \
+		--build-arg YQ_VERSION="${YQ_VERSION}" \
+		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
 		-f Dockerfile \
 		${tag_string} \
 		--push \
