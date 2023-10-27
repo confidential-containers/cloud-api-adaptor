@@ -154,11 +154,11 @@ clean: ## Remove binaries.
 
 .PHONY: image
 image: .git-commit ## Build and push docker image to $registry
-	COMMIT=$(COMMIT) VERSION=$(VERSION) hack/build.sh -i
+	COMMIT=$(COMMIT) VERSION=$(VERSION) YQ_VERSION=$(YQ_VERSION) YQ_CHECKSUM=$(YQ_CHECKSUM) hack/build.sh -i
 
 .PHONY: image-with-arch
 image-with-arch: .git-commit ## Build the per arch image
-	COMMIT=$(COMMIT) VERSION=$(VERSION) hack/build.sh -a
+	COMMIT=$(COMMIT) VERSION=$(VERSION) YQ_VERSION=$(YQ_VERSION) YQ_CHECKSUM=$(YQ_CHECKSUM) hack/build.sh -a
 
 ##@ Deployment
 
