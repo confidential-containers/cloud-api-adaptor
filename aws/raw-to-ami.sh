@@ -158,11 +158,11 @@ register_image() {
     "Description": "Peer-pod image",
     "RootDeviceName": "/dev/xvda",
     "VirtualizationType": "hvm",
-    "EnaSupport": true
+    "EnaSupport": true,
+    "BootMode": "uefi"
 }
 EOF
-
-	AMI_ID=$(aws ec2 register-image --name ${AMI_NAME} --cli-input-json="file://${AMI_REGISTER_JSON_FILE}" --output json --region ${REGION} | jq -r '.ImageId')
+	AMI_ID=$(aws ec2 register-image --name ${AMI_NAME} --cli-input-json="file://${AMI_REGISTER_JSON_FILE}" --tpm-support v2.0 --output json --region ${REGION} | jq -r '.ImageId')
 	echo "AMI name: ${AMI_NAME}"
 	echo "AMI ID: ${AMI_ID}"
 }
