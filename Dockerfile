@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.5-labs
 ARG BUILD_TYPE=dev
 ARG BUILDER_BASE=quay.io/confidential-containers/golang-fedora:1.20.8-36
 ARG BASE=registry.fedoraproject.org/fedora:38
@@ -14,10 +13,8 @@ ARG COMMIT
 ARG VERSION
 ARG TARGETARCH
 ARG YQ_VERSION
-ARG YQ_CHECKSUM
 
-ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 /usr/local/bin/yq
-RUN chmod a+x /usr/local/bin/yq
+RUN go install github.com/mikefarah/yq/v4@$YQ_VERSION
 
 WORKDIR /work
 COPY go.mod go.sum ./
