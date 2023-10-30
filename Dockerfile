@@ -2,9 +2,9 @@ ARG BUILD_TYPE=dev
 ARG BUILDER_BASE=quay.io/confidential-containers/golang-fedora:1.20.8-36
 ARG BASE=registry.fedoraproject.org/fedora:38
 
-FROM --platform=$TARGETPLATFORM $BUILDER_BASE as builder-release
+FROM --platform=$BUILDPLATFORM $BUILDER_BASE as builder-release
+FROM --platform=$TARGETPLATFORM $BUILDER_BASE as builder-dev
 
-FROM builder-release as builder-dev
 RUN dnf install -y libvirt-devel && dnf clean all
 
 FROM builder-${BUILD_TYPE} AS builder
