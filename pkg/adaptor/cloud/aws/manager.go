@@ -34,9 +34,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	// Add a parameter to indicate the root volume size for the Pod VMs
 	// Default is 30GiBs for free tier. Hence use it as default
 	flags.IntVar(&awscfg.RootVolumeSize, "root-volume-size", 30, "Root volume size (in GiB) for the Pod VMs")
-	// Setting disable-cvm to true as there are still some rough edges with CVMs.
-	// Once the issues are fixed, we can set it to false by default
-	flags.BoolVar(&awscfg.DisableCVM, "disable-cvm", true, "Use non-CVMs for peer pods")
+	flags.BoolVar(&awscfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
 	// Add a flag to disable cloud config and use userdata via metadata service
 	flags.BoolVar(&awscfg.DisableCloudConfig, "disable-cloud-config", false, "Disable cloud config and use userdata via metadata service")
 

@@ -33,7 +33,7 @@ func TestManager_ParseCmd(t *testing.T) {
 				"-instance-types=t2.micro,t3.small",
 				"-tags=key1=value1,key2=value2",
 				"-root-volume-size=60",
-				"-disable-cvm=true",
+				"-disable-cvm=false",
 			},
 			expected: Config{
 				AccessKeyId:        "test-access-key",
@@ -51,7 +51,7 @@ func TestManager_ParseCmd(t *testing.T) {
 				Tags:               map[string]string{"key1": "value1", "key2": "value2"},
 				UsePublicIP:        true,
 				RootVolumeSize:     60,
-				DisableCVM:         true,
+				DisableCVM:         false,
 			},
 		},
 		{
@@ -73,7 +73,7 @@ func TestManager_ParseCmd(t *testing.T) {
 				Tags:               nil,
 				UsePublicIP:        false,
 				RootVolumeSize:     30,
-				DisableCVM:         true,
+				DisableCVM:         false,
 			},
 		},
 	}
