@@ -14,10 +14,9 @@ import (
 )
 
 var (
-	testEnv         env.Environment
-	cloudProvider   string
-	provisioner     pv.CloudProvisioner
-	cloudAPIAdaptor *pv.CloudAPIAdaptor
+	testEnv       env.Environment
+	cloudProvider string
+	provisioner   pv.CloudProvisioner
 )
 
 func init() {
@@ -64,6 +63,14 @@ func TestMain(m *testing.M) {
 	if os.Getenv("TEST_PROVISION") == "yes" {
 		shouldProvisionCluster = true
 	}
+	// Cloud API Adaptor is installed by default during e2e test.
+	// In case TEST_INSTALL_CAA is exported as "no", it will skip the installation of
+	// Cloud API Adaptor.
+	// In scenario of teardown, CAA will be cleanup when shouldTeardown is true and shoudlInstallCAA is true.
+	shoudlInstallCAA := true
+	if os.Getenv("TEST_INSTALL_CAA") == "no" {
+		shoudlInstallCAA = false
+	}
 
 	// The TEST_PODVM_IMAGE is an option variable which specifies the path
 	// to the podvm qcow2 image. If it set then the image should be uploaded to
@@ -93,7 +100,7 @@ func TestMain(m *testing.M) {
 		cfg := envconf.NewWithKubeConfig(kubeconfigPath)
 		testEnv = env.NewWithConfig(cfg)
 	}
-
+	var cloudAPIAdaptor *pv.CloudAPIAdaptor
 	// Run *once* before the tests.
 	testEnv.Setup(func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 		log.Info("Do setup")
@@ -116,13 +123,17 @@ func TestMain(m *testing.M) {
 				return ctx, err
 			}
 		}
-		relativeInstallDirectory := "../../install"
-		if cloudAPIAdaptor, err = pv.NewCloudAPIAdaptor(cloudProvider, relativeInstallDirectory); err != nil {
-			return ctx, err
-		}
-		log.Info("Deploy the Cloud API Adaptor")
-		if err = cloudAPIAdaptor.Deploy(ctx, cfg, provisioner.GetProperties(ctx, cfg)); err != nil {
-			return ctx, err
+
+		if shoudlInstallCAA {
+			log.Info("Install Cloud API Adaptor")
+			relativeInstallDirectory := "../../install"
+			if cloudAPIAdaptor, err = pv.NewCloudAPIAdaptor(cloudProvider, relativeInstallDirectory); err != nil {
+				return ctx, err
+			}
+			log.Info("Deploy the Cloud API Adaptor")
+			if err = cloudAPIAdaptor.Deploy(ctx, cfg, provisioner.GetProperties(ctx, cfg)); err != nil {
+				return ctx, err
+			}
 		}
 		return ctx, nil
 	})
@@ -141,7 +152,8 @@ func TestMain(m *testing.M) {
 				log.Warnf("Failed to delete vpc resources, err: %s.", err)
 				return ctx, nil
 			}
-		} else {
+		}
+		if shoudlInstallCAA {
 			log.Info("Delete the Cloud API Adaptor installation")
 			if err = cloudAPIAdaptor.Delete(ctx, cfg); err != nil {
 				return ctx, err

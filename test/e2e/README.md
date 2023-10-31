@@ -46,6 +46,8 @@ By default it is given 20 minutes for the entire e2e execution to complete, othe
 
 To leave the cluster untouched by the execution finish you should export `TEST_TEARDOWN=no`, otherwise the framework will attempt to wipe out any resources created. For example, if `TEST_PROVISION=yes` is used to create a VPC and cluster for testing and `TEST_TEARDOWN=no` not specified, then at the end of the test the provisioned cluster and VPC, will both be deleted.
 
+To use existing cluster which have already installed Cloud API Adaptor, you should export `TEST_INSTALL_CAA=no`.
+
 ## Provision file specifics
 
 As mentioned on the previous section, a properties file can be passed to the cloud provisioner that will be used to controll the provisioning operations. The properties are specific of each cloud provider though, see on the sections below.
