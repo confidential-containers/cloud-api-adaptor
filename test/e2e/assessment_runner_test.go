@@ -55,6 +55,7 @@ type testCase struct {
 	AuthImageStatus      string
 	deletionWithin       *time.Duration
 	testInstanceTypes    instanceValidatorFunctions
+	isNydusSnapshotter   bool
 }
 
 func (tc *testCase) withConfigMap(configMap *v1.ConfigMap) *testCase {
@@ -119,6 +120,11 @@ func (tc *testCase) withAuthenticatedImage() *testCase {
 
 func (tc *testCase) withAuthImageStatus(status string) *testCase {
 	tc.AuthImageStatus = status
+	return tc
+}
+
+func (tc *testCase) withNydusSnapshotter() *testCase {
+	tc.isNydusSnapshotter = true
 	return tc
 }
 
@@ -322,6 +328,16 @@ func (tc *testCase) run() {
 					}
 
 					tc.assert.HasPodVM(t, tc.pod.Name)
+				}
+
+				if tc.isNydusSnapshotter {
+					usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !usedNydusSnapshotter {
+						t.Fatal("Expected to pull with nydus, but that didn't happen")
+					}
 				}
 			}
 			return ctx

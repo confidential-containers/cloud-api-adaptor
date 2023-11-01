@@ -22,7 +22,7 @@ import (
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	pod := newNginxPod(namespace)
-	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).run()
+	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).withNydusSnapshotter().run()
 }
 
 func doTestDeleteSimplePod(t *testing.T, assert CloudAssert) {
