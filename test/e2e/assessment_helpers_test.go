@@ -138,6 +138,63 @@ func watchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod
 	return pullingtime, nil
 }
 
+// Check cloud-api-adaptor daemonset pod logs to ensure that something like:
+// <date time> [adaptor/proxy]         mount_point:/run/kata-containers/<id>/rootfs source:<image> fstype:overlay driver:image_guest_pull
+// <date time> 11:47:42 [adaptor/proxy] CreateContainer: Ignoring PullImage before CreateContainer (cid: "<cid>")
+// not
+// <date time> 15:18:43 [adaptor/proxy] CreateContainer: calling PullImage for <image> before CreateContainer (cid: "<cid>")
+// was output
+func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client) (bool, error) {
+	var podlist v1.PodList
+
+	nydusSnapshotterPullRegex, err := regexp.Compile(`.*mount_point:/run/kata-containers.*driver:image_guest_pull.*$`)
+	if err != nil {
+		return false, err
+	}
+	legacPullRegex, err := regexp.Compile(`.*"CreateContainer: calling PullImage.*before CreateContainer.*$`)
+	if err != nil {
+		return false, err
+	}
+
+	if err := client.Resources("confidential-containers-system").List(ctx, &podlist); err != nil {
+		t.Fatal(err)
+	}
+	for _, caaPod := range podlist.Items {
+		if caaPod.Labels["app"] == "cloud-api-adaptor" {
+			clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+			if err != nil {
+				return false, err
+			}
+
+			req := clientset.CoreV1().Pods(caaPod.ObjectMeta.Namespace).GetLogs(caaPod.ObjectMeta.Name, &v1.PodLogOptions{})
+			podLogs, err := req.Stream(ctx)
+			if err != nil {
+				return false, err
+			}
+			defer podLogs.Close()
+			buf := new(bytes.Buffer)
+			_, err = io.Copy(buf, podLogs)
+			if err != nil {
+				return false, err
+			}
+			podLogString := buf.String()
+
+			podLogSlice := reverseSlice(strings.Split(podLogString, "\n"))
+			for _, line := range podLogSlice {
+				if nydusSnapshotterPullRegex.MatchString(line) {
+					t.Log("Pulled with nydus-snapshotter driver:" + line)
+					return true, nil
+				} else if legacPullRegex.MatchString(line) {
+					t.Log("Called PullImage explicitly, not using nydus-snapshotter :" + line)
+					return false, nil
+				}
+			}
+			return false, nil
+		}
+	}
+	return false, fmt.Errorf("No cloud-api-adaptor pod found in podList: %v", podlist.Items)
+}
+
 func comparePodLogString(ctx context.Context, client klient.Client, customPod v1.Pod, expectedPodlogString string) (string, error) {
 	podLogString := ""
 	var podlist v1.PodList
