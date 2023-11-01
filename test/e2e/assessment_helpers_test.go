@@ -81,26 +81,13 @@ func podEventExtractor(ctx context.Context, client klient.Client, pod v1.Pod) (*
 
 func watchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod, Pod v1.Pod) (string, error) {
 	pullingtime := ""
-	podLogString := ""
 	var startTime, endTime time.Time
-	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
-	if err != nil {
-		return "", err
-	}
 
 	if Pod.Status.Phase == v1.PodRunning {
-		req := clientset.CoreV1().Pods(caaPod.ObjectMeta.Namespace).GetLogs(caaPod.ObjectMeta.Name, &v1.PodLogOptions{})
-		podLogs, err := req.Stream(ctx)
+		podLogString, err := getPodLog(ctx, client, caaPod)
 		if err != nil {
 			return "", err
 		}
-		defer podLogs.Close()
-		buf := new(bytes.Buffer)
-		_, err = io.Copy(buf, podLogs)
-		if err != nil {
-			return "", err
-		}
-		podLogString = buf.String()
 
 		if podLogString != "" {
 			podLogSlice := reverseSlice(strings.Split(podLogString, "\n"))
@@ -159,25 +146,12 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 	if err := client.Resources("confidential-containers-system").List(ctx, &podlist); err != nil {
 		t.Fatal(err)
 	}
-	for _, caaPod := range podlist.Items {
-		if caaPod.Labels["app"] == "cloud-api-adaptor" {
-			clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	for _, pod := range podlist.Items {
+		if pod.Labels["app"] == "cloud-api-adaptor" {
+			podLogString, err := getPodLog(ctx, client, pod)
 			if err != nil {
 				return false, err
 			}
-
-			req := clientset.CoreV1().Pods(caaPod.ObjectMeta.Namespace).GetLogs(caaPod.ObjectMeta.Name, &v1.PodLogOptions{})
-			podLogs, err := req.Stream(ctx)
-			if err != nil {
-				return false, err
-			}
-			defer podLogs.Close()
-			buf := new(bytes.Buffer)
-			_, err = io.Copy(buf, podLogs)
-			if err != nil {
-				return false, err
-			}
-			podLogString := buf.String()
 
 			podLogSlice := reverseSlice(strings.Split(podLogString, "\n"))
 			for _, line := range podLogSlice {
@@ -195,13 +169,29 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 	return false, fmt.Errorf("No cloud-api-adaptor pod found in podList: %v", podlist.Items)
 }
 
+func getPodLog(ctx context.Context, client klient.Client, pod v1.Pod) (string, error) {
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		return "", err
+	}
+
+	req := clientset.CoreV1().Pods(pod.ObjectMeta.Namespace).GetLogs(pod.ObjectMeta.Name, &v1.PodLogOptions{})
+	podLogs, err := req.Stream(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer podLogs.Close()
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 func comparePodLogString(ctx context.Context, client klient.Client, customPod v1.Pod, expectedPodlogString string) (string, error) {
 	podLogString := ""
 	var podlist v1.PodList
-	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
-	if err != nil {
-		return podLogString, err
-	}
 	if err := client.Resources(customPod.Namespace).List(ctx, &podlist); err != nil {
 		return podLogString, err
 	}
@@ -209,25 +199,14 @@ func comparePodLogString(ctx context.Context, client klient.Client, customPod v1
 	time.Sleep(5 * time.Second)
 	for _, pod := range podlist.Items {
 		if pod.ObjectMeta.Name == customPod.Name {
-			func() {
-				req := clientset.CoreV1().Pods(customPod.Namespace).GetLogs(pod.ObjectMeta.Name, &v1.PodLogOptions{})
-				podLogs, err := req.Stream(ctx)
-				if err != nil {
-					return
-				}
-				defer podLogs.Close()
-				buf := new(bytes.Buffer)
-				_, err = io.Copy(buf, podLogs)
-				if err != nil {
-					return
-				}
-				podLogString = strings.TrimSpace(buf.String())
-			}()
+			var err error
+			podLogString, err = getPodLog(ctx, client, pod)
+			if err != nil {
+				return "", err
+			}
+			podLogString = strings.TrimSpace(podLogString)
+			break
 		}
-	}
-
-	if err != nil {
-		return podLogString, err
 	}
 
 	if !strings.Contains(podLogString, expectedPodlogString) {
