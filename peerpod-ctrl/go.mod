@@ -78,7 +78,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20230721195217-16d6e37196cb // indirect
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20231031090015-424de1cbfa4e // indirect
 	github.com/kdomanski/iso9660 v0.3.5 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
