@@ -20,8 +20,8 @@ confidential-containers projects are updated and that Kata Containers is updated
 image is updated, the operator is updated and the tests pass with all of these.
 
 At this point, we should update the cloud-api-adaptor versions to use these release candidate versions of:
-- The kata-containers source branch that we use in the [podvm_builder `Dockerfiles`](../podvm/) and the
-[`podvm_builder.yaml` workflow](../.github/workflows/podvm_builder.yaml), by updating the `KATA_SRC_BRANCH` value to
+- The kata-containers source branch that we use in the [podvm `Dockerfiles`](../podvm/) and the
+[podvm workflows](../.github/workflows), by updating the `git.kata-containers.reference` value in [versions.yaml](../versions.yaml) to
 the tag of the kata-containers release candidate.
 - The `kata-containers/src/runtime` go module that we include in the main `cloud-api-adaptor` [`go.mod`](../go.mod),
 the `peerpod-ctl` [`go.mod`](../peerpod-ctrl/go.mod) and the `csi-wrapper` [`go.mod`](../volumes/csi-wrapper/go.mod).
@@ -39,12 +39,7 @@ avoid compilation errors. This can be done by running:
 > go mod tidy
 > ```
 > from in the `peerpod-ctrl` and `volumes/csi-wrapper` directories.
-- The attestation-agent that is built into the peer pod vm image, by updating the `GUEST_COMPONENTS_VERSION` in
-  - [`Makefile.inc`](../podvm/Makefile.inc)
-  - [Dockerfile.podvm_binaries](../podvm/Dockerfile.podvm_binaries)
-  - [Dockerfile.podvm_binaries.centos](../podvm/Dockerfile.podvm_binaries.centos)
-  - [Dockerfile.podvm_binaries.rhel](../podvm/Dockerfile.podvm_binaries.rhel)
-  - [versions.yaml](../versions.yaml)
+- The attestation-agent that is built into the peer pod vm image, by updating the `git.guest-components.reference` value in [versions.yaml](../versions.yaml)
 
 Currently there isn't automation to build the podvm images at this phase. They should be built manually to ensure they don't break.
 
