@@ -31,7 +31,7 @@ git:
     reference: ebceb0c52ddd9fbd4cc3ac10133bec2ab7ea5795
   kata-containers:
     url: https://github.com/kata-containers/kata-containers
-    reference: CCv0
+    reference: 424de1cbfa4e1da9ecf9a56b1d1e1a11a4f339cd
   umoci:
     url: https://github.com/opencontainers/umoci
     reference: v0.4.7
