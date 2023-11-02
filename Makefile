@@ -197,9 +197,8 @@ PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(VER
 PODVM_IMAGE ?= $(REGISTRY)/podvm-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
 
 PUSH ?= false
-# Always import (--load) the image into the local docker images for use in future
-# steps, otherwise it just stays in the builder cache
-DOCKER_OPTS := --load $(if $(filter $(PUSH),true),--push) $(EXTRA_DOCKER_OPTS)
+# If not pushing `--load` into the local docker cache
+DOCKER_OPTS := $(if $(filter $(PUSH),true),--push,--load) $(EXTRA_DOCKER_OPTS)
 
 DOCKERFILE_SUFFIX := $(if $(filter $(PODVM_DISTRO),ubuntu),,.$(PODVM_DISTRO))
 BUILDER_DOCKERFILE := Dockerfile.podvm_builder$(DOCKERFILE_SUFFIX)
