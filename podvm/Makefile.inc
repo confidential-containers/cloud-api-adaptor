@@ -156,12 +156,12 @@ $(ATTESTATION_AGENT): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
 	mkdir -p "$(@D)"
 	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
 
-$(CONFIDENTIAL_DATA_HUB): $(GUEST_COMPONENTS_SRC)
+$(CONFIDENTIAL_DATA_HUB): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
 	cd "$(GUEST_COMPONENTS_SRC)/confidential-data-hub" && CC= ARCH=$(ARCH) $(MAKE) RESOURCE_PROVIDER="$(CDH_RESOURCE_PROVIDER)" LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
 	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/confidential-data-hub" "$@"
 
-$(API_SERVER_REST): $(GUEST_COMPONENTS_SRC)
+$(API_SERVER_REST): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
 	cd "$(GUEST_COMPONENTS_SRC)/api-server-rest" && CC= ARCH=$(ARCH) $(MAKE) LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
 	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/api-server-rest" "$@"
