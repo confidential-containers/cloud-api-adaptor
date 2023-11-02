@@ -46,3 +46,4 @@ jobs:
         PUSH: true
         ARCH: ${{ matrix.arch }}
         PODVM_DISTRO: ${{ matrix.os }}
+        CLOUD_PROVIDER: ${{ matrix.provider }}

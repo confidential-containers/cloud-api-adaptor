@@ -194,7 +194,7 @@ PODVM_DISTRO ?= ubuntu
 
 PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(VERSIONS_HASH)
 PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
-PODVM_IMAGE ?= $(REGISTRY)/podvm-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
+PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
 
 PUSH ?= false
 # If not pushing `--load` into the local docker cache
@@ -228,4 +228,5 @@ podvm-image:
 	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
 	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
 	--build-arg ARCH=$(ARCH) \
+	--build-arg CLOUD_PROVIDER=$(or $(CLOUD_PROVIDER),generic) \
 	$(DOCKER_OPTS) .
