@@ -17,18 +17,13 @@ jobs:
         arch: [amd64, s390x]
         include:
           - os: centos
-            dockerfile: Dockerfile.podvm_binaries.centos
           - os: ubuntu
-            dockerfile: Dockerfile.podvm_binaries
         exclude:
           - os: centos
             arch: s390x
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
-
-    #- name: Set up QEMU
-    #  uses: docker/setup-qemu-action@v2
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
@@ -48,17 +43,8 @@ jobs:
         password: ${{ secrets.QUAY_PASSWORD }}
 
     - name: Build and push
-      uses: docker/build-push-action@v3
-      with:
-        tags: |
-          quay.io/confidential-containers/podvm-binaries-${{ matrix.os }}-${{ matrix.arch }}:latest
-          quay.io/confidential-containers/podvm-binaries-${{ matrix.os }}-${{ matrix.arch }}:${{ github.sha }}
-        push: true
-        context: podvm
-        platforms: linux/amd64
-        file: |
-          podvm/${{ matrix.dockerfile }}
-        build-args: |
-          "ARCH=${{ matrix.arch }}"
-          "UBUNTU_IMAGE_URL="
-          "UBUNTU_IMAGE_CHECKSUM="
+      run: make podvm-binaries
+      env:
+          PUSH: true
+          ARCH: ${{ matrix.arch }}
+          PODVM_DISTRO: ${{ matrix.os }}
