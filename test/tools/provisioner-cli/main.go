@@ -55,6 +55,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if *action == "createcluster" {
+		log.Info("Creating Cluster...")
+		if err := provisioner.CreateCluster(context.TODO(), cfg); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	if *action == "provision" {
 		log.Info("Creating VPC...")
 		if err := provisioner.CreateVPC(context.TODO(), cfg); err != nil {
