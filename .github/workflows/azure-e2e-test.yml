@@ -153,7 +153,7 @@ jobs:
       working-directory: test/tools
       run: |
         make caa-provisioner-cli
-        ./caa-provisioner-cli -action=provision
+        ./caa-provisioner-cli -action=createcluster
 
   run-e2e-test:
     runs-on: ubuntu-latest
