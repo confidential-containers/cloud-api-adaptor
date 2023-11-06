@@ -92,6 +92,7 @@ func TestMain(m *testing.M) {
 		}
 		cfg := envconf.NewWithKubeConfig(kubeconfigPath)
 		testEnv = env.NewWithConfig(cfg)
+
 	}
 
 	// Run *once* before the tests.
