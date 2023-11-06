@@ -110,7 +110,7 @@ jobs:
 
     - name: Create provisioner file
       env:
-        AZURE_IMAGE_ID: "/CommunityGalleries/${{ secrets.AZURE_COMMUNITY_GALLERY_NAME }}/images/${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }}/Versions/${{ needs.generate-podvm-image-version.outputs.image-version }}"
+        AZURE_IMAGE_ID: ${{ github.event.inputs.podvm-image-id || format('/CommunityGalleries/{0}/images/{1}/Versions/{2}', secrets.AZURE_COMMUNITY_GALLERY_NAME, secrets.AZURE_PODVM_IMAGE_DEF_NAME, needs.generate-podvm-image-version.outputs.image-version) }}
         CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
       run: |
         cat << EOF > ${{ env.TEST_PROVISION_FILE }}
@@ -174,17 +174,24 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
 
-    - name: Restore the configuration created before
-      uses: actions/download-artifact@v3
-      with:
-        name: e2e-configuration
-
     - uses: azure/login@v1
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Restore the configuration created before
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-configuration
+
+    - name: Add AKS Cluster Subnet ID to test provision file
+      run: |
+        NODE_RESOURCE_GROUP="$(az aks show -g ${{ secrets.AZURE_RESOURCE_GROUP }} -n "$CLUSTER_NAME" --query nodeResourceGroup -o tsv)"
+        SUBNET_ID="$(az network vnet list -g "$NODE_RESOURCE_GROUP" --query '[0].subnets[0].id' -o tsv)"
+        test -n "$SUBNET_ID"
+        echo "AZURE_SUBNET_ID=\"${SUBNET_ID}\"" >> "$TEST_PROVISION_FILE"
 
     - name: Run e2e test
       env:
