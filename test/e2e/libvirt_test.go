@@ -3,15 +3,85 @@
 package e2e
 
 import (
+	libvirtAdaptor "github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/libvirt"
+	log "github.com/sirupsen/logrus"
+
+	"bytes"
+	"libvirt.org/go/libvirt"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
-
-	"libvirt.org/go/libvirt"
 )
 
 func TestLibvirtCreateSimplePod(t *testing.T) {
 	assert := LibvirtAssert{}
 	doTestCreateSimplePod(t, assert)
+}
+
+func TestLibvirtCreateConfidentialPod(t *testing.T) {
+	assert := LibvirtAssert{}
+
+	// Check DISABLECVM
+	cmd := exec.Command("kubectl", "describe", "configMap/peer-pods-cm", "-n", "confidential-containers-system")
+	cmd.Env = os.Environ()
+	out, err := cmd.Output()
+
+	if err != nil {
+		t.Errorf("Unable to determine parse configMap to determine DISABLECVM: [%+v]", err)
+	}
+
+	outStr := string(out)
+	startStr := "DISABLECVM:\n----\n"
+	endStr := "\n"
+
+	start := strings.Index(outStr, startStr)
+	start += len(startStr)
+
+	if start == -1 {
+		t.Skip("DISABLECVM not found. Skipping testing CVM")
+	}
+
+	end := strings.Index(outStr[start:], endStr)
+	end = start + end
+
+	outStr = outStr[start:end]
+
+	if outStr == "true" {
+		t.Skip("DISABLECVM is true. Skipping testing CVM")
+	}
+
+	launchSecurity, err := libvirtAdaptor.GetLaunchSecurityType("qemu:///system")
+	if err != nil {
+		t.Errorf("Unable to determine machine confidentiality capabilities: [%v]", err)
+	}
+	switch launchSecurity {
+	case libvirtAdaptor.SEV:
+		// Cannot do Attestation on host hypervisor (since we don't know if compromised)
+		// So can only test if kernel ring buffer messages contain active
+		testCommands := []testCommand{
+			{
+				command:       []string{"bash", "-c", "dmesg | grep \"AMD Secure Encrypted Virtualization (SEV) active\""},
+				containerName: "fakename",
+				testCommandStdoutFn: func(stdout bytes.Buffer) bool {
+					if stdout.String() != "" {
+						log.Infof("SEV is enabled based on kernel ring buffer messages")
+						return true
+					} else {
+						log.Infof("SEV is not enabled based on kernel ring buffer messages")
+						return false
+					}
+				},
+			},
+		}
+
+		doTestCreateConfidentialPod(t, assert, testCommands)
+	case libvirtAdaptor.S390PV:
+		t.Skip("Unimplemented")
+	default:
+		t.Skip("No confidential hardware detected on the machine")
+	}
+
 }
 
 func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
