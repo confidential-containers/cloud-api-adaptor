@@ -232,7 +232,7 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 
 					Name:               to.Ptr(AzureProps.NodeName),
 					Count:              to.Ptr[int32](1),
-					VMSize:             to.Ptr(AzureProps.InstanceSize),
+					VMSize:             to.Ptr("Standard_F4s_v2"),
 					Mode:               to.Ptr(armcontainerservice.AgentPoolModeSystem),
 					OSType:             to.Ptr(armcontainerservice.OSType(AzureProps.OsType)),
 					EnableNodePublicIP: to.Ptr(false),
