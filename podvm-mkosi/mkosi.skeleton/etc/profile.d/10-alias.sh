@@ -5,3 +5,4 @@ alias neofetch='neofetch \
       --ascii /etc/neofetch/coco.ascii \
       --colors 9 9 9 9 9 12 \
       --ascii_colors 24 9'
+alias pcrs='tpm2_pcrread sha256:all'
