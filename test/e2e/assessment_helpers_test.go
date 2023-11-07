@@ -131,14 +131,14 @@ func watchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod
 // not
 // <date time> 15:18:43 [adaptor/proxy] CreateContainer: calling PullImage for <image> before CreateContainer (cid: "<cid>")
 // was output
-func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client) (bool, error) {
+func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, nodeName string) (bool, error) {
 	var podlist v1.PodList
 
 	nydusSnapshotterPullRegex, err := regexp.Compile(`.*mount_point:/run/kata-containers.*driver:image_guest_pull.*$`)
 	if err != nil {
 		return false, err
 	}
-	legacPullRegex, err := regexp.Compile(`.*"CreateContainer: calling PullImage.*before CreateContainer.*$`)
+	legacyPullRegex, err := regexp.Compile(`.*"CreateContainer: calling PullImage.*before CreateContainer.*$`)
 	if err != nil {
 		return false, err
 	}
@@ -147,7 +147,7 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 		t.Fatal(err)
 	}
 	for _, pod := range podlist.Items {
-		if pod.Labels["app"] == "cloud-api-adaptor" {
+		if pod.Labels["app"] == "cloud-api-adaptor" && pod.Spec.NodeName == nodeName {
 			podLogString, err := getPodLog(ctx, client, pod)
 			if err != nil {
 				return false, err
@@ -158,7 +158,7 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 				if nydusSnapshotterPullRegex.MatchString(line) {
 					t.Log("Pulled with nydus-snapshotter driver:" + line)
 					return true, nil
-				} else if legacPullRegex.MatchString(line) {
+				} else if legacyPullRegex.MatchString(line) {
 					t.Log("Called PullImage explicitly, not using nydus-snapshotter :" + line)
 					return false, nil
 				}
@@ -214,6 +214,20 @@ func comparePodLogString(ctx context.Context, client klient.Client, customPod v1
 	}
 
 	return podLogString, nil
+}
+
+func getNodeNameFromPod(ctx context.Context, client klient.Client, customPod v1.Pod) (string, error) {
+	var podlist v1.PodList
+	if err := client.Resources(customPod.Namespace).List(ctx, &podlist); err != nil {
+		return "", err
+	}
+
+	for _, pod := range podlist.Items {
+		if pod.ObjectMeta.Name == customPod.Name {
+			return pod.Spec.NodeName, nil
+		}
+	}
+	return "", errors.New("Pod wasn't found")
 }
 
 func getSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klient.Client, job batchv1.Job) (int, int, string, error) {

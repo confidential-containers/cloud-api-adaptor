@@ -331,7 +331,12 @@ func (tc *testCase) run() {
 				}
 
 				if tc.isNydusSnapshotter {
-					usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client)
+					nodeName, err := getNodeNameFromPod(ctx, client, *tc.pod)
+					if err != nil {
+						t.Fatal(err)
+					}
+					log.Tracef("Test pod running on node %s", nodeName)
+					usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client, nodeName)
 					if err != nil {
 						t.Fatal(err)
 					}
