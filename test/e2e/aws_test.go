@@ -76,6 +76,12 @@ func TestAwsCreateSimplePod(t *testing.T) {
 	doTestCreateSimplePod(t, assert)
 }
 
+func TestAwsCreateSimplePodWithNydusAnnotation(t *testing.T) {
+	assert := NewAWSAssert()
+
+	doTestCreateSimplePodWithNydusAnnotation(t, assert)
+}
+
 func TestAwsCreatePodWithConfigMap(t *testing.T) {
 	t.Skip("Test not passing")
 	assert := NewAWSAssert()

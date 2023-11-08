@@ -29,6 +29,13 @@ func TestCreateSimplePod(t *testing.T) {
 	doTestCreateSimplePod(t, assert)
 }
 
+func TestCreateSimplePodWithNydusAnnotation(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestCreateSimplePodWithNydusAnnotation(t, assert)
+}
+
 func TestCaaDaemonsetRollingUpdate(t *testing.T) {
 	if os.Getenv("TEST_CAA_ROLLING_UPDATE") == "yes" {
 		assert := IBMRollingUpdateAssert{
