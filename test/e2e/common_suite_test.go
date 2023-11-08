@@ -14,6 +14,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	envconf "sigs.k8s.io/e2e-framework/pkg/envconf"
 )
@@ -22,6 +23,15 @@ import (
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	pod := newNginxPod(namespace)
+	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).run()
+}
+
+func doTestCreateSimplePodWithNydusAnnotation(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	annotationData := map[string]string{
+		"io.containerd.cri.runtime-handler": "kata-remote",
+	}
+	pod := newPod(namespace, "nginx", "nginx", "nginx", withRestartPolicy(corev1.RestartPolicyNever), withAnnotations(annotationData))
 	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).withNydusSnapshotter().run()
 }
 

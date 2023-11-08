@@ -14,6 +14,11 @@ func TestLibvirtCreateSimplePod(t *testing.T) {
 	doTestCreateSimplePod(t, assert)
 }
 
+func TestLibvirtCreateSimplePodWithNydusAnnotation(t *testing.T) {
+	assert := LibvirtAssert{}
+	doTestCreateSimplePodWithNydusAnnotation(t, assert)
+}
+
 func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
 	skipTestOnCI(t)
 	assert := LibvirtAssert{}
