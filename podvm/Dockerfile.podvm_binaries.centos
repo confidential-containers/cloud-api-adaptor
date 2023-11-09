@@ -15,7 +15,7 @@ ARG ARCH
 ENV PODVM_DISTRO ${PODVM_DISTRO}
 ENV AA_KBC ${AA_KBC}
 ENV ARCH ${ARCH}
-
+RUN sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/' /etc/ssh/sshd_config
 COPY . /src/cloud-api-adaptor
 
 WORKDIR /src/cloud-api-adaptor/podvm
