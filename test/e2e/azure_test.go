@@ -29,6 +29,11 @@ func TestCreateSimplePodAzure(t *testing.T) {
 	doTestCreateSimplePod(t, assert)
 }
 
+func TestCreateSimplePodWithNydusAnnotationAzure(t *testing.T) {
+	t.Parallel()
+	doTestCreateSimplePodWithNydusAnnotation(t, assert)
+}
+
 func TestCreatePodWithConfigMapAzure(t *testing.T) {
 	t.Parallel()
 	doTestCreatePodWithConfigMap(t, assert)

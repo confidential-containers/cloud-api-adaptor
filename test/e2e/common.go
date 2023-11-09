@@ -88,11 +88,12 @@ func withAnnotations(data map[string]string) podOption {
 
 func newPod(namespace string, podName string, containerName string, imageName string, options ...podOption) *corev1.Pod {
 	runtimeClassName := "kata-remote"
-	annotationData := map[string]string{
-		"io.containerd.cri.runtime-handler": runtimeClassName,
-	}
+	// Comment out adding runtime-handler until nydus-snapshotter is stable
+	// annotationData := map[string]string{
+	// 	"io.containerd.cri.runtime-handler": runtimeClassName,
+	// }
 	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{Name: podName, Namespace: namespace, Annotations: annotationData},
+		ObjectMeta: metav1.ObjectMeta{Name: podName, Namespace: namespace /*, Annotations: annotationData*/},
 		Spec: corev1.PodSpec{
 			Containers:       []corev1.Container{{Name: containerName, Image: imageName, ImagePullPolicy: corev1.PullAlways}},
 			RuntimeClassName: &runtimeClassName,
@@ -138,16 +139,17 @@ func newSecret(namespace string, name string, data map[string][]byte, secretType
 // newJob returns a new job
 func newJob(namespace string, name string) *batchv1.Job {
 	runtimeClassName := "kata-remote"
-	annotationData := map[string]string{
-		"io.containerd.cri.runtime-handler": runtimeClassName,
-	}
+	// Comment out adding runtime-handler until nydus-snapshotter is stable
+	// annotationData := map[string]string{
+	// 	"io.containerd.cri.runtime-handler": runtimeClassName,
+	// }
 	BackoffLimit := int32(8)
 	TerminateGracePeriod := int64(0)
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Namespace:   namespace,
-			Annotations: annotationData,
+			Name:      name,
+			Namespace: namespace,
+			// Annotations: annotationData,
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
