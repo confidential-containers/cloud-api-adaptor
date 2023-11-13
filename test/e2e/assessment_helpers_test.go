@@ -138,7 +138,7 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 	if err != nil {
 		return false, err
 	}
-	legacyPullRegex, err := regexp.Compile(`.*"CreateContainer: calling PullImage.*before CreateContainer.*$`)
+	legacyPullRegex, err := regexp.Compile(`.*CreateContainer: calling PullImage.*before CreateContainer.*$`)
 	if err != nil {
 		return false, err
 	}
@@ -163,7 +163,7 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 					return false, nil
 				}
 			}
-			return false, nil
+			return false, fmt.Errorf("Didn't find pull image for snapshotter, or directly")
 		}
 	}
 	return false, fmt.Errorf("No cloud-api-adaptor pod found in podList: %v", podlist.Items)
