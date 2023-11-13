@@ -68,12 +68,6 @@ BUILTIN_CLOUD_PROVIDERS="aws azure ibmcloud" make
 
 Install the prerequisites as mentioned in the following [link](https://github.com/kata-containers/kata-containers/blob/main/docs/Developer-Guide.md#requirements-to-build-individual-components)
 
-Install `protoc`
-```
-wget -c https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/protoc-3.11.4-linux-x86_64.zip
-sudo unzip protoc-3.11.4-linux-x86_64.zip -d /usr/local
-```
-
 Build the runtime
 
 ```
