@@ -1,3 +1,5 @@
+AA_KBC ?= offline_fs_kbc
+
 all: fedora-binaries-builder binaries image
 
 PHONY: fedora-binaries-builder
@@ -14,6 +16,7 @@ binaries:
 	@echo "Building binaries..."
 	docker buildx build \
 		--build-arg BUILDER_IMG=fedora-binaries-builder \
+		--build-arg AA_KBC=$(AA_KBC) \
 		-o type=local,dest="./resources/binaries-tree" \
 		- < ../podvm/Dockerfile.podvm_binaries.fedora
 
