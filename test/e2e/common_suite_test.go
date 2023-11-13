@@ -31,7 +31,7 @@ func doTestCreateSimplePodWithNydusAnnotation(t *testing.T, assert CloudAssert) 
 	annotationData := map[string]string{
 		"io.containerd.cri.runtime-handler": "kata-remote",
 	}
-	pod := newPod(namespace, "nginx", "nginx", "nginx", withRestartPolicy(corev1.RestartPolicyNever), withAnnotations(annotationData))
+	pod := newPod(namespace, "alpine", "alpine", "alpine", withRestartPolicy(corev1.RestartPolicyNever), withAnnotations(annotationData))
 	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).withNydusSnapshotter().run()
 }
 
