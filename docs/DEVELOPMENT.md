@@ -2,6 +2,7 @@
 - make
 - golang 1.18.y
 - g++
+- yq (4.x.y, [the Go one](https://github.com/mikefarah/yq), not Python)
 
 ## Clone the source code
 ```
