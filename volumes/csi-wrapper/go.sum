@@ -2,8 +2,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/confidential-containers/cloud-api-adaptor v0.8.0-alpha.1 h1:s1fDOkKSRN/sVJx/VTIhxVJCK/AFG8R95JVGV0qdsSE=
-github.com/confidential-containers/cloud-api-adaptor v0.8.0-alpha.1/go.mod h1:tpHaeetmLLDIIArMHHtBLR4C0v47bVAR5TI1n3x+QaI=
+github.com/confidential-containers/cloud-api-adaptor v0.8.0 h1:ZZezfcfv/mqo9dVNAPJ3+6WdhDM1YC60qyAP6VEWKSc=
+github.com/confidential-containers/cloud-api-adaptor v0.8.0/go.mod h1:hlRWfbYbTJlpgsiQqlDlNRLREr6IhNbSCJ6ysF3I8v0=
 github.com/container-storage-interface/spec v1.8.0 h1:D0vhF3PLIZwlwZEf2eNbpujGCNwspwTYf2idJRJx4xI=
 github.com/container-storage-interface/spec v1.8.0/go.mod h1:ROLik+GhPslwwWRNFF1KasPzroNARibH2rfz1rkg4H0=
 github.com/containerd/ttrpc v1.1.0 h1:GbtyLRxb0gOLR0TYQWt3O6B0NvT8tMdorEHqIQo/lWI=
