@@ -22,7 +22,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&azurecfg.Region, "region", "", "Region")
 	flags.StringVar(&azurecfg.SubnetId, "subnetid", "", "Network Subnet Id")
 	flags.StringVar(&azurecfg.SecurityGroupId, "securitygroupid", "", "Security Group Id")
-	flags.StringVar(&azurecfg.Size, "instance-size", "", "Instance size")
+	flags.StringVar(&azurecfg.Size, "instance-size", "Standard_DC2as_v5", "Instance size")
 	flags.StringVar(&azurecfg.ImageId, "imageid", "", "Image Id")
 	flags.StringVar(&azurecfg.SubscriptionId, "subscriptionid", "", "Subscription ID")
 	flags.StringVar(&azurecfg.SSHKeyPath, "ssh-key-path", "$HOME/.ssh/id_rsa.pub", "Path to SSH public key")
@@ -44,6 +44,7 @@ func (_ *Manager) LoadEnv() {
 	cloud.DefaultToEnv(&azurecfg.SubscriptionId, "AZURE_SUBSCRIPTION_ID", "")
 	cloud.DefaultToEnv(&azurecfg.Region, "AZURE_REGION", "")
 	cloud.DefaultToEnv(&azurecfg.ResourceGroupName, "AZURE_RESOURCE_GROUP", "")
+	cloud.DefaultToEnv(&azurecfg.Size, "AZURE_INSTANCE_SIZE", "Standard_DC2as_v5")
 }
 
 func (_ *Manager) NewProvider() (cloud.Provider, error) {
