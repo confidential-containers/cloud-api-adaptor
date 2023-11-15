@@ -22,7 +22,6 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&awscfg.LaunchTemplateName, "aws-lt-name", "kata", "AWS Launch Template Name")
 	flags.BoolVar(&awscfg.UseLaunchTemplate, "use-lt", false, "Use EC2 Launch Template for the Pod VMs")
 	flags.StringVar(&awscfg.ImageId, "imageid", "", "Pod VM ami id")
-	flags.StringVar(&awscfg.InstanceType, "instance-type", "t3.small", "Pod VM instance type")
 	flags.Var(&awscfg.SecurityGroupIds, "securitygroupids", "Security Group Ids to be used for the Pod VM, comma separated")
 	flags.StringVar(&awscfg.KeyName, "keyname", "", "SSH Keypair name to be used with the Pod VM")
 	flags.StringVar(&awscfg.SubnetId, "subnetid", "", "Subnet ID to be used for the Pod VMs")
@@ -43,7 +42,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 func (_ *Manager) LoadEnv() {
 	cloud.DefaultToEnv(&awscfg.AccessKeyId, "AWS_ACCESS_KEY_ID", "")
 	cloud.DefaultToEnv(&awscfg.SecretKey, "AWS_SECRET_ACCESS_KEY", "")
-
+	cloud.DefaultToEnv(&awscfg.InstanceType, "PODVM_INSTANCE_TYPE", "t3.small")
 }
 
 func (_ *Manager) NewProvider() (cloud.Provider, error) {
