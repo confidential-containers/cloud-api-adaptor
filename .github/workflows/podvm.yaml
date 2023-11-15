@@ -6,6 +6,10 @@ on:
         default: 'quay.io/confidential-containers'
         required: false
         type: string
+      image_tag:
+        default: ''
+        required: false
+        type: string
 
 jobs:
   build:
@@ -56,5 +60,6 @@ jobs:
         PUSH: true
         REGISTRY: ${{ inputs.registry }}
         ARCH: ${{ matrix.arch }}
+        PODVM_TAG: ${{ inputs.image_tag }}
         PODVM_DISTRO: ${{ matrix.os }}
         CLOUD_PROVIDER: ${{ matrix.provider }}
