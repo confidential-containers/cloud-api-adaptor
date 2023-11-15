@@ -43,7 +43,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 func (_ *Manager) LoadEnv() {
 	cloud.DefaultToEnv(&awscfg.AccessKeyId, "AWS_ACCESS_KEY_ID", "")
 	cloud.DefaultToEnv(&awscfg.SecretKey, "AWS_SECRET_ACCESS_KEY", "")
-
+	cloud.DefaultToEnv(&awscfg.InstanceType, "PODVM_INSTANCE_TYPE", "t3.small")
 }
 
 func (_ *Manager) NewProvider() (cloud.Provider, error) {
