@@ -1,6 +1,6 @@
 ## Prerequisites
 - make
-- golang 1.18.y
+- golang 1.20.y
 - g++
 - yq (4.x.y, [the Go one](https://github.com/mikefarah/yq), not Python)
 
