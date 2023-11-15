@@ -191,10 +191,11 @@ endif
 REGISTRY ?= quay.io/confidential-containers
 
 PODVM_DISTRO ?= ubuntu
+PODVM_TAG ?= $(VERSIONS_HASH)
 
-PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(VERSIONS_HASH)
-PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
-PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(ARCH):$(VERSIONS_HASH)
+PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(PODVM_TAG)
+PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(PODVM_TAG)
+PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(ARCH):$(PODVM_TAG)
 
 PUSH ?= false
 # If not pushing `--load` into the local docker cache
