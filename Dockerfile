@@ -25,11 +25,13 @@ RUN go install github.com/mikefarah/yq/v4@$YQ_VERSION
 
 WORKDIR /work
 COPY go.mod go.sum ./
+COPY provider/go.mod provider/go.sum ./provider/
 RUN go mod download
 COPY entrypoint.sh Makefile Makefile.defaults versions.yaml ./
 COPY cmd   ./cmd
 COPY pkg   ./pkg
 COPY proto ./proto
+COPY provider ./provider
 RUN CC=gcc make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
 
 FROM --platform=$TARGETPLATFORM $BASE as base-release
