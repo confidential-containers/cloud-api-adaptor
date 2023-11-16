@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -25,7 +24,9 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	putil "github.com/confidential-containers/cloud-api-adaptor/provider/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 )
 
 const (
@@ -33,33 +34,6 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
-
-type Cloud interface {
-	ParseCmd(flags *flag.FlagSet)
-	LoadEnv()
-	NewProvider() (Provider, error)
-}
-
-var cloudTable map[string]Cloud = make(map[string]Cloud)
-
-func Get(name string) Cloud {
-	return cloudTable[name]
-}
-
-func AddCloud(name string, cloud Cloud) {
-	cloudTable[name] = cloud
-}
-
-func List() []string {
-
-	var list []string
-
-	for name := range cloudTable {
-		list = append(list, name)
-	}
-
-	return list
-}
 
 func (s *cloudService) addSandbox(sid sandboxID, sandbox *sandbox) error {
 
@@ -99,7 +73,7 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 	return nil
 }
 
-func NewService(provider Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
+func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
 	podsDir, daemonPort, aaKBCParams string) Service {
 	var err error
 
@@ -208,14 +182,14 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	vcpus, memory := util.GetCPUAndMemoryFromAnnotation(req.Annotations)
 
 	// Pod VM spec
-	vmSpec := InstanceTypeSpec{
+	vmSpec := provider.InstanceTypeSpec{
 		InstanceType: instanceType,
 		VCPUs:        vcpus,
 		Memory:       memory,
 	}
 
 	// TODO: server name is also generated in each cloud provider, and possibly inconsistent
-	serverName := util.GenerateInstanceName(pod, string(sid), 63)
+	serverName := putil.GenerateInstanceName(pod, string(sid), 63)
 
 	netNSPath := req.NetworkNamespacePath
 

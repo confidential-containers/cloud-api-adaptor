@@ -21,6 +21,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 	pbPodVMInfo "github.com/confidential-containers/cloud-api-adaptor/proto/podvminfo"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
 )
 
 var logger = log.New(log.Writer(), "[adaptor] ", log.LstdFlags|log.Lmsgprefix)
@@ -60,7 +61,7 @@ type server struct {
 	enableCloudConfigVerify bool
 }
 
-func NewServer(provider cloud.Provider, cfg *ServerConfig, workerNode podnetwork.WorkerNode) Server {
+func NewServer(provider provider.Provider, cfg *ServerConfig, workerNode podnetwork.WorkerNode) Server {
 
 	logger.Printf("server config: %#v", cfg)
 

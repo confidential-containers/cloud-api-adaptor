@@ -12,11 +12,12 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/cmd"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/probe"
@@ -41,7 +42,7 @@ func printHelp(out io.Writer) {
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Supported cloud providers are:")
 
-	for _, name := range cloud.List() {
+	for _, name := range provider.List() {
 		fmt.Fprintf(out, "\t%s\n", name)
 	}
 	fmt.Fprintln(out)
@@ -74,7 +75,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		cmd.Exit(1)
 	}
 
-	cloud := cloud.Get(cloudName)
+	cloud := provider.Get(cloudName)
 
 	if cloud == nil {
 		fmt.Fprintf(os.Stderr, "%s: Unsupported cloud provider: %s\n\n", programName, cloudName)
@@ -125,7 +126,19 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		cfg.serverConfig.TLSConfig = &tlsConfig
 	}
 
-	cloud.LoadEnv()
+	nodeName, ok := os.LookupEnv("NODE_NAME")
+	var nodeLabels map[string]string
+	if ok {
+		var err error
+		nodeLabels, err = k8sops.NodeLabels(context.Background(), nodeName)
+		if err != nil {
+			fmt.Printf("%s: warning, could not find node labels\ndue to: %v\n", programName, err)
+		}
+	}
+	err := cloud.LoadEnv(nodeLabels)
+	if err != nil {
+		return nil, err
+	}
 
 	workerNode := podnetwork.NewWorkerNode(cfg.TunnelType, cfg.HostInterface, cfg.VXLANPort, cfg.VXLANMinID)
 

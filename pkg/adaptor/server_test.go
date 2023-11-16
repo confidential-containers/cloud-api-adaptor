@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	"github.com/google/uuid"
@@ -195,7 +195,7 @@ type mockProvider struct {
 	secondaryIP string
 }
 
-func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
+func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	primaryIP := p.primaryIP
 	if primaryIP == "" {
@@ -211,7 +211,7 @@ func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID st
 	ips[0] = netip.MustParseAddr(primaryIP)
 	ips[1] = netip.MustParseAddr(secondaryIP)
 
-	instance := &cloud.Instance{
+	instance := &provider.Instance{
 		ID:   "mock",
 		Name: "mock",
 		IPs:  ips,
