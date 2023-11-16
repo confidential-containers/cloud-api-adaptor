@@ -6,5 +6,5 @@
 package main
 
 import (
-	_ "github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/ibmcloud-powervs"
+	_ "github.com/confidential-containers/cloud-api-adaptor/provider/ibmcloud-powervs"
 )

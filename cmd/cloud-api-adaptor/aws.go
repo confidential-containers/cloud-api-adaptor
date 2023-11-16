@@ -6,5 +6,5 @@
 package main
 
 import (
-	_ "github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/aws"
+	_ "github.com/confidential-containers/cloud-api-adaptor/provider/aws"
 )
