@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/azure"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/azure"
 	"github.com/stretchr/testify/assert"
 )
 
