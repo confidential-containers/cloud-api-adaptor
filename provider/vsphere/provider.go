@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
@@ -31,7 +31,7 @@ type vsphereProvider struct {
 	serviceConfig *Config
 }
 
-func NewProvider(config *Config) (cloud.Provider, error) {
+func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("vsphere config: %#v", config.Redact())
 
@@ -76,7 +76,7 @@ func checkConfig(config *Config) error {
 
 type VmConfig []types.BaseOptionValue
 
-func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, requirement cloud.InstanceTypeSpec) (*cloud.Instance, error) {
+func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, requirement provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	vmname := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -302,7 +302,7 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		return nil, err
 	}
 
-	instance := &cloud.Instance{
+	instance := &provider.Instance{
 		ID:   clone.UUID(ctx),
 		Name: vmname,
 		IPs:  ips,

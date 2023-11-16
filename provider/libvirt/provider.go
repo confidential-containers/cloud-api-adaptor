@@ -11,9 +11,9 @@ import (
 	"log"
 	"net/netip"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/libvirt] ", log.LstdFlags|log.Lmsgprefix)
@@ -25,7 +25,7 @@ type libvirtProvider struct {
 	serviceConfig *Config
 }
 
-func NewProvider(config *Config) (cloud.Provider, error) {
+func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("libvirt config: %#v", config)
 
@@ -47,7 +47,7 @@ func getIPs(instance *vmConfig) ([]netip.Addr, error) {
 	return instance.ips, nil
 }
 
-func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
+func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -96,7 +96,7 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		return nil, err
 	}
 
-	instance := &cloud.Instance{
+	instance := &provider.Instance{
 		ID:   instanceID,
 		Name: instanceName,
 		IPs:  ips,

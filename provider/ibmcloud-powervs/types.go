@@ -3,7 +3,7 @@
 
 package ibmcloud_powervs
 
-import "github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+import "github.com/confidential-containers/cloud-api-adaptor/provider/util"
 
 type Config struct {
 	ApiKey            string

@@ -6,8 +6,8 @@ package ibmcloud
 import (
 	"strings"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
 )
 
 type instanceProfiles []string
@@ -76,7 +76,7 @@ type Config struct {
 	KeyID                    string
 	VpcID                    string
 	InstanceProfiles         instanceProfiles
-	InstanceProfileSpecList  []cloud.InstanceTypeSpec
+	InstanceProfileSpecList  []provider.InstanceTypeSpec
 }
 
 func (c Config) Redact() Config {

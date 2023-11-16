@@ -8,7 +8,7 @@ package libvirt
 import (
 	"flag"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
 )
 
 var libvirtcfg Config
@@ -26,7 +26,7 @@ const (
 )
 
 func init() {
-	cloud.AddCloud("libvirt", &Manager{})
+	provider.AddCloudProvider("libvirt", &Manager{})
 }
 
 func (*Manager) ParseCmd(flags *flag.FlagSet) {
@@ -41,15 +41,16 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 
 }
 
-func (*Manager) LoadEnv() {
-	cloud.DefaultToEnv(&libvirtcfg.URI, "LIBVIRT_URI", defaultURI)
-	cloud.DefaultToEnv(&libvirtcfg.PoolName, "LIBVIRT_POOL", defaultPoolName)
-	cloud.DefaultToEnv(&libvirtcfg.NetworkName, "LIBVIRT_NET", defaultNetworkName)
-	cloud.DefaultToEnv(&libvirtcfg.VolName, "LIBVIRT_VOL_NAME", defaultVolName)
-	cloud.DefaultToEnv(&libvirtcfg.LaunchSecurity, "LIBVIRT_LAUNCH_SECURITY", defaultLaunchSecurity)
-	cloud.DefaultToEnv(&libvirtcfg.Firmware, "LIBVIRT_FIRMWARE", defaultFirmware)
+func (*Manager) LoadEnv(extras map[string]string) error {
+	provider.DefaultToEnv(&libvirtcfg.URI, "LIBVIRT_URI", defaultURI)
+	provider.DefaultToEnv(&libvirtcfg.PoolName, "LIBVIRT_POOL", defaultPoolName)
+	provider.DefaultToEnv(&libvirtcfg.NetworkName, "LIBVIRT_NET", defaultNetworkName)
+	provider.DefaultToEnv(&libvirtcfg.VolName, "LIBVIRT_VOL_NAME", defaultVolName)
+	provider.DefaultToEnv(&libvirtcfg.LaunchSecurity, "LIBVIRT_LAUNCH_SECURITY", defaultLaunchSecurity)
+	provider.DefaultToEnv(&libvirtcfg.Firmware, "LIBVIRT_FIRMWARE", defaultFirmware)
+	return nil
 }
 
-func (*Manager) NewProvider() (cloud.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&libvirtcfg)
 }

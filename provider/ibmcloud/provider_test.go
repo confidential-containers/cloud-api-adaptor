@@ -12,7 +12,7 @@ import (
 
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -138,7 +138,7 @@ func TestCreateInstance(t *testing.T) {
 	if err != nil {
 		t.Errorf("Images.Set() error %v", err)
 	}
-	provider := &ibmcloudVPCProvider{
+	mockProvider := &ibmcloudVPCProvider{
 		vpc: vpc,
 		serviceConfig: &Config{
 			ProfileName: "bx2-2x8",
@@ -146,7 +146,7 @@ func TestCreateInstance(t *testing.T) {
 		},
 	}
 
-	instance, err := provider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, cloud.InstanceTypeSpec{InstanceType: "bx2-2x8"})
+	instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, provider.InstanceTypeSpec{InstanceType: "bx2-2x8"})
 
 	assert.NoError(t, err)
 	assert.NotNil(t, instance)
@@ -250,7 +250,7 @@ func TestGetImageDetails(t *testing.T) {
 	tests := []struct {
 		name            string
 		provider        *ibmcloudVPCProvider
-		instanceSpec    cloud.InstanceTypeSpec
+		instanceSpec    provider.InstanceTypeSpec
 		expectListErr   bool
 		expectSelectErr bool
 		wantID          string
@@ -264,7 +264,7 @@ func TestGetImageDetails(t *testing.T) {
 					Images: validImageList,
 				},
 			},
-			instanceSpec: cloud.InstanceTypeSpec{
+			instanceSpec: provider.InstanceTypeSpec{
 				Arch: "s390x",
 			},
 			expectListErr:   false,
@@ -280,7 +280,7 @@ func TestGetImageDetails(t *testing.T) {
 					Images: emptyImageList,
 				},
 			},
-			instanceSpec: cloud.InstanceTypeSpec{
+			instanceSpec: provider.InstanceTypeSpec{
 				Arch: "s390x",
 			},
 			expectListErr:   true,
@@ -296,7 +296,7 @@ func TestGetImageDetails(t *testing.T) {
 					Images: invalidImageList,
 				},
 			},
-			instanceSpec: cloud.InstanceTypeSpec{
+			instanceSpec: provider.InstanceTypeSpec{
 				Arch: "s390x",
 			},
 			expectListErr:   true,
@@ -312,7 +312,7 @@ func TestGetImageDetails(t *testing.T) {
 					Images: validImageList,
 				},
 			},
-			instanceSpec: cloud.InstanceTypeSpec{
+			instanceSpec: provider.InstanceTypeSpec{
 				Arch: "amd64",
 			},
 			expectListErr:   false,

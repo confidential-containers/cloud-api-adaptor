@@ -6,7 +6,7 @@ package aws
 import (
 	"flag"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
 )
 
 var awscfg Config
@@ -14,7 +14,7 @@ var awscfg Config
 type Manager struct{}
 
 func init() {
-	cloud.AddCloud("aws", &Manager{})
+	provider.AddCloudProvider("aws", &Manager{})
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
@@ -44,12 +44,12 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 }
 
-func (_ *Manager) LoadEnv() {
-	cloud.DefaultToEnv(&awscfg.AccessKeyId, "AWS_ACCESS_KEY_ID", "")
-	cloud.DefaultToEnv(&awscfg.SecretKey, "AWS_SECRET_ACCESS_KEY", "")
-
+func (_ *Manager) LoadEnv(extras map[string]string) error {
+	provider.DefaultToEnv(&awscfg.AccessKeyId, "AWS_ACCESS_KEY_ID", "")
+	provider.DefaultToEnv(&awscfg.SecretKey, "AWS_SECRET_ACCESS_KEY", "")
+	return nil
 }
 
-func (_ *Manager) NewProvider() (cloud.Provider, error) {
+func (_ *Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&awscfg)
 }

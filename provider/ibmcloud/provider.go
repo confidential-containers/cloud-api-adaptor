@@ -9,15 +9,13 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
-	"os"
 	"time"
 
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/k8sops"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 )
 
 const (
@@ -43,115 +41,24 @@ type ibmcloudVPCProvider struct {
 	serviceConfig *Config
 }
 
-func NewProvider(config *Config) (cloud.Provider, error) {
-
-	var authenticator core.Authenticator
-
-	if config.ApiKey != "" {
-		authenticator = &core.IamAuthenticator{
-			ApiKey: config.ApiKey,
-			URL:    config.IamServiceURL,
-		}
-	} else if config.IAMProfileID != "" {
-		authenticator = &core.ContainerAuthenticator{
-			URL:             config.IamServiceURL,
-			IAMProfileID:    config.IAMProfileID,
-			CRTokenFilename: config.CRTokenFileName,
-		}
-	} else {
-		return nil, fmt.Errorf("either an IAM API Key or Profile ID needs to be set")
-	}
-
-	nodeName, ok := os.LookupEnv("NODE_NAME")
-	var nodeLabels map[string]string
-	if ok {
-		var err error
-		nodeLabels, err = k8sops.NodeLabels(context.TODO(), nodeName)
-		if err != nil {
-			logger.Printf("warning, could not find node labels\ndue to: %v\n", err)
-		}
-	}
-
-	nodeRegion, ok := nodeLabels["topology.kubernetes.io/region"]
-	if config.VpcServiceURL == "" && ok {
-		// Assume in prod if fetching from labels for now
-		// TODO handle other environments
-		config.VpcServiceURL = fmt.Sprintf("https://%s.iaas.cloud.ibm.com/v1", nodeRegion)
-	}
-
-	vpcV1, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{
-		Authenticator: authenticator,
-		URL:           config.VpcServiceURL,
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	// If this label exists assume we are in an IKS cluster
-	primarySubnetID, iks := nodeLabels["ibm-cloud.kubernetes.io/subnet-id"]
-	if iks {
-		if config.ZoneName == "" {
-			config.ZoneName = nodeLabels["topology.kubernetes.io/zone"]
-		}
-		vpcID, rgID, sgID, err := fetchVPCDetails(vpcV1, primarySubnetID)
-		if err != nil {
-			logger.Printf("warning, unable to automatically populate VPC details\ndue to: %v\n", err)
-		} else {
-			if config.PrimarySubnetID == "" {
-				config.PrimarySubnetID = primarySubnetID
-			}
-			if config.VpcID == "" {
-				config.VpcID = vpcID
-			}
-			if config.ResourceGroupID == "" {
-				config.ResourceGroupID = rgID
-			}
-			if config.PrimarySecurityGroupID == "" {
-				config.PrimarySecurityGroupID = sgID
-			}
-		}
-	}
+func NewProvider(config *Config, service *vpcv1.VpcV1) (provider.Provider, error) {
 
 	provider := &ibmcloudVPCProvider{
-		vpc:           vpcV1,
+		vpc:           service,
 		serviceConfig: config,
 	}
 
-	if err = provider.updateInstanceProfileSpecList(); err != nil {
+	if err := provider.updateInstanceProfileSpecList(); err != nil {
 		return nil, err
 	}
 
-	if err = provider.updateImageList(context.TODO()); err != nil {
+	if err := provider.updateImageList(context.TODO()); err != nil {
 		return nil, err
 	}
 
 	logger.Printf("ibmcloud-vpc config: %#v", config.Redact())
 
 	return provider, nil
-}
-
-func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourceGroupID string, securityGroupID string, e error) {
-	subnet, response, err := vpcV1.GetSubnet(&vpcv1.GetSubnetOptions{
-		ID: &subnetID,
-	})
-	if err != nil {
-		e = fmt.Errorf("VPC error with:\n %w\nfurther details:\n %v", err, response)
-		return
-	}
-
-	sg, response, err := vpcV1.GetVPCDefaultSecurityGroup(&vpcv1.GetVPCDefaultSecurityGroupOptions{
-		ID: subnet.VPC.ID,
-	})
-	if err != nil {
-		e = fmt.Errorf("VPC error with:\n %w\nfurther details:\n %v", err, response)
-		return
-	}
-
-	securityGroupID = *sg.ID
-	vpcID = *subnet.VPC.ID
-	resourceGroupID = *subnet.ResourceGroup.ID
-	return
 }
 
 func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageId string) *vpcv1.InstancePrototype {
@@ -235,7 +142,7 @@ func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]n
 	return ips, nil
 }
 
-func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
+func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -290,7 +197,7 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		vpcInstance = result
 	}
 
-	instance := &cloud.Instance{
+	instance := &provider.Instance{
 		ID:   instanceID,
 		Name: instanceName,
 		IPs:  ips,
@@ -300,9 +207,9 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 }
 
 // Select an instance profile based on the memory and vcpu requirements
-func (p *ibmcloudVPCProvider) selectInstanceProfile(ctx context.Context, spec cloud.InstanceTypeSpec) (string, error) {
+func (p *ibmcloudVPCProvider) selectInstanceProfile(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
 
-	return cloud.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceProfileSpecList, p.serviceConfig.InstanceProfiles, p.serviceConfig.ProfileName)
+	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceProfileSpecList, p.serviceConfig.InstanceProfiles, p.serviceConfig.ProfileName)
 }
 
 // Populate instanceProfileSpecList for all the instanceProfiles
@@ -317,7 +224,7 @@ func (p *ibmcloudVPCProvider) updateInstanceProfileSpecList() error {
 	}
 
 	// Create a list of instanceProfileSpec
-	var instanceProfileSpecList []cloud.InstanceTypeSpec
+	var instanceProfileSpecList []provider.InstanceTypeSpec
 
 	// Iterate over the instance types and populate the instanceProfileSpecList
 	for _, profileType := range instanceProfiles {
@@ -325,11 +232,11 @@ func (p *ibmcloudVPCProvider) updateInstanceProfileSpecList() error {
 		if err != nil {
 			return err
 		}
-		instanceProfileSpecList = append(instanceProfileSpecList, cloud.InstanceTypeSpec{InstanceType: profileType, VCPUs: vcpus, Memory: memory})
+		instanceProfileSpecList = append(instanceProfileSpecList, provider.InstanceTypeSpec{InstanceType: profileType, VCPUs: vcpus, Memory: memory})
 	}
 
 	// Sort the instanceProfileSpecList by Memory and update the serviceConfig
-	p.serviceConfig.InstanceProfileSpecList = cloud.SortInstanceTypesOnMemory(instanceProfileSpecList)
+	p.serviceConfig.InstanceProfileSpecList = provider.SortInstanceTypesOnMemory(instanceProfileSpecList)
 	logger.Printf("instanceProfileSpecList (%v)", p.serviceConfig.InstanceProfileSpecList)
 	return nil
 }
@@ -355,7 +262,7 @@ func (p *ibmcloudVPCProvider) getProfileNameInformation(profileName string) (vcp
 }
 
 // Select Image from list, invalid image IDs should have already been removed
-func (p *ibmcloudVPCProvider) selectImage(ctx context.Context, spec cloud.InstanceTypeSpec) (string, error) {
+func (p *ibmcloudVPCProvider) selectImage(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
 	for _, image := range p.serviceConfig.Images {
 		if spec.Arch != "" && image.Arch != spec.Arch {
 			continue

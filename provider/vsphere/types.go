@@ -4,7 +4,7 @@
 package vsphere
 
 import (
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
 )
 
 type Config struct {

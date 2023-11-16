@@ -6,7 +6,7 @@ package vsphere
 import (
 	"flag"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
 )
 
 var vspherecfg Config
@@ -14,7 +14,7 @@ var vspherecfg Config
 type Manager struct{}
 
 func init() {
-	cloud.AddCloud("vsphere", &Manager{})
+	provider.AddCloudProvider("vsphere", &Manager{})
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
@@ -32,12 +32,13 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&vspherecfg.Host, "host", "", "vCenter host name of resource pool destination")
 }
 
-func (_ *Manager) LoadEnv() {
-	cloud.DefaultToEnv(&vspherecfg.UserName, "GOVC_USERNAME", "")
-	cloud.DefaultToEnv(&vspherecfg.Password, "GOVC_PASSWORD", "")
-	cloud.DefaultToEnv(&vspherecfg.Thumbprint, "GOVC_THUMBPRINT", "")
+func (_ *Manager) LoadEnv(extras map[string]string) error {
+	provider.DefaultToEnv(&vspherecfg.UserName, "GOVC_USERNAME", "")
+	provider.DefaultToEnv(&vspherecfg.Password, "GOVC_PASSWORD", "")
+	provider.DefaultToEnv(&vspherecfg.Thumbprint, "GOVC_THUMBPRINT", "")
+	return nil
 }
 
-func (_ *Manager) NewProvider() (cloud.Provider, error) {
+func (_ *Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&vspherecfg)
 }

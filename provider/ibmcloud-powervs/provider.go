@@ -14,9 +14,9 @@ import (
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/avast/retry-go/v4"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 )
 
 const maxInstanceNameLen = 63
@@ -28,7 +28,7 @@ type ibmcloudPowerVSProvider struct {
 	serviceConfig *Config
 }
 
-func NewProvider(config *Config) (cloud.Provider, error) {
+func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("ibmcloud-powervs config: %#v", config.Redact())
 
@@ -43,7 +43,7 @@ func NewProvider(config *Config) (cloud.Provider, error) {
 	}, nil
 }
 
-func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
+func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -119,7 +119,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		return nil, fmt.Errorf("failed to get IPs for the instance : %v", err)
 	}
 
-	return &cloud.Instance{
+	return &provider.Instance{
 		ID:   instanceID,
 		Name: instanceName,
 		IPs:  ips,

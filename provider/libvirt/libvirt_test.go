@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
 	"github.com/stretchr/testify/assert"
 	libvirtxml "libvirt.org/go/libvirtxml"
 )
@@ -15,10 +15,10 @@ import (
 var testCfg Config
 
 func init() {
-	cloud.DefaultToEnv(&testCfg.URI, "LIBVIRT_URI", "") // explicitly no fallback here
-	cloud.DefaultToEnv(&testCfg.PoolName, "LIBVIRT_POOL", defaultPoolName)
-	cloud.DefaultToEnv(&testCfg.NetworkName, "LIBVIRT_NET", defaultNetworkName)
-	cloud.DefaultToEnv(&testCfg.VolName, "LIBVIRT_VOL_NAME", defaultVolName)
+	provider.DefaultToEnv(&testCfg.URI, "LIBVIRT_URI", "") // explicitly no fallback here
+	provider.DefaultToEnv(&testCfg.PoolName, "LIBVIRT_POOL", defaultPoolName)
+	provider.DefaultToEnv(&testCfg.NetworkName, "LIBVIRT_NET", defaultNetworkName)
+	provider.DefaultToEnv(&testCfg.VolName, "LIBVIRT_VOL_NAME", defaultVolName)
 }
 
 func checkConfig(t *testing.T) {

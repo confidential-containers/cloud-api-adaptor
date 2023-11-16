@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 )
 
 // Mock EC2 API
@@ -251,13 +251,13 @@ func TestCreateInstance(t *testing.T) {
 		podName     string
 		sandboxID   string
 		cloudConfig cloudinit.CloudConfigGenerator
-		spec        cloud.InstanceTypeSpec
+		spec        provider.InstanceTypeSpec
 	}
 	tests := []struct {
 		name    string
 		fields  fields
 		args    args
-		want    *cloud.Instance
+		want    *provider.Instance
 		wantErr bool
 	}{
 		// Test creating an instance
@@ -277,9 +277,9 @@ func TestCreateInstance(t *testing.T) {
 				podName:     "podtest",
 				sandboxID:   "123",
 				cloudConfig: &mockCloudConfig{},
-				spec:        cloud.InstanceTypeSpec{InstanceType: "t2.small"},
+				spec:        provider.InstanceTypeSpec{InstanceType: "t2.small"},
 			},
-			want: &cloud.Instance{
+			want: &provider.Instance{
 				ID:   "i-1234567890abcdef0",
 				Name: "podvm-podtest-123",
 				IPs:  []netip.Addr{netip.MustParseAddr("10.0.0.2")},
@@ -304,9 +304,9 @@ func TestCreateInstance(t *testing.T) {
 				podName:     "podpublicip",
 				sandboxID:   "123",
 				cloudConfig: &mockCloudConfig{},
-				spec:        cloud.InstanceTypeSpec{InstanceType: "t2.small"},
+				spec:        provider.InstanceTypeSpec{InstanceType: "t2.small"},
 			},
-			want: &cloud.Instance{
+			want: &provider.Instance{
 				ID:   "i-1234567890abcdef0",
 				Name: "podvm-podpublicip-123",
 				IPs:  []netip.Addr{netip.MustParseAddr("192.168.100.1")},
@@ -331,7 +331,7 @@ func TestCreateInstance(t *testing.T) {
 				podName:     "podinvalidinstance",
 				sandboxID:   "123",
 				cloudConfig: &mockCloudConfig{},
-				spec:        cloud.InstanceTypeSpec{InstanceType: "t2.small"},
+				spec:        provider.InstanceTypeSpec{InstanceType: "t2.small"},
 			},
 			want: nil,
 			// Test should return an error
@@ -354,7 +354,7 @@ func TestCreateInstance(t *testing.T) {
 				podName:     "podemptyinstance",
 				sandboxID:   "123",
 				cloudConfig: &mockCloudConfig{},
-				spec:        cloud.InstanceTypeSpec{InstanceType: "t2.large"},
+				spec:        provider.InstanceTypeSpec{InstanceType: "t2.large"},
 			},
 			want: nil,
 			// Test should return an error
@@ -377,9 +377,9 @@ func TestCreateInstance(t *testing.T) {
 				podName:     "podemptyinstance",
 				sandboxID:   "123",
 				cloudConfig: &mockCloudConfig{},
-				spec:        cloud.InstanceTypeSpec{InstanceType: ""},
+				spec:        provider.InstanceTypeSpec{InstanceType: ""},
 			},
-			want: &cloud.Instance{
+			want: &provider.Instance{
 				ID:   "i-1234567890abcdef0",
 				Name: "podvm-podemptyinstance-123",
 				IPs:  []netip.Addr{netip.MustParseAddr("10.0.0.2")},
@@ -405,9 +405,9 @@ func TestCreateInstance(t *testing.T) {
 				podName:     "podemptyinstance",
 				sandboxID:   "123",
 				cloudConfig: &mockCloudConfig{},
-				spec:        cloud.InstanceTypeSpec{InstanceType: ""},
+				spec:        provider.InstanceTypeSpec{InstanceType: ""},
 			},
-			want: &cloud.Instance{
+			want: &provider.Instance{
 				ID:   "i-1234567890abcdef0",
 				Name: "podvm-podemptyinstance-123",
 				IPs:  []netip.Addr{netip.MustParseAddr("10.0.0.2")},

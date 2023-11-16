@@ -7,7 +7,7 @@ import (
 	"flag"
 	"strconv"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
 )
 
 var ibmcloudPowerVSConfig Config
@@ -15,7 +15,7 @@ var ibmcloudPowerVSConfig Config
 type Manager struct{}
 
 func init() {
-	cloud.AddCloud("ibmcloud-powervs", &Manager{})
+	provider.AddCloudProvider("ibmcloud-powervs", &Manager{})
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
@@ -34,30 +34,31 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 }
 
-func (_ *Manager) LoadEnv() {
+func (_ *Manager) LoadEnv(extras map[string]string) error {
 	// overwrite config set by cmd parameters in oci image with env might come from orchastration platform
-	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.ApiKey, "IBMCLOUD_API_KEY", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ApiKey, "IBMCLOUD_API_KEY", "")
 
-	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.Zone, "POWERVS_ZONE", "")
-	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.ServiceInstanceID, "POWERVS_SERVICE_INSTANCE_ID", "")
-	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.NetworkID, "POWERVS_NETWORK_ID", "")
-	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.ImageID, "POWERVS_IMAGE_ID", "")
-	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.SSHKey, "POWERVS_SSH_KEY_NAME", "")
-	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.ProcessorType, "POWERVS_PROCESSOR_TYPE", "")
-	cloud.DefaultToEnv(&ibmcloudPowerVSConfig.SystemType, "POWERVS_SYSTEM_TYPE", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.Zone, "POWERVS_ZONE", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ServiceInstanceID, "POWERVS_SERVICE_INSTANCE_ID", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.NetworkID, "POWERVS_NETWORK_ID", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ImageID, "POWERVS_IMAGE_ID", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.SSHKey, "POWERVS_SSH_KEY_NAME", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ProcessorType, "POWERVS_PROCESSOR_TYPE", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.SystemType, "POWERVS_SYSTEM_TYPE", "")
 
 	var memoryStr, processorsStr string
-	cloud.DefaultToEnv(&memoryStr, "POWERVS_MEMORY", "")
+	provider.DefaultToEnv(&memoryStr, "POWERVS_MEMORY", "")
 	if memoryStr != "" {
 		ibmcloudPowerVSConfig.Memory, _ = strconv.ParseFloat(memoryStr, 64)
 	}
 
-	cloud.DefaultToEnv(&processorsStr, "POWERVS_MEMORY", "")
+	provider.DefaultToEnv(&processorsStr, "POWERVS_MEMORY", "")
 	if processorsStr != "" {
 		ibmcloudPowerVSConfig.Processors, _ = strconv.ParseFloat(processorsStr, 64)
 	}
+	return nil
 }
 
-func (_ *Manager) NewProvider() (cloud.Provider, error) {
+func (_ *Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&ibmcloudPowerVSConfig)
 }

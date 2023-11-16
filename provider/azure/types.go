@@ -6,8 +6,8 @@ package azure
 import (
 	"strings"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
 )
 
 type instanceSizes []string
@@ -42,8 +42,8 @@ type Config struct {
 	SSHUserName          string
 	DisableCVM           bool
 	InstanceSizes        instanceSizes
-	InstanceSizeSpecList []cloud.InstanceTypeSpec
-	Tags                 cloud.KeyValueFlag
+	InstanceSizeSpecList []provider.InstanceTypeSpec
+	Tags                 provider.KeyValueFlag
 	DisableCloudConfig   bool
 	// Disabled by default, we want to do measured boot.
 	// Secure boot brings no additional security.

@@ -17,9 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/aws] ", log.LstdFlags|log.Lmsgprefix)
@@ -69,7 +69,7 @@ type awsProvider struct {
 	serviceConfig *Config
 }
 
-func NewProvider(config *Config) (cloud.Provider, error) {
+func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("aws config: %#v", config.Redact())
 
@@ -140,7 +140,7 @@ func getIPs(instance types.Instance) ([]netip.Addr, error) {
 	return podNodeIPs, nil
 }
 
-func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
+func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	// Public IP address
 	var publicIPAddr netip.Addr
@@ -303,7 +303,7 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	}
 
-	instance := &cloud.Instance{
+	instance := &provider.Instance{
 		ID:   instanceID,
 		Name: instanceName,
 		IPs:  ips,
@@ -345,9 +345,9 @@ func (p *awsProvider) ConfigVerifier() error {
 }
 
 // Add SelectInstanceType method to select an instance type based on the memory and vcpu requirements
-func (p *awsProvider) selectInstanceType(ctx context.Context, spec cloud.InstanceTypeSpec) (string, error) {
+func (p *awsProvider) selectInstanceType(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
 
-	return cloud.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceTypeSpecList, p.serviceConfig.InstanceTypes, p.serviceConfig.InstanceType)
+	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceTypeSpecList, p.serviceConfig.InstanceTypes, p.serviceConfig.InstanceType)
 }
 
 // Add a method to populate InstanceTypeSpecList for all the instanceTypes
@@ -362,7 +362,7 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 	}
 
 	// Create a list of instancetypespec
-	var instanceTypeSpecList []cloud.InstanceTypeSpec
+	var instanceTypeSpecList []provider.InstanceTypeSpec
 
 	// Iterate over the instance types and populate the instanceTypeSpecList
 	for _, instanceType := range instanceTypes {
@@ -370,11 +370,11 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 		if err != nil {
 			return err
 		}
-		instanceTypeSpecList = append(instanceTypeSpecList, cloud.InstanceTypeSpec{InstanceType: instanceType, VCPUs: vcpus, Memory: memory})
+		instanceTypeSpecList = append(instanceTypeSpecList, provider.InstanceTypeSpec{InstanceType: instanceType, VCPUs: vcpus, Memory: memory})
 	}
 
 	// Sort the instanceTypeSpecList by Memory and update the serviceConfig
-	p.serviceConfig.InstanceTypeSpecList = cloud.SortInstanceTypesOnMemory(instanceTypeSpecList)
+	p.serviceConfig.InstanceTypeSpecList = provider.SortInstanceTypesOnMemory(instanceTypeSpecList)
 	logger.Printf("InstanceTypeSpecList (%v)", p.serviceConfig.InstanceTypeSpecList)
 	return nil
 }

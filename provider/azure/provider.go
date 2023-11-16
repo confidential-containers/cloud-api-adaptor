@@ -20,9 +20,9 @@ import (
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/avast/retry-go/v4"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
+	"github.com/confidential-containers/cloud-api-adaptor/provider"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/azure] ", log.LstdFlags|log.Lmsgprefix)
@@ -38,7 +38,7 @@ type azureProvider struct {
 	serviceConfig *Config
 }
 
-func NewProvider(config *Config) (cloud.Provider, error) {
+func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("azure config %+v", config.Redact())
 
@@ -147,7 +147,7 @@ func (p *azureProvider) createNetworkInterface(ctx context.Context, nicName stri
 	return &resp.Interface, nil
 }
 
-func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
+func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	var b64EncData string
 
@@ -249,7 +249,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
-	instance := &cloud.Instance{
+	instance := &provider.Instance{
 		ID:   instanceID,
 		Name: instanceName,
 		IPs:  ips,
@@ -357,9 +357,9 @@ func (p *azureProvider) ConfigVerifier() error {
 }
 
 // Add SelectInstanceType method to select an instance type based on the memory and vcpu requirements
-func (p *azureProvider) selectInstanceType(ctx context.Context, spec cloud.InstanceTypeSpec) (string, error) {
+func (p *azureProvider) selectInstanceType(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
 
-	return cloud.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceSizeSpecList, p.serviceConfig.InstanceSizes, p.serviceConfig.Size)
+	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceSizeSpecList, p.serviceConfig.InstanceSizes, p.serviceConfig.Size)
 }
 
 // Add a method to populate InstanceSizeSpecList for all the instanceSizes
@@ -380,7 +380,7 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 	}
 
 	// Create a list of instancesizespec
-	var instanceSizeSpecList []cloud.InstanceTypeSpec
+	var instanceSizeSpecList []provider.InstanceTypeSpec
 
 	// TODO: Is there an optimal method for this?
 	// Create NewListPager to iterate over the instance types
@@ -394,13 +394,13 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 		}
 		for _, vmSize := range nextResult.VirtualMachineSizeListResult.Value {
 			if util.Contains(instanceSizes, *vmSize.Name) {
-				instanceSizeSpecList = append(instanceSizeSpecList, cloud.InstanceTypeSpec{InstanceType: *vmSize.Name, VCPUs: int64(*vmSize.NumberOfCores), Memory: int64(*vmSize.MemoryInMB)})
+				instanceSizeSpecList = append(instanceSizeSpecList, provider.InstanceTypeSpec{InstanceType: *vmSize.Name, VCPUs: int64(*vmSize.NumberOfCores), Memory: int64(*vmSize.MemoryInMB)})
 			}
 		}
 	}
 
 	// Sort the InstanceSizeSpecList by Memory and update the serviceConfig
-	p.serviceConfig.InstanceSizeSpecList = cloud.SortInstanceTypesOnMemory(instanceSizeSpecList)
+	p.serviceConfig.InstanceSizeSpecList = provider.SortInstanceTypesOnMemory(instanceSizeSpecList)
 	logger.Printf("instanceSizeSpecList (%v)", p.serviceConfig.InstanceSizeSpecList)
 	return nil
 }
