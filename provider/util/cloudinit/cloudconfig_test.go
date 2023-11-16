@@ -9,9 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"gopkg.in/yaml.v2"
 )
+
+const forwarderConfigPath = "/peerpod/daemon.json"
 
 func TestUserData(t *testing.T) {
 	cloudConfig := &CloudConfig{
@@ -90,7 +91,7 @@ func TestUserDataWithDaemonAndAuth(t *testing.T) {
 	// Create a CloudConfig struct
 	cloudConfig := &CloudConfig{
 		WriteFiles: []WriteFile{
-			{Path: forwarder.DefaultConfigPath, Content: string(testDaemonConfigJson)},
+			{Path: forwarderConfigPath, Content: string(testDaemonConfigJson)},
 			{Path: DefaultAuthfileDstPath, Content: testResourcesJson},
 		},
 	}
@@ -106,8 +107,8 @@ func TestUserDataWithDaemonAndAuth(t *testing.T) {
 
 	// Verify that the userData has the daemon.json and auth.json files
 	// in the write_files section
-	if !strings.Contains(userData, forwarder.DefaultConfigPath) {
-		t.Fatalf("Expect %q, got %q", forwarder.DefaultConfigPath, userData)
+	if !strings.Contains(userData, forwarderConfigPath) {
+		t.Fatalf("Expect %q, got %q", forwarderConfigPath, userData)
 	}
 
 	if !strings.Contains(userData, DefaultAuthfileDstPath) {
@@ -183,7 +184,7 @@ func TestUserDataWithDaemonAndAuthAndAAKBCParams(t *testing.T) {
 	// Create a CloudConfig struct
 	cloudConfig := &CloudConfig{
 		WriteFiles: []WriteFile{
-			{Path: forwarder.DefaultConfigPath, Content: string(testDaemonConfigJson)},
+			{Path: forwarderConfigPath, Content: string(testDaemonConfigJson)},
 			{Path: DefaultAuthfileDstPath, Content: testResourcesJson},
 		},
 	}
@@ -199,8 +200,8 @@ func TestUserDataWithDaemonAndAuthAndAAKBCParams(t *testing.T) {
 
 	// Verify that the userData has the daemon.json, auth.json and kbc-params files
 	// in the write_files section
-	if !strings.Contains(userData, forwarder.DefaultConfigPath) {
-		t.Fatalf("Expect %q, got %q", forwarder.DefaultConfigPath, userData)
+	if !strings.Contains(userData, forwarderConfigPath) {
+		t.Fatalf("Expect %q, got %q", forwarderConfigPath, userData)
 	}
 
 	if !strings.Contains(userData, DefaultAuthfileDstPath) {
