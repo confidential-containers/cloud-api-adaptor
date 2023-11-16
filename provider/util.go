@@ -1,29 +1,18 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package cloud
+package provider
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sort"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
+	"github.com/confidential-containers/cloud-api-adaptor/provider/util"
 )
 
-func DefaultToEnv(field *string, env, fallback string) {
-
-	if *field != "" {
-		return
-	}
-
-	val := os.Getenv(env)
-	if val == "" {
-		val = fallback
-	}
-
-	*field = val
-}
+var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
 
 // Method to verify the correct instanceType to be used for Pod VM
 func VerifyCloudInstanceType(instanceType string, validInstanceTypes []string, defaultInstanceType string) (string, error) {
@@ -109,4 +98,18 @@ func GetBestFitInstanceType(sortedInstanceTypeSpecList []InstanceTypeSpec, vcpus
 	// If binary search finds a match, return the instance type
 	return sortedInstanceTypeSpecList[index].InstanceType, nil
 
+}
+
+func DefaultToEnv(field *string, env, fallback string) {
+
+	if *field != "" {
+		return
+	}
+
+	val := os.Getenv(env)
+	if val == "" {
+		val = fallback
+	}
+
+	*field = val
 }
