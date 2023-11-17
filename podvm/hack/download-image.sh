@@ -39,7 +39,7 @@ fi
 [ -z "$container_binary" ] && error "please install docker or podman"
 
 # Create a non-running container to extract image
-$container_binary create --name "$container_name" "$image" /bin/sh >/dev/null 2>&1;
+$container_binary create --platform=amd64 --name "$container_name" "$image" /bin/sh >/dev/null 2>&1;
 # Destory container after use
 rm-container(){
     $container_binary rm -f "$container_name" >/dev/null 2>&1;
