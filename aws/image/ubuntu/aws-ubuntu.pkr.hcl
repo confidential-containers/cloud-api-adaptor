@@ -56,7 +56,7 @@ build {
   }
 
   provisioner "file" {
-    source      = "copy-files.sh"
+    source      = "${var.config_script_src}/copy-files.sh"
     destination = "~/copy-files.sh"
   }
 
@@ -68,7 +68,7 @@ build {
   }
 
   provisioner "file" {
-    source      = "misc-settings.sh"
+    source      = "${var.config_script_src}/misc-settings.sh"
     destination = "~/misc-settings.sh"
   }
 
