@@ -19,6 +19,7 @@ $(IMAGE_FILE): setopts $(BINARIES) $(FILES)
 		-var region=${AWS_REGION} \
 		-var instance_type=${INSTANCE_TYPE} \
 		-var volume_size=${VOLUME_SIZE} \
+		-var config_script_src=$(ROOT_DIR)/podvm/qcow2 \
 		-var ami_name=${IMAGE_NAME} ./${PODVM_DISTRO}/
 	rm -fr toupload
 
