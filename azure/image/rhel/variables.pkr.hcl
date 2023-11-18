@@ -118,3 +118,8 @@ variable "az_gallery_image_version" {
   type    = string
   default = ""
 }
+
+variable "config_script_src" {
+  type    = string
+  default = ""
+}

@@ -25,7 +25,9 @@ $(IMAGE_FILE): $(BINARIES) $(FILES)
 	# export PKR_VAR_az_gallery_image_version="${GALLERY_IMAGE_VERSION}"
 
 	packer init ./${PODVM_DISTRO}/
-	packer build ./${PODVM_DISTRO}/
+	packer build \
+		-var config_script_src=$(ROOT_DIR)/podvm/qcow2 \
+		./${PODVM_DISTRO}/
 	rm -fr toupload
 
 clean:

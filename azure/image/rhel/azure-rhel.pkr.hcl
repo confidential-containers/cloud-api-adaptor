@@ -62,7 +62,7 @@ build {
   }
 
   provisioner "file" {
-    source      = "copy-files.sh"
+    source      = "${var.config_script_src}/copy-files.sh"
     destination = "~/copy-files.sh"
   }
 
@@ -82,7 +82,7 @@ build {
   # relabel copied files right after copy-files.sh
   # to prevent other commands from failing
   provisioner "file" {
-    source      = "selinux_relabel.sh"
+    source      = "${var.config_script_src}/selinux_relabel.sh"
     destination = "~/selinux_relabel.sh"
   }
 
@@ -94,7 +94,7 @@ build {
   }
 
   provisioner "file" {
-    source      = "misc-settings.sh"
+    source      = "${var.config_script_src}/misc-settings.sh"
     destination = "~/misc-settings.sh"
   }
 
