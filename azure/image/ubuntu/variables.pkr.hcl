@@ -118,3 +118,8 @@ variable "disable_cloud_config" {
   type    = string
   default = env("DISABLE_CLOUD_CONFIG")
 }
+
+variable "config_script_src" {
+  type    = string
+  default = ""
+}
