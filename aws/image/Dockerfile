@@ -65,5 +65,4 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     export AWS_ACCESS_KEY_ID=$(cat /run/secrets/AWS_ACCESS_KEY_ID) && \
     export AWS_SECRET_ACCESS_KEY=$(cat /run/secrets/AWS_SECRET_ACCESS_KEY) && \
     cd cloud-api-adaptor/aws/image && \
-    packer init ${PODVM_DISTRO}/ && \
     BINARIES= PAUSE_BUNDLE= CLOUD_PROVIDER=aws PODVM_DISTRO=$PODVM_DISTRO make image
