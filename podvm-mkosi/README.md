@@ -2,10 +2,18 @@
 
 [mkosi](https://github.com/systemd/mkosi) builds a bootable OS image from scratch. This way, we have full control over every detail of the image, especially over the image format and boot process. On the long run, we will implement fully, bit-by-bit reproducible images with mkosi, and use measured boot and an immutable root FS to ensure the image integrity through remote attestation.
 
-## Building the image
+## Prerequisites
+
+Currently, mksoi and other related tools are provided through a [Nix](https://nixos.org/) flake. Nix ensures all tools used in the build of the image are itself reproducible and pinned. mkosi requires a very recent systemd version, so using tools installed on the host is usually not possible. Nix needs to be configured to enable `flakes` and `nix command`. It is recommended to install Nix with the `DeterminateSystems nix-installer`, which comes with a configuration that is ready to use.
+
+### Building the image
 
 ```sh
-make
+make # this will rebuild the builder, the binaries and the OS image
+```
+
+```sh
+make image # this will only rebuild the OS image
 ```
 
 ### Upload the image to the desired cloud provider
@@ -31,11 +39,11 @@ Further, the image has access through the serial console enabled, you can access
 of the cloud provider.
 
 ```sh
-# for building the binaries
-make fedora-binaries-builder
-make binaries
-# for building a debug image
-make image-debug
+make debug # this will rebuild the builder, the binaries and the OS image
+```
+
+```sh
+make image-debug # this will only rebuild the OS image
 ```
 
 Notice that building a debug image will overwrite any previous existing debug or production image.
