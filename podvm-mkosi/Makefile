@@ -1,6 +1,11 @@
 AA_KBC ?= offline_fs_kbc
 
+.DEFAULT_GOAL := all
+.PHONY: all
 all: fedora-binaries-builder binaries image
+
+.PHONY: debug
+debug: fedora-binaries-builder binaries image-debug
 
 PHONY: fedora-binaries-builder
 fedora-binaries-builder:
@@ -20,34 +25,24 @@ binaries:
 		-o type=local,dest="./resources/binaries-tree" \
 		- < ../podvm/Dockerfile.podvm_binaries.fedora
 
-define build-image =
-docker buildx use default
-@echo "Building mkosi-builder..."
-docker buildx build \
-	-t mkosi-builder \
-	--load \
-	--no-cache \
-	.
-rm -rf ./build
-mkdir -p build
-@echo "Building image..."
-docker run \
-	--rm \
-	--privileged \
-	-v $(PWD)/build:/mkosi/build \
-	mkosi-builder \
-	mkosi
-endef
-
 PHONY: image
 image:
 	@echo "Enabling production preset..."
 	rm -rf resources/buildDebugImage
-	$(build-image)
-
+	rm -rf ./build
+	@echo "Building image..."
+	nix develop ..#podvm-mkosi --command "mkosi"
 
 PHONY: image-debug
 image-debug:
 	@echo "Enabling debug preset..."
 	touch resources/buildDebugImage
-	$(build-image)
+	rm -rf ./build
+	@echo "Building image..."
+	nix develop ..#podvm-mkosi --command "mkosi"
+
+PHONY: clean
+clean:
+	rm -rf resources/buildDebugImage
+	rm -rf ./build
+	rm -rf ./resources/binaries-tree
