@@ -15,6 +15,7 @@ image: $(IMAGE_FILE)
 
 $(IMAGE_FILE): setopts $(BINARIES) $(FILES)
 	mkdir -p toupload
+	packer init ./${PODVM_DISTRO}/
 	packer build ${OPTS} \
 		-var region=${AWS_REGION} \
 		-var instance_type=${INSTANCE_TYPE} \
