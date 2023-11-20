@@ -20,7 +20,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - type: amd64
+          - type: e2e_amd64
+          - type: libvirt_amd64
           - type: s390x-non-secure-execution
           - type: s390x-secure-execution
           - type: csi_wrapper_x86_64
@@ -80,9 +81,9 @@ jobs:
           echo "The built podvm image is based on CAA commit_id: ${caa_commit_id}"
           arch_string=""
           podvm_docker_name=""
-          if [[ "${{matrix.type}}" != "csi_wrapper_x86_64" ]]; then
+          if [[ "${{matrix.type}}" != "csi_wrapper_x86_64" ]] && [[ "${{matrix.type}}" != "libvirt_amd64" ]]; then
             case "${{matrix.type}}" in
-              amd64)
+              e2e_amd64)
                 arch_string="amd64"
                 ;;
               s390x-non-secure-execution)
@@ -94,10 +95,17 @@ jobs:
             esac
             podvm_image_tar_name="podvm-generic-ubuntu-${arch_string}-${caa_commit_id}.tar"
             podvm_docker_name="quay.io/confidential-containers/podvm-generic-ubuntu-${arch_string}:${caa_commit_id}"
-            ibmcloud cos object-get --bucket daily-e2e-test-bucket --key=$podvm_image_tar_name $podvm_image_tar_name
-            docker load -i $podvm_image_tar_name
-            docker push ${podvm_docker_name}
-            echo "${podvm_docker_name} is pushed"
+            manifest_url="https://quay.io/v2/confidential-containers/podvm-generic-ubuntu-${arch_string}/manifests/${caa_commit_id}"
+            curl -I --silent "${manifest_url}" > header.txt
+            if grep -q "HTTP/2 200" "header.txt"; then
+              echo "${podvm_docker_name} exists."
+            else
+              echo "downloading ${podvm_image_tar_name}"
+              ibmcloud cos object-get --bucket daily-e2e-test-bucket --key=$podvm_image_tar_name $podvm_image_tar_name
+              docker load -i $podvm_image_tar_name
+              docker push ${podvm_docker_name}
+              echo "${podvm_docker_name} is pushed"
+            fi
           fi
         env:
           bucket_name : "daily-e2e-test-bucket"
