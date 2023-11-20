@@ -8,29 +8,48 @@
 #
 FROM registry.access.redhat.com/ubi9/ubi:9.2
 
+ARG ARCH
+ARG PACKER_VERSION
 ARG GO_VERSION
 ARG PROTOC_VERSION
 ARG RUST_VERSION
+ARG ORG_ID
+ARG ACTIVATION_KEY
 ARG YQ_VERSION
-ARG YQ_CHECKSUM
 
-# This must be running on subscribed RHEL host !!!
+ENV SMDEV_CONTAINER_OFF=1
+ENV ARCH ${ARCH}
+
+# This registering RHEL when building on an unsubscribed system
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
+RUN if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
+    subscription-manager register --org=${ORG_ID} --activationkey=${ACTIVATION_KEY}; \
+    fi
+    
+RUN subscription-manager repos --enable codeready-builder-for-rhel-9-${ARCH}-rpms; \
+    dnf groupinstall -y 'Development Tools'; \
+    dnf install -y yum-utils gnupg git --allowerasing curl pkg-config clang perl libseccomp-devel gpgme-devel \
+    device-mapper-devel qemu-kvm unzip wget libassuan-devel genisoimage cloud-utils-growpart cloud-init; 
 
-RUN dnf config-manager --set-enabled codeready-builder-for-rhel-9-x86_64-rpms && \
-    dnf groupinstall -y 'Development Tools' && \
-    dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
-        device-mapper-devel qemu-kvm unzip wget libassuan-devel \
-	genisoimage cloud-utils-growpart cloud-init clang tpm2-tss-devel && \
+ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH/x86_64/amd64} /usr/local/bin/yq
+RUN chmod a+x /usr/local/bin/yq && \
+    curl https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH/x86_64/amd64}.tar.gz -o go${GO_VERSION}.linux-${ARCH/x86_64/amd64}.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH/x86_64/amd64}.tar.gz && \
+    rm -f go${GO_VERSION}.linux-${ARCH/x86_64/amd64}.tar.gz
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+# Install packer. Packer doesn't does not have prebuilt s390x arch binaries above Packer version 0.1.5 
+RUN if [ "${ARCH}" == "s390x" ]; then \
+    git clone --depth 1 --single-branch https://github.com/hashicorp/packer.git -b ${PACKER_VERSION}; \
+    cd packer; \
+    sed -i -- "s/ALL_XC_ARCH=.*/ALL_XC_ARCH=\"${ARCH}\"/g" scripts/build.sh; \
+	sed -i -- "s/ALL_XC_OS=.*/ALL_XC_OS=\"Linux\"/g" scripts/build.sh; \
+    make bin && cp bin/packer /usr/local/bin/; \
+    cd $OLDPWD; \
+    else \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
-    dnf install -y packer && \
-    dnf clean all && \
-    curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -f go${GO_VERSION}.linux-amd64.tar.gz
-
-ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 /usr/local/bin/yq
-RUN chmod a+x /usr/local/bin/yq
+    dnf install -y packer; \
+    fi
 
 # set a correspond qemu-system-* named link to qemu-kvm
 RUN ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-$(uname -m)
@@ -43,9 +62,8 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VER
 
 ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
-RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
-    unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
+RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip && \
+    unzip protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip
 
 WORKDIR /src
-
 ENV GOPATH /src
