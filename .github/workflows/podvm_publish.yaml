@@ -14,14 +14,20 @@ on:
 jobs:
   podvm_builder:
     uses: ./.github/workflows/podvm_builder.yaml
+    with:
+      git_ref: ${{ github.sha }}
     secrets: inherit
 
   podvm_binaries:
     needs: [podvm_builder]
     uses: ./.github/workflows/podvm_binaries.yaml
+    with:
+      git_ref: ${{ github.sha }}
     secrets: inherit
 
   podvm:
     needs: [podvm_binaries]
     uses: ./.github/workflows/podvm.yaml
+    with:
+      git_ref: ${{ github.sha }}
     secrets: inherit
