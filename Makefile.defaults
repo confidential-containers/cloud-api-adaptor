@@ -36,6 +36,8 @@ centos_amd64_IMAGE_URL := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.u
 centos_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.centos.$(centos_RELEASE).amd64.checksum)
 rhel_amd64_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.url)
 rhel_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.checksum)
+rhel_s390x_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.url)
+rhel_s390x_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.checksum)
 
 KATA_SRC := $(or $(KATA_SRC),$(call query,git.kata-containers.url))
 KATA_SRC_REF := $(or $(KATA_SRC_REF),$(call query,git.kata-containers.reference))
