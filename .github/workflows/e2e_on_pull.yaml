@@ -156,7 +156,9 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - centos
+          # FIXME: temporarily disable CentOS tests as the CentOS podvm builds
+          # are disabled due https://github.com/confidential-containers/cloud-api-adaptor/issues/1558
+          #- centos
           - ubuntu
         provider:
           - generic
