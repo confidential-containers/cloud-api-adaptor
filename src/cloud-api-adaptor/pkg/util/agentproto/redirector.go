@@ -19,7 +19,6 @@ import (
 
 type Redirector interface {
 	pb.AgentServiceService
-	pb.ImageService
 	pb.HealthService
 
 	Connect(ctx context.Context) error
@@ -35,7 +34,6 @@ type redirector struct {
 
 type client struct {
 	pb.AgentServiceService
-	pb.ImageService
 	pb.HealthService
 }
 
@@ -381,16 +379,6 @@ func (s *redirector) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeReque
 		return nil, err
 	}
 	return s.agentClient.ResizeVolume(ctx, req)
-}
-
-// ImageService method
-
-func (s *redirector) PullImage(ctx context.Context, req *pb.PullImageRequest) (res *pb.PullImageResponse, err error) {
-
-	if err := s.Connect(ctx); err != nil {
-		return nil, err
-	}
-	return s.agentClient.PullImage(ctx, req)
 }
 
 // HealthService methods

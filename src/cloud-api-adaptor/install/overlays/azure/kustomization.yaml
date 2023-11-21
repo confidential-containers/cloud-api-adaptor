@@ -74,7 +74,6 @@ secretGenerator:
 ##TLS_SETTINGS
 
 patchesStrategicMerge:
-  #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
 ##TLS_SETTINGS
   #- tls_certs_volume_mount.yaml # set (for tls)
 ##TLS_SETTINGS

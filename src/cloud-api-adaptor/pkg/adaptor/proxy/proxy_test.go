@@ -8,7 +8,6 @@ import (
 	"errors"
 	"net"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -18,14 +17,14 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
-	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestNewAgentProxy(t *testing.T) {
 
 	socketPath := "/run/dummy.sock"
 
-	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil, 0)
+	proxy := NewAgentProxy("podvm", socketPath, "", nil, nil, 0)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
@@ -46,7 +45,6 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("expect no error, got %q", err)
 	}
 	pb.RegisterAgentServiceService(agentServer, &agentMock{})
-	pb.RegisterImageService(agentServer, &agentMock{})
 	pb.RegisterHealthService(agentServer, &agentMock{})
 
 	agentListener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -82,7 +80,7 @@ func TestStartStop(t *testing.T) {
 		Host:   agentListener.Addr().String(),
 	}
 
-	proxy := NewAgentProxy("podvm", socketPath, "", "", nil, nil, 5*time.Second)
+	proxy := NewAgentProxy("podvm", socketPath, "", nil, nil, 5*time.Second)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
@@ -117,22 +115,10 @@ func TestStartStop(t *testing.T) {
 
 	client := struct {
 		pb.AgentServiceService
-		pb.ImageService
 		pb.HealthService
 	}{
 		AgentServiceService: pb.NewAgentServiceClient(ttrpcClient),
-		ImageService:        pb.NewImageClient(ttrpcClient),
 		HealthService:       pb.NewHealthClient(ttrpcClient),
-	}
-
-	{
-		res, err := client.PullImage(context.Background(), &pb.PullImageRequest{Image: "abc", ContainerId: "123"})
-		if err != nil {
-			t.Fatalf("expect no error, got %q", err)
-		}
-		if res == nil {
-			t.Fatal("expect non nil, got nil")
-		}
 	}
 
 	{
@@ -220,43 +206,6 @@ func TestDialerFailure(t *testing.T) {
 
 	if e, a := "failed to establish agent proxy connection", err.Error(); !strings.Contains(a, e) {
 		t.Fatalf("expect %q, got %q", e, a)
-	}
-}
-
-func TestNullCriEndpoint(t *testing.T) {
-	p := &agentProxy{
-		criTimeout:    100 * time.Millisecond,
-		criSocketPath: "/dev/null",
-	}
-	_, err := p.initCriClient(context.Background())
-	if err == nil {
-		t.Fatal("expect error, got nil")
-	}
-}
-
-func TestCriEndpointDial(t *testing.T) {
-	protocol := "unix"
-	sockAddr := "/tmp/grpc.sock"
-	if _, err := os.Stat(sockAddr); !os.IsNotExist(err) {
-		if err := os.RemoveAll(sockAddr); err != nil {
-			t.Fatal(err)
-		}
-	}
-	listener, err := net.Listen(protocol, sockAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	server := grpc.NewServer()
-	defer server.Stop()
-	go server.Serve(listener) //nolint:errcheck // no need to check exit error for test
-
-	p := &agentProxy{
-		criTimeout:    100 * time.Millisecond,
-		criSocketPath: sockAddr,
-	}
-	_, err = p.initCriClient(context.Background())
-	if err != nil {
-		t.Fatalf("expect no error, got %q\n", err)
 	}
 }
 
@@ -372,9 +321,6 @@ func (m *agentMock) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeReques
 }
 func (p *agentMock) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (*types.Empty, error) {
 	return &types.Empty{}, nil
-}
-func (m *agentMock) PullImage(ctx context.Context, req *pb.PullImageRequest) (*pb.PullImageResponse, error) {
-	return &pb.PullImageResponse{}, nil
 }
 func (m *agentMock) Check(ctx context.Context, req *pb.CheckRequest) (*pb.HealthCheckResponse, error) {
 	return &pb.HealthCheckResponse{}, nil
