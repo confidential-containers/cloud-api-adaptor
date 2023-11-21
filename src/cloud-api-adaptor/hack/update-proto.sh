@@ -2,10 +2,10 @@
 
 set -o errexit -o pipefail -o nounset
 
-basedir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." &>/dev/null && pwd -P)
+PODMVINFO_PATH="proto/podvminfo"
 
-cd "$basedir/proto"
-
-protoc  --gogottrpc_out=. \
-        --gogottrpc_opt=plugins=ttrpc+fieldpath,paths=source_relative \
-        podvminfo/podvminfo.proto
+protoc \
+    --proto_path=$PODMVINFO_PATH \
+    --go_out=$GOPATH/src \
+    --go-ttrpc_out=$GOPATH/src \
+    $PODMVINFO_PATH/podvminfo.proto
