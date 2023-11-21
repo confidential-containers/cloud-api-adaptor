@@ -276,7 +276,6 @@ optionals+=""
 # following is the correct method: optionals+="-option val "
 # following is the incorrect method: optionals+="-option val"
 
-[[ -S ${CRI_RUNTIME_ENDPOINT} ]] && optionals+="-cri-runtime-endpoint ${CRI_RUNTIME_ENDPOINT} "
 [[ "${PAUSE_IMAGE}" ]] && optionals+="-pause-image ${PAUSE_IMAGE} "
 [[ "${VXLAN_PORT}" ]] && optionals+="-vxlan-port ${VXLAN_PORT} "
 [[ "${CACERT_FILE}" ]] && optionals+="-ca-cert-file ${CACERT_FILE} "

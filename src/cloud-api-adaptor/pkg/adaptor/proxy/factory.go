@@ -14,14 +14,13 @@ type Factory interface {
 }
 
 type factory struct {
-	pauseImage    string
-	criSocketPath string
-	tlsConfig     *tlsutil.TLSConfig
-	caService     tlsutil.CAService
-	proxyTimeout  time.Duration
+	pauseImage   string
+	tlsConfig    *tlsutil.TLSConfig
+	caService    tlsutil.CAService
+	proxyTimeout time.Duration
 }
 
-func NewFactory(pauseImage, criSocketPath string, tlsConfig *tlsutil.TLSConfig, proxyTimeout time.Duration) Factory {
+func NewFactory(pauseImage string, tlsConfig *tlsutil.TLSConfig, proxyTimeout time.Duration) Factory {
 
 	if tlsConfig != nil && !tlsConfig.HasCertAuth() {
 
@@ -46,15 +45,14 @@ func NewFactory(pauseImage, criSocketPath string, tlsConfig *tlsutil.TLSConfig, 
 	}
 
 	return &factory{
-		pauseImage:    pauseImage,
-		criSocketPath: criSocketPath,
-		tlsConfig:     tlsConfig,
-		caService:     caService,
-		proxyTimeout:  proxyTimeout,
+		pauseImage:   pauseImage,
+		tlsConfig:    tlsConfig,
+		caService:    caService,
+		proxyTimeout: proxyTimeout,
 	}
 }
 
 func (f *factory) New(serverName, socketPath string) AgentProxy {
 
-	return NewAgentProxy(serverName, socketPath, f.criSocketPath, f.pauseImage, f.tlsConfig, f.caService, f.proxyTimeout)
+	return NewAgentProxy(serverName, socketPath, f.pauseImage, f.tlsConfig, f.caService, f.proxyTimeout)
 }

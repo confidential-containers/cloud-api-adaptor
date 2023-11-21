@@ -20,14 +20,10 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	"github.com/containerd/ttrpc"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	criapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 )
 
 const (
 	SocketName          = "agent.ttrpc"
-	defaultCriTimeout   = 1 * time.Second
 	DefaultProxyTimeout = 5 * time.Minute
 
 	// The server TLS certificate must have this as SAN
@@ -36,10 +32,6 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[adaptor/proxy] ", log.LstdFlags|log.Lmsgprefix)
-
-type criClient struct {
-	criapi.ImageServiceClient
-}
 
 type AgentProxy interface {
 	Start(ctx context.Context, serverURL *url.URL) error
@@ -50,32 +42,28 @@ type AgentProxy interface {
 }
 
 type agentProxy struct {
-	tlsConfig     *tlsutil.TLSConfig
-	caService     tlsutil.CAService
-	readyCh       chan struct{}
-	stopCh        chan struct{}
-	serverName    string
-	socketPath    string
-	criSocketPath string
-	pauseImage    string
-	proxyTimeout  time.Duration
-	criTimeout    time.Duration
-	stopOnce      sync.Once
+	tlsConfig    *tlsutil.TLSConfig
+	caService    tlsutil.CAService
+	readyCh      chan struct{}
+	stopCh       chan struct{}
+	serverName   string
+	socketPath   string
+	pauseImage   string
+	proxyTimeout time.Duration
+	stopOnce     sync.Once
 }
 
-func NewAgentProxy(serverName, socketPath, criSocketPath string, pauseImage string, tlsConfig *tlsutil.TLSConfig, caService tlsutil.CAService, proxyTimeout time.Duration) AgentProxy {
+func NewAgentProxy(serverName, socketPath, pauseImage string, tlsConfig *tlsutil.TLSConfig, caService tlsutil.CAService, proxyTimeout time.Duration) AgentProxy {
 
 	return &agentProxy{
-		serverName:    serverName,
-		socketPath:    socketPath,
-		criSocketPath: criSocketPath,
-		readyCh:       make(chan struct{}),
-		stopCh:        make(chan struct{}),
-		proxyTimeout:  proxyTimeout,
-		criTimeout:    defaultCriTimeout,
-		pauseImage:    pauseImage,
-		tlsConfig:     tlsConfig,
-		caService:     caService,
+		serverName:   serverName,
+		socketPath:   socketPath,
+		readyCh:      make(chan struct{}),
+		stopCh:       make(chan struct{}),
+		proxyTimeout: proxyTimeout,
+		pauseImage:   pauseImage,
+		tlsConfig:    tlsConfig,
+		caService:    caService,
 	}
 }
 
@@ -139,32 +127,6 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 	return conn, nil
 }
 
-func (p *agentProxy) initCriClient(ctx context.Context) (*criClient, error) {
-	if p.criSocketPath != "" {
-		timeout, cancel := context.WithTimeout(ctx, p.criTimeout)
-		defer cancel()
-		conn, err := grpc.DialContext(timeout, p.criSocketPath,
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
-			grpc.WithBlock(),
-			grpc.WithContextDialer(func(ctx context.Context, target string) (net.Conn, error) {
-				return (&net.Dialer{}).DialContext(ctx, "unix", target)
-			}),
-			grpc.FailOnNonTempDialError(true),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to established cri uds connection to %s: %v", p.criSocketPath, err)
-		}
-
-		criClient := &criClient{
-			ImageServiceClient: criapi.NewImageServiceClient(conn),
-		}
-		logger.Printf("established cri uds connection to %s", p.criSocketPath)
-		return criClient, err
-	}
-
-	return nil, fmt.Errorf("cri runtime endpoint is not specified, it is used to get the image name from image digest")
-}
-
 func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 
 	if err := os.MkdirAll(filepath.Dir(p.socketPath), os.ModePerm); err != nil {
@@ -185,13 +147,7 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 		return p.dial(ctx, serverURL.Host)
 	}
 
-	criClient, err := p.initCriClient(ctx)
-	if err != nil {
-		// cri client is optional currently, we ignore any errors here
-		logger.Printf("failed to init cri client, the err: %v", err)
-	}
-
-	proxyService := newProxyService(dialer, criClient, p.pauseImage)
+	proxyService := newProxyService(dialer, p.pauseImage)
 	defer func() {
 		if err := proxyService.Close(); err != nil {
 			logger.Printf("error closing agent proxy connection: %v", err)
@@ -208,7 +164,6 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 	}
 
 	pb.RegisterAgentServiceService(ttrpcServer, proxyService)
-	pb.RegisterImageService(ttrpcServer, proxyService)
 	pb.RegisterHealthService(ttrpcServer, proxyService)
 
 	ctx, cancel := context.WithCancel(ctx)

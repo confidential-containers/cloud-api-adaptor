@@ -138,7 +138,6 @@ func (d *daemon) Start(ctx context.Context) error {
 	}
 
 	pb.RegisterAgentServiceService(ttrpcServer, d.interceptor)
-	pb.RegisterImageService(ttrpcServer, d.interceptor)
 	pb.RegisterHealthService(ttrpcServer, d.interceptor)
 
 	ttrpcServerErr := make(chan error)

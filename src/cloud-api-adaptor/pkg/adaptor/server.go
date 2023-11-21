@@ -35,7 +35,6 @@ const (
 type ServerConfig struct {
 	TLSConfig               *tlsutil.TLSConfig
 	SocketPath              string
-	CriSocketPath           string
 	PauseImage              string
 	PodsDir                 string
 	ForwarderPort           string
@@ -70,7 +69,7 @@ func NewServer(provider provider.Provider, cfg *ServerConfig, workerNode podnetw
 
 	logger.Printf("server config: %#v", cfg)
 
-	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.CriSocketPath, cfg.TLSConfig, cfg.ProxyTimeout)
+	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout)
 	cloudService := cloud.NewService(provider, agentFactory, workerNode,
 		cfg.SecureComms, cfg.SecureCommsInbounds, cfg.SecureCommsOutbounds, cfg.SecureCommsKbsAddress, cfg.PodsDir, cfg.ForwarderPort, cfg.AAKBCParams, sshutil.SSHPORT)
 	vmInfoService := vminfo.NewService(cloudService)
