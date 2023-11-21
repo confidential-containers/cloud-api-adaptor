@@ -383,16 +383,6 @@ func (s *redirector) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeReque
 	return s.agentClient.ResizeVolume(ctx, req)
 }
 
-// ImageService method
-
-func (s *redirector) PullImage(ctx context.Context, req *pb.PullImageRequest) (res *pb.PullImageResponse, err error) {
-
-	if err := s.Connect(ctx); err != nil {
-		return nil, err
-	}
-	return s.agentClient.PullImage(ctx, req)
-}
-
 // HealthService methods
 
 func (s *redirector) Check(ctx context.Context, req *pb.CheckRequest) (res *pb.HealthCheckResponse, err error) {
