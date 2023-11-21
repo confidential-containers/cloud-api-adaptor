@@ -86,6 +86,8 @@ Kubernetes node virtual server instances, the VPC and the subnet. If not set it 
 defaults to `jp-tok`.
 > - `zone_name` (optional) is the zone in the region Terraform will create the demo environment in. If not set it
 defaults to `jp-tok-2`.
+> - `vpc_name` (optional) is an existing VPC name. If it is not set, Terraform will create a new VPC named "${cluster_name}-vpc".
+> - `subnet_name` (optional) is an existing subnet name. If it is not set, Terraform will create a new subnet named "{cluster_name}-subnet". This must be provided if `vpc_name` has been set.
 > - `ssh_pub_key` (optional) is an variable for a SSH public key which has **not** been registered in IBM Cloud in the
 targeted region. Terraform will manage this key instead. You cannot register the same SSH public key in the same region
 twice under different SSHs key names. This key needs to be password-less and on the 'developer machine' running the terraform in order to perform the cluster set up.

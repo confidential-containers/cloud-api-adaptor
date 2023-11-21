@@ -17,6 +17,18 @@ variable "ssh_pub_key" {
   default = ""
 }
 
+variable "vpc_name" {
+  type        = string
+  description = "(optional) Specify existing VPC name. If none is provided, it will create a new VPC named {cluster_name}-vpc"
+  default     = ""
+}
+
+variable "subnet_name" {
+  type        = string
+  description = "(optional) Specify existing subnet name. If none is provided, it will create a new subnet named {cluster_name}-subnet. This must be provided if vpc_name has been set"
+  default     = ""
+}
+
 # amd64: ibm-ubuntu-20-04-3-minimal-amd64-1
 # s390x: ibm-ubuntu-20-04-2-minimal-s390x-1
 variable "node_image" {
