@@ -12,7 +12,7 @@ set -o pipefail
 CLUSTER_DISK_SIZE="${CLUSTER_DISK_SIZE:-20}"
 CLUSTER_CONTROL_NODES="${CLUSTER_CONTROL_NODES:-1}"
 CLUSTER_NAME="${CLUSTER_NAME:-peer-pods}"
-CLUSTER_IMAGE="${CLUSTER_IMAGE:-ubuntu2004}"
+CLUSTER_IMAGE="${CLUSTER_IMAGE:-ubuntu2204}"
 CLUSTER_VERSION="${CLUSTER_VERSION:-1.26.7}"
 CLUSTER_WORKERS="${CLUSTER_WORKERS:-1}"
 LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-default}"
@@ -102,9 +102,28 @@ usage () {
 }
 
 main() {
+	# It should use kcli version newer than the build of 2023/11/21
+	# that contains the fix to https://github.com/karmab/kcli/issues/619
+	local kcli_version
+	local kcli_version_min="99.0"
+	local kcli_build_date
+	local kcli_build_date_min="2023/11/22"
+
 	if ! command -v kcli >/dev/null; then
 		echo "ERROR: kcli command is required. See https://kcli.readthedocs.io/en/latest/#installation"
 		exit 1
+	fi
+
+	kcli_version="$(kcli version | awk '{ print $2}')"
+	if [ "${kcli_version/.*/}" -lt "${kcli_version_min/.*/}" ];then
+		echo "ERROR: kcli version >= ${kcli_version_min} is required"
+		exit 1
+	elif [ "${kcli_version}" = "${kcli_version_min}" ]; then
+		kcli_build_date="$(kcli version | awk '{ print $5}')"
+		if [[ "$kcli_build_date" < "$kcli_build_date_min" ]]; then
+			echo "ERROR: kcli ${kcli_version} built since ${kcli_build_date_min} is required"
+			exit 1
+		fi
 	fi
 
 	# Parse arguments.

@@ -100,11 +100,6 @@ jobs:
           [ -f ~/.ssh/id_rsa ] || \
             ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
 
-          # Newest version of kcli does not index old Ubuntu images like 20.04
-          echo "::group::Download Ubuntu 20.04 image"
-          kcli download image -u https://cloud-images.ubuntu.com/releases/20.04/release/ubuntu-20.04-server-cloudimg-amd64.img ubuntu2004
-          echo "::endgroup::"
-
         # This is the key used by cloud-api-adaptor to connect to libvirt
       - name: Generate the SSH key
         run: |
