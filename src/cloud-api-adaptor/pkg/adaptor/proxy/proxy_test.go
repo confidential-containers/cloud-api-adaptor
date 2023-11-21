@@ -16,7 +16,6 @@ import (
 	"github.com/containerd/ttrpc"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
