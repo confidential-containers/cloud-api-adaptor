@@ -208,7 +208,6 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 	}
 
 	pb.RegisterAgentServiceService(ttrpcServer, proxyService)
-	pb.RegisterImageService(ttrpcServer, proxyService)
 	pb.RegisterHealthService(ttrpcServer, proxyService)
 
 	ctx, cancel := context.WithCancel(ctx)

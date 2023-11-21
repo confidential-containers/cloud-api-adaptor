@@ -46,7 +46,6 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("expect no error, got %q", err)
 	}
 	pb.RegisterAgentServiceService(agentServer, &agentMock{})
-	pb.RegisterImageService(agentServer, &agentMock{})
 	pb.RegisterHealthService(agentServer, &agentMock{})
 
 	agentListener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -117,22 +116,10 @@ func TestStartStop(t *testing.T) {
 
 	client := struct {
 		pb.AgentServiceService
-		pb.ImageService
 		pb.HealthService
 	}{
 		AgentServiceService: pb.NewAgentServiceClient(ttrpcClient),
-		ImageService:        pb.NewImageClient(ttrpcClient),
 		HealthService:       pb.NewHealthClient(ttrpcClient),
-	}
-
-	{
-		res, err := client.PullImage(context.Background(), &pb.PullImageRequest{Image: "abc", ContainerId: "123"})
-		if err != nil {
-			t.Fatalf("expect no error, got %q", err)
-		}
-		if res == nil {
-			t.Fatal("expect non nil, got nil")
-		}
 	}
 
 	{
@@ -372,9 +359,6 @@ func (m *agentMock) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeReques
 }
 func (p *agentMock) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (*types.Empty, error) {
 	return &types.Empty{}, nil
-}
-func (m *agentMock) PullImage(ctx context.Context, req *pb.PullImageRequest) (*pb.PullImageResponse, error) {
-	return &pb.PullImageResponse{}, nil
 }
 func (m *agentMock) Check(ctx context.Context, req *pb.CheckRequest) (*pb.HealthCheckResponse, error) {
 	return &pb.HealthCheckResponse{}, nil
