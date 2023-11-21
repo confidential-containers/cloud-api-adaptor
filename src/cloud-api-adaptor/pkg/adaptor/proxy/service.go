@@ -18,7 +18,7 @@ import (
 	crio "github.com/containers/podman/v4/pkg/annotations"
 	"github.com/gogo/protobuf/types"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
-	criapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	criapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 type proxyService struct {
