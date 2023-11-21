@@ -3,10 +3,28 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+data "ibm_is_vpc" "vpc" {
+  count = var.vpc_name == "" ? 0 : 1
+  name  = var.vpc_name
+}
+
+data "ibm_is_subnet" "subnet" {
+  count = var.subnet_name == "" ? 0 : 1
+  name  = var.subnet_name
+}
+
 module "vpc" {
+  # Create new vpc ans subnet only if vpc_name is not set
+  count        = var.vpc_name == "" ? 1 : 0
   source       = "./vpc"
   cluster_name = var.cluster_name
   zone         = var.zone
+}
+
+locals {
+  vpc_id            = var.vpc_name == "" ? module.vpc[0].vpc_id : data.ibm_is_vpc.vpc[0].id
+  subnet_id         = var.vpc_name == "" ? module.vpc[0].subnet_id : data.ibm_is_subnet.subnet[0].id
+  security_group_id = var.vpc_name == "" ? module.vpc[0].security_group_id : data.ibm_is_vpc.vpc[0].default_security_group
 }
 
 data "ibm_resource_group" "default_group" {
@@ -35,13 +53,13 @@ resource "ibm_is_instance_template" "node_template" {
   name    = "${var.cluster_name}-node-template"
   image   = data.ibm_is_image.node_image.id
   profile = var.node_profile
-  vpc     = module.vpc.vpc_id
+  vpc     = local.vpc_id
   zone    = var.zone
   keys    = [data.ibm_is_ssh_key.ssh_key.id]
 
   primary_network_interface {
-    subnet          = module.vpc.subnet_id
-    security_groups = [module.vpc.security_group_id]
+    subnet          = local.subnet_id
+    security_groups = [local.security_group_id]
   }
 }
 
@@ -86,6 +104,6 @@ resource "null_resource" "label_nodes" {
     null_resource.kubeadm
   ]
   provisioner "local-exec" {
-    command = "./label-nodes.sh ${var.region} ${var.zone} ${module.vpc.subnet_id}"
+    command = "./label-nodes.sh ${var.region} ${var.zone} ${local.subnet_id}"
   }
 }
