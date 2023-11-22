@@ -27,14 +27,6 @@ var E2eNamespace = envconf.RandomName("coco-pp-e2e-test", 25)
 // DoTestCreateSimplePod tests a simple peer-pod can be created.
 func DoTestCreateSimplePod(t *testing.T, e env.Environment, assert CloudAssert) {
 	pod := NewBusyboxPodWithName(E2eNamespace, "simple-test")
-	NewTestCase(t, e, "SimplePeerPod", assert, "PodVM is created").WithPod(pod).Run()
-}
-
-func DoTestCreateSimplePodWithNydusAnnotation(t *testing.T, e env.Environment, assert CloudAssert) {
-	annotationData := map[string]string{
-		"io.containerd.cri.runtime-handler": "kata-remote",
-	}
-	pod := NewPod(E2eNamespace, "alpine", "alpine", "alpine", WithRestartPolicy(v1.RestartPolicyNever), WithAnnotations(annotationData))
 	NewTestCase(t, e, "SimplePeerPod", assert, "PodVM is created").WithPod(pod).WithNydusSnapshotter().Run()
 }
 
