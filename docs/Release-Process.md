@@ -43,8 +43,7 @@ avoid compilation errors. This can be done by running:
 
 Currently there isn't automation to build the podvm images at this phase. They should be built manually to ensure they don't break.
 
-These updates should be done in a PR that is merged triggering the cloud-api-adaptor
-[image build workflow](../.github/workflows/image.yaml) to create a new container image in
+These updates should be done in a PR that is merged triggering the [project images publish workflow](../.github/workflows/publish_images_on_push.yaml) to create a new container image in
 [`quay.io/confidential-containers/cloud-api-adaptor`](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags) to use in testing.
 
 #### Tags and update go submodules
