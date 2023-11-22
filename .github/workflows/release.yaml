@@ -1,0 +1,41 @@
+# Copyright Confidential Containers Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build and push the project release images.
+---
+name: Release project images
+on:
+  release:
+    types: [created]
+
+jobs:
+  caa:
+    uses: ./.github/workflows/caa_build_and_push_per_arch.yaml
+    with:
+      dev_tags: ${{ github.event.release.tag_name }}-dev
+      release_tags: ${{ github.event.release.tag_name }}
+      git_ref: ${{ github.ref }}
+    secrets: inherit
+
+  podvm_builder:
+    uses: ./.github/workflows/podvm_builder.yaml
+    with:
+      image_tag: ${{ github.event.release.tag_name }}
+      git_ref: ${{ github.ref }}
+    secrets: inherit
+
+  podvm_binaries:
+    needs: [podvm_builder]
+    uses: ./.github/workflows/podvm_binaries.yaml
+    with:
+      image_tag: ${{ github.event.release.tag_name }}
+      git_ref: ${{ github.ref }}
+    secrets: inherit
+
+  podvm:
+    needs: [podvm_binaries]
+    uses: ./.github/workflows/podvm.yaml
+    with:
+      image_tag: ${{ github.event.release.tag_name }}
+      git_ref: ${{ github.ref }}
+    secrets: inherit
