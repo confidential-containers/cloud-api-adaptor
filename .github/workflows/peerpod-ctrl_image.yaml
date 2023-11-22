@@ -3,18 +3,30 @@
 #
 # Push peerpod-ctrl image
 ---
-name: peerpod-ctrl image push
+name: (Callable) Build and push peerpod-ctrl image
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'peerpod-ctrl/**'
+  workflow_call:
+    inputs:
+      registry:
+        default: 'quay.io/confidential-containers'
+        description: 'Image registry (e.g. "ghcr.io/confidential-containers") where the built image will be pushed to'
+        required: false
+        type: string
+      image_tags:
+        default: ''
+        description: 'Comma-separated list of tags for the dev built image (e.g. latest,ci-dev). By default uses the values from hack/build.sh'
+        required: true
+        type: string
+      git_ref:
+        default: 'main'
+        description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
+        required: false
+        type: string
 
 jobs:
   peerpod_push:
-    name: Push peerpod-ctrl image
+    name: build and push peerpod-ctrl
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,24 +35,42 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Login to Quay container Registry
+        if: ${{ startsWith(inputs.registry, 'quay.io') }}
         uses: docker/login-action@v2
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
+      - name: Login to Github Container Registry
+        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Validate build args contains the essentials
         run: |
            make list-build-args | grep -e 'CGO_ENABLED=[0|1]' && \
            make list-build-args | grep 'GOFLAGS=' | grep -E '\-tags=[a-z,]*'
+      - name: Determine tags
+        id: tags
+        run: |
+          tags="${{ inputs.image_tags }}"
+          tags_new=""
+          for t in ${tags/,/ }; do
+          tags_new+="${{ inputs.registry }}/peerpod-ctrl:${t},"
+          done
+          echo "tags=${tags_new}" >> "$GITHUB_OUTPUT"
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
-          tags: |
-            quay.io/confidential-containers/peerpod-ctrl:latest
-            quay.io/confidential-containers/peerpod-ctrl:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.tags }}
           push: true
           context: peerpod-ctrl
           platforms: linux/amd64, linux/s390x, linux/ppc64le
