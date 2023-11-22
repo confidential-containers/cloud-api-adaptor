@@ -155,6 +155,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate image manifest
+        env:
+          registry: ${{ inputs.registry }}
         run:  |
           hack/image-manifest.sh
 
