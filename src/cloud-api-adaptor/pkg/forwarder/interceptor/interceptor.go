@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/gogo/protobuf/types"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/agentproto"
 )
@@ -80,12 +80,12 @@ func NewInterceptor(agentSocket, nsPath string) Interceptor {
 	}
 }
 
-func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*types.Empty, error) {
+func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*emptypb.Empty, error) {
 
 	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
 
 	// Specify the network namespace path in the container spec
-	req.OCI.Linux.Namespaces = append(req.OCI.Linux.Namespaces, pb.LinuxNamespace{
+	req.OCI.Linux.Namespaces = append(req.OCI.Linux.Namespaces, &pb.LinuxNamespace{
 		Type: string(specs.NetworkNamespace),
 		Path: i.nsPath,
 	})
@@ -167,7 +167,7 @@ func waitForDeviceMounted(ctx context.Context, path string) error {
 
 }
 
-func (i *interceptor) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*types.Empty, error) {
+func (i *interceptor) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*emptypb.Empty, error) {
 
 	logger.Printf("StartContainer: containerID:%s", req.ContainerId)
 
@@ -180,7 +180,7 @@ func (i *interceptor) StartContainer(ctx context.Context, req *pb.StartContainer
 	return res, err
 }
 
-func (i *interceptor) RemoveContainer(ctx context.Context, req *pb.RemoveContainerRequest) (*types.Empty, error) {
+func (i *interceptor) RemoveContainer(ctx context.Context, req *pb.RemoveContainerRequest) (*emptypb.Empty, error) {
 
 	logger.Printf("RemoveContainer: containerID:%s", req.ContainerId)
 
@@ -192,7 +192,7 @@ func (i *interceptor) RemoveContainer(ctx context.Context, req *pb.RemoveContain
 	return res, err
 }
 
-func (i *interceptor) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (*types.Empty, error) {
+func (i *interceptor) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (*emptypb.Empty, error) {
 
 	logger.Printf("CreateSandbox: hostname:%s sandboxId:%s", req.Hostname, req.SandboxId)
 
@@ -217,7 +217,7 @@ func (i *interceptor) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRe
 	return res, err
 }
 
-func (i *interceptor) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (*types.Empty, error) {
+func (i *interceptor) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (*emptypb.Empty, error) {
 
 	logger.Printf("DestroySandbox")
 
