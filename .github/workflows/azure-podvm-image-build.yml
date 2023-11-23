@@ -188,6 +188,18 @@ jobs:
         echo "successfully built $IMAGE_ID"
         echo "image-id=${IMAGE_ID}" >> "$GITHUB_OUTPUT"
 
+    - name: Update image tag
+      id: update-image-tag
+      run: |
+        git config --global user.name 'cocopodvm'
+        git config --global user.email 'cocoatmsft@outlook.com'
+        git fetch origin podvm-image-id:podvm-image-id
+        git checkout  podvm-image-id
+        echo "${IMAGE_ID}" > azure-podvm-image-id.txt
+        git add azure-podvm-image-id.txt
+        git commit -m "Update Azure image id tag"
+        git push -u origin podvm-image-id
+
     - name: Cleanup intermediate image
       if: always()
       run: |
