@@ -19,6 +19,13 @@ jobs:
       git_ref: ${{ github.sha }}
     secrets: inherit
 
+  csi-wrapper:
+    uses: ./.github/workflows/csi_wrapper_images.yaml
+    with:
+      image_tags: latest,${{ github.sha }}
+      git_ref: ${{ github.sha }}
+    secrets: inherit
+
   peerpod-ctrl:
     uses: ./.github/workflows/peerpod-ctrl_image.yaml
     with:
