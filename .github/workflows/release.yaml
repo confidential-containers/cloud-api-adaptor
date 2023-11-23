@@ -24,6 +24,13 @@ jobs:
       git_ref: ${{ github.ref }}
     secrets: inherit
 
+  peerpodconfig-ctrl:
+    uses: ./.github/workflows/peerpodconfig-ctrl_image.yaml
+    with:
+      image_tags: ${{ github.event.release.tag_name }}
+      git_ref: ${{ github.ref }}
+    secrets: inherit
+
   podvm_builder:
     uses: ./.github/workflows/podvm_builder.yaml
     with:
