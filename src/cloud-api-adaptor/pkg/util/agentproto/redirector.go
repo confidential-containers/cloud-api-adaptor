@@ -11,8 +11,8 @@ import (
 	"sync"
 
 	"github.com/containerd/ttrpc"
-	"github.com/gogo/protobuf/types"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 )
@@ -60,7 +60,6 @@ func (s *redirector) Connect(ctx context.Context) error {
 
 		s.agentClient = &client{
 			AgentServiceService: pb.NewAgentServiceClient(s.ttrpcClient),
-			ImageService:        pb.NewImageClient(s.ttrpcClient),
 			HealthService:       pb.NewHealthClient(s.ttrpcClient),
 		}
 	})
@@ -86,7 +85,7 @@ func (s *redirector) Close() error {
 
 // AgentServiceService methods
 
-func (s *redirector) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (res *types.Empty, err error) {
+func (s *redirector) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -94,7 +93,7 @@ func (s *redirector) CreateContainer(ctx context.Context, req *pb.CreateContaine
 	return s.agentClient.CreateContainer(ctx, req)
 }
 
-func (s *redirector) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (res *types.Empty, err error) {
+func (s *redirector) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -102,7 +101,7 @@ func (s *redirector) StartContainer(ctx context.Context, req *pb.StartContainerR
 	return s.agentClient.StartContainer(ctx, req)
 }
 
-func (s *redirector) RemoveContainer(ctx context.Context, req *pb.RemoveContainerRequest) (res *types.Empty, err error) {
+func (s *redirector) RemoveContainer(ctx context.Context, req *pb.RemoveContainerRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -110,7 +109,7 @@ func (s *redirector) RemoveContainer(ctx context.Context, req *pb.RemoveContaine
 	return s.agentClient.RemoveContainer(ctx, req)
 }
 
-func (s *redirector) ExecProcess(ctx context.Context, req *pb.ExecProcessRequest) (res *types.Empty, err error) {
+func (s *redirector) ExecProcess(ctx context.Context, req *pb.ExecProcessRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -118,7 +117,7 @@ func (s *redirector) ExecProcess(ctx context.Context, req *pb.ExecProcessRequest
 	return s.agentClient.ExecProcess(ctx, req)
 }
 
-func (s *redirector) SignalProcess(ctx context.Context, req *pb.SignalProcessRequest) (res *types.Empty, err error) {
+func (s *redirector) SignalProcess(ctx context.Context, req *pb.SignalProcessRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -134,7 +133,7 @@ func (s *redirector) WaitProcess(ctx context.Context, req *pb.WaitProcessRequest
 	return s.agentClient.WaitProcess(ctx, req)
 }
 
-func (s *redirector) UpdateContainer(ctx context.Context, req *pb.UpdateContainerRequest) (res *types.Empty, err error) {
+func (s *redirector) UpdateContainer(ctx context.Context, req *pb.UpdateContainerRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -142,7 +141,7 @@ func (s *redirector) UpdateContainer(ctx context.Context, req *pb.UpdateContaine
 	return s.agentClient.UpdateContainer(ctx, req)
 }
 
-func (s *redirector) UpdateEphemeralMounts(ctx context.Context, req *pb.UpdateEphemeralMountsRequest) (res *types.Empty, err error) {
+func (s *redirector) UpdateEphemeralMounts(ctx context.Context, req *pb.UpdateEphemeralMountsRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -158,7 +157,7 @@ func (s *redirector) StatsContainer(ctx context.Context, req *pb.StatsContainerR
 	return s.agentClient.StatsContainer(ctx, req)
 }
 
-func (s *redirector) PauseContainer(ctx context.Context, req *pb.PauseContainerRequest) (res *types.Empty, err error) {
+func (s *redirector) PauseContainer(ctx context.Context, req *pb.PauseContainerRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -166,7 +165,7 @@ func (s *redirector) PauseContainer(ctx context.Context, req *pb.PauseContainerR
 	return s.agentClient.PauseContainer(ctx, req)
 }
 
-func (s *redirector) ResumeContainer(ctx context.Context, req *pb.ResumeContainerRequest) (res *types.Empty, err error) {
+func (s *redirector) ResumeContainer(ctx context.Context, req *pb.ResumeContainerRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -174,7 +173,7 @@ func (s *redirector) ResumeContainer(ctx context.Context, req *pb.ResumeContaine
 	return s.agentClient.ResumeContainer(ctx, req)
 }
 
-func (s *redirector) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (res *types.Empty, err error) {
+func (s *redirector) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (res *emptypb.Empty, err error) {
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
 	}
@@ -205,7 +204,7 @@ func (s *redirector) ReadStderr(ctx context.Context, req *pb.ReadStreamRequest) 
 	return s.agentClient.ReadStderr(ctx, req)
 }
 
-func (s *redirector) CloseStdin(ctx context.Context, req *pb.CloseStdinRequest) (res *types.Empty, err error) {
+func (s *redirector) CloseStdin(ctx context.Context, req *pb.CloseStdinRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -213,7 +212,7 @@ func (s *redirector) CloseStdin(ctx context.Context, req *pb.CloseStdinRequest) 
 	return s.agentClient.CloseStdin(ctx, req)
 }
 
-func (s *redirector) TtyWinResize(ctx context.Context, req *pb.TtyWinResizeRequest) (res *types.Empty, err error) {
+func (s *redirector) TtyWinResize(ctx context.Context, req *pb.TtyWinResizeRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -253,7 +252,7 @@ func (s *redirector) ListRoutes(ctx context.Context, req *pb.ListRoutesRequest) 
 	return s.agentClient.ListRoutes(ctx, req)
 }
 
-func (s *redirector) AddARPNeighbors(ctx context.Context, req *pb.AddARPNeighborsRequest) (res *types.Empty, err error) {
+func (s *redirector) AddARPNeighbors(ctx context.Context, req *pb.AddARPNeighborsRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -285,7 +284,7 @@ func (s *redirector) GetMetrics(ctx context.Context, req *pb.GetMetricsRequest) 
 	return s.agentClient.GetMetrics(ctx, req)
 }
 
-func (s *redirector) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (res *types.Empty, err error) {
+func (s *redirector) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -293,7 +292,7 @@ func (s *redirector) CreateSandbox(ctx context.Context, req *pb.CreateSandboxReq
 	return s.agentClient.CreateSandbox(ctx, req)
 }
 
-func (s *redirector) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (res *types.Empty, err error) {
+func (s *redirector) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -301,7 +300,7 @@ func (s *redirector) DestroySandbox(ctx context.Context, req *pb.DestroySandboxR
 	return s.agentClient.DestroySandbox(ctx, req)
 }
 
-func (s *redirector) OnlineCPUMem(ctx context.Context, req *pb.OnlineCPUMemRequest) (res *types.Empty, err error) {
+func (s *redirector) OnlineCPUMem(ctx context.Context, req *pb.OnlineCPUMemRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -309,7 +308,7 @@ func (s *redirector) OnlineCPUMem(ctx context.Context, req *pb.OnlineCPUMemReque
 	return s.agentClient.OnlineCPUMem(ctx, req)
 }
 
-func (s *redirector) ReseedRandomDev(ctx context.Context, req *pb.ReseedRandomDevRequest) (res *types.Empty, err error) {
+func (s *redirector) ReseedRandomDev(ctx context.Context, req *pb.ReseedRandomDevRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -325,7 +324,7 @@ func (s *redirector) GetGuestDetails(ctx context.Context, req *pb.GuestDetailsRe
 	return s.agentClient.GetGuestDetails(ctx, req)
 }
 
-func (s *redirector) MemHotplugByProbe(ctx context.Context, req *pb.MemHotplugByProbeRequest) (res *types.Empty, err error) {
+func (s *redirector) MemHotplugByProbe(ctx context.Context, req *pb.MemHotplugByProbeRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -333,7 +332,7 @@ func (s *redirector) MemHotplugByProbe(ctx context.Context, req *pb.MemHotplugBy
 	return s.agentClient.MemHotplugByProbe(ctx, req)
 }
 
-func (s *redirector) SetGuestDateTime(ctx context.Context, req *pb.SetGuestDateTimeRequest) (res *types.Empty, err error) {
+func (s *redirector) SetGuestDateTime(ctx context.Context, req *pb.SetGuestDateTimeRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -341,7 +340,7 @@ func (s *redirector) SetGuestDateTime(ctx context.Context, req *pb.SetGuestDateT
 	return s.agentClient.SetGuestDateTime(ctx, req)
 }
 
-func (s *redirector) CopyFile(ctx context.Context, req *pb.CopyFileRequest) (res *types.Empty, err error) {
+func (s *redirector) CopyFile(ctx context.Context, req *pb.CopyFileRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -357,7 +356,7 @@ func (s *redirector) GetOOMEvent(ctx context.Context, req *pb.GetOOMEventRequest
 	return s.agentClient.GetOOMEvent(ctx, req)
 }
 
-func (s *redirector) AddSwap(ctx context.Context, req *pb.AddSwapRequest) (res *types.Empty, err error) {
+func (s *redirector) AddSwap(ctx context.Context, req *pb.AddSwapRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
@@ -373,12 +372,20 @@ func (s *redirector) GetVolumeStats(ctx context.Context, req *pb.VolumeStatsRequ
 	return s.agentClient.GetVolumeStats(ctx, req)
 }
 
-func (s *redirector) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeRequest) (res *types.Empty, err error) {
+func (s *redirector) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
 		return nil, err
 	}
 	return s.agentClient.ResizeVolume(ctx, req)
+}
+
+func (s *redirector) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (res *emptypb.Empty, err error) {
+
+	if err := s.Connect(ctx); err != nil {
+		return nil, err
+	}
+	return s.agentClient.SetPolicy(ctx, req)
 }
 
 // HealthService methods
@@ -397,12 +404,4 @@ func (s *redirector) Version(ctx context.Context, req *pb.CheckRequest) (res *pb
 		return nil, err
 	}
 	return s.agentClient.Version(ctx, req)
-}
-
-func (s *redirector) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (res *types.Empty, err error) {
-
-	if err := s.Connect(ctx); err != nil {
-		return nil, err
-	}
-	return s.agentClient.SetPolicy(ctx, req)
 }

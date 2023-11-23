@@ -22,10 +22,10 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
-	"github.com/gogo/protobuf/types"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
 	agent "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestShim(t *testing.T) {
@@ -300,7 +300,7 @@ func (s *agentService) get(cid string) (*container, error) {
 	return c, nil
 }
 
-func (s *agentService) CreateContainer(ctx context.Context, req *agent.CreateContainerRequest) (*types.Empty, error) {
+func (s *agentService) CreateContainer(ctx context.Context, req *agent.CreateContainerRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
 
 	cid := containerID(req.ContainerId)
@@ -313,13 +313,13 @@ func (s *agentService) CreateContainer(ctx context.Context, req *agent.CreateCon
 
 	s.containers[cid] = c
 
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) StartContainer(ctx context.Context, req *agent.StartContainerRequest) (*types.Empty, error) {
+func (s *agentService) StartContainer(ctx context.Context, req *agent.StartContainerRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) RemoveContainer(ctx context.Context, req *agent.RemoveContainerRequest) (*types.Empty, error) {
+func (s *agentService) RemoveContainer(ctx context.Context, req *agent.RemoveContainerRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
 
 	cid := containerID(req.ContainerId)
@@ -329,13 +329,13 @@ func (s *agentService) RemoveContainer(ctx context.Context, req *agent.RemoveCon
 
 	delete(s.containers, cid)
 
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) ExecProcess(ctx context.Context, req *agent.ExecProcessRequest) (*types.Empty, error) {
+func (s *agentService) ExecProcess(ctx context.Context, req *agent.ExecProcessRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) SignalProcess(ctx context.Context, req *agent.SignalProcessRequest) (*types.Empty, error) {
+func (s *agentService) SignalProcess(ctx context.Context, req *agent.SignalProcessRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
 
 	c, err := s.get(req.ContainerId)
@@ -347,7 +347,7 @@ func (s *agentService) SignalProcess(ctx context.Context, req *agent.SignalProce
 		close(c.done)
 	})
 
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 func (s *agentService) WaitProcess(ctx context.Context, req *agent.WaitProcessRequest) (*agent.WaitProcessResponse, error) {
 	log.Printf("agent call: %T %#v", req, req)
@@ -361,25 +361,25 @@ func (s *agentService) WaitProcess(ctx context.Context, req *agent.WaitProcessRe
 
 	return &agent.WaitProcessResponse{}, nil
 }
-func (s *agentService) UpdateContainer(ctx context.Context, req *agent.UpdateContainerRequest) (*types.Empty, error) {
+func (s *agentService) UpdateContainer(ctx context.Context, req *agent.UpdateContainerRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) UpdateEphemeralMounts(ctx context.Context, req *agent.UpdateEphemeralMountsRequest) (*types.Empty, error) {
+func (s *agentService) UpdateEphemeralMounts(ctx context.Context, req *agent.UpdateEphemeralMountsRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 func (s *agentService) StatsContainer(ctx context.Context, req *agent.StatsContainerRequest) (*agent.StatsContainerResponse, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &agent.StatsContainerResponse{}, nil
 }
-func (s *agentService) PauseContainer(ctx context.Context, req *agent.PauseContainerRequest) (*types.Empty, error) {
+func (s *agentService) PauseContainer(ctx context.Context, req *agent.PauseContainerRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) ResumeContainer(ctx context.Context, req *agent.ResumeContainerRequest) (*types.Empty, error) {
+func (s *agentService) ResumeContainer(ctx context.Context, req *agent.ResumeContainerRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 func (s *agentService) WriteStdin(ctx context.Context, req *agent.WriteStreamRequest) (*agent.WriteStreamResponse, error) {
 	log.Printf("agent call: %T %#v", req, req)
@@ -423,13 +423,13 @@ func (s *agentService) ReadStderr(ctx context.Context, req *agent.ReadStreamRequ
 
 	return nil, io.EOF
 }
-func (s *agentService) CloseStdin(ctx context.Context, req *agent.CloseStdinRequest) (*types.Empty, error) {
+func (s *agentService) CloseStdin(ctx context.Context, req *agent.CloseStdinRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) TtyWinResize(ctx context.Context, req *agent.TtyWinResizeRequest) (*types.Empty, error) {
+func (s *agentService) TtyWinResize(ctx context.Context, req *agent.TtyWinResizeRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 func (s *agentService) UpdateInterface(ctx context.Context, req *agent.UpdateInterfaceRequest) (*protocols.Interface, error) {
 	log.Printf("agent call: %T %#v", req, req)
@@ -447,9 +447,9 @@ func (s *agentService) ListRoutes(ctx context.Context, req *agent.ListRoutesRequ
 	log.Printf("agent call: %T %#v", req, req)
 	return &agent.Routes{}, nil
 }
-func (s *agentService) AddARPNeighbors(ctx context.Context, req *agent.AddARPNeighborsRequest) (*types.Empty, error) {
+func (s *agentService) AddARPNeighbors(ctx context.Context, req *agent.AddARPNeighborsRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 func (s *agentService) GetIPTables(ctx context.Context, req *agent.GetIPTablesRequest) (*agent.GetIPTablesResponse, error) {
 	log.Printf("agent call: %T %#v", req, req)
@@ -463,66 +463,62 @@ func (s *agentService) GetMetrics(ctx context.Context, req *agent.GetMetricsRequ
 	log.Printf("agent call: %T %#v", req, req)
 	return &agent.Metrics{}, nil
 }
-func (s *agentService) CreateSandbox(ctx context.Context, req *agent.CreateSandboxRequest) (*types.Empty, error) {
+func (s *agentService) CreateSandbox(ctx context.Context, req *agent.CreateSandboxRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) DestroySandbox(ctx context.Context, req *agent.DestroySandboxRequest) (*types.Empty, error) {
+func (s *agentService) DestroySandbox(ctx context.Context, req *agent.DestroySandboxRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) OnlineCPUMem(ctx context.Context, req *agent.OnlineCPUMemRequest) (*types.Empty, error) {
+func (s *agentService) OnlineCPUMem(ctx context.Context, req *agent.OnlineCPUMemRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) ReseedRandomDev(ctx context.Context, req *agent.ReseedRandomDevRequest) (*types.Empty, error) {
+func (s *agentService) ReseedRandomDev(ctx context.Context, req *agent.ReseedRandomDevRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 func (s *agentService) GetGuestDetails(ctx context.Context, req *agent.GuestDetailsRequest) (*agent.GuestDetailsResponse, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &agent.GuestDetailsResponse{}, nil
 }
-func (s *agentService) MemHotplugByProbe(ctx context.Context, req *agent.MemHotplugByProbeRequest) (*types.Empty, error) {
+func (s *agentService) MemHotplugByProbe(ctx context.Context, req *agent.MemHotplugByProbeRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) SetGuestDateTime(ctx context.Context, req *agent.SetGuestDateTimeRequest) (*types.Empty, error) {
+func (s *agentService) SetGuestDateTime(ctx context.Context, req *agent.SetGuestDateTimeRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) CopyFile(ctx context.Context, req *agent.CopyFileRequest) (*types.Empty, error) {
+func (s *agentService) CopyFile(ctx context.Context, req *agent.CopyFileRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 func (s *agentService) GetOOMEvent(ctx context.Context, req *agent.GetOOMEventRequest) (*agent.OOMEvent, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	select {}
 	//return &agent.OOMEvent{}, nil
 }
-func (s *agentService) AddSwap(ctx context.Context, req *agent.AddSwapRequest) (*types.Empty, error) {
+func (s *agentService) AddSwap(ctx context.Context, req *agent.AddSwapRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 func (s *agentService) GetVolumeStats(ctx context.Context, req *agent.VolumeStatsRequest) (*agent.VolumeStatsResponse, error) {
 	log.Printf("agent call: %T %#v", req, req)
 	return &agent.VolumeStatsResponse{}, nil
 }
-func (s *agentService) ResizeVolume(ctx context.Context, req *agent.ResizeVolumeRequest) (*types.Empty, error) {
+func (s *agentService) ResizeVolume(ctx context.Context, req *agent.ResizeVolumeRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *agent.RemoveStaleVirtiofsShareMountsRequest) (*types.Empty, error) {
+func (s *agentService) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *agent.RemoveStaleVirtiofsShareMountsRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: %T %#v", req, req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *agentService) PullImage(ctx context.Context, req *agent.PullImageRequest) (*types.Empty, error) {
-	log.Printf("agent call: PullImage %#v", req)
-	return &types.Empty{}, nil
-}
-func (s *agentService) SetPolicy(ctx context.Context, req *agent.SetPolicyRequest) (*types.Empty, error) {
+func (s *agentService) SetPolicy(ctx context.Context, req *agent.SetPolicyRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: SetPolicy %#v", req)
-	return &types.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 
 type healthService struct{}
