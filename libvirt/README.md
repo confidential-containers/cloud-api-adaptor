@@ -19,13 +19,18 @@ You must have a Linux/KVM system with libvirt installed and the following tools:
 Assume that you have a 'default' network and storage pools created in libvirtd system instance (`qemu:///system`). However,
 if you have a different pool name then the scripts should be able to handle it properly.
 
+The script [config_libvirt.sh](config_libvirt.sh) is tested on Ubuntu 20.04 amd64/s390x VSI, please config your Ubuntu with it, run the script from the root of this repo:
+```bash
+./libvirt/config_libvirt.sh
+```
+
 ## Create the Kubernetes cluster
 
 Use the [`kcli_cluster.sh`](./kcli_cluster.sh) script to create a simple two VMs (one control plane and one worker) cluster
 with the kcli tool, as:
 
-```
-./kcli_cluster.sh create
+```bash
+./libvirt/kcli_cluster.sh create
 ```
 
 With `kcli_cluster.sh` you can configure the libvirt network and storage pools that the cluster VMs will be created, among
@@ -46,8 +51,8 @@ $ kcli list kube
 +-----------+---------+-----------+-----------------------------------------+
 $ kubectl get nodes
 NAME                 STATUS   ROLES                  AGE     VERSION
-peer-pods-ctlplane-0 Ready    control-plane,master   6m8s    v1.25.3
-peer-pods-worker-0   Ready    worker                 2m47s   v1.25.3
+peer-pods-ctlplane-0 Ready    control-plane,master   6m8s    v1.26.7
+peer-pods-worker-0   Ready    worker                 2m47s   v1.26.7
 ```
 
 ## Prepare the Pod VM volume

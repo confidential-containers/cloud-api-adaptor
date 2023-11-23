@@ -22,6 +22,7 @@ jobs:
         include:
           - type: e2e_amd64
           - type: libvirt_amd64
+          - type: libvirt_s390x
           - type: s390x-non-secure-execution
           - type: s390x-secure-execution
           - type: csi_wrapper_x86_64
@@ -81,7 +82,7 @@ jobs:
           echo "The built podvm image is based on CAA commit_id: ${caa_commit_id}"
           arch_string=""
           podvm_docker_name=""
-          if [[ "${{matrix.type}}" != "csi_wrapper_x86_64" ]] && [[ "${{matrix.type}}" != "libvirt_amd64" ]]; then
+          if [[ "${{matrix.type}}" != "csi_wrapper_x86_64" ]] && [[ "${{matrix.type}}" != "libvirt_amd64" ]] && [[ "${{matrix.type}}" != "libvirt_s390x" ]]; then
             case "${{matrix.type}}" in
               e2e_amd64)
                 arch_string="amd64"
