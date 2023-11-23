@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/containerd/ttrpc"
-	"github.com/gogo/protobuf/types"
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestNewAgentProxy(t *testing.T) {
@@ -249,38 +249,38 @@ func TestCriEndpointDial(t *testing.T) {
 
 type agentMock struct{}
 
-func (m *agentMock) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) RemoveContainer(ctx context.Context, req *pb.RemoveContainerRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) RemoveContainer(ctx context.Context, req *pb.RemoveContainerRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) ExecProcess(ctx context.Context, req *pb.ExecProcessRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) ExecProcess(ctx context.Context, req *pb.ExecProcessRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) SignalProcess(ctx context.Context, req *pb.SignalProcessRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) SignalProcess(ctx context.Context, req *pb.SignalProcessRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) WaitProcess(ctx context.Context, req *pb.WaitProcessRequest) (*pb.WaitProcessResponse, error) {
 	return &pb.WaitProcessResponse{}, nil
 }
-func (m *agentMock) UpdateContainer(ctx context.Context, req *pb.UpdateContainerRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) UpdateContainer(ctx context.Context, req *pb.UpdateContainerRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) UpdateEphemeralMounts(ctx context.Context, req *pb.UpdateEphemeralMountsRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) UpdateEphemeralMounts(ctx context.Context, req *pb.UpdateEphemeralMountsRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) StatsContainer(ctx context.Context, req *pb.StatsContainerRequest) (*pb.StatsContainerResponse, error) {
 	return &pb.StatsContainerResponse{}, nil
 }
-func (m *agentMock) PauseContainer(ctx context.Context, req *pb.PauseContainerRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) PauseContainer(ctx context.Context, req *pb.PauseContainerRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) ResumeContainer(ctx context.Context, req *pb.ResumeContainerRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) ResumeContainer(ctx context.Context, req *pb.ResumeContainerRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) WriteStdin(ctx context.Context, req *pb.WriteStreamRequest) (*pb.WriteStreamResponse, error) {
 	return &pb.WriteStreamResponse{}, nil
@@ -291,11 +291,11 @@ func (m *agentMock) ReadStdout(ctx context.Context, req *pb.ReadStreamRequest) (
 func (m *agentMock) ReadStderr(ctx context.Context, req *pb.ReadStreamRequest) (*pb.ReadStreamResponse, error) {
 	return &pb.ReadStreamResponse{}, nil
 }
-func (m *agentMock) CloseStdin(ctx context.Context, req *pb.CloseStdinRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) CloseStdin(ctx context.Context, req *pb.CloseStdinRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) TtyWinResize(ctx context.Context, req *pb.TtyWinResizeRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) TtyWinResize(ctx context.Context, req *pb.TtyWinResizeRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) UpdateInterface(ctx context.Context, req *pb.UpdateInterfaceRequest) (*protocols.Interface, error) {
 	return &protocols.Interface{}, nil
@@ -309,8 +309,8 @@ func (m *agentMock) ListInterfaces(ctx context.Context, req *pb.ListInterfacesRe
 func (m *agentMock) ListRoutes(ctx context.Context, req *pb.ListRoutesRequest) (*pb.Routes, error) {
 	return &pb.Routes{}, nil
 }
-func (m *agentMock) AddARPNeighbors(ctx context.Context, req *pb.AddARPNeighborsRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) AddARPNeighbors(ctx context.Context, req *pb.AddARPNeighborsRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) GetIPTables(ctx context.Context, req *pb.GetIPTablesRequest) (*pb.GetIPTablesResponse, error) {
 	return &pb.GetIPTablesResponse{}, nil
@@ -321,44 +321,44 @@ func (m *agentMock) SetIPTables(ctx context.Context, req *pb.SetIPTablesRequest)
 func (m *agentMock) GetMetrics(ctx context.Context, req *pb.GetMetricsRequest) (*pb.Metrics, error) {
 	return &pb.Metrics{}, nil
 }
-func (m *agentMock) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) OnlineCPUMem(ctx context.Context, req *pb.OnlineCPUMemRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) OnlineCPUMem(ctx context.Context, req *pb.OnlineCPUMemRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) ReseedRandomDev(ctx context.Context, req *pb.ReseedRandomDevRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) ReseedRandomDev(ctx context.Context, req *pb.ReseedRandomDevRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) GetGuestDetails(ctx context.Context, req *pb.GuestDetailsRequest) (*pb.GuestDetailsResponse, error) {
 	return &pb.GuestDetailsResponse{}, nil
 }
-func (m *agentMock) MemHotplugByProbe(ctx context.Context, req *pb.MemHotplugByProbeRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) MemHotplugByProbe(ctx context.Context, req *pb.MemHotplugByProbeRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) SetGuestDateTime(ctx context.Context, req *pb.SetGuestDateTimeRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) SetGuestDateTime(ctx context.Context, req *pb.SetGuestDateTimeRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (m *agentMock) CopyFile(ctx context.Context, req *pb.CopyFileRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) CopyFile(ctx context.Context, req *pb.CopyFileRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) GetOOMEvent(ctx context.Context, req *pb.GetOOMEventRequest) (*pb.OOMEvent, error) {
 	return &pb.OOMEvent{}, nil
 }
-func (m *agentMock) AddSwap(ctx context.Context, req *pb.AddSwapRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) AddSwap(ctx context.Context, req *pb.AddSwapRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) GetVolumeStats(ctx context.Context, req *pb.VolumeStatsRequest) (*pb.VolumeStatsResponse, error) {
 	return &pb.VolumeStatsResponse{}, nil
 }
-func (m *agentMock) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (m *agentMock) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
-func (p *agentMock) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (*types.Empty, error) {
-	return &types.Empty{}, nil
+func (p *agentMock) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) Check(ctx context.Context, req *pb.CheckRequest) (*pb.HealthCheckResponse, error) {
 	return &pb.HealthCheckResponse{}, nil
@@ -366,7 +366,6 @@ func (m *agentMock) Check(ctx context.Context, req *pb.CheckRequest) (*pb.Health
 func (m *agentMock) Version(ctx context.Context, req *pb.CheckRequest) (*pb.VersionCheckResponse, error) {
 	return &pb.VersionCheckResponse{}, nil
 }
-
-func (m *agentMock) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (res *types.Empty, err error) {
-	return &types.Empty{}, nil
+func (m *agentMock) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
 }
