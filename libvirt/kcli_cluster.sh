@@ -18,6 +18,9 @@ CLUSTER_WORKERS="${CLUSTER_WORKERS:-1}"
 LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-default}"
 LIBVIRT_POOL="${LIBVIRT_POOL:-default}"
 
+ARCH=$(uname -m)
+TARGET_ARCH=${ARCH/x86_64/amd64}
+
 # Wait until the command return true.
 #
 # Parameters:
@@ -41,28 +44,46 @@ wait_for_process() {
 # Create the cluster.
 #
 create () {
-	kcli create kube generic \
-		-P domain="kata.com" \
-		-P pool="$LIBVIRT_POOL" \
-		-P ctlplanes="$CLUSTER_CONTROL_NODES" \
-		-P workers="$CLUSTER_WORKERS" \
-		-P network="$LIBVIRT_NETWORK" \
-		-P image="$CLUSTER_IMAGE" \
+	parameters="-P domain=kata.com \
+		-P pool=$LIBVIRT_POOL \
+		-P ctlplanes=$CLUSTER_CONTROL_NODES \
+		-P workers=$CLUSTER_WORKERS \
+		-P network=$LIBVIRT_NETWORK \
+		-P image=$CLUSTER_IMAGE \
 		-P sdn=flannel \
 		-P nfs=false \
-		-P disk_size="$CLUSTER_DISK_SIZE" \
-		-P version="$CLUSTER_VERSION" \
-		"$CLUSTER_NAME"
+		-P disk_size=$CLUSTER_DISK_SIZE \
+		-P version=$CLUSTER_VERSION"
+	# The autolabeller and multus images do not support s390x arch yet
+	# disable them for s390x cluster
+	if [[ ${TARGET_ARCH} == "s390x" ]]; then
+		parameters="$parameters \
+			-P arch=$ARCH \
+			-P multus=false \
+			-P autolabeller=false "
+	fi
+	echo "Download $CLUSTER_IMAGE ${TARGET_ARCH} image"
+	# kcli support download image with archs: 'x86_64', 'aarch64', 'ppc64le', 's390x'
+	kcli download image $CLUSTER_IMAGE -a ${ARCH}
+
+	kcli create kube generic $parameters "$CLUSTER_NAME"
 
 	export KUBECONFIG=$HOME/.kcli/clusters/$CLUSTER_NAME/auth/kubeconfig
 
-	local cmd="kubectl get nodes | grep '\<Ready\>.*worker'"
+	# The autolabeller docker image do not support s390x arch yet
+	# use node name to wait one worker node in 'Ready' status and then label worker nodes
+	local cmd="kubectl get nodes --no-headers | grep 'worker-.* Ready'"
 	echo "Wait at least one worker be Ready"
 	if ! wait_for_process "330" "30" "$cmd"; then
 		echo "ERROR: worker nodes not ready."
 		kubectl get nodes
 		exit 1
 	fi
+	workers=$(kubectl get nodes -o name --no-headers | grep 'worker')
+	for worker in $workers; do
+		kubectl label --overwrite "$worker" node.kubernetes.io/worker=
+		kubectl label --overwrite "$worker" node-role.kubernetes.io/worker=
+	done
 
 	# Ensure that system pods are running or completed.
 	cmd="[ \$(kubectl get pods -A --no-headers | grep -v 'Running\|Completed' | wc -l) -eq 0 ]"
@@ -102,12 +123,12 @@ usage () {
 }
 
 main() {
-	# It should use kcli version newer than the build of 2023/11/21
-	# that contains the fix to https://github.com/karmab/kcli/issues/619
+	# It should use kcli version newer than the build of 2023/11/24
+	# that contains the fix to https://github.com/karmab/kcli/pull/623
 	local kcli_version
 	local kcli_version_min="99.0"
 	local kcli_build_date
-	local kcli_build_date_min="2023/11/22"
+	local kcli_build_date_min="2023/11/24"
 
 	if ! command -v kcli >/dev/null; then
 		echo "ERROR: kcli command is required. See https://kcli.readthedocs.io/en/latest/#installation"
