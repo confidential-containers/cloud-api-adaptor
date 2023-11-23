@@ -53,3 +53,10 @@ jobs:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
     secrets: inherit
+
+  webhook:
+    uses: ./.github/workflows/webhook_image.yaml
+    with:
+      image_tags: ${{ github.event.release.tag_name }}
+      git_ref: ${{ github.ref }}
+    secrets: inherit
