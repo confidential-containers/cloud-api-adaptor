@@ -19,7 +19,6 @@ import (
 
 type Redirector interface {
 	pb.AgentServiceService
-	pb.ImageService
 	pb.HealthService
 
 	Connect(ctx context.Context) error
@@ -35,7 +34,6 @@ type redirector struct {
 
 type client struct {
 	pb.AgentServiceService
-	pb.ImageService
 	pb.HealthService
 }
 
