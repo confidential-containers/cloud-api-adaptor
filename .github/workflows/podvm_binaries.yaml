@@ -1,4 +1,4 @@
-name: Create Pod VM Binaries Image
+name: (Callable) Build and push podvm_binaries image
 on:
   workflow_call:
     inputs:
