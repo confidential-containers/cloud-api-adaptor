@@ -107,3 +107,55 @@ jobs:
 
       - name: Build the controller image
         run: make docker-build
+
+  volumes:
+    name: volume controllers
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        controller:
+          - csi-wrapper
+    defaults:
+      run:
+        working-directory: volumes/${{ matrix.controller }}
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@v4
+
+      - name: Read properties from versions.yaml
+        run: |
+          go_version="$(yq '.tools.golang' ../../versions.yaml)"
+          [ -n "$go_version" ]
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build the controllers
+        run: make build
+
+      - name: Run unit tests
+        run: make test
+
+      - name: Build checks
+        run: make check
+
+      - name: Build docker images
+        run: |
+          echo "::group::Build csi-node-wrapper-docker"
+          make csi-node-wrapper-docker
+          echo "::endgroup::"
+
+          echo "::group::Build csi-controller-wrapper-docker"
+          make csi-controller-wrapper-docker
+          echo "::endgroup::"
+
+          echo "::group::Build csi-podvm-wrapper-docker"
+          make csi-podvm-wrapper-docker
+          echo "::endgroup::"
