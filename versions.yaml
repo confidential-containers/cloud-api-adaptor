@@ -19,6 +19,7 @@ cloudimg:
         checksum: "sha256:d436ffeac7d468f75526ca8b8bab1cba64ba3ab2889ccd11fa107a7323b267db"
 
 tools:
+  bats: 1.10.0
   golang: 1.20.12
   rust: 1.72.0
   protoc: 3.11.4
