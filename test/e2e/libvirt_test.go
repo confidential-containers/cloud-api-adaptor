@@ -75,6 +75,11 @@ func TestLibvirtCreatePeerPodWithLargeImage(t *testing.T) {
 }
 */
 
+func TestLibvirtDeletePod(t *testing.T) {
+	assert := LibvirtAssert{}
+	doTestDeleteSimplePod(t, assert)
+}
+
 // LibvirtAssert implements the CloudAssert interface for Libvirt.
 type LibvirtAssert struct {
 	// TODO: create the connection once on the initializer.
