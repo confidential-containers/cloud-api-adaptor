@@ -14,7 +14,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	envconf "sigs.k8s.io/e2e-framework/pkg/envconf"
 )
@@ -22,7 +21,7 @@ import (
 // doTestCreateSimplePod tests a simple peer-pod can be created.
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
-	pod := newNginxPod(namespace)
+	pod := newBusyboxPodWithName(namespace, "simplePeerPod-test")
 	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).run()
 }
 
@@ -31,29 +30,29 @@ func doTestCreateSimplePodWithNydusAnnotation(t *testing.T, assert CloudAssert) 
 	annotationData := map[string]string{
 		"io.containerd.cri.runtime-handler": "kata-remote",
 	}
-	pod := newPod(namespace, "alpine", "alpine", "alpine", withRestartPolicy(corev1.RestartPolicyNever), withAnnotations(annotationData))
+	pod := newPod(namespace, "alpine", "alpine", "alpine", withRestartPolicy(v1.RestartPolicyNever), withAnnotations(annotationData))
 	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).withNydusSnapshotter().run()
 }
 
 func doTestDeleteSimplePod(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
-	pod := newNginxPodWithName(namespace, "deletion-test")
+	pod := newBusyboxPodWithName(namespace, "deletion-test")
 	duration := 1 * time.Minute
 	newTestCase(t, "DeletePod", assert, "Deletion complete").withPod(pod).withDeleteAssertion(&duration).run()
 }
 
 func doTestCreatePodWithConfigMap(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
-	podName := "nginx-configmap-pod"
-	containerName := "nginx-configmap-container"
-	imageName := "nginx:latest"
-	configMapName := "nginx-configmap"
+	podName := "busybox-configmap-pod"
+	containerName := "busybox-configmap-container"
+	imageName := BUSYBOX_IMAGE
+	configMapName := "busybox-configmap"
 	configMapFileName := "example.txt"
 	podKubeConfigmapDir := "/etc/config/"
 	configMapPath := podKubeConfigmapDir + configMapFileName
 	configMapContents := "Hello, world"
 	configMapData := map[string]string{configMapFileName: configMapContents}
-	pod := newPod(namespace, podName, containerName, imageName, withConfigMapBinding(podKubeConfigmapDir, configMapName), withContainerPort(80))
+	pod := newPod(namespace, podName, containerName, imageName, withConfigMapBinding(podKubeConfigmapDir, configMapName), withCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 	configMap := newConfigMap(namespace, configMapName, configMapData)
 	testCommands := []testCommand{
 		{
@@ -77,10 +76,10 @@ func doTestCreatePodWithConfigMap(t *testing.T, assert CloudAssert) {
 func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 	//doTestCreatePod(t, assert, "Secret is created and contains data", pod)
 	namespace := envconf.RandomName("default", 7)
-	podName := "nginx-secret-pod"
-	containerName := "nginx-secret-container"
-	imageName := "nginx:latest"
-	secretName := "nginx-secret"
+	podName := "busybox-secret-pod"
+	containerName := "busybox-secret-container"
+	imageName := BUSYBOX_IMAGE
+	secretName := "busybox-secret"
 	podKubeSecretsDir := "/etc/secret/"
 	usernameFileName := "username"
 	username := "admin"
@@ -89,7 +88,7 @@ func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 	password := "password"
 	passwordPath := podKubeSecretsDir + passwordFileName
 	secretData := map[string][]byte{passwordFileName: []byte(password), usernameFileName: []byte(username)}
-	pod := newPod(namespace, podName, containerName, imageName, withSecretBinding(podKubeSecretsDir, secretName), withContainerPort(80))
+	pod := newPod(namespace, podName, containerName, imageName, withSecretBinding(podKubeSecretsDir, secretName), withCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 	secret := newSecret(namespace, secretName, secretData, v1.SecretTypeOpaque)
 
 	testCommands := []testCommand{
@@ -168,7 +167,7 @@ func doTestCreatePeerPodAndCheckUserLogs(t *testing.T, assert CloudAssert) {
 // doTestCreateConfidentialPod verify a confidential peer-pod can be created.
 func doTestCreateConfidentialPod(t *testing.T, assert CloudAssert, testCommands []testCommand) {
 	namespace := envconf.RandomName("default", 7)
-	pod := newNginxPodWithName(namespace, "confidential-pod-nginx")
+	pod := newBusyboxPodWithName(namespace, "confidential-pod-busybox")
 	for i := 0; i < len(testCommands); i++ {
 		testCommands[i].containerName = pod.Spec.Containers[0].Name
 	}
@@ -197,8 +196,8 @@ func doTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T, asser
 func doTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	podName := "env-variable-in-config"
-	imageName := "nginx:latest"
-	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyOnFailure), withEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}), withCommand([]string{"/bin/sh", "-c", "env"}), withContainerPort(80))
+	imageName := BUSYBOX_IMAGE
+	pod := newPod(namespace, podName, podName, imageName, withRestartPolicy(v1.RestartPolicyOnFailure), withEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}), withCommand([]string{"/bin/sh", "-c", "env"}))
 	expectedPodLogString := "ISPRODUCTION=true"
 	newTestCase(t, "EnvVariablePeerPodWithDeploymentOnly", assert, "Peer pod with environmental variables has been created").withPod(pod).withExpectedPodLogString(expectedPodLogString).withCustomPodState(v1.PodSucceeded).run()
 }
@@ -298,7 +297,7 @@ func doTestPodVMwithNoAnnotations(t *testing.T, assert CloudAssert, expectedType
 	namespace := envconf.RandomName("default", 7)
 	podName := "no-annotations"
 	containerName := "busybox"
-	imageName := "busybox:latest"
+	imageName := BUSYBOX_IMAGE
 	pod := newPod(namespace, podName, containerName, imageName, withCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 	testInstanceTypes := instanceValidatorFunctions{
 		testSuccessfn: func(instance string) bool {
@@ -319,7 +318,7 @@ func doTestPodVMwithAnnotationsInstanceType(t *testing.T, assert CloudAssert, ex
 	namespace := envconf.RandomName("default", 7)
 	podName := "annotations-instance-type"
 	containerName := "busybox"
-	imageName := "busybox:latest"
+	imageName := BUSYBOX_IMAGE
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.machine_type": expectedType,
 	}
@@ -344,7 +343,7 @@ func doTestPodVMwithAnnotationsCPUMemory(t *testing.T, assert CloudAssert, expec
 	namespace := envconf.RandomName("default", 7)
 	podName := "annotations-cpu-mem"
 	containerName := "busybox"
-	imageName := "busybox:latest"
+	imageName := BUSYBOX_IMAGE
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.default_vcpus":  "2",
 		"io.katacontainers.config.hypervisor.default_memory": "12288",
@@ -370,7 +369,7 @@ func doTestPodVMwithAnnotationsInvalidInstanceType(t *testing.T, assert CloudAss
 	namespace := envconf.RandomName("default", 7)
 	podName := "annotations-invalid-instance-type"
 	containerName := "busybox"
-	imageName := "busybox:latest"
+	imageName := BUSYBOX_IMAGE
 	expectedErrorMessage := `requested instance type ("` + expectedType + `") is not part of supported instance types list`
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.machine_type": expectedType,
@@ -395,7 +394,7 @@ func doTestPodVMwithAnnotationsLargerMemory(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	podName := "annotations-too-big-mem"
 	containerName := "busybox"
-	imageName := "busybox:latest"
+	imageName := BUSYBOX_IMAGE
 	expectedErrorMessage := "failed to get instance type based on vCPU and memory annotations: no instance type found for the given vcpus (2) and memory (18432)"
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.default_vcpus":  "2",
@@ -421,7 +420,7 @@ func doTestPodVMwithAnnotationsLargerCPU(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	podName := "annotations-too-big-cpu"
 	containerName := "busybox"
-	imageName := "busybox:latest"
+	imageName := BUSYBOX_IMAGE
 	expectedErrorMessage := []string{
 		"no instance type found for the given vcpus (3) and memory (12288)",
 		"Number of cpus 3 specified in annotation default_vcpus is greater than the number of CPUs 2 on the system",
