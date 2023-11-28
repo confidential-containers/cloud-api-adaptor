@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +22,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
 
-const WAIT_POD_RUNNING_TIMEOUT = time.Second * 900
+const WAIT_POD_RUNNING_TIMEOUT = time.Second * 600
 const WAIT_JOB_RUNNING_TIMEOUT = time.Second * 600
 
 // testCommand is a list of commands to execute inside the pod container,
@@ -189,44 +190,32 @@ func (tc *testCase) run() {
 				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
 					t.Fatal(err)
 				}
-				if tc.podState == v1.PodRunning || tc.pod.Spec.Containers[0].ReadinessProbe != nil {
-					clientset, err := kubernetes.NewForConfig(client.RESTConfig())
-					if err != nil {
+				if tc.podState == v1.PodRunning || len(tc.testCommands) > 0 {
+					t.Logf("Waiting for containers in pod: %v are ready", tc.pod.Name)
+					if err = wait.For(conditions.New(client.Resources()).ContainersReady(tc.pod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+						//Added logs for debugging nightly tests
+						clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+						if err != nil {
+							t.Fatal(err)
+						}
+						pod, err := clientset.CoreV1().Pods(tc.pod.Namespace).Get(ctx, tc.pod.Name, metav1.GetOptions{})
+						if err != nil {
+							t.Fatal(err)
+						}
+						t.Logf("Expected Pod State: %v", tc.podState)
+						yamlData, err := yaml.Marshal(pod.Status)
+						if err != nil {
+							fmt.Println("Error marshaling pod.Status to YAML: ", err.Error())
+						} else {
+							t.Logf("Current Pod State: %v", string(yamlData))
+						}
+						if pod.Status.Phase == v1.PodRunning {
+							fmt.Printf("Log of the pod %.v \n===================\n", pod.Name)
+							podLogString, _ := getPodLog(ctx, client, *pod)
+							fmt.Println(podLogString)
+							fmt.Printf("===================\n")
+						}
 						t.Fatal(err)
-					}
-					pod, err := clientset.CoreV1().Pods(tc.pod.Namespace).Get(ctx, tc.pod.Name, metav1.GetOptions{})
-					if err != nil {
-						t.Fatal(err)
-					}
-					//Added logs for debugging nightly tests
-					t.Logf("Expected Pod State: %v", tc.podState)
-					t.Logf("Current Pod State: %v", pod.Status.Phase)
-					//Getting Readiness probe of a container
-					for i, condition := range pod.Status.Conditions {
-						fmt.Printf("===================\n")
-						fmt.Printf("Checking Conditons - %v....\n", i+1)
-						fmt.Printf("===================\n")
-						fmt.Printf("*.Condition Type: %v\n", condition.Type)
-						fmt.Printf("*.Condition Status: %v\n", condition.Status)
-						fmt.Printf("*.Condition Last Probe Time: %v\n", condition.LastProbeTime)
-						fmt.Printf("*.Condition Last Transition Time: %v\n", condition.LastTransitionTime)
-						fmt.Printf("*.Condition Last Message: %v\n", condition.Message)
-						fmt.Printf("*.Condition Last Reason: %v\n", condition.Reason)
-					}
-
-					readinessProbe := pod.Spec.Containers[0].ReadinessProbe
-					if readinessProbe != nil {
-						fmt.Printf("===================\n")
-						fmt.Printf("Checking Readiness Probe....\n")
-						fmt.Printf("===================\n")
-						fmt.Printf("*.Initial Delay Seconds: %v\n", readinessProbe.InitialDelaySeconds)
-						fmt.Printf("*.Timeout Seconds: %v\n", readinessProbe.TimeoutSeconds)
-						fmt.Printf("*.Success Threshold: %v\n", readinessProbe.SuccessThreshold)
-						fmt.Printf("*.Failure Threshold: %v\n", readinessProbe.FailureThreshold)
-						fmt.Printf("*.Period Seconds: %v\n", readinessProbe.PeriodSeconds)
-						fmt.Printf("*.Probe Handler: %v\n", readinessProbe.ProbeHandler)
-						fmt.Printf("*.Probe Handler Port: %v\n", readinessProbe.ProbeHandler.HTTPGet.Port)
-						fmt.Printf("===================\n")
 					}
 				}
 			}

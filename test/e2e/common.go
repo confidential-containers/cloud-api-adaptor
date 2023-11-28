@@ -8,31 +8,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 
 type podOption func(*corev1.Pod)
 
 func withRestartPolicy(restartPolicy corev1.RestartPolicy) podOption {
 	return func(p *corev1.Pod) {
 		p.Spec.RestartPolicy = restartPolicy
-	}
-}
-
-// Optional method to add ContainerPort and ReadinessProbe to listen Port 80
-func withContainerPort(port int32) podOption {
-	return func(p *corev1.Pod) {
-		p.Spec.Containers[0].Ports = []corev1.ContainerPort{{ContainerPort: port}}
-		p.Spec.Containers[0].ReadinessProbe = &corev1.Probe{
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/",
-					Port: intstr.FromInt(int(port)),
-				},
-			},
-			InitialDelaySeconds: 10,
-			PeriodSeconds:       5,
-		}
 	}
 }
 
@@ -107,20 +91,16 @@ func newPod(namespace string, podName string, containerName string, imageName st
 	return pod
 }
 
-func newNginxPod(namespace string) *corev1.Pod {
-	return newPod(namespace, "nginx", "nginx", "nginx", withRestartPolicy(corev1.RestartPolicyNever))
-}
-
-func newNginxPodWithName(namespace string, podName string) *corev1.Pod {
-	return newPod(namespace, podName, "nginx", "nginx", withRestartPolicy(corev1.RestartPolicyNever))
-}
-
 func newBusyboxPod(namespace string) *corev1.Pod {
-	return newPod(namespace, "busybox-pod", "busybox", "quay.io/prometheus/busybox:latest", withCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+	return newBusyboxPodWithName(namespace, "busybox")
+}
+
+func newBusyboxPodWithName(namespace, podName string) *corev1.Pod {
+	return newPod(namespace, podName, "busybox", BUSYBOX_IMAGE, withCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 }
 
 // newConfigMap returns a new config map object.
-func newConfigMap(namespace string, name string, configMapData map[string]string) *corev1.ConfigMap {
+func newConfigMap(namespace, name string, configMapData map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Data:       configMapData,
@@ -128,7 +108,7 @@ func newConfigMap(namespace string, name string, configMapData map[string]string
 }
 
 // newSecret returns a new secret object.
-func newSecret(namespace string, name string, data map[string][]byte, secretType corev1.SecretType) *corev1.Secret {
+func newSecret(namespace, name string, data map[string][]byte, secretType corev1.SecretType) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Data:       data,
@@ -137,7 +117,7 @@ func newSecret(namespace string, name string, data map[string][]byte, secretType
 }
 
 // newJob returns a new job
-func newJob(namespace string, name string) *batchv1.Job {
+func newJob(namespace, name string) *batchv1.Job {
 	runtimeClassName := "kata-remote"
 	// Comment out adding runtime-handler until nydus-snapshotter is stable
 	// annotationData := map[string]string{
