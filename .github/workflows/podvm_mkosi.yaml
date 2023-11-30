@@ -2,10 +2,15 @@ name: Create a Pod VM image with mkosi
 
 on:
   workflow_dispatch:
+    inputs:
+      binaries-image:
+        description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora"
+        required: false
 
 jobs:
   build-binaries:
     name: Build binaries
+    if : ${{ github.event.inputs.binaries-image == '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,7 +48,17 @@ jobs:
   build-image:
     name: Build image
     needs: [build-binaries]
+    if: |
+      always() && (
+          needs.build-binaries.result == 'success' || (
+              needs.build-binaries.result == 'skipped' &&
+              github.event.inputs.binaries-image != ''
+          )
+      )
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -72,10 +87,19 @@ jobs:
       - name: Second checkout
         uses: actions/checkout@v3
 
+      - name: Decide on image to use
+        id: binaries-image
+        run: |
+          if [ -z "${{ github.event.inputs.binaries-image }}" ]; then
+            echo "image=ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "image=${{ github.event.inputs.binaries-image }}" | tee -a "$GITHUB_OUTPUT"
+          fi
+
       - name: Download binaries and unpack into binaries-tree
         run: |
           crane export \
-            ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }} \
+            ${{ steps.binaries-image.outputs.image }} \
             podvm-binaries.tar
           mkdir -p podvm-mkosi/resources/binaries-tree
           tar xf podvm-binaries.tar -C podvm-mkosi/resources/binaries-tree
