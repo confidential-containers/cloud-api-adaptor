@@ -206,6 +206,19 @@ func isNodePublishVolumeTargetPath(volumePath, directVolumesDir string) bool {
 	return err == nil
 }
 
+func (s *proxyService) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (*types.Empty, error) {
+
+	logger.Printf("SetPolicy: policy:%s", req.Policy)
+
+	res, err := s.Redirector.SetPolicy(ctx, req)
+
+	if err != nil {
+		logger.Printf("SetPolicy fails: %v", err)
+	}
+
+	return res, err
+}
+
 func (s *proxyService) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*types.Empty, error) {
 
 	logger.Printf("StartContainer: containerID:%s", req.ContainerId)

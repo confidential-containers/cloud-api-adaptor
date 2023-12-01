@@ -21,6 +21,7 @@ require (
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.0
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20231130163424-59d733fafdf6
 	github.com/opencontainers/runtime-spec v1.1.0-rc.1
 	github.com/stretchr/testify v1.8.4
 	github.com/vishvananda/netlink v1.2.1-beta.2
@@ -50,7 +51,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.38.5
 	github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl v0.0.0-20230329054732-0d6eda047e81
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20231109143605-6c2a2a14fe78
 	github.com/kdomanski/iso9660 v0.3.5
 	github.com/moby/sys/mountinfo v0.6.2
 	github.com/pelletier/go-toml/v2 v2.1.0
