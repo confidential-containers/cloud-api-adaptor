@@ -8,6 +8,7 @@ umoci
 skopeo
 volumes/csi-wrapper/build
 volumes/csi-wrapper/vendor
+opa/
 
 # Binaries
 agent-protocol-forwarder
@@ -19,6 +20,7 @@ cluster-provisioner
 confidential-data-hub
 kata-agent
 process-user-data
+opa
 
 # The code files under cmd are not ignored
 !/cmd/*

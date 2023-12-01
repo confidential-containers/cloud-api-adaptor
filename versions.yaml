@@ -36,6 +36,9 @@ git:
   skopeo:
     url: https://github.com/containers/skopeo
     reference: v1.5.0
+  opa:
+    url: https://github.com/open-policy-agent/opa
+    reference: v0.58.0
 oci:
   pause:
     registry: docker://registry.k8s.io/pause
