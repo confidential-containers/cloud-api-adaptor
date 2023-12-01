@@ -410,3 +410,11 @@ func (s *redirector) Version(ctx context.Context, req *pb.CheckRequest) (res *pb
 	}
 	return s.agentClient.Version(ctx, req)
 }
+
+func (s *redirector) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (res *types.Empty, err error) {
+
+	if err := s.Connect(ctx); err != nil {
+		return nil, err
+	}
+	return s.agentClient.SetPolicy(ctx, req)
+}

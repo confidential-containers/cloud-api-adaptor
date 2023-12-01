@@ -44,5 +44,6 @@ allowed = [
 "UpdateInterfaceRequest",
 "UpdateRoutesRequest",
 "WaitProcessRequest",
-"WriteStreamRequest"
+"WriteStreamRequest",
+"SetPolicyRequest"
 ]
