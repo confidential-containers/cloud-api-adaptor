@@ -20,9 +20,6 @@ if [ "$CLOUD_PROVIDER" == "vsphere" ]
 then
 # Add vsphere specific commands to execute on remote
     case $PODVM_DISTRO in
-    centos)
-        #fallthrough
-        ;&
     rhel)
         (! dnf list --installed | grep open-vm-tools > /dev/null 2>&1) && \
         (! dnf -y install open-vm-tools) && \
@@ -52,9 +49,6 @@ if [ "$CLOUD_PROVIDER" == "azure" ] || [ "$CLOUD_PROVIDER" == "aws" ] || [ "$CLO
 then
     if [ ! -x "$(command -v iptables)" ]; then
         case $PODVM_DISTRO in
-        centos)
-            #fallthrough
-            ;&
         rhel)
             dnf -q install iptables -y
             ;;
@@ -102,9 +96,6 @@ fi
 # Disable unnecessary systemd services
 
 case $PODVM_DISTRO in
-    centos)
-        #fallthrough
-        ;&
     rhel)
         systemctl disable kdump.service
         systemctl disable tuned.service

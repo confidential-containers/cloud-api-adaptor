@@ -43,7 +43,7 @@ The builder image packages the cloud-api-adaptor and Kata Containers sources as 
 the binaries (e.g. *kata-agent* and *agent-protocol-forwarder*) that should be installed in the podvm image.
 
 The builder image is agnostic to cloud providers in the sense that one can be used to build for multiple providers, however it is
-dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)), CentOS Stream 9 ([Dockerfile.podvm_builder.centos](./Dockerfile.podvm_builder.centos)), and RHEL 9 ([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
+dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)), and RHEL 9 ([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
 
 As an example, to build the builder image for Ubuntu, run:
 

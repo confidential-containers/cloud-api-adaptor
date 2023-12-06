@@ -24,7 +24,6 @@ jobs:
       matrix:
         os:
           # Please keep this list in alphabetical order.
-          - centos
           - ubuntu
         runner:
           - ubuntu-latest
