@@ -71,7 +71,7 @@ func doTestCreatePodWithConfigMap(t *testing.T, assert CloudAssert) {
 		},
 	}
 
-	newTestCase(t, "ConfigMapPeerPod", assert, "Configmap is created and contains data").withPod(pod).withConfigMap(configMap).withTestCommands(testCommands).withCustomPodState(v1.PodRunning).run()
+	newTestCase(t, "ConfigMapPeerPod", assert, "Configmap is created and contains data").withPod(pod).withConfigMap(configMap).withTestCommands(testCommands).run()
 }
 
 func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
@@ -121,7 +121,7 @@ func doTestCreatePodWithSecret(t *testing.T, assert CloudAssert) {
 		},
 	}
 
-	newTestCase(t, "SecretPeerPod", assert, "Secret has been created and contains data").withPod(pod).withSecret(secret).withTestCommands(testCommands).withCustomPodState(v1.PodRunning).run()
+	newTestCase(t, "SecretPeerPod", assert, "Secret has been created and contains data").withPod(pod).withSecret(secret).withTestCommands(testCommands).run()
 }
 
 func doTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, assert CloudAssert) {
@@ -236,7 +236,7 @@ func doTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, assert CloudAssert, m
 			},
 		},
 	}
-	newTestCase(t, "PeerPodWithPVCAndCSIWrapper", assert, "PVC is created and mounted as expected").withPod(pod).withPVC(myPVC).withTestCommands(testCommands).withCustomPodState(v1.PodRunning).run()
+	newTestCase(t, "PeerPodWithPVCAndCSIWrapper", assert, "PVC is created and mounted as expected").withPod(pod).withPVC(myPVC).withTestCommands(testCommands).run()
 }
 
 func doTestCreatePeerPodWithAuthenticatedImagewithValidCredentials(t *testing.T, assert CloudAssert) {

@@ -321,7 +321,7 @@ func (tc *testCase) run() {
 									t.Fatal(fmt.Errorf("PodVM Created with Differenct Instance Type %v", profile))
 								}
 							}
-
+							break
 						} else {
 							t.Fatal("Pod Not Found...")
 						}
@@ -348,6 +348,7 @@ func (tc *testCase) run() {
 									if !testCommand.testCommandStdoutFn(stdout) {
 										t.Fatal(fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String()))
 									}
+									break
 								}
 							}
 						}
