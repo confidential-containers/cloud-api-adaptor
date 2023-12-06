@@ -72,6 +72,8 @@ docker build -t aws \
 -f Dockerfile .
 ```
 
+>Note: images for CentOS Stream haven't been built since the release 0.8.0 of this project.
+
 - Note down your newly created AMI_ID
 
 Once the image creation is complete, you can use the following CLI command as well to

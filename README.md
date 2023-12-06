@@ -54,8 +54,8 @@ To create a QCOW2 image which can be imported into your provider of choice, you 
 make podvm-builder podvm-binaries podvm-image
 # or to produce an s390x architecture image
 ARCH=s390x make podvm-builder podvm-binaries podvm-image
-# or to produce a centos distribution image
-PODVM_DISTRO=centos make podvm-builder podvm-binaries podvm-image
+# or to produce a rhel distribution image
+PODVM_DISTRO=rhel make podvm-builder podvm-binaries podvm-image
 ```
 
 > N.B. This will populate the image using the component versions found in [versions.yaml](./versions.yaml).

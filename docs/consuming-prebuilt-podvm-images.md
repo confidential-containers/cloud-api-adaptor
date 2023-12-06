@@ -10,6 +10,7 @@ For example:
 - https://quay.io/repository/confidential-containers/podvm-generic-ubuntu-s390x hosts the Ubuntu images that can be used for s390x architecture.
 - https://quay.io/repository/confidential-containers/podvm-generic-centos-amd64 hosts the CentOS images that can be used with all providers (except vsphere).
 
+>Note: images for CentOS Stream haven't been built since the release 0.8.0 of this project.
 
 The easiest way to extract the qcow2 file from the podvm container image is using the [`download-image.sh`](../podvm/hack/download-image.sh) script. For example, to extract the file from the *podvm-generic-ubuntu-amd64* image:
 

@@ -22,14 +22,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [centos, ubuntu]
+        os: [ubuntu]
         arch: [amd64, s390x]
         include:
-          - os: centos
           - os: ubuntu
-        exclude:
-          - os: centos
-            arch: s390x
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3

@@ -23,22 +23,14 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          # FIXME: temporarily disable CentOS builds while we don't find a
-          # fix to https://github.com/confidential-containers/cloud-api-adaptor/issues/1558
-          #- centos
           - ubuntu
         arch: [amd64, s390x]
         provider: [generic, vsphere]
         include:
-          #- os: centos
           - os: ubuntu
         exclude:
-          #- os: centos
-          #  arch: s390x
           - provider: vsphere
             arch: s390x
-          #- provider: vsphere
-          #  os: centos
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3

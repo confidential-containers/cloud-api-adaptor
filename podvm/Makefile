@@ -51,8 +51,6 @@ endif
 endif
 else ifeq ($(PODVM_DISTRO),rhel)
 	$(eval OPTS := -var disk_size=11144)
-else ifeq ($(PODVM_DISTRO),centos)
-	$(eval OPTS := )
 else
 	$(error PODVM_DISTRO is invalid or not defined)
 endif
