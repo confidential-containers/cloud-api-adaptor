@@ -30,7 +30,7 @@ RUN apt-get update -y && \
     apt-get update && apt-get install -y clang-17 && \
     curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - && \
     echo "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee -a /etc/apt/sources.list && \
-    apt-get update && apt-get install --no-install-recommends -y packer && \
+    apt-get update && apt-get install --no-install-recommends -y packer=1.9.4-1 && \
     apt-get clean
 
 ADD https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz go${GO_VERSION}.linux-amd64.tar.gz
