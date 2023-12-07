@@ -62,3 +62,8 @@ variable "enable_nvidia_gpu" {
   type    = string
   default = env("ENABLE_NVIDIA_GPU")
 }
+
+variable "forwarder_port" {
+  type    = string
+  default = env("FORWARDER_PORT")
+}
