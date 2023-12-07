@@ -39,6 +39,7 @@ configMapGenerator:
   #- TAGS="" # Uncomment and add key1=value1,key2=value2 etc if you want to use specific tags for podvm
   #- DISABLE_CLOUD_CONFIG="" # Uncomment if you want to enable user data for podvm
   #- AA_KBC_PARAMS="" # Uncomment and set if you want to set KBC params for podvm
+  #- FORWARDER_PORT="" # Uncomment and set if you want to use a specific port for agent-protocol-forwarder. Defaults to 15150
 ##TLS_SETTINGS
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS
