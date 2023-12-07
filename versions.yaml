@@ -26,7 +26,7 @@ tools:
 git:
   guest-components:
     url: https://github.com/confidential-containers/guest-components
-    reference: v0.8.0
+    reference: dec7f10ec2ab1e715c49741188d48065ab6c0feb
   kata-containers:
     url: https://github.com/kata-containers/kata-containers
     reference: CC-0.8.1
