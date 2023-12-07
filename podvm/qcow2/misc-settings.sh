@@ -93,6 +93,12 @@ ExecStartPre=
 END
 fi
 
+if [ -n "${FORWARDER_PORT}" ]; then
+    cat <<END >> /etc/default/agent-protocol-forwarder 
+OPTIONS=-listen 0.0.0.0:${FORWARDER_PORT}
+END
+fi
+
 # Disable unnecessary systemd services
 
 case $PODVM_DISTRO in

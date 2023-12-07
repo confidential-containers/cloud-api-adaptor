@@ -27,6 +27,11 @@ For example if you want to set the volume size to 40 GiB, then do the following:
 export VOLUME_SIZE=40
 ```
 
+If you want to use a specific port or address for `agent-protocol-forwarder`, set `FORWARDER_PORT` environment variable.
+```
+export FORWARDER_PORT=<port-number>
+```
+
 - Create a custom AWS VM image based on Ubuntu 22.04 having kata-agent and other dependencies
 
 > **NOTE**: For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
