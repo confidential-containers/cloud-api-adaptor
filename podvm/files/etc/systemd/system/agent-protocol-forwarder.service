@@ -8,7 +8,7 @@ DefaultDependencies=no
 [Service]
 Type=notify
 EnvironmentFile=-/etc/default/agent-protocol-forwarder
-ExecStart=/usr/local/bin/agent-protocol-forwarder -kata-agent-namespace /run/netns/podns -kata-agent-socket /run/kata-containers/agent.sock $TLS_OPTIONS
+ExecStart=/usr/local/bin/agent-protocol-forwarder -kata-agent-namespace /run/netns/podns -kata-agent-socket /run/kata-containers/agent.sock $TLS_OPTIONS $OPTIONS
 Restart=on-failure
 RestartSec=5s
 
