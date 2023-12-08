@@ -35,6 +35,11 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.git_ref }}
 
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+
       - name: Read properties from versions.yaml
         run: |
           sudo snap install yq
