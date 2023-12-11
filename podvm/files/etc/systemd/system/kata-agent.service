@@ -5,6 +5,7 @@ Wants=process-user-data.service
 After=netns@podns.service process-user-data.service
 
 [Service]
+ExecStartPre=mkdir -p /run/kata-containers
 ExecStart=/usr/local/bin/kata-agent --config /run/peerpod/agent-config.toml
 ExecStartPre=-umount /sys/fs/cgroup/misc
 ExecStopPost=/usr/local/bin/kata-agent-clean --config /run/peerpod/agent-config.toml
