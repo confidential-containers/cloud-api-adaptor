@@ -131,14 +131,15 @@ func watchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod
 // not
 // <date time> 15:18:43 [adaptor/proxy] CreateContainer: calling PullImage for <image> before CreateContainer (cid: "<cid>")
 // was output
-func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, nodeName string) (bool, error) {
+func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, nodeName string, containerId string) (bool, error) {
 	var podlist v1.PodList
 
-	nydusSnapshotterPullRegex, err := regexp.Compile(`.*mount_point:/run/kata-containers.*driver:image_guest_pull.*$`)
+	nydusSnapshotterPullRegex, err := regexp.Compile(`.*mount_point:/run/kata-containers.*` + containerId + `.*driver:image_guest_pull.*$`)
 	if err != nil {
 		return false, err
 	}
-	legacyPullRegex, err := regexp.Compile(`.*CreateContainer: calling PullImage.*before CreateContainer.*$`)
+
+	legacyPullRegex, err := regexp.Compile(`.*CreateContainer: calling PullImage.*before CreateContainer.*` + containerId + `.*$`)
 	if err != nil {
 		return false, err
 	}
