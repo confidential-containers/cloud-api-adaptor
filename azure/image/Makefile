@@ -7,6 +7,8 @@ include $(ROOT_DIR)podvm/Makefile.inc
 
 .PHONY: image clean
 
+ENABLE_NVIDIA_GPU ?= yes
+
 image: $(IMAGE_FILE)
 
 $(IMAGE_FILE): $(BINARIES) $(FILES)
@@ -27,6 +29,7 @@ $(IMAGE_FILE): $(BINARIES) $(FILES)
 	packer init ./${PODVM_DISTRO}/
 	packer build \
 		-var config_script_src=$(ROOT_DIR)/podvm/qcow2 \
+		-var addons_script_src=$(ROOT_DIR)/podvm/addons \
 		./${PODVM_DISTRO}/
 	rm -fr toupload
 

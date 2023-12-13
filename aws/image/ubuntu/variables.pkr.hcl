@@ -53,3 +53,12 @@ variable "config_script_src" {
   default = ""
 }
 
+variable "addons_script_src" {
+  type    = string
+  default = ""
+}
+
+variable "enable_nvidia_gpu" {
+  type    = string
+  default = env("ENABLE_NVIDIA_GPU")
+}

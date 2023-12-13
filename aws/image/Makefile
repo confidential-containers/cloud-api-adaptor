@@ -7,9 +7,12 @@ include $(ROOT_DIR)podvm/Makefile.inc
 
 .PHONY: image clean default-vpc
 
-INSTANCE_TYPE ?= t3.small
+INSTANCE_TYPE ?= c4.xlarge
 
 VOLUME_SIZE ?= 30
+
+ENABLE_NVIDIA_GPU ?= yes
+export ENABLE_NVIDIA_GPU
 
 image: $(IMAGE_FILE)
 
@@ -21,6 +24,7 @@ $(IMAGE_FILE): setopts $(BINARIES) $(FILES)
 		-var instance_type=${INSTANCE_TYPE} \
 		-var volume_size=${VOLUME_SIZE} \
 		-var config_script_src=$(ROOT_DIR)/podvm/qcow2 \
+		-var addons_script_src=$(ROOT_DIR)/podvm/addons \
 		-var ami_name=${IMAGE_NAME} ./${PODVM_DISTRO}/
 	rm -fr toupload
 
