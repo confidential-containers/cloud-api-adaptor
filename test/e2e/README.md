@@ -130,3 +130,34 @@ func TestCloudProviderCreateSimplePod(t *testing.T) {
 For running e2e test cases specifically for checking PodVM with Image from Authenticated Registry, we need to export following two variables
 - `AUTHENTICATED_REGISTRY_IMAGE` - Name of the image along with the tag from authenticated registry (example: quay.io/kata-containers/confidential-containers-auth:test)
 - `REGISTRY_CREDENTIAL_ENCODED` - Credentials of registry encrypted as BASE64ENCODED(USERNAME:PASSWORD). If you're using quay registry, we can get the encrypted credentials from Account Settings >> Generate Encrypted Password >> Docker Configuration
+
+## Running the e2e Test Suite on an Existing CAA Deployment
+
+To test local changes the test suite can run without provisioning any infrastructure, CoCo or CAA. Make sure your cluster is configured and available via kubectl. You also might need to set up Cloud Provider-specific API access, since some of tests assert conditions for cloud resources.
+
+## Azure
+
+Fill in `RESOURCE_GROUP` and `AZURE_SUBSCRIPTION_ID` with the values you want to use in your test:
+
+```bash
+cd ../.. # go to project root
+cat <<EOF> skip-provisioning.properties
+RESOURCE_GROUP_NAME="..."
+AZURE_SUBSCRIPTION_ID="..."
+AZURE_CLIENT_ID="unused"
+AZURE_TENANT_ID="unused"
+LOCATION="unused"
+AZURE_IMAGE_ID="unused"
+EOF
+```
+
+Run the test suite with the respective flags:
+
+```bash
+make test-e2e \
+CLOUD_PROVIDER=azure \
+TEST_TEARDOWN=no \
+TEST_PROVISION=no \
+TEST_INSTALL_CAA=no \
+TEST_PROVISION_FILE="${PWD}/skip-provisioning.properties" \
+```
