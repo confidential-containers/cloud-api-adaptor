@@ -97,4 +97,42 @@ build {
       "sudo -E bash ~/misc-settings.sh"
     ]
   }
+
+  # Addons
+  # To avoid multiple conditionals, copying the entire addons directory
+  # Individual addons are installed based on environment_vars by setup_addons.sh
+  provisioner "shell-local" {
+    command = "tar cf toupload/addons.tar -C ../../podvm addons"
+  }
+
+  provisioner "file" {
+    source      = "toupload"
+    destination = "/tmp/"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "cd /tmp && tar xf toupload/addons.tar",
+      "rm toupload/addons.tar"
+    ]
+  }
+
+  provisioner "file" {
+    source      = "${var.addons_script_src}/setup_addons.sh"
+    destination = "~/setup_addons.sh"
+  }
+
+  provisioner "shell" {
+    remote_folder = "~"
+    environment_vars = [
+      "CLOUD_PROVIDER=${var.cloud_provider}",
+      "PODVM_DISTRO=${var.podvm_distro}",
+      "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}",
+      "ENABLE_NVIDIA_GPU=${var.enable_nvidia_gpu}"
+    ]
+    inline = [
+      "sudo -E bash ~/setup_addons.sh"
+    ]
+  }
+
 }
