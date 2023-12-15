@@ -4,6 +4,7 @@ enable kata-agent.service
 enable netns@.service
 enable process-user-data.service
 enable setup-nat-for-imds.service
+enable kata-opa.service
 
 enable gen-issue.service
 enable image-env.service
