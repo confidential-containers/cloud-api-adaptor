@@ -520,6 +520,10 @@ func (s *agentService) PullImage(ctx context.Context, req *agent.PullImageReques
 	log.Printf("agent call: PullImage %#v", req)
 	return &types.Empty{}, nil
 }
+func (s *agentService) SetPolicy(ctx context.Context, req *agent.SetPolicyRequest) (*types.Empty, error) {
+	log.Printf("agent call: SetPolicy %#v", req)
+	return &types.Empty{}, nil
+}
 
 type healthService struct{}
 

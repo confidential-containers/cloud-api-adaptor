@@ -382,3 +382,7 @@ func (m *agentMock) Check(ctx context.Context, req *pb.CheckRequest) (*pb.Health
 func (m *agentMock) Version(ctx context.Context, req *pb.CheckRequest) (*pb.VersionCheckResponse, error) {
 	return &pb.VersionCheckResponse{}, nil
 }
+
+func (m *agentMock) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (res *types.Empty, err error) {
+	return &types.Empty{}, nil
+}
