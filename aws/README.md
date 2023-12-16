@@ -1,33 +1,42 @@
-# Setup instructions
+# Cloud API Adaptor (CAA) on AWS
+
+This documentation will walk you through setting up CAA (a.k.a. Peer Pods) on Amazon Elastic Kubernetes Service (EKS). It explains how to deploy:
+
+- One worker EKS
+- CAA on that Kubernetes cluster
+- An Nginx pod backed by CAA pod VM
+
+> **Note**: Run the following commands from the root of this repository.
+
 ## Prerequisites
 
-- Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for AWS cli access
-
+- Install `aws` CLI [tool](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- Install `eksctl` CLI [tool](https://eksctl.io/installation/)
+- Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_REGION` for AWS cli access
 - Install packer by following the instructions in the following [link](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli)
-
 - Install packer's Amazon plugin `packer plugins install github.com/hashicorp/amazon`
 
-## Build Pod VM Image
-
-### Option-1: Modifying existing marketplace image
+## Build CAA pod-VM image
 
 - Set environment variables
 ```
+export CLOUD_PROVIDER=aws # mandatory
 export AWS_REGION="us-east-1" # mandatory
-export PODVM_DISTRO=rhel # mandatory
-export INSTANCE_TYPE=t3.small # optional, default is t3.small
+export PODVM_DISTRO=ubuntu # mandatory
+export INSTANCE_TYPE=c4.xlarge # optional, default is c4.xlarge
 export IMAGE_NAME=peer-pod-ami # optional
-export VPC_ID=vpc-01234567890abcdef # optional, otherwise, it creates and uses the default vpc in the specific region
-export SUBNET_ID=subnet-01234567890abcdef # must be set if VPC_ID is set
+export VPC_ID=REPLACE_ME # optional, otherwise, it creates and uses the default vpc in the specific region
+export SUBNET_ID=REPLACE_ME # must be set if VPC_ID is set
 ```
 
-If you want to change the volume size of the generated AMI, then set the `VOLUME_SIZE` environment variable.
+
+[Optional] If you want to change the volume size of the generated AMI, then set the `VOLUME_SIZE` environment variable.
 For example if you want to set the volume size to 40 GiB, then do the following:
 ```
 export VOLUME_SIZE=40
 ```
 
-If you want to use a specific port or address for `agent-protocol-forwarder`, set `FORWARDER_PORT` environment variable.
+[Optional] If you want to use a specific port or address for `agent-protocol-forwarder`, set `FORWARDER_PORT` environment variable.
 ```
 export FORWARDER_PORT=<port-number>
 ```
@@ -37,7 +46,7 @@ export FORWARDER_PORT=<port-number>
 > **NOTE**: For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
 
 ```
-cd image
+cd aws/image
 make image
 ```
 
@@ -62,64 +71,208 @@ docker build -t aws \
 -f Dockerfile .
 ```
 
-If you want to build a CentOS based custom AMI then you'll need to first
-accept the terms by visiting this [link](https://aws.amazon.com/marketplace/pp?sku=bz4vuply68xrif53movwbkpnl)
-
-Once done, run the following command:
-
-```
-docker build -t aws \
---secret id=AWS_ACCESS_KEY_ID \
---secret id=AWS_SECRET_ACCESS_KEY \
---build-arg AWS_REGION=${AWS_REGION} \
---build-arg BINARIES_IMG=quay.io/confidential-containers/podvm-binaries-centos-amd64 \
---build-arg PODVM_DISTRO=centos \
--f Dockerfile .
-```
-
->Note: images for CentOS Stream haven't been built since the release 0.8.0 of this project.
-
-- Note down your newly created AMI_ID
+- Note down your newly created AMI_ID and export it via `PODVM_AMI_ID` env variable
 
 Once the image creation is complete, you can use the following CLI command as well to
 get the AMI_ID. The command assumes that you are using the default AMI name: `peer-pod-ami`
 
 ```
-aws ec2 describe-images --query "Images[*].[ImageId]" --filters "Name=name,Values=peer-pod-ami" --region ${AWS_REGION} --output text
+export PODVM_AMI_ID=$(aws ec2 describe-images --query "Images[*].[ImageId]" --filters "Name=name,Values=peer-pod-ami" --region ${AWS_REGION} --output text)
+echo ${PODVM_AMI_ID}
 ```
 
-### Option-2: Using precreated QCOW2 image
+## Build CAA container image
 
-- Download QCOW2 image
-```
-mkdir -p qcow2-img && cd qcow2-img
+> **Note**: If you have made changes to the CAA code and you want to deploy those changes then follow [these instructions](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/install/README.md#building-custom-cloud-api-adaptor-image) to build the container image from the root of this repository.
 
-curl -LO https://raw.githubusercontent.com/confidential-containers/cloud-api-adaptor/staging/podvm/hack/download-image.sh
+If you would like to deploy the latest code from the default branch (`main`) of this repository then expose the following environment variable:
 
-bash download-image.sh quay.io/confidential-containers/podvm-generic-ubuntu-amd64:latest . -o podvm.qcow2
-
+```bash
+export registry="quay.io/confidential-containers"
 ```
 
-- Convert QCOW2 image to RAW format
-You'll need the `qemu-img` tool for conversion.
-```
-qemu-img convert -O raw podvm.qcow2 podvm.raw
-```
+## Deploy Kubernetes using EKS
 
-- Upload RAW image to S3 and create AMI
-You can use the following helper script to upload the podvm.raw image to S3 and create an AMI
-Note that AWS cli should be configured to use the helper script.
+- Create cluster config file
+This config will create a single node cluster. Feel free to change it as per your requirement.
 
 ```
-curl -L0 https://raw.githubusercontent.com/confidential-containers/cloud-api-adaptor/staging/aws/raw-to-ami.sh
-
-bash raw-to-ami.sh podvm.raw <Some S3 Bucket Name> <AWS Region>
+cat > ekscluster-config.yaml <<EOF
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: caa-eks
+  region: ${AWS_REGION}
+nodeGroups:
+  - name: ng-1-workers
+    labels: { role: workers }
+    instanceType: m5.xlarge
+    desiredCapacity: 1
+    privateNetworking: true
+    ssh:
+      allow: true # will use ~/.ssh/id_rsa.pub as the default ssh key
+EOF
+```
+- Create cluster
+```
+eksctl create cluster -f ekscluster-config.yaml
 ```
 
-On success, the command will generate the `AMI_ID`, which needs to be used to set the value of `PODVM_AMI_ID` in `peer-pods-cm` configmap.
+Wait for the cluster to be created.
 
-## Running cloud-api-adaptor
+- Install `fuse` package on the worker node
+This is required for `nydus snapshotter` that is used for CoCo.
+You can either SSH to the node, or run a debug shell and install the `fuse` package
 
-- Update [kustomization.yaml](../install/overlays/aws/kustomization.yaml) with your AMI_ID
 
-- Deploy Cloud API Adaptor by following the [install](../install/README.md) guide
+## Deploy CAA
+
+### Create the credentials file
+```
+cat <<EOF > install/overlays/aws/aws-cred.env
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+EOF
+```
+
+### Update the `kustomization.yaml` file
+
+Run the following command to update the [`kustomization.yaml`](../install/overlays/aws/kustomization.yaml) file:
+
+```bash
+cat <<EOF > install/overlays/aws/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+- ../../yamls
+
+images:
+- name: cloud-api-adaptor
+  newName: quay.io/confidential-containers/cloud-api-adaptor # change image if needed
+  newTag: d4496d008b65c979a4d24767979a77ed1ba21e76
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="aws"   
+  - PODVM_AMI_ID="${PODVM_AMI_ID}"  
+  #- PODVM_INSTANCE_TYPE="t3.small" # default instance type to use
+  #- PODVM_INSTANCE_TYPES="" # comma separated list of supported instance types
+secretGenerator:
+- name: auth-json-secret
+  namespace: confidential-containers-system
+  files:
+  #- auth.json # set - path to auth.json pull credentials file
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  # This file should look like this (w/o quotes!):
+  # AWS_ACCESS_KEY_ID=...
+  # AWS_SECRET_ACCESS_KEY=...
+  envs:
+    - aws-cred.env
+patchesStrategicMerge:
+EOF
+```
+
+### Deploy CAA on the Kubernetes cluster
+
+Run the following command to deploy CAA:
+
+```bash
+CLOUD_PROVIDER=aws make deploy
+```
+
+Generic CAA deployment instructions are also described [here](../install/README.md).
+
+## Run sample application
+
+### Ensure runtimeclass is present
+
+Verify that the `runtimeclass` is created after deploying CAA:
+
+```bash
+kubectl get runtimeclass
+```
+
+Once you can find a `runtimeclass` named `kata-remote` then you can be sure that the deployment was successful. A successful deployment will look like this:
+
+```console
+$ kubectl get runtimeclass
+NAME          HANDLER       AGE
+kata-remote   kata-remote   7m18s
+```
+
+### Deploy workload
+
+Create an `nginx` deployment:
+
+```yaml
+echo '
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: default
+  annotations:
+    io.containerd.cri.runtime-handler: kata-remote
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      runtimeClassName: kata-remote
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+        imagePullPolicy: Always
+' | kubectl apply -f -
+```
+
+Ensure that the pod is up and running:
+
+```bash
+kubectl get pods -n default
+```
+
+You can verify that the peer-pod VM was created by running the following command:
+
+```bash
+aws ec2 describe-instances --filters "Name=tag:Name,Values=podvm*" \
+   --query 'Reservations[*].Instances[*].[InstanceId, Tags[?Key==`Name`].Value | [0]]' --output table
+```
+
+Here you should see the VM associated with the pod `nginx`. If you run into problems then check the troubleshooting guide [here](../docs/troubleshooting/README.md).
+
+## Cleanup
+
+Delete all running pods using the runtimeClass `kata-remote`. You can use the following command for the same:
+
+```
+kubectl get pods -A -o custom-columns='NAME:.metadata.name,NAMESPACE:.metadata.namespace,RUNTIMECLASS:.spec.runtimeClassName' | grep kata-remote | awk '{print $1, $2}'
+```
+
+Verify that all peer-pod VMs are deleted. You can use the following command to list all the peer-pod VMs
+(VMs having prefix `podvm`) and status:
+
+```
+aws ec2 describe-instances --filters "Name=tag:Name,Values=podvm*" \
+--query 'Reservations[*].Instances[*].[InstanceId, Tags[?Key==`Name`].Value | [0], State.Name]' --output table
+```
+
+Delete the EKS cluster by running the following command:
+
+```bash
+eksctl delete -f -f ekscluster-config.yaml
+```
