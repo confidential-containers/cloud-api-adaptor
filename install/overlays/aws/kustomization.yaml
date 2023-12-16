@@ -47,9 +47,11 @@ secretGenerator:
   #- auth.json # set - path to auth.json pull credentials file
 - name: peer-pods-secret
   namespace: confidential-containers-system
-  literals:
-  - AWS_ACCESS_KEY_ID="" # set
-  - AWS_SECRET_ACCESS_KEY="" # set
+  # This file should look like this (w/o quotes!):
+  # AWS_ACCESS_KEY_ID=...
+  # AWS_SECRET_ACCESS_KEY=...
+  envs:
+    - aws-cred.env
 ##TLS_SETTINGS
 #- name: certs-for-tls
 #  namespace: confidential-containers-system
