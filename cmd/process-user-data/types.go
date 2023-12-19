@@ -5,7 +5,7 @@ const (
 	providerAzure = "azure"
 	providerAws   = "aws"
 
-	defaultAgentConfigPath  = "/run/peerpod/agent-config.toml"
+	defaultAgentConfigPath  = "/etc/agent-config.toml"
 	defaultAuthJsonFilePath = "/run/peerpod/auth.json"
 )
 
