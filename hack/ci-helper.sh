@@ -11,6 +11,13 @@ set -o pipefail
 
 TARGET_BRANCH=${TARGET_BRANCH:-main}
 
+function add_git_config_info() {
+	echo "Adding user name and email to the local git repo"
+
+	git config user.email "dummy@email.com"
+	git config user.name "Dummy User Name"
+}
+
 function rebase_atop_of_the_latest_target_branch() {
 	if [ -n "${TARGET_BRANCH}" ]; then
 		echo "Rebasing atop of the latest ${TARGET_BRANCH}"
@@ -33,6 +40,8 @@ function rebase_atop_of_the_latest_target_branch() {
 
 function main() {
     action="${1:-}"
+
+	 add_git_config_info
 
     case "${action}" in
 	rebase-atop-of-the-latest-target-branch) rebase_atop_of_the_latest_target_branch;;
