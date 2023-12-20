@@ -769,7 +769,7 @@ func toAddr(ip net.IP) netip.Addr {
 func toPrefix(ipnet *net.IPNet) netip.Prefix {
 
 	if ipnet == nil {
-		return netip.Prefix{}
+		return netip.PrefixFrom(netip.IPv4Unspecified(), 0)
 	}
 
 	addr, _ := netip.AddrFromSlice(ipnet.IP)
