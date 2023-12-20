@@ -17,7 +17,7 @@ func init() {
 	cloud.AddCloud("ibmcloud", &Manager{})
 }
 
-func (*Manager) ParseCmd(flags *flag.FlagSet) {
+func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 	flags.StringVar(&ibmcloudVPCConfig.ApiKey, "api-key", "", "IBM Cloud API key, defaults to `IBMCLOUD_API_KEY`")
 	flags.StringVar(&ibmcloudVPCConfig.IAMProfileID, "iam-profile-id", "", "IBM IAM Profile ID, defaults to `IBMCLOUD_IAM_PROFILE_ID`")
@@ -38,7 +38,7 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 
 }
 
-func (*Manager) LoadEnv() {
+func (_ *Manager) LoadEnv() {
 	// overwrite config set by cmd parameters in oci image with env might come from orchastration platform
 	cloud.DefaultToEnv(&ibmcloudVPCConfig.ApiKey, "IBMCLOUD_API_KEY", "")
 	cloud.DefaultToEnv(&ibmcloudVPCConfig.IAMProfileID, "IBMCLOUD_IAM_PROFILE_ID", "")
@@ -66,6 +66,10 @@ func (*Manager) LoadEnv() {
 	}
 }
 
-func (*Manager) NewProvider() (cloud.Provider, error) {
+func (_ *Manager) NewProvider() (cloud.Provider, error) {
 	return NewProvider(&ibmcloudVPCConfig)
+}
+
+func (_ *Manager) GetConfig() (config *Config) {
+	return &ibmcloudVPCConfig
 }

@@ -41,3 +41,7 @@ func (_ *Manager) LoadEnv() {
 func (_ *Manager) NewProvider() (cloud.Provider, error) {
 	return NewProvider(&vspherecfg)
 }
+
+func (_ *Manager) GetConfig() (config *Config) {
+	return &vspherecfg
+}
