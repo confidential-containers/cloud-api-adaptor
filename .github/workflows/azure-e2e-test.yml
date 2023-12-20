@@ -110,7 +110,7 @@ jobs:
 
     - name: Create provisioner file
       env:
-        AZURE_IMAGE_ID: ${{ github.event.inputs.podvm-image-id || format('/CommunityGalleries/{0}/images/{1}/Versions/{2}', secrets.AZURE_COMMUNITY_GALLERY_NAME, secrets.AZURE_PODVM_IMAGE_DEF_NAME, needs.generate-podvm-image-version.outputs.image-version) }}
+        AZURE_IMAGE_ID: ${{ github.event.inputs.podvm-image-id || format('/CommunityGalleries/{0}/images/{1}/Versions/{2}', vars.AZURE_COMMUNITY_GALLERY_NAME, vars.AZURE_PODVM_IMAGE_DEF_NAME, needs.generate-podvm-image-version.outputs.image-version) }}
         CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
       run: |
         cat << EOF > ${{ env.TEST_PROVISION_FILE }}
