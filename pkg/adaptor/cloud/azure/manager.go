@@ -54,3 +54,7 @@ func (_ *Manager) LoadEnv() {
 func (_ *Manager) NewProvider() (cloud.Provider, error) {
 	return NewProvider(&azurecfg)
 }
+
+func (_ *Manager) GetConfig() (config *Config) {
+	return &azurecfg
+}

@@ -53,3 +53,7 @@ func (_ *Manager) LoadEnv() {
 func (_ *Manager) NewProvider() (cloud.Provider, error) {
 	return NewProvider(&awscfg)
 }
+
+func (_ *Manager) GetConfig() (config *Config) {
+	return &awscfg
+}
