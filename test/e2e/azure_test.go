@@ -44,6 +44,11 @@ func TestCreatePodWithSecretAzure(t *testing.T) {
 	doTestCreatePodWithSecret(t, assert)
 }
 
+func TestCreateNginxDeploymentAzure(t *testing.T) {
+	t.Parallel()
+	doTestNginxDeployment(t, assert)
+}
+
 func checkVMExistence(resourceGroupName, prefixName string) bool {
 	pager := pv.AzureProps.ManagedVmClient.NewListPager(resourceGroupName, nil)
 

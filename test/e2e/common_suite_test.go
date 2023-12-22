@@ -21,7 +21,7 @@ import (
 // doTestCreateSimplePod tests a simple peer-pod can be created.
 func doTestCreateSimplePod(t *testing.T, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
-	pod := newBusyboxPodWithName(namespace, "simplePeerPod-test")
+	pod := newBusyboxPodWithName(namespace, "simple-test")
 	newTestCase(t, "SimplePeerPod", assert, "PodVM is created").withPod(pod).run()
 }
 
