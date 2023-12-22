@@ -8,15 +8,16 @@ package provisioner
 import (
 	"context"
 	"fmt"
-
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
-	"libvirt.org/go/libvirt"
-	"libvirt.org/go/libvirtxml"
+	"golang.org/x/exp/slices"
+
+	libvirt "libvirt.org/go/libvirt"
+	libvirtxml "libvirt.org/go/libvirtxml"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
@@ -101,7 +102,6 @@ func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, erro
 }
 
 func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
-
 	cmd := exec.Command("/bin/bash", "-c", "./kcli_cluster.sh create")
 	cmd.Dir = l.wd
 	cmd.Stdout = os.Stdout
@@ -115,7 +115,6 @@ func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Con
 	if err != nil {
 		return err
 	}
-
 	clusterName := l.clusterName
 	home, _ := os.UserHomeDir()
 	kubeconfig := path.Join(home, ".kcli/clusters", clusterName, "auth/kubeconfig")
@@ -130,19 +129,103 @@ func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Con
 }
 
 func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) error {
-	// TODO: create a temporary Network and storage pool to use on
-	// the tests.
 	var (
 		sPool *libvirt.StoragePool
 		err   error
 	)
 
 	if _, err := l.conn.LookupNetworkByName(l.network); err != nil {
-		return fmt.Errorf("Network '%s' not found. It should be created beforehand", l.network)
+		// Check if network is defined, but not enabled
+		definedNets, err := l.conn.ListDefinedNetworks()
+		if err != nil {
+			return err
+		}
+		if slices.Contains(definedNets, l.network) {
+			return fmt.Errorf("%s is defined but not enabled. Change to an enabled network, or to create a temporary network, use an undefined network name", l.network)
+		}
+		log.Printf("Network %s is not defined. Creating a new temporary network", l.network)
+
+		// Try subnets from x.x.122.x-x.x.255.x
+		subnetBlock := 122
+		for ; subnetBlock < 256; subnetBlock++ {
+			testAddr := fmt.Sprintf("192.168.%d.1", subnetBlock)
+			testDHCPStart := fmt.Sprintf("192.168.%d.128", subnetBlock)
+			testDHCPEnd := fmt.Sprintf("192.168.%d.254", subnetBlock)
+
+			networkCfg := &libvirtxml.Network{
+				Name: l.network,
+				Forward: &libvirtxml.NetworkForward{
+					Mode: "nat",
+				},
+				IPs: []libvirtxml.NetworkIP{
+					{
+						Address: testAddr,
+						DHCP: &libvirtxml.NetworkDHCP{
+							Ranges: []libvirtxml.NetworkDHCPRange{
+								{
+									Start: testDHCPStart,
+									End:   testDHCPEnd,
+								},
+							},
+						},
+						Netmask: "255.255.255.0",
+					},
+				},
+			}
+
+			networkXML, err := networkCfg.Marshal()
+			if err != nil {
+				return fmt.Errorf("Failed to create temp network XML: %s", err)
+			}
+
+			_, err = l.conn.NetworkCreateXML(networkXML)
+			if err == nil {
+				log.Printf("Using 192.168.%d.1 as the network ip for %s", subnetBlock, l.network)
+				break
+			}
+		}
+		if subnetBlock == 256 {
+			return fmt.Errorf("Unable to allocate a network ip address. Failed to create temporary network.")
+		}
+
 	}
 
 	if sPool, err = l.conn.LookupStoragePoolByName(l.storage); err != nil {
-		return fmt.Errorf("Storage pool '%s' not found. It should be created beforehand", l.storage)
+		definedStorage, err := l.conn.ListDefinedStoragePools()
+		if err != nil {
+			return err
+		}
+		if slices.Contains(definedStorage, l.storage) {
+			return fmt.Errorf("%s is defined but not enabled. Change to an enabled storage pool, or to create a temporary storage pool, use an undefined network name", l.storage)
+		}
+		log.Printf("Storage %s is not defined. Creating a new temporary storage pool", l.storage)
+
+		dirPath, err := os.MkdirTemp("", "temp-images")
+		if err != nil {
+			return err
+		}
+
+		poolCfg := &libvirtxml.StoragePool{
+			Type: "dir",
+			Name: l.storage,
+			Target: &libvirtxml.StoragePoolTarget{
+				Path: dirPath,
+				Permissions: &libvirtxml.StoragePoolTargetPermissions{
+					Mode: "0771",
+				},
+			},
+		}
+		poolXML, err := poolCfg.Marshal()
+		if err != nil {
+			return fmt.Errorf("Failed to create temp pool XML: %s", err)
+		}
+
+		sPool, err = l.conn.StoragePoolCreateXML(poolXML, libvirt.STORAGE_POOL_CREATE_WITH_BUILD)
+
+		if err != nil {
+			return fmt.Errorf("Unable to create temporary storage pool. Please create one beforehand. %s", err)
+		}
+		log.Printf("Created temporary Pool %s", l.storage)
 	}
 
 	// Create the podvm storage volume if it does not exist.
@@ -189,8 +272,68 @@ func (l *LibvirtProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Con
 }
 
 func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
-	// TODO: delete the resources created on CreateVPC() that currently only checks
-	// the Libvirt's storage and network exist.
+	log.Trace("DeleteVPC()")
+	network, err := l.conn.LookupNetworkByName(l.network)
+	if err == nil {
+
+		persistent, err := network.IsPersistent()
+
+		if err != nil {
+			log.Errorf("Cannot determine whether network %s is persistent", l.network)
+		} else {
+			if !persistent {
+				if err := network.Destroy(); err != nil {
+					log.Errorf("Failed to destroy network %s, %s", l.network, err)
+				} else {
+					log.Printf("Destroyed temp network %s", l.network)
+				}
+			}
+		}
+		if err = network.Free(); err != nil {
+			log.Errorf("Failed to free network pointer %s, %s", l.storage, err)
+		} else {
+			log.Printf("Freed network pointer %s", l.storage)
+		}
+	}
+
+	storage, err := l.conn.LookupStoragePoolByName(l.storage)
+	if err == nil {
+		persistent, err := storage.IsPersistent()
+		if err != nil {
+			log.Errorf("Cannot determine whether storage %s is persistent", l.storage)
+		} else {
+			if !persistent {
+				// Delete Storage function only works on inactive storage volumes
+				// Transient storage volumes can only be active afaik
+				// Going to Delete each of the volumes instead
+				volumes, err := storage.ListAllStorageVolumes(0)
+
+				if err != nil {
+					log.Errorf("Failed to delete volumes associated with temporary pool %s", l.storage)
+				} else {
+					for _, v := range volumes {
+						err = v.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+						if err != nil {
+							log.Errorf("Unable to delete volume: %s", err)
+						}
+					}
+					log.Printf("Destroyed volumes associated with %s", l.storage)
+				}
+
+				if err := storage.Destroy(); err != nil {
+					log.Errorf("Failed to destroy storage %s, %s", l.storage, err)
+
+				} else {
+					log.Printf("Destroyed temp storage %s", l.storage)
+				}
+			}
+		}
+		if err = storage.Free(); err != nil {
+			log.Errorf("Failed to free storage pointer %s, %s", l.storage, err)
+		} else {
+			log.Printf("Freed storage pointer %s", l.storage)
+		}
+	}
 	return nil
 }
 
