@@ -165,3 +165,8 @@ func TestAwsDeletePod(t *testing.T) {
 	assert := NewAWSAssert()
 	doTestDeleteSimplePod(t, assert)
 }
+
+func TestAwsCreateNginxDeployment(t *testing.T) {
+	assert := NewAWSAssert()
+	doTestNginxDeployment(t, assert)
+}

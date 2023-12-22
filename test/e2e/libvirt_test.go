@@ -67,6 +67,11 @@ func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *te
 	doTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, assert)
 }
 
+func TestLibvirtCreateNginxDeployment(t *testing.T) {
+	assert := LibvirtAssert{}
+	doTestNginxDeployment(t, assert)
+}
+
 /*
 Failing due to issues will pulling image (ErrImagePull)
 func TestLibvirtCreatePeerPodWithLargeImage(t *testing.T) {

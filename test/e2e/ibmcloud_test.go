@@ -495,6 +495,13 @@ func TestPodVMwithAnnotationsLargerCPU(t *testing.T) {
 	doTestPodVMwithAnnotationsLargerCPU(t, assert)
 }
 
+func TestIBMCreateNginxDeployment(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestNginxDeployment(t, assert)
+}
+
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
 type IBMCloudAssert struct {
 	vpc *vpcv1.VpcV1
