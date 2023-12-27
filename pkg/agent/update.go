@@ -1,29 +1,53 @@
-package main
+package agent
 
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	toml "github.com/pelletier/go-toml/v2"
-	"github.com/spf13/cobra"
 )
+
+var logger = log.New(log.Writer(), "[agent/update] ", log.LstdFlags|log.Lmsgprefix)
+
+type Config struct {
+	agentConfigPath  string
+	authJsonPath     string
+	daemonConfigPath string
+}
+
+func NewConfig(agentConfigPath, authJsonPath, daemonConfigPath string) *Config {
+	return &Config{agentConfigPath, authJsonPath, daemonConfigPath}
+}
+
+type Endpoints struct {
+	Allowed []string `toml:"allowed"`
+}
+
+type AgentConfig struct {
+	EnableSignatureVerification bool      `toml:"enable_signature_verification"`
+	ServerAddr                  string    `toml:"server_addr"`
+	AaKbcParams                 string    `toml:"aa_kbc_params"`
+	ImageRegistryAuthFile       string    `toml:"image_registry_auth_file"`
+	Endpoints                   Endpoints `toml:"endpoints"`
+}
 
 // Get daemon.Config from local file
 func getConfigFromLocalFile(daemonConfigPath string) daemon.Config {
 
 	// if daemonConfigPath is empty then return
 	if daemonConfigPath == "" {
-		fmt.Printf("daemonConfigPath is empty\n")
+		logger.Printf("daemonConfigPath is empty\n")
 		return daemon.Config{}
 	}
 
 	// Read the daemonConfigPath file
 	daemonConfig, err := os.ReadFile(daemonConfigPath)
 	if err != nil {
-		fmt.Printf("failed to read daemon config file: %s\n", err)
+		logger.Printf("failed to read daemon config file: %s\n", err)
 		return daemon.Config{}
 	}
 
@@ -32,7 +56,7 @@ func getConfigFromLocalFile(daemonConfigPath string) daemon.Config {
 
 	err = json.Unmarshal(daemonConfig, &config)
 	if err != nil {
-		fmt.Printf("failed to unmarshal daemon config: %s\n", err)
+		logger.Printf("failed to unmarshal daemon config: %s\n", err)
 		return daemon.Config{}
 	}
 
@@ -45,7 +69,7 @@ func updateAAKBCParams(aaKBCParams string, agentConfigFile string) error {
 
 	// if aaKBCParams is empty then return. Nothing to do
 	if aaKBCParams == "" {
-		fmt.Printf("aaKBCParams is empty. Nothing to do\n")
+		logger.Printf("aaKBCParams is empty. Nothing to do\n")
 		return nil
 	}
 
@@ -67,7 +91,7 @@ func updateAAKBCParams(aaKBCParams string, agentConfigFile string) error {
 	for i, line := range lines {
 		if strings.Contains(line, "aa_kbc_params") {
 			lines[i] = fmt.Sprintf("aa_kbc_params = \"%s\"", aaKBCParams)
-			fmt.Printf("Updated line: %s\n", lines[i])
+			logger.Printf("Updated line: %s\n", lines[i])
 		}
 	}
 
@@ -80,12 +104,12 @@ func updateAAKBCParams(aaKBCParams string, agentConfigFile string) error {
 		return fmt.Errorf("failed to write agent config file: %s", err)
 	}
 
-	fmt.Printf("Updated agent config file: %s\n", agentConfigFile)
+	logger.Printf("Updated agent config file: %s\n", agentConfigFile)
 
 	return nil
 }
 
-func updateAgentConfig(cmd *cobra.Command, args []string) error {
+func UpdateConfig(cfg *Config) error {
 
 	// Get the daemon.Config from the daemonConfigPath
 	// It's assumed that the local file is already provisioned either via the provision-files command
@@ -102,26 +126,26 @@ func updateAgentConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	if config.AAKBCParams != "" {
-		fmt.Printf("Updating aa_kbc_params in agent config file\n")
+		logger.Printf("Updating aa_kbc_params in agent config file\n")
 		agentConfig.AaKbcParams = config.AAKBCParams
 	}
 
 	if config.AuthJson != "" {
 
-		fmt.Printf("Updating image_registry_auth_file in agent config file with value\n")
+		logger.Printf("Updating image_registry_auth_file in agent config file with value\n")
 
 		// Check if authJsonFilePath exists. If it doesn't exists create the file
 
-		if _, err := os.Stat(defaultAuthJsonFilePath); err != nil && os.IsNotExist(err) {
+		if _, err := os.Stat(cfg.authJsonPath); err != nil && os.IsNotExist(err) {
 			// Write the authJson to the defaultAuthJsonFilePath
-			err = os.WriteFile(defaultAuthJsonFilePath, []byte(config.AuthJson), 0644)
+			err = os.WriteFile(cfg.authJsonPath, []byte(config.AuthJson), 0644)
 			if err != nil {
 				return fmt.Errorf("failed to write auth.json file: %s", err)
 			}
 		}
 
 		// Update the file path in the agent config
-		agentConfig.ImageRegistryAuthFile = "file://" + defaultAuthJsonFilePath
+		agentConfig.ImageRegistryAuthFile = "file://" + cfg.authJsonPath
 
 	}
 
@@ -169,6 +193,6 @@ func writeAgentConfig(agentConfig AgentConfig, agentConfigFile string) error {
 		return fmt.Errorf("failed to write agent config file: %s", err)
 	}
 
-	fmt.Printf("Updated agent config file: %s\n", agentConfigFile)
+	logger.Printf("Updated agent config file: %s\n", agentConfigFile)
 	return nil
 }
