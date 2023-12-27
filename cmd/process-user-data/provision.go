@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -13,158 +12,182 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/azure"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
-// Get the provider and the URL to retrieve the userData from the instance metadata service
-func getProviderAndUserDataURL(ctx context.Context) (provider string, userDataUrl string) {
+type WriteFile struct {
+	Path    string `yaml:"path"`
+	Content string `yaml:"content"`
+}
 
+type CloudConfig struct {
+	WriteFiles []WriteFile `yaml:"write_files"`
+}
+
+func getProvider(ctx context.Context) (UserDataProvider, error) {
 	if azure.IsAzure(ctx) {
-		provider = providerAzure
-		// If the VM is running on Azure, retrieve the userData from the Azure IMDS endpoint
-		userDataUrl = azure.AzureUserDataImdsUrl
+		return AzureUserDataProvider{}, nil
 	}
 
 	if aws.IsAWS(ctx) {
-		provider = providerAws
-		// If the VM is running on AWS, retrieve the userData from the AWS IMDS endpoint
-		userDataUrl = aws.AWSUserDataImdsUrl
+		return AWSUserDataProvider{}, nil
 	}
 
-	return provider, userDataUrl
+	return nil, fmt.Errorf("unsupported user data provider")
 }
 
-// Add method to parse the userData and copy it to a file
-func parseAndCopyUserData(userData string, dstFilePath string) error {
-
-	// Write userData to file specified in the dstFilePath var
-	// Create the directory and the file.
-
-	// Split the dstFilePath into directory and file name
-	splitPath := strings.Split(dstFilePath, "/")
-	dir := strings.Join(splitPath[:len(splitPath)-1], "/")
-
-	// Create the directory.
-	err := os.MkdirAll(dir, 0755)
+func parseUserData(userData []byte) (*CloudConfig, error) {
+	var cc CloudConfig
+	err := yaml.UnmarshalStrict(userData, &cc)
 	if err != nil {
-		return fmt.Errorf("failed to create directory: %s", err)
-
+		return nil, err
 	}
+	return &cc, nil
+}
 
-	// Create the file
-	file, err := os.Create(dstFilePath)
+func parseDaemonConfig(content []byte) (*daemon.Config, error) {
+	var dc daemon.Config
+	err := json.Unmarshal(content, &dc)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %s", err)
+		return nil, err
+	}
+	return &dc, nil
+}
+
+func getDaemonConfigContent(cc *CloudConfig) ([]byte, error) {
+	for _, wf := range cc.WriteFiles {
+		if wf.Path != cfg.daemonConfigPath {
+			continue
+		}
+		return []byte(wf.Content), nil
+	}
+	return nil, fmt.Errorf("failed to find entry for %s in cloud config", cfg.daemonConfigPath)
+}
+
+func writeAuthJson(dc *daemon.Config) error {
+	// Create the file
+	file, err := os.Create(cfg.authJsonPath)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
 
-	// Write userData to file
-	_, err = file.WriteString(userData)
+	// Write the authJson to the file
+	_, err = file.WriteString(dc.AuthJson)
 	if err != nil {
-		return fmt.Errorf("failed to write userData to file: %s", err)
+		return fmt.Errorf("failed to write authJson to file: %w", err)
 	}
-
-	fmt.Printf("Wrote userData to file: %s\n", dstFilePath)
-
 	return nil
-
 }
 
-// Get daemon.Config from userData
-func getConfigFromUserData(userData string) daemon.Config {
-
-	// UnMarshal the userData into forwarder (daemon) Config struct
-	var daemonConfig daemon.Config
-
-	err := json.Unmarshal([]byte(userData), &daemonConfig)
+func writeDaemonConfig(content []byte) error {
+	err := os.WriteFile(cfg.daemonConfigPath, content, 0644)
 	if err != nil {
-		fmt.Printf("failed to unmarshal userData: %s\n", err)
-		return daemon.Config{}
+		return fmt.Errorf("failed to write daemon config file: %w", err)
 	}
-
-	return daemonConfig
+	fmt.Printf("Wrote daemon config file: %s\n", cfg.daemonConfigPath)
+	return nil
 }
 
-func provisionFiles(cmd *cobra.Command, args []string) error {
+type UserDataProvider interface {
+	GetUserData(ctx context.Context) ([]byte, error)
+	GetRetryDelay() time.Duration
+}
 
-	var (
-		ctx    context.Context
-		cancel context.CancelFunc
-	)
+type DefaultRetry struct{}
+
+func (d DefaultRetry) GetRetryDelay() time.Duration {
+	return 5 * time.Second
+}
+
+type AzureUserDataProvider struct{ DefaultRetry }
+
+func (a AzureUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
+	url := azure.AzureUserDataImdsUrl
+	fmt.Printf("provider: Azure, userDataUrl: %s\n", url)
+	return azure.GetUserData(ctx, url)
+}
+
+type AWSUserDataProvider struct{ DefaultRetry }
+
+func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
+	url := aws.AWSUserDataImdsUrl
+	fmt.Printf("provider: AWS, userDataUrl: %s\n", url)
+	return azure.GetUserData(ctx, url)
+}
+
+func getCloudConfig(ctx context.Context, provider UserDataProvider) (*CloudConfig, error) {
+	var cc CloudConfig
 
 	// Use retry.Do to retry the getUserData function until it succeeds
 	// This is needed because the VM's userData is not available immediately
-	// Have an option to either wait forever or timeout after a certain amount of time
-	// https://github.com/avast/retry-go
-
-	// Create context with the specified timeout
-	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(cfg.userDataFetchTimeout)*time.Second)
-	defer cancel()
-
-	// Get the provider and userData URL
-	provider, userDataUrl := getProviderAndUserDataURL(ctx)
-
-	fmt.Printf("provider: %s, userDataUrl: %s\n", provider, userDataUrl)
-
 	err := retry.Do(
 		func() error {
-
-			var err error
-			// Get the userData depending on the provider
-			switch provider {
-			case providerAzure:
-				cfg.userData, err = azure.GetUserData(ctx, userDataUrl)
-			case providerAws:
-				cfg.userData, err = aws.GetUserData(ctx, userDataUrl)
-			default:
-				return fmt.Errorf("unsupported provider")
-			}
-
+			ud, err := provider.GetUserData(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to get userData: %s", err)
+				return fmt.Errorf("failed to get user data: %w", err)
 			}
 
-			if cfg.userData != "" && strings.Contains(cfg.userData, "podip") {
-				return nil // Valid user data, stop retrying
+			// We parse user data now, b/c we want to retry if it's not valid
+			parsed, err := parseUserData(ud)
+			if err != nil {
+				return fmt.Errorf("failed to parse user data: %w", err)
 			}
-			return fmt.Errorf("invalid user data")
+			cc = *parsed
+
+			// Valid user data, stop retrying
+			return nil
 		},
-		retry.Context(ctx),                // Use the context with timeout
-		retry.Delay(5*time.Second),        // Set the delay between retries
-		retry.LastErrorOnly(true),         // Only consider the last error for retry decision
-		retry.DelayType(retry.FixedDelay), // Use fixed delay between retries
-		retry.OnRetry(func(n uint, err error) { // Optional: log retry attempts
+		retry.Context(ctx),
+		retry.Delay(provider.GetRetryDelay()),
+		retry.LastErrorOnly(true),
+		retry.DelayType(retry.FixedDelay),
+		retry.OnRetry(func(n uint, err error) {
 			fmt.Printf("Retry attempt %d: %v\n", n, err)
 		}),
 	)
 
-	if err != nil {
-		return fmt.Errorf("failed to get valid user data")
-	}
+	return &cc, err
+}
 
-	fmt.Printf("Valid user data: %s\n", cfg.userData)
-	// Parse the userData and copy the specified values to the cfg.daemonConfigPath file
-	if err := parseAndCopyUserData(cfg.userData, cfg.daemonConfigPath); err != nil {
-		fmt.Printf("Error: Failed to parse userData: %s\n", err)
+func processCloudConfig(cc *CloudConfig) error {
+	dcc, err := getDaemonConfigContent(cc)
+	if err != nil {
 		return err
 	}
 
-	// Copy the authJson to the authJsonFilePath
-	config := getConfigFromUserData(cfg.userData)
-	if config.AuthJson != "" {
-		// Create the file
-		file, err := os.Create(defaultAuthJsonFilePath)
-		if err != nil {
-			return fmt.Errorf("failed to create file: %s", err)
-		}
-		defer file.Close()
-
-		// Write the authJson to the file
-		_, err = file.WriteString(config.AuthJson)
-		if err != nil {
-			return fmt.Errorf("failed to write authJson to file: %s", err)
-		}
-
+	dc, err := parseDaemonConfig(dcc)
+	if err != nil {
+		return err
 	}
 
+	if err = writeDaemonConfig(dcc); err != nil {
+		return err
+	}
+
+	if dc.AuthJson != "" {
+		if err := writeAuthJson(dc); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func provisionFiles(_ *cobra.Command, _ []string) error {
+	bg := context.Background()
+	duration := time.Duration(cfg.userDataFetchTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(bg, duration)
+	defer cancel()
+
+	provider, _ := getProvider(ctx)
+	cc, err := getCloudConfig(ctx, provider)
+	if err != nil {
+		return fmt.Errorf("failed to get valid cloud config: %w", err)
+	}
+
+	if err = processCloudConfig(cc); err != nil {
+		return fmt.Errorf("failed to process cloud config: %w", err)
+	}
 	return nil
 }

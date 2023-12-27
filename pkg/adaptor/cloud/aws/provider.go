@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -145,8 +144,6 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	// Public IP address
 	var publicIPAddr netip.Addr
 
-	var b64EncData string
-
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
 	cloudConfigData, err := cloudConfig.Generate()
@@ -154,19 +151,8 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		return nil, err
 	}
 
-	if !p.serviceConfig.DisableCloudConfig {
-		//Convert userData to base64
-		b64EncData = base64.StdEncoding.EncodeToString([]byte(cloudConfigData))
-	} else {
-		userData := strings.Split(cloudConfigData, "content: |")[1]
-		// Take the data in {} after content: and ignore the rest
-		// ToDo: use a regex
-		userData = strings.Split(userData, "- path")[0]
-		userData = strings.TrimSpace(userData)
-
-		//Convert userData to base64
-		b64EncData = base64.StdEncoding.EncodeToString([]byte(userData))
-	}
+	//Convert userData to base64
+	b64EncData := base64.StdEncoding.EncodeToString([]byte(cloudConfigData))
 
 	instanceType, err := p.selectInstanceType(ctx, spec)
 	if err != nil {

@@ -12,8 +12,8 @@ const (
 type Config struct {
 	daemonConfigPath     string
 	agentConfigPath      string
-	userData             string
 	userDataFetchTimeout int
+	authJsonPath         string
 }
 
 type Endpoints struct {

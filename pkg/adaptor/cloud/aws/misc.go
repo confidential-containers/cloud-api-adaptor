@@ -41,11 +41,11 @@ func IsAWS(ctx context.Context) bool {
 
 // Method to retrieve userData from the instance metadata service
 // and return it as a string
-func GetUserData(ctx context.Context, url string) (string, error) {
+func GetUserData(ctx context.Context, url string) ([]byte, error) {
 
 	// If url is empty then return empty string
 	if url == "" {
-		return "", fmt.Errorf("url is empty")
+		return nil, fmt.Errorf("url is empty")
 	}
 
 	// Create a new HTTP client
@@ -57,30 +57,30 @@ func GetUserData(ctx context.Context, url string) (string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %s", err)
+		return nil, fmt.Errorf("failed to create request: %s", err)
 
 	}
 
 	// Send the request and retrieve the response
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to send request: %s", err)
+		return nil, fmt.Errorf("failed to send request: %s", err)
 
 	}
 	defer resp.Body.Close()
 
 	// Check if the response was successful
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to retrieve userData: %s", resp.Status)
+		return nil, fmt.Errorf("failed to retrieve userData: %s", resp.Status)
 
 	}
 
 	// Read the response body and return it as a string
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %s", err)
+		return nil, fmt.Errorf("failed to read response body: %s", err)
 
 	}
 
-	return string(body), nil
+	return body, nil
 }
