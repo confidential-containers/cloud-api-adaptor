@@ -41,6 +41,8 @@ var updateAgentConfigCmd = &cobra.Command{
 var cfg Config
 
 func init() {
+	// set a fixed value for authJsonPath
+	cfg.authJsonPath = defaultAuthJsonFilePath
 
 	rootCmd.PersistentFlags().BoolVarP(&versionFlag, "version", "v", false, "Print the version")
 	// Add a flag to specify the daemonConfigPath

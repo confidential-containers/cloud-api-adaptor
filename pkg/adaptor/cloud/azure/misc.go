@@ -44,11 +44,11 @@ func IsAzure(ctx context.Context) bool {
 
 // Method to retrieve userData from the instance metadata service
 // and return it as a string
-func GetUserData(ctx context.Context, url string) (string, error) {
+func GetUserData(ctx context.Context, url string) ([]byte, error) {
 
 	// If url is empty then return empty string
 	if url == "" {
-		return "", fmt.Errorf("url is empty")
+		return nil, fmt.Errorf("url is empty")
 	}
 
 	// Create a new HTTP client
@@ -60,7 +60,7 @@ func GetUserData(ctx context.Context, url string) (string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %s", err)
+		return nil, fmt.Errorf("failed to create request: %s", err)
 
 	}
 	// Add the required headers to the request
@@ -69,21 +69,21 @@ func GetUserData(ctx context.Context, url string) (string, error) {
 	// Send the request and retrieve the response
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to send request: %s", err)
+		return nil, fmt.Errorf("failed to send request: %s", err)
 
 	}
 	defer resp.Body.Close()
 
 	// Check if the response was successful
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to retrieve userData: %s", resp.Status)
+		return nil, fmt.Errorf("failed to retrieve userData: %s", resp.Status)
 
 	}
 
 	// Read the response body and return it as a string
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %s", err)
+		return nil, fmt.Errorf("failed to read response body: %s", err)
 
 	}
 
@@ -125,8 +125,8 @@ func GetUserData(ctx context.Context, url string) (string, error) {
 	// Decode the base64 response
 	decoded, err := base64.StdEncoding.DecodeString(string(body))
 	if err != nil {
-		return "", fmt.Errorf("failed to decode b64 encoded userData: %s", err)
+		return nil, fmt.Errorf("failed to decode b64 encoded userData: %s", err)
 	}
 
-	return string(decoded), nil
+	return decoded, nil
 }

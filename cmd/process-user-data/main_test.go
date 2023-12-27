@@ -10,14 +10,46 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/azure"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/stretchr/testify/assert"
 )
 
+var testDaemonConfig string = `{
+	"pod-network": {
+		"podip": "10.244.0.19/24",
+		"pod-hw-addr": "0e:8f:62:f3:81:ad",
+		"interface": "eth0",
+		"worker-node-ip": "10.224.0.4/16",
+		"tunnel-type": "vxlan",
+		"routes": [
+			{
+				"Dst": "",
+				"GW": "10.244.0.1",
+				"Dev": "eth0"
+			}
+		],
+		"mtu": 1500,
+		"index": 1,
+		"vxlan-port": 8472,
+		"vxlan-id": 555001,
+		"dedicated": false
+	},
+	"pod-namespace": "default",
+	"pod-name": "nginx-866fdb5bfb-b98nw",
+	"tls-server-key": "-----BEGIN PRIVATE KEY-----\n....\n-----END PRIVATE KEY-----\n",
+	"tls-server-cert": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
+	"tls-client-ca": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
+	"aa-kbc-params": "cc_kbc::http://192.168.100.2:8080",
+	"auth-json": "{\"auths\":{}}"
+}`
+
 // Test server to simulate the metadata service
 func startTestServer() *httptest.Server {
+	// Create base64 encoded test data
+	testUserDataString := base64.StdEncoding.EncodeToString([]byte("test data"))
 
 	// Create a handler function for the desired path /metadata/instance/compute/userData
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -33,11 +65,8 @@ func startTestServer() *httptest.Server {
 			return
 		}
 
-		// Create base64 encoded test data
-		testUserData := base64.StdEncoding.EncodeToString([]byte("test data"))
-
 		// Write the test data to the response
-		if _, err := io.WriteString(w, testUserData); err != nil {
+		if _, err := io.WriteString(w, testUserDataString); err != nil {
 			http.Error(w, "Error writing response.", http.StatusNotFound)
 		}
 	}
@@ -85,7 +114,6 @@ func startTestServerPlainText() *httptest.Server {
 
 // TestGetUserData tests the getUserData function
 func TestGetUserData(t *testing.T) {
-
 	// Start a temporary HTTP server for the test simulating
 	// the Azure metadata service
 	srv := startTestServer()
@@ -101,39 +129,8 @@ func TestGetUserData(t *testing.T) {
 	userData, _ := azure.GetUserData(ctx, reqPath)
 
 	// Check that the userData is not empty
-	if userData == "" {
+	if userData == nil {
 		t.Fatalf("getUserData returned empty userData")
-	}
-
-	// Create a temporary file for the test
-	tmpFile, err := os.CreateTemp("", "test")
-	if err != nil {
-		t.Fatalf("failed to create temp file: %v", err)
-	}
-	defer os.Remove(tmpFile.Name())
-
-	// Write the userData to the file
-	if _, err := io.WriteString(tmpFile, userData); err != nil {
-		t.Fatalf("failed to write userData to file: %v", err)
-	}
-
-	// Close the file
-	if err := tmpFile.Close(); err != nil {
-		t.Fatalf("failed to close temp file: %v", err)
-	}
-
-	// Call the parseAndCopyUserData function with the userData and file path
-	if err := parseAndCopyUserData(userData, tmpFile.Name()); err != nil {
-		t.Fatalf("parseAndCopyUserData failed: %v", err)
-	}
-
-	// Read the file and check that the contents match the userData
-	fileData, err := os.ReadFile(tmpFile.Name())
-	if err != nil {
-		t.Fatalf("failed to read file: %v", err)
-	}
-	if string(fileData) != userData {
-		t.Fatalf("file contents do not match userData: expected %q, got %q", userData, string(fileData))
 	}
 }
 
@@ -149,7 +146,7 @@ func TestInvalidGetUserDataInvalidUrl(t *testing.T) {
 	userData, _ := azure.GetUserData(ctx, reqPath)
 
 	// Check that the userData is empty
-	if userData != "" {
+	if userData != nil {
 		t.Fatalf("getUserData returned non-empty userData")
 	}
 }
@@ -166,81 +163,125 @@ func TestInvalidGetUserDataEmptyUrl(t *testing.T) {
 	userData, _ := azure.GetUserData(ctx, reqPath)
 
 	// Check that the userData is empty
-	if userData != "" {
+	if userData != nil {
 		t.Fatalf("getUserData returned non-empty userData")
 	}
 }
 
-func TestParseUserData(t *testing.T) {
-	// Create a temporary directory for the test
-	tmpDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+type TestProvider struct {
+	content  string
+	failNext bool
+}
 
-	// Create a temporary file for the test
-	tmpFile, err := os.CreateTemp(tmpDir, "test")
+func (p *TestProvider) GetUserData(ctx context.Context) ([]byte, error) {
+	if p.failNext {
+		p.failNext = false
+		return []byte("%$#"), nil
+	}
+	return []byte(p.content), nil
+}
+
+func (p *TestProvider) GetRetryDelay() time.Duration {
+	return 1 * time.Millisecond
+}
+
+// TestGetCloudConfig tests retrieving and parsing of a daemon config
+func TestGetCloudConfig(t *testing.T) {
+	provider := TestProvider{content: "write_files: []"}
+	_, err := getCloudConfig(context.TODO(), &provider)
+	if err != nil {
+		t.Fatalf("couldn't retrieve and parse empty cloud config: %v", err)
+	}
+
+	provider = TestProvider{failNext: true, content: "write_files: []"}
+	_, err = getCloudConfig(context.TODO(), &provider)
+	if err != nil {
+		t.Fatalf("retry failed: %v", err)
+	}
+
+	provider = TestProvider{content: `#cloud-config
+write_files:
+- path: /test
+  content: |
+    test
+    test`}
+	_, err = getCloudConfig(context.TODO(), &provider)
+	if err != nil {
+		t.Fatalf("couldn't retrieve and parse valid cloud config: %v", err)
+	}
+}
+
+// TestProcessCloudConfig fail tests
+func TestFailProcessCloudConfig(t *testing.T) {
+	content := "#cloud-config\nwrite_files:\n- path: /wrong\n  content: bla"
+	provider := TestProvider{content: content}
+	cc, err := getCloudConfig(context.TODO(), &provider)
+	if err != nil {
+		t.Fatalf("couldn't retrieve and parse cloud config: %v", err)
+	}
+	err = processCloudConfig(cc)
+	if err == nil {
+		t.Fatalf("it should fail as there is no file w/ $daemonConfigPath")
+	}
+}
+
+// TestProcessCloudConfig tests parsing and provisioning of a daemon config
+func TestProcessCloudConfig(t *testing.T) {
+	// create temporary daemon config file
+	tmpDaemonConfigFile, err := os.CreateTemp("", "test")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer os.Remove(tmpDaemonConfigFile.Name())
+	cfg.daemonConfigPath = tmpDaemonConfigFile.Name()
 
-	testData := "test data"
-
-	// Call the parseAndCopyUserData function with the test data and file path
-	if err := parseAndCopyUserData(testData, tmpFile.Name()); err != nil {
-		t.Fatalf("parseAndCopyUserData failed: %v", err)
-	}
-
-	// Read the file and check that the written contents by parseAndCopyUserData
-	// match the test data
-	fileData, err := os.ReadFile(tmpFile.Name())
+	// create temporary auth json file
+	tmpAuthJsonFile, err := os.CreateTemp("", "test")
 	if err != nil {
-		t.Fatalf("failed to read file: %v", err)
+		t.Fatalf("failed to create temp file: %v", err)
 	}
-	if string(fileData) != testData {
-		t.Fatalf("file contents do not match test data: expected %q, got %q", testData, string(fileData))
+	defer os.Remove(tmpAuthJsonFile.Name())
+	cfg.authJsonPath = tmpAuthJsonFile.Name()
+
+	// embed daemon config fixture in cloud config
+	indented := strings.ReplaceAll(testDaemonConfig, "\n", "\n    ")
+	content := fmt.Sprintf("#cloud-config\nwrite_files:\n- path: %s\n  content: |\n    %s", cfg.daemonConfigPath, indented)
+	provider := TestProvider{content: content}
+	cc, err := getCloudConfig(context.TODO(), &provider)
+	if err != nil {
+		t.Fatalf("couldn't retrieve and parse cloud config: %v", err)
+	}
+
+	// process cloud config
+	err = processCloudConfig(cc)
+	if err != nil {
+		t.Fatalf("failed to process cloud config: %v", err)
+	}
+
+	// check if files have been written correctly
+	data, err := os.ReadFile(tmpDaemonConfigFile.Name())
+	if err != nil {
+		t.Fatalf("failed to read daemon config file: %v", err)
+	}
+	fileContent := string(data)
+
+	if fileContent != testDaemonConfig {
+		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
+	}
+
+	data, err = os.ReadFile(tmpAuthJsonFile.Name())
+	fileContent = string(data)
+	if err != nil {
+		t.Fatalf("failed to read auth json file: %v", err)
+	}
+
+	if fileContent != `{"auths":{}}` {
+		t.Fatalf("file content does not match auth json fixture: got %q", fileContent)
 	}
 }
 
-// TestParseUserDataNonExistentFile tests the parseAndCopyUserData function with a non-existent file
-func TestParseUserDataNonExistentFile(t *testing.T) {
-	// Create a temporary directory for the test
-	tmpDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	tmpFile := tmpDir + "/daemon.json"
-	tmpFile1 := tmpDir + "/dir/daemon.json"
-	testData := "test data"
-
-	// Run a loop to call parseAndCopyUserData with different files
-	for _, file := range []string{tmpFile, tmpFile1} {
-
-		// Call the parseAndCopyUserData function with the test data and file path
-		if err := parseAndCopyUserData(testData, file); err != nil {
-			t.Fatalf("parseAndCopyUserData failed: %v", err)
-		}
-
-		// Read the file and check that the written contents by parseAndCopyUserData
-		// match the test data
-		fileData, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatalf("failed to read file: %v", err)
-		}
-		if string(fileData) != testData {
-			t.Fatalf("file contents do not match test data: expected %q, got %q", testData, string(fileData))
-		}
-	}
-
-}
-
-// TestParsePlainTextUserData tests the parseAndCopyUserData function with plain text userData
-func TestParsePlainTextUserData(t *testing.T) {
-
+// TestFailPlainTextUserData tests with plain text userData
+func TestFailPlainTextUserData(t *testing.T) {
 	// startTestServerPlainText
 	srv := startTestServerPlainText()
 	defer srv.Close()
@@ -255,48 +296,17 @@ func TestParsePlainTextUserData(t *testing.T) {
 	userData, _ := azure.GetUserData(ctx, reqPath)
 
 	// Check that the userData is empty. Since plain text userData is not supported
-	if userData != "" {
+	if userData != nil {
 		t.Fatalf("getUserData returned userData")
 	}
 
 }
 
-func TestGetConfigFromUserData(t *testing.T) {
-	// Create a sample test data string
-	testUserData := `{
-		"pod-network": {
-			"podip": "10.244.0.19/24",
-			"pod-hw-addr": "0e:8f:62:f3:81:ad",
-			"interface": "eth0",
-			"worker-node-ip": "10.224.0.4/16",
-			"tunnel-type": "vxlan",
-			"routes": [
-				{
-					"Dst": "",
-					"GW": "10.244.0.1",
-					"Dev": "eth0"
-				}
-			],
-			"mtu": 1500,
-			"index": 1,
-			"vxlan-port": 8472,
-			"vxlan-id": 555001,
-			"dedicated": false
-		},
-		"pod-namespace": "default",
-		"pod-name": "nginx-866fdb5bfb-b98nw",
-		"tls-server-key": "-----BEGIN PRIVATE KEY-----\n....\n-----END PRIVATE KEY-----\n",
-		"tls-server-cert": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
-		"tls-client-ca": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
-		"aa-kbc-params": "cc_kbc::http://192.168.100.2:8080"
-	}`
-
+func TestParseDaemonConfig(t *testing.T) {
 	// Get the config from the test data
-	config := getConfigFromUserData(testUserData)
-	// Error if config struct is empty struct, not nil
-
-	if config == (daemon.Config{}) {
-		t.Fatalf("getConfigFromUserData failed")
+	config, err := parseDaemonConfig([]byte(testDaemonConfig))
+	if err != nil {
+		t.Fatalf("parseDaemonConfig failed: %v", err)
 	}
 
 	// Verify that the config fields match the test data

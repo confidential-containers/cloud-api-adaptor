@@ -44,7 +44,6 @@ type Config struct {
 	InstanceSizes        instanceSizes
 	InstanceSizeSpecList []cloud.InstanceTypeSpec
 	Tags                 cloud.KeyValueFlag
-	DisableCloudConfig   bool
 	// Disabled by default, we want to do measured boot.
 	// Secure boot brings no additional security.
 	EnableSecureBoot bool

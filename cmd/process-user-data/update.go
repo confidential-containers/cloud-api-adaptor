@@ -102,7 +102,7 @@ func updateAgentConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	if config.AAKBCParams != "" {
-		fmt.Printf("Updating aa_kbc_params in agent config file")
+		fmt.Printf("Updating aa_kbc_params in agent config file\n")
 		agentConfig.AaKbcParams = config.AAKBCParams
 	}
 

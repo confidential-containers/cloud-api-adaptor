@@ -149,46 +149,11 @@ func (p *azureProvider) createNetworkInterface(ctx context.Context, nicName stri
 
 func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
 
-	var b64EncData string
-
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
 	cloudConfigData, err := cloudConfig.Generate()
 	if err != nil {
 		return nil, err
-	}
-
-	// Copy the data in {} after content: from customData
-	/*
-		#cloud-config
-		write_files:
-		  - path: /peerpod/daemon.json
-		    content: |
-		      {
-		       ...
-			  }
-		  - path: other files
-	*/
-
-	if !p.serviceConfig.DisableCloudConfig {
-		//Convert cloudConfigData to base64
-		b64EncData = base64.StdEncoding.EncodeToString([]byte(cloudConfigData))
-	} else {
-		userData := strings.Split(cloudConfigData, "content: |")[1]
-		// Take the data in {} after content: and ignore the rest
-		// ToDo: use a regex
-		userData = strings.Split(userData, "- path")[0]
-		userData = strings.TrimSpace(userData)
-
-		//Convert userData to base64
-		b64EncData = base64.StdEncoding.EncodeToString([]byte(userData))
-	}
-
-	// Azure limits the base64 encrypted userData to 64KB.
-	// Ref: https://learn.microsoft.com/en-us/azure/virtual-machines/user-data
-	// If the b64EncData is greater than 64KB then return an error
-	if len(b64EncData) > 64*1024 {
-		return nil, fmt.Errorf("base64 encoded userData is greater than 64KB")
 	}
 
 	instanceSize, err := p.selectInstanceType(ctx, spec)
@@ -223,7 +188,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
-	vmParameters, err := p.getVMParameters(instanceSize, diskName, b64EncData, sshBytes, instanceName, vmNIC)
+	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, vmNIC)
 	if err != nil {
 		return nil, err
 	}
@@ -405,7 +370,15 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 	return nil
 }
 
-func (p *azureProvider) getVMParameters(instanceSize, diskName, b64EncData string, sshBytes []byte, instanceName string, vmNIC *armnetwork.Interface) (*armcompute.VirtualMachine, error) {
+func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName string, vmNIC *armnetwork.Interface) (*armcompute.VirtualMachine, error) {
+	userDataB64 := base64.StdEncoding.EncodeToString([]byte(cloudConfig))
+
+	// Azure limits the base64 encrypted userData to 64KB.
+	// Ref: https://learn.microsoft.com/en-us/azure/virtual-machines/user-data
+	// If the b64EncData is greater than 64KB then return an error
+	if len(userDataB64) > 64*1024 {
+		return nil, fmt.Errorf("base64 encoded userData is greater than 64KB")
+	}
 	var managedDiskParams *armcompute.ManagedDiskParameters
 	var securityProfile *armcompute.SecurityProfile
 	if !p.serviceConfig.DisableCVM {
@@ -494,22 +467,10 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, b64EncData strin
 					Enabled: to.Ptr(true),
 				},
 			},
+			UserData: to.Ptr(userDataB64),
 		},
 		// Add tags to the instance
 		Tags: tags,
-	}
-
-	// If DisableCloudConfig is set to false then set OSProfile.CustomData to b64EncData and
-	// armcompute.VirtualMachine.Properties.UserData to nil
-	// If DisableCloudConfig is set to true then set armcompute.VirtualMachine.Properties.UserData to b64EncData and
-	// OSProfile.CustomData to nil
-
-	if !p.serviceConfig.DisableCloudConfig {
-		vmParameters.Properties.OSProfile.CustomData = to.Ptr(b64EncData)
-		vmParameters.Properties.UserData = nil
-	} else {
-		vmParameters.Properties.UserData = to.Ptr(b64EncData)
-		vmParameters.Properties.OSProfile.CustomData = nil
 	}
 
 	return &vmParameters, nil

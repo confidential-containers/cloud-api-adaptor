@@ -114,7 +114,6 @@ build {
     environment_vars = [
       "CLOUD_PROVIDER=${var.cloud_provider}",
       "PODVM_DISTRO=${var.podvm_distro}",
-      "DISABLE_CLOUD_CONFIG=${var.disable_cloud_config}",
       "ENABLE_NVIDIA_GPU=${var.enable_nvidia_gpu}"
     ]
     inline = [
