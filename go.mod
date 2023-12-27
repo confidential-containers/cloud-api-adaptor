@@ -56,6 +56,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.7.0
+	github.com/tj/assert v0.0.3
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	k8s.io/api v0.26.0
 	k8s.io/apimachinery v0.26.0
