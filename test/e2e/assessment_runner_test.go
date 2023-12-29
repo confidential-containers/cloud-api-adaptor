@@ -33,6 +33,16 @@ type testCommand struct {
 	testCommandStdoutFn func(stdout bytes.Buffer) bool
 	containerName       string
 }
+type extraPod struct {
+	pod                  *v1.Pod
+	imagePullTimer       bool
+	expectedPodLogString string
+	isAuth               bool
+	testInstanceTypes    instanceValidatorFunctions
+	podState             v1.PodPhase
+	testCommands         []testCommand
+}
+
 type instanceValidatorFunctions struct {
 	testSuccessfn func(instance string) bool
 	testFailurefn func(error error) bool
@@ -44,10 +54,12 @@ type testCase struct {
 	assert               CloudAssert
 	assessMessage        string
 	pod                  *v1.Pod
+	extraPods            []*extraPod
 	configMap            *v1.ConfigMap
 	secret               *v1.Secret
 	pvc                  *v1.PersistentVolumeClaim
 	job                  *batchv1.Job
+	service              *v1.Service
 	testCommands         []testCommand
 	expectedPodLogString string
 	podState             v1.PodPhase
@@ -84,6 +96,16 @@ func (tc *testCase) withPod(pod *v1.Pod) *testCase {
 	return tc
 }
 
+func (tc *testCase) withExtraPods(pods []*extraPod) *testCase {
+	tc.extraPods = pods
+	return tc
+}
+
+func (tc *testCase) withService(service *v1.Service) *testCase {
+	tc.service = service
+	return tc
+}
+
 func (tc *testCase) withDeleteAssertion(duration *time.Duration) *testCase {
 	tc.deletionWithin = duration
 	return tc
@@ -97,6 +119,11 @@ func (tc *testCase) withTestCommands(testCommands []testCommand) *testCase {
 func (tc *testCase) withInstanceTypes(testInstanceTypes instanceValidatorFunctions) *testCase {
 	tc.testInstanceTypes = testInstanceTypes
 	return tc
+}
+
+func (pod *extraPod) withTestCommands(testCommands []testCommand) *extraPod {
+	pod.testCommands = testCommands
+	return pod
 }
 
 func (tc *testCase) withExpectedPodLogString(expectedPodLogString string) *testCase {
@@ -215,6 +242,22 @@ func (tc *testCase) run() {
 							fmt.Println(podLogString)
 							fmt.Printf("===================\n")
 						}
+						t.Fatal(err)
+					}
+				}
+			}
+			if tc.service != nil {
+				if err = client.Resources().Create(ctx, tc.service); err != nil {
+					t.Fatal(err)
+				}
+				clusterIP := waitForClusterIP(t, client, tc.service)
+				log.Printf("webserver service is available on cluster IP: %s", clusterIP)
+			}
+			if tc.extraPods != nil {
+				for _, extraPod := range tc.extraPods {
+					fmt.Printf("Provision extra pod %s", extraPod.pod.Name)
+					err := provisionPod(ctx, client, t, extraPod.pod, extraPod.podState, extraPod.testCommands)
+					if err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -368,6 +411,48 @@ func (tc *testCase) run() {
 					}
 				}
 			}
+
+			if tc.extraPods != nil {
+				for _, extraPod := range tc.extraPods {
+					if extraPod.imagePullTimer {
+						// TBD
+						t.Fatal("Please implement assess logic for imagePullTimer")
+					}
+					if extraPod.expectedPodLogString != "" {
+						LogString, err := comparePodLogString(ctx, client, *extraPod.pod, extraPod.expectedPodLogString)
+						if err != nil {
+							t.Logf("Output:%s", LogString)
+							t.Fatal(err)
+						}
+						t.Logf("Log output of peer pod:%s", LogString)
+					}
+					if extraPod.isAuth {
+						// TBD
+						t.Fatal("Error: isAuth hasn't been implemented in extraPods. Please implement assess function for isAuth")
+					}
+					if extraPod.testInstanceTypes.testSuccessfn != nil && extraPod.testInstanceTypes.testFailurefn != nil {
+						// TBD
+						t.Fatal("Error: testInstanceTypes hasn't been implemented in extraPods. Please implement assess for function testInstanceTypes.")
+					}
+					if extraPod.podState == v1.PodRunning {
+						if len(extraPod.testCommands) > 0 {
+							logString, err := assessExtraPodTestCommands(ctx, client, extraPod.pod, extraPod.testCommands)
+							t.Logf("Output when execute test commands:%s", logString)
+							if err != nil {
+								t.Fatal(err)
+							}
+						}
+						tc.assert.HasPodVM(t, extraPod.pod.Name)
+					}
+
+					if tc.isNydusSnapshotter {
+						// TBD
+						t.Fatal("Error: isNydusSnapshotter hasn't been implemented in extraPods. Please implement assess function for isNydusSnapshotter.")
+					}
+
+				}
+
+			}
 			return ctx
 		}).
 		Teardown(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -430,11 +515,29 @@ func (tc *testCase) run() {
 				log.Infof("Pod %s has been successfully deleted within %.0fs", tc.pod.Name, tc.deletionWithin.Seconds())
 			}
 
+			if tc.extraPods != nil {
+				for _, extraPod := range tc.extraPods {
+					err := deletePod(ctx, client, extraPod.pod, tc.deletionWithin)
+					if err != nil {
+						t.Logf("Error occurs when delete pod: %s", extraPod.pod.Name)
+						t.Fatal(err)
+					}
+				}
+			}
+
 			if tc.pvc != nil {
 				if err = client.Resources().Delete(ctx, tc.pvc); err != nil {
 					t.Fatal(err)
 				} else {
 					log.Infof("Deleting PVC... %s", tc.pvc.Name)
+				}
+			}
+
+			if tc.service != nil {
+				if err = client.Resources().Delete(ctx, tc.service); err != nil {
+					t.Fatal(err)
+				} else {
+					log.Infof("Deleting Service... %s", tc.service.Name)
 				}
 			}
 

@@ -445,3 +445,38 @@ func doTestPodVMwithAnnotationsLargerCPU(t *testing.T, assert CloudAssert) {
 	}
 	newTestCase(t, "PodVMwithAnnotationsLargerCPU", assert, "Failed to Create PodVM with Annotations Larger CPU").withPod(pod).withInstanceTypes(testInstanceTypes).withCustomPodState(v1.PodPending).run()
 }
+
+func doTestPodToServiceCommunication(t *testing.T, assert CloudAssert) {
+	namespace := envconf.RandomName("default", 7)
+	clientPodName := "busybox"
+	clientContainerName := "busybox"
+	clientImageName := BUSYBOX_IMAGE
+	serverPodName := "nginx"
+	serverContainerName := "nginx"
+	serverImageName := "nginx:latest"
+	serviceName := "nginx"
+	labels := map[string]string{
+		"app": "nginx",
+	}
+	clientPod := newExtraPod(namespace, clientPodName, clientContainerName, clientImageName, withCommand([]string{"/bin/sh", "-c", "sleep 3600"}), withRestartPolicy(v1.RestartPolicyNever))
+	serverPod := newPod(namespace, serverPodName, serverContainerName, serverImageName, withContainerPort(80), withRestartPolicy(v1.RestartPolicyNever), withLabel(labels))
+	testCommands := []testCommand{
+		{
+			command:       []string{"wget", "-O-", "nginx"},
+			containerName: clientPod.pod.Spec.Containers[0].Name,
+			testCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if strings.Contains(stdout.String(), "Thank you for using nginx") {
+					log.Infof("Success to access nginx service. %s", stdout.String())
+					return true
+				} else {
+					log.Errorf("Failed to access nginx service: %s", stdout.String())
+					return false
+				}
+			},
+		},
+	}
+	clientPod.withTestCommands(testCommands)
+	nginxSvc := newService(namespace, serviceName, "http", 80, 80, labels)
+	extraPods := []*extraPod{clientPod}
+	newTestCase(t, "TestExtraPods", assert, "Failed to test extra pod.").withPod(serverPod).withExtraPods(extraPods).withService(nginxSvc).run()
+}

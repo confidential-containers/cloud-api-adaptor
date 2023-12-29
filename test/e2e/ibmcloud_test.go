@@ -502,6 +502,13 @@ func TestIBMCreateNginxDeployment(t *testing.T) {
 	doTestNginxDeployment(t, assert)
 }
 
+func TestPodToServiceCommunication(t *testing.T) {
+	assert := IBMCloudAssert{
+		vpc: pv.IBMCloudProps.VPC,
+	}
+	doTestPodToServiceCommunication(t, assert)
+}
+
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
 type IBMCloudAssert struct {
 	vpc *vpcv1.VpcV1
