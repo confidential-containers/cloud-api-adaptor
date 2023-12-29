@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -17,6 +18,23 @@ type podOption func(*corev1.Pod)
 func withRestartPolicy(restartPolicy corev1.RestartPolicy) podOption {
 	return func(p *corev1.Pod) {
 		p.Spec.RestartPolicy = restartPolicy
+	}
+}
+
+// Optional method to add ContainerPort and ReadinessProbe to listen Port
+func withContainerPort(port int32) podOption {
+	return func(p *corev1.Pod) {
+		p.Spec.Containers[0].Ports = []corev1.ContainerPort{{ContainerPort: port}}
+		p.Spec.Containers[0].ReadinessProbe = &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/",
+					Port: intstr.FromInt(int(port)),
+				},
+			},
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       5,
+		}
 	}
 }
 
@@ -67,6 +85,12 @@ func withPVCBinding(mountPath string, pvcName string) podOption {
 func withAnnotations(data map[string]string) podOption {
 	return func(p *corev1.Pod) {
 		p.ObjectMeta.Annotations = data
+	}
+}
+
+func withLabel(data map[string]string) podOption {
+	return func(p *corev1.Pod) {
+		p.ObjectMeta.Labels = data
 	}
 }
 
@@ -167,6 +191,27 @@ func newPVC(namespace, name, storageClassName, diskSize string, accessModel core
 					corev1.ResourceStorage: resource.MustParse(diskSize),
 				},
 			},
+		},
+	}
+}
+
+func newService(namespace, serviceName, portName string, portNumber, targetPort int32, labels map[string]string) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceName,
+			Namespace: namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       portName,
+					Port:       portNumber,
+					TargetPort: intstr.FromInt(int(targetPort)),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+			Selector:  labels,
+			ClusterIP: "None",
 		},
 	}
 }

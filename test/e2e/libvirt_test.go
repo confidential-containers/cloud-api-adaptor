@@ -85,6 +85,11 @@ func TestLibvirtDeletePod(t *testing.T) {
 	doTestDeleteSimplePod(t, assert)
 }
 
+func TestLibvirtPodToServiceCommunication(t *testing.T) {
+	assert := LibvirtAssert{}
+	doTestPodToServiceCommunication(t, assert)
+}
+
 // LibvirtAssert implements the CloudAssert interface for Libvirt.
 type LibvirtAssert struct {
 	// TODO: create the connection once on the initializer.

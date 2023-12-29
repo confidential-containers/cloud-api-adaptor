@@ -12,11 +12,15 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/e2e-framework/klient"
+	"sigs.k8s.io/e2e-framework/klient/wait"
+	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 )
 
 func reverseSlice(slice []string) []string {
@@ -54,6 +58,18 @@ func newTestCase(t *testing.T, testName string, assert CloudAssert, assessMessag
 	}
 
 	return testCase
+}
+
+func newExtraPod(namespace string, podName string, containerName string, imageName string, options ...podOption) *extraPod {
+	basicPod := newPod(namespace, podName, containerName, imageName)
+	for _, option := range options {
+		option(basicPod)
+	}
+	extPod := &extraPod{
+		pod:      basicPod,
+		podState: v1.PodRunning,
+	}
+	return extPod
 }
 
 func podEventExtractor(ctx context.Context, client klient.Client, pod v1.Pod) (*PodEvents, error) {
@@ -350,4 +366,86 @@ func testErrorEmpty(err error) bool {
 	} else {
 		return false
 	}
+}
+
+func assessExtraPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Pod, testCommands []testCommand) (string, error) {
+	var podlist v1.PodList
+	if err := client.Resources(pod.Namespace).List(ctx, &podlist); err != nil {
+		return "Failed to list pod", err
+	}
+	for _, testCommand := range testCommands {
+		var stdout, stderr bytes.Buffer
+		for _, podItem := range podlist.Items {
+			if podItem.ObjectMeta.Name == pod.Name {
+				//adding sleep time to intialize container and ready for Executing commands
+				time.Sleep(5 * time.Second)
+				if err := client.Resources(pod.Namespace).ExecInPod(ctx, pod.Namespace, pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
+					return stderr.String(), err
+				}
+				if !testCommand.testCommandStdoutFn(stdout) {
+					return stderr.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String())
+				}
+			}
+			//After command is executed in expected pod, it doesn't need to loop other pods.
+			break
+		}
+	}
+	return "", nil
+}
+
+func provisionPod(ctx context.Context, client klient.Client, t *testing.T, pod *v1.Pod, podState v1.PodPhase, testCommands []testCommand) error {
+	if err := client.Resources().Create(ctx, pod); err != nil {
+		t.Fatal(err)
+	}
+	if err := wait.For(conditions.New(client.Resources()).PodPhaseMatch(pod, podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+		t.Fatal(err)
+	}
+	if podState == v1.PodRunning || len(testCommands) > 0 {
+		t.Logf("Waiting for containers in pod: %v are ready", pod.Name)
+		if err := wait.For(conditions.New(client.Resources()).ContainersReady(pod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+			//Added logs for debugging nightly tests
+			clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+			if err != nil {
+				t.Fatal(err)
+			}
+			actualPod, err := clientset.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("Expected Pod State: %v", podState)
+			yamlData, err := yaml.Marshal(actualPod.Status)
+			if err != nil {
+				fmt.Println("Error marshaling pod.Status to YAML: ", err.Error())
+			} else {
+				t.Logf("Current Pod State: %v", string(yamlData))
+			}
+			if actualPod.Status.Phase == v1.PodRunning {
+				fmt.Printf("Log of the pod %.v \n===================\n", actualPod.Name)
+				podLogString, _ := getPodLog(ctx, client, *actualPod)
+				fmt.Println(podLogString)
+				fmt.Printf("===================\n")
+			}
+			t.Fatal(err)
+		}
+	}
+	return nil
+}
+
+func deletePod(ctx context.Context, client klient.Client, pod *v1.Pod, tcDelDuration *time.Duration) error {
+	duration := 1 * time.Minute
+	if tcDelDuration == nil {
+		tcDelDuration = &duration
+	}
+	if err := client.Resources().Delete(ctx, pod); err != nil {
+		return err
+	}
+	log.Infof("Deleting pod %s...", pod.Name)
+	if err := wait.For(conditions.New(
+		client.Resources()).ResourceDeleted(pod),
+		wait.WithInterval(5*time.Second),
+		wait.WithTimeout(*tcDelDuration)); err != nil {
+		return err
+	}
+	log.Infof("Pod %s has been successfully deleted within %.0fs", pod.Name, tcDelDuration.Seconds())
+	return nil
 }
