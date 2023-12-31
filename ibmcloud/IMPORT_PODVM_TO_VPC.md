@@ -10,15 +10,24 @@ To simpify this process a script has been created to aid this. `ibmcloud/image/i
 
 - jq `apt install jq`
 - ibmcloud `curl -fsSL https://clis.cloud.ibm.com/install/linux | sh` (https://cloud.ibm.com/docs/cli?topic=cli-getting-started)
-- docker/podman `apt install docker.io`
+- docker/podman `apt install docker.io`    
+It's failed to install `docker` on Ubuntu20.04 with above single command. `docker` can be installed with `snap` as below.
+    ```
+    sudo snap install docker
+    sudo systemctl start snap.docker.dockerd
+    sudo systemctl enable snap.docker.dockerd
+    ```
 
 ### Cloud-Object-Storage
 
 To create the VPC image you need to first import the file to ibmcloud COS. The script will do this step but a bucket must already be available.
 
-You may follow the [offical documentation](https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-getting-started-cloud-object-storage) to create a bucket, a free tier is sufficient.
+You may follow the [offical documentation](https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-getting-started-cloud-object-storage) to create a bucket, a free tier is sufficient. Bucket region can be different from the VPC region.
 
 ## Running
+```
+Usage: ./import.sh <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint> --os <operating-system>]
+```
 
 ### Arguments
 
