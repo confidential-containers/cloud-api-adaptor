@@ -161,3 +161,32 @@ TEST_PROVISION=no \
 TEST_INSTALL_CAA=no \
 TEST_PROVISION_FILE="${PWD}/skip-provisioning.properties" \
 ```
+
+## IBM Cloud
+Take region `jp-tok` for example.
+```
+cd ../.. # go to project root
+cat <<EOF> skip-provisioning.properties
+REGION="jp-tok"
+ZONE="jp-tok-1"
+VPC_ID="<vpc-of-worker>"
+VPC_SUBNET_ID="<subnet-of-worker>"
+VPC_SECURITY_GROUP_ID="<security-group-of-vpc>"
+RESOURCE_GROUP_ID="<resource-group-id>"
+IBMCLOUD_PROVIDER="ibmcloud"
+APIKEY="<your-ibmcloud-apikey>"
+
+IAM_SERVICE_URL="https://iam.cloud.ibm.com/identity/token"
+VPC_SERVICE_URL="https://jp-tok.iaas.cloud.ibm.com/v1"
+IKS_SERVICE_URL="https://containers.cloud.ibm.com/global"
+PODVM_IMAGE_ID="<podvm-image-uploaded-previously>"
+INSTANCE_PROFILE_NAME="bz2-2x8"
+PODVM_IMAGE_ARCH="s390x"
+IMAGE_PULL_API_KEY="<can-be-same-as-apikey>"
+CAA_IMAGE_TAG="<caa-image-tag>"
+EOF
+```
+
+- For `INSTANCE_PROFILE_NAME`, if it's not secure execution, the value is started with "bz2". If it's secure execution, the value is started with 'bz2e'. More values can be found through ibmcloud command `ibmcloud is instance-profiles`.
+- For `PODVM_IMAGE_ID`, the vpc image id uploaded to ibmcloud.
+- For `CAA_IMAGE_TAG`, the commit id of project. The commit id can be found here: https://github.com/confidential-containers/cloud-api-adaptor/commits/main/
