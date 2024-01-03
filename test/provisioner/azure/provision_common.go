@@ -1,9 +1,7 @@
-//go:build azure
-
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package provisioner
+package azure
 
 import (
 	"context"
@@ -18,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
+	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	"github.com/containerd/containerd/reference"
 	log "github.com/sirupsen/logrus"
 
@@ -27,11 +26,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/go-autorest/autorest"
 )
-
-func init() {
-	newProvisionerFunctions["azure"] = NewAzureCloudProvisioner
-	newInstallOverlayFunctions["azure"] = NewAzureInstallOverlay
-}
 
 func createResourceGroup() error {
 	if AzureProps.IsCIManaged {
@@ -151,10 +145,10 @@ type AzureCloudProvisioner struct {
 
 // AzureInstallOverlay implements the InstallOverlay interface
 type AzureInstallOverlay struct {
-	overlay *KustomizeOverlay
+	Overlay *pv.KustomizeOverlay
 }
 
-func NewAzureCloudProvisioner(properties map[string]string) (CloudProvisioner, error) {
+func NewAzureCloudProvisioner(properties map[string]string) (pv.CloudProvisioner, error) {
 	if err := initAzureProperties(properties); err != nil {
 		return nil, err
 	}
@@ -395,23 +389,23 @@ func isAzureKustomizeSecretKey(key string) bool {
 	return key == "AZURE_CLIENT_ID"
 }
 
-func NewAzureInstallOverlay(installDir string) (InstallOverlay, error) {
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "overlays/azure"))
+func NewAzureInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
+	overlay, err := pv.NewKustomizeOverlay(filepath.Join(installDir, "overlays", provider))
 	if err != nil {
 		return nil, err
 	}
 
 	return &AzureInstallOverlay{
-		overlay: overlay,
+		Overlay: overlay,
 	}, nil
 }
 
 func (lio *AzureInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Apply(ctx, cfg)
+	return lio.Overlay.Apply(ctx, cfg)
 }
 
 func (lio *AzureInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Delete(ctx, cfg)
+	return lio.Overlay.Delete(ctx, cfg)
 }
 
 func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
@@ -425,7 +419,7 @@ func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, p
 		}
 
 		log.Infof("Updating CAA image with %q", spec.Locator)
-		if err = lio.overlay.SetKustomizeImage("cloud-api-adaptor", "newName", spec.Locator); err != nil {
+		if err = lio.Overlay.SetKustomizeImage("cloud-api-adaptor", "newName", spec.Locator); err != nil {
 			return err
 		}
 
@@ -436,12 +430,12 @@ func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, p
 		}
 
 		log.Infof("Updating CAA image tag with %q", tag)
-		if err = lio.overlay.SetKustomizeImage("cloud-api-adaptor", "newTag", tag); err != nil {
+		if err = lio.Overlay.SetKustomizeImage("cloud-api-adaptor", "newTag", tag); err != nil {
 			return err
 		}
 
 		log.Infof("Updating CAA image digest with %q", digest)
-		if err = lio.overlay.SetKustomizeImage("cloud-api-adaptor", "digest", digest.String()); err != nil {
+		if err = lio.Overlay.SetKustomizeImage("cloud-api-adaptor", "digest", digest.String()); err != nil {
 			return err
 		}
 	}
@@ -449,35 +443,35 @@ func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, p
 	for k, v := range properties {
 		// configMapGenerator
 		if isAzureKustomizeConfigMapKey(k) {
-			if err = lio.overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm", k, v); err != nil {
+			if err = lio.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm", k, v); err != nil {
 				return err
 			}
 		}
 		// secretGenerator
 		if isAzureKustomizeSecretKey(k) {
-			if err = lio.overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret", k, v); err != nil {
+			if err = lio.Overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret", k, v); err != nil {
 				return err
 			}
 		}
 		// ssh key id
 		if k == "SSH_KEY_ID" {
-			if err = lio.overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret", v); err != nil {
+			if err = lio.Overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret", v); err != nil {
 				return err
 			}
 		}
 	}
 
 	// Replace the contents of the `workload-identity.yaml` with the client id
-	workloadIdentity := filepath.Join(lio.overlay.configDir, "workload-identity.yaml")
+	workloadIdentity := filepath.Join(lio.Overlay.ConfigDir, "workload-identity.yaml")
 	if err = replaceTextInFile(workloadIdentity, "00000000-0000-0000-0000-000000000000", AzureProps.ClientID); err != nil {
 		return fmt.Errorf("replacing client id in workload-identity.yaml: %w", err)
 	}
 
-	if err = lio.overlay.AddToPatchesStrategicMerge("workload-identity.yaml"); err != nil {
+	if err = lio.Overlay.AddToPatchesStrategicMerge("workload-identity.yaml"); err != nil {
 		return err
 	}
 
-	if err = lio.overlay.YamlReload(); err != nil {
+	if err = lio.Overlay.YamlReload(); err != nil {
 		return err
 	}
 

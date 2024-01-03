@@ -20,8 +20,8 @@ import (
 )
 
 type KustomizeOverlay struct {
-	configDir string // path to the overlay directory
-	yaml      []byte // Resources built in YAML
+	ConfigDir string // path to the overlay directory
+	Yaml      []byte // Resources built in YAML
 }
 
 func NewKustomizeOverlay(dir string) (*KustomizeOverlay, error) {
@@ -31,8 +31,8 @@ func NewKustomizeOverlay(dir string) (*KustomizeOverlay, error) {
 	}
 
 	return &KustomizeOverlay{
-		configDir: dir,
-		yaml:      yml,
+		ConfigDir: dir,
+		Yaml:      yml,
 	}, nil
 }
 
@@ -43,7 +43,7 @@ func (kh *KustomizeOverlay) Apply(ctx context.Context, cfg *envconf.Config) erro
 		return err
 	}
 
-	err = decoder.DecodeEach(ctx, bytes.NewReader(kh.yaml), decoder.CreateIgnoreAlreadyExists(client.Resources()))
+	err = decoder.DecodeEach(ctx, bytes.NewReader(kh.Yaml), decoder.CreateIgnoreAlreadyExists(client.Resources()))
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (kh *KustomizeOverlay) Delete(ctx context.Context, cfg *envconf.Config) err
 		return err
 	}
 
-	err = decoder.DecodeEach(ctx, bytes.NewReader(kh.yaml), decoder.DeleteHandler(client.Resources()))
+	err = decoder.DecodeEach(ctx, bytes.NewReader(kh.Yaml), decoder.DeleteHandler(client.Resources()))
 	if err != nil {
 		return err
 	}
@@ -80,11 +80,11 @@ func (kh *KustomizeOverlay) Delete(ctx context.Context, cfg *envconf.Config) err
 }
 
 func (kh *KustomizeOverlay) YamlReload() error {
-	yml, err := BuildKustomizeOverlayAsYaml(kh.configDir)
+	yml, err := BuildKustomizeOverlayAsYaml(kh.ConfigDir)
 	if err != nil {
 		return err
 	}
-	kh.yaml = yml
+	kh.Yaml = yml
 
 	return nil
 }
@@ -99,7 +99,7 @@ func (kh *KustomizeOverlay) SetKustomizeConfigMapGeneratorLiteral(cmgName string
 	if err != nil {
 		return err
 	}
-	if err = os.Chdir(kh.configDir); err != nil {
+	if err = os.Chdir(kh.ConfigDir); err != nil {
 		return err
 	}
 	defer func() {
@@ -140,7 +140,7 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorLiteral(secretName string
 	if err != nil {
 		return err
 	}
-	if err = os.Chdir(kh.configDir); err != nil {
+	if err = os.Chdir(kh.ConfigDir); err != nil {
 		return err
 	}
 	defer func() {
@@ -177,7 +177,7 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorFile(sgName string, file 
 	if err != nil {
 		return err
 	}
-	if err = os.Chdir(kh.configDir); err != nil {
+	if err = os.Chdir(kh.ConfigDir); err != nil {
 		return err
 	}
 	defer func() {
@@ -226,7 +226,7 @@ func (kh *KustomizeOverlay) AddToPatchesStrategicMerge(fileName string) error {
 	if err != nil {
 		return err
 	}
-	if err = os.Chdir(kh.configDir); err != nil {
+	if err = os.Chdir(kh.ConfigDir); err != nil {
 		return err
 	}
 	defer func() {
@@ -271,7 +271,7 @@ func (kh *KustomizeOverlay) SetKustomizeImage(imageName string, key string, valu
 	if err != nil {
 		return err
 	}
-	if err = os.Chdir(kh.configDir); err != nil {
+	if err = os.Chdir(kh.ConfigDir); err != nil {
 		return err
 	}
 	defer func() {

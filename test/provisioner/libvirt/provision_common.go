@@ -1,9 +1,7 @@
-//go:build libvirt && cgo
-
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package provisioner
+package libvirt
 
 import (
 	"context"
@@ -14,16 +12,12 @@ import (
 	"path"
 	"path/filepath"
 
+	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
-
-func init() {
-	newProvisionerFunctions["libvirt"] = NewLibvirtProvisioner
-	newInstallOverlayFunctions["libvirt"] = NewLibvirtInstallOverlay
-}
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
@@ -39,15 +33,14 @@ type LibvirtProvisioner struct {
 
 // LibvirtInstallOverlay implements the InstallOverlay interface
 type LibvirtInstallOverlay struct {
-	overlay *KustomizeOverlay
+	Overlay *pv.KustomizeOverlay
 }
 
-func NewLibvirtProvisioner(properties map[string]string) (CloudProvisioner, error) {
+func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, error) {
 	wd, err := filepath.Abs(path.Join("..", "..", "libvirt"))
 	if err != nil {
 		return nil, err
 	}
-
 	network := "default"
 	if properties["libvirt_network"] != "" {
 		network = properties["libvirt_network"]
@@ -121,7 +114,7 @@ func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Con
 	kubeconfig := path.Join(home, ".kcli/clusters", clusterName, "auth/kubeconfig")
 	cfg.WithKubeconfigFile(kubeconfig)
 
-	if err := AddNodeRoleWorkerLabel(ctx, clusterName, cfg); err != nil {
+	if err := pv.AddNodeRoleWorkerLabel(ctx, clusterName, cfg); err != nil {
 
 		return fmt.Errorf("labeling nodes: %w", err)
 	}
@@ -278,23 +271,23 @@ func (l *LibvirtProvisioner) GetStoragePool() (*libvirt.StoragePool, error) {
 	return sp, nil
 }
 
-func NewLibvirtInstallOverlay(installDir string) (InstallOverlay, error) {
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "overlays/libvirt"))
+func NewLibvirtInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
+	overlay, err := pv.NewKustomizeOverlay(filepath.Join(installDir, "overlays", provider))
 	if err != nil {
 		return nil, err
 	}
 
 	return &LibvirtInstallOverlay{
-		overlay: overlay,
+		Overlay: overlay,
 	}, nil
 }
 
 func (lio *LibvirtInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Apply(ctx, cfg)
+	return lio.Overlay.Apply(ctx, cfg)
 }
 
 func (lio *LibvirtInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Delete(ctx, cfg)
+	return lio.Overlay.Delete(ctx, cfg)
 }
 
 // Update install/overlays/libvirt/kustomization.yaml
@@ -313,7 +306,7 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 
 	for k, v := range mapProps {
 		if properties[k] != v[0] {
-			if err = lio.overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm",
+			if err = lio.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm",
 				v[1], properties[k]); err != nil {
 				return err
 			}
@@ -321,13 +314,13 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 	}
 
 	if properties["ssh_key_file"] != "" {
-		if err = lio.overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret",
+		if err = lio.Overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret",
 			properties["ssh_key_file"]); err != nil {
 			return err
 		}
 	}
 
-	if err = lio.overlay.YamlReload(); err != nil {
+	if err = lio.Overlay.YamlReload(); err != nil {
 		return err
 	}
 

@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-type patchLabel struct {
+type PatchLabel struct {
 	Op    string `json:"op"`
 	Path  string `json:"path"`
 	Value string `json:"value"`
@@ -36,7 +36,7 @@ func AddNodeRoleWorkerLabel(ctx context.Context, clusterName string, cfg *envcon
 		return err
 	}
 	// Use full path to avoid overwriting other labels (see RFC 6902)
-	payload := []patchLabel{{
+	payload := []PatchLabel{{
 		Op: "add",
 		// "/" must be written as ~1 (see RFC 6901)
 		Path:  "/metadata/labels/node.kubernetes.io~1worker",

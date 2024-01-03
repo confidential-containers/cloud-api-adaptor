@@ -24,7 +24,7 @@ all: $(BINARIES)
 provisioner-cli: caa-provisioner-cli
 
 caa-provisioner-cli: force ## Build provisioner-cli for developer
-	$(GOOPTIONS) go build $(GOFLAGS) -o caa-provisioner-cli "provisioner-cli/main.go"
+	$(GOOPTIONS) go build $(GOFLAGS) -o caa-provisioner-cli ./provisioner-cli/
 
 .PHONY: clean
 clean: ## Remove binaries.

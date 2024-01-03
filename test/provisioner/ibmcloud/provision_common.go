@@ -1,9 +1,7 @@
-//go:build ibmcloud
-
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package provisioner
+package ibmcloud
 
 import (
 	"context"
@@ -20,6 +18,7 @@ import (
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
+	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	"github.com/confidential-containers/cloud-api-adaptor/test/utils"
 
 	"github.com/IBM-Cloud/bluemix-go/api/container/containerv1"
@@ -31,10 +30,6 @@ import (
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 	log "github.com/sirupsen/logrus"
 )
-
-func init() {
-	newProvisionerFunctions["ibmcloud"] = NewIBMCloudProvisioner
-}
 
 // https://cloud.ibm.com/docs/vpc?topic=vpc-configuring-address-prefixes
 func getCidrBlock(region, zone string) string {
@@ -629,13 +624,13 @@ func getKubeconfig(kubecfgDir string) (*containerv1.ClusterKeyInfo, error) {
 type IBMCloudProvisioner struct {
 }
 
-func NewIBMCloudProvisioner(properties map[string]string) (CloudProvisioner, error) {
-	if err := initProperties(properties); err != nil {
+func NewIBMCloudProvisioner(properties map[string]string) (pv.CloudProvisioner, error) {
+	if err := InitIBMCloudProperties(properties); err != nil {
 		return nil, err
 	}
 
 	if IBMCloudProps.IsSelfManaged {
-		return &SelfManagedClusterProvisioner{}, nil
+		return &IBMSelfManagedClusterProvisioner{}, nil
 	}
 
 	return &IBMCloudProvisioner{}, nil
