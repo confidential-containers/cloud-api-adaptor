@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
+	"sigs.k8s.io/e2e-framework/pkg/env"
 	envconf "sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
@@ -27,13 +28,13 @@ const WAIT_NGINX_DEPLOYMENT_TIMEOUT = time.Second * 900
 
 type deploymentOption func(*appsv1.Deployment)
 
-func withReplicaCount(replicas int32) deploymentOption {
+func WithReplicaCount(replicas int32) deploymentOption {
 	return func(deployment *appsv1.Deployment) {
 		deployment.Spec.Replicas = &replicas
 	}
 }
 
-func newDeployment(namespace, deploymentName, containerName, imageName string, options ...deploymentOption) *appsv1.Deployment {
+func NewDeployment(namespace, deploymentName, containerName, imageName string, options ...deploymentOption) *appsv1.Deployment {
 	runtimeClassName := "kata-remote"
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -91,13 +92,13 @@ func newDeployment(namespace, deploymentName, containerName, imageName string, o
 	return deployment
 }
 
-func doTestNginxDeployment(t *testing.T, assert CloudAssert) {
+func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAssert) {
 	namespace := envconf.RandomName("default", 7)
 	deploymentName := "nginx-deployment"
 	containerName := "nginx"
 	imageName := "nginx:latest"
 	replicas := int32(2)
-	deployment := newDeployment(namespace, deploymentName, containerName, imageName, withReplicaCount(replicas))
+	deployment := NewDeployment(namespace, deploymentName, containerName, imageName, WithReplicaCount(replicas))
 
 	nginxImageFeature := features.New("Nginx image deployment test").
 		WithSetup("Create nginx deployment", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -182,7 +183,7 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 				}
 				if pod.Status.Phase == v1.PodRunning {
 					fmt.Printf("Log of the pod %.v \n===================\n", pod.Name)
-					podLogString, _ := getPodLog(ctx, client, pod)
+					podLogString, _ := GetPodLog(ctx, client, pod)
 					fmt.Println(podLogString)
 					fmt.Printf("===================\n")
 				}

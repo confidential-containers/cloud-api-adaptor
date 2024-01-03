@@ -22,14 +22,14 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
+	"sigs.k8s.io/e2e-framework/pkg/env"
 	envconf "sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
 
-const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const OLD_VM_DELETION_TIMEOUT = time.Second * 30
 
-func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
+func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, assert RollingUpdateAssert) {
 	runtimeClassName := "kata-remote"
 	namespace := envconf.RandomName("default", 7)
 	deploymentName := "webserver-deployment"
@@ -158,7 +158,7 @@ func doTestCaaDaemonsetRollingUpdate(t *testing.T, assert RollingUpdateAssert) {
 			if err = client.Resources().Create(ctx, svc); err != nil {
 				t.Fatal(err)
 			}
-			clusterIP := waitForClusterIP(t, client, svc)
+			clusterIP := WaitForClusterIP(t, client, svc)
 			log.Printf("webserver service is available on cluster IP: %s", clusterIP)
 
 			// Update verify command
@@ -298,26 +298,4 @@ func waitForDeploymentAvailable(t *testing.T, client klient.Client, deployment *
 	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func waitForClusterIP(t *testing.T, client klient.Client, svc *v1.Service) string {
-	var clusterIP string
-	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(svc, func(object k8s.Object) bool {
-		svcObj, ok := object.(*v1.Service)
-		if !ok {
-			log.Printf("Not a Service object: %v", object)
-			return false
-		}
-		clusterIP = svcObj.Spec.ClusterIP
-		if clusterIP != "" {
-			return true
-		} else {
-			log.Printf("Current service: %v", svcObj)
-			return false
-		}
-	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
-		t.Fatal(err)
-	}
-
-	return clusterIP
 }

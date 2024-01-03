@@ -6,83 +6,37 @@
 package e2e
 
 import (
-	"context"
-	"strings"
 	"testing"
 
-	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
-	log "github.com/sirupsen/logrus"
+	_ "github.com/confidential-containers/cloud-api-adaptor/test/provisioner/azure"
 )
-
-// AzureCloudAssert implements the CloudAssert interface for azure.
-type AzureCloudAssert struct{}
-
-var assert = &AzureCloudAssert{}
 
 func TestDeletePodAzure(t *testing.T) {
 	t.Parallel()
-	doTestDeleteSimplePod(t, assert)
+	DoTestDeleteSimplePod(t, testEnv, assert)
 }
 
 func TestCreateSimplePodAzure(t *testing.T) {
 	t.Parallel()
-	doTestCreateSimplePod(t, assert)
+	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
 func TestCreateSimplePodWithNydusAnnotationAzure(t *testing.T) {
 	t.Parallel()
-	doTestCreateSimplePodWithNydusAnnotation(t, assert)
+	DoTestCreateSimplePodWithNydusAnnotation(t, testEnv, assert)
 }
 
 func TestCreatePodWithConfigMapAzure(t *testing.T) {
 	t.Parallel()
-	doTestCreatePodWithConfigMap(t, assert)
+	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
 
 func TestCreatePodWithSecretAzure(t *testing.T) {
 	t.Parallel()
-	doTestCreatePodWithSecret(t, assert)
+	DoTestCreatePodWithSecret(t, testEnv, assert)
 }
 
 func TestCreateNginxDeploymentAzure(t *testing.T) {
 	t.Parallel()
-	doTestNginxDeployment(t, assert)
-}
-
-func checkVMExistence(resourceGroupName, prefixName string) bool {
-	pager := pv.AzureProps.ManagedVmClient.NewListPager(resourceGroupName, nil)
-
-	for pager.More() {
-		page, err := pager.NextPage(context.Background())
-		if err != nil {
-			log.Errorf("failed to advance page: %v", err)
-			return false
-		}
-
-		for _, vm := range page.Value {
-			if strings.HasPrefix(*vm.Name, prefixName) {
-				// VM found
-				return true
-			}
-		}
-
-	}
-
-	return false
-}
-
-func (c AzureCloudAssert) HasPodVM(t *testing.T, id string) {
-	pod_vm_prefix := "podvm-" + id
-	rg := pv.AzureProps.ResourceGroupName
-	if checkVMExistence(rg, pod_vm_prefix) {
-		log.Infof("VM found in resource group")
-	} else {
-		log.Infof("Virtual machine %s not found in resource group %s", id, rg)
-		t.Error("PodVM was not created")
-	}
-}
-
-func (c AzureCloudAssert) getInstanceType(t *testing.T, podName string) (string, error) {
-	// Get Instance Type of PodVM
-	return "", nil
+	DoTestNginxDeployment(t, testEnv, assert)
 }

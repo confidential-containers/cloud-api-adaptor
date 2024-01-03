@@ -157,7 +157,7 @@ popd
 ## End-2-End Test Framework
 
 To validate that a cluster has been setup properly, there is a suite of tests that validate peer-pods across different providers,
-the implementation of these tests can be found in [test/e2e/common_suite_test.go)](../test/e2e/common_suite_test.go).
+the implementation of these tests can be found in [test/e2e/common_suite.go)](../test/e2e/common_suite.go).
 
 Assuming `CLOUD_PROVIDER` and `TEST_PROVISION_FILE` are still set in your current terminal you can execute these tests
 from the cloud-api-adaptor root directory by running the following commands

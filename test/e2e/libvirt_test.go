@@ -1,125 +1,93 @@
 //go:build libvirt && cgo
 
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package e2e
 
 import (
-	"strings"
 	"testing"
 
-	"libvirt.org/go/libvirt"
+	_ "github.com/confidential-containers/cloud-api-adaptor/test/provisioner/libvirt"
 )
 
 func TestLibvirtCreateSimplePod(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreateSimplePod(t, assert)
+	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
 func TestLibvirtCreateSimplePodWithNydusAnnotation(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreateSimplePodWithNydusAnnotation(t, assert)
+	DoTestCreateSimplePodWithNydusAnnotation(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
-	skipTestOnCI(t)
+	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
-	doTestCreatePodWithConfigMap(t, assert)
+	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePodWithSecret(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreatePodWithSecret(t, assert)
+	DoTestCreatePodWithSecret(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
-	skipTestOnCI(t)
+	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
-	doTestCreatePeerPodContainerWithExternalIPAccess(t, assert)
+	DoTestCreatePeerPodContainerWithExternalIPAccess(t, testEnv, assert)
 
 }
 
 func TestLibvirtCreatePeerPodWithJob(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreatePeerPodWithJob(t, assert)
+	DoTestCreatePeerPodWithJob(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePeerPodAndCheckUserLogs(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreatePeerPodAndCheckUserLogs(t, assert)
+	DoTestCreatePeerPodAndCheckUserLogs(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreatePeerPodAndCheckWorkDirLogs(t, assert)
+	DoTestCreatePeerPodAndCheckWorkDirLogs(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t, assert)
+	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t, assert)
+	DoTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, assert)
+	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, testEnv, assert)
 }
 
 func TestLibvirtCreateNginxDeployment(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestNginxDeployment(t, assert)
+	DoTestNginxDeployment(t, testEnv, assert)
 }
 
 /*
 Failing due to issues will pulling image (ErrImagePull)
 func TestLibvirtCreatePeerPodWithLargeImage(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestCreatePeerPodWithLargeImage(t, assert)
+	DoTestCreatePeerPodWithLargeImage(t, testEnv, assert)
 }
 */
 
 func TestLibvirtDeletePod(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestDeleteSimplePod(t, assert)
+	DoTestDeleteSimplePod(t, testEnv, assert)
 }
 
 func TestLibvirtPodToServiceCommunication(t *testing.T) {
 	assert := LibvirtAssert{}
-	doTestPodToServiceCommunication(t, assert)
-}
-
-// LibvirtAssert implements the CloudAssert interface for Libvirt.
-type LibvirtAssert struct {
-	// TODO: create the connection once on the initializer.
-	//conn libvirt.Connect
-}
-
-func (l LibvirtAssert) HasPodVM(t *testing.T, id string) {
-	conn, err := libvirt.NewConnect("qemu:///system")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	domains, err := conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, dom := range domains {
-		name, _ := dom.GetName()
-		// TODO: PodVM name is podvm-POD_NAME-SANDBOX_ID, where SANDBOX_ID is truncated
-		// in the 8th word. Ideally we should match the exact name, not just podvm-POD_NAME.
-		if strings.HasPrefix(name, strings.Join([]string{"podvm", id, ""}, "-")) {
-			return
-		}
-	}
-
-	// It didn't find the PodVM if it reached here.
-	t.Error("PodVM was not created")
-}
-
-func (l LibvirtAssert) getInstanceType(t *testing.T, podName string) (string, error) {
-	// Get Instance Type of PodVM
-	return "", nil
+	DoTestPodToServiceCommunication(t, testEnv, assert)
 }

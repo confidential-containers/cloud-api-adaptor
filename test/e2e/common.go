@@ -1,28 +1,40 @@
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package e2e
 
 import (
+	"net"
 	"testing"
+	"time"
 
+	log "github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/e2e-framework/klient"
+	"sigs.k8s.io/e2e-framework/klient/k8s"
+	"sigs.k8s.io/e2e-framework/klient/wait"
+	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
+const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 
-type podOption func(*corev1.Pod)
+type PodOption func(*corev1.Pod)
 
-func withRestartPolicy(restartPolicy corev1.RestartPolicy) podOption {
+func WithRestartPolicy(restartPolicy corev1.RestartPolicy) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.RestartPolicy = restartPolicy
 	}
 }
 
 // Optional method to add ContainerPort and ReadinessProbe to listen Port
-func withContainerPort(port int32) podOption {
+func WithContainerPort(port int32) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].Ports = []corev1.ContainerPort{{ContainerPort: port}}
 		p.Spec.Containers[0].ReadinessProbe = &corev1.Probe{
@@ -38,19 +50,19 @@ func withContainerPort(port int32) podOption {
 	}
 }
 
-func withCommand(command []string) podOption {
+func WithCommand(command []string) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].Command = command
 	}
 }
 
-func withEnvironmentalVariables(envVar []corev1.EnvVar) podOption {
+func WithEnvironmentalVariables(envVar []corev1.EnvVar) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].Env = envVar
 	}
 }
 
-func withImagePullSecrets(secretName string) podOption {
+func WithImagePullSecrets(secretName string) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
 			{
@@ -60,21 +72,21 @@ func withImagePullSecrets(secretName string) podOption {
 	}
 }
 
-func withConfigMapBinding(mountPath string, configMapName string) podOption {
+func WithConfigMapBinding(mountPath string, configMapName string) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "config-volume", MountPath: mountPath})
 		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "config-volume", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMapName}}}})
 	}
 }
 
-func withSecretBinding(mountPath string, secretName string) podOption {
+func WithSecretBinding(mountPath string, secretName string) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "secret-volume", MountPath: mountPath})
 		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "secret-volume", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: secretName}}})
 	}
 }
 
-func withPVCBinding(mountPath string, pvcName string) podOption {
+func WithPVCBinding(mountPath string, pvcName string) PodOption {
 	propagationHostToContainer := corev1.MountPropagationHostToContainer
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[2].VolumeMounts = append(p.Spec.Containers[2].VolumeMounts, corev1.VolumeMount{Name: "pvc-volume", MountPath: mountPath, MountPropagation: &propagationHostToContainer})
@@ -82,19 +94,19 @@ func withPVCBinding(mountPath string, pvcName string) podOption {
 	}
 }
 
-func withAnnotations(data map[string]string) podOption {
+func WithAnnotations(data map[string]string) PodOption {
 	return func(p *corev1.Pod) {
 		p.ObjectMeta.Annotations = data
 	}
 }
 
-func withLabel(data map[string]string) podOption {
+func WithLabel(data map[string]string) PodOption {
 	return func(p *corev1.Pod) {
 		p.ObjectMeta.Labels = data
 	}
 }
 
-func newPod(namespace string, podName string, containerName string, imageName string, options ...podOption) *corev1.Pod {
+func NewPod(namespace string, podName string, containerName string, imageName string, options ...PodOption) *corev1.Pod {
 	runtimeClassName := "kata-remote"
 	// Comment out adding runtime-handler until nydus-snapshotter is stable
 	// annotationData := map[string]string{
@@ -115,24 +127,24 @@ func newPod(namespace string, podName string, containerName string, imageName st
 	return pod
 }
 
-func newBusyboxPod(namespace string) *corev1.Pod {
-	return newBusyboxPodWithName(namespace, "busybox")
+func NewBusyboxPod(namespace string) *corev1.Pod {
+	return NewBusyboxPodWithName(namespace, "busybox")
 }
 
-func newBusyboxPodWithName(namespace, podName string) *corev1.Pod {
-	return newPod(namespace, podName, "busybox", BUSYBOX_IMAGE, withCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+func NewBusyboxPodWithName(namespace, podName string) *corev1.Pod {
+	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 }
 
-// newConfigMap returns a new config map object.
-func newConfigMap(namespace, name string, configMapData map[string]string) *corev1.ConfigMap {
+// NewConfigMap returns a new config map object.
+func NewConfigMap(namespace, name string, configMapData map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Data:       configMapData,
 	}
 }
 
-// newSecret returns a new secret object.
-func newSecret(namespace, name string, data map[string][]byte, secretType corev1.SecretType) *corev1.Secret {
+// NewSecret returns a new secret object.
+func NewSecret(namespace, name string, data map[string][]byte, secretType corev1.SecretType) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Data:       data,
@@ -140,8 +152,8 @@ func newSecret(namespace, name string, data map[string][]byte, secretType corev1
 	}
 }
 
-// newJob returns a new job
-func newJob(namespace, name string) *batchv1.Job {
+// NewJob returns a new job
+func NewJob(namespace, name string) *batchv1.Job {
 	runtimeClassName := "kata-remote"
 	// Comment out adding runtime-handler until nydus-snapshotter is stable
 	// annotationData := map[string]string{
@@ -174,8 +186,8 @@ func newJob(namespace, name string) *batchv1.Job {
 	}
 }
 
-// newPVC returns a new pvc object.
-func newPVC(namespace, name, storageClassName, diskSize string, accessModel corev1.PersistentVolumeAccessMode) *corev1.PersistentVolumeClaim {
+// NewPVC returns a new pvc object.
+func NewPVC(namespace, name, storageClassName, diskSize string, accessModel corev1.PersistentVolumeAccessMode) *corev1.PersistentVolumeClaim {
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -195,7 +207,7 @@ func newPVC(namespace, name, storageClassName, diskSize string, accessModel core
 	}
 }
 
-func newService(namespace, serviceName, portName string, portNumber, targetPort int32, labels map[string]string) *corev1.Service {
+func NewService(namespace, serviceName, portName string, portNumber, targetPort int32, labels map[string]string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
@@ -210,16 +222,38 @@ func newService(namespace, serviceName, portName string, portNumber, targetPort 
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
-			Selector:  labels,
-			ClusterIP: "None",
+			Selector: labels,
 		},
 	}
+}
+
+func WaitForClusterIP(t *testing.T, client klient.Client, svc *v1.Service) string {
+	var clusterIP string
+	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(svc, func(object k8s.Object) bool {
+		svcObj, ok := object.(*v1.Service)
+		if !ok {
+			log.Printf("Not a Service object: %v", object)
+			return false
+		}
+		clusterIP = svcObj.Spec.ClusterIP
+		ip := net.ParseIP(clusterIP)
+		if ip != nil {
+			return true
+		} else {
+			log.Printf("Current service: %v", svcObj)
+			return false
+		}
+	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
+		t.Fatal(err)
+	}
+
+	return clusterIP
 }
 
 // CloudAssert defines assertions to perform on the cloud provider.
 type CloudAssert interface {
 	HasPodVM(t *testing.T, id string)                             // Assert there is a PodVM with `id`.
-	getInstanceType(t *testing.T, podName string) (string, error) // Get Instance Type of PodVM
+	GetInstanceType(t *testing.T, podName string) (string, error) // Get Instance Type of PodVM
 }
 
 // RollingUpdateAssert defines assertions for rolling update test
