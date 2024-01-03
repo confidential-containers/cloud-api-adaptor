@@ -1,3 +1,6 @@
+// (C) Copyright Confidential Containers Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package e2e
 
 import (
@@ -18,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
+	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
@@ -25,138 +29,142 @@ import (
 const WAIT_POD_RUNNING_TIMEOUT = time.Second * 600
 const WAIT_JOB_RUNNING_TIMEOUT = time.Second * 600
 
-// testCommand is a list of commands to execute inside the pod container,
+// TestCommand is a list of commands to execute inside the pod container,
 // each with a function to test if the command outputs the value the test
 // expects it to on the stdout stream
-type testCommand struct {
-	command             []string
-	testCommandStdoutFn func(stdout bytes.Buffer) bool
-	containerName       string
+type TestCommand struct {
+	Command             []string
+	TestCommandStdoutFn func(stdout bytes.Buffer) bool
+	TestCommandStderrFn func(stderr bytes.Buffer) bool
+	TestErrorFn         func(errorMsg error) bool
+	ContainerName       string
 }
-type extraPod struct {
+
+type ExtraPod struct {
 	pod                  *v1.Pod
 	imagePullTimer       bool
 	expectedPodLogString string
 	isAuth               bool
-	testInstanceTypes    instanceValidatorFunctions
+	testInstanceTypes    InstanceValidatorFunctions
 	podState             v1.PodPhase
-	testCommands         []testCommand
+	testCommands         []TestCommand
 }
 
-type instanceValidatorFunctions struct {
+type InstanceValidatorFunctions struct {
 	testSuccessfn func(instance string) bool
 	testFailurefn func(error error) bool
 }
 
-type testCase struct {
+type TestCase struct {
 	testing              *testing.T
+	testEnv              env.Environment
 	testName             string
 	assert               CloudAssert
 	assessMessage        string
 	pod                  *v1.Pod
-	extraPods            []*extraPod
+	extraPods            []*ExtraPod
 	configMap            *v1.ConfigMap
 	secret               *v1.Secret
 	pvc                  *v1.PersistentVolumeClaim
 	job                  *batchv1.Job
 	service              *v1.Service
-	testCommands         []testCommand
+	testCommands         []TestCommand
 	expectedPodLogString string
 	podState             v1.PodPhase
 	imagePullTimer       bool
 	isAuth               bool
 	AuthImageStatus      string
 	deletionWithin       *time.Duration
-	testInstanceTypes    instanceValidatorFunctions
+	testInstanceTypes    InstanceValidatorFunctions
 	isNydusSnapshotter   bool
 }
 
-func (tc *testCase) withConfigMap(configMap *v1.ConfigMap) *testCase {
+func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
 	tc.configMap = configMap
 	return tc
 }
 
-func (tc *testCase) withSecret(secret *v1.Secret) *testCase {
+func (tc *TestCase) WithSecret(secret *v1.Secret) *TestCase {
 	tc.secret = secret
 	return tc
 }
 
-func (tc *testCase) withPVC(pvc *v1.PersistentVolumeClaim) *testCase {
+func (tc *TestCase) WithPVC(pvc *v1.PersistentVolumeClaim) *TestCase {
 	tc.pvc = pvc
 	return tc
 }
 
-func (tc *testCase) withJob(job *batchv1.Job) *testCase {
+func (tc *TestCase) WithJob(job *batchv1.Job) *TestCase {
 	tc.job = job
 	return tc
 }
 
-func (tc *testCase) withPod(pod *v1.Pod) *testCase {
+func (tc *TestCase) WithPod(pod *v1.Pod) *TestCase {
 	tc.pod = pod
 	return tc
 }
 
-func (tc *testCase) withExtraPods(pods []*extraPod) *testCase {
+func (tc *TestCase) WithExtraPods(pods []*ExtraPod) *TestCase {
 	tc.extraPods = pods
 	return tc
 }
 
-func (tc *testCase) withService(service *v1.Service) *testCase {
+func (tc *TestCase) WithService(service *v1.Service) *TestCase {
 	tc.service = service
 	return tc
 }
 
-func (tc *testCase) withDeleteAssertion(duration *time.Duration) *testCase {
+func (tc *TestCase) WithDeleteAssertion(duration *time.Duration) *TestCase {
 	tc.deletionWithin = duration
 	return tc
 }
 
-func (tc *testCase) withTestCommands(testCommands []testCommand) *testCase {
-	tc.testCommands = testCommands
+func (tc *TestCase) WithTestCommands(TestCommands []TestCommand) *TestCase {
+	tc.testCommands = TestCommands
 	return tc
 }
 
-func (tc *testCase) withInstanceTypes(testInstanceTypes instanceValidatorFunctions) *testCase {
+func (tc *TestCase) WithInstanceTypes(testInstanceTypes InstanceValidatorFunctions) *TestCase {
 	tc.testInstanceTypes = testInstanceTypes
 	return tc
 }
 
-func (pod *extraPod) withTestCommands(testCommands []testCommand) *extraPod {
-	pod.testCommands = testCommands
+func (pod *ExtraPod) WithTestCommands(TestCommands []TestCommand) *ExtraPod {
+	pod.testCommands = TestCommands
 	return pod
 }
 
-func (tc *testCase) withExpectedPodLogString(expectedPodLogString string) *testCase {
+func (tc *TestCase) WithExpectedPodLogString(expectedPodLogString string) *TestCase {
 	tc.expectedPodLogString = expectedPodLogString
 	return tc
 }
 
-func (tc *testCase) withCustomPodState(customPodState v1.PodPhase) *testCase {
+func (tc *TestCase) WithCustomPodState(customPodState v1.PodPhase) *TestCase {
 	tc.podState = customPodState
 	return tc
 }
 
-func (tc *testCase) withPodWatcher() *testCase {
+func (tc *TestCase) WithPodWatcher() *TestCase {
 	tc.imagePullTimer = true
 	return tc
 }
 
-func (tc *testCase) withAuthenticatedImage() *testCase {
+func (tc *TestCase) WithAuthenticatedImage() *TestCase {
 	tc.isAuth = true
 	return tc
 }
 
-func (tc *testCase) withAuthImageStatus(status string) *testCase {
+func (tc *TestCase) WithAuthImageStatus(status string) *TestCase {
 	tc.AuthImageStatus = status
 	return tc
 }
 
-func (tc *testCase) withNydusSnapshotter() *testCase {
+func (tc *TestCase) WithNydusSnapshotter() *TestCase {
 	tc.isNydusSnapshotter = true
 	return tc
 }
 
-func (tc *testCase) run() {
+func (tc *TestCase) Run() {
 	testCaseFeature := features.New(fmt.Sprintf("%s test", tc.testName)).
 		WithSetup("Create testworkload", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			client, err := cfg.NewClient()
@@ -238,7 +246,7 @@ func (tc *testCase) run() {
 						}
 						if pod.Status.Phase == v1.PodRunning {
 							fmt.Printf("Log of the pod %.v \n===================\n", pod.Name)
-							podLogString, _ := getPodLog(ctx, client, *pod)
+							podLogString, _ := GetPodLog(ctx, client, *pod)
 							fmt.Println(podLogString)
 							fmt.Printf("===================\n")
 						}
@@ -250,13 +258,13 @@ func (tc *testCase) run() {
 				if err = client.Resources().Create(ctx, tc.service); err != nil {
 					t.Fatal(err)
 				}
-				clusterIP := waitForClusterIP(t, client, tc.service)
+				clusterIP := WaitForClusterIP(t, client, tc.service)
 				log.Printf("webserver service is available on cluster IP: %s", clusterIP)
 			}
 			if tc.extraPods != nil {
 				for _, extraPod := range tc.extraPods {
 					fmt.Printf("Provision extra pod %s", extraPod.pod.Name)
-					err := provisionPod(ctx, client, t, extraPod.pod, extraPod.podState, extraPod.testCommands)
+					err := ProvisionPod(ctx, client, t, extraPod.pod, extraPod.podState, extraPod.testCommands)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -273,7 +281,7 @@ func (tc *testCase) run() {
 				if err := client.Resources(tc.job.Namespace).List(ctx, &podlist); err != nil {
 					t.Fatal(err)
 				}
-				successPod, errorPod, podLogString, err := getSuccessfulAndErroredPods(ctx, t, client, *tc.job)
+				successPod, errorPod, podLogString, err := GetSuccessfulAndErroredPods(ctx, t, client, *tc.job)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -299,7 +307,7 @@ func (tc *testCase) run() {
 					}
 					for _, caaPod := range podlist.Items {
 						if caaPod.Labels["app"] == "cloud-api-adaptor" {
-							imagePullTime, err := watchImagePullTime(ctx, client, caaPod, *tc.pod)
+							imagePullTime, err := WatchImagePullTime(ctx, client, caaPod, *tc.pod)
 							if err != nil {
 								t.Fatal(err)
 							}
@@ -310,7 +318,7 @@ func (tc *testCase) run() {
 				}
 
 				if tc.expectedPodLogString != "" {
-					LogString, err := comparePodLogString(ctx, client, *tc.pod, tc.expectedPodLogString)
+					LogString, err := ComparePodLogString(ctx, client, *tc.pod, tc.expectedPodLogString)
 					if err != nil {
 						t.Logf("Output:%s", LogString)
 						t.Fatal(err)
@@ -319,7 +327,7 @@ func (tc *testCase) run() {
 				}
 
 				if tc.isAuth {
-					if err := getAuthenticatedImageStatus(ctx, client, tc.AuthImageStatus, *tc.pod); err != nil {
+					if err := GetAuthenticatedImageStatus(ctx, client, tc.AuthImageStatus, *tc.pod); err != nil {
 						t.Fatal(err)
 					}
 
@@ -333,10 +341,10 @@ func (tc *testCase) run() {
 
 					for _, podItem := range podlist.Items {
 						if podItem.ObjectMeta.Name == tc.pod.Name {
-							profile, error := tc.assert.getInstanceType(t, tc.pod.Name)
+							profile, error := tc.assert.GetInstanceType(t, tc.pod.Name)
 							if error != nil {
 								if error.Error() == "Failed to Create PodVM Instance" {
-									podEvent, err := podEventExtractor(ctx, client, *tc.pod)
+									podEvent, err := PodEventExtractor(ctx, client, *tc.pod)
 									if err != nil {
 										t.Fatal(err)
 									}
@@ -366,22 +374,11 @@ func (tc *testCase) run() {
 						t.Fatal(err)
 					}
 					if len(tc.testCommands) > 0 {
-						for _, testCommand := range tc.testCommands {
-							var stdout, stderr bytes.Buffer
-							for _, podItem := range podlist.Items {
-								if podItem.ObjectMeta.Name == tc.pod.Name {
-									//adding sleep time to intialize container and ready for Executing commands
-									time.Sleep(5 * time.Second)
-									if err := cfg.Client().Resources(tc.pod.Namespace).ExecInPod(ctx, tc.pod.Namespace, tc.pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
-										t.Log(stderr.String())
-										t.Fatal(err)
-									}
-
-									if !testCommand.testCommandStdoutFn(stdout) {
-										t.Fatal(fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String()))
-									}
-									break
-								}
+						if len(tc.testCommands) > 0 {
+							logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
+							t.Logf("Output when execute test commands:%s", logString)
+							if err != nil {
+								t.Fatal(err)
 							}
 						}
 					}
@@ -390,7 +387,7 @@ func (tc *testCase) run() {
 				}
 
 				if tc.isNydusSnapshotter {
-					nodeName, err := getNodeNameFromPod(ctx, client, *tc.pod)
+					nodeName, err := GetNodeNameFromPod(ctx, client, *tc.pod)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -419,7 +416,7 @@ func (tc *testCase) run() {
 						t.Fatal("Please implement assess logic for imagePullTimer")
 					}
 					if extraPod.expectedPodLogString != "" {
-						LogString, err := comparePodLogString(ctx, client, *extraPod.pod, extraPod.expectedPodLogString)
+						LogString, err := ComparePodLogString(ctx, client, *extraPod.pod, extraPod.expectedPodLogString)
 						if err != nil {
 							t.Logf("Output:%s", LogString)
 							t.Fatal(err)
@@ -436,7 +433,7 @@ func (tc *testCase) run() {
 					}
 					if extraPod.podState == v1.PodRunning {
 						if len(extraPod.testCommands) > 0 {
-							logString, err := assessExtraPodTestCommands(ctx, client, extraPod.pod, extraPod.testCommands)
+							logString, err := AssessPodTestCommands(ctx, client, extraPod.pod, extraPod.testCommands)
 							t.Logf("Output when execute test commands:%s", logString)
 							if err != nil {
 								t.Fatal(err)
@@ -517,7 +514,7 @@ func (tc *testCase) run() {
 
 			if tc.extraPods != nil {
 				for _, extraPod := range tc.extraPods {
-					err := deletePod(ctx, client, extraPod.pod, tc.deletionWithin)
+					err := DeletePod(ctx, client, extraPod.pod, tc.deletionWithin)
 					if err != nil {
 						t.Logf("Error occurs when delete pod: %s", extraPod.pod.Name)
 						t.Fatal(err)
@@ -544,5 +541,5 @@ func (tc *testCase) run() {
 			return ctx
 		}).Feature()
 
-	testEnv.Test(tc.testing, testCaseFeature)
+	tc.testEnv.Test(tc.testing, testCaseFeature)
 }

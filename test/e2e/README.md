@@ -102,7 +102,7 @@ for the *libvirt* provider.
 
 ## Create the provision implementation
 
-Create a new Go file (.go) named `provision_<CLOUD_PROVIDER>`.go (e.g., `provision_libvirt.go`)
+Create a folder named <CLOUD_PROVIDER> and create a new Go file (.go) named `provision`.go under it (e.g., `libvirt/provision.go`)
 that should be tagged with `//go:build <CLOUD_PROVIDER>`. That file should have the implementation
 of the `CloudProvisioner` interface (see its definition in [provision.go](../provisioner/provision.go)).
 
@@ -115,14 +115,14 @@ Create another Go file named `<CLOUD_PROVIDER>_test.go` to host the test suite a
 Likewise the provision file, you should tag the test file with `//go:build <CLOUD_PROVIDER>`.
 
 You can have tests specific for the cloud provider or re-use the existing suite found in
-[common_suite_test.go](./common_suite_test.go) (or mix both). In the later cases, you must first implement the `CloudAssert` interface (see its definition in [common.go](./common.go)) because some tests will need to do assertions on the cloud side, so there should provider-specific asserts implementations.
+[common_suite.go](./common_suite.go) (or mix both). In the later cases, you must first implement the `CloudAssert` interface (see its definition in [common.go](./common.go)) because some tests will need to do assertions on the cloud side, so there should provider-specific asserts implementations.
 
-Once you got the assertions done, create the test function which wrap the common suite function. For example, suppose there is a re-usable `doTestCreateSimplePod` test then you can wrap it in test function like shown below:
+Once you got the assertions done, create the test function which wrap the common suite function. For example, suppose there is a re-usable `DoTestCreateSimplePod` test then you can wrap it in test function like shown below:
 
 ```go
 func TestCloudProviderCreateSimplePod(t *testing.T) {
     assert := MyAssert{}
-    doTestCreateSimplePod(t, assert)
+    DoTestCreateSimplePod(t, assert)
 }
 ```
 ## Running tests for PodVM with Authenticated Registry

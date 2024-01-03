@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/e2e-framework/klient"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
+	"sigs.k8s.io/e2e-framework/pkg/env"
 )
 
 func reverseSlice(slice []string) []string {
@@ -46,9 +47,10 @@ type PodEvents struct {
 	EventReason      string
 }
 
-func newTestCase(t *testing.T, testName string, assert CloudAssert, assessMessage string) *testCase {
-	testCase := &testCase{
+func NewTestCase(t *testing.T, e env.Environment, testName string, assert CloudAssert, assessMessage string) *TestCase {
+	testCase := &TestCase{
 		testing:        t,
+		testEnv:        e,
 		testName:       testName,
 		assert:         assert,
 		assessMessage:  assessMessage,
@@ -60,19 +62,19 @@ func newTestCase(t *testing.T, testName string, assert CloudAssert, assessMessag
 	return testCase
 }
 
-func newExtraPod(namespace string, podName string, containerName string, imageName string, options ...podOption) *extraPod {
-	basicPod := newPod(namespace, podName, containerName, imageName)
+func NewExtraPod(namespace string, podName string, containerName string, imageName string, options ...PodOption) *ExtraPod {
+	basicPod := NewPod(namespace, podName, containerName, imageName)
 	for _, option := range options {
 		option(basicPod)
 	}
-	extPod := &extraPod{
+	extPod := &ExtraPod{
 		pod:      basicPod,
 		podState: v1.PodRunning,
 	}
 	return extPod
 }
 
-func podEventExtractor(ctx context.Context, client klient.Client, pod v1.Pod) (*PodEvents, error) {
+func PodEventExtractor(ctx context.Context, client klient.Client, pod v1.Pod) (*PodEvents, error) {
 	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 	if err != nil {
 		return nil, err
@@ -95,12 +97,12 @@ func podEventExtractor(ctx context.Context, client klient.Client, pod v1.Pod) (*
 	return nil, errors.New("No Events Found in PodVM")
 }
 
-func watchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod, Pod v1.Pod) (string, error) {
+func WatchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod, pod v1.Pod) (string, error) {
 	pullingtime := ""
 	var startTime, endTime time.Time
 
-	if Pod.Status.Phase == v1.PodRunning {
-		podLogString, err := getPodLog(ctx, client, caaPod)
+	if pod.Status.Phase == v1.PodRunning {
+		podLogString, err := GetPodLog(ctx, client, caaPod)
 		if err != nil {
 			return "", err
 		}
@@ -108,7 +110,7 @@ func watchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod
 		if podLogString != "" {
 			podLogSlice := reverseSlice(strings.Split(podLogString, "\n"))
 			for _, i := range podLogSlice {
-				if strings.Contains(i, "calling PullImage for \""+Pod.Spec.Containers[0].Image+"\"") {
+				if strings.Contains(i, "calling PullImage for \""+pod.Spec.Containers[0].Image+"\"") {
 					timeString, err := timeExtractor(i)
 					if err != nil {
 						return "", err
@@ -119,7 +121,7 @@ func watchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod
 					}
 					break
 				}
-				if strings.Contains(i, "successfully pulled image \""+Pod.Spec.Containers[0].Image+"\"") {
+				if strings.Contains(i, "successfully pulled image \""+pod.Spec.Containers[0].Image+"\"") {
 					timeString, err := timeExtractor(i)
 					if err != nil {
 						return "", err
@@ -165,7 +167,7 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 	}
 	for _, pod := range podlist.Items {
 		if pod.Labels["app"] == "cloud-api-adaptor" && pod.Spec.NodeName == nodeName {
-			podLogString, err := getPodLog(ctx, client, pod)
+			podLogString, err := GetPodLog(ctx, client, pod)
 			if err != nil {
 				return false, err
 			}
@@ -186,7 +188,7 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 	return false, fmt.Errorf("No cloud-api-adaptor pod found in podList: %v", podlist.Items)
 }
 
-func getPodLog(ctx context.Context, client klient.Client, pod v1.Pod) (string, error) {
+func GetPodLog(ctx context.Context, client klient.Client, pod v1.Pod) (string, error) {
 	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 	if err != nil {
 		return "", err
@@ -206,7 +208,7 @@ func getPodLog(ctx context.Context, client klient.Client, pod v1.Pod) (string, e
 	return buf.String(), nil
 }
 
-func comparePodLogString(ctx context.Context, client klient.Client, customPod v1.Pod, expectedPodlogString string) (string, error) {
+func ComparePodLogString(ctx context.Context, client klient.Client, customPod v1.Pod, expectedPodlogString string) (string, error) {
 	podLogString := ""
 	var podlist v1.PodList
 	if err := client.Resources(customPod.Namespace).List(ctx, &podlist); err != nil {
@@ -217,7 +219,7 @@ func comparePodLogString(ctx context.Context, client klient.Client, customPod v1
 	for _, pod := range podlist.Items {
 		if pod.ObjectMeta.Name == customPod.Name {
 			var err error
-			podLogString, err = getPodLog(ctx, client, pod)
+			podLogString, err = GetPodLog(ctx, client, pod)
 			if err != nil {
 				return "", err
 			}
@@ -233,7 +235,7 @@ func comparePodLogString(ctx context.Context, client klient.Client, customPod v1
 	return podLogString, nil
 }
 
-func getNodeNameFromPod(ctx context.Context, client klient.Client, customPod v1.Pod) (string, error) {
+func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod v1.Pod) (string, error) {
 	var podlist v1.PodList
 	if err := client.Resources(customPod.Namespace).List(ctx, &podlist); err != nil {
 		return "", err
@@ -247,7 +249,7 @@ func getNodeNameFromPod(ctx context.Context, client klient.Client, customPod v1.
 	return "", errors.New("Pod wasn't found")
 }
 
-func getSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klient.Client, job batchv1.Job) (int, int, string, error) {
+func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klient.Client, job batchv1.Job) (int, int, string, error) {
 	podLogString := ""
 	errorPod := 0
 	successPod := 0
@@ -302,7 +304,7 @@ func getSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 	return successPod, errorPod, podLogString, nil
 }
 
-func getAuthenticatedImageStatus(ctx context.Context, client klient.Client, expectedStatus string, authpod v1.Pod) error {
+func GetAuthenticatedImageStatus(ctx context.Context, client klient.Client, expectedStatus string, authpod v1.Pod) error {
 	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 	if err != nil {
 		return err
@@ -343,8 +345,8 @@ func getAuthenticatedImageStatus(ctx context.Context, client klient.Client, expe
 	return errors.New("PodVM Start Error")
 }
 
-// skipTestOnCI skips the test if running on CI
-func skipTestOnCI(t *testing.T) {
+// SkipTestOnCI skips the test if running on CI
+func SkipTestOnCI(t *testing.T) {
 	ci := os.Getenv("CI")
 
 	if ci == "true" {
@@ -352,7 +354,7 @@ func skipTestOnCI(t *testing.T) {
 	}
 }
 
-func testStringEmpty(data string) bool {
+func IsStringEmpty(data string) bool {
 	if data == "" {
 		return true
 	} else {
@@ -360,7 +362,7 @@ func testStringEmpty(data string) bool {
 	}
 }
 
-func testErrorEmpty(err error) bool {
+func IsErrorEmpty(err error) bool {
 	if err == nil {
 		return true
 	} else {
@@ -368,7 +370,15 @@ func testErrorEmpty(err error) bool {
 	}
 }
 
-func assessExtraPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Pod, testCommands []testCommand) (string, error) {
+func IsBufferEmpty(buffer bytes.Buffer) bool {
+	if buffer.String() == "" {
+		return true
+	} else {
+		return false
+	}
+}
+
+func AssessPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Pod, testCommands []TestCommand) (string, error) {
 	var podlist v1.PodList
 	if err := client.Resources(pod.Namespace).List(ctx, &podlist); err != nil {
 		return "Failed to list pod", err
@@ -379,11 +389,28 @@ func assessExtraPodTestCommands(ctx context.Context, client klient.Client, pod *
 			if podItem.ObjectMeta.Name == pod.Name {
 				//adding sleep time to intialize container and ready for Executing commands
 				time.Sleep(5 * time.Second)
-				if err := client.Resources(pod.Namespace).ExecInPod(ctx, pod.Namespace, pod.Name, testCommand.containerName, testCommand.command, &stdout, &stderr); err != nil {
-					return stderr.String(), err
+				if err := client.Resources(pod.Namespace).ExecInPod(ctx, pod.Namespace, pod.Name, testCommand.ContainerName, testCommand.Command, &stdout, &stderr); err != nil {
+					if testCommand.TestErrorFn != nil {
+						if !testCommand.TestErrorFn(err) {
+							return err.Error(), fmt.Errorf("Command %v running in container %s produced unexpected output on error: %s", testCommand.Command, testCommand.ContainerName, err.Error())
+						}
+					} else {
+						return err.Error(), err
+					}
 				}
-				if !testCommand.testCommandStdoutFn(stdout) {
-					return stderr.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.command, testCommand.containerName, stdout.String())
+				if testCommand.TestCommandStderrFn != nil {
+					if !testCommand.TestCommandStderrFn(stderr) {
+						return stderr.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stderr: %s", testCommand.Command, testCommand.ContainerName, stderr.String())
+					} else {
+						return stderr.String(), nil
+					}
+				}
+				if testCommand.TestCommandStdoutFn != nil {
+					if !testCommand.TestCommandStdoutFn(stdout) {
+						return stdout.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.Command, testCommand.ContainerName, stdout.String())
+					} else {
+						return stdout.String(), nil
+					}
 				}
 			}
 			//After command is executed in expected pod, it doesn't need to loop other pods.
@@ -393,7 +420,7 @@ func assessExtraPodTestCommands(ctx context.Context, client klient.Client, pod *
 	return "", nil
 }
 
-func provisionPod(ctx context.Context, client klient.Client, t *testing.T, pod *v1.Pod, podState v1.PodPhase, testCommands []testCommand) error {
+func ProvisionPod(ctx context.Context, client klient.Client, t *testing.T, pod *v1.Pod, podState v1.PodPhase, testCommands []TestCommand) error {
 	if err := client.Resources().Create(ctx, pod); err != nil {
 		t.Fatal(err)
 	}
@@ -421,7 +448,7 @@ func provisionPod(ctx context.Context, client klient.Client, t *testing.T, pod *
 			}
 			if actualPod.Status.Phase == v1.PodRunning {
 				fmt.Printf("Log of the pod %.v \n===================\n", actualPod.Name)
-				podLogString, _ := getPodLog(ctx, client, *actualPod)
+				podLogString, _ := GetPodLog(ctx, client, *actualPod)
 				fmt.Println(podLogString)
 				fmt.Printf("===================\n")
 			}
@@ -431,7 +458,7 @@ func provisionPod(ctx context.Context, client klient.Client, t *testing.T, pod *
 	return nil
 }
 
-func deletePod(ctx context.Context, client klient.Client, pod *v1.Pod, tcDelDuration *time.Duration) error {
+func DeletePod(ctx context.Context, client klient.Client, pod *v1.Pod, tcDelDuration *time.Duration) error {
 	duration := 1 * time.Minute
 	if tcDelDuration == nil {
 		tcDelDuration = &duration
