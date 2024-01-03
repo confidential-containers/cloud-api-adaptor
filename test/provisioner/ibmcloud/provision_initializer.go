@@ -1,9 +1,7 @@
-//go:build ibmcloud
-
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package provisioner
+package ibmcloud
 
 import (
 	"errors"
@@ -16,6 +14,7 @@ import (
 	bxsession "github.com/IBM-Cloud/bluemix-go/session"
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
+	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -61,7 +60,7 @@ type IBMCloudProperties struct {
 
 var IBMCloudProps = &IBMCloudProperties{}
 
-func initProperties(properties map[string]string) error {
+func InitIBMCloudProperties(properties map[string]string) error {
 	IBMCloudProps = &IBMCloudProperties{
 		IBMCloudProvider:  properties["IBMCLOUD_PROVIDER"],
 		ApiKey:            properties["APIKEY"],
@@ -165,7 +164,7 @@ func initProperties(properties map[string]string) error {
 	log.Infof("IksServiceURL is: %s.", IBMCloudProps.IksServiceURL)
 
 	needProvisionStr := os.Getenv("TEST_PROVISION")
-	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") || Action == "uploadimage" {
+	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") || pv.Action == "uploadimage" {
 		if len(IBMCloudProps.ApiKey) <= 0 {
 			return errors.New("APIKEY is required for provisioning")
 		}

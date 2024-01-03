@@ -1,9 +1,7 @@
-//go:build ibmcloud
-
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package provisioner
+package ibmcloud
 
 import (
 	"context"
@@ -14,19 +12,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-func init() {
-	newInstallOverlayFunctions["ibmcloud"] = NewIBMCloudInstallOverlay
-}
-
 // IBMCloudInstallOverlay implements the InstallOverlay interface
 type IBMCloudInstallOverlay struct {
-	overlay *KustomizeOverlay
+	Overlay *pv.KustomizeOverlay
 }
 
 type QuayTagsResponse struct {
@@ -120,23 +115,23 @@ func getCaaLatestCommitTag() string {
 	return ""
 }
 
-func NewIBMCloudInstallOverlay(installDir string) (InstallOverlay, error) {
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "overlays/ibmcloud"))
+func NewIBMCloudInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
+	overlay, err := pv.NewKustomizeOverlay(filepath.Join(installDir, "overlays", provider))
 	if err != nil {
 		return nil, err
 	}
 
 	return &IBMCloudInstallOverlay{
-		overlay: overlay,
+		Overlay: overlay,
 	}, nil
 }
 
 func (lio *IBMCloudInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Apply(ctx, cfg)
+	return lio.Overlay.Apply(ctx, cfg)
 }
 
 func (lio *IBMCloudInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Delete(ctx, cfg)
+	return lio.Overlay.Delete(ctx, cfg)
 }
 
 // Update install/overlays/ibmcloud/kustomization.yaml
@@ -153,7 +148,7 @@ func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config
 	}
 	if newTag != "" {
 		log.Infof("Updating caa image tag with %s", newTag)
-		if err = lio.overlay.SetKustomizeImage("cloud-api-adaptor", "newTag", newTag); err != nil {
+		if err = lio.Overlay.SetKustomizeImage("cloud-api-adaptor", "newTag", newTag); err != nil {
 			return err
 		}
 	}
@@ -161,13 +156,13 @@ func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config
 	for k, v := range properties {
 		// configMapGenerator
 		if isKustomizeConfigMapKey(k) {
-			if err = lio.overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm", k, v); err != nil {
+			if err = lio.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm", k, v); err != nil {
 				return err
 			}
 		}
 		// secretGenerator
 		if isKustomizeSecretKey(k) {
-			if err = lio.overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret", k, v); err != nil {
+			if err = lio.Overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret", k, v); err != nil {
 				return err
 			}
 		}
@@ -202,15 +197,14 @@ func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config
 		if err != nil {
 			return err
 		}
-
-		if err := os.WriteFile("../../install/overlays/ibmcloud/auth.json", jsondata, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(lio.Overlay.ConfigDir, "auth.json"), jsondata, 0644); err != nil {
 			return err
 		}
-		if err = lio.overlay.SetKustomizeSecretGeneratorFile("auth-json-secret", "auth.json"); err != nil {
+		if err = lio.Overlay.SetKustomizeSecretGeneratorFile("auth-json-secret", "auth.json"); err != nil {
 			return err
 		}
 	}
-	if err = lio.overlay.YamlReload(); err != nil {
+	if err = lio.Overlay.YamlReload(); err != nil {
 		return err
 	}
 

@@ -1,9 +1,7 @@
-//go:build aws
-
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package provisioner
+package aws
 
 import (
 	"context"
@@ -24,6 +22,7 @@ import (
 	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,12 +37,6 @@ const (
 )
 
 var AWSProps = &AWSProvisioner{}
-
-func init() {
-	// Add this implementation to the list of provisioners.
-	newProvisionerFunctions["aws"] = NewAWSProvisioner
-	newInstallOverlayFunctions["aws"] = NewAwsInstallOverlay
-}
 
 // S3Bucket represents an S3 bucket where the podvm image should be uploaded
 type S3Bucket struct {
@@ -120,11 +113,11 @@ type AWSProvisioner struct {
 
 // AwsInstallOverlay implements the InstallOverlay interface
 type AwsInstallOverlay struct {
-	overlay *KustomizeOverlay
+	Overlay *pv.KustomizeOverlay
 }
 
 // NewAWSProvisioner instantiates the AWS provisioner
-func NewAWSProvisioner(properties map[string]string) (CloudProvisioner, error) {
+func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error) {
 	var cluster Cluster
 
 	cfg, err := awsConfig.LoadDefaultConfig(context.TODO())
@@ -960,23 +953,23 @@ func ConvertQcow2ToRaw(qcow2 string, raw string) error {
 	return nil
 }
 
-func NewAwsInstallOverlay(installDir string) (InstallOverlay, error) {
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "overlays/aws"))
+func NewAwsInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
+	overlay, err := pv.NewKustomizeOverlay(filepath.Join(installDir, "overlays", provider))
 	if err != nil {
 		return nil, err
 	}
 
 	return &AwsInstallOverlay{
-		overlay: overlay,
+		Overlay: overlay,
 	}, nil
 }
 
 func (a *AwsInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return a.overlay.Apply(ctx, cfg)
+	return a.Overlay.Apply(ctx, cfg)
 }
 
 func (a *AwsInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return a.overlay.Delete(ctx, cfg)
+	return a.Overlay.Delete(ctx, cfg)
 }
 
 func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
@@ -997,7 +990,7 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 
 	for k, v := range mapProps {
 		if properties[k] != "" {
-			if err = a.overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm",
+			if err = a.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm",
 				v, properties[k]); err != nil {
 				return err
 			}
@@ -1011,14 +1004,14 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 	}
 	for k, v := range mapProps {
 		if properties[k] != "" {
-			if err = a.overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret",
+			if err = a.Overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret",
 				v, properties[k]); err != nil {
 				return err
 			}
 		}
 	}
 
-	if err = a.overlay.YamlReload(); err != nil {
+	if err = a.Overlay.YamlReload(); err != nil {
 		return err
 	}
 
@@ -1196,7 +1189,7 @@ func (e *EKSCluster) CreateCluster() error {
 		return err
 	}
 	// Use full path to avoid overwriting other labels (see RFC 6902)
-	payload := []patchLabel{{
+	payload := []pv.PatchLabel{{
 		Op: "add",
 		// "/" must be written as ~1 (see RFC 6901)
 		Path:  "/metadata/labels/node.kubernetes.io~1worker",

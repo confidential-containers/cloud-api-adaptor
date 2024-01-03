@@ -34,9 +34,9 @@ type CloudProvisioner interface {
 	UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error
 }
 
-type newProvisionerFunc func(properties map[string]string) (CloudProvisioner, error)
+type NewProvisionerFunc func(properties map[string]string) (CloudProvisioner, error)
 
-var newProvisionerFunctions = make(map[string]newProvisionerFunc)
+var NewProvisionerFunctions = make(map[string]NewProvisionerFunc)
 
 type CloudAPIAdaptor struct {
 	caaDaemonSet         *appsv1.DaemonSet    // Represents the cloud-api-adaptor daemonset
@@ -48,9 +48,9 @@ type CloudAPIAdaptor struct {
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
 }
 
-type newInstallOverlayFunc func(installDir string) (InstallOverlay, error)
+type NewInstallOverlayFunc func(installDir, provider string) (InstallOverlay, error)
 
-var newInstallOverlayFunctions = make(map[string]newInstallOverlayFunc)
+var NewInstallOverlayFunctions = make(map[string]NewInstallOverlayFunc)
 
 // InstallOverlay defines common operations to an install overlay (install/overlays/*)
 type InstallOverlay interface {
@@ -95,8 +95,12 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 		}
 	}
 
-	newProvisioner, ok := newProvisionerFunctions[provider]
+	newProvisioner, ok := NewProvisionerFunctions[provider]
 	if !ok {
+		log.Info("Supported providers are:")
+		for provisioner := range NewProvisionerFunctions {
+			log.Info(provisioner)
+		}
 		return nil, fmt.Errorf("Not implemented provisioner for %s\n", provider)
 	}
 
@@ -106,12 +110,12 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 // GetInstallOverlay returns the InstallOverlay implementation for the provider
 func GetInstallOverlay(provider string, installDir string) (InstallOverlay, error) {
 
-	overlayFunc, ok := newInstallOverlayFunctions[provider]
+	overlayFunc, ok := NewInstallOverlayFunctions[provider]
 	if !ok {
 		return nil, fmt.Errorf("Not implemented install overlay for %s\n", provider)
 	}
 
-	return overlayFunc(installDir)
+	return overlayFunc(installDir, provider)
 }
 
 // Deletes the peer pods installation including the controller manager.
