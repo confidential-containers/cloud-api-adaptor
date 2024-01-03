@@ -31,7 +31,6 @@ import (
 
 	confidentialcontainersorgv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl/api/v1alpha1"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/cloudmgr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -162,7 +161,7 @@ func (r *PeerPodReconciler) cloudConfigsGetter() error {
 
 func SetProvider() (cloud.Provider, error) {
 	cloudName := os.Getenv("CLOUD_PROVIDER")
-	if cloud := cloudmgr.Get(cloudName); cloud != nil {
+	if cloud := cloud.Get(cloudName); cloud != nil {
 		cloud.LoadEnv() // we assume LoadEnv knows to load all necessary configs
 		provider, err := cloud.NewProvider()
 		if err != nil {
@@ -171,7 +170,7 @@ func SetProvider() (cloud.Provider, error) {
 		return provider, nil
 	}
 
-	return nil, fmt.Errorf("cloudmgr: %s cloud provider not supported", cloudName)
+	return nil, fmt.Errorf("%s cloud provider not supported", cloudName)
 }
 
 func isOldPeerPod(pp, cur confidentialcontainersorgv1alpha1.PeerPod) bool {
