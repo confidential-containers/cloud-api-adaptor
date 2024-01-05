@@ -7,49 +7,39 @@
 #
 FROM registry.fedoraproject.org/fedora:38
 
-ARG GO_VERSION="1.20.8"
+ARG ARCH="amd64"
+ARG YQ_ARCH="amd64"
+# PROTOC_ARCH="x86_64" | "s390x_64"
+ARG PROTOC_ARCH="x86_64"
+ARG GO_VERSION="1.20.12"
 ARG PROTOC_VERSION="3.11.4"
 ARG RUST_VERSION="1.72.0"
 ARG YQ_VERSION="v4.35.1"
+# amd64: YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
+# s390x: YQ_CHECKSUM="sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
 ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
-
 
 RUN dnf groupinstall -y 'Development Tools' && \
     dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
         device-mapper-devel unzip libassuan-devel \
         perl-FindBin openssl-devel tpm2-tss-devel \
-	clang which && \
-    dnf clean all && \
-    curl -fsSLO https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -f go${GO_VERSION}.linux-amd64.tar.gz
+        clang which && \
+    dnf clean all
 
-ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 /usr/local/bin/yq
+ADD https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz go${GO_VERSION}.linux-${ARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && rm -f go${GO_VERSION}.linux-${ARCH}.tar.gz
+
+ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH} /usr/local/bin/yq
 RUN chmod a+x /usr/local/bin/yq
-
-RUN curl -fsSL https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VERSION}"
 
 ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
-RUN echo $PATH
+ADD https://sh.rustup.rs rustup
+RUN chmod a+x rustup && ./rustup -y --default-toolchain ${RUST_VERSION}
 
-RUN curl -fsSLO https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
-    unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
+ADD https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
+RUN unzip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
 
 WORKDIR /src
-
-ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
-ARG CAA_SRC_REF="main"
-
-ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
-ARG KATA_SRC_BRANCH="CCv0"
-
-RUN echo $CAA_SRC
-
-RUN echo $CAA_SRC_REF
-
-RUN git clone ${CAA_SRC} -b ${CAA_SRC_REF} cloud-api-adaptor
-RUN git clone ${KATA_SRC} kata-containers
-RUN cd kata-containers && git checkout ${KATA_SRC_BRANCH}
 
 ENV GOPATH /src

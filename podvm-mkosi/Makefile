@@ -13,7 +13,7 @@ fedora-binaries-builder:
 	docker buildx build \
 		-t fedora-binaries-builder \
 		--load \
-		- < ../podvm/Dockerfile.podvm_builder.fedora
+		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
 
 PHONY: binaries
 binaries:
@@ -24,7 +24,7 @@ binaries:
 		--build-arg BUILDER_IMG=fedora-binaries-builder \
 		--build-arg AA_KBC=$(AA_KBC) \
 		-o type=local,dest="./resources/binaries-tree" \
-		- < ../podvm/Dockerfile.podvm_binaries.fedora
+		-f ../podvm/Dockerfile.podvm_binaries.fedora ../.
 
 PHONY: image
 image:

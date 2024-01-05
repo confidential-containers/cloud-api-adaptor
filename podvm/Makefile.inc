@@ -133,7 +133,11 @@ $(SKOPEO_SRC):
 	$(call git_clone_repo_ref,$(SKOPEO_REPO),$(SKOPEO_SRC),$(SKOPEO_VERSION))
 
 $(SKOPEO_BIN): $(SKOPEO_SRC)
+ifeq ($(ARCH),s390x)
+	cd "$(SKOPEO_SRC)" && CC=gcc $(MAKE) bin/skopeo
+else
 	cd "$(SKOPEO_SRC)" && CC= $(MAKE) bin/skopeo
+endif
 
 # The umoci release page only publishes amd64 binaries. https://github.com/opencontainers/umoci/releases
 $(UMOCI_SRC):
