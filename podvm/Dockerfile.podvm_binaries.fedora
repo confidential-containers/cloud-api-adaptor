@@ -31,8 +31,11 @@ ENV DEFAULT_AGENT_POLICY_FILE ${DEFAULT_AGENT_POLICY_FILE}
 ENV IMAGE_URL "none"
 ENV IMAGE_CHECKSUM "none"
 
-RUN cd cloud-api-adaptor/podvm && \
-     LIBC=gnu make binaries
+COPY . /src/cloud-api-adaptor
+
+WORKDIR /src/cloud-api-adaptor/podvm
+
+RUN LIBC=gnu make binaries
 
 FROM scratch
 COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/files /
