@@ -157,7 +157,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	deployments := &appsv1.DeploymentList{Items: []appsv1.Deployment{*p.controllerDeployment}}
 
 	log.Info("Uninstall the controller manager")
-	cmd = exec.Command("kubectl", "delete", "-k", "github.com/confidential-containers/operator/config/default")
+	cmd = exec.Command("kubectl", "delete", "-k", "github.com/confidential-containers/operator/config/release?ref=v0.8.0")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
@@ -184,7 +184,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 
 	log.Info("Install the controller manager")
 	// TODO - find go idiomatic way to apply/delete remote kustomize and apply to this file
-	cmd := exec.Command("kubectl", "apply", "-k", "github.com/confidential-containers/operator/config/default")
+	cmd := exec.Command("kubectl", "apply", "-k", "github.com/confidential-containers/operator/config/release?ref=v0.8.0")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
