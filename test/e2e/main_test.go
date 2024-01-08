@@ -69,10 +69,10 @@ func TestMain(m *testing.M) {
 	// Cloud API Adaptor is installed by default during e2e test.
 	// In case TEST_INSTALL_CAA is exported as "no", it will skip the installation of
 	// Cloud API Adaptor.
-	// In scenario of teardown, CAA will be cleanup when shouldTeardown is true and shoudlInstallCAA is true.
-	shoudlInstallCAA := true
+	// In scenario of teardown, CAA will be cleanup when shouldTeardown is true and shouldInstallCAA is true.
+	shouldInstallCAA := true
 	if os.Getenv("TEST_INSTALL_CAA") == "no" {
-		shoudlInstallCAA = false
+		shouldInstallCAA = false
 	}
 
 	// The TEST_PODVM_IMAGE is an option variable which specifies the path
@@ -127,7 +127,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		if shoudlInstallCAA {
+		if shouldInstallCAA {
 			log.Info("Install Cloud API Adaptor")
 			relativeInstallDirectory := "../../install"
 			if cloudAPIAdaptor, err = pv.NewCloudAPIAdaptor(cloudProvider, relativeInstallDirectory); err != nil {
@@ -156,7 +156,7 @@ func TestMain(m *testing.M) {
 				return ctx, nil
 			}
 		}
-		if shoudlInstallCAA {
+		if shouldInstallCAA {
 			log.Info("Delete the Cloud API Adaptor installation")
 			if err = cloudAPIAdaptor.Delete(ctx, cfg); err != nil {
 				return ctx, err
