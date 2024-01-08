@@ -12,9 +12,14 @@ ARG PODVM_DISTRO=rhel
 ARG AA_KBC="offline_fs_kbc"
 # If not provided, uses system architecture
 ARG ARCH
+#This is the name of the policy file under
+#files/etc/kata-opa
+ARG DEFAULT_AGENT_POLICY_FILE=allow-all.rego
+
 ENV PODVM_DISTRO ${PODVM_DISTRO}
 ENV AA_KBC ${AA_KBC}
 ENV ARCH ${ARCH}
+ENV DEFAULT_AGENT_POLICY_FILE ${DEFAULT_AGENT_POLICY_FILE}
 
 COPY . /src/cloud-api-adaptor
 

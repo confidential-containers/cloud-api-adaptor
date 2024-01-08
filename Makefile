@@ -221,6 +221,7 @@ podvm-binaries:
 	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
 	--build-arg ARCH=$(ARCH) \
 	--build-arg AA_KBC=$(AA_KBC) \
+	--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE) \
 	$(DOCKER_OPTS) .
 
 podvm-image:
