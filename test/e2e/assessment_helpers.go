@@ -19,10 +19,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/e2e-framework/klient"
+	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 )
+
+const WAIT_NAMESPACE_AVAILABLE_TIMEOUT = time.Second * 120
 
 func reverseSlice(slice []string) []string {
 	length := len(slice)
@@ -474,5 +477,45 @@ func DeletePod(ctx context.Context, client klient.Client, pod *v1.Pod, tcDelDura
 		return err
 	}
 	log.Infof("Pod %s has been successfully deleted within %.0fs", pod.Name, tcDelDuration.Seconds())
+	return nil
+}
+
+func CreateAndWaitForNamespace(ctx context.Context, client klient.Client, namespaceName string) error {
+	log.Infof("Creating namespace '%s'...", namespaceName)
+	nsObj := v1.Namespace{}
+	nsObj.Name = namespaceName
+	if err := client.Resources().Create(ctx, &nsObj); err != nil {
+		return err
+	}
+
+	log.Infof("Wait for namespace '%s' be ready", namespaceName)
+	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(&nsObj, func(object k8s.Object) bool {
+		ns, ok := object.(*v1.Namespace)
+		if !ok {
+			log.Printf("Not a namespace object: %v", object)
+			return false
+		}
+		return ns.Status.Phase == v1.NamespaceActive
+	}), wait.WithTimeout(WAIT_NAMESPACE_AVAILABLE_TIMEOUT)); err != nil {
+		return err
+	}
+	log.Infof("Namespace '%s' is ready", namespaceName)
+	return nil
+}
+
+func DeleteAndWaitForNamespace(ctx context.Context, client klient.Client, namespaceName string) error {
+	nsObj := v1.Namespace{}
+	nsObj.Name = namespaceName
+	if err := client.Resources().Delete(ctx, &nsObj); err != nil {
+		return err
+	}
+	log.Infof("Deleting namespace '%s'...", nsObj.Name)
+	if err := wait.For(conditions.New(
+		client.Resources()).ResourceDeleted(&nsObj),
+		wait.WithInterval(5*time.Second),
+		wait.WithTimeout(60*time.Second)); err != nil {
+		return err
+	}
+	log.Infof("Namespace '%s' has been successfully deleted within 60s", nsObj.Name)
 	return nil
 }

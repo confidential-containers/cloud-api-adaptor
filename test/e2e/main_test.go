@@ -138,6 +138,11 @@ func TestMain(m *testing.M) {
 				return ctx, err
 			}
 		}
+
+		if err = CreateAndWaitForNamespace(ctx, cfg.Client(), E2eNamespace); err != nil {
+			return ctx, err
+		}
+
 		return ctx, nil
 	})
 
@@ -146,6 +151,11 @@ func TestMain(m *testing.M) {
 		if !shouldTeardown {
 			return ctx, nil
 		}
+
+		if err = DeleteAndWaitForNamespace(ctx, cfg.Client(), E2eNamespace); err != nil {
+			return ctx, err
+		}
+
 		if shouldProvisionCluster {
 			if err = provisioner.DeleteCluster(ctx, cfg); err != nil {
 				return ctx, err
