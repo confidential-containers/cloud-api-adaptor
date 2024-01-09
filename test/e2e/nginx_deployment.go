@@ -93,12 +93,11 @@ func NewDeployment(namespace, deploymentName, containerName, imageName string, o
 }
 
 func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAssert) {
-	namespace := envconf.RandomName("default", 7)
 	deploymentName := "nginx-deployment"
 	containerName := "nginx"
 	imageName := "nginx:latest"
 	replicas := int32(2)
-	deployment := NewDeployment(namespace, deploymentName, containerName, imageName, WithReplicaCount(replicas))
+	deployment := NewDeployment(E2eNamespace, deploymentName, containerName, imageName, WithReplicaCount(replicas))
 
 	nginxImageFeature := features.New("Nginx image deployment test").
 		WithSetup("Create nginx deployment", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
