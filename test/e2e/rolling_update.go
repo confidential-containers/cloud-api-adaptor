@@ -31,7 +31,6 @@ const OLD_VM_DELETION_TIMEOUT = time.Second * 30
 
 func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, assert RollingUpdateAssert) {
 	runtimeClassName := "kata-remote"
-	namespace := envconf.RandomName("default", 7)
 	deploymentName := "webserver-deployment"
 	containerName := "webserver"
 	imageName := "python:3"
@@ -48,7 +47,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
-			Namespace: namespace,
+			Namespace: E2eNamespace,
 			Labels:    labelsMap,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -100,7 +99,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
-			Namespace: namespace,
+			Namespace: E2eNamespace,
 		},
 		Spec: v1.ServiceSpec{
 			Type: v1.ServiceTypeNodePort,
@@ -119,7 +118,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 	verifyPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      verifyPodName,
-			Namespace: namespace,
+			Namespace: E2eNamespace,
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy: v1.RestartPolicyNever,
@@ -208,7 +207,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 			// Wait for webserver deployment available again
 			waitForDeploymentAvailable(t, client, deployment, rc)
 
-			if err = client.Resources().Get(ctx, verifyPodName, namespace, verifyPod); err != nil {
+			if err = client.Resources().Get(ctx, verifyPodName, E2eNamespace, verifyPod); err != nil {
 				t.Fatal(err)
 			}
 			log.Printf("verify pod status: %s", verifyPod.Status.Phase)
@@ -217,7 +216,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 				if err != nil {
 					log.Printf("Failed to new client set: %v", err)
 				} else {
-					req := clientset.CoreV1().Pods(namespace).GetLogs(verifyPodName, &v1.PodLogOptions{})
+					req := clientset.CoreV1().Pods(E2eNamespace).GetLogs(verifyPodName, &v1.PodLogOptions{})
 					podLogs, err := req.Stream(ctx)
 					if err != nil {
 						log.Printf("Failed to get pod logs: %v", err)
