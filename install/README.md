@@ -50,20 +50,9 @@ You can either deploy the CoCo operator and cloud-api-adaptor with the `Makefile
 
 Alternatively the manual approach, if you want to pick a specific CoCo release/reference is:
 
-- Deploy the [CoCo operator](https://github.com/confidential-containers/operator/blob/main/docs/INSTALL.md#deploy-the-operator)
-  - Either deploy a released version of Confidential Containers Operator, run the following command where `<RELEASE_VERSION>` needs to be substituted with the desired [release tag](https://github.com/confidential-containers/operator/tags). For example, to deploy the `v0.6.0` release run: `export RELEASE_VERSION="v0.6.0"`.
-  ```
-  export RELEASE_VERSION=<RELEASE_VERSION>
-  kubectl apply -k "github.com/confidential-containers/operator/config/release?ref=${RELEASE_VERSION}"
-  ```
-  - Or for development activities, to install the latest, non-released version of the Confidential Containers Operator run:
-  ```
-  kubectl apply -k "github.com/confidential-containers/operator/config/default"
-  ```
-  - Wait for the cc-operator-controller-manager be in running state with:
-  ```
-  kubectl get pods -n confidential-containers-system --watch
-  ```
+- Deploy the CoCo operator
+
+  - Follow the instructions in the ["Deploy the Operator" section](https://github.com/confidential-containers/operator/blob/main/docs/INSTALL.md#deploy-the-operator) of the CoCo Operator's INSTALL.md file.
 
 - Create the peer pods variant of the CC custom resource to install the required pieces of CC and create the `kata-remote` `RuntimeClass`
   - Again, either deploy a release version of the Confidential Containers peer pod customer resource with, by running the following command where `<RELEASE_VERSION>` needs to be substituted with the desired [release tag](https://github.com/confidential-containers/operator/tags):
