@@ -67,7 +67,7 @@ docker build -t aws \
 --secret id=AWS_SECRET_ACCESS_KEY \
 --build-arg AWS_REGION=${AWS_REGION} \
 --build-arg VPC_ID=${VPC_ID} \
---build-arg SUBNET_ID=${SUBNET_ID}\
+--build-arg SUBNET_ID=${SUBNET_ID} \
 -f Dockerfile .
 ```
 
