@@ -36,7 +36,9 @@
 
 ## Deploy the CoCo operator, CC runtime CRD and the cloud-api-adaptor daemonset
 
-You can either deploy the CoCo operator and cloud-api-adaptor with the `Makefile` by running
+### Using make deploy
+
+You can deploy the CoCo operator and cloud-api-adaptor with the `Makefile` by running
 * set CLOUD_PROVIDER
     ```
     export CLOUD_PROVIDER=<aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere>
@@ -47,6 +49,8 @@ You can either deploy the CoCo operator and cloud-api-adaptor with the `Makefile
     * validate kubectl is available in your `$PATH` and `$KUBECONFIG` is set
 
 > **Note:** `make delete` deletes the cloud-api-adaptor daemonset from the configured cluster (and peerpod-ctrl if RESOURCE_CTRL=true is set)
+
+### Manually
 
 Alternatively the manual approach, if you want to pick a specific CoCo release/reference is:
 
