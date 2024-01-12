@@ -488,7 +488,16 @@ func CreateAndWaitForNamespace(ctx context.Context, client klient.Client, namesp
 		return err
 	}
 
-	log.Infof("Wait for namespace '%s' be ready", namespaceName)
+	if err := waitForNamespaceToBeUseable(ctx, client, namespaceName); err != nil {
+		return err
+	}
+	return nil
+}
+
+func waitForNamespaceToBeUseable(ctx context.Context, client klient.Client, namespaceName string) error {
+	log.Infof("Wait for namespace '%s' be ready...", namespaceName)
+	nsObj := v1.Namespace{}
+	nsObj.Name = namespaceName
 	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(&nsObj, func(object k8s.Object) bool {
 		ns, ok := object.(*v1.Namespace)
 		if !ok {
@@ -499,8 +508,28 @@ func CreateAndWaitForNamespace(ctx context.Context, client klient.Client, namesp
 	}), wait.WithTimeout(WAIT_NAMESPACE_AVAILABLE_TIMEOUT)); err != nil {
 		return err
 	}
-	log.Infof("Namespace '%s' is ready", namespaceName)
-	return nil
+
+	// SH: There is a race condition where the default service account isn't ready when we
+	// try and use it #1657, so we want to ensure that it is available before continuing.
+	// As the serviceAccount doesn't have a status I can't seem to use the wait condition to
+	// detect if it is ready, so do things the old-fashioned way
+	log.Infof("Wait for default serviceaccount in namespace '%s'...", namespaceName)
+	var saList v1.ServiceAccountList
+	for start := time.Now(); time.Since(start) < WAIT_NAMESPACE_AVAILABLE_TIMEOUT; {
+		if err := client.Resources(namespaceName).List(ctx, &saList); err != nil {
+			return err
+		}
+		for _, sa := range saList.Items {
+			if sa.ObjectMeta.Name == "default" {
+
+				log.Infof("default serviceAccount exists, namespace '%s' is ready for use", namespaceName)
+				return nil
+			}
+		}
+		log.Tracef("default serviceAccount not found after %.0f seconds", time.Since(start).Seconds())
+		time.Sleep(5 * time.Second)
+	}
+	return fmt.Errorf("default service account not found in namespace '%s' after %.0f seconds wait", namespaceName, WAIT_NAMESPACE_AVAILABLE_TIMEOUT.Seconds())
 }
 
 func DeleteAndWaitForNamespace(ctx context.Context, client klient.Client, namespaceName string) error {
