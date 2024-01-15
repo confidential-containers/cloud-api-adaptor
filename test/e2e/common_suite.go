@@ -13,8 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
@@ -465,7 +468,110 @@ func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert Clo
 		},
 	}
 	clientPod.WithTestCommands(testCommands)
-	nginxSvc := NewService(E2eNamespace, serviceName, "http", 80, 80, labels)
+	httpPort := v1.ServicePort{
+		Name:       "http",
+		Port:       80,
+		TargetPort: intstr.FromInt(int(80)),
+		Protocol:   v1.ProtocolTCP,
+	}
+	servicePorts := []v1.ServicePort{httpPort}
+	nginxSvc := NewService(E2eNamespace, serviceName, servicePorts, labels)
 	extraPods := []*ExtraPod{clientPod}
 	NewTestCase(t, e, "TestExtraPods", assert, "Failed to test extra pod.").WithPod(serverPod).WithExtraPods(extraPods).WithService(nginxSvc).Run()
+}
+
+func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAssert) {
+	clientPodName := "curl"
+	clientContainerName := "curl"
+	clientImageName := "docker.io/curlimages/curl:8.4.0"
+	serverPodName := "nginx"
+	serverContainerName := "nginx"
+	serverImageName := "nginx:latest"
+	caService, _ := tlsutil.NewCAService("nginx")
+	serverCACertPEM := caService.RootCertificate()
+	serverName := "nginx"
+	serverCertPEM, serverKeyPEM, _ := caService.Issue(serverName)
+	clientCertPEM, clientKeyPEM, _ := tlsutil.NewClientCertificate("curl")
+	clientSecretDir := "/etc/certs"
+	serverSecretDir := "/etc/nginx/certs"
+	clientSecretValue := string(clientKeyPEM)
+	serverSecretValue := string(serverKeyPEM)
+	clientSecretName := "curl-certs"
+	serverSecretName := "server-certs"
+	serverSecretData := map[string][]byte{"tls.key": []byte(serverSecretValue), "tls.crt": []byte(serverCertPEM), "ca.crt": []byte(serverCACertPEM)}
+	clientSecretData := map[string][]byte{"tls.key": []byte(clientSecretValue), "tls.crt": []byte(clientCertPEM), "ca.crt": []byte(serverCACertPEM)}
+	serverSecret := NewSecret(E2eNamespace, serverSecretName, serverSecretData, v1.SecretTypeOpaque)
+	clientSecret := NewSecret(E2eNamespace, clientSecretName, clientSecretData, v1.SecretTypeOpaque)
+	clientPod := NewExtraPod(
+		E2eNamespace, clientPodName, clientContainerName, clientImageName,
+		WithSecretBinding(clientSecretDir, clientSecretName),
+		WithRestartPolicy(v1.RestartPolicyNever),
+		WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}),
+	)
+
+	configMapName := "nginx-conf"
+	configMapFileName := "nginx.conf"
+	podKubeConfigmapDir := "/etc/nginx"
+	configMapData := map[string]string{
+		configMapFileName: `
+			worker_processes auto;
+			events {
+			}
+			http{
+			  server {
+				listen                 80;
+				return 301 https://$host$request_uri;
+			  }
+			  server {
+				listen 443 ssl;
+
+				root /usr/share/nginx/html;
+				index index.html;
+
+				server_name nginx.default.svc.cluster.local;
+				ssl_certificate /etc/nginx/certs/tls.crt;
+				ssl_certificate_key /etc/nginx/certs/tls.key;
+
+				location / {
+					try_files $uri $uri/ =404;
+				}
+			  }
+		    }
+			`,
+	}
+	labels := map[string]string{
+		"app": "nginx",
+	}
+	serverPod := NewPod(E2eNamespace, serverPodName, serverContainerName, serverImageName, WithSecureContainerPort(443), WithSecretBinding(serverSecretDir, serverSecretName), WithLabel(labels), WithConfigMapBinding(podKubeConfigmapDir, configMapName))
+	configMap := NewConfigMap(E2eNamespace, configMapName, configMapData)
+
+	testCommands := []TestCommand{
+		{
+			Command:       []string{"curl", "--key", "/etc/certs/tls.key", "--cert", "/etc/certs/tls.crt", "--cacert", "/etc/certs/ca.crt", "https://nginx"},
+			ContainerName: clientPod.pod.Spec.Containers[0].Name,
+			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if strings.Contains(stdout.String(), "Thank you for using nginx") {
+					log.Infof("Success to access nginx service. %s", stdout.String())
+					return true
+				} else {
+					log.Errorf("Failed to access nginx service: %s", stdout.String())
+					return false
+				}
+			},
+		},
+	}
+	serviceName := "nginx"
+	clientPod.WithTestCommands(testCommands)
+	httpsPort := corev1.ServicePort{
+		Name:       "https",
+		Port:       443,
+		TargetPort: intstr.FromInt(int(443)),
+		Protocol:   corev1.ProtocolTCP,
+	}
+	servicePorts := []corev1.ServicePort{httpsPort}
+	nginxSvc := NewService(E2eNamespace, serviceName, servicePorts, labels)
+	extraPods := []*ExtraPod{clientPod}
+	extraSecrets := []*v1.Secret{clientSecret}
+	NewTestCase(t, e, "TestPodsMTLSCommunication", assert, "Pods communication with mTLS").WithPod(serverPod).WithExtraPods(extraPods).WithConfigMap(configMap).WithService(nginxSvc).WithSecret(serverSecret).WithExtraSecrets(extraSecrets).Run()
+
 }

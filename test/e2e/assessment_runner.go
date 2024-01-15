@@ -65,6 +65,7 @@ type TestCase struct {
 	extraPods            []*ExtraPod
 	configMap            *v1.ConfigMap
 	secret               *v1.Secret
+	extraSecrets         []*v1.Secret
 	pvc                  *v1.PersistentVolumeClaim
 	job                  *batchv1.Job
 	service              *v1.Service
@@ -86,6 +87,11 @@ func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
 
 func (tc *TestCase) WithSecret(secret *v1.Secret) *TestCase {
 	tc.secret = secret
+	return tc
+}
+
+func (tc *TestCase) WithExtraSecrets(secrets []*v1.Secret) *TestCase {
+	tc.extraSecrets = secrets
 	return tc
 }
 
@@ -181,6 +187,14 @@ func (tc *TestCase) Run() {
 			if tc.secret != nil {
 				if err = client.Resources().Create(ctx, tc.secret); err != nil {
 					t.Fatal(err)
+				}
+			}
+
+			if tc.extraSecrets != nil {
+				for _, extraSecret := range tc.extraSecrets {
+					if err = client.Resources().Create(ctx, extraSecret); err != nil {
+						t.Fatal(err)
+					}
 				}
 			}
 
@@ -471,6 +485,17 @@ func (tc *TestCase) Run() {
 				} else {
 					log.Infof("Deleting Secret... %s", tc.secret.Name)
 				}
+			}
+
+			if tc.extraSecrets != nil {
+				for _, extraSecret := range tc.extraSecrets {
+					if err = client.Resources().Delete(ctx, extraSecret); err != nil {
+						t.Fatal(err)
+					} else {
+						log.Infof("Deleting extra Secret... %s", extraSecret.Name)
+					}
+				}
+
 			}
 
 			if tc.job != nil {
