@@ -177,7 +177,7 @@ func generateCertificate(orgName, serverName string, parentCertPEM, parentKeyPEM
 		Subject:               pkix.Name{Organization: []string{orgName}},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
-		KeyUsage:              x509.KeyUsageCertSign,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{authType},
 		BasicConstraintsValid: true,
 	}

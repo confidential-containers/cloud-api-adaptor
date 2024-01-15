@@ -243,3 +243,10 @@ func TestPodToServiceCommunication(t *testing.T) {
 	}
 	DoTestPodToServiceCommunication(t, testEnv, assert)
 }
+
+func TestPodsMTLSCommunication(t *testing.T) {
+	assert := IBMCloudAssert{
+		VPC: pv.IBMCloudProps.VPC,
+	}
+	DoTestPodsMTLSCommunication(t, testEnv, assert)
+}

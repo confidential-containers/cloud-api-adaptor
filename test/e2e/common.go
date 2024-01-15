@@ -50,6 +50,13 @@ func WithContainerPort(port int32) PodOption {
 	}
 }
 
+func WithSecureContainerPort(port int32) PodOption {
+	return func(p *corev1.Pod) {
+		p.Spec.Containers[0].Ports = append(p.Spec.Containers[0].Ports,
+			corev1.ContainerPort{Name: "https", ContainerPort: port})
+	}
+}
+
 func WithCommand(command []string) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].Command = command
@@ -207,21 +214,14 @@ func NewPVC(namespace, name, storageClassName, diskSize string, accessModel core
 	}
 }
 
-func NewService(namespace, serviceName, portName string, portNumber, targetPort int32, labels map[string]string) *corev1.Service {
+func NewService(namespace, serviceName string, servicePorts []corev1.ServicePort, labels map[string]string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
 			Namespace: namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:       portName,
-					Port:       portNumber,
-					TargetPort: intstr.FromInt(int(targetPort)),
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
+			Ports:    servicePorts,
 			Selector: labels,
 		},
 	}

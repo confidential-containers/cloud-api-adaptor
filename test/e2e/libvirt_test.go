@@ -91,3 +91,8 @@ func TestLibvirtPodToServiceCommunication(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodToServiceCommunication(t, testEnv, assert)
 }
+
+func TestLibvirtPodsMTLSCommunication(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodsMTLSCommunication(t, testEnv, assert)
+}
