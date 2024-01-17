@@ -216,27 +216,25 @@ echo '
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app: nginx
   name: nginx
-  namespace: default
-  annotations:
-    io.containerd.cri.runtime-handler: kata-remote
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: nginx
-  replicas: 1
   template:
     metadata:
       labels:
         app: nginx
+      annotations:
+        io.containerd.cri.runtime-handler: kata-remote
     spec:
       runtimeClassName: kata-remote
       containers:
-      - name: nginx
-        image: nginx
-        ports:
-        - containerPort: 80
-        imagePullPolicy: Always
+      - image: nginx@sha256:9700d098d545f9d2ee0660dfb155fe64f4447720a0a763a93f2cf08997227279
+        name: nginx
 ' | kubectl apply -f -
 ```
 
