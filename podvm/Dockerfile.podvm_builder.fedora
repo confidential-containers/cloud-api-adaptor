@@ -5,13 +5,13 @@
 #
 # Build binaries for mkosi podvm image
 #
-FROM registry.fedoraproject.org/fedora:38
+FROM registry.fedoraproject.org/fedora:39
 
 ARG GO_VERSION="1.20.8"
-ARG PROTOC_VERSION="3.11.4"
+ARG PROTOC_VERSION="25.2"
 ARG RUST_VERSION="1.72.0"
-ARG YQ_VERSION="v4.35.1"
-ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
+ARG YQ_VERSION="v4.40.5"
+ARG YQ_CHECKSUM="sha256:45b7000ebe3f52c8b0c8a7ac2b313cb72b30460909cca370d57cd43c6e658f73"
 
 
 RUN dnf groupinstall -y 'Development Tools' && \
@@ -20,11 +20,11 @@ RUN dnf groupinstall -y 'Development Tools' && \
         perl-FindBin openssl-devel tpm2-tss-devel \
 	clang which && \
     dnf clean all && \
-    curl -fsSLO https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm -f go${GO_VERSION}.linux-amd64.tar.gz
+    curl -fsSLO https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-s390x.tar.gz && \
+    rm -f go${GO_VERSION}.linux-s390x.tar.gz
 
-ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 /usr/local/bin/yq
+ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_s390x /usr/local/bin/yq
 RUN chmod a+x /usr/local/bin/yq
 
 RUN curl -fsSL https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VERSION}"
@@ -33,8 +33,8 @@ ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
 RUN echo $PATH
 
-RUN curl -fsSLO https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
-    unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
+RUN curl -fsSLO https://github.com/protocolbuffers/protobuf/releases/download/v25.2/protoc-25.2-linux-s390_64.zip && \
+    unzip protoc-${PROTOC_VERSION}-linux-s390_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-s390_64.zip
 
 WORKDIR /src
 
