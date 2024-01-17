@@ -21,7 +21,7 @@ SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 # End-to-end tests overall run timeout.
 TEST_E2E_TIMEOUT ?= 60m
 
-RESOURCE_CTRL ?= false
+RESOURCE_CTRL ?= true
 
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)

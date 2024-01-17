@@ -43,7 +43,7 @@ You can deploy the CoCo operator and cloud-api-adaptor with the `Makefile` by ru
     ```
     export CLOUD_PROVIDER=<aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere>
     ```
-    * optional: set also `RESOURCE_CTRL=true` to allow the peerpod-ctrl to run, monitor and delete dangling cloud resources (upon provider's support)
+    * `RESOURCE_CTRL` is set to `true` by default to allow the peerpod-ctrl to run, monitor and delete dangling cloud resources
 
 * `make deploy` deploys operator, runtime and cloud-api-adaptor pod in the configured cluster
     * validate kubectl is available in your `$PATH` and `$KUBECONFIG` is set
