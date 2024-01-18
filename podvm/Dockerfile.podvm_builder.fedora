@@ -38,8 +38,8 @@ RUN curl -fsSLO https://github.com/protocolbuffers/protobuf/releases/download/v2
 
 WORKDIR /src
 
-ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
-ARG CAA_SRC_REF="main"
+ARG CAA_SRC="https://github.com/lysliu/cloud-api-adaptor"
+ARG CAA_SRC_REF="mkosi-s390x"
 
 ARG KATA_SRC="https://github.com/kata-containers/kata-containers"
 ARG KATA_SRC_BRANCH="CCv0"
