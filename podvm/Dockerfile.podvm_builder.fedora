@@ -17,7 +17,7 @@ ARG YQ_CHECKSUM="sha256:45b7000ebe3f52c8b0c8a7ac2b313cb72b30460909cca370d57cd43c
 RUN dnf groupinstall -y 'Development Tools' && \
     dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
         device-mapper-devel unzip libassuan-devel \
-        perl-FindBin openssl-devel tpm2-tss-devel \
+        perl-FindBin openssl-devel tpm2-tss-devel skopeo \
 	clang which && \
     dnf clean all && \
     curl -fsSLO https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz && \

@@ -84,7 +84,7 @@ KATA_CONTAINERS_SRC = $(ROOT_DIR)/../kata-containers
 KATA_AGENT_SRC = $(KATA_CONTAINERS_SRC)/src/agent
 KATA_AGENT_BUILD_TYPE = release
 
-SKOPEO_SRC ?= skopeo
+SKOPEO_SRC ?= /usr
 SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo
 
 UMOCI_SRC   = umoci
@@ -140,12 +140,6 @@ $(STATIC_LIBSECCOMP): $(KATA_CONTAINERS_SRC)
 $(KATA_CONTAINERS_SRC):
 	$(call git_clone_repo_ref,$(KATA_SRC),$(KATA_CONTAINERS_SRC),$(KATA_SRC_REF))
 
-# Skopeo package packages are available in RHEL/CentOS 8 or later and Ubuntu 20.10 or later
-$(SKOPEO_SRC):
-	$(call git_clone_repo_ref,$(SKOPEO_REPO),$(SKOPEO_SRC),$(SKOPEO_VERSION))
-
-$(SKOPEO_BIN): $(SKOPEO_SRC)
-	cd "$(SKOPEO_SRC)" && CC= $(MAKE) bin/skopeo
 
 # The umoci release page only publishes amd64 binaries. https://github.com/opencontainers/umoci/releases
 $(UMOCI_SRC):
@@ -155,7 +149,7 @@ $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
 	cd "$(UMOCI_SRC)" && CC= $(MAKE)
 
 $(PAUSE_SRC): $(SKOPEO_BIN)
-	$(SKOPEO_BIN) --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
+	skopeo --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
 
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
