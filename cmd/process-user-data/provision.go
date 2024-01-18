@@ -113,7 +113,7 @@ type AWSUserDataProvider struct{ DefaultRetry }
 func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 	url := aws.AWSUserDataImdsUrl
 	fmt.Printf("provider: AWS, userDataUrl: %s\n", url)
-	return azure.GetUserData(ctx, url)
+	return aws.GetUserData(ctx, url)
 }
 
 func getCloudConfig(ctx context.Context, provider UserDataProvider) (*CloudConfig, error) {
