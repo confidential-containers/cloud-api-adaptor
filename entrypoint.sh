@@ -53,7 +53,6 @@ aws() {
 
     set -x
     exec cloud-api-adaptor aws \
-        -aws-region "${AWS_REGION}" \
         -pods-dir /run/peerpod/pods \
         ${optionals} \
         -socket /run/peerpod/hypervisor.sock
