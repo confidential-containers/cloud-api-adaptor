@@ -11,11 +11,11 @@ set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-LIBVIRT_IP="${LIBVIRT_IP:-}"
+LIBVIRT_IP="${LIBVIRT_IP:-192.168.122.1}"
 LIBVIRT_USER="${LIBVIRT_USER:-$USER}"
 LIBVIRT_NET="${LIBVIRT_NET:-default}"
 LIBVIRT_POOL="${LIBVIRT_POOL:-default}"
-SSH_KEY_FILE="${SSH_KEY_FILE:-}"
+SSH_KEY_FILE="${SSH_KEY_FILE:-id_rsa}"
 
 # Apply the 'node.kubernetes.io/worker' label on all worker nodes.
 #

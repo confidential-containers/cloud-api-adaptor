@@ -13,20 +13,27 @@ ARCH=$(uname -m)
 TARGET_ARCH=${ARCH/x86_64/amd64}
 
 installGolang() {
-    export PATH=$PATH:/usr/local/go/bin
+    export PATH=/usr/local/go/bin:$PATH
     export GOROOT=/usr/local/go
     export GOPATH=$HOME/go
+    REQUIRED_GO_VERSION="$(yq '.tools.golang' versions.yaml)"
     if ! command -v "yq" >/dev/null; then
         echo "Installing latest yq"
         sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${TARGET_ARCH} -O /usr/bin/yq && sudo chmod a+x /usr/bin/yq
     fi
     if [[ -d /usr/local/go ]]; then
-        echo "go is installed, set path."
+        installed_go_version=$(v=$(go version | awk '{print $3}') && echo ${v#go})
+        if [[ "$(printf '%s\n' "$REQUIRED_GO_VERSION" "$installed_go_version" | sort -V | head -1)" != "$REQUIRED_GO_VERSION" ]]; then
+            echo "Warning: Found ${installed_go_version} at /usr/local/go, is lower than our required $REQUIRED_GO_VERSION"
+            echo "Please run \"rm -rf /usr/local/go\" and run this script again."
+            exit 1
+        else
+            echo "Found ${installed_go_version} at /usr/local/go, good to go"
+        fi
     else
-        GO_VERSION="$(yq '.tools.golang' versions.yaml)"
-        wget -q "https://dl.google.com/go/go${GO_VERSION}.linux-${TARGET_ARCH}.tar.gz"
-        sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-${TARGET_ARCH}.tar.gz
-        echo "Installed golang with ${GO_VERSION}"
+        wget -q "https://dl.google.com/go/go${REQUIRED_GO_VERSION}.linux-${TARGET_ARCH}.tar.gz"
+        sudo tar -C /usr/local -xzf go${REQUIRED_GO_VERSION}.linux-${TARGET_ARCH}.tar.gz
+        echo "Installed golang with ${REQUIRED_GO_VERSION}"
     fi
     mkdir -p $HOME/go
 }
