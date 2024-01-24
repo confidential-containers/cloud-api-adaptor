@@ -12,7 +12,8 @@ mkdir -p /usr/share/oci/hooks/prestart
 cat <<'END' >  /usr/share/oci/hooks/prestart/nvidia-container-toolkit.sh
 #!/bin/bash -x
 
-/usr/bin/nvidia-container-toolkit -debug "$@"
+# Log the o/p of the hook to a file
+/usr/bin/nvidia-container-toolkit -debug "$@" > /var/log/nvidia-hook.log 2>&1
 END
 
 # Make the script executable
