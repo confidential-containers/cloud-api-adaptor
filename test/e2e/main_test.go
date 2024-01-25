@@ -116,7 +116,12 @@ func TestMain(m *testing.M) {
 	testEnv.Setup(func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 		log.Info("Do setup")
 		var err error
+
 		// Get properties
+		props := provisioner.GetProperties(ctx, cfg)
+		if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
+			return ctx, fmt.Errorf("kbs image not provided")
+		}
 
 		if shouldProvisionCluster {
 			log.Info("Cluster provisioning")
@@ -129,14 +134,9 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		props := provisioner.GetProperties(ctx, cfg)
 		var kbsparams string
 		if shouldDeployKbs {
 			log.Info("Deploying kbs")
-			if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
-				return ctx, fmt.Errorf("kbs image not provided")
-			}
-
 			if keyBrokerService, err = pv.NewKeyBrokerService(props["CLUSTER_NAME"]); err != nil {
 				return ctx, err
 			}
@@ -145,11 +145,11 @@ func TestMain(m *testing.M) {
 				return ctx, err
 			}
 			var kbsPodIP string
-			if kbsPodIP, err = keyBrokerService.GetKbsSvcIP(ctx, cfg); err != nil {
+			if kbsPodIP, err = keyBrokerService.GetKbsPodIP(ctx, cfg); err != nil {
 				return ctx, err
 			}
 
-			kbsparams = "cc_kbc::http:" + kbsPodIP + ":8080"
+			kbsparams = "cc_kbc::http://" + kbsPodIP + ":8080"
 			log.Infof("KBS PARAMS%s:", kbsparams)
 		}
 

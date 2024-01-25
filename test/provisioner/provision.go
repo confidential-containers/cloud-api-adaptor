@@ -10,7 +10,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -78,40 +77,19 @@ type InstallOverlay interface {
 	Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
 }
 
-func runCommand(command string, stdout io.Writer, stderr io.Writer, args ...string) error {
-	cmd := exec.Command(command, args...)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	fmt.Printf("Running command: %s %v\n", command, args)
-
-	if err := cmd.Run(); err != nil {
-		err = fmt.Errorf(fmt.Sprintf("Error running command: %s %v - %s", command, args, err))
-
-		log.Errorf("%v", err)
-		return err
-	}
-
-	return nil
-}
+// Waiting timeout for bringing up the pod
+const PodWaitTimeout = time.Second * 30
 
 func saveToFile(filename string, content []byte) error {
 	// Save contents to file
 	err := os.WriteFile(filename, content, 0644)
 	if err != nil {
-		return fmt.Errorf("error writing contents to file: %w", err)
+		return fmt.Errorf("writing contents to file: %w", err)
 	}
 	return nil
 }
 
 func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
-	// Clone kbs repo
-	repoURL := "https://github.com/confidential-containers/kbs"
-
-	if err := runCommand("git", os.Stdout, os.Stderr, "clone", repoURL); err != nil {
-		return nil, err
-	}
-
 	log.Info("creating key.bin")
 
 	// Create secret
@@ -120,7 +98,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 	// Create the file.
 	file, err := os.Create(filePath)
 	if err != nil {
-		err = fmt.Errorf("Error creating file: %w\n", err)
+		err = fmt.Errorf("creating file: %w\n", err)
 		log.Errorf("%v", err)
 		return nil, err
 	}
@@ -129,14 +107,14 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 	// Write the content to the file.
 	err = saveToFile(filePath, content)
 	if err != nil {
-		err = fmt.Errorf("Error writing to the file: %w\n", err)
+		err = fmt.Errorf("writing to the file: %w\n", err)
 		log.Errorf("%v", err)
 		return nil, err
 	}
 
 	k8sCnfDir, err := os.Getwd()
 	if err != nil {
-		err = fmt.Errorf("Error getting the current working directory: %w\n", err)
+		err = fmt.Errorf("getting the current working directory: %w\n", err)
 		log.Errorf("%v", err)
 		return nil, err
 	}
@@ -147,7 +125,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 		kbsKey := filepath.Join(k8sCnfDir, "kbs/kbs/config/kubernetes/base/kbs.key")
 		keyOutputFile, err := os.Create(kbsKey)
 		if err != nil {
-			err = fmt.Errorf("Error creating key file: %w\n", err)
+			err = fmt.Errorf("creating key file: %w\n", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
@@ -155,7 +133,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 
 		_, privateKey, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
-			err = fmt.Errorf("Error generating Ed25519 key pair: %w\n", err)
+			err = fmt.Errorf("generating Ed25519 key pair: %w\n", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
@@ -168,7 +146,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 		// Save private key to file
 		err = saveToFile(kbsKey, privateKeyPEM)
 		if err != nil {
-			err = fmt.Errorf("Error saving private key to file: %w\n", err)
+			err = fmt.Errorf("saving private key to file: %w\n", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
@@ -176,7 +154,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 		publicKey := privateKey.Public().(ed25519.PublicKey)
 		publicKeyX509, err := x509.MarshalPKIXPublicKey(publicKey)
 		if err != nil {
-			err = fmt.Errorf("Error generating Ed25519 public key: %w\n", err)
+			err = fmt.Errorf("generating Ed25519 public key: %w\n", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
@@ -189,14 +167,14 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 		// Save public key to file
 		err = saveToFile(kbsCert, publicKeyPEM)
 		if err != nil {
-			err = fmt.Errorf("Error saving public key to file: %w\n", err)
+			err = fmt.Errorf("saving public key to file: %w\n", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
 
 	}
 
-	overlay, err := NewKbsInstallOverlay("kbs")
+	overlay, err := NewBaseKbsInstallOverlay("kbs")
 	if err != nil {
 		return nil, err
 	}
@@ -262,9 +240,21 @@ func GetInstallOverlay(provider string, installDir string) (InstallOverlay, erro
 	return overlayFunc(installDir, provider)
 }
 
-func NewKbsInstallOverlay(installDir string) (InstallOverlay, error) {
+func NewBaseKbsInstallOverlay(installDir string) (InstallOverlay, error) {
 	log.Info("Creating kbs install overlay")
 	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/base"))
+	if err != nil {
+		return nil, err
+	}
+
+	return &KbsInstallOverlay{
+		overlay: overlay,
+	}, nil
+}
+
+func NewKbsInstallOverlay(installDir string) (InstallOverlay, error) {
+	log.Info("Creating kbs install overlay")
+	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/overlays"))
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +279,7 @@ func (lio *KbsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, pro
 		return err
 	}
 
-	log.Infof("Updating CAA image tag with %q", props["KBS_IMAGE_TAG"])
+	log.Infof("Updating kbs image tag with %q", props["KBS_IMAGE_TAG"])
 	if err = lio.overlay.SetKustomizeImage("kbs-container-image", "newTag", props["KBS_IMAGE_TAG"]); err != nil {
 		return err
 	}
@@ -297,7 +287,7 @@ func (lio *KbsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, pro
 	return nil
 }
 
-func (p *KeyBrokerService) GetKbsSvcIP(ctx context.Context, cfg *envconf.Config) (string, error) {
+func (p *KeyBrokerService) GetKbsPodIP(ctx context.Context, cfg *envconf.Config) (string, error) {
 	client, err := cfg.NewClient()
 	if err != nil {
 		return "", err
@@ -314,31 +304,29 @@ func (p *KeyBrokerService) GetKbsSvcIP(ctx context.Context, cfg *envconf.Config)
 	}
 
 	resources := client.Resources(namespace)
-
-	// Get the service associated with the deployment
-	serviceList := &corev1.ServiceList{}
-	err = resources.List(context.TODO(), serviceList)
+	podList := &corev1.PodList{}
+	err = resources.List(context.TODO(), podList)
 	if err != nil {
-		err = fmt.Errorf("Error listing services: %w\n", err)
+		err = fmt.Errorf("Error listing pods: %w\n", err)
 		log.Errorf("%v", err)
 		return "", err
 	}
 
-	var matchingService *corev1.Service
-	for i := range serviceList.Items {
-		service := &serviceList.Items[i]
-		if service.Name == deploymentName {
-			matchingService = service
+	var matchingPod *corev1.Pod
+	for i := range podList.Items {
+		pod := &podList.Items[i]
+		if pod.Labels["app"] == deploymentName {
+			matchingPod = pod
 			break
 		}
 	}
 
-	if matchingService == nil {
-		return "", fmt.Errorf("No service with label selector found")
+	if matchingPod == nil {
+		return "", fmt.Errorf("No pod with label selector found")
 	}
 
-	fmt.Printf("KBS Service IP: %s\n", matchingService.Spec.ClusterIP)
-	return matchingService.Spec.ClusterIP, nil
+	fmt.Printf("Pod IP: %s\n", matchingPod.Status.PodIP)
+	return matchingPod.Status.PodIP, nil
 }
 
 func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
@@ -347,42 +335,14 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 		return err
 	}
 
-	originalDir, err := os.Getwd()
-	if err != nil {
-		err = fmt.Errorf("Error getting the current working directory: %w\n", err)
-		log.Errorf("%v", err)
-		return err
-	}
-
-	newDirectory := "kbs/kbs/config/kubernetes"
-	err = os.Chdir(newDirectory)
-	if err != nil {
-		err = fmt.Errorf("Error changing the working directory: %w\n", err)
-		log.Errorf("%v", err)
-		return err
-	}
-
-	// Replace this to use install overlay
-	cmd := exec.Command("kubectl", "apply", "-k", "overlays")
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
-	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	// Create kustomize pointer for overlay directory with updated changes
+	tmpoverlay, err := NewKbsInstallOverlay("kbs")
 	if err != nil {
 		return err
 	}
 
-	/*
-		log.Info("Install Kbs")
-		if err := p.installOverlay.Apply(ctx, cfg); err != nil {
-			return err
-		}
-	*/
-
-	// Return to the original working directory.
-	err = os.Chdir(originalDir)
-	if err != nil {
-		err = fmt.Errorf("Error changing back to the original working directory: %w\n", err)
-		log.Errorf("%v", err)
+	log.Info("Install Kbs")
+	if err := tmpoverlay.Apply(ctx, cfg); err != nil {
 		return err
 	}
 
@@ -390,46 +350,16 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 }
 
 func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) error {
-
-	originalDir, err := os.Getwd()
+	// Create kustomize pointer for overlay directory with updated changes
+	tmpoverlay, err := NewKbsInstallOverlay("kbs")
 	if err != nil {
-		err = fmt.Errorf("Error getting the current working directory: %w\n", err)
-		log.Errorf("%v", err)
 		return err
 	}
 
-	// Remove kbs deployment
-	newDirectory := "kbs/kbs/config/kubernetes"
-	err = os.Chdir(newDirectory)
-	if err != nil {
-		err = fmt.Errorf("Error changing the working directory: %w\n", err)
-		log.Errorf("%v", err)
+	log.Info("Uninstall the cloud-api-adaptor")
+	if err = tmpoverlay.Delete(ctx, cfg); err != nil {
 		return err
 	}
-
-	log.Info("Delete Kbs deployment")
-	if err := p.installOverlay.Delete(ctx, cfg); err != nil {
-		return err
-	}
-
-	// Return to the original working directory.
-	err = os.Chdir(originalDir)
-	if err != nil {
-		err = fmt.Errorf("Error changing back to the original working directory: %w\n", err)
-		log.Errorf("%v", err)
-		return err
-	}
-
-	// remove kbs repo
-	directoryPath := "kbs"
-
-	err = os.RemoveAll(directoryPath)
-	if err != nil {
-		err = fmt.Errorf("Error deleting directory: %w\n", err)
-		log.Errorf("%v", err)
-		return err
-	}
-
 	return nil
 }
 
@@ -634,7 +564,7 @@ func AllPodsRunning(ctx context.Context, cfg *envconf.Config, namespace string) 
 	for _, o := range metaList {
 		obj, _ := o.(k8s.Object)
 		fmt.Printf("Wait pod '%s' status for Ready\n", obj.GetName())
-		if err := wait.For(conditions.New(resources).PodReady(obj), wait.WithTimeout(time.Second*15)); err != nil {
+		if err := wait.For(conditions.New(resources).PodReady(obj), wait.WithTimeout(PodWaitTimeout)); err != nil {
 			return err
 		}
 		fmt.Printf("pod '%s' is Ready\n", obj.GetName())
