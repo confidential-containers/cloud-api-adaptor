@@ -63,6 +63,11 @@ func main() {
 	}
 
 	if *action == "provision" {
+		props := provisioner.GetProperties(context.TODO(), cfg)
+		if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
+			log.Fatal("kbs image not provided")
+		}
+
 		log.Info("Creating VPC...")
 		if err := provisioner.CreateVPC(context.TODO(), cfg); err != nil {
 			log.Fatal(err)
@@ -83,11 +88,33 @@ func main() {
 			}
 		}
 
+		log.Info("Deploying kbs")
+		keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"])
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err = keyBrokerService.Deploy(context.TODO(), cfg, props); err != nil {
+			log.Fatal(err)
+		}
+
+		var kbsPodIP string
+		kbsPodIP, err = keyBrokerService.GetKbsPodIP(context.TODO(), cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		kbsparams := "cc_kbc::http://" + kbsPodIP + ":8080"
+		log.Infof("KBS PARAMS: %s", kbsparams)
+
+		props = provisioner.GetProperties(context.TODO(), cfg)
+		props["AA_KBC_PARAMS"] = kbsparams
+
 		cloudAPIAdaptor, err := pv.NewCloudAPIAdaptor(cloudProvider, installDirectory)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := cloudAPIAdaptor.Deploy(context.TODO(), cfg, provisioner.GetProperties(context.TODO(), cfg)); err != nil {
+		if err := cloudAPIAdaptor.Deploy(context.TODO(), cfg, props); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -128,7 +155,7 @@ func main() {
 		if kubeconfigPath == "" {
 			log.Fatal("Unabled to find a kubeconfig file")
 		}
-		cfg := envconf.NewWithKubeConfig(kubeconfigPath)
+		cfg = envconf.NewWithKubeConfig(kubeconfigPath)
 
 		err = deployer.Deploy(context.TODO(), cfg, provisioner.GetProperties(context.TODO(), cfg))
 		if err != nil {
@@ -140,6 +167,16 @@ func main() {
 		log.Info("Uninstalling CoCo operator and cloud-api-adaptor resources")
 		deployer, err := pv.NewCloudAPIAdaptor(cloudProvider, installDirectory)
 		if err != nil {
+			log.Fatal(err)
+		}
+
+		props := provisioner.GetProperties(context.TODO(), cfg)
+		keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"])
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err = keyBrokerService.Delete(context.TODO(), cfg); err != nil {
 			log.Fatal(err)
 		}
 
