@@ -75,7 +75,7 @@ OPA = $(FILES_DIR)/usr/local/bin/opa
 
 # Allow BINARIES to be overriden externally
 
-BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGENT) $(CONFIDENTIAL_DATA_HUB) $(API_SERVER_REST) $(PROCESS_USER_DATA) \
+BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(PAUSE) $(KATA_AGENT) $(ATTESTATION_AGENT) $(CONFIDENTIAL_DATA_HUB) $(API_SERVER_REST) $(PROCESS_USER_DATA) \
 		$(OPA)
 
 $(shell sed -i "s|\(aa_kbc_params = \)\"[^\"]*\"|\1\"${AA_KBC}::${KBC_URI}\"|g" $(FILES_DIR)/etc/agent-config.toml)
