@@ -1,4 +1,6 @@
-AA_KBC ?= offline_fs_kbc
+AA_KBC  ?= offline_fs_kbc
+ARCH    ?= $(subst x86_64,amd64,$(shell uname -m))
+BUILDER = fedora-binaries-builder-$(ARCH)
 
 .DEFAULT_GOAL := all
 .PHONY: all
@@ -9,11 +11,22 @@ debug: fedora-binaries-builder binaries image-debug
 
 PHONY: fedora-binaries-builder
 fedora-binaries-builder:
-	@echo "Building fedora-binaries-builder image..."
+	@echo "Building $(BUILDER) image..."
+ifeq ($(ARCH),s390x)
 	docker buildx build \
-		-t fedora-binaries-builder \
+		-t $(BUILDER) \
+		--build-arg ARCH=s390x \
+		--build-arg PROTOC_ARCH=s390x_64 \
+		--build-arg YQ_ARCH=s390x \
+		--build-arg YQ_CHECKSUM=sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45 \
 		--load \
 		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
+else
+	docker buildx build \
+		-t $(BUILDER) \
+		--load \
+		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
+endif
 
 PHONY: binaries
 binaries:
@@ -21,7 +34,7 @@ binaries:
 	@echo "Building binaries..."
 	rm -rf ./resources/binaries-tree
 	docker buildx build \
-		--build-arg BUILDER_IMG=fedora-binaries-builder \
+		--build-arg BUILDER_IMG=$(BUILDER) \
 		--build-arg AA_KBC=$(AA_KBC) \
 		-o type=local,dest="./resources/binaries-tree" \
 		-f ../podvm/Dockerfile.podvm_binaries.fedora ../.
