@@ -184,6 +184,22 @@ func (tc *TestCase) Run() {
 				}
 			}
 
+			if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
+				providerName := os.Getenv("CLOUD_PROVIDER")
+				authfile, err := os.ReadFile("../../install/overlays/" + providerName + "/auth.json")
+				if err != nil {
+					t.Fatal(err)
+				}
+				secretData := map[string][]byte{v1.DockerConfigJsonKey: authfile}
+				secret := NewSecret(E2eNamespace, DEFAULT_AUTH_SECRET, secretData, v1.SecretTypeDockerConfigJson)
+				if err = client.Resources().Create(ctx, secret); err != nil {
+					t.Fatal(err)
+				}
+				if err = AddImagePullSecretToDefaultServiceAccount(ctx, client, DEFAULT_AUTH_SECRET); err != nil {
+					t.Fatal(err)
+				}
+			}
+
 			if tc.secret != nil {
 				if err = client.Resources().Create(ctx, tc.secret); err != nil {
 					t.Fatal(err)
@@ -219,14 +235,14 @@ func (tc *TestCase) Run() {
 				if err != nil {
 					t.Fatal(err)
 				}
-				_, err = clientSet.CoreV1().Secrets("confidential-containers-system").Get(ctx, "auth-json-secret", metav1.GetOptions{})
+				_, err = clientSet.CoreV1().Secrets(E2eNamespace).Get(ctx, DEFAULT_AUTH_SECRET, metav1.GetOptions{})
 				if err == nil {
-					log.Info("Deleting pre-existing auth-json-secret...")
-					if err = clientSet.CoreV1().Secrets("confidential-containers-system").Delete(ctx, "auth-json-secret", metav1.DeleteOptions{}); err != nil {
+					log.Infof("Deleting pre-existing %v...", DEFAULT_AUTH_SECRET)
+					if err = clientSet.CoreV1().Secrets(E2eNamespace).Delete(ctx, DEFAULT_AUTH_SECRET, metav1.DeleteOptions{}); err != nil {
 						t.Fatal(err)
 					}
-					log.Info("Creating empty auth-json-secret...")
-					if err = client.Resources().Create(ctx, &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "auth-json-secret", Namespace: "confidential-containers-system"}, Type: v1.SecretTypeOpaque}); err != nil {
+					log.Infof("Creating empty %v...", DEFAULT_AUTH_SECRET)
+					if err = client.Resources().Create(ctx, &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: DEFAULT_AUTH_SECRET, Namespace: E2eNamespace}, Type: v1.SecretTypeOpaque}); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -484,6 +500,16 @@ func (tc *TestCase) Run() {
 					t.Fatal(err)
 				} else {
 					log.Infof("Deleting Secret... %s", tc.secret.Name)
+				}
+			}
+
+			if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
+				clientSet, err := kubernetes.NewForConfig(client.RESTConfig())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = clientSet.CoreV1().Secrets(E2eNamespace).Delete(ctx, DEFAULT_AUTH_SECRET, metav1.DeleteOptions{}); err != nil {
+					t.Fatal(err)
 				}
 			}
 
