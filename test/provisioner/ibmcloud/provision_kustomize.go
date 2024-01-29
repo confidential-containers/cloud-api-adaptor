@@ -168,6 +168,7 @@ func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config
 		}
 	}
 	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
+		registryName := "quay.io"
 		client, err := cfg.NewClient()
 		if err != nil {
 			return err
@@ -184,11 +185,13 @@ func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config
 				return err
 			}
 		}
-
+		if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+			registryName = strings.Split(os.Getenv("AUTHENTICATED_REGISTRY_IMAGE"), "/")[0]
+		}
 		log.Info("Setting up auth.json")
 		data := map[string]interface{}{
 			"auths": map[string]interface{}{
-				"quay.io": map[string]interface{}{
+				registryName: map[string]interface{}{
 					"auth": os.Getenv("REGISTRY_CREDENTIAL_ENCODED"),
 				},
 			},

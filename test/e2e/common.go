@@ -24,6 +24,7 @@ import (
 
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
+const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
 
 type PodOption func(*corev1.Pod)
 

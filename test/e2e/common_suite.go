@@ -243,26 +243,23 @@ func DoTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, e env.Environment, as
 func DoTestCreatePeerPodWithAuthenticatedImagewithValidCredentials(t *testing.T, e env.Environment, assert CloudAssert) {
 	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
 	podName := "authenticated-image-valid-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
-	secretName := "auth-json-secret"
-	authfile, err := os.ReadFile("../../install/overlays/ibmcloud/auth.json")
-	if err != nil {
-		t.Fatal(err)
-	}
 	expectedAuthStatus := "Completed"
-	secretData := map[string][]byte{v1.DockerConfigJsonKey: authfile}
-	secret := NewSecret(E2eNamespace, secretName, secretData, v1.SecretTypeDockerConfigJson)
 	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
-	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever), WithImagePullSecrets(secretName))
-	NewTestCase(t, e, "ValidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Valid Credentials has been created").WithSecret(secret).WithPod(pod).WithAuthenticatedImage().WithAuthImageStatus(expectedAuthStatus).WithCustomPodState(v1.PodPending).Run()
+	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever))
+	NewTestCase(t, e, "ValidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Valid Credentials(Default service account) has been created").WithPod(pod).WithAuthenticatedImage().WithAuthImageStatus(expectedAuthStatus).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.T, e env.Environment, assert CloudAssert) {
+	registryName := "quay.io"
+	if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		registryName = strings.Split(os.Getenv("AUTHENTICATED_REGISTRY_IMAGE"), "/")[0]
+	}
 	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
 	podName := "authenticated-image-invalid-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
-	secretName := "auth-json-secret"
+	secretName := "auth-json-secret-invalid"
 	data := map[string]interface{}{
 		"auths": map[string]interface{}{
-			"quay.io": map[string]interface{}{
+			registryName: map[string]interface{}{
 				"auth": "aW52YWxpZHVzZXJuYW1lOmludmFsaWRwYXNzd29yZAo=",
 			},
 		},
@@ -288,7 +285,7 @@ func DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T, e
 	expectedAuthStatus := "WithoutCredentials"
 	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever))
-	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Invalid Credentials has been created").WithPod(pod).WithAuthenticatedImage().WithAuthImageStatus(expectedAuthStatus).WithCustomPodState(v1.PodPending).Run()
+	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image without Credentials has been created").WithPod(pod).WithAuthenticatedImage().WithAuthImageStatus(expectedAuthStatus).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestPodVMwithNoAnnotations(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
