@@ -25,6 +25,12 @@ on:
       caa-image:
         type: string
         description: prebuilt caa image
+      kbs-image-id:
+        type: string
+        description: prebuild kbs image
+      kbs-image-tag:
+        type: string
+        description: prebuild kbs image tag
 
 jobs:
   generate-podvm-image-version:
@@ -116,10 +122,17 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
 
+    - name: Extract provisioner environment
+      run: |
+        echo "KBS_IMAGE=$(yq -e '.oci.kbs.registry' versions.yaml)" >> "$GITHUB_ENV"
+        echo "KBS_IMAGE_TAG=$(yq -e '.oci.kbs.tag' versions.yaml)" >> "$GITHUB_ENV"
+
     - name: Create provisioner file
       env:
         AZURE_IMAGE_ID: ${{ github.event.inputs.podvm-image-id || format('/CommunityGalleries/{0}/images/{1}/Versions/{2}', vars.AZURE_COMMUNITY_GALLERY_NAME, vars.AZURE_PODVM_IMAGE_DEF_NAME, needs.generate-podvm-image-version.outputs.image-version) }}
         CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
+        KBS_IMAGE: ${{ github.event.inputs.kbs-image-id || env.KBS_IMAGE }}
+        KBS_IMAGE_TAG: ${{  github.event.inputs.kbs-image-tag || env.KBS_IMAGE_TAG}}
       run: |
         cat << EOF > "$TEST_PROVISION_FILE"
           AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
@@ -132,6 +145,8 @@ jobs:
           IS_CI_MANAGED_CLUSTER="true"
           MANAGED_IDENTITY_NAME="${{ secrets.AZURE_MANAGED_IDENTITY_NAME}}"
           CAA_IMAGE="${CAA_IMAGE}"
+          KBS_IMAGE="${KBS_IMAGE}"
+          KBS_IMAGE_TAG="${KBS_IMAGE_TAG}"
         EOF
         cat "$TEST_PROVISION_FILE"
         # assert that no variable is unset
@@ -203,9 +218,20 @@ jobs:
         test -n "$SUBNET_ID"
         echo "AZURE_SUBNET_ID=\"${SUBNET_ID}\"" >> "$TEST_PROVISION_FILE"
 
+    - name: Extract kbs reference
+      run: echo "KBS_VERSION=$(yq -e '.git.kbs.reference' versions.yaml)" >> "$GITHUB_ENV"
+
+    - name: Checkout kbs Repository
+      run: |
+        git clone https://github.com/confidential-containers/trustee test/trustee
+        pushd test/trustee
+        git checkout "${KBS_VERSION}"
+        popd
+
     - name: Run e2e test
       env:
         TEST_PROVISION: "no"
+        DEPLOY_KBS: "yes"
       run: |
         # Since we install the cluster in parallel, we need to get the credentials here.
         az aks get-credentials \

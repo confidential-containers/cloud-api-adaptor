@@ -80,6 +80,9 @@ type InstallOverlay interface {
 // Waiting timeout for bringing up the pod
 const PodWaitTimeout = time.Second * 30
 
+// trustee repo related base path
+const TRUSTEE_REPO_PATH = "../trustee"
+
 func saveToFile(filename string, content []byte) error {
 	// Save contents to file
 	err := os.WriteFile(filename, content, 0644)
@@ -94,7 +97,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 
 	// Create secret
 	content := []byte("This is my cluster name: " + clusterName)
-	filePath := "trustee/kbs/config/kubernetes/overlays/key.bin"
+	filePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/overlays/key.bin")
 	// Create the file.
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -120,9 +123,9 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 	}
 	fmt.Println(k8sCnfDir)
 
-	kbsCert := filepath.Join(k8sCnfDir, "trustee/kbs/config/kubernetes/base/kbs.pem")
+	kbsCert := filepath.Join(k8sCnfDir, TRUSTEE_REPO_PATH, "kbs/config/kubernetes/base/kbs.pem")
 	if _, err := os.Stat(kbsCert); os.IsNotExist(err) {
-		kbsKey := filepath.Join(k8sCnfDir, "trustee/kbs/config/kubernetes/base/kbs.key")
+		kbsKey := filepath.Join(k8sCnfDir, TRUSTEE_REPO_PATH, "kbs/config/kubernetes/base/kbs.key")
 		keyOutputFile, err := os.Create(kbsKey)
 		if err != nil {
 			err = fmt.Errorf("creating key file: %w\n", err)
@@ -174,7 +177,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 
 	}
 
-	overlay, err := NewBaseKbsInstallOverlay("trustee")
+	overlay, err := NewBaseKbsInstallOverlay(TRUSTEE_REPO_PATH)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +339,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 	}
 
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay("trustee")
+	tmpoverlay, err := NewKbsInstallOverlay(TRUSTEE_REPO_PATH)
 	if err != nil {
 		return err
 	}
@@ -351,7 +354,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 
 func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) error {
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay("trustee")
+	tmpoverlay, err := NewKbsInstallOverlay(TRUSTEE_REPO_PATH)
 	if err != nil {
 		return err
 	}

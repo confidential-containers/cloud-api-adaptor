@@ -41,6 +41,9 @@ git:
   opa:
     url: https://github.com/open-policy-agent/opa
     reference: v0.58.0
+  kbs:
+    url: https://github.com/confidential-containers/trustee
+    reference: 84432a2a97da306399db5bc863c9324dbd8b95ac
 oci:
   pause:
     registry: docker://registry.k8s.io/pause
