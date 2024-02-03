@@ -448,15 +448,15 @@ func (p *awsProvider) getDeviceNameAndSize(imageID string) (string, int32, error
 		return "", 0, err
 	}
 
+	if describeImagesOutput == nil || len(describeImagesOutput.Images) == 0 {
+		return "", 0, fmt.Errorf("Unable to get details for the image")
+	}
+
 	// Get the device name
 	deviceName := describeImagesOutput.Images[0].RootDeviceName
 
-	// Check if the device name is nil
-	if deviceName == nil {
-		return "", 0, fmt.Errorf("device name is nil")
-	}
-	// If the device name is empty, return an error
-	if *deviceName == "" {
+	// Check if the device name is empty
+	if deviceName == nil || *deviceName == "" {
 		return "", 0, fmt.Errorf("device name is empty")
 	}
 
