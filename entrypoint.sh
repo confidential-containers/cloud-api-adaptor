@@ -37,17 +37,16 @@ one_of() {
 aws() {
     test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 
-
     [[ "${PODVM_LAUNCHTEMPLATE_NAME}" ]] && optionals+="-use-lt -aws-lt-name ${PODVM_LAUNCHTEMPLATE_NAME} " # has precedence if set
     [[ "${AWS_SG_IDS}" ]] && optionals+="-securitygroupids ${AWS_SG_IDS} "                                  # MUST if template is not used
     [[ "${PODVM_AMI_ID}" ]] && optionals+="-imageid ${PODVM_AMI_ID} "                                       # MUST if template is not used
-    [[ "${PODVM_INSTANCE_TYPE}" ]] && optionals+="-instance-type ${PODVM_INSTANCE_TYPE} "                   # default t3.small
+    [[ "${PODVM_INSTANCE_TYPE}" ]] && optionals+="-instance-type ${PODVM_INSTANCE_TYPE} "                   # default m6a.large
     [[ "${PODVM_INSTANCE_TYPES}" ]] && optionals+="-instance-types ${PODVM_INSTANCE_TYPES} "
-    [[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} "      # if not retrieved from IMDS
-    [[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} " # if not set retrieved from IMDS
-    [[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} "     # if not set retrieved from IMDS
-    [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
-    [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip " # Use public IP for pod vm
+    [[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} "                    # if not retrieved from IMDS
+    [[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} "               # if not set retrieved from IMDS
+    [[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} "                   # if not set retrieved from IMDS
+    [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} "                                     # Custom tags applied to pod vm
+    [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "                 # Use public IP for pod vm
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
     [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
 

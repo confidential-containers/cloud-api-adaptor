@@ -161,7 +161,7 @@ configMapGenerator:
   literals:
   - CLOUD_PROVIDER="aws"   
   - PODVM_AMI_ID="${PODVM_AMI_ID}"  
-  #- PODVM_INSTANCE_TYPE="t3.small" # default instance type to use
+  #- PODVM_INSTANCE_TYPE="m6a.large" # default instance type to use
   #- PODVM_INSTANCE_TYPES="" # comma separated list of supported instance types
 secretGenerator:
 - name: auth-json-secret

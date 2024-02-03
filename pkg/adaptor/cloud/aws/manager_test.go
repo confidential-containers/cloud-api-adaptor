@@ -65,7 +65,7 @@ func TestManager_ParseCmd(t *testing.T) {
 				LaunchTemplateName: "kata",
 				UseLaunchTemplate:  false,
 				ImageId:            "",
-				InstanceType:       "t3.small",
+				InstanceType:       "m6a.large",
 				SecurityGroupIds:   securityGroupIds{},
 				KeyName:            "",
 				SubnetId:           "",
