@@ -18,8 +18,8 @@ import (
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
 
 type Config struct {
-	daemonConfigPath string
 	authJsonPath     string
+	daemonConfigPath string
 	fetchTimeout     int
 }
 
@@ -154,7 +154,7 @@ func writeFile(path string, bytes []byte) error {
 func processCloudConfig(cfg *Config, cc *CloudConfig) error {
 	daemonConfig, bytes, err := findDaemonConfigEntry(cfg.daemonConfigPath, cc)
 	if err != nil {
-		return fmt.Errorf("failed to process cloud config: %w", err)
+		return fmt.Errorf("failed to process daemon config: %w", err)
 	}
 
 	if err = writeFile(cfg.daemonConfigPath, bytes); err != nil {
