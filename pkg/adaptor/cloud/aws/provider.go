@@ -27,7 +27,6 @@ var errNotReady = errors.New("address not ready")
 const (
 	maxInstanceNameLen = 63
 	maxWaitTime        = 120 * time.Second
-	defaultCVMInstance = "m6a.large"
 )
 
 // Make ec2Client a mockable interface
@@ -240,9 +239,6 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 				// Add AmdSevSnp Cpu options to the instance
 				AmdSevSnp: types.AmdSevSnpSpecificationEnabled,
 			}
-
-			// Change the default instance type to a CVM capable instance type
-			p.serviceConfig.InstanceType = defaultCVMInstance
 		}
 
 	}
