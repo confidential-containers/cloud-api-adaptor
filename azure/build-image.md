@@ -2,9 +2,15 @@
 
 This documentation will walk you through building the pod VM image for Azure.
 
-> **Note**: Run the following commands from the directory `azure/image`.
+> [!NOTE]
+> Run the following commands from the directory `azure/image`.
 
 ## Pre-requisites
+
+### Install required tools
+
+- Install tools like `git`, `make` and `curl`.
+- Install Azure CLI by following instructions [here](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli).
 
 ### Azure login
 
@@ -17,7 +23,8 @@ export AZURE_REGION="eastus"
 
 ### Resource group
 
-> **Note**: Skip this step if you already have a resource group you want to use. Please, export the resource group name in the `AZURE_RESOURCE_GROUP` environment variable.
+> [!NOTE]
+> Skip this step if you already have a resource group you want to use. Please, export the resource group name in the `AZURE_RESOURCE_GROUP` environment variable.
 
 Create an Azure resource group by running the following command:
 
@@ -43,7 +50,8 @@ az sig create \
 
 Create the "Image Definition" by running the following command:
 
-> **Note**: The flag `--features SecurityType=ConfidentialVmSupported` allows you to a upload custom image and boot it up as a Confidential Virtual Machine (CVM).
+> [!NOTE]
+> The flag `--features SecurityType=ConfidentialVmSupported` allows you to a upload custom image and boot it up as a Confidential Virtual Machine (CVM).
 
 ```bash
 export GALLERY_IMAGE_DEF_NAME="cc-image"
@@ -72,7 +80,22 @@ The Pod-VM image can be built in three ways:
 
 ### Option 1: Modifying an existing marketplace image
 
+**Install necessary tools**
+
+- Install the following packages (on Ubuntu):
+
+```bash
+sudo apt install \
+  libdevmapper-dev libgpgme-dev gcc clang pkg-config \
+  libssl-dev libtss2-dev protobuf-compiler
+```
+
+- Install `yq` by following instructions [here](https://mikefarah.gitbook.io/yq/#install).
+- Install Golang by following instructions [here](https://go.dev/doc/install).
+- Install Rust (`cargo`) by following instructions [here](https://www.rust-lang.org/tools/install).
 - Install packer by following [these instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
+
+**Build**
 
 - Create a custom Azure VM image based on Ubuntu 22.04 adding kata-agent, agent-protocol-forwarder and other dependencies for Cloud API Adaptor (CAA):
 
@@ -88,11 +111,13 @@ export PKR_VAR_offer=0001-com-ubuntu-confidential-vm-jammy
 export PKR_VAR_sku=22_04-lts-cvm
 
 export AA_KBC="cc_kbc_az_snp_vtpm"
+export LIBC=gnu
 export CLOUD_PROVIDER=azure
 PODVM_DISTRO=ubuntu make image
 ```
 
-> **Note**: If you want to disable cloud config then `export DISABLE_CLOUD_CONFIG=true` before building the image.
+> [!NOTE]
+> If you want to disable cloud-init then `export DISABLE_CLOUD_CONFIG=true` before building the image.
 
 Use the `ManagedImageSharedImageGalleryId` field from output of the above command to populate the following environment variable. It's used while deploying cloud-api-adaptor:
 
