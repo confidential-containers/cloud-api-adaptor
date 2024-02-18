@@ -2,6 +2,8 @@ package util
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -115,4 +117,30 @@ func Contains(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// Method to write userdata to a file
+func WriteUserData(instanceName string, userData string) (string, error) {
+	// Write userdata to a file named after the instance name in the current directory
+	// File name: (mktemp)/peerpod/instanceName-userdata.json
+	// File content: userdata
+
+	// Create temp directory
+	tempDir, err := os.MkdirTemp("", "peerpod")
+	if err != nil {
+		return "", err
+	}
+
+	// Create file path
+	filePath := filepath.Join(tempDir, instanceName+"-userdata.json")
+
+	// Write userdata to a file in the temp directory
+	err = os.WriteFile(filePath, []byte(userData), 0644)
+	if err != nil {
+		return "", err
+	}
+
+	// Write userdata to a file in the temp directory
+	// Return the file path
+	return filePath, nil
 }
