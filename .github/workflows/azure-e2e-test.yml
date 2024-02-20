@@ -10,6 +10,7 @@ env:
   CLOUD_PROVIDER: "azure"
   BUILTIN_CLOUD_PROVIDERS: "azure"
   TEST_E2E_CREATE_RG: "no"
+  ACR_URL: "${{ vars.AZURE_ACR_URL }}"
 
 on:
   schedule:
@@ -40,7 +41,7 @@ jobs:
         echo "image-version=${unique_version}" >> "$GITHUB_OUTPUT"
 
   build-podvm-image:
-    uses: confidential-containers/cloud-api-adaptor/.github/workflows/azure-podvm-image-build.yml@main
+    uses: ./.github/workflows/azure-podvm-image-build.yml
     needs:
     - generate-podvm-image-version
     if: github.event.inputs.podvm-image-id == ''
@@ -85,15 +86,12 @@ jobs:
       env:
         ARCHES: "linux/amd64"
         RELEASE_BUILD: "false"
-        registry: "${{ secrets.ACR_URL }}"
-        COMMIT: "${GITHUB_SHA}"
       run: |
-        az acr login --name ${{ secrets.ACR_URL }}
-
+        az acr login --name "$ACR_URL"
         # This builds image in the following format:
-        # ACR_URL/cloud-api-adaptor:dev-COMMIT
-        make image
-        echo "caa-image=${{ secrets.ACR_URL }}/cloud-api-adaptor:dev-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+        # $ACR_URL/cloud-api-adaptor:dev-COMMIT
+        make image "registry=${ACR_URL}"
+        echo "caa-image=${ACR_URL}/cloud-api-adaptor:dev-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
   install-aks:
     runs-on: ubuntu-latest
@@ -117,7 +115,7 @@ jobs:
         AZURE_IMAGE_ID: ${{ github.event.inputs.podvm-image-id || format('/CommunityGalleries/{0}/images/{1}/Versions/{2}', vars.AZURE_COMMUNITY_GALLERY_NAME, vars.AZURE_PODVM_IMAGE_DEF_NAME, needs.generate-podvm-image-version.outputs.image-version) }}
         CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
       run: |
-        cat << EOF > ${{ env.TEST_PROVISION_FILE }}
+        cat << EOF > "$TEST_PROVISION_FILE"
           AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           AZURE_CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
           RESOURCE_GROUP_NAME="${{ secrets.AZURE_RESOURCE_GROUP }}"
@@ -129,7 +127,9 @@ jobs:
           MANAGED_IDENTITY_NAME="${{ secrets.AZURE_MANAGED_IDENTITY_NAME}}"
           CAA_IMAGE="${CAA_IMAGE}"
         EOF
-        cat ${{ env.TEST_PROVISION_FILE }}
+        cat "$TEST_PROVISION_FILE"
+        # assert that no variable is unset
+        ! grep -E '=x$|=""$' "$TEST_PROVISION_FILE"
 
     - name: Create public ssh key and secrets
       run: |
@@ -254,7 +254,7 @@ jobs:
         az sig image-version delete \
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
           --gallery-name ${{ secrets.AZURE_PODVM_GALLERY_NAME }} \
-          --gallery-image-definition ${{ secrets.AZURE_PODVM_IMAGE_DEF_NAME }} \
+          --gallery-image-definition ${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }} \
           --gallery-image-version "${{ needs.generate-podvm-image-version.outputs.image-version }}" || true
 
     - name: Remove container image
@@ -262,12 +262,11 @@ jobs:
       run: |
         # Delete the CAA container image built for this run.
         suffix=".azurecr.io"
-        acr_url=${{ secrets.ACR_URL }}
-        registry_name="${acr_url%"${suffix}"}"
+        registry_name="${ACR_URL%"${suffix}"}"
 
         az acr repository delete \
           --name "${registry_name}" \
-          --image "${{ secrets.ACR_URL }}/cloud-api-adaptor:dev-${GITHUB_SHA}" \
+          --image "${ACR_URL}/cloud-api-adaptor:dev-${GITHUB_SHA}" \
           --yes || true
 
     - name: Remove AKS cluster
