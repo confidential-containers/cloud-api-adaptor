@@ -8,6 +8,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -285,6 +286,10 @@ func NewPodWithPVCFromIBMVPCBlockDriver(namespace, podName, containerName, image
 // IBMCloudAssert implements the CloudAssert interface for ibmcloud.
 type IBMCloudAssert struct {
 	VPC *vpcv1.VpcV1
+}
+
+func (c IBMCloudAssert) DefaultTimeout() time.Duration {
+	return 1 * time.Minute
 }
 
 func (c IBMCloudAssert) HasPodVM(t *testing.T, id string) {

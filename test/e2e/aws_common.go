@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -23,6 +24,10 @@ func NewAWSAssert() AWSAssert {
 	return AWSAssert{
 		Vpc: pv.AWSProps.Vpc,
 	}
+}
+
+func (aa AWSAssert) DefaultTimeout() time.Duration {
+	return 1 * time.Minute
 }
 
 func (aa AWSAssert) HasPodVM(t *testing.T, id string) {

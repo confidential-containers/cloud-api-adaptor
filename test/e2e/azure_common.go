@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/test/provisioner/azure"
 	log "github.com/sirupsen/logrus"
@@ -37,6 +38,10 @@ func checkVMExistence(resourceGroupName, prefixName string) bool {
 	}
 
 	return false
+}
+
+func (c AzureCloudAssert) DefaultTimeout() time.Duration {
+	return 2 * time.Minute
 }
 
 func (c AzureCloudAssert) HasPodVM(t *testing.T, id string) {

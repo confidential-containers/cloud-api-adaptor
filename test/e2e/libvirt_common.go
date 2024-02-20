@@ -6,6 +6,7 @@ package e2e
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"libvirt.org/go/libvirt"
 )
@@ -14,6 +15,10 @@ import (
 type LibvirtAssert struct {
 	// TODO: create the connection once on the initializer.
 	//conn libvirt.Connect
+}
+
+func (c LibvirtAssert) DefaultTimeout() time.Duration {
+	return 1 * time.Minute
 }
 
 func (l LibvirtAssert) HasPodVM(t *testing.T, id string) {

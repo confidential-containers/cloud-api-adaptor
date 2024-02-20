@@ -60,6 +60,7 @@ func NewTestCase(t *testing.T, e env.Environment, testName string, assert CloudA
 		podState:       v1.PodRunning,
 		imagePullTimer: false,
 		isAuth:         false,
+		deletionWithin: assert.DefaultTimeout(),
 	}
 
 	return testCase

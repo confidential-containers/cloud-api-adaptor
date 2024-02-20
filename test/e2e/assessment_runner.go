@@ -75,7 +75,7 @@ type TestCase struct {
 	imagePullTimer       bool
 	isAuth               bool
 	AuthImageStatus      string
-	deletionWithin       *time.Duration
+	deletionWithin       time.Duration
 	testInstanceTypes    InstanceValidatorFunctions
 	isNydusSnapshotter   bool
 }
@@ -121,7 +121,7 @@ func (tc *TestCase) WithService(service *v1.Service) *TestCase {
 }
 
 func (tc *TestCase) WithDeleteAssertion(duration *time.Duration) *TestCase {
-	tc.deletionWithin = duration
+	tc.deletionWithin = *duration
 	return tc
 }
 
@@ -546,10 +546,6 @@ func (tc *TestCase) Run() {
 			}
 
 			if tc.pod != nil {
-				duration := 1 * time.Minute
-				if tc.deletionWithin == nil {
-					tc.deletionWithin = &duration
-				}
 				if err = client.Resources().Delete(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
@@ -557,7 +553,7 @@ func (tc *TestCase) Run() {
 				if err = wait.For(conditions.New(
 					client.Resources()).ResourceDeleted(tc.pod),
 					wait.WithInterval(5*time.Second),
-					wait.WithTimeout(*tc.deletionWithin)); err != nil {
+					wait.WithTimeout(tc.deletionWithin)); err != nil {
 					t.Fatal(err)
 				}
 				log.Infof("Pod %s has been successfully deleted within %.0fs", tc.pod.Name, tc.deletionWithin.Seconds())
@@ -565,7 +561,7 @@ func (tc *TestCase) Run() {
 
 			if tc.extraPods != nil {
 				for _, extraPod := range tc.extraPods {
-					err := DeletePod(ctx, client, extraPod.pod, tc.deletionWithin)
+					err := DeletePod(ctx, client, extraPod.pod, &tc.deletionWithin)
 					if err != nil {
 						t.Logf("Error occurs when delete pod: %s", extraPod.pod.Name)
 						t.Fatal(err)

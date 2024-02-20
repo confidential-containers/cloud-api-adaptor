@@ -40,7 +40,7 @@ func DoTestCreateSimplePodWithNydusAnnotation(t *testing.T, e env.Environment, a
 
 func DoTestDeleteSimplePod(t *testing.T, e env.Environment, assert CloudAssert) {
 	pod := NewBusyboxPodWithName(E2eNamespace, "deletion-test")
-	duration := 1 * time.Minute
+	duration := assert.DefaultTimeout()
 	NewTestCase(t, e, "DeletePod", assert, "Deletion complete").WithPod(pod).WithDeleteAssertion(&duration).Run()
 }
 
