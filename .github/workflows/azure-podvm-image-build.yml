@@ -30,9 +30,6 @@ env:
   AZURE_PODVM_IMAGE_VERSION: "${{ inputs.image-version }}"
   COMMUNITY_GALLERY_PREFIX: "/CommunityGalleries/${{ vars.AZURE_COMMUNITY_GALLERY_NAME }}"
   PODVM_IMAGE_NAME: "peerpod-image-${{ github.run_id }}-${{ github.run_attempt }}"
-  SSH_USERNAME: "peerpod"
-  VM_SIZE: "Standard_D2as_v5"
-  AA_KBC: "cc_kbc_az_snp_vtpm"
 
 jobs:
   build-podvm-image:
@@ -42,12 +39,19 @@ jobs:
         working-directory: cloud-api-adaptor/azure/image
     outputs:
       image-id: "${{ steps.create-image.outputs.image-id }}"
+
     steps:
     - name: Clone cloud-api-adaptor repository
       uses: actions/checkout@v3
       with:
         path: cloud-api-adaptor
         ref: "${{ inputs.git-ref || 'main' }}"
+
+    - name: Clone rust repos
+      run: |
+        # we have to clone prior to cache loading
+        make ../../podvm/..//../kata-containers
+        make ../../../guest-components
 
     - name: Read properties from versions.yaml
       working-directory: cloud-api-adaptor
@@ -60,47 +64,11 @@ jobs:
         [ -n "$rust_version" ]
         echo "RUST_VERSION=${rust_version}" >> "$GITHUB_ENV"
 
-        kata_src_branch="$(yq '.git.kata-containers.reference' versions.yaml)"
-        [ "$kata_src_branch" ]
-        echo "KATA_SRC_BRANCH=${kata_src_branch}" >> "$GITHUB_ENV"
-
-        guest_components_ref="$(yq '.git.guest-components.reference' versions.yaml)"
-        [ -n "$guest_components_ref" ]
-        echo "GUEST_COMPONENTS_REF=${guest_components_ref}" >> "$GITHUB_ENV"
-
-        pause_tag="$(yq '.oci.pause.tag' versions.yaml)"
-        [ -n "$pause_tag" ]
-        echo "PAUSE_TAG=${pause_tag}" >> "$GITHUB_ENV"
-
     - name: Set up Go environment
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.GO_VERSION }}
         cache-dependency-path: cloud-api-adaptor/go.sum
-
-    - name: Install build dependencies
-      run: |
-        sudo curl -L https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
-        sudo echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
-        sudo apt-get update
-        sudo apt-get install -y \
-          libdevmapper-dev \
-          libgpgme-dev \
-          libtdx-attest-dev \
-          musl-tools \
-          libssl-dev \
-          libtss2-dev \
-          protobuf-compiler
-
-    - name: Set PodVM files base
-      run: echo "PODVM_FILES_BASE=$(realpath -m ../../podvm/files)" >> "$GITHUB_ENV"
-
-    - name: Build CAA binaries
-      env:
-        GOPATH: /home/runner/go
-      run: |
-        make "${PODVM_FILES_BASE}/usr/local/bin/agent-protocol-forwarder"
-        make "${PODVM_FILES_BASE}/usr/local/bin/process-user-data"
 
     - uses: actions-rs/toolchain@v1
       with:
@@ -109,56 +77,39 @@ jobs:
         target: x86_64-unknown-linux-musl
         default: true
 
-    - name: Set up kata-agent cache
-      id: kata-agent-cache
-      uses: actions/cache@v3
-      with:
-        path: cloud-api-adaptor/podvm/files/usr/local/bin/kata-agent
-        key: kata-agent-${{ env.KATA_SRC_BRANCH }}_rust${{ env.RUST_VERSION }}
+    - name: Install build dependencies
+      run: |
+        sudo apt-get install \
+          clang \
+          gcc \
+          libdevmapper-dev \
+          libgpgme-dev \
+          libssl-dev \
+          libtss2-dev \
+          pkg-config \
+          protobuf-compiler
 
-    - name: Clone kata-containers repository
-      if: steps.kata-agent-cache.outputs.cache-hit != 'true'
-      uses: actions/checkout@v3
+    - name: Set up rust build cache
+      uses: actions/cache@v4
+      continue-on-error: false
       with:
-        repository: kata-containers/kata-containers
-        path: kata-containers
-        ref: ${{ env.KATA_SRC_BRANCH }}
+        path: |
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          guest-components/target
+          kata-containers/src/agent/target
+        key: rust-${{ env.RUST_VERSION }}
 
     - name: Build kata-agent
       env:
         GOPATH: /home/runner/go
-      if: steps.kata-agent-cache.outputs.cache-hit != 'true'
       run: |
-        make "${PODVM_FILES_BASE}/usr/local/bin/kata-agent"
-        rm -f "${GOPATH}/bin/yq"
+        make "$(realpath ../../podvm/files/usr/local/bin/kata-agent)" LIBC=gnu
+        # kata build installs yq v3 as a side effect
+        rm -r "${GOPATH}/bin/yq"
 
-    - name: Set up pause cache
-      id: pause-cache
-      uses: actions/cache@v3
-      with:
-        path: cloud-api-adaptor/podvm/files/pause_bundle
-        key: pause-${{ env.PAUSE_TAG }}
-
-    - name: Build pause bundle
-      if: steps.pause-cache.outputs.cache-hit != 'true'
-      run: make "${PODVM_FILES_BASE}/pause_bundle/rootfs/pause"
-
-    - name: Set up guest-components cache
-      id: guest-components-cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ${{ env.PODVM_FILES_BASE }}/usr/local/bin/attestation-agent
-          ${{ env.PODVM_FILES_BASE }}/usr/local/bin/confidential-data-hub
-          ${{ env.PODVM_FILES_BASE }}/usr/local/bin/api-server-rest
-        key: guest-components-${{ env.AA_KBC }}_${{ env.GUEST_COMPONENTS_REF }}_rust${{ env.RUST_VERSION }}
-
-    - name: Build guest-components
-      if: steps.guest-components-cache.outputs.cache-hit != 'true'
-      run: |
-        make "${PODVM_FILES_BASE}/usr/local/bin/attestation-agent" LIBC=gnu
-        make "${PODVM_FILES_BASE}/usr/local/bin/confidential-data-hub" LIBC=gnu
-        make "${PODVM_FILES_BASE}/usr/local/bin/api-server-rest" LIBC=gnu
+    - name: Build binaries
+      run: make binaries LIBC=gnu AA_KBC=cc_kbc_az_snp_vtpm
 
     - uses: azure/login@v1
       name: 'Az CLI login'
@@ -175,16 +126,16 @@ jobs:
         PKR_VAR_resource_group: ${{ secrets.AZURE_RESOURCE_GROUP }}
         PKR_VAR_location: ${{ secrets.AZURE_REGION }}
         PKR_VAR_az_image_name: ${{ env.PODVM_IMAGE_NAME }}
-        PKR_VAR_vm_size: ${{ env.VM_SIZE }}
-        PKR_VAR_ssh_username: ${{ env.SSH_USERNAME }}
+        PKR_VAR_vm_size: "Standard_D2as_v5"
+        PKR_VAR_ssh_username: "peerpod"
         PKR_VAR_az_gallery_name: ${{ secrets.AZURE_PODVM_GALLERY_NAME }}
         PKR_VAR_az_gallery_image_name: ${{ env.AZURE_PODVM_IMAGE_DEF_NAME }}
         PKR_VAR_az_gallery_image_version: ${{ env.AZURE_PODVM_IMAGE_VERSION }}
         PKR_VAR_use_azure_cli_auth: "true"
-        CLOUD_PROVIDER: "azure"
-        PODVM_DISTRO: "ubuntu"
       run: |
-        make image BINARIES=
+        make image \
+          CLOUD_PROVIDER=azure \
+          PODVM_DISTRO=ubuntu
         echo "successfully built $IMAGE_ID"
         echo "image-id=${IMAGE_ID}" >> "$GITHUB_OUTPUT"
 
