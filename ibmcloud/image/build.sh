@@ -113,7 +113,8 @@ fi
 
 printf "\nCopying partitions from the base image $src_img_path\n"
 
-qemu-img create -f qcow2 -b "$base_img_path" "$src_img_path" $disksize
+cp -f "$base_img_path" "$src_img_path"
+qemu-img resize "$src_img_path" $disksize
 qemu-img create -f qcow2 "$tmp_img_path" $disksize
 
 qemu-nbd --connect="$src_nbd" "$src_img_path"
