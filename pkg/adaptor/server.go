@@ -15,13 +15,13 @@ import (
 	"github.com/containerd/ttrpc"
 	pbHypervisor "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 
+	provider "github.com/confidential-containers/cloud-api-adaptor/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/vminfo"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
 	pbPodVMInfo "github.com/confidential-containers/cloud-api-adaptor/proto/podvminfo"
-	"github.com/confidential-containers/cloud-api-adaptor/provider"
 )
 
 var logger = log.New(log.Writer(), "[adaptor] ", log.LstdFlags|log.Lmsgprefix)

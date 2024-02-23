@@ -6,5 +6,5 @@
 package main
 
 import (
-	_ "github.com/confidential-containers/cloud-api-adaptor/provider/vsphere"
+	_ "github.com/confidential-containers/cloud-api-adaptor/cloud-providers/vsphere"
 )

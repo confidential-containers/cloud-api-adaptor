@@ -6,5 +6,5 @@
 package controllers
 
 import (
-	_ "github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/ibmcloud"
+	_ "github.com/confidential-containers/cloud-api-adaptor/cloud-providers/ibmcloud"
 )

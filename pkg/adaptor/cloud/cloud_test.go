@@ -14,12 +14,12 @@ import (
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 	"github.com/stretchr/testify/assert"
 
+	provider "github.com/confidential-containers/cloud-api-adaptor/cloud-providers"
+	"github.com/confidential-containers/cloud-api-adaptor/cloud-providers/util/cloudinit"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
-	"github.com/confidential-containers/cloud-api-adaptor/provider"
-	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 )
 
 type mockProvider struct{}
