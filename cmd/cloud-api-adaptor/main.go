@@ -10,14 +10,13 @@ import (
 	"io"
 	"os"
 
+	provider "github.com/confidential-containers/cloud-api-adaptor/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/cmd"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/tlsutil"
-	"github.com/confidential-containers/cloud-api-adaptor/provider"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/probe"
@@ -126,19 +125,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		cfg.serverConfig.TLSConfig = &tlsConfig
 	}
 
-	nodeName, ok := os.LookupEnv("NODE_NAME")
-	var nodeLabels map[string]string
-	if ok {
-		var err error
-		nodeLabels, err = k8sops.NodeLabels(context.Background(), nodeName)
-		if err != nil {
-			fmt.Printf("%s: warning, could not find node labels\ndue to: %v\n", programName, err)
-		}
-	}
-	err := cloud.LoadEnv(nodeLabels)
-	if err != nil {
-		return nil, err
-	}
+	cloud.LoadEnv()
 
 	workerNode := podnetwork.NewWorkerNode(cfg.TunnelType, cfg.HostInterface, cfg.VXLANPort, cfg.VXLANMinID)
 

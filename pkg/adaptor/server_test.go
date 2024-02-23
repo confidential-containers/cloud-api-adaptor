@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
+	provider "github.com/confidential-containers/cloud-api-adaptor/cloud-providers"
+	"github.com/confidential-containers/cloud-api-adaptor/cloud-providers/util/cloudinit"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/cloud-api-adaptor/provider"
-	"github.com/confidential-containers/cloud-api-adaptor/provider/util/cloudinit"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	"github.com/google/uuid"

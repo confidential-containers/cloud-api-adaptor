@@ -22,18 +22,15 @@ import (
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	provider "github.com/confidential-containers/cloud-api-adaptor/cloud-providers"
 	confidentialcontainersorgv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/peerpod-ctrl/api/v1alpha1"
-	"github.com/confidential-containers/cloud-api-adaptor/provider"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -165,15 +162,7 @@ func (r *PeerPodReconciler) cloudConfigsGetter() error {
 func SetProvider() (provider.Provider, error) {
 	cloudName := os.Getenv("CLOUD_PROVIDER")
 	if cloud := provider.Get(cloudName); cloud != nil {
-		extraEnvs := make(map[string]string, 0)
-		nodeLabels, err := NodeLabels()
-		if err == nil {
-			extraEnvs = nodeLabels
-		}
-		err = cloud.LoadEnv(extraEnvs) // we assume LoadEnv knows to load all necessary configs
-		if err != nil {
-			return nil, err
-		}
+		cloud.LoadEnv()
 		provider, err := cloud.NewProvider()
 		if err != nil {
 			return nil, err
@@ -188,23 +177,4 @@ func isOldPeerPod(pp, cur confidentialcontainersorgv1alpha1.PeerPod) bool {
 	return pp.OwnerReferences[0].UID == cur.OwnerReferences[0].UID && // Same owner
 		pp.UID != cur.UID && // Not cur itself
 		pp.CreationTimestamp.Before(&cur.CreationTimestamp) // Created before cur
-}
-
-func NodeLabels() (map[string]string, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get k8s rest config: %w", err)
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create k8s clientset: %w", err)
-	}
-
-	node, err := clientset.CoreV1().Nodes().Get(context.Background(), os.Getenv("NODE_NAME"), metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return node.Labels, nil
-
 }
