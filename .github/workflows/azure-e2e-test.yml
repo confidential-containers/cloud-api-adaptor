@@ -13,10 +13,6 @@ env:
   ACR_URL: "${{ vars.AZURE_ACR_URL }}"
 
 on:
-  schedule:
-  # Runs "at midnight every day" (see https://crontab.guru)
-  # will base on default branch `main`
-    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       podvm-image-id:
@@ -25,6 +21,11 @@ on:
       caa-image:
         type: string
         description: prebuilt caa image
+  workflow_call:
+    inputs:
+      podvm-image-id:
+        type: string
+        description: prebuilt podvm image
 
 jobs:
   generate-podvm-image-version:
