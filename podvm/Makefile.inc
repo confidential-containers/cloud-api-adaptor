@@ -191,7 +191,7 @@ ifeq ($(AGENT_POLICY),yes)
 	cd "$(OPA_SRC)" && $(MAKE) GOARCH=$(DEB_ARCH) GOOS=linux WASM_ENABLED=0 CGO_ENABLED=0 go-build
 	install --compare "$(OPA_SRC)/$(OPA_BUILD_TARGET)" "$@"
 	# Set default policy
-	cd $(AGENT_POLICY_PATH) && ln -s -f $(DEFAULT_AGENT_POLICY_FILE) default-policy.rego
+	cd $(AGENT_POLICY_PATH) && ln -s -f "$(DEFAULT_AGENT_POLICY_FILE)" default-policy.rego
 	# Enable the service
 	cd $(FILES_DIR)/etc/systemd/system/multi-user.target.wants && ln -s -f ../kata-opa.service kata-opa.service
 
