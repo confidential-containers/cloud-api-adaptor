@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"plugin"
+	"strings"
 	"sync"
 
 	"github.com/containerd/containerd/pkg/cri/annotations"
@@ -28,7 +30,8 @@ import (
 )
 
 const (
-	Version = "0.0.0"
+	Version      = "0.0.0"
+	ProviderPath = "/providers/"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -41,7 +44,44 @@ type Cloud interface {
 
 var cloudTable map[string]Cloud = make(map[string]Cloud)
 
+// LoadCloudProviders loads cloud providers from the directory with the given path, looking for
+// all .so files in there and call the InitCloud function from the found .so files
+func LoadCloudProviders(path string) {
+	clouds, err := os.ReadDir(path)
+	if err != nil {
+		logger.Printf("failed to ReadDir %s", err)
+	} else {
+		for _, entry := range clouds {
+			// Only check the ".so" files under path, skip files in the sub directory
+			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".so") {
+				fullpath := filepath.Join(path, entry.Name())
+				logger.Printf("Found cloud provider file %s", fullpath)
+				cloud, err := plugin.Open(fullpath)
+				if err != nil {
+					logger.Printf("Failed to open the cloud provider file %s", err)
+				} else {
+					ifunc, err := cloud.Lookup("InitCloud")
+					if err != nil {
+						logger.Printf("Failed to find the InitCloud function %s", err)
+					} else {
+						// Run the InitCloud from cloud provider to register it to cloudTable
+						initCloudFunc := ifunc.(func())
+						initCloudFunc()
+					}
+				}
+			}
+		}
+	}
+}
+
 func Get(name string) Cloud {
+	// Get the length of the cloudTable
+	length := len(cloudTable)
+	logger.Printf("Length of the cloudTable: %d", length)
+	if length == 0 {
+		logger.Printf("Loading CloudProviders from %s", ProviderPath)
+		LoadCloudProviders(ProviderPath)
+	}
 	return cloudTable[name]
 }
 

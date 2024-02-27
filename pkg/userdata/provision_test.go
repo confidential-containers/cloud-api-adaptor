@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/azure"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/userdata/azure"
 )
 
 var testDaemonConfig string = `{

@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/aws"
-	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/azure"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/userdata/aws"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/userdata/azure"
 	"gopkg.in/yaml.v2"
 )
 

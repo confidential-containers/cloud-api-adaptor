@@ -30,7 +30,7 @@ COPY entrypoint.sh Makefile Makefile.defaults versions.yaml ./
 COPY cmd   ./cmd
 COPY pkg   ./pkg
 COPY proto ./proto
-RUN CC=gcc make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
+RUN CC=gcc make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor providers
 
 FROM --platform=$TARGETPLATFORM $BASE as base-release
 
@@ -39,4 +39,5 @@ RUN dnf install -y libvirt-libs /usr/bin/ssh && dnf clean all
 
 FROM base-${BUILD_TYPE}
 COPY --from=builder /work/cloud-api-adaptor /work/entrypoint.sh /usr/local/bin/
+COPY --from=builder /work/*.so /providers/
 CMD ["entrypoint.sh"]

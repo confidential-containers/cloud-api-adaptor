@@ -1,7 +1,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package ibmcloud_powervs
+package main
 
 import "github.com/confidential-containers/cloud-api-adaptor/pkg/util"
 

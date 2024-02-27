@@ -3,7 +3,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package libvirt
+package main
 
 // Code copied from https://github.com/openshift/cluster-api-provider-libvirt
 

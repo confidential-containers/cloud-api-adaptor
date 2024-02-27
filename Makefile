@@ -31,7 +31,9 @@ else
 endif
 
 all: build
-build: $(BINARIES)
+build: $(BINARIES) providers
+
+providers: $(BUILTIN_CLOUD_PROVIDERS)
 
 # The help target prints out all targets with their descriptions organized
 # beneath their categories. The categories are represented by '##@' and the
@@ -72,10 +74,14 @@ GOFLAGS += -tags=$(subst $(space),$(comma),$(strip $(BUILTIN_CLOUD_PROVIDERS)))
 
 ifneq (,$(filter libvirt,$(BUILTIN_CLOUD_PROVIDERS)))
 cloud-api-adaptor: GOOPTIONS := $(subst CGO_ENABLED=0,CGO_ENABLED=1,$(GOOPTIONS))
+$(BUILTIN_CLOUD_PROVIDERS): GOOPTIONS := $(subst CGO_ENABLED=0,CGO_ENABLED=1,$(GOOPTIONS))
 endif
 
 $(BINARIES): .git-commit $(SOURCES)
 	$(GOOPTIONS) go build $(GOFLAGS) -o "$@" ./cmd/$@
+
+$(BUILTIN_CLOUD_PROVIDERS): .git-commit $(SOURCES)
+	$(GOOPTIONS) go build $(GOFLAGS) -buildmode=plugin ./pkg/adaptor/cloud/$@
 
 ##@ Development
 

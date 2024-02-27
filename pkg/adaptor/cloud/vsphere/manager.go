@@ -1,7 +1,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package vsphere
+package main
 
 import (
 	"flag"
@@ -13,7 +13,7 @@ var vspherecfg Config
 
 type Manager struct{}
 
-func init() {
+func InitCloud() {
 	cloud.AddCloud("vsphere", &Manager{})
 }
 

@@ -3,7 +3,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package libvirt
+package main
 
 import (
 	"flag"
@@ -25,7 +25,7 @@ const (
 	defaultFirmware       = "/usr/share/edk2/ovmf/OVMF_CODE.fd"
 )
 
-func init() {
+func InitCloud() {
 	cloud.AddCloud("libvirt", &Manager{})
 }
 

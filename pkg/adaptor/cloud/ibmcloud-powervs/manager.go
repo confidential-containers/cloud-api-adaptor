@@ -1,7 +1,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package ibmcloud_powervs
+package main
 
 import (
 	"flag"
@@ -14,7 +14,7 @@ var ibmcloudPowerVSConfig Config
 
 type Manager struct{}
 
-func init() {
+func InitCloud() {
 	cloud.AddCloud("ibmcloud-powervs", &Manager{})
 }
 

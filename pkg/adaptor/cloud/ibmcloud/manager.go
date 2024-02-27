@@ -1,7 +1,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package ibmcloud
+package main
 
 import (
 	"flag"
@@ -13,7 +13,7 @@ var ibmcloudVPCConfig Config
 
 type Manager struct{}
 
-func init() {
+func InitCloud() {
 	cloud.AddCloud("ibmcloud", &Manager{})
 }
 
