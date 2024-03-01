@@ -96,9 +96,9 @@ func TestMain(m *testing.M) {
 	}
 
 	// The DEPLOY_KBS is exported then provisioner will install kbs before installing CAA
-	shouldDeployKbs := true
-	if os.Getenv("DEPLOY_KBS") != "yes" {
-		shouldDeployKbs = false
+	shouldDeployKbs := false
+	if os.Getenv("DEPLOY_KBS") == "true" {
+		shouldDeployKbs = true
 	}
 
 	if !shouldProvisionCluster {
