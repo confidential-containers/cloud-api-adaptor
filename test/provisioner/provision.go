@@ -451,6 +451,15 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	}
 	resources := client.Resources(p.namespace)
 
+	fmt.Println("Debug-anjana: Pods before runtime class creation")
+	cmd := exec.Command("kubectl", "get", "pods", "-A")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err := cmd.CombinedOutput()
+	fmt.Println(string(stdoutStderr))
+	if err != nil {
+		return err
+	}
+
 	log.Info("Install the controller manager")
 	// TODO - find go idiomatic way to apply/delete remote kustomize and apply to this file
 	cmd := exec.Command("kubectl", "apply", "-k", "github.com/confidential-containers/operator/config/release?ref=v0.8.0")
@@ -476,6 +485,15 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Debug-anjana: Pods before install caa")
+	cmd = exec.Command("kubectl", "get", "pods", "-A")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err = cmd.CombinedOutput()
+	fmt.Println(string(stdoutStderr))
 	if err != nil {
 		return err
 	}
@@ -515,14 +533,33 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		}
 	}
 
+	fmt.Println("Debug-anjana: Pods after caa and before runtime class creation")
+	cmd = exec.Command("kubectl", "get", "pods", "-A")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err = cmd.CombinedOutput()
+	fmt.Println(string(stdoutStderr))
+	if err != nil {
+		return err
+	}
+
 	fmt.Printf("Wait for the %s runtimeclass be created\n", p.runtimeClass.GetName())
 	if err = wait.For(conditions.New(resources).ResourcesFound(&nodev1.RuntimeClassList{Items: []nodev1.RuntimeClass{*p.runtimeClass}}),
-		wait.WithTimeout(time.Second*60)); err != nil {
+		wait.WithTimeout(time.Minute*3)); err != nil {
+		return err
+	}
+
+	fmt.Println("Debug-anjana: Pods after runtime class creation")
+	cmd = exec.Command("kubectl", "get", "pods", "-A")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err = cmd.CombinedOutput()
+	fmt.Println(string(stdoutStderr))
+	if err != nil {
 		return err
 	}
 
 	log.Info("Installing peerpod-ctrl")
 	cmd = exec.Command("make", "-C", "peerpod-ctrl", "deploy")
+	log.Info("Debug-anjana: Installing peerpod-ctrl command executed")
 	// Run the deployment from the root src dir
 	cmd.Dir = p.rootSrcDir
 	// Set the KUBECONFIG env var
