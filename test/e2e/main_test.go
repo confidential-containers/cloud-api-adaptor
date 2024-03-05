@@ -119,8 +119,10 @@ func TestMain(m *testing.M) {
 
 		// Get properties
 		props := provisioner.GetProperties(ctx, cfg)
-		if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
-			return ctx, fmt.Errorf("kbs image not provided")
+		if shouldDeployKbs {
+			if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
+				return ctx, fmt.Errorf("kbs image not provided")
+			}
 		}
 
 		if shouldProvisionCluster {
