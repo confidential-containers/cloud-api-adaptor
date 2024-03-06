@@ -6,6 +6,7 @@
 package e2e
 
 import (
+	"os"
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/azure"
@@ -39,4 +40,12 @@ func TestCreatePodWithSecretAzure(t *testing.T) {
 func TestCreateNginxDeploymentAzure(t *testing.T) {
 	t.Parallel()
 	DoTestNginxDeployment(t, testEnv, assert)
+}
+
+func TestKbsKeyRelease(t *testing.T) {
+	if os.Getenv("DEPLOY_KBS") == "false" || os.Getenv("DEPLOY_KBS") == "no" {
+		t.Skip("Skipping kbs related test as kbs is not deployed")
+	}
+	t.Parallel()
+	DoTestKbsKeyRelease(t, testEnv, assert)
 }

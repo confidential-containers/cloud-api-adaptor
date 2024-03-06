@@ -572,3 +572,26 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 	NewTestCase(t, e, "TestPodsMTLSCommunication", assert, "Pods communication with mTLS").WithPod(serverPod).WithExtraPods(extraPods).WithConfigMap(configMap).WithService(nginxSvc).WithSecret(serverSecret).WithExtraSecrets(extraSecrets).Run()
 
 }
+
+func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
+
+	log.Info("Do test kbs key release")
+	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget")
+	testCommands := []TestCommand{
+		{
+			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
+			ContainerName: pod.Spec.Containers[0].Name,
+			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if strings.Contains(stdout.String(), "This is my cluster name") {
+					log.Infof("Success to get key.bin %s", stdout.String())
+					return true
+				} else {
+					log.Errorf("Failed to access key.bin: %s", stdout.String())
+					return false
+				}
+			},
+		},
+	}
+
+	NewTestCase(t, e, "KbsKeyReleasePod", assert, "Kbs key release is successful").WithPod(pod).WithTestCommands(testCommands).Run()
+}
