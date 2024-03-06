@@ -19,8 +19,8 @@ The background and description of the components involved in 'peer pods' can be 
 
 ## Components
 
-* Cloud API adaptor ([cmd/cloud-api-adaptor](./cmd/cloud-api-adaptor)) - `cloud-api-adator` implements the remote hypervisor support.
-* Agent protocol forwarder ([cmd/agent-protocol-forwarder](./cmd/agent-protocol-forwarder))
+* Cloud API adaptor ([cmd/cloud-api-adaptor](./src/cloud-api-adaptor/cmd/cloud-api-adaptor)) - `cloud-api-adator` implements the remote hypervisor support.
+* Agent protocol forwarder ([cmd/agent-protocol-forwarder](./src/cloud-api-adaptor/cmd/agent-protocol-forwarder))
 
 ## Installation
 
@@ -36,7 +36,7 @@ Please refer to the instructions mentioned in the following [doc](install/README
 
 ### Adding a new provider
 
-Please refer to the instructions mentioned in the following [doc](./docs/addnewprovider.md).
+Please refer to the instructions mentioned in the following [doc](./src/cloud-api-adaptor/docs/addnewprovider.md).
 
 ## Cloud Provider VM Image
 
