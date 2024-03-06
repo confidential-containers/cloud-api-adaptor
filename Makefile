@@ -15,7 +15,7 @@ CLOUD_PROVIDER ?=
 GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
 GOFLAGS     ?=
 BINARIES    := cloud-api-adaptor agent-protocol-forwarder process-user-data
-SOURCEDIRS  := ./cmd ./pkg
+SOURCEDIRS  := ./src/cloud-api-adaptor/cmd ./src/cloud-api-adaptor/pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 # End-to-end tests overall run timeout.
@@ -111,39 +111,39 @@ vet: ## Run go vet against code.
 
 .PHONY: shellcheck
 shellcheck: ## Run shellcheck against shell scripts.
-	./hack/shellcheck.sh
+	./src/cloud-api-adaptor/hack/shellcheck.sh
 
 .PHONY: golangci-lint
 golangci-lint: ## Run golangci-lint against code.
-	./hack/golangci-lint.sh
+	./src/cloud-api-adaptor/hack/golangci-lint.sh
 
 .PHONY: tidy
 tidy:
-	./hack/go-tidy.sh
+	./src/cloud-api-adaptor/hack/go-tidy.sh
 
 .PHONY: tidy-check
 tidy-check:
-	./hack/go-tidy.sh --check
+	./src/cloud-api-adaptor/hack/go-tidy.sh --check
 
 .PHONY: govulncheck
 govulncheck:
-	./hack/govulncheck.sh -v
+	./src/cloud-api-adaptor/hack/govulncheck.sh -v
 
 .PHONY: packer-format
 packer-format:
-	./hack/packer-check.sh
+	./src/cloud-api-adaptor/hack/packer-check.sh
 
 .PHONY: packer-check
 packer-check:
-	./hack/packer-check.sh --check
+	./src/cloud-api-adaptor/hack/packer-check.sh --check
 
 .PHONY: terraform-format
 terraform-format:
-	./hack/terraform-check.sh
+	./src/cloud-api-adaptor/hack/terraform-check.sh
 
 .PHONY: terraform-check
 terraform-check:
-	./hack/terraform-check.sh --check
+	./src/cloud-api-adaptor/hack/terraform-check.sh --check
 
 .PHONY: clean
 clean: ## Remove binaries.
@@ -172,13 +172,13 @@ else
 	$(error CLOUD_PROVIDER is not set)
 endif
 ifeq ($(RESOURCE_CTRL),true)
-	$(MAKE) -C ./peerpod-ctrl deploy
+	$(MAKE) -C ./src/peerpod-ctrl deploy
 endif
 
 .PHONY: delete
 delete: ## Delete cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
 ifeq ($(RESOURCE_CTRL),true)
-	$(MAKE) -C ./peerpod-ctrl undeploy
+	$(MAKE) -C ./src/peerpod-ctrl undeploy
 endif
 ifneq ($(CLOUD_PROVIDER),)
 	kubectl delete -k install/overlays/$(CLOUD_PROVIDER)
