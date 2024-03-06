@@ -209,6 +209,7 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
+
     - name: Restore the configuration created before
       uses: actions/download-artifact@v3
       with:
@@ -221,15 +222,21 @@ jobs:
         test -n "$SUBNET_ID"
         echo "AZURE_SUBNET_ID=\"${SUBNET_ID}\"" >> "$TEST_PROVISION_FILE"
 
-    - name: Extract kbs reference
+    - name: Extract trustee reference
       run: echo "KBS_VERSION=$(yq -e '.oci.kbs.tag' versions.yaml)" >> "$GITHUB_ENV"
 
-    - name: Checkout kbs Repository
-      uses: actions/checkout@v2
-      with:
-        repository: confidential-containers/kbs
-        ref: "${KBS_VERSION}"
-        path: test/e2e/kbs
+    - name: Checkout trustee Repository
+      run: |
+        git clone https://github.com/confidential-containers/trustee test/e2e/kbs
+        pushd test/e2e/kbs
+        git checkout "${KBS_VERSION}"
+        popd
+        #uses: actions/checkout@v2
+        #with:
+        #repository: confidential-containers/trustee
+        #ref: "${KBS_VERSION}"
+        #path: test/e2e/kbs
+
 
     - name: Run e2e test
       env:
@@ -240,6 +247,8 @@ jobs:
         az aks get-credentials \
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
           --name "${CLUSTER_NAME}"
+        touch install/overlays/azure/service-principal.env
+        ssh-keygen -t rsa -b 4096 -f install/overlays/azure/id_rsa -N "" -C dev@coco.io
         make test-e2e
 
   cleanup-resources:

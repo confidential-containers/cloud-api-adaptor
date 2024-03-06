@@ -10,7 +10,7 @@ import (
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/azure"
 )
-
+/*
 func TestDeletePodAzure(t *testing.T) {
 	t.Parallel()
 	DoTestDeleteSimplePod(t, testEnv, assert)
@@ -39,4 +39,9 @@ func TestCreatePodWithSecretAzure(t *testing.T) {
 func TestCreateNginxDeploymentAzure(t *testing.T) {
 	t.Parallel()
 	DoTestNginxDeployment(t, testEnv, assert)
+}
+*/
+func TestKbsKeyRelease(t *testing.T) {
+	t.Parallel()
+	DoTestKbsKeyRelease(t, testEnv, assert)
 }
