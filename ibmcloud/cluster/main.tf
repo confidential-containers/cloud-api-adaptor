@@ -86,7 +86,7 @@ resource "null_resource" "ansible" {
   }
   provisioner "local-exec" {
     working_dir = "./ansible"
-    command     = "ansible-playbook -i inventory -u root containerd.yaml -e containerd_release_version=${var.containerd_version}"
+    command     = "ansible-playbook -i inventory -u root containerd.yaml -e containerd_release_version=${var.containerd_version} -e kube_version=${var.kube_version}"
   }
 }
 
