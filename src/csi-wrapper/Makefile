@@ -29,27 +29,27 @@ clean:
 
 .PHONY: csi-node-wrapper-docker
 csi-node-wrapper-docker:
-	docker buildx build --platform "linux/$(ARCH)" \
+	cd ../ && docker buildx build --platform "linux/$(ARCH)" \
 		--build-arg BINARY=csi-node-wrapper \
 		--build-arg SOURCE_FROM=local \
 		-t csi-node-wrapper:local \
-		-f Dockerfile.csi_wrappers --load .
+		-f csi-wrapper/Dockerfile.csi_wrappers --load .
 
 .PHONY: csi-controller-wrapper-docker
 csi-controller-wrapper-docker:
-	docker buildx build --platform "linux/$(ARCH)" \
+	cd ../ && docker buildx build --platform "linux/$(ARCH)" \
 		--build-arg BINARY=csi-controller-wrapper \
 		--build-arg SOURCE_FROM=local \
 		-t csi-controller-wrapper:local \
-		-f Dockerfile.csi_wrappers --load .
+		-f csi-wrapper/Dockerfile.csi_wrappers --load .
 
 .PHONY: csi-podvm-wrapper-docker
 csi-podvm-wrapper-docker:
-	docker buildx build --platform "linux/$(ARCH)" \
+	cd ../ && docker buildx build --platform "linux/$(ARCH)" \
 		--build-arg BINARY=csi-podvm-wrapper \
 		--build-arg SOURCE_FROM=local \
 		-t csi-podvm-wrapper:local \
-		-f Dockerfile.csi_wrappers --load .
+		-f csi-wrapper/Dockerfile.csi_wrappers --load .
 
 .PHONY: import-csi-node-wrapper-docker
 import-csi-node-wrapper-docker: csi-node-wrapper-docker

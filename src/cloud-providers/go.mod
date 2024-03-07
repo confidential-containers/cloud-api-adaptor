@@ -3,28 +3,28 @@ module github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers
 go 1.20
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.0
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.4.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2 v2.2.1
-	github.com/IBM-Cloud/power-go-client v1.5.3
-	github.com/IBM/go-sdk-core/v5 v5.15.0
-	github.com/IBM/platform-services-go-sdk v0.54.0
-	github.com/IBM/vpc-go-sdk v0.43.0
-	github.com/avast/retry-go/v4 v4.5.1
-	github.com/aws/aws-sdk-go-v2 v1.23.0
-	github.com/aws/aws-sdk-go-v2/config v1.25.1
-	github.com/aws/aws-sdk-go-v2/credentials v1.16.1
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.4
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.134.0
-	github.com/kdomanski/iso9660 v0.4.0
+	github.com/IBM-Cloud/power-go-client v1.2.3
+	github.com/IBM/go-sdk-core/v5 v5.13.1
+	github.com/IBM/platform-services-go-sdk v0.36.0
+	github.com/IBM/vpc-go-sdk v0.35.0
+	github.com/avast/retry-go/v4 v4.3.3
+	github.com/aws/aws-sdk-go-v2 v1.21.0
+	github.com/aws/aws-sdk-go-v2/config v1.15.11
+	github.com/aws/aws-sdk-go-v2/credentials v1.12.6
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.117.0
+	github.com/kdomanski/iso9660 v0.3.5
 	github.com/stretchr/testify v1.8.4
-	github.com/vmware/govmomi v0.33.1
+	github.com/vmware/govmomi v0.29.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.26.0
 	k8s.io/client-go v0.26.0
-	libvirt.org/go/libvirt v1.9008.0
-	libvirt.org/go/libvirtxml v1.9007.0
+	libvirt.org/go/libvirt v1.8002.0
+	libvirt.org/go/libvirtxml v1.9004.0
 )
 
 require (
@@ -33,14 +33,12 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.1.1 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.1.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.7.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.17.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.19.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.25.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.41 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.35 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.13 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.35 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.11.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.7 // indirect
 	github.com/aws/smithy-go v1.17.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
@@ -104,7 +102,7 @@ require (
 	k8s.io/api v0.26.0 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
-	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
+	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect

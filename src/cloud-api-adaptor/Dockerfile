@@ -24,14 +24,16 @@ ARG YQ_VERSION
 RUN go install github.com/mikefarah/yq/v4@$YQ_VERSION
 
 WORKDIR /work
-COPY go.mod go.sum ./
-COPY provider/go.mod provider/go.sum ./provider/
+COPY cloud-api-adaptor/go.mod cloud-api-adaptor/go.sum ./cloud-api-adaptor/
+COPY cloud-providers ./cloud-providers
+COPY peerpod-ctrl ./peerpod-ctrl
+WORKDIR /work/cloud-api-adaptor
 RUN go mod download
-COPY entrypoint.sh Makefile Makefile.defaults versions.yaml ./
-COPY cmd   ./cmd
-COPY pkg   ./pkg
-COPY proto ./proto
-COPY provider ./provider
+COPY cloud-api-adaptor/entrypoint.sh cloud-api-adaptor/Makefile cloud-api-adaptor/Makefile.defaults cloud-api-adaptor/versions.yaml ./
+COPY cloud-api-adaptor/cmd   ./cmd
+COPY cloud-api-adaptor/pkg   ./pkg
+COPY cloud-api-adaptor/proto ./proto
+
 RUN CC=gcc make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
 
 FROM --platform=$TARGETPLATFORM $BASE as base-release
@@ -40,5 +42,5 @@ FROM base-release as base-dev
 RUN dnf install -y libvirt-libs /usr/bin/ssh && dnf clean all
 
 FROM base-${BUILD_TYPE}
-COPY --from=builder /work/cloud-api-adaptor /work/entrypoint.sh /usr/local/bin/
+COPY --from=builder /work/cloud-api-adaptor/cloud-api-adaptor /work/cloud-api-adaptor/entrypoint.sh /usr/local/bin/
 CMD ["entrypoint.sh"]
