@@ -6,12 +6,12 @@
 ---
 - name: "Add gpg key "
   apt_key:
-    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    url: https://pkgs.k8s.io/core:/stable:/v{{ kube_version }}/deb/Release.key
     state: present
 
 - name: "Add kubernetes source list "
   apt_repository:
-    repo: "deb http://packages.cloud.google.com/apt/ kubernetes-xenial main"
+    repo: "deb https://pkgs.k8s.io/core:/stable:/v{{ kube_version }}/deb/ /"
     state: present
     filename: "kubernetes"
 

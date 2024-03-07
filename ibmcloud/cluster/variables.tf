@@ -57,3 +57,7 @@ variable "zone" {
 variable "containerd_version" {
   default = "1.7.0-beta.3"
 }
+
+variable "kube_version" {
+  default = "1.28"
+}

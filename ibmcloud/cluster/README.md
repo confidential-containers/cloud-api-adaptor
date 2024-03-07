@@ -100,6 +100,7 @@ twice under different SSHs key names. This key needs to be password-less and on 
 plane node and the rest will be worker nodes. If not set it defaults to `2`.
 > - `containerd_version` (optional) is the version of containerd installed on the Kubernetes nodes. If not set it 
 defaults to `1.7.0-beta.3`.
+> - `kube_version` (optional) is the version of kubeadmin and cluster. If not set it defaults to `1.28`.
  <!-- TODO #570 once we've fixed pre-install of containerd note that this might be overriden?-->
 
 > **Hint:** In order to create a cluster based on a different type of VSI image you can use the `instance_profile_name`
