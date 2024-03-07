@@ -5,19 +5,21 @@ ARG TARGETARCH
 ARG CGO_ENABLED=1
 ARG GOFLAGS
 
-WORKDIR /workspace
+WORKDIR /workspace/
 RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-devel && dnf clean all; fi
 # Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
+COPY peerpod-ctrl/go.mod peerpod-ctrl/go.mod
+COPY peerpod-ctrl/go.sum peerpod-ctrl/go.sum
+COPY cloud-providers cloud-providers
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
+WORKDIR /workspace/peerpod-ctrl/
 RUN go mod download
 
 # Copy the go source
-COPY main.go main.go
-COPY api/ api/
-COPY controllers/ controllers/
+COPY peerpod-ctrl/main.go main.go
+COPY peerpod-ctrl/api/ api/
+COPY peerpod-ctrl/controllers/ controllers/
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
@@ -33,6 +35,6 @@ ARG CGO_ENABLED=1
 
 RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-libs openssh-clients && dnf clean all; fi
 WORKDIR /
-COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/peerpod-ctrl/manager .
 
 ENTRYPOINT ["/manager"]

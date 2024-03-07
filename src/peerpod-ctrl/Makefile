@@ -154,8 +154,8 @@ PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
 docker-buildx: test ## Build and push docker image for the manager for cross-platform support
 	- docker buildx create --name project-v3-builder
-	docker buildx use project-v3-builder
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG} --build-arg CGO_ENABLED=$(CGO_ENABLED) --build-arg GOFLAGS=$(GOFLAGS) -f Dockerfile .
+	- docker buildx use project-v3-builder
+	- cd ../ && docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG} --build-arg CGO_ENABLED=$(CGO_ENABLED) --build-arg GOFLAGS=$(GOFLAGS) -f peerpod-ctrl/Dockerfile .
 	- docker buildx rm project-v3-builder
 
 ##@ Deployment

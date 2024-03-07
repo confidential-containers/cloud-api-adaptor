@@ -9,11 +9,8 @@ ARG SOURCE_FROM=remote
 ##### Builder Dev Image #####
 FROM --platform=${BUILDPLATFORM} golang:1.20 AS builder-local
 WORKDIR /src
-COPY go.mod go.sum ./cloud-api-adaptor/volumes/csi-wrapper/
-COPY Makefile ./cloud-api-adaptor/volumes/csi-wrapper/
-COPY cmd   ./cloud-api-adaptor/volumes/csi-wrapper/cmd
-COPY pkg   ./cloud-api-adaptor/volumes/csi-wrapper/pkg
-COPY entrypoint.sh   ./cloud-api-adaptor/volumes/csi-wrapper/entrypoint.sh
+COPY csi-wrapper ./cloud-api-adaptor/src/csi-wrapper/
+COPY cloud-api-adaptor ./cloud-api-adaptor/src/cloud-api-adaptor
 
 ##### Builder Release Image #####
 FROM --platform=${BUILDPLATFORM} golang:1.20 AS builder-remote
@@ -31,13 +28,13 @@ FROM builder-${SOURCE_FROM} AS builder
 ARG TARGETARCH
 ARG BINARY
 
-RUN cd cloud-api-adaptor/volumes/csi-wrapper/ && make ARCH=${TARGETARCH} ${BINARY}
+RUN cd cloud-api-adaptor/src/csi-wrapper/ && make ARCH=${TARGETARCH} ${BINARY}
 
 FROM ubuntu:20.04
 ARG BINARY
 ENV BINARY ${BINARY}
 WORKDIR /
-COPY --from=builder /src/cloud-api-adaptor/volumes/csi-wrapper/build/${BINARY}/${BINARY} /usr/bin/${BINARY}
-COPY --from=builder /src/cloud-api-adaptor/volumes/csi-wrapper/entrypoint.sh /usr/bin/entrypoint.sh
+COPY --from=builder /src/cloud-api-adaptor/src/csi-wrapper/build/${BINARY}/${BINARY} /usr/bin/${BINARY}
+COPY --from=builder /src/cloud-api-adaptor/src/csi-wrapper/entrypoint.sh /usr/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]

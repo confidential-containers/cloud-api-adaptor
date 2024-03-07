@@ -41,7 +41,7 @@ function get_tag_string() {
 }
 
 function build_caa_payload_image() {
-	pushd "${script_dir}/.."
+	pushd "${script_dir}/../../"
 
 	local tag_string
 	local build_type=dev
@@ -59,7 +59,7 @@ function build_caa_payload_image() {
 		--build-arg COMMIT="${commit}" \
 		--build-arg YQ_VERSION="${YQ_VERSION}" \
 		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
-		-f Dockerfile \
+		-f cloud-api-adaptor/Dockerfile \
 		${tag_string} \
 		--push \
 		.
@@ -80,7 +80,7 @@ function get_arch_specific_tag_string() {
 
 # accept one arch as --platform
 function build_caa_payload_arch_specific() {
-	pushd "${script_dir}/.."
+	pushd "${script_dir}/../../"
 
 	arch=${supported_arches#"$arch_prefix"}
 
@@ -104,7 +104,7 @@ function build_caa_payload_arch_specific() {
 		--build-arg COMMIT="${commit}" \
 		--build-arg YQ_VERSION="${YQ_VERSION}" \
 		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
-		-f Dockerfile \
+		-f cloud-api-adaptor/Dockerfile \
 		${tag_string} \
 		--push \
 		.
