@@ -22,7 +22,7 @@ tools:
   bats: 1.10.0
   golang: 1.20.12
   rust: 1.72.0
-  protoc: 3.11.4
+  protoc: 3.15.0
 # Referenced Git repositories
 git:
   guest-components:
