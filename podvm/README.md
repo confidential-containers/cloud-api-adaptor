@@ -62,7 +62,7 @@ currently accepted:
 | KATA\_SRC         | https://github.com/kata-containers/kata-containers           | The Kata Containers source repository                           |
 | KATA\_SRC\_BRANCH | CCv0                                                         | The Kata Containers repository branch                           |
 | GO\_VERSION       | 1.20.12                                                      | Go version                                                      |
-| PROTOC\_VERSION   | 3.11.4                                                       | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
+| PROTOC\_VERSION   | 3.15.0                                                       | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
 | RUST\_VERSION     | 1.72.0                                                       | Rust version                                                    |
 | YQ\_VERSION       | v4.35.1                                                      | [yq](https://github.com/mikefarah/yq/) version                  |
 
