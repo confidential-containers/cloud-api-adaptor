@@ -1,0 +1,53 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+  - ../../yamls
+
+images:
+  - name: cloud-api-adaptor
+    newName: quay.io/confidential-containers/cloud-api-adaptor # change image if needed
+    newTag: latest
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: peer-pods-cm
+    namespace: confidential-containers-system
+    literals:
+      - CLOUD_PROVIDER="docker"
+      - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
+    #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+    #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
+##TLS_SETTINGS
+#- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
+#- CERT_FILE="/etc/certificates/client.crt" # for TLS
+#- CERT_KEY="/etc/certificates/client.key" # for TLS
+#- TLS_SKIP_VERIFY="" # for testing only
+##TLS_SETTINGS
+
+secretGenerator:
+  - name: auth-json-secret
+    namespace: confidential-containers-system
+  #  files:
+  #- auth.json # set - path to auth.json pull credentials file
+  - name: peer-pods-secret
+    namespace: confidential-containers-system
+    literals:
+      - DUMMY_USER="dummy"
+##TLS_SETTINGS
+#- name: certs-for-tls
+#  namespace: confidential-containers-system
+#  files:
+#  - <path_to_ca.crt> # set - relative path to ca.crt, located either in the same folder as the kustomization.yaml file or within a subfolder
+#  - <path_to_client.crt> # set - relative path to client.crt, located either in the same folder as the kustomization.yaml file or within a subfolder
+#  - <path_to_client.key> # set - relative path to client.key, located either in the same folder as the kustomization.yaml file or within a subfolder
+##TLS_SETTINGS
+
+patchesStrategicMerge:
+  #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
+  ##TLS_SETTINGS
+  #- tls_certs_volume_mount.yaml # set (for tls)
+  ##TLS_SETTINGS
+  - docker_mount.yaml
