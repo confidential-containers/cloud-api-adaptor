@@ -154,12 +154,26 @@ vsphere() {
         -socket /run/peerpod/hypervisor.sock
 }
 
+docker() {
+    [[ "${DOCKER_HOST}" ]] && optionals+="-docker-host ${DOCKER_HOST} "
+    [[ "${DOCKER_TLS_VERIFY}" ]] && optionals+="-docker-tls-verify ${DOCKER_TLS_VERIFY} "
+    [[ "${DOCKER_CERT_PATH}" ]] && optionals+="-docker-cert-path ${DOCKER_CERT_PATH} "
+    [[ "${DOCKER_API_VERSION}" ]] && optionals+="-docker-api-version ${DOCKER_API_VERSION} "
+
+    set -x
+    exec cloud-api-adaptor docker \
+        -pods-dir /run/peerpod/pods \
+        "${optionals}" \
+        -socket /run/peerpod/hypervisor.sock
+
+}
+
 help_msg() {
     cat <<EOF
 Usage:
-	CLOUD_PROVIDER=aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere $0
+	CLOUD_PROVIDER=aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker $0
 or
-	$0 aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere
+	$0 aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
 EOF
@@ -177,6 +191,8 @@ elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
     libvirt
 elif [[ "$CLOUD_PROVIDER" == "vsphere" ]]; then
     vsphere
+elif [[ "$CLOUD_PROVIDER" == "docker" ]]; then
+    docker
 else
     help_msg
 fi
