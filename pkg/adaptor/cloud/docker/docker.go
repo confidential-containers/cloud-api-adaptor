@@ -32,6 +32,8 @@ func createContainer(ctx context.Context, client *client.Client,
 	// No need to bind the port to the host
 	portBinding := nat.PortMap{}
 
+	// Create a privileged container as it's required due to systemd
+
 	resp, err := client.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -43,6 +45,7 @@ func createContainer(ctx context.Context, client *client.Client,
 		&container.HostConfig{
 			PortBindings: portBinding,
 			Binds:        volumeBinding,
+			Privileged:   true, // This line is added to create a privileged container
 		},
 		nil, nil, instanceName,
 	)
