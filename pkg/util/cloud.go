@@ -120,19 +120,20 @@ func Contains(slice []string, s string) bool {
 }
 
 // Method to write userdata to a file
-func WriteUserData(instanceName string, userData string) (string, error) {
-	// Write userdata to a file named after the instance name in the current directory
-	// File name: (mktemp)/peerpod/instanceName-userdata.json
+func WriteUserData(instanceName string, userData string, dataDir string) (string, error) {
+	// Write userdata to a file named after the instance name in the dataDir directory
+	// File name: $dataDir/instanceName-userdata.json
 	// File content: userdata
 
-	// Create temp directory
-	tempDir, err := os.MkdirTemp("", "peerpod")
+	// Check if the dataDir directory exists
+	// If it does not exist, create it
+	err := os.MkdirAll(dataDir, 0755)
 	if err != nil {
 		return "", err
 	}
 
 	// Create file path
-	filePath := filepath.Join(tempDir, instanceName+"-userdata.json")
+	filePath := filepath.Join(dataDir, instanceName+"-userdata.json")
 
 	// Write userdata to a file in the temp directory
 	err = os.WriteFile(filePath, []byte(userData), 0644)

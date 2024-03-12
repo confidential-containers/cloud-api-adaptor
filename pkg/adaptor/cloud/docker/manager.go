@@ -11,6 +11,8 @@ var dockerCfg Config
 
 type Manager struct{}
 
+const defaultDataDir = "/var/lib/docker/peerpods"
+
 func init() {
 	cloud.AddCloud("docker", &Manager{})
 }
@@ -20,6 +22,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&dockerCfg.DockerAPIVersion, "docker-api-version", "1.40", "Docker API version")
 	flags.StringVar(&dockerCfg.DockerCertPath, "docker-cert-path", "", "Path to directory with Docker TLS certificates")
 	flags.BoolVar(&dockerCfg.DockerTLSVerify, "docker-tls-verify", false, "Use TLS and verify the remote server certificate")
+	flags.StringVar(&dockerCfg.DataDir, "data-dir", defaultDataDir, "docker storage dir")
 }
 
 func (m *Manager) LoadEnv() {

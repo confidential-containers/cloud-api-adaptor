@@ -5,4 +5,5 @@ type Config struct {
 	DockerAPIVersion string
 	DockerCertPath   string
 	DockerTLSVerify  bool
+	DataDir          string
 }

@@ -11,7 +11,8 @@ import (
 )
 
 type dockerProvider struct {
-	Client *client.Client
+	Client  *client.Client
+	DataDir string
 }
 
 const maxInstanceNameLen = 63
@@ -23,7 +24,8 @@ func NewProvider(config *Config) (*dockerProvider, error) {
 	}
 
 	return &dockerProvider{
-		Client: cli,
+		Client:  cli,
+		DataDir: config.DataDir,
 	}, nil
 }
 
@@ -36,14 +38,10 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 	if err != nil {
 		return nil, err
 	}
-	// Write userdata to a file named after the instance name in the current directory
-	// File name: (mktemp)/peerpod/instanceName-userdata.json
+	// Write userdata to a file named after the instance name in the data directory
+	// File name: $data-dir/instanceName-userdata.json
 	// File content: userdata
-
-	// Create temp directory
-	// Write userdata to a file in the temp directory
-	// Return the file path
-	instanceUserdataFile, err := util.WriteUserData(instanceName, userData)
+	instanceUserdataFile, err := util.WriteUserData(instanceName, userData, p.DataDir)
 	if err != nil {
 		return nil, err
 	}
