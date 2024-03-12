@@ -79,7 +79,8 @@ jobs:
 
     - name: Install build dependencies
       run: |
-        sudo apt-get install \
+        sudo apt-get update
+        sudo apt-get install -y \
           clang \
           gcc \
           libdevmapper-dev \
