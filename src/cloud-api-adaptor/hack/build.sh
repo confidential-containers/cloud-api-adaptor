@@ -23,7 +23,7 @@ release_tags=${RELEASE_TAGS:-"${commit}"}
 supported_arches=${ARCHES:-"linux/amd64"}
 
 tags_file="${script_dir}/../tags.txt"
-arch_file_prefix="tags-architectures-"
+arch_file_prefix="${script_dir}/../tags-architectures-"
 arch_prefix="linux/"
 
 # Get a list of comma-separated tags (e.g. latest,dev-5d0da3dc9764), return

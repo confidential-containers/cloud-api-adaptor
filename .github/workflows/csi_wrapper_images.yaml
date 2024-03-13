@@ -15,7 +15,7 @@ on:
         type: string
       image_tags:
         default: ''
-        description: 'Comma-separated list of tags for the dev built image (e.g. latest,ci-dev). By default uses the values from hack/build.sh'
+        description: 'Comma-separated list of tags for the dev built image (e.g. latest,ci-dev). By default uses the values from src/cloud-api-adaptor/hack/build.sh'
         required: true
         type: string
       git_ref:
@@ -43,7 +43,7 @@ jobs:
           ref: "${{ inputs.git_ref }}"
       - name: Read properties from versions.yaml
         run: |
-          go_version="$(yq '.tools.golang' versions.yaml)"
+          go_version="$(yq '.tools.golang' src/cloud-api-adaptor/versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
       - name: Setup Golang version ${{ env.GO_VERSION }}
@@ -80,9 +80,9 @@ jobs:
         with:
           tags: ${{ steps.tags.outputs.tags }}
           push: true
-          context: volumes/csi-wrapper
+          context: src
           platforms: linux/amd64, linux/s390x, linux/ppc64le
-          file: volumes/csi-wrapper/Dockerfile.csi_wrappers
+          file: src/csi-wrapper/Dockerfile.csi_wrappers
           build-args: |
             "BINARY=${{matrix.binary}}"
-            "SOURCE_FROM=remote"
+            "SOURCE_FROM=local"

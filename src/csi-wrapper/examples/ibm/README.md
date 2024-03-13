@@ -2,7 +2,7 @@
 
 ## Set up a demo environment on your development machine
 
-Follow the [README.md](../../../../ibmcloud/README.md) to setup a x86_64 based demo environment on IBM Cloud VPC.
+Follow the [README.md](../../../cloud-api-adaptor/ibmcloud/README.md) to setup a x86_64 based demo environment on IBM Cloud VPC.
 
 ## Deploy `ibm-vpc-block-csi-driver` on the cluster
 
@@ -16,7 +16,7 @@ kubectl get nodes -o wide
 - Check vsi instance id for the worker node
 ```bash
 export IBMCLOUD_API_KEY=<your_api_key>
-/root/cloud-api-adaptor/ibmcloud/image/login.sh
+/root/cloud-api-adaptor/src/cloud-api-adaptor/ibmcloud/image/login.sh
 
 ```
 > **Note** You can export `IBMCLOUD_API_ENDPOINT` and `IBMCLOUD_VPC_REGION` to use other regions
@@ -60,7 +60,7 @@ node/liudali-csi-amd64-node-1 patched
 
 4. Add labels to worker node:
 ```bash
-cd /root/cloud-api-adaptor/volumes/csi-wrapper/
+cd /root/cloud-api-adaptor/src/csi-wrapper/
 bash ./examples/ibm/apply-required-labels.sh <node-name> <instanceID> <region-of-instanceID> <zone-of-instanceID>
 ```
 The expected result looks like:

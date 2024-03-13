@@ -25,6 +25,10 @@ env:
   CLOUD_PROVIDER: libvirt
   DEBIAN_FRONTEND: noninteractive
 
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
 jobs:
   test:
     runs-on: az-ubuntu-2204
@@ -37,6 +41,7 @@ jobs:
 
       - name: Rebase the code
         if: github.event_name == 'pull_request_target'
+        working-directory: ./
         run: |
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
@@ -62,14 +67,14 @@ jobs:
            qcow2=$(echo ${{ inputs.podvm_image }} | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
            ./hack/download-image.sh ${{ inputs.podvm_image }} . -o ${qcow2}
            echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
-        working-directory: podvm
+        working-directory: src/cloud-api-adaptor/podvm
 
       - name: Get the install directory
         if: ${{ inputs.install_directory_artifact != '' }}
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.install_directory_artifact }}
-          path: install
+          path: src/cloud-api-adaptor/install
 
       - name: Config Libvirt
         run: |

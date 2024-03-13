@@ -28,3 +28,14 @@ or nested virtualisation support.
 
 ## Webhook
 [webhook](./src/webhook/) This mutating webhook modifies a POD spec using specific runtimeclass to remove all `resources` entries and replace it with peer-pod extended resource.
+
+
+## Contribution
+
+This project uses [the Apache 2.0 license](./LICENSE). Contribution to this project requires the [DCO 1.1](./DCO1.1.txt) process to be followed.
+
+## Collaborations
+
+* Slack: [#confidential-containers-peerpod](https://cloud-native.slack.com/archives/C04A2EJ70BX) in [CNCF](https://communityinviter.com/apps/cloud-native/cncf)
+* Zoom meeting: https://zoom.us/j/94601737867?pwd=MEF5NkN5ZkRDcUtCV09SQllMWWtzUT09
+    * 14:00 - 15:00 UTC on each `Wednesday`

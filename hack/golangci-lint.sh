@@ -49,7 +49,7 @@ fi
 
 # Configuration
 excludeModules=(
-    "./podvm" # see the comment in podvm/go.mod
+    "./src/cloud-api-adaptor/podvm" # see the comment in podvm/go.mod
 )
 flags=()
 

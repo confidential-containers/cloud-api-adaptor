@@ -27,7 +27,7 @@
 
 ## Deploy webhook
 
-   Please refer to the instructions available in the following [doc](../webhook/docs/INSTALL.md).
+   Please refer to the instructions available in the following [doc](../../webhook/docs/INSTALL.md).
 
 ## Configure and deploy CoCo and the cloud-api-adaptor
 

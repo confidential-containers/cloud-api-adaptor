@@ -15,6 +15,10 @@ on:
         required: true
         type: string
 
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
 jobs:
   build:
     name: Create pod vm image
@@ -40,6 +44,7 @@ jobs:
 
     - name: Rebase the code
       if: github.event_name == 'pull_request_target'
+      working-directory: ./
       run: |
         ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 

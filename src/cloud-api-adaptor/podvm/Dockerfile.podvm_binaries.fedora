@@ -31,7 +31,7 @@ ENV DEFAULT_AGENT_POLICY_FILE ${DEFAULT_AGENT_POLICY_FILE}
 ENV IMAGE_URL "none"
 ENV IMAGE_CHECKSUM "none"
 
-COPY . /src/cloud-api-adaptor
+COPY . /src
 
 WORKDIR /src/cloud-api-adaptor/podvm
 

@@ -5,7 +5,7 @@ on:
     inputs:
       registry:
         default: 'quay.io/confidential-containers'
-        description: 'Image registry (e.g. "ghcr.io/confidential-containers") where the built image will be pushed to'
+        description: 'Image registry (e.g. "quay.io/confidential-containers") where the built image will be pushed to'
         required: false
         type: string
       dev_tags:
@@ -23,6 +23,10 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
         required: false
         type: string
+
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
 
 jobs:
   build_push_job:
@@ -95,7 +99,7 @@ jobs:
           max_attempts: 3
           command: |
             echo "Build and push dev image with libvirt"
-            ARCHES=${{matrix.arches}} RELEASE_BUILD=false DEV_TAGS=${{ inputs.dev_tags}} make image-with-arch registry=${{ inputs.registry }}
+            cd src/cloud-api-adaptor && ARCHES=${{matrix.arches}} RELEASE_BUILD=false DEV_TAGS=${{ inputs.dev_tags}} make image-with-arch registry=${{ inputs.registry }}
 
       - name: Build and push release image
         if: ${{ startsWith(matrix.type, 'release-') }}
@@ -108,7 +112,7 @@ jobs:
           max_attempts: 3
           command: |
             echo "Build and push release image without libvirt"
-            ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
+            cd src/cloud-api-adaptor && ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
@@ -116,8 +120,8 @@ jobs:
           name: image-artifacts
           retention-days: 1
           path: |
-            tags.txt
-            tags-architectures-*
+            src/cloud-api-adaptor/tags.txt
+            src/cloud-api-adaptor/tags-architectures-*
       
   manifest_job:
     name: generate images manifest
@@ -134,6 +138,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: image-artifacts
+          path: src/cloud-api-adaptor
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -159,4 +164,3 @@ jobs:
           registry: ${{ inputs.registry }}
         run:  |
           hack/image-manifest.sh
-

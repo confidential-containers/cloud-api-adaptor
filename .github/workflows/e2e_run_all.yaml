@@ -33,6 +33,10 @@ env:
   # cloud-api-adaptor image dev tag
   E2E_IMG_DEV_TAG: ${{ inputs.caa_image_tag }}-dev
 
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
 jobs:
   # Build the podvm images.
   #
@@ -106,6 +110,7 @@ jobs:
 
       - name: Rebase the code
         if: github.event_name == 'pull_request_target'
+        working-directory: ./
         run: |
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
@@ -140,7 +145,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: install_directory
-          path: install/
+          path: src/cloud-api-adaptor/install/
           retention-days: 7
 
   # Run libvirt e2e tests if pull request labeled 'test_e2e_libvirt'

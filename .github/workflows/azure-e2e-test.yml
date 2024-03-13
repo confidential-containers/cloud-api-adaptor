@@ -52,6 +52,9 @@ jobs:
   build-caa-container-image:
     if: github.event.inputs.caa-image == ''
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/cloud-api-adaptor
     outputs:
       caa-image: "${{ steps.build-container.outputs.caa-image }}"
     steps:
@@ -95,6 +98,9 @@ jobs:
 
   install-aks:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/cloud-api-adaptor
     needs:
     - generate-podvm-image-version
     - build-caa-container-image
@@ -154,13 +160,16 @@ jobs:
 
     # Install AKS cluster in parallel with the podvm image build.
     - name: Run provisioner
-      working-directory: test/tools
+      working-directory: src/cloud-api-adaptor/test/tools
       run: |
         make caa-provisioner-cli
         ./caa-provisioner-cli -action=createcluster
 
   run-e2e-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/cloud-api-adaptor
     needs:
     - build-podvm-image
     - build-caa-container-image
@@ -209,6 +218,9 @@ jobs:
 
   cleanup-resources:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/cloud-api-adaptor
     needs:
     - generate-podvm-image-version
     - build-podvm-image
@@ -241,7 +253,7 @@ jobs:
 
     # Clean up step, run regardless of the failure state.
     - name: Run deprovisioner
-      working-directory: test/tools
+      working-directory: src/cloud-api-adaptor/test/tools
       run: |
         make caa-provisioner-cli
         # Ignore the error if the deprovision fails.

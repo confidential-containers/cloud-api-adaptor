@@ -12,11 +12,11 @@ For example:
 
 >Note: images for CentOS Stream haven't been built since the release 0.8.0 of this project.
 
-The easiest way to extract the qcow2 file from the podvm container image is using the [`download-image.sh`](../../../podvm/hack/download-image.sh) script. For example, to extract the file from the *podvm-generic-ubuntu-amd64* image:
+The easiest way to extract the qcow2 file from the podvm container image is using the [`download-image.sh`](../podvm/hack/download-image.sh) script. For example, to extract the file from the *podvm-generic-ubuntu-amd64* image:
 
 ```
 $ cd podvm
 $ ./hack/download-image.sh quay.io/confidential-containers/podvm-generic-ubuntu-amd64 . -o podvm.qcow2
 ```
 
-In case your workload images are pulled from a private registry then you need to provide the authentication file by either [installing along with the cloud-api-adaptor deployment](registries-authentication.md#deploy-authentication-file-along-with-cloud-api-adaptor-deployment) or [statically embedding in the podvm image](registries-authentication.md#statically-embed-authentication-file-in-podvm-image). With the later you will need to build the image from sources, so find detailed instructions in [podvm/README.md](../../../podvm/README.md).
+In case your workload images are pulled from a private registry then you need to provide the authentication file by either [installing along with the cloud-api-adaptor deployment](registries-authentication.md#deploy-authentication-file-along-with-cloud-api-adaptor-deployment) or [statically embedding in the podvm image](registries-authentication.md#statically-embed-authentication-file-in-podvm-image). With the later you will need to build the image from sources, so find detailed instructions in [podvm/README.md](../podvm/README.md).

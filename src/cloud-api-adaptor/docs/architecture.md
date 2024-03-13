@@ -137,7 +137,7 @@ have them be attached to the peer pod.
 
 ## Peer Pod VM components
 
-In order to create a peer pod VM, each cloud provider needs to have an [image](../../../podvm/) created that provides some
+In order to create a peer pod VM, each cloud provider needs to have an [image](../podvm/) created that provides some
 components that help to communicate with the worker and run containers on the VM.
 
 ### Agent Protocol Forwarder

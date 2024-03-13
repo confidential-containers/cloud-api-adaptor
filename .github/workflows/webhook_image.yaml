@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: webhook
+        working-directory: src/webhook
     steps:
       - name: Checkout the code
         uses: actions/checkout@v3
@@ -38,7 +38,7 @@ jobs:
           ref: "${{ inputs.git_ref }}"
       - name: Read properties from versions.yaml
         run: |
-          go_version="$(yq '.tools.golang' ../versions.yaml)"
+          go_version="$(yq '.tools.golang' ../cloud-api-adaptor/versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
       - name: Setup Golang version ${{ env.GO_VERSION }}

@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: cloud-api-adaptor/azure/image
+        working-directory: cloud-api-adaptor/src/cloud-api-adaptor/azure/image
     outputs:
       image-id: "${{ steps.create-image.outputs.image-id }}"
 
@@ -54,7 +54,7 @@ jobs:
         make ../../../guest-components
 
     - name: Read properties from versions.yaml
-      working-directory: cloud-api-adaptor
+      working-directory: cloud-api-adaptor/src/cloud-api-adaptor
       run: |
         go_version="$(yq '.tools.golang' versions.yaml)"
         [ -n "$go_version" ]
@@ -68,7 +68,7 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.GO_VERSION }}
-        cache-dependency-path: cloud-api-adaptor/go.sum
+        cache-dependency-path: cloud-api-adaptor/src/cloud-api-adaptor/go.sum
 
     - uses: actions-rs/toolchain@v1
       with:
