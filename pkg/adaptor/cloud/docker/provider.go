@@ -56,8 +56,8 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 	}
 
 	// Create volume binding for the container
-	// mount userdata to /run/peerpod/daemon.json
-	volumeBinding := fmt.Sprintf("%s:%s", instanceUserdataFile, "/run/peerpod/daemon.json")
+	// mount userdata to DockerUserDataUrl=/peerpod/daemon.json
+	volumeBinding := fmt.Sprintf("%s:%s", instanceUserdataFile, DockerUserDataUrl)
 
 	instanceID, ip, err := createContainer(ctx, p.Client, instanceName, []string{volumeBinding})
 	if err != nil {
