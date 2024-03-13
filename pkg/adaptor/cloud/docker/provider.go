@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/netip"
 
@@ -56,9 +57,9 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 
 	// Create volume binding for the container
 	// mount userdata to /run/peerpod/daemon.json
-	volumeBinding := []string{instanceUserdataFile, "/run/peerpod/daemon.json"}
+	volumeBinding := fmt.Sprintf("%s:%s", instanceUserdataFile, "/run/peerpod/daemon.json")
 
-	instanceID, ip, err := createContainer(ctx, p.Client, instanceName, volumeBinding)
+	instanceID, ip, err := createContainer(ctx, p.Client, instanceName, []string{volumeBinding})
 	if err != nil {
 		return nil, err
 	}
