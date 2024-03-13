@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"log"
 	"net/netip"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
@@ -9,6 +10,8 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util/cloudinit"
 	"github.com/docker/docker/client"
 )
+
+var logger = log.New(log.Writer(), "[adaptor/cloud/docker] ", log.LstdFlags|log.Lmsgprefix)
 
 type dockerProvider struct {
 	Client  *client.Client
@@ -18,6 +21,9 @@ type dockerProvider struct {
 const maxInstanceNameLen = 63
 
 func NewProvider(config *Config) (*dockerProvider, error) {
+
+	logger.Printf("docker config: %#v", config)
+
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
@@ -33,6 +39,8 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 	cloudConfig cloudinit.CloudConfigGenerator, spec cloud.InstanceTypeSpec) (*cloud.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
+
+	logger.Printf("CreateInstance: name: %q", instanceName)
 
 	userData, err := cloudConfig.Generate()
 	if err != nil {
@@ -55,6 +63,8 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 		return nil, err
 	}
 
+	logger.Printf("CreateInstance: instanceID: %q, ip: %q", instanceID, ip)
+
 	// Convert ip to []netip.Addr
 	ipAddr, err := netip.ParseAddr(ip)
 	if err != nil {
@@ -70,6 +80,8 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 }
 
 func (p *dockerProvider) DeleteInstance(ctx context.Context, instanceID string) error {
+
+	logger.Printf("DeleteInstance: instanceID: %q", instanceID)
 
 	// Delete the container
 	err := deleteContainer(ctx, p.Client, instanceID)
