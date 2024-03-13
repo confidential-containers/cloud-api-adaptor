@@ -44,9 +44,8 @@ Kubernetes users can encode in `base64` format their Policy documents, and add t
 ### Encode a Policy file
 
 For example, the
-[`allow-all-except-exec-process.rego`](../../../podvm/files/etc/kata-opa/allow-all-except-exec-process.rego)
-sample policy file is different from the [default
-Policy](../../../podvm/files/etc/kata-opa/allow-all.rego) because it rejects any `ExecProcess`
+[`allow-all-except-exec-process.rego`](../podvm/files/etc/kata-opa/allow-all-except-exec-process.rego)
+sample policy file is different from the [default Policy](../podvm/files/etc/kata-opa/allow-all.rego) because it rejects any `ExecProcess`
 requests. You can encode this policy file:
 
 ```bash

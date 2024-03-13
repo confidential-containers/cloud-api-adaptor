@@ -3,13 +3,17 @@
 
 name: "build golang-fedora container image"
 
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
 on:
   push:
     branches:
       - main
     paths:
-      - "hack/Dockerfile.golang"
-      - "hack/update-go-container.sh"
+      - "src/cloud-api-adaptor/hack/Dockerfile.golang"
+      - "src/cloud-api-adaptor/hack/update-go-container.sh"
   workflow_dispatch:
     inputs:
       registry:
@@ -108,8 +112,8 @@ jobs:
       - name: Build the container image
         uses: docker/build-push-action@v4
         with:
-          context: ./hack
-          file: ./hack/Dockerfile.golang
+          context: ./src/cloud-api-adaptor/hack
+          file: ./src/cloud-api-adaptor/hack/Dockerfile.golang
           platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           tags: |
             ${{ steps.tags.outputs.fullImageName }}

@@ -6,8 +6,12 @@ on:
     branches:
       - 'main'
     paths:
-      - 'test/e2e/fixtures/Dockerfile.*'
+      - 'src/cloud-api-adaptor/test/e2e/fixtures/Dockerfile.*'
       - '.github/workflows/test-images.yaml'
+
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
 
 jobs:
   list-dockerfiles:

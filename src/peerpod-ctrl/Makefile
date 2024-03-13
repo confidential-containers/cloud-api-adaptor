@@ -133,7 +133,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} . --build-arg CGO_ENABLED=$(CGO_ENABLED) --build-arg GOFLAGS=$(GOFLAGS)
+	cd ../ && docker build -t ${IMG} -f peerpod-ctrl/Dockerfile . --build-arg CGO_ENABLED=$(CGO_ENABLED) --build-arg GOFLAGS=$(GOFLAGS)
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.

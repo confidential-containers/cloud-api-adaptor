@@ -42,15 +42,15 @@ RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/clo
 COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz
 RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
 
-COPY . /src/cloud-api-adaptor
+COPY . /src
 
-RUN cd cloud-api-adaptor/podvm && \
-    LIBC=gnu make image
+WORKDIR /src/cloud-api-adaptor/podvm
+
+RUN LIBC=gnu make image
 
 # The below instructions can be used if you prefer to rebuild all the binaries
-#RUN cd cloud-api-adaptor/podvm && \
-#     make binaries
-#RUN  make image
+#RUN make binaries
+#RUN make image
 
 FROM scratch
 COPY --from=podvm_builder /src/cloud-api-adaptor/podvm/output/*.qcow2 /

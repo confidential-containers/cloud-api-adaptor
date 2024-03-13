@@ -92,7 +92,7 @@ If you don't have a Kubernetes cluster for testing, you can follow the open-sour
   ```
 
 #### Deploy the peer-pods webhook
-- From within the root directory of the `cloud-api-adaptor` repository, deploy the [webhook](../webhook) with:
+- From within the root directory of the `cloud-api-adaptor` repository, deploy the [webhook](../../webhook/) with:
   ```
   kubectl apply -f ./webhook/hack/webhook-deploy.yaml
   ```

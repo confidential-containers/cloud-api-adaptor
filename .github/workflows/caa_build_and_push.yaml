@@ -5,7 +5,7 @@ on:
     inputs:
       registry:
         default: 'quay.io/confidential-containers'
-        description: 'Image registry (e.g. "ghcr.io/confidential-containers") where the built image will be pushed to'
+        description: 'Image registry (e.g. "quay.io/confidential-containers") where the built image will be pushed to'
         required: false
         type: string
       dev_arches:
@@ -34,6 +34,10 @@ on:
         required: false
         type: string
 
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
 jobs:
   build_push_job:
     name: build and push
@@ -55,6 +59,7 @@ jobs:
 
       - name: Rebase the code
         if: github.event_name == 'pull_request_target'
+        working-directory: ./
         run: |
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
@@ -101,7 +106,7 @@ jobs:
           max_attempts: 3
           command: |
             if [ ${{ matrix.type }} == "release" ]; then
-              ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image registry=${{ inputs.registry }}
+              cd src/cloud-api-adaptor && ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image registry=${{ inputs.registry }}
             else
-              ARCHES=${{matrix.arches}} RELEASE_BUILD=false DEV_TAGS=${{ inputs.dev_tags }} make image registry=${{ inputs.registry }}
+              cd src/cloud-api-adaptor && ARCHES=${{matrix.arches}} RELEASE_BUILD=false DEV_TAGS=${{ inputs.dev_tags }} make image registry=${{ inputs.registry }}
             fi

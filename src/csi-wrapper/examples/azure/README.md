@@ -4,7 +4,7 @@
 
 ### Set up a demo environment on your development machine
 
-1. Follow the [README.md](../../../../azure/README.md) to setup a x86_64 based demo environment on AKS.
+1. Follow the [README.md](../../../cloud-api-adaptor/azure/README.md) to setup a x86_64 based demo environment on AKS.
 
 2. To prevent our changes to be rolled back, disable the built-in AKS azurefile driver:
 ```bash
@@ -89,7 +89,7 @@ cd ~/cloud-api-adaptor
 
 2. Create the PeerpodVolume CRD object
 ```bash
-kubectl apply -f volumes/csi-wrapper/crd/peerpodvolume.yaml
+kubectl apply -f src/csi-wrapper/crd/peerpodvolume.yaml
 ```
 
 The output looks like:
@@ -99,27 +99,27 @@ customresourcedefinition.apiextensions.k8s.io/peerpodvolumes.confidentialcontain
 
 3. Configure RBAC so that the wrapper has access to the required operations
 ```bash
-kubectl apply -f volumes/csi-wrapper/examples/azure/azure-files-csi-wrapper-runner.yaml
-kubectl apply -f volumes/csi-wrapper/examples/azure/azure-files-csi-wrapper-podvm.yaml
+kubectl apply -f src/csi-wrapper/examples/azure/azure-files-csi-wrapper-runner.yaml
+kubectl apply -f src/csi-wrapper/examples/azure/azure-files-csi-wrapper-podvm.yaml
 ```
 
 4. patch csi-azurefile-driver:
 ```bash
-kubectl patch deploy csi-azurefile-controller -n kube-system --patch-file volumes/csi-wrapper/examples/azure/patch-controller.yaml
+kubectl patch deploy csi-azurefile-controller -n kube-system --patch-file src/csi-wrapper/examples/azure/patch-controller.yaml
 kubectl -n kube-system delete replicaset -l app=csi-azurefile-controller
-kubectl patch ds csi-azurefile-node -n kube-system --patch-file volumes/csi-wrapper/examples/azure/patch-node.yaml
+kubectl patch ds csi-azurefile-node -n kube-system --patch-file src/csi-wrapper/examples/azure/patch-node.yaml
 ```
 
 5. Create **storage class**:
 ```bash
-kubectl apply -f volumes/csi-wrapper/examples/azure/azure-file-StorageClass-for-peerpod.yaml
+kubectl apply -f src/csi-wrapper/examples/azure/azure-file-StorageClass-for-peerpod.yaml
 ```
 
 ### Run the `csi-wrapper for peerpod storage` demo
 
 1. Create one pvc that use `azurefiles-csi-driver`
 ```bash
-kubectl apply -f volumes/csi-wrapper/examples/azure/my-pvc.yaml
+kubectl apply -f src/csi-wrapper/examples/azure/my-pvc.yaml
 ```
 
 2. Wait for the pvc status to become `bound`
@@ -131,7 +131,7 @@ pvc-azurefile   Bound    pvc-3edc7a93-4531-4034-8818-1b1608907494   1Gi        R
 
 3. Create the nginx peer-pod demo with with `podvm-wrapper` and `azurefile-csi-driver` containers
 ```bash
-kubectl apply -f volumes/csi-wrapper/examples/azure/nginx-kata-with-my-pvc-and-csi-wrapper.yaml
+kubectl apply -f src/csi-wrapper/examples/azure/nginx-kata-with-my-pvc-and-csi-wrapper.yaml
 ```
 
 4. Exec into the container and check the mount

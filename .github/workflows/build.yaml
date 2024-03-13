@@ -21,6 +21,9 @@ jobs:
           - release
         runner:
           - ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/cloud-api-adaptor
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v3
@@ -74,14 +77,14 @@ jobs:
           - peerpodconfig-ctrl
     defaults:
       run:
-        working-directory: ${{ matrix.controller }}
+        working-directory: src/${{ matrix.controller }}
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v4
 
       - name: Read properties from versions.yaml
         run: |
-          go_version="$(yq '.tools.golang' ../versions.yaml)"
+          go_version="$(yq '.tools.golang' ../cloud-api-adaptor/versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
@@ -118,14 +121,14 @@ jobs:
           - csi-wrapper
     defaults:
       run:
-        working-directory: volumes/${{ matrix.controller }}
+        working-directory: src/${{ matrix.controller }}
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v4
 
       - name: Read properties from versions.yaml
         run: |
-          go_version="$(yq '.tools.golang' ../../versions.yaml)"
+          go_version="$(yq '.tools.golang' ../cloud-api-adaptor/versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
@@ -164,14 +167,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: webhook
+        working-directory: src/webhook
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v4
 
       - name: Read properties from versions.yaml
         run: |
-          go_version="$(yq '.tools.golang' ../versions.yaml)"
+          go_version="$(yq '.tools.golang' ../cloud-api-adaptor/versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
@@ -189,7 +192,7 @@ jobs:
 
       - name: Install bats
         run: |
-          bats_version="$(yq '.tools.bats' ../versions.yaml)"
+          bats_version="$(yq '.tools.bats' ../cloud-api-adaptor/versions.yaml)"
           [ -n "$bats_version" ]
           git clone --branch "v${bats_version}" --single-branch \
             https://github.com/bats-core/bats-core.git

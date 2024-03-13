@@ -4,7 +4,7 @@
 
 * Running Kubernetes cluster (Version >= 1.20) on AWS
 
-* Peer-Pods is [deployed](../../../../aws/README.md)
+* Peer-Pods is [deployed](../../../cloud-api-adaptor/aws/README.md)
 
 ## AWS EBS CSI Driver Installation
 

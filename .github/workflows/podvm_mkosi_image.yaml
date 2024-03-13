@@ -3,6 +3,9 @@ name: mkosi build podvm builder, binaries and image
 on:
   workflow_dispatch:
 
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor/podvm-mkosi
 
 jobs:
   build-podvm-image-mkosi:
@@ -39,11 +42,9 @@ jobs:
 
       - name: Build builder
         run: make fedora-binaries-builder
-        working-directory: podvm-mkosi
 
       - name: Build binaries
         run: make binaries
-        working-directory: podvm-mkosi
       
       # TODO - build image via mkosi when s390x is available
       # TODO - upload the image 

@@ -7,6 +7,10 @@ on:
         description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora"
         required: false
 
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
 jobs:
   build-binaries:
     name: Build binaries
@@ -33,14 +37,14 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           tags: ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}
-          file: podvm/Dockerfile.podvm_builder.fedora
+          file: src/cloud-api-adaptor/podvm/Dockerfile.podvm_builder.fedora
           push: true
 
       - name: Build binaries
         uses: docker/build-push-action@v5
         with:
           tags: ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}
-          file: podvm/Dockerfile.podvm_binaries.fedora
+          file: src/cloud-api-adaptor/podvm/Dockerfile.podvm_binaries.fedora
           push: true
           build-args:
             "BUILDER_IMG=ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}"
@@ -106,11 +110,11 @@ jobs:
           rm podvm-binaries.tar
 
       - name: Build image
-        working-directory: podvm-mkosi
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: make image-debug
 
       - name: Upload image
         uses: actions/upload-artifact@v2
         with:
           name: podvm-mkosi-${{ github.sha }}
-          path: podvm-mkosi/build/system.raw
+          path: src/cloud-api-adaptor/podvm-mkosi/build/system.raw

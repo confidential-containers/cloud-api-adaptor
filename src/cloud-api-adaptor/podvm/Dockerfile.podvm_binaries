@@ -21,7 +21,7 @@ ENV AA_KBC ${AA_KBC}
 ENV ARCH ${ARCH}
 ENV DEFAULT_AGENT_POLICY_FILE ${DEFAULT_AGENT_POLICY_FILE}
 
-COPY . /src/cloud-api-adaptor
+COPY . /src
 
 WORKDIR /src/cloud-api-adaptor/podvm
 # Installs add-ons for foreign target, if required

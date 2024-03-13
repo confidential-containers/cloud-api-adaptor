@@ -298,7 +298,7 @@ issues:
 
     # "github.com/container-storage-interface/spec/lib/go/csi" still uses
     # "github.com/golang/protobuf", which is the deprecated protobuf V1.
-    - path: ^../csi-wrapper/pkg/wrapper/
+    - path: ^src/csi-wrapper/pkg/wrapper/
       linters: [staticcheck]
       text: 'SA1019: "github.com/golang/protobuf/jsonpb" is deprecated: Use the "google.golang.org/protobuf/encoding/protojson" package instead.'
 

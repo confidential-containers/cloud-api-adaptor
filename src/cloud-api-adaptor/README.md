@@ -19,12 +19,12 @@ The background and description of the components involved in 'peer pods' can be 
 
 ## Components
 
-* Cloud API adaptor ([cmd/cloud-api-adaptor](./src/cloud-api-adaptor/cmd/cloud-api-adaptor)) - `cloud-api-adator` implements the remote hypervisor support.
-* Agent protocol forwarder ([cmd/agent-protocol-forwarder](./src/cloud-api-adaptor/cmd/agent-protocol-forwarder))
+* Cloud API adaptor ([cmd/cloud-api-adaptor](./cmd/cloud-api-adaptor)) - `cloud-api-adator` implements the remote hypervisor support.
+* Agent protocol forwarder ([cmd/agent-protocol-forwarder](./cmd/agent-protocol-forwarder))
 
 ## Installation
 
-Please refer to the instructions mentioned in the following [doc](install/README.md).
+Please refer to the instructions mentioned in the following [doc](./install/README.md).
 
 ## Supported Providers
 
@@ -36,7 +36,7 @@ Please refer to the instructions mentioned in the following [doc](install/README
 
 ### Adding a new provider
 
-Please refer to the instructions mentioned in the following [doc](./src/cloud-api-adaptor/docs/addnewprovider.md).
+Please refer to the instructions mentioned in the following [doc](./docs/addnewprovider.md).
 
 ## Cloud Provider VM Image
 
@@ -63,13 +63,3 @@ PODVM_DISTRO=rhel make podvm-builder podvm-binaries podvm-image
 > N.B. This will populate the image using the component versions found in [versions.yaml](./versions.yaml).
 
 You can find provider specific instructions on how to import the QCOW2 image for each cloud provider in their respective directories.
-
-## Contribution
-
-This project uses [the Apache 2.0 license](./LICENSE). Contribution to this project requires the [DCO 1.1](./DCO1.1.txt) process to be followed.
-
-## Collaborations
-
-* Slack: [#confidential-containers-peerpod](https://cloud-native.slack.com/archives/C04A2EJ70BX) in [CNCF](https://communityinviter.com/apps/cloud-native/cncf)
-* Zoom meeting: https://zoom.us/j/94601737867?pwd=MEF5NkN5ZkRDcUtCV09SQllMWWtzUT09
-    * 14:00 - 15:00 UTC on each `Wednesday`
