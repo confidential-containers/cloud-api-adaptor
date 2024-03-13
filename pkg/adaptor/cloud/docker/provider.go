@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"path/filepath"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
@@ -56,10 +57,24 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 	}
 
 	// Create volume binding for the container
-	// mount userdata to DockerUserDataUrl=/peerpod/daemon.json
-	volumeBinding := fmt.Sprintf("%s:%s", instanceUserdataFile, DockerUserDataUrl)
 
-	instanceID, ip, err := createContainer(ctx, p.Client, instanceName, []string{volumeBinding})
+	// mount userdata to DockerUserDataUrl=/peerpod/daemon.json
+	volumeBinding := []string{
+		fmt.Sprintf("%s:%s", instanceUserdataFile, DockerUserDataUrl),
+	}
+
+	// Add host bind mount for /run/kata-containers and /run/image to avoid
+	// overlay on overlay issue
+	// (host)kata-containers dir -> (container) /run/kata-containers
+	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s",
+		filepath.Join(p.DataDir, "kata-containers"), "/run/kata-containers"))
+
+	// (host)image dir -> (container) /image
+	// There is a podvm systemd service in pod which bind mounts /run/image to /image
+	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s",
+		filepath.Join(p.DataDir, "image"), "/image"))
+
+	instanceID, ip, err := createContainer(ctx, p.Client, instanceName, volumeBinding)
 	if err != nil {
 		return nil, err
 	}

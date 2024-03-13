@@ -16,24 +16,11 @@ const defaultPodVMDockerImage = "quay.io/confidential-containers/podvm-docker-im
 // Returns the container ID and the IP address of the container
 func createContainer(ctx context.Context, client *client.Client,
 	instanceName string, volumeBinding []string) (string, string, error) {
-	/*
-			hostBinding := nat.PortBinding{
-				HostIP:   "0.0.0.0",
-				HostPort: "8000",
-			}
-		containerPort, err := nat.NewPort("tcp", "15150")
-		if err != nil {
-			return "", err
-		}
-
-		portBinding := nat.PortMap{containerPort: []nat.PortBinding{hostBinding}}
-	*/
 
 	// No need to bind the port to the host
 	portBinding := nat.PortMap{}
 
 	// Create a privileged container as it's required due to systemd
-
 	resp, err := client.ContainerCreate(
 		ctx,
 		&container.Config{
