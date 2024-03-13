@@ -61,8 +61,8 @@ function build_caa_payload_image() {
 		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
 		-f Dockerfile \
 		${tag_string} \
-		--push \
 		.
+	docker push  ${registry}/${name}  
 	popd
 }
 
@@ -106,8 +106,8 @@ function build_caa_payload_arch_specific() {
 		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
 		-f Dockerfile \
 		${tag_string} \
-		--push \
 		.
+  	docker push  ${registry}/${name}
 	popd
 }
 
