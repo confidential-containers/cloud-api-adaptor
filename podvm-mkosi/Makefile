@@ -16,7 +16,7 @@ ifeq ($(ARCH),s390x)
 	docker buildx build \
 		-t $(BUILDER) \
 		--build-arg ARCH=s390x \
-		--build-arg PROTOC_ARCH=s390x_64 \
+		--build-arg PROTOC_ARCH=s390x \
 		--build-arg YQ_ARCH=s390x \
 		--build-arg YQ_CHECKSUM=sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45 \
 		--load \
