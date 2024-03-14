@@ -17,14 +17,20 @@ import (
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
 
-type Config struct {
-	authJsonPath     string
-	daemonConfigPath string
-	fetchTimeout     int
+type paths struct {
+	authJson     string
+	cdhConfig    string
+	daemonConfig string
 }
 
-func NewConfig(authJsonPath, daemonConfigPath string, fetchTimeout int) *Config {
-	return &Config{authJsonPath, daemonConfigPath, fetchTimeout}
+type Config struct {
+	fetchTimeout int
+	paths        paths
+}
+
+func NewConfig(authJsonPath, daemonConfigPath, cdhConfig string, fetchTimeout int) *Config {
+	cfgPaths := paths{authJsonPath, cdhConfig, daemonConfigPath}
+	return &Config{fetchTimeout, cfgPaths}
 }
 
 type WriteFile struct {
@@ -127,19 +133,14 @@ func parseDaemonConfig(content []byte) (*daemon.Config, error) {
 	return &dc, nil
 }
 
-func findDaemonConfigEntry(path string, cc *CloudConfig) (*daemon.Config, []byte, error) {
+func findConfigEntry(path string, cc *CloudConfig) []byte {
 	for _, wf := range cc.WriteFiles {
 		if wf.Path != path {
 			continue
 		}
-		bytes := []byte(wf.Content)
-		daemonConfig, err := parseDaemonConfig(bytes)
-		if err != nil {
-			return nil, nil, err
-		}
-		return daemonConfig, bytes, nil
+		return []byte(wf.Content)
 	}
-	return nil, nil, fmt.Errorf("failed to find entry for %s in cloud config", path)
+	return nil
 }
 
 func writeFile(path string, bytes []byte) error {
@@ -152,18 +153,27 @@ func writeFile(path string, bytes []byte) error {
 }
 
 func processCloudConfig(cfg *Config, cc *CloudConfig) error {
-	daemonConfig, bytes, err := findDaemonConfigEntry(cfg.daemonConfigPath, cc)
+	bytes := findConfigEntry(cfg.paths.daemonConfig, cc)
+	if bytes == nil {
+		return fmt.Errorf("failed to find daemon config entry in cloud config")
+	}
+	daemonConfig, err := parseDaemonConfig(bytes)
 	if err != nil {
-		return fmt.Errorf("failed to process daemon config: %w", err)
+		return fmt.Errorf("failed to parse daemon config: %w", err)
+	}
+	if err = writeFile(cfg.paths.daemonConfig, bytes); err != nil {
+		return fmt.Errorf("failed to write daemon config file: %w", err)
 	}
 
-	if err = writeFile(cfg.daemonConfigPath, bytes); err != nil {
-		return fmt.Errorf("failed to write daemon config file: %w", err)
+	if bytes := findConfigEntry(cfg.paths.cdhConfig, cc); bytes != nil {
+		if err = writeFile(cfg.paths.cdhConfig, bytes); err != nil {
+			return fmt.Errorf("failed to write cdh config file: %w", err)
+		}
 	}
 
 	if daemonConfig.AuthJson != "" {
 		bytes := []byte(daemonConfig.AuthJson)
-		if err = writeFile(cfg.authJsonPath, bytes); err != nil {
+		if err = writeFile(cfg.paths.authJson, bytes); err != nil {
 			return fmt.Errorf("failed to write auth json file: %w", err)
 		}
 	}

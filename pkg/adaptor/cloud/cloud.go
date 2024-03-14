@@ -21,6 +21,7 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/proxy"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/cdh"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/util"
@@ -279,6 +280,17 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 				Content: string(daemonJSON),
 			},
 		},
+	}
+
+	if s.aaKBCParams != "" {
+		toml, err := cdh.CreateConfigFile(s.aaKBCParams)
+		if err != nil {
+			return nil, fmt.Errorf("creating CDH config: %w", err)
+		}
+		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+			Path:    cdh.ConfigFilePath,
+			Content: toml,
+		})
 	}
 
 	sandbox := &sandbox{

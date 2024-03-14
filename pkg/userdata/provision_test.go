@@ -42,7 +42,16 @@ var testDaemonConfig string = `{
 	"tls-client-ca": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
 	"aa-kbc-params": "cc_kbc::http://192.168.100.2:8080",
 	"auth-json": "{\"auths\":{}}"
-}`
+}
+`
+
+var testCDHConfig string = `socket = 'unix:///run/confidential-containers/cdh.sock'
+credentials = []
+
+[kbc]
+name = 'cc_kbc'
+url = 'http://1.2.3.4:8080'
+`
 
 // Test server to simulate the metadata service
 func startTestServer() *httptest.Server {
@@ -75,7 +84,6 @@ func startTestServer() *httptest.Server {
 	fmt.Printf("Started metadata server at srv.URL: %s\n", srv.URL)
 
 	return srv
-
 }
 
 // test server, serving plain text userData
@@ -207,22 +215,18 @@ write_files:
     test`}
 	_, err = retrieveCloudConfig(context.TODO(), &provider)
 	if err != nil {
-		t.Fatalf("couldn't retrieve and parse valid cloud config: %v", err)
+		t.Fatalf("couldn't retrieve valid cloud config: %v", err)
 	}
 }
 
-// TestProcessCloudConfig fail tests
-func TestFailProcessCloudConfig(t *testing.T) {
-	content := "#cloud-config\nwrite_files:\n- path: /wrong\n  content: bla"
-	provider := TestProvider{content: content}
-	cc, err := retrieveCloudConfig(context.TODO(), &provider)
-	if err != nil {
-		t.Fatalf("couldn't retrieve and parse cloud config: %v", err)
+func indentTextBlock(text string, by int) string {
+	whiteSpace := strings.Repeat(" ", by)
+	split := strings.Split(text, "\n")
+	indented := ""
+	for _, line := range split {
+		indented += whiteSpace + line + "\n"
 	}
-	_, _, err = findDaemonConfigEntry("/other", cc)
-	if err == nil {
-		t.Fatalf("it should fail as there is no file w/ $daemonConfigPath")
-	}
+	return indented
 }
 
 // TestProcessCloudConfig tests parsing and provisioning of a daemon config
@@ -241,40 +245,97 @@ func TestProcessCloudConfig(t *testing.T) {
 	}
 	defer os.Remove(tmpAuthJsonFile.Name())
 
-	// embed daemon config fixture in cloud config
-	indented := strings.ReplaceAll(testDaemonConfig, "\n", "\n    ")
-	content := fmt.Sprintf("#cloud-config\nwrite_files:\n- path: %s\n  content: |\n    %s", tmpDaemonConfigFile.Name(), indented)
+	// create temporary cdh config file
+	tmpCDHConfigFile, err := os.CreateTemp("", "test")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpCDHConfigFile.Name())
+
+	content := fmt.Sprintf(`#cloud-config
+write_files:
+- path: %s
+  content: |
+%s
+- path: %s
+  content: |
+%s
+`,
+		tmpDaemonConfigFile.Name(),
+		indentTextBlock(testDaemonConfig, 4),
+		tmpCDHConfigFile.Name(),
+		indentTextBlock(testCDHConfig, 4))
+
 	provider := TestProvider{content: content}
 
 	cc, err := retrieveCloudConfig(context.TODO(), &provider)
 	if err != nil {
-		t.Fatalf("couldn't retrieve and parse cloud config: %v", err)
+		t.Fatalf("couldn't retrieve cloud config: %v", err)
 	}
 
 	cfg := Config{
-		daemonConfigPath: tmpDaemonConfigFile.Name(),
-		authJsonPath:     tmpAuthJsonFile.Name(),
+		paths: paths{
+			daemonConfig: tmpDaemonConfigFile.Name(),
+			cdhConfig:    tmpCDHConfigFile.Name(),
+			authJson:     tmpAuthJsonFile.Name(),
+		},
 	}
 	if err := processCloudConfig(&cfg, cc); err != nil {
 		t.Fatalf("failed to process cloud config file: %v", err)
 	}
 
 	// check if files have been written correctly
-	data, err := os.ReadFile(tmpDaemonConfigFile.Name())
-	if err != nil {
-		t.Fatalf("failed to read daemon config file: %v", err)
-	}
+	data, _ := os.ReadFile(tmpDaemonConfigFile.Name())
 	fileContent := string(data)
-
 	if fileContent != testDaemonConfig {
 		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
 	}
 
+	data, _ = os.ReadFile(tmpCDHConfigFile.Name())
+	fileContent = string(data)
+	if fileContent != testCDHConfig {
+		t.Fatalf("file content does not match cdh config fixture: got %q", fileContent)
+	}
+
 	data, _ = os.ReadFile(tmpAuthJsonFile.Name())
 	fileContent = string(data)
-
 	if fileContent != `{"auths":{}}` {
 		t.Fatalf("file content does not match auth json fixture: got %q", fileContent)
+	}
+}
+
+func TestProcessWithoutCDHConfig(t *testing.T) {
+	tmpDaemonConfigFile, _ := os.CreateTemp("", "test")
+	defer os.Remove(tmpDaemonConfigFile.Name())
+	tmpAuthJsonFile, _ := os.CreateTemp("", "test")
+	defer os.Remove(tmpAuthJsonFile.Name())
+	tmpCDHConfigFile, _ := os.CreateTemp("", "test")
+	defer os.Remove(tmpCDHConfigFile.Name())
+
+	content := fmt.Sprintf(`#cloud-config
+write_files:
+- path: %s
+  content: |
+%s
+`,
+		tmpDaemonConfigFile.Name(),
+		indentTextBlock(testDaemonConfig, 4))
+	provider := TestProvider{content: content}
+
+	cc, err := retrieveCloudConfig(context.TODO(), &provider)
+	if err != nil {
+		t.Fatalf("couldn't retrieve cloud config: %v", err)
+	}
+
+	cfg := Config{
+		paths: paths{
+			daemonConfig: tmpDaemonConfigFile.Name(),
+			cdhConfig:    tmpCDHConfigFile.Name(),
+			authJson:     tmpAuthJsonFile.Name(),
+		},
+	}
+	if err := processCloudConfig(&cfg, cc); err != nil {
+		t.Fatalf("failed to process cloud config file: %v", err)
 	}
 }
 
