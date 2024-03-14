@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"os"
 	"path/filepath"
 
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud"
@@ -27,6 +28,12 @@ func NewProvider(config *Config) (*dockerProvider, error) {
 	logger.Printf("docker config: %#v", config)
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the data directory if it doesn't exist
+	err = os.MkdirAll(config.DataDir, 0755)
 	if err != nil {
 		return nil, err
 	}
