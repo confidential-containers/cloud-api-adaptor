@@ -208,6 +208,21 @@ $ virsh -c qemu:///system list
  6    peer-pods-worker-0   running
 ```
 
+## Running the CAA e2e tests
+
+Now when you're all set you can run the CAA e2e [tests/e2e/README.md](../test/e2e/README.md) by running ``make test-e2e``. You might want to modify some of the env variables, for example:
+
+```
+make TEST_PROVISION=no TEST_TEARDOWN=no TEST_PODVM_IMAGE=$PWD/podvm/podvm.qcow2 CLOUD_PROVIDER=libvirt TEST_E2E_TIMEOUT=40m TEST_PROVISION_FILE=$PWD/libvirt.properties test-e2e
+```
+
+* ``TEST_PROVISION`` - whether to perform the setup steps (we just did thated for it)
+* ``TEST_TEARDOWN`` - attempt to clean all resources created by `test-e2e` after testing (no guarantee)
+* ``TEST_PODVM_IMAGE`` - image to be used for this testing
+* ``CLOUD_PROVIDER`` - which cloud provider should be used
+* ``TEST_E2E_TIMEOUT`` - test timeout
+* ``TEST_PROVISION_FILE`` - file specifying the libvirt connection and the ssh key file (created earlier by [config_libvirt.sh](config_libvirt.sh))
+
 ## Delete Confidential Containers and cloud-api-adaptor from the cluster
 
 You might want to reinstall the Confidential Containers and cloud-api-adaptor into your cluster. There are two options:
