@@ -30,7 +30,7 @@ key2 = "value2"
 ...
 ```
 
-You should use the `TEST_PROVISION_FILE` variable to specify the properties file path, as shown below:
+You should use the `TEST_PROVISION_FILE` variable to specify the properties file path, as shown below (for libvirt provider look at [libvirt/README.md](../../libvirt/README.md) setup):
 
 ```
 $ TEST_PROVISION=yes TEST_PROVISION_FILE=/path/to/libvirt.properties CLOUD_PROVIDER=libvirt make test-e2e
