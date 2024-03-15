@@ -52,7 +52,7 @@ IMG ?= quay.io/confidential-containers/peerpodconfig-ctrl:latest
 ENVTEST_K8S_VERSION = 1.23
 
 KUSTOMIZE_VERSION ?= v5.3.0
-CONTROLLER_TOOLS_VERSION ?= v0.10.0
+CONTROLLER_TOOLS_VERSION ?= v0.14.0
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
