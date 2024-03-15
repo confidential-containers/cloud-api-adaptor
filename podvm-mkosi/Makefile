@@ -46,7 +46,12 @@ image:
 	rm -rf resources/buildDebugImage
 	rm -rf ./build
 	@echo "Building image..."
+ifeq ($(ARCH),s390x)
+	mkosi --profile production.conf
+	../hack/build-s390x-image.sh
+else
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
+endif
 
 PHONY: image-debug
 image-debug:
@@ -54,7 +59,12 @@ image-debug:
 	touch resources/buildDebugImage
 	rm -rf ./build
 	@echo "Building debug image..."
+ifeq ($(ARCH),s390x)
+	mkosi --profile debug.conf
+	../hack/build-s390x-image.sh
+else
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
+endif
 
 PHONY: clean
 clean:
