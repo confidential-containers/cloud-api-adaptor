@@ -8,20 +8,39 @@ In this section you will learn how to setup an environment in your local machine
 the libvirt cloud API adaptor. Bear in mind that many different tools can be used to setup the environment
 and here we just make suggestions of tools that seems used by most of the peer pods developers.
 
-## Requirements
+## Prerequisites
 
 You must have a Linux/KVM system with libvirt installed and the following tools:
 
 - docker (or podman-docker)
 - [kubectl](https://kubernetes.io/docs/reference/kubectl/)
 - [kcli](https://kcli.readthedocs.io/en/latest/)
+- [go](https://github.com/golang/go)
 
-Assume that you have a 'default' network and storage pools created in libvirtd system instance (`qemu:///system`). However,
-if you have a different pool name then the scripts should be able to handle it properly.
+To configure the basic set of tools one can use [config_libvirt.sh](config_libvirt.sh) script (tested on Ubuntu 20.04 amd64/s390x VSI) from the [cloud-api-adaptor](../) folder:
 
-The script [config_libvirt.sh](config_libvirt.sh) is tested on Ubuntu 20.04 amd64/s390x VSI, please config your Ubuntu with it, run the script from [cloud-api-adaptor](../) folder:
 ```bash
 ./libvirt/config_libvirt.sh
+```
+
+This script installs golang+yq+kcli+kubectl, ensures ``default`` libvirt storage pool is up and running. Then it configures the ssh keys and libvirt uri in following manner (no need to execute this when you use the [config_libvirt.sh](config_libvirt.sh) script):
+
+```bash
+[ -f $HOME/.ssh/id_rsa ] || ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -N ""
+
+pushd install/overlays/libvirt
+cp $HOME/.ssh/id_rsa* .
+cat id_rsa.pub >> $HOME/.ssh/authorized_keys
+chmod 600 $HOME/.ssh/authorized_keys
+
+echo "Verifing libvirt connection..."
+IP="$(hostname -I | cut -d' ' -f1)"
+virsh -c "qemu+ssh://${USER}@${IP}/system?keyfile=$(pwd)/id_rsa&no_verify=1" nodeinfo
+popd
+
+rm -f libvirt.properties
+echo "libvirt_uri=\"qemu+ssh://${USER}@${IP}/system?no_verify=1\"" >> libvirt.properties
+echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
 ```
 
 ## Create the Kubernetes cluster
@@ -82,44 +101,10 @@ Allocation:     631.52 MiB
 ## Install and configure Confidential Containers and cloud-api-adaptor in the cluster
 
 The easiest way to install the cloud-api-adaptor along with Confidential Containers in the cluster is through the
-Kubernetes operator available in the `install` directory of this repository.
-
-Start by creating a public/private RSA key pair that will be used by the cloud-api-provider program, running on the
-cluster workers, to connect with your local libvirtd instance without password authentication. Assume you are in the
-`libvirt` directory, do:
+Kubernetes operator [`install_operator.sh`](./install_operator.sh) script. Ensure that you have your IP address exported in the environment, as shown below, then run the install script:
 
 ```
-$ cd ../install/overlays/libvirt
-$ ssh-keygen -f ./id_rsa -N ""
-$ cat id_rsa.pub >> ~/.ssh/authorized_keys
-```
-**Note**: ensure that `~/.ssh/authorized_keys` has the right permissions (read/write for the user only) otherwise the
-authentication can silently fail. You can run `chmod 600 ~/.ssh/authorized_keys` to set the right permissions.
-
-You will need to figure out the IP address of your local host (e.g. 192.168.122.1). This can be determined by looking at the ip address field from the network xml.
-
-```
-virsh -c qemu:///system net-dumpxml default
-```
-
-Then try to remote connect with libvirt to check the keys setup is fine, for example:
-
-```
-$ virsh -c "qemu+ssh://$USER@192.168.122.1/system?keyfile=$(pwd)/id_rsa" nodeinfo
-CPU model:           x86_64
-CPU(s):              12
-CPU frequency:       1084 MHz
-CPU socket(s):       1
-Core(s) per socket:  6
-Thread(s) per core:  2
-NUMA cell(s):        1
-Memory size:         32600636 KiB
-```
-
-Now you should finally install the Kubernetes operator in the cluster with the help of the [`install_operator.sh`](./install_operator.sh) script. Ensure that you have your IP address exported in the environment, as shown below, then run the install script:
-
-```
-$ cd ../../../libvirt/
+$ cd libvirt
 $ export LIBVIRT_IP="192.168.122.1"
 $ export SSH_KEY_FILE="id_rsa"
 $ ./install_operator.sh
