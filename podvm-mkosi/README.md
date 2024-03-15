@@ -75,3 +75,27 @@ reduce complexity of configuration and CI and shall not be seen as open to-dos.
 
 - Deployed images cannot be customized with cloud-init. Runtime configuration data is retrieved
   from IMDS via the project's `process-user-data` tool.
+
+## Build s390x image
+Since the [nix OS](https://nixos.org/download/#download-nix) does not support s390x, we can use the mkosi **ToolsTree** feature defined in `mkosi.conf` to download latest tools automatically:
+```
+[Host]
+ToolsTree=default
+```
+And install **mkosi** from the repository:
+```sh
+git clone -b v21 https://github.com/systemd/mkosi
+ln -s $PWD/mkosi/bin/mkosi /usr/local/bin/mkosi
+mkosi --version
+```
+Another issue is s390x does not support UEFI. Instead, we can first use **mkosi** to build non-bootable system files, then use **zipl** to generate the bootloader and finally create the bootable image.
+
+It requires a **s390x host** to build s390x image with make commands:
+```
+make fedora-binaries-builder
+make binaries
+make image
+# make image-debug
+```
+
+The final output is `build/podvm-s390x.qcow2`, which can be used as the Pod VM image in libvirt environment.
