@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/aws"
 	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/azure"
+	"github.com/confidential-containers/cloud-api-adaptor/pkg/adaptor/cloud/docker"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/pkg/forwarder"
 	"gopkg.in/yaml.v2"
 )
@@ -63,6 +65,14 @@ func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 	return aws.GetUserData(ctx, url)
 }
 
+type DockerUserDataProvider struct{ DefaultRetry }
+
+func (a DockerUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
+	url := docker.DockerUserDataUrl
+	logger.Printf("provider: Docker, userDataUrl: %s\n", url)
+	return docker.GetUserData(ctx, url)
+}
+
 func newProvider(ctx context.Context) (UserDataProvider, error) {
 	if azure.IsAzure(ctx) {
 		return AzureUserDataProvider{}, nil
@@ -70,6 +80,10 @@ func newProvider(ctx context.Context) (UserDataProvider, error) {
 
 	if aws.IsAWS(ctx) {
 		return AWSUserDataProvider{}, nil
+	}
+
+	if docker.IsDocker(ctx) {
+		return DockerUserDataProvider{}, nil
 	}
 
 	return nil, fmt.Errorf("unsupported user data provider")
@@ -143,7 +157,14 @@ func findDaemonConfigEntry(path string, cc *CloudConfig) (*daemon.Config, []byte
 }
 
 func writeFile(path string, bytes []byte) error {
-	err := os.WriteFile(path, bytes, 0644)
+
+	// Ensure the parent directory exists
+	err := os.MkdirAll(filepath.Dir(path), 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	err = os.WriteFile(path, bytes, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
