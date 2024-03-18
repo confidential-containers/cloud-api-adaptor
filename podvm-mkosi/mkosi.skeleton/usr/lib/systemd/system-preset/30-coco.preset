@@ -1,5 +1,5 @@
 enable attestation-protocol-forwarder.service
-enable api-server-rest.service
+enable api-server-rest.path
 enable kata-agent.service
 enable netns@.service
 enable process-user-data.service
