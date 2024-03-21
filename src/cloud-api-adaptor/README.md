@@ -13,10 +13,6 @@ virtualization support.
 * Forward communication between kata shim on a worker node VM and kata agent on a pod VM
 * Provide a mechanism to establish a network tunnel between a worker and pod VMs to Kubernetes pod network
 
-## Architecture
-
-The background and description of the components involved in 'peer pods' can be found in the [architecture documentation](./docs/architecture.md).
-
 ## Components
 
 * Cloud API adaptor ([cmd/cloud-api-adaptor](./cmd/cloud-api-adaptor)) - `cloud-api-adator` implements the remote hypervisor support.

@@ -9,7 +9,9 @@ of [Kata Containers](https://github.com/kata-containers/kata-containers)
 It enables the creation of Kata Containers VMs on any machines without the need for bare metal worker nodes,
 or nested virtualisation support.
 
-[More details](./src/cloud-api-adaptor/docs/architecture.md)
+## Architecture
+
+The background and description of the components involved in 'peer pods' can be found in the [architecture documentation](./docs/architecture.md).
 
 ## Cloud Proviers
 [cloud-providers](./src/cloud-providers/) Cloud Providers for Kata remote hypervisor
@@ -28,7 +30,6 @@ or nested virtualisation support.
 
 ## Webhook
 [webhook](./src/webhook/) This mutating webhook modifies a POD spec using specific runtimeclass to remove all `resources` entries and replace it with peer-pod extended resource.
-
 
 ## Contribution
 
