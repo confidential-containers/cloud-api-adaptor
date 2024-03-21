@@ -104,7 +104,7 @@ receive commands from Kubernetes, via a CRI client to launch and run Pods.
 
 
 ### Cloud API Adaptor
-The [cloud-api-adaptor](../cmd/cloud-api-adaptor) implements the remote hypervisor. It runs as a daemonset on
+The [cloud-api-adaptor](../src/cloud-api-adaptor/cmd/cloud-api-adaptor) implements the remote hypervisor. It runs as a daemonset on
 each node and is responsible for receiving commands from the `containerd-shim-kata-v2` process and implementing them
 for peer pods. For example, when it receives commands that were related to Pod lifecycle that are traditionally
 serviced by a local hypervisor (like `CreateSandboxRequest` and `StopSandboxRequest`) it will use IaaS APIs (from the
@@ -114,35 +114,35 @@ When the VMs are created they make a CNI compatible network tunnel using VxLAN t
 peer pods VM to flow other commands like `CreateContainer` through to the the remote sandbox.
 
 ### Webhook
-The [webhook](../../webhook/) is an mutating admission controller that modifies a pod spec using specific runtimeclass to
+The [webhook](../src/webhook/) is an mutating admission controller that modifies a pod spec using specific runtimeclass to
 remove all resources entries and replace it with peer-pod extended resource. This is needed as unlike a standard pod, a
 peer pod will not consume the worker node's resources in the same way.
 
 ### peerpodconfig-ctrl
 
-The [peerpodconfig-ctrl](../../peerpodconfig-ctrl/) is a Kubernetes controller that manages the creation and deletion of
+The [peerpodconfig-ctrl](../src/peerpodconfig-ctrl/) is a Kubernetes controller that manages the creation and deletion of
 components required to run peer pods.
 
 ### peerpod-ctrl
 
-The [peerpod-ctrl](../../peerpod-ctrl/) is a Kubernetes controller that is used to track the cloud provider resources for
+The [peerpod-ctrl](../src/peerpod-ctrl/) is a Kubernetes controller that is used to track the cloud provider resources for
 the peer pods. It is responsible for watching PeerPod events and ensuring that any resources that weren't cleaned up by
 the cloud-api-adaptor (e.g. in the case of a network error) are deleted.
 
 ### CSI wrapper
 
-The [CSI wrapper](../../csi-wrapper/) plugins (which run on the control place and worker nodes and the peer pod
+The [CSI wrapper](../src/csi-wrapper/) plugins (which run on the control place and worker nodes and the peer pod
 VM) allows Kubernetes to use Container Storage Interface (CSI) to attach and export persistent volumes to a pod and
 have them be attached to the peer pod.
 
 ## Peer Pod VM components
 
-In order to create a peer pod VM, each cloud provider needs to have an [image](../podvm/) created that provides some
+In order to create a peer pod VM, each cloud provider needs to have an [image](../src/cloud-api-adaptor/podvm/) created that provides some
 components that help to communicate with the worker and run containers on the VM.
 
 ### Agent Protocol Forwarder
 
-The [agent-protocol-forwarder](../cmd/agent-protocol-forwarder) is the process that receives commands from the
+The [agent-protocol-forwarder](../src/cloud-api-adaptor/cmd/agent-protocol-forwarder) is the process that receives commands from the
 cloud-api-adaptor and sends them to the `kata-agent`. In local hypervisor deployments of Kata, the shim talks to the
 kata-agent over a virtual socket, which isn't possible over the network to a separate Kata VM, so we use the
 agent-protocol-forwarder to act as a bridge and allow a default kata-agent to be used.
