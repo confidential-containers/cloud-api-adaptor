@@ -2,15 +2,15 @@
 
 ### Step 1: Initialize and register the cloud provider manager
 
-The provider-specific cloud manager should be placed under `pkg/adaptor/cloud/<provider>/`.
+The provider-specific cloud manager should be placed under `src/cloud-providers/<provider>`.
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/pkg/adaptor/cloud/aws)
+:information_source:[Example code](../../cloud-providers/aws)
 
 ### Step 2: Add provider specific code
 
-Under `pkg/adaptor/cloud/<provider>`, start by adding a new file called `types.go`. This file defines a configuration struct that contains the required parameters for a cloud provider.
+Under `src/cloud-providers/<provider>`, start by adding a new file called `types.go`. This file defines a configuration struct that contains the required parameters for a cloud provider.
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/pkg/adaptor/cloud/aws/types.go)
+:information_source:[Example code](../../cloud-providers/aws/types.go)
 
 #### Step 2.1: Implement the Cloud interface
 
@@ -28,7 +28,7 @@ func init() {
 }
 ```
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/pkg/adaptor/cloud/aws/manager.go)
+:information_source:[Example code](../../cloud-providers/aws/manager.go)
 
 #### Step 2.2: Implement the Provider interface
 
@@ -38,7 +38,7 @@ The Provider interface defines a set of methods that need to be implemented by t
  - DeleteInstance
  - Teardown
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/pkg/adaptor/cloud/aws/provider.go#L76-L175)
+:information_source:[Example code](../../cloud-providers/aws/provider.go)
 
 Also, consider adding additional files to modularize the code. You can refer to existing providers such as `aws`, `azure`, `ibmcloud`, and `libvirt` for guidance. Adding unit tests wherever necessary is good practice.
 
@@ -46,12 +46,12 @@ Also, consider adding additional files to modularize the code. You can refer to 
 
 To include your provider you need reference it from the main package. Go build tags are used to selectively include different providers.
 
-:information_source:[Example code](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/cmd/cloud-api-adaptor/aws.go)
+:information_source:[Example code](../../cloud-api-adaptor/cmd/cloud-api-adaptor/aws.go)
 
 ```go
 //go:build aws
 ```
-Note the comment at the top of the file, when building ensure `-tags=` is set to include your new provider. See the [Makefile](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/Makefile#L26) for more context and usage.
+Note the comment at the top of the file, when building ensure `-tags=` is set to include your new provider. See the [Makefile](../../cloud-api-adaptor/Makefile#L26) for more context and usage.
 
 #### Step 3: Add documentation on how to build a Pod VM image
 
