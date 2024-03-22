@@ -72,7 +72,7 @@ Use the properties on the table below for AWS:
 |vxlan_port|VXLAN port number||
 
 >Notes:
- * The AWS credentials are obtained from the CLI [configuration files](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html). **Important**: the access key and secret are recorded in plain-text in [install/overlays/aws/kustomization.yaml](https://github.com/confidential-containers/cloud-api-adaptor/tree/main/install/overlays/aws/kustomization.yaml)
+ * The AWS credentials are obtained from the CLI [configuration files](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html). **Important**: the access key and secret are recorded in plain-text in [install/overlays/aws/kustomization.yaml](../../install/overlays/aws/kustomization.yaml)
  * The subnet is created with CIDR IPv4 block 10.0.0.0/25. In case of deploying an EKS cluster,
 a secondary (private) subnet is created with CIDR IPv4 block 10.0.0.128/25
  * The cluster type **onprem** assumes Kubernetes is already provisioned and its kubeconfig file path can be found at the `KUBECONFIG` environment variable or in the `~/.kube/config` file. Whereas **eks** type instructs to create an [AWS EKS](https://aws.amazon.com/eks/) cluster on the VPC

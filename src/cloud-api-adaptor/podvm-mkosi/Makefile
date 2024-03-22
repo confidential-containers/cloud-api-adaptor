@@ -33,12 +33,14 @@ binaries:
 	docker buildx use default
 	@echo "Building binaries..."
 	rm -rf ./resources/binaries-tree
+	cp -rf ../../../.git ../../.git
 	docker buildx build \
 		--build-arg BUILDER_IMG=$(BUILDER) \
 		--build-arg AA_KBC=$(AA_KBC) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		-o type=local,dest="./resources/binaries-tree" \
-		-f ../podvm/Dockerfile.podvm_binaries.fedora ../.
+		-f ../podvm/Dockerfile.podvm_binaries.fedora ../../
+	rm -rf ../../.git
 
 PHONY: image
 image:

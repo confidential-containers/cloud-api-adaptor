@@ -83,7 +83,7 @@ echo ${PODVM_AMI_ID}
 
 ## Build CAA container image
 
-> **Note**: If you have made changes to the CAA code and you want to deploy those changes then follow [these instructions](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/install/README.md#building-custom-cloud-api-adaptor-image) to build the container image from the root of this repository.
+> **Note**: If you have made changes to the CAA code and you want to deploy those changes then follow [these instructions](../install/README.md#building-custom-cloud-api-adaptor-image) to build the container image from the root of this repository.
 
 If you would like to deploy the latest code from the default branch (`main`) of this repository then expose the following environment variable:
 
