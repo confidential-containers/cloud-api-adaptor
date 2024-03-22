@@ -37,13 +37,21 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           tags: ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}
+          context: src
           file: src/cloud-api-adaptor/podvm/Dockerfile.podvm_builder.fedora
           push: true
+
+      # Build binaries need git commit id as part of image name
+      - name: Prepare .git folder
+        working-directory: ./
+        run: |
+          cp -rf .git src/.git
 
       - name: Build binaries
         uses: docker/build-push-action@v5
         with:
           tags: ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}
+          context: src
           file: src/cloud-api-adaptor/podvm/Dockerfile.podvm_binaries.fedora
           push: true
           build-args:

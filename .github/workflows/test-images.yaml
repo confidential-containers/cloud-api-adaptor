@@ -68,8 +68,8 @@ jobs:
         tags: |
           quay.io/confidential-containers/test-images:${{env.DOCKER_TAG}}
         push: true
-        context: .
+        context: src/cloud-api-adaptor/
         platforms: linux/s390x,linux/amd64
-        file: ${{matrix.targets}}
+        file: src/cloud-api-adaptor/${{matrix.targets}}
         build-args: |
           "ARCH=${{ matrix.arch }}"
