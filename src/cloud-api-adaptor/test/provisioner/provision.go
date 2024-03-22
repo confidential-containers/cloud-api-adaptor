@@ -421,7 +421,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	}
 
 	log.Info("Delete the peerpod-ctrl deployment")
-	cmd = exec.Command("make", "-C", "peerpod-ctrl", "undeploy")
+	cmd = exec.Command("make", "-C", "../peerpod-ctrl", "undeploy")
 	// Run the command from the root src dir
 	cmd.Dir = p.rootSrcDir
 	// Set the KUBECONFIG env var
@@ -522,7 +522,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	}
 
 	log.Info("Installing peerpod-ctrl")
-	cmd = exec.Command("make", "-C", "peerpod-ctrl", "deploy")
+	cmd = exec.Command("make", "-C", "../peerpod-ctrl", "deploy")
 	// Run the deployment from the root src dir
 	cmd.Dir = p.rootSrcDir
 	// Set the KUBECONFIG env var
