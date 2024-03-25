@@ -104,10 +104,9 @@ The easiest way to install the cloud-api-adaptor along with Confidential Contain
 Kubernetes operator [`install_operator.sh`](./install_operator.sh) script. Ensure that you have your IP address exported in the environment, as shown below, then run the install script:
 
 ```
-$ cd libvirt
 $ export LIBVIRT_IP="192.168.122.1"
 $ export SSH_KEY_FILE="id_rsa"
-$ ./install_operator.sh
+$ ./libvirt/install_operator.sh
 ```
 
 If everything goes well you will be able to see the operator's controller manager and cloud-api-adaptor Pods running:
