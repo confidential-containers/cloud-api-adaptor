@@ -56,7 +56,7 @@ wait_pods() {
 	pods="$(kubectl get pods --no-headers -n "$ns" | \
 		awk '{ print $1 }')"
 	for pod in $pods; do
-		kubectl wait --for=condition=Ready --timeout 120s -n "$ns" "pod/${pod}"
+		kubectl wait --for=condition=Ready --timeout 240s -n "$ns" "pod/${pod}"
 	done
 }
 
