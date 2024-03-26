@@ -17,6 +17,7 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="aws"
+  - ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN="false" # flag to enable/disable dynamically load cloud provider external plugin feature
   - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789

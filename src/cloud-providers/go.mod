@@ -11,20 +11,20 @@ require (
 	github.com/IBM/go-sdk-core/v5 v5.13.1
 	github.com/IBM/platform-services-go-sdk v0.36.0
 	github.com/IBM/vpc-go-sdk v0.35.0
-	github.com/avast/retry-go/v4 v4.3.3
+	github.com/avast/retry-go/v4 v4.5.1
 	github.com/aws/aws-sdk-go-v2 v1.21.0
 	github.com/aws/aws-sdk-go-v2/config v1.15.11
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.6
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.6
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.117.0
-	github.com/kdomanski/iso9660 v0.3.5
+	github.com/kdomanski/iso9660 v0.4.0
 	github.com/stretchr/testify v1.8.4
-	github.com/vmware/govmomi v0.29.0
+	github.com/vmware/govmomi v0.33.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.26.0
 	k8s.io/client-go v0.26.0
-	libvirt.org/go/libvirt v1.8002.0
-	libvirt.org/go/libvirtxml v1.9004.0
+	libvirt.org/go/libvirt v1.9008.0
+	libvirt.org/go/libvirtxml v1.9007.0
 )
 
 require (

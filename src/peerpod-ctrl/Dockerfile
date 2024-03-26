@@ -1,11 +1,11 @@
 # Build the manager binary
-FROM --platform=$TARGETPLATFORM quay.io/confidential-containers/golang-fedora:1.20.8-38 as builder
+FROM --platform=$TARGETPLATFORM quay.io/confidential-containers/golang-fedora:1.21.9-38 as builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG CGO_ENABLED=1
 ARG GOFLAGS
 
-WORKDIR /workspace/
+WORKDIR /work
 RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-devel && dnf clean all; fi
 # Copy the Go Modules manifests
 COPY peerpod-ctrl/go.mod peerpod-ctrl/go.mod
@@ -13,7 +13,7 @@ COPY peerpod-ctrl/go.sum peerpod-ctrl/go.sum
 COPY cloud-providers cloud-providers
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-WORKDIR /workspace/peerpod-ctrl/
+WORKDIR /work/peerpod-ctrl/
 RUN go mod download
 
 # Copy the go source
@@ -35,6 +35,6 @@ ARG CGO_ENABLED=1
 
 RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-libs openssh-clients && dnf clean all; fi
 WORKDIR /
-COPY --from=builder /workspace/peerpod-ctrl/manager .
+COPY --from=builder /work/peerpod-ctrl/manager .
 
 ENTRYPOINT ["/manager"]
