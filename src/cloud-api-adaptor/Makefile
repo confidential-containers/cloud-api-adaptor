@@ -177,6 +177,7 @@ podvm-builder:
 	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
 	--build-arg YQ_ARCH=$(ARCH) \
 	--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390_64) \
+	--build-arg ORAS_VERSION=$(ORAS_VERSION) \
 	$(DOCKER_OPTS) .
 
 podvm-binaries:
