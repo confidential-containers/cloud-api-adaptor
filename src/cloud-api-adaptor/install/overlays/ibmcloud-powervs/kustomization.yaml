@@ -17,6 +17,7 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="ibmcloud-powervs"
+  - ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN="false" # flag to enable/disable dynamically load cloud provider external plugin feature
   - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
   - POWERVS_SERVICE_INSTANCE_ID="" #set
   - POWERVS_NETWORK_ID="" #set

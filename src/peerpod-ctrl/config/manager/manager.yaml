@@ -62,6 +62,12 @@ spec:
           defaultMode: 384
           optional: true
           secretName: ssh-key-secret
+      # setting for cloud provider external plugin
+      # - hostPath:
+      #     path: /opt/cloud-api-adaptor/plugins
+      #     type: Directory
+      #   name: provider-dir
+      # setting for cloud provider external plugin
       securityContext:
         runAsNonRoot: false
         # TODO(user): For common cases that do not require escalating privileges
@@ -80,6 +86,10 @@ spec:
         - mountPath: /root/.ssh/
           name: ssh
           readOnly: true
+        # # setting for cloud provider external plugin
+        # - mountPath: /cloud-providers
+        #   name: provider-dir
+        # # setting for cloud provider external plugin
         envFrom:
         - secretRef:
             name: peer-pods-secret

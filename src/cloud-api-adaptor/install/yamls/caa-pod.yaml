@@ -59,6 +59,10 @@ spec:
         - mountPath: /run/netns
           mountPropagation: HostToContainer
           name: netns
+        # # setting for cloud provider external plugin
+        # - mountPath: /cloud-providers
+        #   name: provider-dir
+        # # setting for cloud provider external plugin
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
@@ -79,3 +83,9 @@ spec:
       - hostPath:
           path: /run/netns
         name: netns
+      # # setting for cloud provider external plugin
+      # - hostPath:
+      #     path: /opt/cloud-api-adaptor/plugins
+      #     type: Directory
+      #   name: provider-dir
+      # # setting for cloud provider external plugin

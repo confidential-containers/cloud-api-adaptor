@@ -1,6 +1,9 @@
 #!/bin/bash
 
 CLOUD_PROVIDER=${1:-$CLOUD_PROVIDER}
+# Enabling dynamically loaded cloud provider external plugin feature, disabled by default
+ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN=${ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN:-false}
+
 CRI_RUNTIME_ENDPOINT=${CRI_RUNTIME_ENDPOINT:-/run/cri-runtime.sock}
 optionals+=""
 
