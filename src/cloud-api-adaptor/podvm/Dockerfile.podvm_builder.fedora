@@ -15,6 +15,7 @@ ARG GO_VERSION="1.21.12"
 ARG PROTOC_VERSION="3.15.0"
 ARG RUST_VERSION="1.75.0"
 ARG YQ_VERSION="v4.35.1"
+ARG ORAS_VERSION
 # amd64: YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 # s390x: YQ_CHECKSUM="sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
 ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
@@ -40,6 +41,9 @@ RUN chmod a+x rustup && ./rustup -y --default-toolchain ${RUST_VERSION}
 
 ADD https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
 RUN unzip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
+
+ADD https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz oras_${ORAS_VERSION}_linux_amd64.tar.gz
+RUN rm -rf /usr/local/bin/oras && tar -C /usr/local/bin -xzf oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz && rm -f oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz
 
 WORKDIR /src
 

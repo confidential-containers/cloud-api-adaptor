@@ -20,6 +20,7 @@ ARG PACKER_VERSION="v1.9.4"
 # amd64: YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 # s390x: YQ_CHECKSUM="sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
 ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
+ARG ORAS_VERSION
 ARG ORG_ID
 ARG ACTIVATION_KEY
 
@@ -31,6 +32,7 @@ ENV PROTOC_ARCH=${PROTOC_ARCH}
 ENV ARCH=${ARCH}
 ENV YQ_ARCH=${YQ_ARCH}
 ENV YQ_VERSION=${YQ_VERSION}
+ENV ORAS_VERSION=${ORAS_VERSION}
 
 # This registering RHEL when building on an unsubscribed system
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
@@ -38,7 +40,7 @@ RUN if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
     rm -f /etc/rhsm-host && rm -f /etc/pki/entitlement-host; \
     subscription-manager register --org=${ORG_ID} --activationkey=${ACTIVATION_KEY}; \
     fi
- 
+
 RUN subscription-manager repos --enable codeready-builder-for-rhel-9-${ARCH/amd64/x86_64}-rpms; \
     dnf groupinstall -y 'Development Tools'; \
     dnf install -y yum-utils gnupg git --allowerasing curl pkg-config clang perl libseccomp-devel gpgme-devel \
@@ -53,12 +55,12 @@ RUN chmod a+x /usr/local/bin/yq && \
     rm -f go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-# Install packer. Packer doesn't does not have prebuilt s390x arch binaries above Packer version 0.1.5 
+# Install packer. Packer doesn't does not have prebuilt s390x arch binaries above Packer version 0.1.5
 RUN if [ "${ARCH}" == "s390x" ]; then \
     git clone --depth 1 --single-branch https://github.com/hashicorp/packer.git -b ${PACKER_VERSION}; \
     cd packer; \
     sed -i -- "s/ALL_XC_ARCH=.*/ALL_XC_ARCH=\"${ARCH}\"/g" scripts/build.sh; \
-	sed -i -- "s/ALL_XC_OS=.*/ALL_XC_OS=\"Linux\"/g" scripts/build.sh; \
+    sed -i -- "s/ALL_XC_OS=.*/ALL_XC_OS=\"Linux\"/g" scripts/build.sh; \
     make bin && cp bin/packer /usr/local/bin/; \
     cd $OLDPWD; \
     else \
@@ -79,6 +81,9 @@ ENV PATH="/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
 RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip && \
     unzip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
+
+ADD https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz oras_${ORAS_VERSION}_linux_amd64.tar.gz
+RUN rm -rf /usr/local/bin/oras && tar -C /usr/local/bin -xzf oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz && rm -f oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz
 
 WORKDIR /src
 ENV GOPATH=/src

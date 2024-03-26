@@ -19,6 +19,8 @@ ARG YQ_VERSION="v4.35.1"
 # amd64: YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 # s390x: YQ_CHECKSUM="sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
 ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
+ARG ORAS_VERSION
+
 # Without setting ENV gh-action is failing to use the correct values
 ENV GO_VERSION=${GO_VERSION}
 ENV RUST_VERSION=${RUST_VERSION}
@@ -26,6 +28,7 @@ ENV PROTOC_VERSION=${PROTOC_VERSION}
 ENV ARCH=${ARCH}
 ENV YQ_ARCH=${YQ_ARCH}
 ENV YQ_VERSION=${YQ_VERSION}
+ENV ORAS_VERSION=${ORAS_VERSION}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -56,6 +59,9 @@ RUN chmod a+x rustup && ./rustup -y --default-toolchain ${RUST_VERSION} \
 
 ADD https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip protoc-${PROTOC_VERSION}-linux-x86_64.zip
 RUN unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-x86_64.zip
+
+ADD https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz oras_${ORAS_VERSION}_linux_amd64.tar.gz
+RUN rm -rf /usr/local/bin/oras && tar -C /usr/local/bin -xzf oras_${ORAS_VERSION}_linux_amd64.tar.gz && rm -f oras_${ORAS_VERSION}_linux_amd64.tar.gz
 
 WORKDIR /src
 
