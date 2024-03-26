@@ -39,6 +39,7 @@ fedora-binaries-builder:
 		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
 		--build-arg YQ_ARCH=$(ARCH) \
 		--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390x) \
+		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
 		--load \
 		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
 

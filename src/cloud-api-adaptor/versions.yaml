@@ -26,6 +26,7 @@ tools:
   packer: v1.9.4
   kcli: 99.0.202407031308
   iptables-wrapper: v0.0.0-20240819165702-06cad2ec6cb5
+  oras: 1.2.0
 # Referenced Git repositories
 git:
   coco-operator:
