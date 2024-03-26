@@ -59,6 +59,7 @@ PHONY: image-debug
 image-debug:
 	@echo "Enabling debug preset..."
 	touch resources/buildDebugImage
+	#mkdir -p resources/binaries-tree
 	rm -rf ./build
 	@echo "Building debug image..."
 ifeq ($(ARCH),s390x)

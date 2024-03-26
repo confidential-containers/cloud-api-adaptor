@@ -11,7 +11,6 @@ jobs:
       fail-fast: false
       matrix:
         runner:
-          - ubuntu-latest
           - S390X
     permissions:
       contents: read
@@ -36,13 +35,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install build dependencies
+        run: |
+          cat /etc/os-release
+          sudo apt-get update -y
+          sudo apt-get install -y bubblewrap alien dnf qemu-utils uidmap
+
+      - name: Install mkosi
+        run: |
+          git clone -b v22 https://github.com/systemd/mkosi
+          sudo rm /usr/local/bin/mkosi
+          sudo ln -s $PWD/mkosi/bin/mkosi /usr/local/bin/mkosi
+          mkosi --version
+
       - name: Build builder
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: make fedora-binaries-builder
 
       - name: Build binaries
         working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: make binaries
+        run: sudo make binaries
+
+      - name: Build image
+        run: sudo make image-debug
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
       
       # TODO - build image via mkosi when s390x is available
       # TODO - upload the image 
