@@ -6,6 +6,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -78,6 +79,7 @@ type TestCase struct {
 	deletionWithin       time.Duration
 	testInstanceTypes    InstanceValidatorFunctions
 	isNydusSnapshotter   bool
+	FailReason           string
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -167,6 +169,11 @@ func (tc *TestCase) WithAuthImageStatus(status string) *TestCase {
 
 func (tc *TestCase) WithNydusSnapshotter() *TestCase {
 	tc.isNydusSnapshotter = true
+	return tc
+}
+
+func (tc *TestCase) WithFailReason(reason string) *TestCase {
+	tc.FailReason = reason
 	return tc
 }
 
@@ -414,6 +421,37 @@ func (tc *TestCase) Run() {
 					}
 
 					tc.assert.HasPodVM(t, tc.pod.Name)
+				}
+
+				if tc.podState != v1.PodRunning {
+					profile, error := tc.assert.GetInstanceType(t, tc.pod.Name)
+					if error != nil {
+						if error.Error() == "Failed to Create PodVM Instance" {
+							_, err := PodEventExtractor(ctx, client, *tc.pod)
+							if err != nil {
+								t.Fatal(err)
+							}
+						} else {
+							t.Fatal(error)
+						}
+					} else if profile != "" {
+						fmt.Printf("PodVM Created with Instance Type %v", profile)
+						if tc.FailReason != "" {
+							jsonData, err := json.Marshal(tc.pod.Status)
+							if err != nil {
+								fmt.Println("Error marshaling pod.Status to JSON: ", err.Error())
+							} else {
+								t.Logf("Current Pod State: %v", string(jsonData))
+							}
+							if strings.Contains(string(jsonData), tc.FailReason) {
+								log.Infof("failed due to expected reason %s", tc.FailReason)
+							} else {
+								t.Fatal(err)
+							}
+						} else {
+							log.Infof("Pod Failed If you want to cross check please give .WithFailReason(error string)")
+						}
+					}
 				}
 
 				if tc.isNydusSnapshotter {
