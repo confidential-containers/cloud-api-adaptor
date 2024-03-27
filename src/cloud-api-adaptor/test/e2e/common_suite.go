@@ -572,3 +572,46 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 	NewTestCase(t, e, "TestPodsMTLSCommunication", assert, "Pods communication with mTLS").WithPod(serverPod).WithExtraPods(extraPods).WithConfigMap(configMap).WithService(nginxSvc).WithSecret(serverSecret).WithExtraSecrets(extraSecrets).Run()
 
 }
+
+func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
+
+	log.Info("Do test kbs key release")
+	pod := NewBusyboxPod(E2eNamespace)
+
+	        testCommands := []TestCommand{
+                {
+                        Command:       []string{"ping", "-c", "1", "www.google.com"},
+                        ContainerName: pod.Spec.Containers[0].Name,
+                        TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+                                if stdout.String() != "" {
+                                        log.Infof("Output of ping command in busybox : %s", stdout.String())
+                                        return true
+                                } else {
+                                        log.Info("No output from ping command")
+                                        return false
+                                }
+                        },
+                        TestCommandStderrFn: IsBufferEmpty,
+                        TestErrorFn:         IsErrorEmpty,
+                },
+        }
+	/*testCommands := []TestCommand{
+		{
+			Command:       []string{"wget http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
+			ContainerName: pod.Spec.Containers[0].Name,
+			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if stdout.String() != "" {
+					log.Infof("Output of curl command in busybox : %s", stdout.String())
+					return true
+				} else {
+					log.Info("No output from curl command")
+					return false
+				}
+			},
+			TestCommandStderrFn: IsBufferEmpty,
+			TestErrorFn:         IsErrorEmpty,
+		},
+	}*/
+
+	NewTestCase(t, e, "KbsKeyReleasePod", assert, "Kbs key release is successfull").WithPod(pod).WithTestCommands(testCommands).Run()
+}
