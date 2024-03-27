@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -144,7 +145,13 @@ func findConfigEntry(path string, cc *CloudConfig) []byte {
 }
 
 func writeFile(path string, bytes []byte) error {
-	err := os.WriteFile(path, bytes, 0644)
+	// Ensure the parent directory exists
+	err := os.MkdirAll(filepath.Dir(path), 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	err = os.WriteFile(path, bytes, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
