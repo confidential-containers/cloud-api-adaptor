@@ -45,26 +45,31 @@ binaries:
 PHONY: image
 image:
 	@echo "Enabling production preset..."
-	rm -rf resources/buildDebugImage
+	rm -rf resources/build*Image
 	rm -rf ./build
 	@echo "Building image..."
 ifeq ($(ARCH),s390x)
+	touch resources/buildS390xImage
 	mkosi --profile production.conf
 	../hack/build-s390x-image.sh
 else
+	touch resources/buildBootableImage
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
 endif
 
 PHONY: image-debug
 image-debug:
 	@echo "Enabling debug preset..."
+	rm -rf resources/build*Image
 	touch resources/buildDebugImage
 	rm -rf ./build
 	@echo "Building debug image..."
 ifeq ($(ARCH),s390x)
+	touch resources/buildS390xImage
 	mkosi --profile debug.conf
 	../hack/build-s390x-image.sh
 else
+	touch resources/buildBootableImage
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
 endif
 
