@@ -25,6 +25,7 @@ ENV ARCH ${ARCH}
 ENV UEFI ${UEFI}
 
 ARG IMAGE_URL="/tmp/rhel.qcow2"
+
 ARG IMAGE_CHECKSUM
 
 ENV IMAGE_URL ${IMAGE_URL}
@@ -45,6 +46,10 @@ RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud
 COPY . /src
 
 WORKDIR /src/cloud-api-adaptor/podvm
+
+RUN if [ "${ARCH}" == "x86_64" || "${ARCH}" == "amd64"]; then \
+    packer plugins install github.com/hashicorp/qemu; \
+    fi
 
 RUN LIBC=gnu make image
 

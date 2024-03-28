@@ -10,6 +10,7 @@ endif
 # stored in versions.yaml
 YQ_VERSION := v4.35.1
 YQ_CHECKSUM := "sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
+YQ_CHECKSUM_s390x:= "sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
 
 MINIMUM_YQ_MAJOR_VERSION := 4
 INSTALLED_YQ_MAJOR_VERSION := $(shell $(YQ_COMMAND) --version | sed -nE 's/.* v?([0-9]+).*/\1/p')
@@ -51,3 +52,4 @@ PAUSE_REPO :=  $(or $(PAUSE_REPO),$(call query,oci.pause.registry))
 PAUSE_VERSION := $(or $(PAUSE_VERSION),$(call query,oci.pause.tag))
 OPA_REPO :=  $(or $(OPA_REPO),$(call query,git.opa.url))
 OPA_VERSION := $(or $(OPA_VERSION),$(call query,git.opa.reference))
+PACKER_VERSION := $(or $(PACKER_VERSION),$(call query,tools.packer))

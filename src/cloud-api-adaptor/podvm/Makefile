@@ -50,7 +50,14 @@ endif
 
 endif
 else ifeq ($(PODVM_DISTRO),rhel)
+	@echo defined
 	$(eval OPTS := -var disk_size=11144)
+ifeq ($(ARCH),s390x)
+	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
+ifndef QEMU_BINARY
+	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
+endif
+endif
 else
 	$(error PODVM_DISTRO is invalid or not defined)
 endif
@@ -74,6 +81,9 @@ $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
 	mkdir -p toupload
 	if [ "${SE_BOOT}" = "1" ] && [ "${ARCH}" = "s390x" ]; then \
 		qemu-img create -f qcow2 "se-${IMAGE_FILE}" 100G; \
+	fi
+	if [ "${ARCH}" = "x86_64" ]; then \
+		packer plugins install github.com/hashicorp/qemu; \
 	fi
 	packer build ${PACKER_DEFAULT_OPTS} ${OPTS} qcow2/$(PODVM_DISTRO)
 	rm -fr toupload
