@@ -18,6 +18,7 @@ BINARIES    := cloud-api-adaptor agent-protocol-forwarder process-user-data
 SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
+YQ_CHECKSUM_${ARCH} ?= $(YQ_CHECKSUM)
 # End-to-end tests overall run timeout.
 TEST_E2E_TIMEOUT ?= 60m
 
@@ -163,13 +164,27 @@ BINARIES_DOCKERFILE := Dockerfile.podvm_binaries$(DOCKERFILE_SUFFIX)
 PODVM_DOCKERFILE := Dockerfile.podvm$(DOCKERFILE_SUFFIX)
 
 podvm-builder:
+ifeq ($(PODVM_DISTRO),rhel)
+	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
+	--build-arg GO_VERSION=$(GO_VERSION) \
+	--build-arg ORG_ID=$(ORG_ID) \
+	--build-arg ARCH=$(ARCH) \
+	--build-arg ACTIVATION_KEY=$(ACTIVATION_KEY) \
+	--build-arg PACKER_VERSION=$(PACKER_VERSION) \
+	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
+	--build-arg RUST_VERSION=$(RUST_VERSION) \
+	--build-arg YQ_VERSION=$(YQ_VERSION) \
+	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
+	$(DOCKER_OPTS) .
+else
 	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
 	--build-arg GO_VERSION=$(GO_VERSION) \
 	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
 	--build-arg RUST_VERSION=$(RUST_VERSION) \
 	--build-arg YQ_VERSION=$(YQ_VERSION) \
-	--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
+	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
 	$(DOCKER_OPTS) .
+endif
 
 podvm-binaries:
 	cp -rf ../../.git .git
@@ -189,6 +204,7 @@ podvm-image:
 	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
 	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
 	--build-arg ARCH=$(ARCH) \
+	--build-arg IMAGE_URL=$(IMAGE_URL) \
 	--build-arg CLOUD_PROVIDER=$(or $(CLOUD_PROVIDER),generic) \
 	$(DOCKER_OPTS) .
 	rm -rf .git

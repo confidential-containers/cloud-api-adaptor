@@ -33,6 +33,11 @@ variable "memory" {
   default = "2048M"
 }
 
+variable "qemu_binary" {
+  type    = string
+  default = "qemu-system-x86_64"
+}
+
 variable "ssh_password" {
   type    = string
   default = "PeerP0d"

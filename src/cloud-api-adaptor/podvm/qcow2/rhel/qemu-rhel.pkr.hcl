@@ -2,6 +2,7 @@ locals {
   machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
   use_pflash   = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
   firmware     = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
+  cpu_type     = "${var.os_arch}" == "s390x" ? "max" : "Cascadelake-Server"
 }
 
 source "qemu" "rhel" {
@@ -14,7 +15,7 @@ source "qemu" "rhel" {
   iso_checksum     = "${var.cloud_image_checksum}"
   iso_url          = "${var.cloud_image_url}"
   output_directory = "output"
-  qemuargs         = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"], ["-cpu", "Cascadelake-Server"]]
+  qemuargs         = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"], ["-cpu", "${local.cpu_type}"]]
   ssh_password     = "${var.ssh_password}"
   ssh_port         = 22
   ssh_username     = "${var.ssh_username}"
@@ -22,6 +23,7 @@ source "qemu" "rhel" {
   boot_wait        = "${var.boot_wait}"
   vm_name          = "${var.qemu_image_name}"
   shutdown_command = "sudo shutdown -h now"
+  qemu_binary      = "${var.qemu_binary}"
   machine_type     = "${local.machine_type}"
   use_pflash       = "${local.use_pflash}"
   firmware         = "${local.firmware}"
