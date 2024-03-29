@@ -50,7 +50,15 @@ endif
 
 endif
 else ifeq ($(PODVM_DISTRO),rhel)
+	@echo defined
 	$(eval OPTS := -var disk_size=11144)
+ifeq ($(ARCH),s390x)
+	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
+	$(eval OPTS += -var cpu_type=max)
+ifndef QEMU_BINARY
+	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
+endif
+endif
 else
 	$(error PODVM_DISTRO is invalid or not defined)
 endif
