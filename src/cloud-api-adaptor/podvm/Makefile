@@ -83,6 +83,9 @@ $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
 	if [ "${SE_BOOT}" = "1" ] && [ "${ARCH}" = "s390x" ]; then \
 		qemu-img create -f qcow2 "se-${IMAGE_FILE}" 100G; \
 	fi
+	if [ "${ARCH}" = "x86_64" ]; then \
+		packer init qcow2/rhel/qemu-rhel.pkr.hcl; \
+	fi
 	packer build ${PACKER_DEFAULT_OPTS} ${OPTS} qcow2/$(PODVM_DISTRO)
 	rm -fr toupload
 	rm -f cloud-init.img
