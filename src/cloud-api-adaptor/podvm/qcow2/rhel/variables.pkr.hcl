@@ -13,6 +13,11 @@ variable "cpus" {
   default = "2"
 }
 
+variable "cpu_type" {
+  type    = string
+  default = "Cascadelake-Server"
+}
+
 variable "disk_size" {
   type    = string
   default = "6144"
@@ -31,6 +36,11 @@ variable "cloud_image_url" {
 variable "memory" {
   type    = string
   default = "2048M"
+}
+
+variable "qemu_binary" {
+  type    = string
+  default = "qemu-system-x86_64"
 }
 
 variable "ssh_password" {
