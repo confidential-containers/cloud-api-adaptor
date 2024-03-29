@@ -15,7 +15,7 @@ cloudimg:
         url: https://access.redhat.com/downloads/content/479/ver=/rhel---9/9.2/x86_64/product-software
         checksum: "sha256:34ff41b5274692c984e3860b21136af8b6ae502744c6c7578dda82002fba0287"
       s390x:
-        url: hhttps://access.redhat.com/downloads/content/433/ver=/rhel---9/9.3%20Beta/s390x/product-software
+        url: https://access.redhat.com/downloads/content/433/ver=/rhel---9/9.3%20Beta/s390x/product-software
         checksum: "sha256:d436ffeac7d468f75526ca8b8bab1cba64ba3ab2889ccd11fa107a7323b267db"
 
 tools:
@@ -23,6 +23,7 @@ tools:
   golang: 1.21.9
   rust: 1.72.0
   protoc: 3.15.0
+  packer: v1.9.4
 # Referenced Git repositories
 git:
   guest-components:

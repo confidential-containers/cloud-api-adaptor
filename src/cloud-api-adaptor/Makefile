@@ -22,7 +22,7 @@ SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 TEST_E2E_TIMEOUT ?= 60m
 
 RESOURCE_CTRL ?= true
-
+YQ_CHECKSUM_${ARCH} ?= $(YQ_CHECKSUM)
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
 	BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere
@@ -163,13 +163,27 @@ BINARIES_DOCKERFILE := Dockerfile.podvm_binaries$(DOCKERFILE_SUFFIX)
 PODVM_DOCKERFILE := Dockerfile.podvm$(DOCKERFILE_SUFFIX)
 
 podvm-builder:
+ifeq ($(PODVM_DISTRO),rhel)
+	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
+	--build-arg GO_VERSION=$(GO_VERSION) \
+	--build-arg ORG_ID=$(ORG_ID) \
+	--build-arg ARCH=$(ARCH) \
+	--build-arg ACTIVATION_KEY=$(ACTIVATION_KEY) \
+	--build-arg PACKER_VERSION=$(PACKER_VERSION) \
+	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
+	--build-arg RUST_VERSION=$(RUST_VERSION) \
+	--build-arg YQ_VERSION=$(YQ_VERSION) \
+	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
+	$(DOCKER_OPTS) .
+else
 	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
 	--build-arg GO_VERSION=$(GO_VERSION) \
 	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
 	--build-arg RUST_VERSION=$(RUST_VERSION) \
 	--build-arg YQ_VERSION=$(YQ_VERSION) \
-	--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
+	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
 	$(DOCKER_OPTS) .
+endif
 
 podvm-binaries:
 	cp -rf ../../.git .git
@@ -190,5 +204,7 @@ podvm-image:
 	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
 	--build-arg ARCH=$(ARCH) \
 	--build-arg CLOUD_PROVIDER=$(or $(CLOUD_PROVIDER),generic) \
+	--build-arg IMAGE_URL=$(IMAGE_URL) \
+	--build-arg IMAGE_CHECKSUM=$(IMAGE_CHECKSUM) \
 	$(DOCKER_OPTS) .
 	rm -rf .git
