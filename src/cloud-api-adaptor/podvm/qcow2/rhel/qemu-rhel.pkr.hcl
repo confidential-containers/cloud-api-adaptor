@@ -1,3 +1,12 @@
+packer {
+  required_plugins {
+    qemu = {
+      version = "1.1.0"
+      source  = "github.com/hashicorp/qemu"
+    }
+  }
+}
+
 locals {
   machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
   use_pflash   = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
