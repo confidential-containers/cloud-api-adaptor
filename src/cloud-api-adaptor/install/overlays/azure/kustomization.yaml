@@ -57,8 +57,8 @@ secretGenerator:
   # AZURE_CLIENT_ID=...
   # AZURE_CLIENT_SECRET=...
   # AZURE_TENANT_ID=...
-  envs:
-  - service-principal.env
+  # envs:
+  # - service-principal.env
 - name: ssh-key-secret
   namespace: confidential-containers-system
   files: # key generation example: ssh-keygen -f ./id_rsa -N ""
