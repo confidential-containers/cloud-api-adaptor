@@ -142,6 +142,15 @@ jobs:
         echo "successfully built $IMAGE_ID"
         echo "image-id=${IMAGE_ID}" >> "$GITHUB_OUTPUT"
 
+    # Above build can take a > 10 minutes and the login assertion is valid only
+    # for 5 minutes, so re-login before we cleanup the intermediate image.
+    - uses: azure/login@v1
+      name: 'Az CLI login'
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
     - name: Cleanup intermediate image
       if: always()
       run: |
