@@ -60,6 +60,7 @@ spec:
           mountPropagation: HostToContainer
           name: netns
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         node.kubernetes.io/worker: ""
       volumes:
