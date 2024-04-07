@@ -105,6 +105,7 @@ function build_caa_payload_arch_specific() {
 		--build-arg COMMIT="${commit}" \
 		--build-arg YQ_VERSION="${YQ_VERSION}" \
 		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
+		--load \
 		-f Dockerfile \
 		${tag_string} \
 		.
