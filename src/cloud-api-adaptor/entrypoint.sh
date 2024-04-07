@@ -22,6 +22,11 @@ optionals+=""
 [[ "${AA_KBC_PARAMS}" ]] && optionals+="-aa-kbc-params ${AA_KBC_PARAMS} "
 [[ "${FORWARDER_PORT}" ]] && optionals+="-forwarder-port ${FORWARDER_PORT} "
 [[ "${CLOUD_CONFIG_VERIFY}" == "true" ]] && optionals+="-cloud-config-verify "
+[[ "${SECURE_COMMS}" == "true" ]] && optionals+="-secure-comms "
+[[ "${SECURE_COMMS_INBOUNDS}" ]] && optionals+="-secure-comms-inbounds ${SECURE_COMMS_INBOUNDS} "
+[[ "${SECURE_COMMS_OUTBOUNDS}" ]] && optionals+="-secure-comms-outbounds ${SECURE_COMMS_OUTBOUNDS} "
+[[ "${SECURE_COMMS_KBS_ADDR}" ]] && optionals+="-secure-comms-kbs ${SECURE_COMMS_KBS_ADDR} "
+
 
 test_vars() {
     for i in "$@"; do

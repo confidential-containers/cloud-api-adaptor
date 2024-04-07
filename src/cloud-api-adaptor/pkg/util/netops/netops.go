@@ -156,6 +156,19 @@ func (ns *namespace) Run(fn func() error) (err error) {
 	return fn()
 }
 
+func RunAsNsPath(nsPath string, fn func() error) (err error) {
+	podNS, err := OpenNamespace(nsPath)
+	if err != nil {
+		return fmt.Errorf("failed to open network namespace %q: %w", nsPath, err)
+	}
+	defer func() {
+		if err = podNS.Close(); err != nil {
+			err = fmt.Errorf("failed to close a network namespace %q: %w ", podNS.Path(), err)
+		}
+	}()
+	return podNS.Run(fn)
+}
+
 type Link interface {
 	Name() string
 	Namespace() Namespace

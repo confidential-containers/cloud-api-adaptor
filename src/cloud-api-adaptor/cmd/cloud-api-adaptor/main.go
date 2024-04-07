@@ -15,6 +15,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/kubemgr"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 
@@ -22,7 +23,10 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/probe"
 )
 
-const programName = "cloud-api-adaptor"
+const (
+	programName           = "cloud-api-adaptor"
+	AA_KBC_PARAMS_DEFAULT = "cc_kbc::http://127.0.0.1:8080"
+)
 
 type daemonConfig struct {
 	serverConfig adaptor.ServerConfig
@@ -83,8 +87,12 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	}
 
 	var (
-		disableTLS bool
-		tlsConfig  tlsutil.TLSConfig
+		disableTLS           bool
+		tlsConfig            tlsutil.TLSConfig
+		secureComms          bool
+		secureCommsInbounds  string
+		secureCommsOutbounds string
+		secureCommsKbsAddr   string
 	)
 
 	cmd.Parse(programName, os.Args[1:], func(flags *flag.FlagSet) {
@@ -105,6 +113,10 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.StringVar(&tlsConfig.KeyFile, "cert-key", "", "cert key")
 		flags.BoolVar(&tlsConfig.SkipVerify, "tls-skip-verify", false, "Skip TLS certificate verification - use it only for testing")
 		flags.BoolVar(&disableTLS, "disable-tls", false, "Disable TLS encryption - use it only for testing")
+		flags.BoolVar(&secureComms, "secure-comms", false, "Use SSH to secure communication between cluster and peer pods")
+		flags.StringVar(&secureCommsInbounds, "secure-comms-inbounds", "", "Inbound tags for secure communication tunnels")
+		flags.StringVar(&secureCommsOutbounds, "secure-comms-outbounds", "", "Outbound tags for secure communication tunnels")
+		flags.StringVar(&secureCommsKbsAddr, "secure-comms-kbs", "kbs-service.kbs-operator-system:8080", "Address of a KBS Service for Secure-Comms")
 		flags.DurationVar(&cfg.serverConfig.ProxyTimeout, "proxy-timeout", proxy.DefaultProxyTimeout, "Maximum timeout in minutes for establishing agent proxy connection")
 
 		flags.StringVar(&cfg.networkConfig.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
@@ -121,8 +133,22 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 	fmt.Printf("%s: starting Cloud API Adaptor daemon for %q\n", programName, cloudName)
 
-	if !disableTLS {
-		cfg.serverConfig.TLSConfig = &tlsConfig
+	if secureComms {
+		err := kubemgr.InitKubeMgrInVivo()
+		if err != nil {
+			return nil, fmt.Errorf("secure comms failed to initialize KubeMgr: %w", err)
+		}
+
+		cfg.serverConfig.SecureComms = true
+		cfg.serverConfig.SecureCommsInbounds = secureCommsInbounds
+		cfg.serverConfig.SecureCommsOutbounds = secureCommsOutbounds
+		cfg.serverConfig.SecureCommsKbsAddress = secureCommsKbsAddr
+
+		cfg.serverConfig.AAKBCParams = AA_KBC_PARAMS_DEFAULT
+	} else {
+		if !disableTLS {
+			cfg.serverConfig.TLSConfig = &tlsConfig
+		}
 	}
 
 	cloud.LoadEnv()

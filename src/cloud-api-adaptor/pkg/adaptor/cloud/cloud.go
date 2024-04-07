@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/containerd/containerd/pkg/cri/annotations"
@@ -27,6 +28,8 @@ import (
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	putil "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
+
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/wnssh"
 )
 
 const (
@@ -74,8 +77,18 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	podsDir, daemonPort, aaKBCParams string) Service {
+	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, aaKBCParams, sshport string) Service {
 	var err error
+	var sshClient *wnssh.SshClient
+
+	if secureComms {
+		inbounds := append([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, strings.Split(secureCommsInbounds, ",")...)
+		outbounds := append([]string{"BOTH_PHASES:KBS:" + kbsAddress}, strings.Split(secureCommsOutbounds, ",")...)
+		sshClient, err = wnssh.InitSshClient(inbounds, outbounds, kbsAddress, sshport)
+		if err != nil {
+			log.Fatalf("InitSshClient %v", err)
+		}
+	}
 
 	s := &cloudService{
 		provider:     provider,
@@ -85,6 +98,7 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 		daemonPort:   daemonPort,
 		workerNode:   workerNode,
 		aaKBCParams:  aaKBCParams,
+		sshClient:    sshClient,
 	}
 	s.cond = sync.NewCond(&s.mutex)
 	s.ppService, err = k8sops.NewPeerPodService()
@@ -319,13 +333,34 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 
 	logger.Printf("created an instance %s for sandbox %s", instance.Name, sid)
 
+	instanceIP := instance.IPs[0].String()
+	forwarderPort := s.daemonPort
+
+	if s.sshClient != nil {
+		ci := s.sshClient.InitPP(context.Background(), string(sid), instance.IPs)
+		if ci == nil {
+			return nil, fmt.Errorf("failed sshClient.InitPP")
+		}
+
+		if err := ci.Start(); err != nil {
+			return nil, fmt.Errorf("failed SshClientInstance.Start: %s", err)
+		}
+
+		// Set agentProxy
+		instanceIP = "127.0.0.1"
+		forwarderPort = ci.GetPort("KATAAGENT")
+
+		// Set ci in sandbox
+		sandbox.sshClientInst = ci
+	}
+
 	if err := s.workerNode.Setup(sandbox.netNSPath, instance.IPs, sandbox.podNetwork); err != nil {
 		return nil, fmt.Errorf("setting up pod network tunnel on netns %s: %w", sandbox.netNSPath, err)
 	}
 
 	serverURL := &url.URL{
 		Scheme: "http",
-		Host:   net.JoinHostPort(instance.IPs[0].String(), s.daemonPort),
+		Host:   net.JoinHostPort(instanceIP, forwarderPort),
 		Path:   forwarder.AgentURLPath,
 	}
 
@@ -365,6 +400,10 @@ func (s *cloudService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.S
 
 	if err := sandbox.agentProxy.Shutdown(); err != nil {
 		logger.Printf("stopping agent proxy: %v", err)
+	}
+
+	if sandbox.sshClientInst != nil {
+		sandbox.sshClientInst.DisconnectPP(string(sid))
 	}
 
 	if err := s.provider.DeleteInstance(ctx, sandbox.instanceID); err != nil {

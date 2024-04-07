@@ -19,6 +19,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/vminfo"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/sshutil"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	pbPodVMInfo "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/proto/podvminfo"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
@@ -41,6 +42,10 @@ type ServerConfig struct {
 	ProxyTimeout            time.Duration
 	AAKBCParams             string
 	EnableCloudConfigVerify bool
+	SecureComms             bool
+	SecureCommsInbounds     string
+	SecureCommsOutbounds    string
+	SecureCommsKbsAddress   string
 }
 
 type Server interface {
@@ -66,7 +71,8 @@ func NewServer(provider provider.Provider, cfg *ServerConfig, workerNode podnetw
 	logger.Printf("server config: %#v", cfg)
 
 	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.CriSocketPath, cfg.TLSConfig, cfg.ProxyTimeout)
-	cloudService := cloud.NewService(provider, agentFactory, workerNode, cfg.PodsDir, cfg.ForwarderPort, cfg.AAKBCParams)
+	cloudService := cloud.NewService(provider, agentFactory, workerNode,
+		cfg.SecureComms, cfg.SecureCommsInbounds, cfg.SecureCommsOutbounds, cfg.SecureCommsKbsAddress, cfg.PodsDir, cfg.ForwarderPort, cfg.AAKBCParams, sshutil.SSHPORT)
 	vmInfoService := vminfo.NewService(cloudService)
 
 	return &server{
