@@ -51,11 +51,13 @@ require (
 	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.8.2
 	github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl v0.8.2
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
+	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/moby/sys/mountinfo v0.6.2
 	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.7.0
 	github.com/tj/assert v0.0.3
+	golang.org/x/crypto v0.21.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	k8s.io/api v0.26.0
 	k8s.io/apimachinery v0.26.0
@@ -111,7 +113,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.13.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -146,7 +147,6 @@ require (
 	go.opentelemetry.io/otel v1.14.0 // indirect
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/term v0.18.0 // indirect

@@ -17,7 +17,10 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/kubemgr"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/ppssh"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/securecomms/test"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
@@ -29,7 +32,7 @@ func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID st
 		Name: "abc",
 		ID:   fmt.Sprintf("%s-%.8s", podName, sandboxID),
 		IPs: []netip.Addr{
-			netip.MustParseAddr("192.0.2.1"),
+			netip.MustParseAddr("127.0.0.1"),
 		},
 	}, nil
 }
@@ -114,7 +117,62 @@ func TestCloudService(t *testing.T) {
 		podsDir: dir,
 	}
 
-	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, dir, forwarder.DefaultListenPort, "")
+	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, false, "", "", "", dir, forwarder.DefaultListenPort, "", "")
+
+	assert.NotNil(t, s)
+
+	sandboxID := "123"
+	sandboxNS := "default"
+	sandboxName := "mypod"
+
+	req := &pb.CreateVMRequest{
+		Id: sandboxID,
+		Annotations: map[string]string{
+			cri.SandboxNamespace: sandboxNS,
+			cri.SandboxName:      sandboxName,
+		},
+	}
+
+	res1, err := s.CreateVM(ctx, req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res1)
+	assert.Contains(t, res1.AgentSocketPath, dir)
+
+	res2, err := s.StartVM(ctx, &pb.StartVMRequest{Id: sandboxID})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res2)
+
+	res3, err := s.StopVM(ctx, &pb.StopVMRequest{Id: sandboxID})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res3)
+}
+
+func TestCloudServiceWithSecureComms(t *testing.T) {
+	sshport := "6001"
+	kubemgr.InitKubeMgrMock()
+	test.CreatePKCS8Secret(t)
+	test.KBSServer("9009")
+	test.HttpServer(forwarder.DefaultListenPort)
+
+	// create a podvm
+	gkc := test.NewGetKeyClient("9019")
+	ctx2, cancel := context.WithCancel(context.Background())
+	sshServer := ppssh.NewSshServer([]string{"BOTH_PHASES:KBS:9019"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7111"}, ppssh.GetSecret(gkc.GetKey), sshport)
+	_ = sshServer.Start(ctx2)
+	defer func() {
+		cancel()
+	}()
+	ctx := context.Background()
+	dir := t.TempDir()
+
+	proxyFactory := &mockProxyFactory{
+		podsDir: dir,
+	}
+
+	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, true, "", "", "127.0.0.1:9009", dir, forwarder.DefaultListenPort, "", sshport)
 
 	assert.NotNil(t, s)
 
