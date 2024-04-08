@@ -36,7 +36,7 @@ RUN apt-get update -y && \
 ADD https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz go${GO_VERSION}.linux-amd64.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && rm -f go${GO_VERSION}.linux-amd64.tar.gz
 
-ADD --checksum=${YQ_CHECKSUM} https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 /usr/local/bin/yq
+ADD https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 /usr/local/bin/yq
 RUN chmod a+x /usr/local/bin/yq
 
 ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
