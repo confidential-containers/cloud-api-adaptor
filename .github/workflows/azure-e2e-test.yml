@@ -137,17 +137,14 @@ jobs:
         # assert that no variable is unset
         ! grep -E '=x$|=""$' "$TEST_PROVISION_FILE"
 
-    - name: Create public ssh key and secrets
-      run: |
-        # TODO: This is a temporary fix to create an empty file for env.
-        touch install/overlays/azure/service-principal.env
-        ssh-keygen -t rsa -b 4096 -f install/overlays/azure/id_rsa -N "" -C dev@coco.io
+    - name: Create public ssh key
+      run: ssh-keygen -t rsa -b 4096 -f install/overlays/azure/id_rsa -N "" -C dev@coco.io
 
     - name: Save the configuration created here
       uses: actions/upload-artifact@v3
       with:
         path: |
-          install/overlays/azure
+          src/cloud-api-adaptor/install/overlays/azure/id_rsa.pub
           ${{ env.TEST_PROVISION_FILE }}
         name: e2e-configuration
 
