@@ -94,7 +94,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 
 	// Create secret
 	content := []byte("This is my cluster name: " + clusterName)
-	filePath := "kbs/kbs/config/kubernetes/overlays/key.bin"
+	filePath := "trustee/kbs/config/kubernetes/overlays/key.bin"
 	// Create the file.
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -120,9 +120,9 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 	}
 	fmt.Println(k8sCnfDir)
 
-	kbsCert := filepath.Join(k8sCnfDir, "kbs/kbs/config/kubernetes/base/kbs.pem")
+	kbsCert := filepath.Join(k8sCnfDir, "trustee/kbs/config/kubernetes/base/kbs.pem")
 	if _, err := os.Stat(kbsCert); os.IsNotExist(err) {
-		kbsKey := filepath.Join(k8sCnfDir, "kbs/kbs/config/kubernetes/base/kbs.key")
+		kbsKey := filepath.Join(k8sCnfDir, "trustee/kbs/config/kubernetes/base/kbs.key")
 		keyOutputFile, err := os.Create(kbsKey)
 		if err != nil {
 			err = fmt.Errorf("creating key file: %w\n", err)
@@ -174,7 +174,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 
 	}
 
-	overlay, err := NewBaseKbsInstallOverlay("kbs")
+	overlay, err := NewBaseKbsInstallOverlay("trustee")
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +336,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 	}
 
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay("kbs")
+	tmpoverlay, err := NewKbsInstallOverlay("trustee")
 	if err != nil {
 		return err
 	}
@@ -351,7 +351,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 
 func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) error {
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay("kbs")
+	tmpoverlay, err := NewKbsInstallOverlay("trustee")
 	if err != nil {
 		return err
 	}
