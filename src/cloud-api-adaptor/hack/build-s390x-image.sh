@@ -78,6 +78,7 @@ qemu-nbd --disconnect "${tmp_nbd}"
 
 output_img_name="podvm-s390x.qcow2"
 qemu-img convert -O qcow2 -c "${tmp_img_path}" "${output_img_name}"
+chmod 644 "${output_img_name}"
 
 output_img_path=$(realpath "${output_img_name}")
 echo "podvm image is generated: ${output_img_path}"

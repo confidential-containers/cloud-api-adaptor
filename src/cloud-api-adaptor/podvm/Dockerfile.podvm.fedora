@@ -1,0 +1,10 @@
+# Copyright Confidential Containers Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Place pod vm image built via mkosi
+#
+
+FROM scratch
+
+COPY build/podvm-s390x.qcow2 /
