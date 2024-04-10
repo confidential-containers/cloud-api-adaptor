@@ -174,6 +174,7 @@ ifeq ($(PODVM_DISTRO),rhel)
 	--build-arg RUST_VERSION=$(RUST_VERSION) \
 	--build-arg YQ_VERSION=$(YQ_VERSION) \
 	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
+	--build-arg YQ_ARCH=$(ARCH) \
 	$(DOCKER_OPTS) .
 else
 	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
@@ -182,6 +183,7 @@ else
 	--build-arg RUST_VERSION=$(RUST_VERSION) \
 	--build-arg YQ_VERSION=$(YQ_VERSION) \
 	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
+	--build-arg YQ_ARCH=$(ARCH) \
 	$(DOCKER_OPTS) .
 endif
 
