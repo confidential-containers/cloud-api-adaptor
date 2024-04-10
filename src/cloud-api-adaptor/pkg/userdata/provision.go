@@ -13,6 +13,7 @@ import (
 	daemon "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/aws"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/azure"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/docker"
 	"gopkg.in/yaml.v2"
 )
 
@@ -70,7 +71,21 @@ func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 	return aws.GetUserData(ctx, url)
 }
 
+type DockerUserDataProvider struct{ DefaultRetry }
+
+func (a DockerUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
+	url := docker.DockerUserDataUrl
+	logger.Printf("provider: Docker, userDataUrl: %s\n", url)
+	return docker.GetUserData(ctx, url)
+}
+
 func newProvider(ctx context.Context) (UserDataProvider, error) {
+
+	// This checks for the presence of a file and doesn't rely on http req like the
+	// azure, aws ones, thereby making it faster and hence checking this first
+	if docker.IsDocker(ctx) {
+		return DockerUserDataProvider{}, nil
+	}
 	if azure.IsAzure(ctx) {
 		return AzureUserDataProvider{}, nil
 	}
