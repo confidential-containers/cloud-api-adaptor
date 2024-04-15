@@ -34,15 +34,35 @@ function get_tag_string() {
 	local tag_string=""
 
 	for tag in ${tags/,/ };do
-		tag_string+=" -t ${registry}/${name}:${tag}"
+		tag_string+=" ${registry}/${name}:${tag}"
 	done
 
 	echo "$tag_string"
 }
 
+# Add -t to each item of the tag list
+function add_tflags() {
+	local tag_string="$1"
+	local tag_string_with_tflags=""
+
+	for tag in ${tag_string}; do
+		tag_string_with_tflags+=" -t ${tag}"
+	done
+
+	echo "$tag_string_with_tflags"
+}
+
+function push_all_tags() {
+	local tag_string="$1"
+	for tag in ${tag_string}; do
+		echo "Pushing ${tag}"
+		docker push ${tag};
+	done
+}
+
 function build_caa_payload_image() {
 	pushd "${script_dir}/../../"
-
+	
 	local tag_string
 	local build_type=dev
 
@@ -51,7 +71,9 @@ function build_caa_payload_image() {
 		tag_string="$(get_tag_string "$release_tags")"
 		build_type=release
 	fi
+	tag_string_with_tflags="$(add_tflags "$tag_string")"
 
+	echo "Single-platform build of caa payload image and loading the result to docker images"
 	docker buildx build --platform "${supported_arches}" \
 		--build-arg RELEASE_BUILD="${release_build}" \
 		--build-arg BUILD_TYPE="${build_type}" \
@@ -60,9 +82,13 @@ function build_caa_payload_image() {
 		--build-arg YQ_VERSION="${YQ_VERSION}" \
 		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
 		-f cloud-api-adaptor/Dockerfile \
-		${tag_string} \
-		--push \
+		${tag_string_with_tflags} \
+		--load \
 		.
+
+	echo "Push single-platform image to registry"
+	push_all_tags ${tag_string}
+
 	popd
 }
 
@@ -72,7 +98,7 @@ function get_arch_specific_tag_string() {
 	local tag_string=""
 
 	for tag in ${tags/,/ };do
-		tag_string+=" -t ${registry}/${name}:${tag}-${arch}"
+		tag_string+=" ${registry}/${name}:${tag}-${arch}"
 	done
 
 	echo "$tag_string"
@@ -96,7 +122,9 @@ function build_caa_payload_arch_specific() {
 		tag_string="$(get_arch_specific_tag_string "$release_tags" "${arch}")"
 		build_type=release
 	fi
+	tag_string_with_tflags="$(add_tflags "$tag_string")"
 
+	echo "Multi-platform build of caa payload image and pushing the result to registry"
 	docker buildx build --platform "${supported_arches}" \
 		--build-arg RELEASE_BUILD="${release_build}" \
 		--build-arg BUILD_TYPE="${build_type}" \
@@ -105,9 +133,10 @@ function build_caa_payload_arch_specific() {
 		--build-arg YQ_VERSION="${YQ_VERSION}" \
 		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
 		-f cloud-api-adaptor/Dockerfile \
-		${tag_string} \
+		${tag_string_with_tflags} \
 		--push \
 		.
+
 	popd
 }
 
