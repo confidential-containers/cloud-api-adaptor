@@ -7,6 +7,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"strings"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
