@@ -139,7 +139,9 @@ for p in aws azure ibmcloud ibmcloud-powervs vsphere; do cd aws; kustomize edit 
 # Note that the libvirt use the tag with prefix 'dev-'
 cd libvirt; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:dev-6d7d2a3fe8243809b3c3a710792c8498292e2fc3; cd -
 ```
-After these version updates have been merged via new PR.
+
+Include those changes within a commit and add the following changes as a second commit:
+
 We then can repeat the steps done during the release candidate phase, but this time use the
 release tags of the project dependencies e.g. `v0.8.0` and creating the tags without the `-alpha.x` suffix.
 
@@ -147,7 +149,7 @@ release tags of the project dependencies e.g. `v0.8.0` and creating the tags wit
 - Update the [peerpod-ctrl go module](../src/peerpod-ctrl/go.mod) to use the release version version of `cloud-providers`
 - Update the [cloud-api-adaptor go module](../src/cloud-api-adaptor/go.mod) to use the release version version of `cloud-providers` and `peerpod-ctrl`
 - Update the [csi-wrapper go module](../src/csi-wrapper/go.mod) to use the the release version version of `cloud-api-adaptor`
-- Merge the PR with this update to update the `main` branch
+- Merge the 2 commits PR with this update to update the `main` branch
 - Create git tags for all go modules, you can use the [release-helper.sh](../hack/release-helper.sh) script to create related git commands, (e.g. `v0.8.0`)
 ```bash
 ./hack/release-helper.sh v0.8.0        
