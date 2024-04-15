@@ -65,7 +65,7 @@ func TestMain(m *testing.M) {
 	// in the cloud provider. Otherwise, assume the developer did setup the environment and it will
 	// look for a suitable kubeconfig file.
 	shouldProvisionCluster := false
-	if os.Getenv("TEST_PROVISION") == "yes" || os.Getenv("TEST_PROVISION") == "true" {
+	if os.Getenv("TEST_PROVISION") == "yes" {
 		shouldProvisionCluster = true
 	}
 	// Cloud API Adaptor is installed by default during e2e test.
@@ -97,7 +97,7 @@ func TestMain(m *testing.M) {
 
 	// The DEPLOY_KBS is exported then provisioner will install kbs before installing CAA
 	shouldDeployKbs := false
-	if os.Getenv("DEPLOY_KBS") == "true" || os.Getenv("DEPLOY_KBS") == "yes" {
+	if os.Getenv("DEPLOY_KBS") == "true" {
 		shouldDeployKbs = true
 	}
 
