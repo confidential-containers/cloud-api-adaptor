@@ -37,10 +37,7 @@ func main() {
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
 	provisionPropsFile := os.Getenv("TEST_PROVISION_FILE")
 	podvmImage := os.Getenv("TEST_PODVM_IMAGE")
-	shouldDeployKbs := false
-	if os.Getenv("DEPLOY_KBS") == "true" || os.Getenv("DEPLOY_KBS") == "yes" {
-		shouldDeployKbs = true
-	}
+	shouldDeployKbs := os.Getenv("DEPLOY_KBS")
 
 	installDirectory := os.Getenv("INSTALL_DIR")
 	// If not set assume we are in the test/tools directory
@@ -90,7 +87,7 @@ func main() {
 			}
 		}
 
-		if shouldDeployKbs {
+		if strings.EqualFold(shouldDeployKbs, "true") || strings.EqualFold(shouldDeployKbs, "yes") {
 			log.Info("Deploying kbs")
 			if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
 				log.Fatal("kbs image not provided")
@@ -176,13 +173,13 @@ func main() {
 			log.Fatal(err)
 		}
 
-		if shouldDeployKbs {
+		if strings.EqualFold(shouldDeployKbs, "true") || strings.EqualFold(shouldDeployKbs, "yes") {
 			props := provisioner.GetProperties(context.TODO(), cfg)
 			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"])
 			if err != nil {
 				log.Fatal(err)
 			}
-
+	
 			if err = keyBrokerService.Delete(context.TODO(), cfg); err != nil {
 				log.Fatal(err)
 			}
