@@ -93,7 +93,8 @@ func (v *mockVPC) GetInstanceProfileWithContext(context context.Context, options
 
 	vcpu := int64(2)
 	mem := int64(8)
-	return &vpcv1.InstanceProfile{VcpuCount: &vpcv1.InstanceProfileVcpu{Value: &vcpu}, Memory: &vpcv1.InstanceProfileMemory{Value: &mem}}, nil, nil
+	arch := "amd64"
+	return &vpcv1.InstanceProfile{VcpuCount: &vpcv1.InstanceProfileVcpu{Value: &vcpu}, Memory: &vpcv1.InstanceProfileMemory{Value: &mem}, VcpuArchitecture: &vpcv1.InstanceProfileVcpuArchitecture{Value: &arch}}, nil, nil
 }
 
 func (v *mockVPC) GetImageWithContext(context context.Context, options *vpcv1.GetImageOptions) (*vpcv1.Image, *core.DetailedResponse, error) {
@@ -184,6 +185,7 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 		wantVcpu   int64
 		wantMemory int64
 		wantErr    bool
+		wantArch   string
 	}{
 		// Test getting instance type information for a valid instance type
 		{
@@ -197,6 +199,7 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 			},
 			wantVcpu:   2,
 			wantMemory: 8192,
+			wantArch:   "amd64",
 			// Test should not return an error
 			wantErr: false,
 		},
@@ -212,13 +215,14 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 			},
 			wantVcpu:   0,
 			wantMemory: 0,
+			wantArch:   "",
 			// Test should return an error
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotVcpu, gotMemory, err := tt.provider.getProfileNameInformation(tt.args.instanceType)
+			gotVcpu, gotMemory, gotArch, err := tt.provider.getProfileNameInformation(tt.args.instanceType)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ibmcloudProvider.getProfileNameInformation() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -228,6 +232,9 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 			}
 			if gotMemory != tt.wantMemory {
 				t.Errorf("ibmcloudProvider.getProfileNameInformation() gotMemory = %v, want %v", gotMemory, tt.wantMemory)
+			}
+			if gotArch != tt.wantArch {
+				t.Errorf("ibmcloudProvider.getProfileNameInformation() gotArch = %v, want %v", gotArch, tt.wantArch)
 			}
 		})
 	}
@@ -254,6 +261,7 @@ func TestGetImageDetails(t *testing.T) {
 		expectListErr   bool
 		expectSelectErr bool
 		wantID          string
+		profileInstance string
 	}{
 		// Test selecting an image from a valid image list
 		{
@@ -270,6 +278,7 @@ func TestGetImageDetails(t *testing.T) {
 			expectListErr:   false,
 			expectSelectErr: false,
 			wantID:          "valid-id-1",
+			profileInstance: "bz2-2x8",
 		},
 		// Test selecting an image from an empty image list
 		{
@@ -286,6 +295,7 @@ func TestGetImageDetails(t *testing.T) {
 			expectListErr:   true,
 			expectSelectErr: false,
 			wantID:          "",
+			profileInstance: "bz2-2x8",
 		},
 		// Test selecting an image from an image list with no valid ids
 		{
@@ -302,6 +312,7 @@ func TestGetImageDetails(t *testing.T) {
 			expectListErr:   true,
 			expectSelectErr: false,
 			wantID:          "",
+			profileInstance: "bz2-2x8",
 		},
 		// Test selecting an image from an image list with no valid archs
 		{
@@ -318,6 +329,38 @@ func TestGetImageDetails(t *testing.T) {
 			expectListErr:   false,
 			expectSelectErr: true,
 			wantID:          "",
+			profileInstance: "bx2-2x8",
+		},
+		{
+			name: "selectImageForValidInstanceArch",
+			provider: &ibmcloudVPCProvider{
+				vpc: &mockVPC{},
+				serviceConfig: &Config{
+					Images:                  validImageList,
+					InstanceProfileSpecList: []provider.InstanceTypeSpec{{InstanceType: "bz2-2x8", Arch: "s390x"}},
+				},
+			},
+			instanceSpec:    provider.InstanceTypeSpec{},
+			expectListErr:   false,
+			expectSelectErr: false,
+			wantID:          "valid-id-1",
+			profileInstance: "bz2-2x8",
+		},
+		// Test selecting an image from an image list with no valid archs because of profile instance arch difference
+		{
+			name: "selectImageForInvalidInstanceArch",
+			provider: &ibmcloudVPCProvider{
+				vpc: &mockVPC{},
+				serviceConfig: &Config{
+					Images:                  validImageList,
+					InstanceProfileSpecList: []provider.InstanceTypeSpec{{InstanceType: "bx2-2x8", Arch: "amd64"}},
+				},
+			},
+			instanceSpec:    provider.InstanceTypeSpec{},
+			expectListErr:   false,
+			expectSelectErr: true,
+			wantID:          "",
+			profileInstance: "bx2-2x8",
 		},
 	}
 	for _, tt := range tests {
@@ -329,7 +372,7 @@ func TestGetImageDetails(t *testing.T) {
 				}
 				return
 			}
-			id, err := tt.provider.selectImage(context.Background(), tt.instanceSpec)
+			id, err := tt.provider.selectImage(context.Background(), tt.instanceSpec, tt.profileInstance)
 			if tt.expectSelectErr {
 				if err == nil {
 					t.Errorf("ibmcloudProvider.selectImage() error = %v, expectSelectErr %v", err, tt.expectSelectErr)
