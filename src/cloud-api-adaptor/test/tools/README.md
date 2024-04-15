@@ -27,7 +27,6 @@ export LOG_LEVEL=${LOG_LEVEL}
 export CLOUD_PROVIDER=${CLOUD_PROVIDER}
 export TEST_PROVISION_FILE=${PROPERTIES_FILE_PATH}
 export TEST_PROVISION="yes"
-export DEPLOY_KBS="true"
 export INSTALL_DIR="../../install"
 ./caa-provisioner-cli -action=${ACTION}
 ```
