@@ -1,14 +1,14 @@
-# Introduction
+# Cloud API Adaptor (CAA) on Libvirt
 
-This document contains instructions for using, developing and testing the cloud-api-adaptor with [libvirt](https://libvirt.org/).
+This document contains instructions for using, developing and testing the
+cloud-api-adaptor with [libvirt](https://libvirt.org/).
 
-# Creating an end-to-end environment for testing and development
+You will learn how to setup an environment in your local machine to run peer
+pods with the libvirt cloud API adaptor. Bear in mind that many different tools
+can be used to setup the environment and here we just make suggestions of tools
+that seems used by most of the peer pods developers.
 
-In this section you will learn how to setup an environment in your local machine to run peer pods with
-the libvirt cloud API adaptor. Bear in mind that many different tools can be used to setup the environment
-and here we just make suggestions of tools that seems used by most of the peer pods developers.
-
-## Prerequisites
+# Prerequisites
 
 You must have a Linux/KVM system with libvirt installed and the following tools:
 
@@ -43,7 +43,7 @@ echo "libvirt_uri=\"qemu+ssh://${USER}@${IP}/system?no_verify=1\"" >> libvirt.pr
 echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
 ```
 
-## Create the Kubernetes cluster
+# Create the Kubernetes cluster
 
 Use the [`kcli_cluster.sh`](./kcli_cluster.sh) script to create a simple two VMs (one control plane and one worker) cluster
 with the kcli tool, as:
@@ -74,7 +74,7 @@ peer-pods-ctlplane-0 Ready    control-plane,master   6m8s    v1.26.7
 peer-pods-worker-0   Ready    worker                 2m47s   v1.26.7
 ```
 
-## Prepare the Pod VM volume
+# Prepare the Pod VM volume
 
 In order to build the Pod VM without installing the build tools, you can use the Dockerfiles hosted on [../podvm](../podvm) directory to run the entire process inside a container. Refer to [podvm/README.md](../podvm/README.md) for further details. Alternatively you can consume pre-built podvm images as explained [here](../docs/consuming-prebuilt-podvm-images.md).
 
@@ -98,7 +98,7 @@ Capacity:       6.00 GiB
 Allocation:     631.52 MiB
 ```
 
-## Install and configure Confidential Containers and cloud-api-adaptor in the cluster
+# Install and configure Confidential Containers and cloud-api-adaptor in the cluster
 
 The easiest way to install the cloud-api-adaptor along with Confidential Containers in the cluster is through the
 Kubernetes operator [`install_operator.sh`](./install_operator.sh) script. Ensure that you have your IP address exported in the environment, as shown below, then run the install script:
@@ -132,7 +132,7 @@ NAME          HANDLER       AGE
 kata-remote   kata-remote   7m18s
 ```
 
-## Create a sample peer-pods pod
+# Create a sample peer-pods pod
 
 At this point everything should be fine to get a sample Pod created. Let's first list the running VMs so that we can later check
 the Pod VM will be really running. Notice below that we got only the cluster node VMs up:
@@ -207,7 +207,7 @@ $ virsh -c qemu:///system list
  6    peer-pods-worker-0   running
 ```
 
-## Running the CAA e2e tests
+# Running the CAA e2e tests
 
 Now when you're all set you can run the CAA e2e [tests/e2e/README.md](../test/e2e/README.md) by running ``make test-e2e``. You might want to modify some of the env variables, for example:
 
@@ -222,7 +222,7 @@ make TEST_PROVISION=no TEST_TEARDOWN=no TEST_PODVM_IMAGE=$PWD/podvm/podvm.qcow2 
 * ``TEST_E2E_TIMEOUT`` - test timeout
 * ``TEST_PROVISION_FILE`` - file specifying the libvirt connection and the ssh key file (created earlier by [config_libvirt.sh](config_libvirt.sh))
 
-## Delete Confidential Containers and cloud-api-adaptor from the cluster
+# Delete Confidential Containers and cloud-api-adaptor from the cluster
 
 You might want to reinstall the Confidential Containers and cloud-api-adaptor into your cluster. There are two options:
 
