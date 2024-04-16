@@ -17,31 +17,23 @@ You must have a Linux/KVM system with libvirt installed and the following tools:
 - [kcli](https://kcli.readthedocs.io/en/latest/)
 - [go](https://github.com/golang/go)
 
-To configure the basic set of tools one can use [config_libvirt.sh](config_libvirt.sh) script (tested on Ubuntu 20.04 amd64/s390x VSI) from the [cloud-api-adaptor](../) folder:
+To configure the basic set of tools one can use
+[config_libvirt.sh](config_libvirt.sh) script (tested on Ubuntu 20.04
+amd64/s390x VSI) from the [cloud-api-adaptor](../) folder:
 
 ```bash
 ./libvirt/config_libvirt.sh
 ```
 
-This script installs golang+yq+kcli+kubectl, ensures ``default`` libvirt storage pool is up and running. Then it configures the ssh keys and libvirt uri in following manner (no need to execute this when you use the [config_libvirt.sh](config_libvirt.sh) script):
+This script will: a) installs the dependencies above; b) ensure ``default``
+libvirt storage pool is up and running; and c) configure the ssh keys and
+libvirt uri.
 
-```bash
-[ -f $HOME/.ssh/id_rsa ] || ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -N ""
-
-pushd install/overlays/libvirt
-cp $HOME/.ssh/id_rsa* .
-cat id_rsa.pub >> $HOME/.ssh/authorized_keys
-chmod 600 $HOME/.ssh/authorized_keys
-
-echo "Verifing libvirt connection..."
-IP="$(hostname -I | cut -d' ' -f1)"
-virsh -c "qemu+ssh://${USER}@${IP}/system?keyfile=$(pwd)/id_rsa&no_verify=1" nodeinfo
-popd
-
-rm -f libvirt.properties
-echo "libvirt_uri=\"qemu+ssh://${USER}@${IP}/system?no_verify=1\"" >> libvirt.properties
-echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
-```
+> [!WARNING]
+> The script provided is a utility for installing the specified packages using
+> various methods and will modify your $HOME/.ssh folder. Please review the
+> script thoroughly before running it. If you are not comfortable, you should
+> install the prerequisites using your preferred method.
 
 # Create the Kubernetes cluster
 
