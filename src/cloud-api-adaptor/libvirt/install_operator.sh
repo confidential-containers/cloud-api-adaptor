@@ -11,7 +11,6 @@ set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-LIBVIRT_IP="${LIBVIRT_IP:-192.168.122.1}"
 LIBVIRT_USER="${LIBVIRT_USER:-$USER}"
 LIBVIRT_NET="${LIBVIRT_NET:-default}"
 LIBVIRT_POOL="${LIBVIRT_POOL:-default}"
@@ -35,7 +34,7 @@ label_workers() {
 usage() {
 	cat <<-EOF
 	Install cloud-api-adaptor in the Kubernetes cluster.
-	You must have KUBECONFIG and LIBVIRT_IP exported in the environment.
+	You must have at least KUBECONFIG exported in the environment.
 
 	Use: $0 [-h|help]
 
