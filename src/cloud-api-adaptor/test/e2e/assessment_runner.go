@@ -6,7 +6,6 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -437,16 +436,28 @@ func (tc *TestCase) Run() {
 					} else if profile != "" {
 						fmt.Printf("PodVM Created with Instance Type %v", profile)
 						if tc.FailReason != "" {
-							jsonData, err := json.Marshal(tc.pod.Status)
-							if err != nil {
-								fmt.Println("Error marshaling pod.Status to JSON: ", err.Error())
-							} else {
-								t.Logf("Current Pod State: %v", string(jsonData))
+							var podlist v1.PodList
+							var podLogString string
+							if err := client.Resources("confidential-containers-system").List(ctx, &podlist); err != nil {
+								t.Fatal(err)
 							}
-							if strings.Contains(string(jsonData), tc.FailReason) {
+							for _, pod := range podlist.Items {
+								if pod.Labels["app"] == "cloud-api-adaptor" {
+									podLogString, _ = GetPodLog(ctx, client, pod)
+									break
+								}
+							}
+							if strings.Contains(podLogString, tc.FailReason) {
 								log.Infof("failed due to expected reason %s", tc.FailReason)
 							} else {
-								t.Fatal(err)
+								log.Infof("cloud-api-adaptor pod logs: %s", podLogString)
+								yamlData, err := yaml.Marshal(tc.pod.Status)
+								if err != nil {
+									log.Errorf("Error marshaling pod.Status to JSON: %s", err.Error())
+								} else {
+									t.Logf("Current Pod State: %v", string(yamlData))
+								}
+								t.Fatal("failed due to unknown reason")
 							}
 						} else {
 							log.Infof("Pod Failed If you want to cross check please give .WithFailReason(error string)")
