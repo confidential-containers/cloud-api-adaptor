@@ -147,13 +147,13 @@ func TestMain(m *testing.M) {
 			if err = keyBrokerService.Deploy(ctx, cfg, props); err != nil {
 				return ctx, err
 			}
-			var kbsPodIP string
-			if kbsPodIP, err = keyBrokerService.GetKbsPodIP(ctx, cfg); err != nil {
+			var kbsEndpoint string
+			if kbsEndpoint, err = keyBrokerService.GetKbsEndpoint(ctx, cfg); err != nil {
 				return ctx, err
 			}
 
-			kbsparams = "cc_kbc::http://" + kbsPodIP + ":8080"
-			log.Infof("KBS PARAMS%s:", kbsparams)
+			kbsparams = "cc_kbc::http://" + kbsEndpoint
+			log.Infof("KBS PARAMS: %s", kbsparams)
 		}
 
 		if podvmImage != "" {
