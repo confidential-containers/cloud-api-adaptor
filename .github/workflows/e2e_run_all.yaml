@@ -125,7 +125,6 @@ jobs:
           providers=(${{ env.PROVIDERS }})
           # If there aren't providers then something is wrong
           [[ ${#providers[@]} -gt 0 ]] || exit 1
-
           for provider in ${providers[@]}; do
             img="${E2E_IMG_REGISTRY}/cloud-api-adaptor"
             tag="${E2E_IMG_RELEASE_TAG}"
@@ -142,7 +141,8 @@ jobs:
             popd
           done
 
-      - uses: actions/upload-artifact@v3
+      - name: Upload install directory for next test runs
+        uses: actions/upload-artifact@v3
         with:
           name: install_directory
           path: src/cloud-api-adaptor/install/
@@ -167,6 +167,7 @@ jobs:
           - amd64
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
