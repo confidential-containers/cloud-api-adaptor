@@ -10,6 +10,9 @@ on:
       podvm_image:
         required: true
         type: string
+      caa_image:
+        required: true
+        type: string
       install_directory_artifact:
         description: The archive name of the install directory
         default: ''
@@ -79,6 +82,7 @@ jobs:
       - name: Config Libvirt
         run: |
           ./libvirt/config_libvirt.sh
+          echo "CAA_IMAGE=\"${{ inputs.caa_image }}\"" >> libvirt.properties
           # For debugging
           cat libvirt.properties
 
@@ -105,6 +109,9 @@ jobs:
 
           echo "::group::cloud-api-adaptor logs"
           kubectl logs -l app=cloud-api-adaptor -n confidential-containers-system
+          echo "::endgroup::"
+          echo "::group::peerpodconfig-ctrl-caa-daemon logs"
+          kubectl logs ds/peerpodconfig-ctrl-caa-daemon -n confidential-containers-system
           echo "::endgroup::"
 
           for pod in $(kubectl get pods -o name 2>/dev/null); do
