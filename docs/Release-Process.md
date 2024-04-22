@@ -133,11 +133,13 @@ sed -i 's#\(github.com/confidential-containers/operator/config/samples/ccruntime
 Once this has been completed and merged in we should pin the cloud-api-adaptor image used on the deployment files. You should use the commit SHA-1 of the last built `quay.io/confidential-containers/cloud-api-adaptor` image to update the overlays kustomization files. For example, suppose the release image is `quay.io/confidential-containers/cloud-api-adaptor:6d7d2a3fe8243809b3c3a710792c8498292e2fc3`:
 
 ```
-cd src/cloud-api-adaptor/install/overlays/
-for p in aws azure ibmcloud ibmcloud-powervs vsphere; do cd aws; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:6d7d2a3fe8243809b3c3a710792c8498292e2fc3; cd -; done
+RELEASE_TAG="6d7d2a3fe8243809b3c3a710792c8498292e2fc3"
+pushd src/cloud-api-adaptor/install/overlays/
+for provider in aws azure ibmcloud ibmcloud-powervs vsphere; do cd ${provider}; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:${RELEASE_TAG}; cd -; done
 
 # Note that the libvirt use the tag with prefix 'dev-'
-cd libvirt; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:dev-6d7d2a3fe8243809b3c3a710792c8498292e2fc3; cd -
+cd libvirt; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:dev-${RELEASE_TAG};
+popd
 ```
 
 Include those changes within a commit and add the following changes as a second commit:
@@ -152,7 +154,7 @@ release tags of the project dependencies e.g. `v0.8.0` and creating the tags wit
 - Merge the 2 commits PR with this update to update the `main` branch
 - Create git tags for all go modules, you can use the [release-helper.sh](../hack/release-helper.sh) script to create related git commands, (e.g. `v0.8.0`)
 ```bash
-./hack/release-helper.sh v0.8.0        
+./hack/release-helper.sh v0.8.0
 The intput release tag: v0.8.0
 The follow git commands can be used to do release tags.
 *****************************IMPORTANT********************************************
@@ -206,8 +208,9 @@ The CoCo operator URLs on the [Makefile](../src/cloud-api-adaptor/Makefile) shou
 
 The changes on the overlay kustomization files should be reverted to start using the latest cloud-api-adaptor images again:
 ```
-cd install/overlays/
-for p in aws azure ibmcloud ibmcloud-powervs libvirt vsphere; do cd aws; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:latest; cd -; done
+pushd src/cloud-api-adaptor/install/overlays/
+for provider in aws azure ibmcloud ibmcloud-powervs libvirt vsphere; do cd ${provider}; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:latest; cd -; done
+popd
 ```
 
 References to Kata Containers should be reverted to the CCv0 branch in:
