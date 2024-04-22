@@ -110,13 +110,13 @@ func (r *PeerPodConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		r.Log.Error(err, "Failed setting ControllerReference for cloud-api-adaptor DS")
 		return ctrl.Result{}, err
 	}
-	foundDs := &appsv1.DaemonSet{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: ds.Name, Namespace: ds.Namespace}, foundDs)
+
+	err = r.Client.Update(context.TODO(), ds)
 	if err != nil && k8serrors.IsNotFound(err) {
-		r.Log.Info("Creating cloud-api-adapter daemonset", "ds.Namespace", ds.Namespace, "ds.Name", ds.Name)
+		r.Log.Error(err, "cloud-api-adaptor daemonset doesn't exist. Creating")
 		err = r.Client.Create(context.TODO(), ds)
 		if err != nil {
-			r.Log.Error(err, "failed to create cloud-api-adaptor")
+			r.Log.Error(err, "failed to create cloud-api-adaptor daemonset")
 			return ctrl.Result{}, err
 		}
 	}
