@@ -103,15 +103,16 @@ func main() {
 				log.Fatal(err)
 			}
 
-			var kbsPodIP string
-			kbsPodIP, err = keyBrokerService.GetKbsPodIP(context.TODO(), cfg)
+			var kbsEndpoint string
+			kbsEndpoint, err = keyBrokerService.GetKbsEndpoint(context.TODO(), cfg)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			kbsparams := "cc_kbc::http://" + kbsPodIP + ":8080"
+			kbsparams := "cc_kbc::http://" + kbsEndpoint
 			log.Infof("KBS PARAMS: %s", kbsparams)
 
+			props = provisioner.GetProperties(context.TODO(), cfg)
 			props["AA_KBC_PARAMS"] = kbsparams
 		}
 

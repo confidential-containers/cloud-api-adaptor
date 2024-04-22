@@ -254,7 +254,7 @@ func NewBaseKbsInstallOverlay(installDir string) (InstallOverlay, error) {
 
 func NewKbsInstallOverlay(installDir string) (InstallOverlay, error) {
 	log.Info("Creating kbs install overlay")
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/overlays"))
+	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/nodeport"))
 	if err != nil {
 		return nil, err
 	}
@@ -287,28 +287,18 @@ func (lio *KbsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, pro
 	return nil
 }
 
-func (p *KeyBrokerService) GetKbsPodIP(ctx context.Context, cfg *envconf.Config) (string, error) {
+func getNodeIPForSvc(deploymentName string, service corev1.Service, cfg *envconf.Config) (string, error) {
 	client, err := cfg.NewClient()
 	if err != nil {
 		return "", err
 	}
-
-	namespace := "coco-tenant"
-	deploymentName := "kbs"
-
-	err = AllPodsRunning(ctx, cfg, namespace)
-	if err != nil {
-		err = fmt.Errorf("All pods are not running: %w\n", err)
-		log.Errorf("%v", err)
+	podList := &corev1.PodList{}
+	if err := client.Resources(service.Namespace).List(context.TODO(), podList); err != nil {
 		return "", err
 	}
 
-	resources := client.Resources(namespace)
-	podList := &corev1.PodList{}
-	err = resources.List(context.TODO(), podList)
-	if err != nil {
-		err = fmt.Errorf("Error listing pods: %w\n", err)
-		log.Errorf("%v", err)
+	nodeList := &corev1.NodeList{}
+	if err := client.Resources("").List(context.TODO(), nodeList); err != nil {
 		return "", err
 	}
 
@@ -321,12 +311,58 @@ func (p *KeyBrokerService) GetKbsPodIP(ctx context.Context, cfg *envconf.Config)
 		}
 	}
 
-	if matchingPod == nil {
-		return "", fmt.Errorf("No pod with label selector found")
+	for _, node := range nodeList.Items {
+		if node.Name == matchingPod.Spec.NodeName {
+			return node.Status.Addresses[0].Address, nil
+		}
 	}
 
-	fmt.Printf("Pod IP: %s\n", matchingPod.Status.PodIP)
-	return matchingPod.Status.PodIP, nil
+	return "", fmt.Errorf("Node IP not found for Service %s", service.Name)
+}
+
+func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Config) (string, error) {
+	client, err := cfg.NewClient()
+	if err != nil {
+		return "", err
+	}
+
+	namespace := "coco-tenant"
+	serviceName := "kbs"
+	deploymentName := "kbs"
+
+	resources := client.Resources(namespace)
+
+	services := &corev1.ServiceList{}
+	if err := resources.List(context.TODO(), services); err != nil {
+		return "", err
+	}
+
+	for _, service := range services.Items {
+		if service.ObjectMeta.Name == serviceName {
+			// Ensure the service is of type NodePort
+			if service.Spec.Type != corev1.ServiceTypeNodePort {
+				return "", fmt.Errorf("Service %s is not of type NodePort", "kbs")
+			}
+
+			var nodePort int32
+			// Extract NodePort
+			if len(service.Spec.Ports) > 0 {
+				nodePort = service.Spec.Ports[0].NodePort
+			} else {
+				return "", fmt.Errorf("NodePort is not configured for Service %s", "kbs")
+			}
+
+			nodeIP, err := getNodeIPForSvc(deploymentName, service, cfg)
+			if err != nil {
+				return "", err
+			}
+
+			serviceEndpoint := fmt.Sprintf("%s:%d", nodeIP, nodePort)
+			return serviceEndpoint, nil
+		}
+	}
+
+	return "", fmt.Errorf("Service %s not found", serviceName)
 }
 
 func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
@@ -345,7 +381,6 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 	if err := tmpoverlay.Apply(ctx, cfg); err != nil {
 		return err
 	}
-
 	return nil
 }
 
