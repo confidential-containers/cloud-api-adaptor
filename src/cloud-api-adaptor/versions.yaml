@@ -46,5 +46,5 @@ oci:
     registry: docker://registry.k8s.io/pause
     tag: 3.6
   kbs:
-    registry: ghcr.io/confidential-containers/key-broker-service
-    tag: v0.8.2
+    registry: ghcr.io/confidential-containers/staged-images/kbs
+    tag: 84432a2a97da306399db5bc863c9324dbd8b95ac
