@@ -173,14 +173,16 @@ func main() {
 			log.Fatal(err)
 		}
 
-		props := provisioner.GetProperties(context.TODO(), cfg)
-		keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"])
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err = keyBrokerService.Delete(context.TODO(), cfg); err != nil {
-			log.Fatal(err)
+		if strings.EqualFold(shouldDeployKbs, "true") || strings.EqualFold(shouldDeployKbs, "yes") {
+			props := provisioner.GetProperties(context.TODO(), cfg)
+			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"])
+			if err != nil {
+				log.Fatal(err)
+			}
+	
+			if err = keyBrokerService.Delete(context.TODO(), cfg); err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		kubeconfigPath := kconf.ResolveKubeConfigFile()
