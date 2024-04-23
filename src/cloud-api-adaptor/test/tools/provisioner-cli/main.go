@@ -7,6 +7,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"strings"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
@@ -36,6 +37,7 @@ func main() {
 	cloudProvider := os.Getenv("CLOUD_PROVIDER")
 	provisionPropsFile := os.Getenv("TEST_PROVISION_FILE")
 	podvmImage := os.Getenv("TEST_PODVM_IMAGE")
+	shouldDeployKbs := os.Getenv("DEPLOY_KBS")
 
 	installDirectory := os.Getenv("INSTALL_DIR")
 	// If not set assume we are in the test/tools directory
@@ -64,9 +66,6 @@ func main() {
 
 	if *action == "provision" {
 		props := provisioner.GetProperties(context.TODO(), cfg)
-		if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
-			log.Fatal("kbs image not provided")
-		}
 
 		log.Info("Creating VPC...")
 		if err := provisioner.CreateVPC(context.TODO(), cfg); err != nil {
@@ -88,27 +87,31 @@ func main() {
 			}
 		}
 
-		log.Info("Deploying kbs")
-		keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"])
-		if err != nil {
-			log.Fatal(err)
+		if strings.EqualFold(shouldDeployKbs, "true") || strings.EqualFold(shouldDeployKbs, "yes") {
+			log.Info("Deploying kbs")
+			if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
+				log.Fatal("kbs image not provided")
+			}
+			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"])
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if err = keyBrokerService.Deploy(context.TODO(), cfg, props); err != nil {
+				log.Fatal(err)
+			}
+
+			var kbsPodIP string
+			kbsPodIP, err = keyBrokerService.GetKbsPodIP(context.TODO(), cfg)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			kbsparams := "cc_kbc::http://" + kbsPodIP + ":8080"
+			log.Infof("KBS PARAMS: %s", kbsparams)
+
+			props["AA_KBC_PARAMS"] = kbsparams
 		}
-
-		if err = keyBrokerService.Deploy(context.TODO(), cfg, props); err != nil {
-			log.Fatal(err)
-		}
-
-		var kbsPodIP string
-		kbsPodIP, err = keyBrokerService.GetKbsPodIP(context.TODO(), cfg)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		kbsparams := "cc_kbc::http://" + kbsPodIP + ":8080"
-		log.Infof("KBS PARAMS: %s", kbsparams)
-
-		props = provisioner.GetProperties(context.TODO(), cfg)
-		props["AA_KBC_PARAMS"] = kbsparams
 
 		cloudAPIAdaptor, err := pv.NewCloudAPIAdaptor(cloudProvider, installDirectory)
 		if err != nil {
