@@ -1,5 +1,7 @@
 [![daily e2e tests for libvirt](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/daily-e2e-tests-libvirt.yaml/badge.svg)](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/daily-e2e-tests-libvirt.yaml)
 
+[![daily e2e tests for azure](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/azure-e2e-test.yml/badge.svg)](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/azure-e2e-test.yml)
+
 # Introduction
 
 This repository contains all go modules related to Cloud API Adaptor. The Cloud API Adaptor is an implementation of the
