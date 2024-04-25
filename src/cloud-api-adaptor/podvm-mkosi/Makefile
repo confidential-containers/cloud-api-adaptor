@@ -57,8 +57,8 @@ image:
 	@echo "Building image..."
 ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
-	sudo mkosi --profile production.conf
-	sudo ../hack/build-s390x-image.sh
+	sudo mkosi --profile production.conf --image system
+	sudo -E ../hack/build-s390x-se-image.sh
 else
 	touch resources/buildBootableImage
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
@@ -74,7 +74,7 @@ image-debug:
 ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
 	sudo mkosi --profile debug.conf
-	sudo ../hack/build-s390x-image.sh
+	sudo -E ../hack/build-s390x-image.sh
 else
 	touch resources/buildBootableImage
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
