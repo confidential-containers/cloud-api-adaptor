@@ -135,6 +135,7 @@ $(KATA_AGENT): $(FORCE_TARGET) | $(STATIC_LIBSECCOMP)
 	install -D --compare "$(KATA_AGENT_SRC)/target/$(RUST_TARGET)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
 
 $(STATIC_LIBSECCOMP): $(KATA_CONTAINERS_SRC)
+	INSTALL_IN_GOPATH=false $(KATA_CONTAINERS_SRC)/ci/install_yq.sh
 	$(RUST_FLAGS) $(STATIC_LIBSECCOMP_BUILDER) $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp $(STATIC_LIBSECCOMP_DIR)/kata-gperf
 
 $(KATA_CONTAINERS_SRC):
@@ -204,7 +205,7 @@ clean_sources:
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci
 	[ -d "$(KATA_CONTAINERS_SRC)" ] && cd "$(KATA_CONTAINERS_SRC)" && git clean -xfd
-	[ -d "$(OPA_SRC)" ] && cd "$(OPA_SRC)" && git clean -xfd 
+	[ -d "$(OPA_SRC)" ] && cd "$(OPA_SRC)" && git clean -xfd
 
 .PHONY: force always
 always force:
