@@ -104,10 +104,7 @@ jobs:
     - name: Build kata-agent
       env:
         GOPATH: /home/runner/go
-      run: |
-        make "$(realpath ../../podvm/files/usr/local/bin/kata-agent)" LIBC=gnu
-        # kata build installs yq v3 as a side effect
-        rm -r "${GOPATH}/bin/yq"
+      run: make "$(realpath ../../podvm/files/usr/local/bin/kata-agent)" LIBC=gnu
 
     - name: Build binaries
       run: make binaries \

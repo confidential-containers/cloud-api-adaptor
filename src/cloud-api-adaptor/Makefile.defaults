@@ -1,9 +1,6 @@
-YQ_COMMAND ?= yq
-VERSIONS_SRC := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/versions.yaml
-
-ifeq (, $(shell command -v $(YQ_COMMAND) 2> /dev/null))
-$(error "$(YQ_COMMAND) not found, consider doing snap install yq")
-endif
+ROOT_PATH := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+VERSIONS_SRC := $(ROOT_PATH)/versions.yaml
+YQ_COMMAND ?= $(ROOT_PATH)/hack/yq-shim.sh
 
 # As we need `yq` to be installed to fetch the values from versions.yaml
 # these values are hardcoded here, all other versions/references should be
@@ -12,16 +9,10 @@ YQ_VERSION := v4.35.1
 YQ_CHECKSUM := "sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 YQ_CHECKSUM_s390x:= "sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
 
-MINIMUM_YQ_MAJOR_VERSION := 4
-INSTALLED_YQ_MAJOR_VERSION := $(shell $(YQ_COMMAND) --version | sed -nE 's/.* v?([0-9]+).*/\1/p')
-
-ifneq ($(MINIMUM_YQ_MAJOR_VERSION), $(INSTALLED_YQ_MAJOR_VERSION))
-$(error "yq major version should be $(MINIMUM_YQ_MAJOR_VERSION), is: $(INSTALLED_YQ_MAJOR_VERSION)")
-endif
 VERSIONS_HASH := $(firstword $(shell sha256sum $(VERSIONS_SRC)))
 
 define query
-$(or $(shell $(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
+$(or $(shell $(YQ_COMMAND) '.$(1)' $(VERSIONS_SRC)), \
 	$(error $(1) is not set, and could not be automatically set from $(VERSIONS_SRC)))
 endef
 
