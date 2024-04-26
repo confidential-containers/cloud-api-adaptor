@@ -15,7 +15,7 @@ ARG GUEST_COMPONENTS_REPO
 ARG AA_KBC="offline_fs_kbc"
 # If not provided, uses system architecture
 ARG ARCH
-#This is the name of the policy file under 
+#This is the name of the policy file under
 #files/etc/kata-opa
 ARG DEFAULT_AGENT_POLICY_FILE=allow-all.rego
 
@@ -34,6 +34,8 @@ ENV IMAGE_CHECKSUM "none"
 COPY . /src
 
 WORKDIR /src/cloud-api-adaptor/podvm
+# Installs add-ons for foreign target, if required
+RUN ./hack/cross-build-extras.sh
 
 RUN LIBC=gnu make binaries
 
