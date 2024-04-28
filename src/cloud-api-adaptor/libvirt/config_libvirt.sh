@@ -11,6 +11,11 @@ set -o pipefail
 
 ARCH=$(uname -m)
 TARGET_ARCH=${ARCH/x86_64/amd64}
+OS_DISTRO=ubuntu
+cat /etc/os-release | grep "^ID=" | grep rhel
+if [ $? == 0 ]; then
+    OS_DISTRO=rhel
+fi
 
 installGolang() {
     export PATH=/usr/local/go/bin:$PATH
@@ -40,9 +45,18 @@ installGolang() {
 }
 
 installLibvirt() {
-    sudo DEBIAN_FRONTEND=noninteractive apt-get update -y > /dev/null
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install python3-pip genisoimage qemu-kvm libvirt-daemon-system libvirt-dev cpu-checker -y
-    kvm-ok
+    if [ $OS_DISTRO == "rhel" ]; then
+        echo "install required packages for rhel"
+        yum install python3-pip genisoimage qemu-kvm libvirt virt-install libvirt-client virt-manager -y
+        systemctl enable libvirtd
+	    virsh --version
+    else
+        echo "install required packages for ubuntu"
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update -y > /dev/null
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install python3-pip genisoimage qemu-kvm libvirt-daemon-system libvirt-dev cpu-checker -y
+        kvm-ok
+    fi
+
     # Create the default storage pool if not defined.
     echo "Setup Libvirt default storage pool..."
 
