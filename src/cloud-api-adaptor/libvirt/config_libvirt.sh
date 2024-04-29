@@ -9,11 +9,11 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+source /etc/os-release || source /usr/lib/os-release
 ARCH=$(uname -m)
 TARGET_ARCH=${ARCH/x86_64/amd64}
 OS_DISTRO=ubuntu
-cat /etc/os-release | grep "^ID=" | grep rhel
-if [ $? == 0 ]; then
+if [[ "$ID" == "rhel" ]]; then
     OS_DISTRO=rhel
 fi
 
