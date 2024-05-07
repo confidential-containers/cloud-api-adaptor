@@ -62,8 +62,8 @@ $ kcli list kube
 +-----------+---------+-----------+-----------------------------------------+
 $ kubectl get nodes
 NAME                 STATUS   ROLES                  AGE     VERSION
-peer-pods-ctlplane-0 Ready    control-plane,master   6m8s    v1.26.7
-peer-pods-worker-0   Ready    worker                 2m47s   v1.26.7
+peer-pods-ctlplane-0 Ready    control-plane,master   6m8s    v1.30.0
+peer-pods-worker-0   Ready    worker                 2m47s   v1.30.0
 ```
 
 # Prepare the Pod VM volume
