@@ -5,8 +5,8 @@ permissions:
   contents: read
 
 env:
-  CLUSTER_NAME: "e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
-  TEST_PROVISION_FILE: "${{ github.workspace }}/provision_azure${{ github.run_id }}.properties"
+  CLUSTER_NAME_TEMPLATE: "{0}-e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
+  TEST_PROVISION_PATH_TEMPLATE: "${{ github.workspace }}/provision_azure${{ github.run_id }}_{0}.properties"
   CLOUD_PROVIDER: "azure"
   BUILTIN_CLOUD_PROVIDERS: "azure"
   TEST_E2E_CREATE_RG: "no"
@@ -110,6 +110,13 @@ jobs:
     needs:
     - generate-podvm-image-version
     - build-caa-container-image
+    strategy:
+      matrix:
+        parameters:
+          - id: "tdx"
+            machine_type: "Standard_DC2es_v5"
+          - id: "snp"
+            machine_type: "Standard_DC2as_v5"
     if: always() && !cancelled() && needs.build-caa-container-image.result != 'failure'
     steps:
     - uses: actions/checkout@v3
@@ -122,6 +129,11 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
 
+    - name: Set Provisioner Environment Variables
+      run: |
+          echo "TEST_PROVISION_FILE=${{ format(env.TEST_PROVISION_PATH_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
+          echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
+
     - name: Extract provisioner environment
       run: |
         echo "KBS_IMAGE=$(yq -e '.oci.kbs.registry' versions.yaml)" >> "$GITHUB_ENV"
@@ -133,12 +145,14 @@ jobs:
         CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
         KBS_IMAGE: ${{ github.event.inputs.kbs-image-id || env.KBS_IMAGE }}
         KBS_IMAGE_TAG: ${{  github.event.inputs.kbs-image-tag || env.KBS_IMAGE_TAG}}
+        AZURE_INSTANCE_SIZE: ${{ matrix.parameters.machine_type }}
       run: |
+        echo "Provisioner file for ${{ matrix.parameters.id }}"
         cat << EOF > "$TEST_PROVISION_FILE"
           AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           AZURE_CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
           RESOURCE_GROUP_NAME="${{ secrets.AZURE_RESOURCE_GROUP }}"
-          CLUSTER_NAME="$CLUSTER_NAME"
+          CLUSTER_NAME="${{ env.CLUSTER_NAME }}"
           LOCATION="${{ secrets.AZURE_REGION }}"
           SSH_KEY_ID="id_rsa.pub"
           AZURE_IMAGE_ID="$AZURE_IMAGE_ID"
@@ -147,6 +161,7 @@ jobs:
           CAA_IMAGE="${CAA_IMAGE}"
           KBS_IMAGE="${KBS_IMAGE}"
           KBS_IMAGE_TAG="${KBS_IMAGE_TAG}"
+          AZURE_INSTANCE_SIZE="${AZURE_INSTANCE_SIZE}"
         EOF
         cat "$TEST_PROVISION_FILE"
         # assert that no variable is unset
@@ -174,6 +189,7 @@ jobs:
     - name: Run provisioner
       working-directory: src/cloud-api-adaptor/test/tools
       run: |
+        echo "Creating cluster for ${{ matrix.parameters.id }} machine"
         make caa-provisioner-cli
         ./caa-provisioner-cli -action=createcluster
 
@@ -187,6 +203,13 @@ jobs:
     - build-caa-container-image
     - install-aks
     - generate-podvm-image-version
+    strategy:
+      matrix:
+        parameters:
+          - id: "tdx"
+            machine_type: "Standard_DC2es_v5"
+          - id: "snp"
+            machine_type: "Standard_DC2as_v5"
     if: always() && !cancelled() && needs.build-podvm-image.result != 'failure'
     steps:
     - uses: actions/checkout@v3
@@ -198,6 +221,11 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.GO_VERSION }}
+
+    - name: Set Provisioner Environment Variables
+      run: |
+          echo "TEST_PROVISION_FILE=${{ format(env.TEST_PROVISION_PATH_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
+          echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
 
     - uses: azure/login@v1
       name: 'Az CLI login'
@@ -223,6 +251,7 @@ jobs:
 
     - name: Checkout kbs Repository
       run: |
+        rm -rf test/trustee
         git clone https://github.com/confidential-containers/trustee test/trustee
         pushd test/trustee
         git checkout "${KBS_VERSION}"
@@ -234,6 +263,7 @@ jobs:
         DEPLOY_KBS: "yes"
       run: |
         # Since we install the cluster in parallel, we need to get the credentials here.
+        echo "running e2e test for ${{ matrix.parameters.id }} machine"
         az aks get-credentials \
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
           --name "${CLUSTER_NAME}"
@@ -249,8 +279,14 @@ jobs:
     - build-podvm-image
     - build-caa-container-image
     - run-e2e-test
+    strategy:
+      matrix:
+        parameters:
+          - id: "tdx"
+            machine_type: "Standard_DC2es_v5"
+          - id: "snp"
+            machine_type: "Standard_DC2as_v5"
     if: always()
-
     steps:
     - uses: actions/checkout@v3
 
@@ -261,6 +297,11 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.GO_VERSION }}
+
+    - name: Set Provisioner Environment Variables
+      run: |
+          echo "TEST_PROVISION_FILE=${{ format(env.TEST_PROVISION_PATH_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
+          echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
 
     - name: Restore the configuration created before
       uses: actions/download-artifact@v3
