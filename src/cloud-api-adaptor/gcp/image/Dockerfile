@@ -31,6 +31,8 @@ RUN if [ -n "${CAA_SRC}" ]; then \
       git checkout FETCH_HEAD -b ${CAA_SRC_REF} ;\
     fi
 
+RUN mkdir -p /src/cloud-api-adaptor/podvm/files
+
 # Copy the binaries to podvm/files folder
 COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/cloud-api-adaptor/podvm/files
 RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/cloud-api-adaptor/podvm/files
@@ -38,9 +40,6 @@ RUN tar xvf /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz -C /src/clo
 # Copy the pause_bundle to podvm/files folder
 COPY --from=podvm_binaries /pause-bundle.tar.gz /src/cloud-api-adaptor/podvm/files
 RUN tar xvf /src/cloud-api-adaptor/podvm/files/pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files
-
-# Uncomment for development.
-COPY . cloud-api-adaptor/gcp/image
 
 ARG GCP_PROJECT_ID
 ARG GCP_ZONE
@@ -53,6 +52,9 @@ ENV GCP_ZONE ${GCP_ZONE}
 ENV GCP_MACHINE_TYPE ${GCP_MACHINE_TYPE}
 ENV GCP_NETWORK ${GCP_NETWORK}
 ENV IMAGE_NAME ${IMAGE_NAME}
+
+# Uncomment for development.
+COPY . cloud-api-adaptor/gcp/image
 
 RUN --mount=type=secret,id=APPLICATION_KEY \
     export GOOGLE_APPLICATION_CREDENTIALS="/run/secrets/APPLICATION_KEY" && \
