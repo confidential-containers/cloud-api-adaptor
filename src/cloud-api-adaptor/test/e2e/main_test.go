@@ -97,9 +97,13 @@ func TestMain(m *testing.M) {
 
 	// The DEPLOY_KBS is exported then provisioner will install kbs before installing CAA
 	shouldDeployKbs := false
-	if os.Getenv("DEPLOY_KBS") == "true" || os.Getenv("DEPLOY_KBS") == "yes" {
+	if isTestWithKbs() {
 		shouldDeployKbs = true
 	}
+
+	// The TEE_CUSTOMIZED_OPA is an optional variable which specifies the opa file path
+	// such as: $HOME/trustee/kbs/sample_policies/allow_all.rego.
+	customizedOpaFile := os.Getenv("TEE_CUSTOMIZED_OPA")
 
 	if !shouldProvisionCluster {
 		// Look for a suitable kubeconfig file in the sequence: --kubeconfig flag,
@@ -154,6 +158,15 @@ func TestMain(m *testing.M) {
 
 			kbsparams = "cc_kbc::http://" + kbsEndpoint
 			log.Infof("KBS PARAMS: %s", kbsparams)
+			if customizedOpaFile != "" {
+				log.Info("Enable customized opa file in KBS service.")
+				if _, err := os.Stat(customizedOpaFile); err != nil {
+					return ctx, err
+				}
+				if err = keyBrokerService.EnableKbsCustomizedPolicy("http://"+kbsEndpoint, customizedOpaFile); err != nil {
+					return ctx, err
+				}
+			}
 		}
 
 		if podvmImage != "" {

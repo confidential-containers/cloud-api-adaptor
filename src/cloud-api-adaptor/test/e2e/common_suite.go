@@ -595,3 +595,26 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 
 	NewTestCase(t, e, "KbsKeyReleasePod", assert, "Kbs key release is successful").WithPod(pod).WithTestCommands(testCommands).Run()
 }
+
+func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert) {
+
+	log.Info("Do test kbs key release failure case")
+	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget-failure")
+	testCommands := []TestCommand{
+		{
+			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
+			ContainerName: pod.Spec.Containers[0].Name,
+			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if strings.Contains(stdout.String(), "request unautorized") {
+					log.Infof("Pass failure case as: %s", stdout.String())
+					return true
+				} else {
+					log.Errorf("Failed to faliure case as: %s", stdout.String())
+					return false
+				}
+			},
+		},
+	}
+
+	NewTestCase(t, e, "DoTestKbsKeyReleaseForFailure", assert, "Kbs key release is failed").WithPod(pod).WithTestCommands(testCommands).Run()
+}

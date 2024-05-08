@@ -81,7 +81,7 @@ type InstallOverlay interface {
 const PodWaitTimeout = time.Second * 30
 
 // trustee repo related base path
-const TRUSTEE_REPO_PATH = "../trustee"
+const TRUSTEE_REPO_PATH = "trustee"
 
 func saveToFile(filename string, content []byte) error {
 	// Save contents to file
@@ -134,16 +134,23 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 		}
 		defer keyOutputFile.Close()
 
-		_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+		pubKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
 			err = fmt.Errorf("generating Ed25519 key pair: %w\n", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
 
+		b, err := x509.MarshalPKCS8PrivateKey(privateKey)
+		if err != nil {
+			err = fmt.Errorf("MarshalPKCS8PrivateKey private key: %w\n", err)
+			log.Errorf("%v", err)
+			return nil, err
+		}
+
 		privateKeyPEM := pem.EncodeToMemory(&pem.Block{
 			Type:  "PRIVATE KEY",
-			Bytes: privateKey,
+			Bytes: b,
 		})
 
 		// Save private key to file
@@ -154,17 +161,16 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 			return nil, err
 		}
 
-		publicKey := privateKey.Public().(ed25519.PublicKey)
-		publicKeyX509, err := x509.MarshalPKIXPublicKey(publicKey)
+		b, err = x509.MarshalPKIXPublicKey(pubKey)
 		if err != nil {
-			err = fmt.Errorf("generating Ed25519 public key: %w\n", err)
+			err = fmt.Errorf("MarshalPKIXPublicKey Ed25519 public key: %w\n", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
 
 		publicKeyPEM := pem.EncodeToMemory(&pem.Block{
 			Type:  "PUBLIC KEY",
-			Bytes: publicKeyX509,
+			Bytes: b,
 		})
 
 		// Save public key to file
@@ -335,6 +341,13 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 
 	resources := client.Resources(namespace)
 
+	kbsDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: namespace}}
+	fmt.Printf("Wait for the %s deployment be available\n", deploymentName)
+	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(kbsDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
+		wait.WithTimeout(time.Minute*2)); err != nil {
+		return "", err
+	}
+
 	services := &corev1.ServiceList{}
 	if err := resources.List(context.TODO(), services); err != nil {
 		return "", err
@@ -366,6 +379,21 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 	}
 
 	return "", fmt.Errorf("Service %s not found", serviceName)
+}
+
+func (p *KeyBrokerService) EnableKbsCustomizedPolicy(kbsEndpoint string, customizedOpaFile string) error {
+	log.Info("EnableKbsCustomizedPolicy")
+	kbsClientDir := filepath.Join(TRUSTEE_REPO_PATH, "target/release")
+	privateKey := "../../kbs/config/kubernetes/base/kbs.key"
+	cmd := exec.Command("./kbs-client", "--url", kbsEndpoint, "config", "--auth-private-key", privateKey, "set-resource-policy", "--policy-file", customizedOpaFile)
+	cmd.Dir = kbsClientDir
+	cmd.Env = os.Environ()
+	stdoutStderr, err := cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
@@ -536,7 +564,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		fmt.Printf("Wait for the %s DaemonSet be available\n", ds.GetName())
 		if err = wait.For(conditions.New(resources).ResourceMatch(ds, func(object k8s.Object) bool {
 			ds = object.(*appsv1.DaemonSet)
-
+		
 			return ds.Status.CurrentNumberScheduled > 0
 		}), wait.WithTimeout(time.Minute*5)); err != nil {
 			return err

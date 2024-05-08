@@ -48,6 +48,26 @@ To leave the cluster untouched by the execution finish you should export `TEST_T
 
 To use existing cluster which have already installed Cloud API Adaptor, you should export `TEST_INSTALL_CAA=no`.
 
+## Attestation and KBS specific
+
+We need artificats from trustee when do attestation test, to prepare trustee, do as following. 
+
+```
+pushd ${cloud-api-adaptor}/test/e2e
+git clone https://github.com/confidential-containers/trustee.git
+pushd trustee
+git checkout $(../../../hack/yq-shim.sh '.git.kbs.reference' ../../../versions.yaml)
+pushd kbs
+make CLI_FEATURES=sample_only cli
+popd
+popd
+popd
+```
+
+To deploy the KBS service and test attestation related cases, set `DEPLOY_KBS=yes`.
+To use a customized OPA policy file in KBS service, specify the OPA file via `TEE_CUSTOMIZED_OPA=/path/policy.rego`.
+For example, we need set `TEE_CUSTOMIZED_OPA=/$trustee_path/kbs/sample_policies/allow_all.rego` when test sample TEE as default policy disabled sample TEE.
+
 ## Provision file specifics
 
 As mentioned on the previous section, a properties file can be passed to the cloud provisioner that will be used to controll the provisioning operations. The properties are specific of each cloud provider though, see on the sections below.
