@@ -32,7 +32,11 @@ func isTestWithKbs() bool {
 }
 
 func isTestWithCustomizedOpa() bool {
-	return os.Getenv("TEE_CUSTOMIZED_OPA") != ""
+	if _, err := os.Stat(os.Getenv("TEE_CUSTOMIZED_OPA")); err != nil {
+		log.Printf("Stat TEE_CUSTOMIZED_OPA error: %v", err)
+		return false
+	}
+	return true
 }
 
 type PodOption func(*corev1.Pod)

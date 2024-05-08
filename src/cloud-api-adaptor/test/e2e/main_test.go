@@ -96,10 +96,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// The DEPLOY_KBS is exported then provisioner will install kbs before installing CAA
-	shouldDeployKbs := false
-	if isTestWithKbs() {
-		shouldDeployKbs = true
-	}
+	shouldDeployKbs := isTestWithKbs()
 
 	// The TEE_CUSTOMIZED_OPA is an optional variable which specifies the opa file path
 	// such as: $HOME/trustee/kbs/sample_policies/allow_all.rego.

@@ -564,7 +564,6 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		fmt.Printf("Wait for the %s DaemonSet be available\n", ds.GetName())
 		if err = wait.For(conditions.New(resources).ResourceMatch(ds, func(object k8s.Object) bool {
 			ds = object.(*appsv1.DaemonSet)
-		
 			return ds.Status.CurrentNumberScheduled > 0
 		}), wait.WithTimeout(time.Minute*5)); err != nil {
 			return err
