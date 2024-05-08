@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -25,6 +26,14 @@ import (
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
+
+func isTestWithKbs() bool {
+	return os.Getenv("DEPLOY_KBS") == "true" || os.Getenv("DEPLOY_KBS") == "yes"
+}
+
+func isTestWithCustomizedOpa() bool {
+	return os.Getenv("TEE_CUSTOMIZED_OPA") != ""
+}
 
 type PodOption func(*corev1.Pod)
 

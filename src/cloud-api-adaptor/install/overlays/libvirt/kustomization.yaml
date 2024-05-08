@@ -24,6 +24,7 @@ configMapGenerator:
   - LIBVIRT_POOL="default" # set
   - DISABLECVM="true" # set as false to enable confidential VM
   - SECURE_COMMS="false" # set as true to enable Secure Comms
+  - AA_KBC_PARAMS="" #set KBC params for podvm
   #- LIBVIRT_LAUNCH_SECURITY="" #sev or s390-pv
   #- LIBVIRT_FIRMWARE="" # Uncomment and set if you want to change the firmware path. Defaults to /usr/share/edk2/ovmf/OVMF_CODE.fd
   #- LIBVIRT_VOL_NAME="" # Uncomment and set if you want to use a specific volume name. Defaults to podvm-base.qcow2

@@ -312,12 +312,13 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 
 	// Mapping the internal properties to ConfigMapGenerator properties and their default values.
 	mapProps := map[string][2]string{
-		"network":      {"default", "LIBVIRT_NET"},
-		"storage":      {"default", "LIBVIRT_POOL"},
-		"pause_image":  {"", "PAUSE_IMAGE"},
-		"podvm_volume": {"", "LIBVIRT_VOL_NAME"},
-		"uri":          {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
-		"vxlan_port":   {"", "VXLAN_PORT"},
+		"network":       {"default", "LIBVIRT_NET"},
+		"storage":       {"default", "LIBVIRT_POOL"},
+		"pause_image":   {"", "PAUSE_IMAGE"},
+		"podvm_volume":  {"", "LIBVIRT_VOL_NAME"},
+		"uri":           {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
+		"vxlan_port":    {"", "VXLAN_PORT"},
+		"AA_KBC_PARAMS": {"", "AA_KBC_PARAMS"},
 	}
 
 	for k, v := range mapProps {
