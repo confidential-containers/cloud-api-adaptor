@@ -55,6 +55,9 @@ func TestLibvirtCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
 }
 
 func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
+	// This test is causing issues on CI with instability, so skip until we can resolve this.
+	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/1831
+	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t, testEnv, assert)
 }
@@ -65,6 +68,8 @@ func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testin
 }
 
 func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T) {
+	// This test is causing issues on CI with instability, so skip until we can resolve this.
+	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/1831
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, testEnv, assert)
 }
