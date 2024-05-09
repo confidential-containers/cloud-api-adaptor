@@ -97,26 +97,14 @@ func TestLibvirtPodsMTLSCommunication(t *testing.T) {
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
 
-func TestLibvirtKbsKeyReleaseWithDefaultOpa(t *testing.T) {
+func TestLibvirtKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
-	if !isTestWithCustomizedOpa() {
-		t.Skip("Skipping TestLibvirtKbsKeyReleaseWithCustomizedOpa as default opa is used")
-	}
-	assert := LibvirtAssert{}
-	t.Parallel()
-	DoTestKbsKeyRelease(t, testEnv, assert)
-}
-
-func TestLibvirtKbsKeyReleaseWithCustomizedOpa(t *testing.T) {
-	if !isTestWithKbs() {
-		t.Skip("Skipping kbs related test as kbs is not deployed")
-	}
-	if isTestWithCustomizedOpa() {
-		t.Skip("Skipping TestLibvirtKbsKeyReleaseWithDefaultOpa as customized opa is used")
-	}
+	_ = keyBrokerService.EnableKbsCustomizedPolicy("deny_all.rego")
 	assert := LibvirtAssert{}
 	t.Parallel()
 	DoTestKbsKeyReleaseForFailure(t, testEnv, assert)
+	_ = keyBrokerService.EnableKbsCustomizedPolicy("allow_all.rego")
+	DoTestKbsKeyRelease(t, testEnv, assert)
 }

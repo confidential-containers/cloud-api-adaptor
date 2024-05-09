@@ -216,7 +216,6 @@ make TEST_PROVISION=no TEST_TEARDOWN=no TEST_PODVM_IMAGE=$PWD/podvm/podvm.qcow2 
 * ``CLOUD_PROVIDER`` - which cloud provider should be used
 * ``TEST_E2E_TIMEOUT`` - test timeout
 * ``DEPLOY_KBS`` - whether to deploy the key-broker-service, which is used to test the attestation flow
-* ``TEE_CUSTOMIZED_OPA`` - specify a customized OPA policy file for KBS service.
 * ``TEST_PROVISION_FILE`` - file specifying the libvirt connection and the ssh key file (created earlier by [config_libvirt.sh](config_libvirt.sh))
 
 # Delete Confidential Containers and cloud-api-adaptor from the cluster

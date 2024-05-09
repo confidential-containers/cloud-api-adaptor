@@ -65,8 +65,6 @@ popd
 ```
 
 To deploy the KBS service and test attestation related cases, set `export DEPLOY_KBS=yes`.
-To use a customized OPA policy file in KBS service, specify the OPA file via `export TEE_CUSTOMIZED_OPA=/path/policy.rego`.
-For example, we need set `export TEE_CUSTOMIZED_OPA=/$trustee_path/kbs/sample_policies/allow_all.rego` when test sample TEE as default policy disabled sample TEE.
 
 ## Provision file specifics
 

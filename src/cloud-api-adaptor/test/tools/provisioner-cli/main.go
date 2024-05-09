@@ -109,7 +109,7 @@ func main() {
 				log.Fatal(err)
 			}
 
-			kbsparams := "cc_kbc::http://" + kbsEndpoint
+			kbsparams := "cc_kbc::" + kbsEndpoint
 			log.Infof("KBS PARAMS: %s", kbsparams)
 
 			props = provisioner.GetProperties(context.TODO(), cfg)
