@@ -573,6 +573,8 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 
 }
 
+// DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaning opa in kbs
+// as test cases might be run in parallel
 func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 
 	log.Info("Do test kbs key release")
@@ -596,6 +598,8 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 	NewTestCase(t, e, "KbsKeyReleasePod", assert, "Kbs key release is successful").WithPod(pod).WithTestCommands(testCommands).Run()
 }
 
+// DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaning opa in kbs
+// as test cases might be run in parallel
 func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert) {
 
 	log.Info("Do test kbs key release failure case")

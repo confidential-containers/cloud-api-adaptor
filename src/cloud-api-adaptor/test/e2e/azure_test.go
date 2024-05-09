@@ -47,4 +47,8 @@ func TestKbsKeyRelease(t *testing.T) {
 	}
 	t.Parallel()
 	DoTestKbsKeyRelease(t, testEnv, assert)
+
+	// @Magnus @Kartik, are you going to enable this negative test for azure?
+	// _ = keyBrokerService.EnableKbsCustomizedPolicy("deny_all.rego")
+	// DoTestKbsKeyReleaseForFailure(t, testEnv, assert)
 }

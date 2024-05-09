@@ -63,6 +63,7 @@ type NewInstallOverlayFunc func(installDir, provider string) (InstallOverlay, er
 
 type KeyBrokerService struct {
 	installOverlay InstallOverlay // Pointer to the kustomize overlay
+	endpoint       string         // KBS Service endpoint, such as: http://NodeIP:Port
 }
 
 var NewInstallOverlayFunctions = make(map[string]NewInstallOverlayFunc)
@@ -190,6 +191,7 @@ func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 
 	return &KeyBrokerService{
 		installOverlay: overlay,
+		endpoint:       "",
 	}, nil
 }
 
@@ -373,19 +375,20 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 				return "", err
 			}
 
-			serviceEndpoint := fmt.Sprintf("%s:%d", nodeIP, nodePort)
-			return serviceEndpoint, nil
+			p.endpoint = fmt.Sprintf("http://%s:%d", nodeIP, nodePort)
+			return p.endpoint, nil
 		}
 	}
 
 	return "", fmt.Errorf("Service %s not found", serviceName)
 }
 
-func (p *KeyBrokerService) EnableKbsCustomizedPolicy(kbsEndpoint string, customizedOpaFile string) error {
-	log.Info("EnableKbsCustomizedPolicy")
+func (p *KeyBrokerService) EnableKbsCustomizedPolicy(customizedOpaFile string) error {
 	kbsClientDir := filepath.Join(TRUSTEE_REPO_PATH, "target/release")
 	privateKey := "../../kbs/config/kubernetes/base/kbs.key"
-	cmd := exec.Command("./kbs-client", "--url", kbsEndpoint, "config", "--auth-private-key", privateKey, "set-resource-policy", "--policy-file", customizedOpaFile)
+	policyFile := filepath.Join("../../kbs/sample_policies", customizedOpaFile)
+	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
+	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource-policy", "--policy-file", policyFile)
 	cmd.Dir = kbsClientDir
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
