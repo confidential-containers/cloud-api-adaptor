@@ -64,6 +64,14 @@ popd
 popd
 ```
 
+We need build and use the PodVM image with `AA_KBC=cc_kbc` enabled, for example:
+```
+pushd ${cloud-api-adaptor}
+AA_KBC=cc_kbc make podvm-builder podvm-binaries podvm-image
+popd
+```
+Then extract the PodVM image and use it following [extracting-the-qcow2-image](../../podvm/README.md#extracting-the-qcow2-image)
+
 To deploy the KBS service and test attestation related cases, set `export DEPLOY_KBS=yes`.
 
 ## Provision file specifics
