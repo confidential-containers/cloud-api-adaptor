@@ -23,7 +23,7 @@ ARCH        := $(or $(ARCH),$(HOST_ARCH))
 # Normalise x86_64 / amd64 for input ARCH
 ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
-AA_KBC      ?= offline_fs_kbc
+AA_KBC      ?= cc_kbc
 KBC_URI     ?= null
 LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
 RUST_ARCH   ?= $(subst ppc64le,powerpc64le,$(ARCH))
