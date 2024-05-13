@@ -53,7 +53,7 @@ To use existing cluster which have already installed Cloud API Adaptor, you shou
 We need artificats from trustee when do attestation test, to prepare trustee, do as following. 
 
 ```
-pushd ${cloud-api-adaptor}/test/e2e
+pushd ${cloud-api-adaptor-repo-dir}/src/cloud-api-adaptor/test/e2e
 git clone https://github.com/confidential-containers/trustee.git
 pushd trustee
 git checkout $(../../../hack/yq-shim.sh '.git.kbs.reference' ../../../versions.yaml)
@@ -72,7 +72,12 @@ popd
 ```
 Then extract the PodVM image and use it following [extracting-the-qcow2-image](../../podvm/README.md#extracting-the-qcow2-image)
 
-To deploy the KBS service and test attestation related cases, set `export DEPLOY_KBS=yes`.
+To deploy the KBS service and test attestation related cases, export following variables like:
+```
+export DEPLOY_KBS=yes
+export KBS_IMAGE=$(./hack/yq-shim.sh '.oci.kbs.registry' ./versions.yaml)
+export KBS_IMAGE_TAG=$(./hack/yq-shim.sh '.oci.kbs.tag' ./versions.yaml)
+````
 
 ## Provision file specifics
 
