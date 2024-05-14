@@ -1,6 +1,6 @@
 include ../Makefile.defaults
 
-AA_KBC  ?= offline_fs_kbc
+AA_KBC  ?= cc_kbc
 ARCH    ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILDER = fedora-binaries-builder-$(ARCH)
 
