@@ -82,7 +82,7 @@ type InstallOverlay interface {
 const PodWaitTimeout = time.Second * 30
 
 // trustee repo related base path
-const TRUSTEE_REPO_PATH = "trustee"
+const TRUSTEE_REPO_PATH = "../trustee"
 
 func saveToFile(filename string, content []byte) error {
 	// Save contents to file
