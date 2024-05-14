@@ -21,7 +21,7 @@ cloudimg:
 tools:
   bats: 1.10.0
   golang: 1.21.10
-  rust: 1.72.0
+  rust: 1.74.0
   protoc: 3.15.0
   packer: v1.9.4
 # Referenced Git repositories

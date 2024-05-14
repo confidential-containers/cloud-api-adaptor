@@ -51,6 +51,9 @@ jobs:
       - name: Read properties from versions.yaml
         run: |
           sudo snap install yq
+          echo "KBS_REPO=$(yq -e '.git.kbs.url' versions.yaml)" >> "$GITHUB_ENV"
+          echo "KBS_VERSION=$(yq -e '.git.kbs.reference' versions.yaml)" >> "$GITHUB_ENV"
+          echo "RUST_VERSION=$(yq -e '.tools.rust' versions.yaml)" >> "$GITHUB_ENV"
           go_version="$(yq '.tools.golang' versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
@@ -86,10 +89,30 @@ jobs:
           # For debugging
           cat libvirt.properties
 
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          override: true
+          profile: minimal
+
+      - name: Checkout kbs Repository and build kbs-client
+        run: |
+          git clone "${KBS_REPO}" test/trustee
+          pushd test/trustee
+          git checkout "${KBS_VERSION}"
+          pushd kbs
+          make CLI_FEATURES=sample_only cli
+          popd
+          # For debugging
+          ls ./target/release
+          popd
+
       - name: run tests
         id: runTests
         run: |
           export CLOUD_PROVIDER=libvirt
+          export DEPLOY_KBS=true
           export TEST_PROVISION="yes"
           export TEST_TEARDOWN="no"
           export TEST_PROVISION_FILE="$PWD/libvirt.properties"
