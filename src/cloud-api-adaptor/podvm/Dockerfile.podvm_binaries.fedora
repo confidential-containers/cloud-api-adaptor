@@ -12,7 +12,7 @@ ARG CLOUD_PROVIDER
 ARG PODVM_DISTRO=rhel
 ARG GUEST_COMPONENTS_VERSION
 ARG GUEST_COMPONENTS_REPO
-ARG AA_KBC="offline_fs_kbc"
+ARG AA_KBC="cc_kbc"
 # If not provided, uses system architecture
 ARG ARCH
 #This is the name of the policy file under

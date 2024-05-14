@@ -9,7 +9,7 @@ ARG BUILDER_IMG
 FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG PODVM_DISTRO=rhel
-ARG AA_KBC="offline_fs_kbc"
+ARG AA_KBC="cc_kbc"
 # If not provided, uses system architecture
 ARG ARCH
 #This is the name of the policy file under

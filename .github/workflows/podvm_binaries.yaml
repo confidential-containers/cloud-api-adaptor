@@ -71,7 +71,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push
-      run: make podvm-binaries
+      run: AA_KBC=cc_kbc make podvm-binaries
       env:
           PUSH: true
           REGISTRY: ${{ inputs.registry }}
