@@ -53,10 +53,10 @@ To use existing cluster which have already installed Cloud API Adaptor, you shou
 We need artificats from trustee when do attestation test, to prepare trustee, do as following. 
 
 ```
-pushd ${cloud-api-adaptor-repo-dir}/src/cloud-api-adaptor/test/e2e
+pushd ${cloud-api-adaptor-repo-dir}/src/cloud-api-adaptor/test
 git clone https://github.com/confidential-containers/trustee.git
 pushd trustee
-git checkout $(../../../hack/yq-shim.sh '.git.kbs.reference' ../../../versions.yaml)
+git checkout $(../../hack/yq-shim.sh '.git.kbs.reference' ../../versions.yaml)
 pushd kbs
 make CLI_FEATURES=sample_only cli
 popd
