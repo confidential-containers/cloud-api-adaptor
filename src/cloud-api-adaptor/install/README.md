@@ -4,7 +4,7 @@
 
   If using AWS, create VPC and AMI. Similarly for other providers create the
   necessary resources.
-   
+
 * **Setup Kubernetes cluster in the cloud**
 
   At least one node in the cluster must have the "worker" role.
@@ -19,7 +19,7 @@
   ```
 
   If "worker" role is missing, execute the following command to set the role.
-   
+
     ```
     export NODENAME=<node-name>
     kubectl label node $NODENAME node.kubernetes.io/worker=
@@ -56,16 +56,30 @@ Alternatively the manual approach, if you want to pick a specific CoCo release/r
 
 - Deploy the CoCo operator
 
-  - Follow the instructions in the ["Deploy the Operator" section](https://github.com/confidential-containers/operator/blob/main/docs/INSTALL.md#deploy-the-operator) of the CoCo Operator's INSTALL.md file.
+  <!-- TODO - uncomment when 0.9 is released
+  - Either deploy a release version of the peer pods enabled CoCo operator, by running the following command where
+  `<RELEASE_VERSION>` needs to be substituted with the desired [release tag](https://github.com/confidential-containers/operator/tags):
+  > **Note:** the release version needs to be `v0.9.0` or after
+  ```
+  export RELEASE_VERSION=<RELEASE_VERSION>
+  kubectl apply -k github.com/confidential-containers/operator/config/overlays/peerpods/default?ref=<RELEASE_VERSION>
+  ```
+  - Alternatively i-->
+  - Install the latest development version with:
+  ```
+  kubectl apply -k "github.com/confidential-containers/operator/config/default"
+  ```
 
 - Create the peer pods variant of the CC custom resource to install the required pieces of CC and create the `kata-remote` `RuntimeClass`
-  - Again, either deploy a release version of the Confidential Containers peer pod customer resource with, by running the following command where `<RELEASE_VERSION>` needs to be substituted with the desired [release tag](https://github.com/confidential-containers/operator/tags):
-  > **Note:** the release version needs to be `v0.6.0` or after
+    <!-- TODO - uncomment when 0.9 is released
+  - Either deploy a release version of the Confidential Containers peer pod customer resource with, by running the following command where `<RELEASE_VERSION>` needs to be substituted with the desired [release tag](https://github.com/confidential-containers/operator/tags):
+  > **Note:** the release version needs to be `v0.9.0` or after
   ```
   export RELEASE_VERSION=<RELEASE_VERSION>
   kubectl apply -k github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods?ref=<RELEASE_VERSION>
   ```
-  - Alternatively install the latest development version with:
+  - Alternatively i-->
+  - Install the latest development version with:
   ```
   kubectl apply -k "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods"
   ```
@@ -96,7 +110,7 @@ Alternatively the manual approach, if you want to pick a specific CoCo release/r
     ```
   A successful install should show all the PODs with "Running" status under the `confidential-containers-system`
   namespace.
-  
+
     ```
     NAME                                              READY   STATUS    RESTARTS   AGE
     cc-operator-controller-manager-546574cf87-phbdv   2/2     Running   0          43m
