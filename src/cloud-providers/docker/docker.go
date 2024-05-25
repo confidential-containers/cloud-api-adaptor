@@ -13,6 +13,7 @@ import (
 	// eg. - https://github.com/moby/moby/blob/v25.0.5/vendor.mod
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 )
@@ -20,10 +21,14 @@ import (
 // The default podvm docker image to use
 const defaultPodVMDockerImage = "quay.io/confidential-containers/podvm-docker-image"
 
+// Default docker network name to connect to
+const defaultDockerNetworkName = "bridge"
+
 // Method to create and start a container
 // Returns the container ID and the IP address of the container
 func createContainer(ctx context.Context, client *client.Client,
-	instanceName string, volumeBinding []string) (string, string, error) {
+	instanceName string, volumeBinding []string,
+	podvmImage string, networkName string) (string, string, error) {
 
 	// No need to bind the port to the host
 	portBinding := nat.PortMap{}
@@ -32,7 +37,7 @@ func createContainer(ctx context.Context, client *client.Client,
 	resp, err := client.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image: defaultPodVMDockerImage,
+			Image: podvmImage,
 			ExposedPorts: nat.PortSet{
 				"15150/tcp": struct{}{},
 			},
@@ -42,7 +47,14 @@ func createContainer(ctx context.Context, client *client.Client,
 			Binds:        volumeBinding,
 			Privileged:   true, // This line is added to create a privileged container
 		},
-		nil, nil, instanceName,
+		// Connect to specific network name
+		&network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
+				networkName: {},
+			},
+		},
+
+		nil, instanceName,
 	)
 	if err != nil {
 		return "", "", err
@@ -61,7 +73,11 @@ func createContainer(ctx context.Context, client *client.Client,
 		return "", "", err
 	}
 
-	return resp.ID, inspect.NetworkSettings.IPAddress, nil
+	// Get the IP address of the container from the network settings
+	// networks: map[network-name: {IPAddress: ip-address}]
+	// The network name is the key in the networks map
+
+	return resp.ID, inspect.NetworkSettings.Networks[networkName].IPAddress, nil
 
 }
 
