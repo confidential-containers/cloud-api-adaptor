@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"net/netip"
 	"os"
 	"regexp"
@@ -19,6 +20,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/avast/retry-go/v4"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
@@ -148,6 +150,10 @@ func (p *azureProvider) createNetworkInterface(ctx context.Context, nicName stri
 }
 
 func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+	err := p.ConfigVerifier()
+	if err != nil {
+		return nil, err
+	}
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -313,10 +319,83 @@ func (p *azureProvider) Teardown() error {
 	return nil
 }
 
+func parseManagedImageId(imageId string) (string, string, string, error) {
+	managedRegex := regexp.MustCompile(`/subscriptions/([^/]+)/resourceGroups/([^/]+)/providers/Microsoft.Compute/images/([^/]+)`)
+
+	if matches := managedRegex.FindStringSubmatch(imageId); matches != nil {
+		return matches[1], matches[2], matches[3], nil
+	}
+
+	return "", "", "", fmt.Errorf("Invalid ImageId format!")
+}
+
+func parseSharedImageGalleryImageId(imageId string) (string, string, string, error) {
+	communityRegex := regexp.MustCompile(`/CommunityGalleries/([^/]+)/Images/([^/]+)/Versions/([^/]+)`)
+
+	if matches := communityRegex.FindStringSubmatch(imageId); matches != nil {
+		return matches[1], matches[2], matches[3], nil
+	}
+
+	return "", "", "", fmt.Errorf("Invalid ImageId format!")
+}
+
+func (p *azureProvider) isImageIdExist() (bool, error) {
+	if strings.HasPrefix(p.serviceConfig.ImageId, "/CommunityGalleries/") {
+		galleryName, imageName, version, err := parseSharedImageGalleryImageId(p.serviceConfig.ImageId)
+		if err != nil {
+			return false, err
+		}
+
+		galleryclient, err := armcompute.NewCommunityGalleryImageVersionsClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+		if err != nil {
+			return false, fmt.Errorf("failed to create gallery images client: %v", err)
+		}
+
+		_, err = galleryclient.Get(context.Background(), p.serviceConfig.Region, galleryName, imageName, version, nil)
+		if err != nil {
+			if typedError, ok := err.(autorest.DetailedError); ok {
+				if typedError.StatusCode == http.StatusNotFound {
+					return false, nil
+				}
+			}
+			return false, err
+		}
+	} else {
+		_, resourceGroupName, imageName, err := parseManagedImageId(p.serviceConfig.ImageId)
+		if err != nil {
+			return false, err
+		}
+
+		imageclient, err := armcompute.NewImagesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+		if err != nil {
+			return false, fmt.Errorf("failed to create image client: %v", err)
+		}
+
+		_, err = imageclient.Get(context.Background(), resourceGroupName, imageName, nil)
+		if err != nil {
+			if typedError, ok := err.(autorest.DetailedError); ok {
+				if typedError.StatusCode == http.StatusNotFound {
+					return false, nil
+				}
+			}
+			return false, err
+		}
+	}
+	return true, nil
+}
+
 func (p *azureProvider) ConfigVerifier() error {
 	ImageId := p.serviceConfig.ImageId
 	if len(ImageId) == 0 {
 		return fmt.Errorf("ImageId is empty")
+	}
+
+	exist, err := p.isImageIdExist()
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return fmt.Errorf("ImageId is not found")
 	}
 	return nil
 }
