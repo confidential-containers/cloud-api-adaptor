@@ -137,7 +137,6 @@ func TestWriteAgentConfig(t *testing.T) {
 		EnableSignatureVerification: true,
 		ServerAddr:                  "unix:///run/kata-containers/agent.sock",
 		AaKbcParams:                 "cc_kbc::http://192.168.1.2:8080",
-		ImageRegistryAuthFile:       "/etc/attestation-agent/auth.json",
 		Endpoints:                   Endpoints{Allowed: []string{"AddARPNeighborsRequest", "AddSwapRequest"}},
 	}
 
@@ -176,10 +175,6 @@ func TestParseAgentConfig(t *testing.T) {
 
 	if agentConfig.AaKbcParams != "" {
 		t.Fatalf("agentConfig.AaKbcParams does not match test data: expected %v, got %v", "", agentConfig.AaKbcParams)
-	}
-
-	if agentConfig.ImageRegistryAuthFile != "file:///etc/attestation-agent/auth.json" {
-		t.Fatalf("agentConfig.ImageRegistryAuthFile does not match test data: expected %v, got %v", "/etc/attestation-agent/auth.json", agentConfig.ImageRegistryAuthFile)
 	}
 
 	if agentConfig.Endpoints.Allowed[0] != "AddARPNeighborsRequest" {
@@ -228,7 +223,6 @@ func TestWriteAgentConfigNonExistentTomlEntry(t *testing.T) {
 	}
 
 	// Add the missing field to the agentConfig
-	newAgentConfig.ImageRegistryAuthFile = "file:///etc/attestation-agent/auth.json"
 	newAgentConfig.Endpoints.Allowed = []string{""}
 
 	// Update existing field

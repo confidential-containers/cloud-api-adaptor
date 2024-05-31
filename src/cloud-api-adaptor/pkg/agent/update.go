@@ -31,7 +31,6 @@ type AgentConfig struct {
 	EnableSignatureVerification bool      `toml:"enable_signature_verification"`
 	ServerAddr                  string    `toml:"server_addr"`
 	AaKbcParams                 string    `toml:"aa_kbc_params"`
-	ImageRegistryAuthFile       string    `toml:"image_registry_auth_file"`
 	Endpoints                   Endpoints `toml:"endpoints"`
 }
 
@@ -128,25 +127,6 @@ func UpdateConfig(cfg *Config) error {
 	if config.AAKBCParams != "" {
 		logger.Printf("Updating aa_kbc_params in agent config file\n")
 		agentConfig.AaKbcParams = config.AAKBCParams
-	}
-
-	if config.AuthJson != "" {
-
-		logger.Printf("Updating image_registry_auth_file in agent config file with value\n")
-
-		// Check if authJsonFilePath exists. If it doesn't exists create the file
-
-		if _, err := os.Stat(cfg.authJsonPath); err != nil && os.IsNotExist(err) {
-			// Write the authJson to the defaultAuthJsonFilePath
-			err = os.WriteFile(cfg.authJsonPath, []byte(config.AuthJson), 0644)
-			if err != nil {
-				return fmt.Errorf("failed to write auth.json file: %s", err)
-			}
-		}
-
-		// Update the file path in the agent config
-		agentConfig.ImageRegistryAuthFile = "file://" + cfg.authJsonPath
-
 	}
 
 	// Write the updated agent config file
