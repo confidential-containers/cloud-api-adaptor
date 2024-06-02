@@ -38,6 +38,7 @@ if  [[ "$PODVM_DISTRO" == "rhel" ]]; then
     dnf install -q -y "${NVIDIA_USERSPACE_PKGS[@]/%/-${NVIDIA_USERSPACE_VERSION}}"
     # This will use the default stream
     dnf -q -y module install nvidia-driver:${NVIDIA_DRIVER_VERSION}
+    dnf install -q -y kernel-modules
 fi
 
 # Configure the settings for nvidia-container-runtime
