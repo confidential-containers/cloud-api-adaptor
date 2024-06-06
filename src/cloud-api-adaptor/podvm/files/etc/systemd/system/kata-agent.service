@@ -1,8 +1,8 @@
 [Unit]
 Description=Kata Agent
 BindsTo=netns@podns.service
-Wants=process-user-data.service
-After=netns@podns.service process-user-data.service
+Wants=process-user-data-update.service
+After=netns@podns.service process-user-data-update.service
 
 [Service]
 Environment=CDH_CONFIG_PATH=/run/confidential-containers/cdh.toml
