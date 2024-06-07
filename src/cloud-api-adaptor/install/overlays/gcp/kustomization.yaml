@@ -1,13 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-bases:
+resources:
 - ../../yamls
 
 images:
 - name: cloud-api-adaptor
   newName: 192.168.122.1:5000/cloud-api-adaptor # change image if needed
-  newTag: 47dcc2822b6c2489a02db83c520cf9fdcc833b3f-dirty # change tag if needed
+  newTag: latest
 
 generatorOptions:
   disableNameSuffixHash: true
@@ -50,7 +50,6 @@ secretGenerator:
 ##TLS_SETTINGS
 
 patchesStrategicMerge:
-  #- cri_runtime_endpoint.yaml # set (modify host's runtime cri socket path in the file, default is /run/containerd/containerd.sock)
 ##TLS_SETTINGS
   #- tls_certs_volume_mount.yaml # set (for tls)
 ##TLS_SETTINGS
