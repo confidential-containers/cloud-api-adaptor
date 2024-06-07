@@ -1,12 +1,15 @@
 # Cloud API Adaptor on GCP
 
-This documentation will walk you through setting up Cloud API Adaptor (CAA)
-on Google Compute Engine (GCE). We will build the pod vm image, CCA dev image and experiment on a local libvirt cluster.
+This documentation will walk you through setting up Cloud API Adaptor (CAA) on
+Google Compute Engine (GCE). We will build the pod vm image, CCA dev image and
+experiment on a local libvirt cluster.
 
 ## Build Pod VM Image
 
 ### Modifying existing marketplace image
-Install packer by following [these instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
+
+Install packer by following [these
+instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
 
 Create 'packer' service account with compute instance admin role:
 
@@ -35,9 +38,10 @@ gcloud iam service-accounts keys create ${HOME}/.config/gcloud/packer_applicatio
 export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/.config/gcloud/packer_application_key.json
 ```
 
-Create a custom GCP VM image based on Ubuntu 20.04 having kata-agent, agent-protocol-forwarder and other dependencies.
+Create a custom GCP VM image based on Ubuntu 20.04 having kata-agent,
+agent-protocol-forwarder and other dependencies.
 
-```
+```bash
 cd image
 export GCP_ZONE="REPLACE_ME" # e.g. "us-west1-a"
 export GCP_MACHINE_TYPE="REPLACE_ME" # default is "e2-medium"
@@ -59,15 +63,15 @@ DOCKER_BUILDKIT=1 docker build -t gcp \
 
 ## Local experimentation
 
-### Setup
+### Setup a local cluster
 
 For local development we'll use libvirt setup and a local Docker registry.
 Run local Docker registry:
 
 ```bash
-docker stop registry ;\
- docker rm registry ;\
- docker run -d -p 5000:5000 --restart=always --name registry registry:2.7.0
+docker stop registry
+docker rm registry
+docker run -d -p 5000:5000 --restart=always --name registry registry:2.7.0
 ```
 
 Follow instructions in [libvirt/README.md](../libvirt/README.md) and deploy a
@@ -80,6 +84,7 @@ $ kcli list kube
 +-----------+---------+-----------+-----------------------------------------+
 | peer-pods | generic | peer-pods | peer-pods-ctlplane-0,peer-pods-worker-0 |
 +-----------+---------+-----------+-----------------------------------------+
+
 $ kubectl get nodes
 NAME                 STATUS   ROLES                  AGE     VERSION
 peer-pods-ctlplane-0 Ready    control-plane,master   6m8s    v1.25.3
@@ -133,8 +138,13 @@ export RELEASE_BUILD=true
 make image
 ```
 
-Go to your GCP console, under "VPC networks" update the `default` (global) network and add a firewall rule that allows incoming TCP connections
-over port 15150 from your workstation external IP address.
+### Configure VPC network
+
+Go to your GCP console, under "VPC networks" update the `default` (global)
+network and add a firewall rule that allows incoming TCP connections over port
+15150 from your workstation external IP address.
+
+## Deploy CCA
 
 Update [install/overlays/gcp/kustomization.yaml](../install/overlays/gcp/kustomization.yaml) with the required fields:
 
@@ -163,8 +173,6 @@ secretGenerator:
   - GCP_CREDENTIALS # Make sure this file has the application creadentials. You can reuse the Packer creds: copy the file from ${HOME}/.config/gcloud/packer_application_key.json
 ```
 
-Deploy CCA:
-
 ```bash
 $ kubectl apply -k install/overlays/gcp/
 $ kubectl get pods -n confidential-containers-system
@@ -186,4 +194,3 @@ pod/busybox created
 
 Examine your GCP console, under "Compute Engine", "VM instances" you should see the new POD instance running.
 Examine `kubectl logs` and verify the tunnel to the podvm was established successfully.
-
