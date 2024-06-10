@@ -9,7 +9,6 @@ ExecStartPre=mkdir -p /run/kata-containers
 ExecStart=/usr/local/bin/kata-agent --config /etc/agent-config.toml
 ExecStartPre=-umount /sys/fs/cgroup/misc
 ExecStopPost=/usr/local/bin/kata-agent-clean --config /etc/agent-config.toml
-# Now specified in the agent-config.toml Environment="KATA_AGENT_SERVER_ADDR=unix:///run/kata-containers/agent.sock"
 SyslogIdentifier=kata-agent
 
 [Install]

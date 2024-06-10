@@ -28,7 +28,6 @@ func TestUpdateAAKBCParams(t *testing.T) {
 
 	// Write a sample agent config data to the file
 	testAgentConfigData := `
-		# When using the agent-config.toml the KATA_AGENT_SERVER_ADDR env var seems to be ignored, so set it here
 		server_addr="unix:///run/kata-containers/agent.sock"
 
 		# This field sets up the KBC that attestation agent uses
