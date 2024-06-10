@@ -61,7 +61,7 @@ currently accepted:
 | CAA\_SRC\_REF     | main                                                         | cloud-api-adaptor repository branch or commit                   |
 | KATA\_SRC         | https://github.com/kata-containers/kata-containers           | The Kata Containers source repository                           |
 | KATA\_SRC\_BRANCH | CCv0                                                         | The Kata Containers repository branch                           |
-| GO\_VERSION       | 1.21.10                                                       | Go version                                                      |
+| GO\_VERSION       | 1.21.11                                                      | Go version                                                      |
 | PROTOC\_VERSION   | 3.15.0                                                       | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
 | RUST\_VERSION     | 1.72.0                                                       | Rust version                                                    |
 | YQ\_VERSION       | v4.35.1                                                      | [yq](https://github.com/mikefarah/yq/) version                  |
