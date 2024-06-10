@@ -1,0 +1,12 @@
+[Unit]
+Description=Confidential Data Hub TTRPC API Server
+After=network.target process-user-data.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/confidential-data-hub -c /run/confidential-containers/cdh.toml
+RestartSec=1
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

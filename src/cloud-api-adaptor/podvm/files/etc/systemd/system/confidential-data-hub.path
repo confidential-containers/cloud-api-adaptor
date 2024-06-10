@@ -1,0 +1,9 @@
+[Unit]
+Description=Monitor for the Attestation Agent socket
+
+[Path]
+PathExists=/run/confidential-containers/attestation-agent/attestation-agent.sock
+Unit=confidential-data-hub.service
+
+[Install]
+WantedBy=multi-user.target

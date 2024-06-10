@@ -43,7 +43,9 @@ func TestUpdateAAKBCParams(t *testing.T) {
 		[endpoints]
 		allowed = [
 		"AddARPNeighborsRequest",
-		]`
+		]
+		guest_components_procs = "none"
+		`
 	if _, err := tmpFile.WriteString(testAgentConfigData); err != nil {
 		t.Fatalf("failed to write test data to file: %v", err)
 	}
@@ -139,6 +141,7 @@ func TestWriteAgentConfig(t *testing.T) {
 		AaKbcParams:                 "cc_kbc::http://192.168.1.2:8080",
 		ImageRegistryAuthFile:       "/etc/attestation-agent/auth.json",
 		Endpoints:                   Endpoints{Allowed: []string{"AddARPNeighborsRequest", "AddSwapRequest"}},
+		GuestComponentsProcs:        "none",
 	}
 
 	// Call the writeAgentConfig function
@@ -190,6 +193,9 @@ func TestParseAgentConfig(t *testing.T) {
 		t.Fatalf("agentConfig.Endpoints does not match test data: expected %v, got %v", "AddSwapRequest", agentConfig.Endpoints.Allowed[1])
 	}
 
+	if agentConfig.GuestComponentsProcs != "none" {
+		t.Fatalf("agentConfig.GuestComponentsProcs does not match test data: expected %v, got %v", "none", agentConfig.GuestComponentsProcs)
+	}
 }
 
 // Test the writeAgentConfig function with non existent toml entry in agent config file

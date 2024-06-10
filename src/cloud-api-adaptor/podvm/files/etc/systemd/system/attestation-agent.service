@@ -1,0 +1,13 @@
+[Unit]
+Description=Attestation Agent TTRPC API Server
+After=network.target process-user-data.service
+
+[Service]
+Type=simple
+ExecStartPre=mkdir -p /run/confidential-containers/attestation-agent
+ExecStart=/usr/local/bin/attestation-agent
+RestartSec=1
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

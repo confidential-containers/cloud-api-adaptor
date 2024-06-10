@@ -9,6 +9,9 @@ server_addr="unix:///run/kata-containers/agent.sock"
 # This is replaced in the makefile steps so do not set it manually
 aa_kbc_params = ""
 
+# prevent the agent from launching coco guest-components
+guest_components_procs = "none"
+
 # temp workaround for kata-containers/kata-containers#5590
 [endpoints]
 allowed = [

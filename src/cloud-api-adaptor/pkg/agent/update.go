@@ -33,6 +33,7 @@ type AgentConfig struct {
 	AaKbcParams                 string    `toml:"aa_kbc_params"`
 	ImageRegistryAuthFile       string    `toml:"image_registry_auth_file"`
 	Endpoints                   Endpoints `toml:"endpoints"`
+	GuestComponentsProcs        string    `toml:"guest_components_procs"`
 }
 
 // Get daemon.Config from local file

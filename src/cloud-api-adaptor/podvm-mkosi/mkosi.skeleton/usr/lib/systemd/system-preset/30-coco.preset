@@ -1,5 +1,7 @@
 enable attestation-protocol-forwarder.service
+enable attestation-agent.service
 enable api-server-rest.path
+enable confidential-data-hub.path
 enable kata-agent.service
 enable netns@.service
 enable process-user-data.service

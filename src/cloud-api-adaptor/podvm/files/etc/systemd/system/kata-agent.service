@@ -5,7 +5,6 @@ Wants=process-user-data.service
 After=netns@podns.service process-user-data.service
 
 [Service]
-Environment=CDH_CONFIG_PATH=/run/confidential-containers/cdh.toml
 ExecStartPre=mkdir -p /run/kata-containers
 ExecStart=/usr/local/bin/kata-agent --config /etc/agent-config.toml
 ExecStartPre=-umount /sys/fs/cgroup/misc
