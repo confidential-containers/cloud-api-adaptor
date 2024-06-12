@@ -28,10 +28,6 @@ func TestUpdateAAKBCParams(t *testing.T) {
 
 	// Write a sample agent config data to the file
 	testAgentConfigData := `
-		# This disables signature verification which now defaults to true.
-		# We should consider a better solution. See #331 for more info
-		enable_signature_verification=false
-
 		# When using the agent-config.toml the KATA_AGENT_SERVER_ADDR env var seems to be ignored, so set it here
 		server_addr="unix:///run/kata-containers/agent.sock"
 
@@ -130,11 +126,10 @@ func TestWriteAgentConfig(t *testing.T) {
 	// Create an instance of AgentConfig
 	agentConfig := AgentConfig{
 		// Set the fields of AgentConfig
-		EnableSignatureVerification: true,
-		ServerAddr:                  "unix:///run/kata-containers/agent.sock",
-		AaKbcParams:                 "cc_kbc::http://192.168.1.2:8080",
-		ImageRegistryAuthFile:       "/etc/attestation-agent/auth.json",
-		GuestComponentsProcs:        "none",
+		ServerAddr:            "unix:///run/kata-containers/agent.sock",
+		AaKbcParams:           "cc_kbc::http://192.168.1.2:8080",
+		ImageRegistryAuthFile: "/etc/attestation-agent/auth.json",
+		GuestComponentsProcs:  "none",
 	}
 
 	// Call the writeAgentConfig function
@@ -159,11 +154,6 @@ func TestParseAgentConfig(t *testing.T) {
 	agentConfig, err := parseAgentConfig("test-data/sample-agent-config.toml")
 	if err != nil {
 		t.Fatalf("failed to parse agent config file: %v", err)
-	}
-
-	// Verify that the config fields match the test data
-	if agentConfig.EnableSignatureVerification != false {
-		t.Fatalf("agentConfig.EnableSignatureVerification does not match test data: expected %v, got %v", false, agentConfig.EnableSignatureVerification)
 	}
 
 	if agentConfig.ServerAddr != "unix:///run/kata-containers/agent.sock" {
@@ -203,9 +193,8 @@ func TestWriteAgentConfigNonExistentTomlEntry(t *testing.T) {
 	// Create an instance of AgentConfig
 	agentConfig := AgentConfig{
 		// Set the fields of AgentConfig
-		EnableSignatureVerification: true,
-		ServerAddr:                  "unix:///run/kata-containers/agent.sock",
-		AaKbcParams:                 "cc_kbc::http://192.168.1.2:8080",
+		ServerAddr:  "unix:///run/kata-containers/agent.sock",
+		AaKbcParams: "cc_kbc::http://192.168.1.2:8080",
 	}
 
 	// Call the writeAgentConfig function

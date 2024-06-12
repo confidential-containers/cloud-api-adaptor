@@ -24,11 +24,10 @@ func NewConfig(agentConfigPath, authJsonPath, daemonConfigPath string) *Config {
 }
 
 type AgentConfig struct {
-	EnableSignatureVerification bool   `toml:"enable_signature_verification"`
-	ServerAddr                  string `toml:"server_addr"`
-	AaKbcParams                 string `toml:"aa_kbc_params"`
-	ImageRegistryAuthFile       string `toml:"image_registry_auth_file"`
-	GuestComponentsProcs        string `toml:"guest_components_procs"`
+	ServerAddr            string `toml:"server_addr"`
+	AaKbcParams           string `toml:"aa_kbc_params"`
+	ImageRegistryAuthFile string `toml:"image_registry_auth_file"`
+	GuestComponentsProcs  string `toml:"guest_components_procs"`
 }
 
 // Get daemon.Config from local file
