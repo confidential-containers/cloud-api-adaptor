@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const CURL_IMAGE = "quay.io/curl/curl:latest"
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
@@ -138,6 +139,10 @@ func NewPod(namespace string, podName string, containerName string, imageName st
 
 func NewBusyboxPod(namespace string) *corev1.Pod {
 	return NewBusyboxPodWithName(namespace, "busybox")
+}
+
+func NewCurlPodWithName(namespace, podName string) *corev1.Pod {
+	return NewPod(namespace, podName, "curl", CURL_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 }
 
 func NewBusyboxPodWithName(namespace, podName string) *corev1.Pod {

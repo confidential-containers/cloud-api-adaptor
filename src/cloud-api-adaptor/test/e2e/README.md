@@ -64,10 +64,10 @@ popd
 popd
 ```
 
-We need build and use the PodVM image with `AA_KBC=cc_kbc` enabled, for example:
+We need build and use the PodVM image:
 ```
 pushd ${cloud-api-adaptor}
-AA_KBC=cc_kbc make podvm-builder podvm-binaries podvm-image
+make podvm-builder podvm-binaries podvm-image
 popd
 ```
 Then extract the PodVM image and use it following [extracting-the-qcow2-image](../../podvm/README.md#extracting-the-qcow2-image)

@@ -110,7 +110,7 @@ export PKR_VAR_az_gallery_image_version="0.0.1"
 export PKR_VAR_offer=0001-com-ubuntu-confidential-vm-jammy
 export PKR_VAR_sku=22_04-lts-cvm
 
-export AA_KBC="cc_kbc_az_snp_vtpm"
+export ATTESTER="az-snp-vtpm-attester,az-tdx-vtpm-attester"
 export LIBC=gnu
 export CLOUD_PROVIDER=azure
 PODVM_DISTRO=ubuntu make image

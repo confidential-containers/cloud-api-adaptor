@@ -1,8 +1,8 @@
-AA_KBC  ?= offline_fs_kbc
 ARCH    ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILDER = ubuntu-binaries-builder-$(ARCH)
 PODVM_IMG ?= quay.io/confidential-containers/podvm-docker-image
 AGENT_POLICY = no
+ATTESTER ?= none
 
 .DEFAULT_GOAL := all
 .PHONY: all
@@ -35,7 +35,7 @@ binaries:
 	cp -rf ../../../../.git ../../../.git
 	docker buildx build \
 		--build-arg BUILDER_IMG=$(BUILDER) \
-		--build-arg AA_KBC=$(AA_KBC) \
+		--build-arg ATTESTER=$(ATTESTER) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		-o type=local,dest="./resources/binaries-tree" \
 		-f ../../podvm/Dockerfile.podvm_binaries ../../../

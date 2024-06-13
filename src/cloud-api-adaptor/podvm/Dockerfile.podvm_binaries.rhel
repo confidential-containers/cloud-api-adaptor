@@ -9,7 +9,9 @@ ARG BUILDER_IMG
 FROM ${BUILDER_IMG} AS podvm_builder
 
 ARG PODVM_DISTRO=rhel
-ARG AA_KBC="cc_kbc"
+# By default AA will be built with the `all-attesters` feature,
+# which doesn't compile ootb on RHEL.
+ARG ATTESTER=none
 # If not provided, uses system architecture
 ARG ARCH
 #This is the name of the policy file under
@@ -17,7 +19,7 @@ ARG ARCH
 ARG DEFAULT_AGENT_POLICY_FILE=allow-all.rego
 
 ENV PODVM_DISTRO ${PODVM_DISTRO}
-ENV AA_KBC ${AA_KBC}
+ENV ATTESTER ${ATTESTER}
 ENV ARCH ${ARCH}
 ENV DEFAULT_AGENT_POLICY_FILE ${DEFAULT_AGENT_POLICY_FILE}
 
