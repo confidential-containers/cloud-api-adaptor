@@ -595,13 +595,14 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert) {
 
 	log.Info("Do test kbs key release failure case")
-	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget-failure")
+	pod := NewCurlPodWithName(E2eNamespace, "curl-failure")
 	testCommands := []TestCommand{
 		{
-			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
+			Command:       []string{"curl", "-s", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
-				if strings.Contains(stdout.String(), "request unautorized") {
+				body := stdout.String()
+				if strings.Contains(strings.ToLower(body), "error") {
 					log.Infof("Pass failure case as: %s", stdout.String())
 					return true
 				} else {

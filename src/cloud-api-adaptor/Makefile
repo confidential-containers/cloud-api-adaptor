@@ -18,6 +18,7 @@ BINARIES    := cloud-api-adaptor agent-protocol-forwarder process-user-data
 SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
+ATTESTER    ?= none
 # End-to-end tests overall run timeout.
 TEST_E2E_TIMEOUT ?= 60m
 
@@ -193,7 +194,7 @@ podvm-binaries:
 	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
 	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
 	--build-arg ARCH=$(ARCH) \
-	--build-arg AA_KBC=$(AA_KBC) \
+	--build-arg ATTESTER=$(ATTESTER) \
 	$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 	$(DOCKER_OPTS) .
 	rm -rf .git

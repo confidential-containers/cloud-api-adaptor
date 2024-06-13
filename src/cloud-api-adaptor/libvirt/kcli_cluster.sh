@@ -64,7 +64,7 @@ create () {
 	fi
 	echo "Download $CLUSTER_IMAGE ${TARGET_ARCH} image"
 	# kcli support download image with archs: 'x86_64', 'aarch64', 'ppc64le', 's390x'
-	kcli download image $CLUSTER_IMAGE -a ${ARCH}
+	kcli download image $CLUSTER_IMAGE -P arch=${ARCH}
 
 	kcli create kube generic $parameters "$CLUSTER_NAME"
 

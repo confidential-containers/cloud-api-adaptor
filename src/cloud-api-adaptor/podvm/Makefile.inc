@@ -23,12 +23,13 @@ ARCH        := $(or $(ARCH),$(HOST_ARCH))
 # Normalise x86_64 / amd64 for input ARCH
 ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
-AA_KBC      ?= cc_kbc
+AA_KBC      ?= offline_fs_kbc
 KBC_URI     ?= null
 LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
 RUST_ARCH   ?= $(subst ppc64le,powerpc64le,$(ARCH))
 RUST_TARGET := $(RUST_ARCH)-unknown-linux-$(LIBC)
 
+ATTESTER ?= none
 CDH_RESOURCE_PROVIDER ?= kbs
 SEALED_SECRET ?= yes
 
@@ -169,7 +170,7 @@ $(GUEST_COMPONENTS_SRC):
 	$(call git_clone_repo_ref,$(GUEST_COMPONENTS_REPO),$(GUEST_COMPONENTS_SRC),$(GUEST_COMPONENTS_VERSION))
 
 $(ATTESTATION_AGENT): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
-	cd "$(GUEST_COMPONENTS_SRC)/attestation-agent" && CC= ARCH=$(ARCH) $(MAKE) KBC="$(AA_KBC)" ttrpc=true LIBC="$(LIBC)"
+	cd "$(GUEST_COMPONENTS_SRC)/attestation-agent" && CC= ARCH=$(ARCH) $(MAKE) ATTESTER=$(ATTESTER) ttrpc=true LIBC="$(LIBC)"
 	mkdir -p "$(@D)"
 	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
 

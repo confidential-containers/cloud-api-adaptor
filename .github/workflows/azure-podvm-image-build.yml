@@ -108,7 +108,7 @@ jobs:
 
     - name: Build binaries
       run: make binaries \
-        AA_KBC="cc_kbc_az_snp_vtpm,cc_kbc_az_tdx_vtpm" \
+        ATTESTER="az_snp_vtpm_attester,az_tdx_vtpm_attester" \
         LIBC=gnu
 
     - uses: azure/login@v1
