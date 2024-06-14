@@ -73,12 +73,8 @@ installLibvirt() {
 installKcli() {
     if ! command -v kcli >/dev/null; then
         echo "Installing kcli"
-        if [[ ${TARGET_ARCH} == "s390x" ]]; then
-            # Installation of the kcli is supported exclusively for s390x machines using pypi
-            sudo pip3 install kcli
-        else
-            curl https://raw.githubusercontent.com/karmab/kcli/main/install.sh | sudo bash
-        fi
+        kcli_version="$(./hack/yq-shim.sh '.tools.kcli' versions.yaml)"
+        sudo pip3 install kcli==${kcli_version}
     fi
 }
 
