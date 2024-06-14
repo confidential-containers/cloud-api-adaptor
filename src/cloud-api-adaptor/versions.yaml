@@ -24,6 +24,7 @@ tools:
   rust: 1.74.0
   protoc: 3.15.0
   packer: v1.9.4
+  kcli: 99.0.202406160824
 # Referenced Git repositories
 git:
   guest-components:
