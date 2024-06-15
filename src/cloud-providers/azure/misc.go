@@ -89,7 +89,7 @@ func GetUserData(ctx context.Context, url string) ([]byte, error) {
 
 	// Sample data
 	/*
-			{
+		{
 		    "pod-network": {
 		        "podip": "10.244.0.19/24",
 		        "pod-hw-addr": "0e:8f:62:f3:81:ad",
@@ -115,8 +115,6 @@ func GetUserData(ctx context.Context, url string) ([]byte, error) {
 		    "tls-server-cert": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
 		    "tls-client-ca": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
 		    "aa-kbc-params": "cc_kbc::http://192.168.100.2:8080"
-		    "auth-json": "..."
-
 		}
 	*/
 

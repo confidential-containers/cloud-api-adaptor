@@ -40,8 +40,12 @@ var testDaemonConfig string = `{
 	"tls-server-key": "-----BEGIN PRIVATE KEY-----\n....\n-----END PRIVATE KEY-----\n",
 	"tls-server-cert": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
 	"tls-client-ca": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
-	"aa-kbc-params": "cc_kbc::http://192.168.100.2:8080",
-	"auth-json": "{\"auths\":{}}"
+	"aa-kbc-params": "cc_kbc::http://192.168.100.2:8080"
+}
+`
+
+var testAuthJson string = `{
+	"auths": {}
 }
 `
 
@@ -260,11 +264,16 @@ write_files:
 - path: %s
   content: |
 %s
+- path: %s
+  content: |
+%s
 `,
 		tmpDaemonConfigFile.Name(),
 		indentTextBlock(testDaemonConfig, 4),
 		tmpCDHConfigFile.Name(),
-		indentTextBlock(testCDHConfig, 4))
+		indentTextBlock(testCDHConfig, 4),
+		tmpAuthJsonFile.Name(),
+		indentTextBlock(testAuthJson, 4))
 
 	provider := TestProvider{content: content}
 
@@ -299,7 +308,7 @@ write_files:
 
 	data, _ = os.ReadFile(tmpAuthJsonFile.Name())
 	fileContent = string(data)
-	if fileContent != `{"auths":{}}` {
+	if fileContent != testAuthJson {
 		t.Fatalf("file content does not match auth json fixture: got %q", fileContent)
 	}
 }

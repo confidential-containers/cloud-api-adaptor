@@ -242,13 +242,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		daemonConfig.AAKBCParams = s.aaKBCParams
 	}
 
-	// Check if auth json file is present
-	if authJSON, err := os.ReadFile(cloudinit.DefaultAuthfileSrcPath); err == nil {
-		daemonConfig.AuthJson = string(authJSON)
-	} else {
-		logger.Printf("Credentials file is not in a valid Json format, ignored")
-	}
-
 	daemonJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
 	if err != nil {
 		return nil, fmt.Errorf("generating JSON data: %w", err)
@@ -268,6 +261,18 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 				Content: string(daemonJSON),
 			},
 		},
+	}
+
+	authJSON, err := os.ReadFile(cloudinit.DefaultAuthfileSrcPath)
+	if err != nil {
+		logger.Printf("Credentials file is not present at %s", cloudinit.DefaultAuthfileSrcPath)
+	} else if len(authJSON) > cloudinit.DefaultAuthfileLimit {
+		logger.Printf("Credentials file is too large to be included in cloud-config")
+	} else {
+		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+			Path:    cloudinit.DefaultAuthfileDstPath,
+			Content: string(authJSON),
+		})
 	}
 
 	if s.aaKBCParams != "" {
