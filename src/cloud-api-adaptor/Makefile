@@ -178,6 +178,7 @@ ifeq ($(PODVM_DISTRO),rhel)
 	--build-arg YQ_VERSION=$(YQ_VERSION) \
 	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
 	--build-arg YQ_ARCH=$(ARCH) \
+	--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390_64) \
 	$(DOCKER_OPTS) .
 else
 	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \

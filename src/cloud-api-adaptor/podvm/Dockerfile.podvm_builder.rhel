@@ -8,15 +8,20 @@
 #
 FROM registry.access.redhat.com/ubi9/ubi:9.4
 
-ARG ARCH
-ARG PACKER_VERSION
-ARG GO_VERSION
-ARG PROTOC_VERSION
-ARG RUST_VERSION
+ARG ARCH="amd64"
+ARG YQ_ARCH="amd64"
+# PROTOC_ARCH="x86_64" | "s390_64"
+ARG PROTOC_ARCH="x86_64"
+ARG GO_VERSION="1.21.12"
+ARG PROTOC_VERSION="3.15.0"
+ARG RUST_VERSION="1.72.0"
+ARG YQ_VERSION="v4.35.1"
+ARG PACKER_VERSION="v1.9.4"
+# amd64: YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
+# s390x: YQ_CHECKSUM="sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
+ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 ARG ORG_ID
 ARG ACTIVATION_KEY
-ARG YQ_VERSION
-ARG YQ_CHECKSUM
 
 ENV ARCH=${ARCH}
 
@@ -27,17 +32,17 @@ RUN if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
     subscription-manager register --org=${ORG_ID} --activationkey=${ACTIVATION_KEY}; \
     fi
     
-RUN subscription-manager repos --enable codeready-builder-for-rhel-9-${ARCH}-rpms; \
+RUN subscription-manager repos --enable codeready-builder-for-rhel-9-${ARCH/amd64/x86_64}-rpms; \
     dnf groupinstall -y 'Development Tools'; \
     dnf install -y yum-utils gnupg git --allowerasing curl pkg-config clang perl libseccomp-devel gpgme-devel \
     device-mapper-devel qemu-kvm unzip wget libassuan-devel genisoimage cloud-utils-growpart cloud-init; 
 
-RUN curl -L -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH/x86_64/amd64} \
+RUN curl -L -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH} \
     && echo "${YQ_CHECKSUM#sha256:}  /usr/local/bin/yq" | sha256sum -c -
 RUN chmod a+x /usr/local/bin/yq && \
-    curl https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH/x86_64/amd64}.tar.gz -o go${GO_VERSION}.linux-${ARCH/x86_64/amd64}.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH/x86_64/amd64}.tar.gz && \
-    rm -f go${GO_VERSION}.linux-${ARCH/x86_64/amd64}.tar.gz
+    curl https://dl.google.com/go/go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz -o go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz && \
+    rm -f go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:${PATH}"
 
 # Install packer. Packer doesn't does not have prebuilt s390x arch binaries above Packer version 0.1.5 
@@ -64,8 +69,8 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VER
 
 ENV PATH="/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
-RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip && \
-    unzip protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip
+RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip && \
+    unzip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
 
 WORKDIR /src
 ENV GOPATH=/src
