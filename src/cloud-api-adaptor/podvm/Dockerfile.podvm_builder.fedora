@@ -9,7 +9,7 @@ FROM registry.fedoraproject.org/fedora:39
 
 ARG ARCH="amd64"
 ARG YQ_ARCH="amd64"
-# PROTOC_ARCH="x86_64" | "s390x_64"
+# PROTOC_ARCH="x86_64" | "s390_64"
 ARG PROTOC_ARCH="x86_64"
 ARG GO_VERSION="1.21.12"
 ARG PROTOC_VERSION="3.15.0"
