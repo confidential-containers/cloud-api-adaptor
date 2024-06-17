@@ -108,7 +108,7 @@ jobs:
 
     - name: Build binaries
       run: make binaries \
-        ATTESTER="az_snp_vtpm_attester,az_tdx_vtpm_attester" \
+        ATTESTER="az-snp-vtpm-attester,az-tdx-vtpm-attester" \
         LIBC=gnu
 
     - uses: azure/login@v1
