@@ -139,17 +139,13 @@ connect via ssh, with an error similar to:
 > then it might indicate lack of memory, so try to increase the amount of memory if running on VM.
 
 The podvm image can be built for other architectures than `x86_64` by passing
-the `ARCH` build argument to docker. Currently this is only supported for
-Ubuntu `s390x`, which also needs the `UBUNTU_IMAGE_URL` and
-`UBUNTU_IMAGE_CHECKSUM` to be overridden with build arguments as shown below:
+the `ARCH` build argument to docker:
 
 ```bash
 $ docker build -t podvm_s390x \
          --build-arg ARCH=s390x \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries_s390x \
-         --build-arg UBUNTU_IMAGE_URL="" \
-         --build-arg UBUNTU_IMAGE_CHECKSUM="" \
          -f Dockerfile.podvm .
 ```
 
@@ -168,8 +164,6 @@ $ docker build -t se_podvm_s390x \
          --build-arg SE_BOOT=1 \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries_s390x \
-         --build-arg UBUNTU_IMAGE_URL="" \
-         --build-arg UBUNTU_IMAGE_CHECKSUM="" \
          -f Dockerfile.podvm .
 ```
 
@@ -177,12 +171,13 @@ The podvm image can also be built using UEFI based images. For example if you wa
 RHEL podvm image using UEFI based qcow2 image, then run the build using as shown below:
 
 ```
+# RHEL Dockerfile supports in passing an image file, file has to be in the docker context
 $ docker build -t podvm-uefi \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries \
-         --build-arg RHEL_IMAGE_URL="_url_to_uefi_based_qcow2_" \
-         --build-arg RHEL_IMAGE_CHECKSUM="_qcow2_image_checksum" \
-	 --build-arg UEFI=true \
+         --build-arg UEFI=true \
+         --build-arg IMAGE_CHECKSUM="_qcow2_image_checksum" \
+         --build-arg IMAGE_URL="uefi.qcow2" \
          -f Dockerfile.podvm.rhel .
 ```
 
