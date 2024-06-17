@@ -202,6 +202,13 @@ podvm-binaries:
 	rm -rf .git
 
 podvm-image:
+ifeq ($(PODVM_DISTRO),rhel)
+ifeq ($(shell test -f $(IMAGE_URL) && echo 1 || echo 0),1)
+	cp ${IMAGE_URL} ./rhel.img
+	$(eval IMAGE_URL=cloud-api-adaptor/rhel.img)
+	@echo "### Copied IMAGE_URL file to $(IMAGE_URL) in order to suite the docker context"
+endif
+endif
 	cp -rf ../../.git .git
 	cd ../ && docker buildx build -t $(PODVM_IMAGE) -f cloud-api-adaptor/podvm/$(PODVM_DOCKERFILE) \
 	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
