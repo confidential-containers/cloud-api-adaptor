@@ -39,9 +39,6 @@ git:
   skopeo:
     url: https://github.com/containers/skopeo
     reference: v1.5.0
-  opa:
-    url: https://github.com/open-policy-agent/opa
-    reference: v0.58.0
   kbs:
     url: https://github.com/confidential-containers/trustee
     reference: dc01f454264fb4350e5f69eba05683a9a1882c41

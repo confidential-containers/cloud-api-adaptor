@@ -41,6 +41,4 @@ GUEST_COMPONENTS_REPO := $(or $(GUEST_COMPONENTS_REPO),$(call query,git.guest-co
 GUEST_COMPONENTS_VERSION := $(or $(GUEST_COMPONENTS_VERSION),$(call query,git.guest-components.reference))
 PAUSE_REPO :=  $(or $(PAUSE_REPO),$(call query,oci.pause.registry))
 PAUSE_VERSION := $(or $(PAUSE_VERSION),$(call query,oci.pause.tag))
-OPA_REPO :=  $(or $(OPA_REPO),$(call query,git.opa.url))
-OPA_VERSION := $(or $(OPA_VERSION),$(call query,git.opa.reference))
 PACKER_VERSION := $(or $(PACKER_VERSION),$(call query,tools.packer))
