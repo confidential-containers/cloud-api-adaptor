@@ -12,8 +12,8 @@ cloudimg:
   rhel:
     9: # dummy link, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
       amd64:
-        url: https://access.redhat.com/downloads/content/479/ver=/rhel---9/9.2/x86_64/product-software
-        checksum: "sha256:34ff41b5274692c984e3860b21136af8b6ae502744c6c7578dda82002fba0287"
+        url: https://access.redhat.com/downloads/content/479/ver=/rhel---9/9.4/x86_64/product-software
+        checksum: "sha256:d362e72518a2d7415d850b8177c814f6fd87f42ca1640bda17e98855e1d6baad"
       s390x:
         url: https://access.redhat.com/downloads/content/433/ver=/rhel---9/9.3%20Beta/s390x/product-software
         checksum: "sha256:d436ffeac7d468f75526ca8b8bab1cba64ba3ab2889ccd11fa107a7323b267db"
