@@ -17,7 +17,3 @@ COPY ./resources/binaries-tree/pause_bundle /
 RUN curl -LO https://raw.githubusercontent.com/confidential-containers/cloud-api-adaptor/main/src/cloud-api-adaptor/podvm/qcow2/misc-settings.sh
 
 RUN PODVM_DISTRO=ubuntu CLOUD_PROVIDER=generic DISABLE_CLOUD_CONFIG=true bash ./misc-settings.sh
-
-# Adjust the kata-opa systemd script to run inside container env
-RUN sed -i '/StandardError=tty/ s/^/# /' /etc/systemd/system/kata-opa.service
-

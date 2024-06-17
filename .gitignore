@@ -8,7 +8,6 @@ src/cloud-api-adaptor/umoci
 src/cloud-api-adaptor/skopeo
 src/csi-wrapper/build
 src/csi-wrapper/vendor
-src/cloud-api-adaptor/opa/
 
 # Binaries
 src/cloud-api-adaptor/agent-protocol-forwarder
@@ -20,7 +19,6 @@ src/cloud-api-adaptor/cluster-provisioner
 src/cloud-api-adaptor/confidential-data-hub
 src/cloud-api-adaptor/kata-agent
 src/cloud-api-adaptor/process-user-data
-src/cloud-api-adaptor/opa
 
 # The code files under cmd are not ignored
 !src/cloud-api-adaptor/cmd/*

@@ -71,13 +71,11 @@ ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
 CONFIDENTIAL_DATA_HUB = $(FILES_DIR)/usr/local/bin/confidential-data-hub
 API_SERVER_REST  = $(FILES_DIR)/usr/local/bin/api-server-rest
 PROCESS_USER_DATA = $(FILES_DIR)/usr/local/bin/process-user-data
-OPA = $(FILES_DIR)/usr/local/bin/opa
 
 
 # Allow BINARIES to be overriden externally
 
-BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGENT) $(CONFIDENTIAL_DATA_HUB) $(API_SERVER_REST) $(PROCESS_USER_DATA) \
-		$(OPA)
+BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGENT) $(CONFIDENTIAL_DATA_HUB) $(API_SERVER_REST) $(PROCESS_USER_DATA)
 
 $(shell sed -i "s|\(aa_kbc_params = \)\"[^\"]*\"|\1\"${AA_KBC}::${KBC_URI}\"|g" $(FILES_DIR)/etc/agent-config.toml)
 
@@ -89,9 +87,6 @@ SKOPEO_SRC ?= skopeo
 SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo
 
 UMOCI_SRC   = umoci
-
-OPA_SRC = opa
-OPA_BUILD_TARGET := "opa_linux_$(DEB_ARCH)"
 
 # Embed the pause container image
 # https://github.com/arronwy/kata-containers/commit/75b9f3fa3caaae62f49b4733f65cbab0cc87dbee
@@ -184,21 +179,6 @@ $(API_SERVER_REST): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
 	mkdir -p "$(@D)"
 	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/api-server-rest" "$@"
 
-# OPA binaries are not available for s390x. Hence build from source
-$(OPA_SRC):
-	$(call git_clone_repo_ref,$(OPA_REPO),$(OPA_SRC),$(OPA_VERSION))
-
-$(OPA): $(FORCE_TARGET) | $(OPA_SRC)
-ifeq ($(AGENT_POLICY),yes)
-	cd "$(OPA_SRC)" && $(MAKE) GOARCH=$(DEB_ARCH) GOOS=linux WASM_ENABLED=0 CGO_ENABLED=0 go-build
-	install --compare "$(OPA_SRC)/$(OPA_BUILD_TARGET)" "$@"
-	# Set default policy
-	cd $(AGENT_POLICY_PATH) && ln -s -f "$(DEFAULT_AGENT_POLICY_FILE)" default-policy.rego
-	# Enable the service
-	cd $(FILES_DIR)/etc/systemd/system/multi-user.target.wants && ln -s -f ../kata-opa.service kata-opa.service
-
-endif
-
 clean_sources:
 	[ -d "$(GUEST_COMPONENTS_SRC)" ] && cd "$(GUEST_COMPONENTS_SRC)" && git clean -xfd
 	[ -d "$(KATA_AGENT_SRC)" ] && cd "$(KATA_AGENT_SRC)" && git clean -xfd
@@ -206,7 +186,6 @@ clean_sources:
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci
 	[ -d "$(KATA_CONTAINERS_SRC)" ] && cd "$(KATA_CONTAINERS_SRC)" && git clean -xfd
-	[ -d "$(OPA_SRC)" ] && cd "$(OPA_SRC)" && git clean -xfd
 
 .PHONY: force always
 always force:
