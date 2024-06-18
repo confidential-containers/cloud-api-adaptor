@@ -5,44 +5,67 @@ Containers release
 
 ## Release phases
 
-The confidential-containers
-[release process](https://github.com/confidential-containers/community/blob/main/.github/ISSUE_TEMPLATE/release-check-list.md)
-lists the tasks involved in doing a release and these largely break down to three phases:
-- Release candidate selection and testing
-- Cutting releases
-- Post release
+In the new Confidential Containers
+[release process](https://github.com/confidential-containers/community/blob/main/.github/ISSUE_TEMPLATE/release-check-list.md),
+the plan is to do a succession of component releases, rather than releasing
+all components at the same time. This means that the peer pods release process needs to slot into the correct place.
+The flow of releases should roughly be:
+1. The [guest-components release](https://github.com/confidential-containers/guest-components/releases) (or a pinned
+version is picked) and [trustee releases](https://github.com/confidential-containers/trustee/releases).
+    - This triggers [kata-containers](https://github.com/kata-containers/kata-containers) to update to these new versions in
+    [versions.yaml](https://github.com/kata-containers/kata-containers/blob/main/versions.yaml) under
+    `externals.coco-guest-components.version`, `externals.coco-trustee` and the `image-rs` crate in the agent's
+    [`Cargo.toml`](https://github.com/kata-containers/kata-containers/blob/main/src/agent/Cargo.toml).
+    - At this point it makes sense for us to stay in sync, by updating the guest-components and kbs that we use in peer pods,
+    by changing the `git.guest-components.reference` and `git.kbs.tag` values in [versions.yaml](../src/cloud-api-adaptor/versions.yaml).
+    We should also bump the kata agent to the latest commit
+    hash in our [version.yaml](../src/cloud-api-adaptor/versions.yaml) for testing.
+1. Kata Containers [releases](https://github.com/kata-containers/kata-containers/releases)
+    - We should already be in sync with the guest-components and trustee, from the previous step, but now we should update:
+      - The kata-containers source branch that we use in [versions.yaml](../src/cloud-api-adaptor/versions.yaml) to
+the kata-containers release version.
+      - The `kata-containers/src/runtime` go module that we include in the main `cloud-api-adaptor` [`go.mod`](../src/cloud-api-adaptor/go.mod) and the `csi-wrapper` [`go.mod`](../src/csi-wrapper/go.mod). This can be done by running
+        ```
+        go get github.com/kata-containers/kata-containers/src/runtime@<latest release e.g. 3.6.0>
+        go mod tidy
+        ```
+        in the [cloud-api-adaptor](../src/cloud-api-adaptor/) directory and [csi-wrapper](../src/csi-wrapper/) directory.
+1. cloud-api-adaptor releases with the following phases detailed below:
+    - Pre-release testing
+    - Cutting the release
+    - Post release tasks
+1. The CoCo operator updates to use references to the other component releases and then releases itself
 
-### Release candidate testing
+### Pre-release testing
 
-In the release candidate selection and testing phase, we ensure that the dependencies we have within the
-confidential-containers projects are updated and that Kata Containers is updated to use these new versions, the
-[Kata Containers Runtime Payload CI](https://github.com/kata-containers/kata-containers/actions/workflows/cc-payload-after-push.yaml)
-image is updated, the operator is updated and the tests pass with all of these.
+In the pre-release/release candidate testing phase
 
-At this point, we should update the cloud-api-adaptor versions to use these release candidate versions of:
-- The kata-containers source branch that we use in the [podvm `Dockerfiles`](../src/cloud-api-adaptor/podvm/) and the
-[podvm workflows](../.github/workflows), by updating the `git.kata-containers.reference` value in [versions.yaml](../src/cloud-api-adaptor/versions.yaml) to
-the tag of the kata-containers release candidate.
-- The `kata-containers/src/runtime` go module that we include in the main `cloud-api-adaptor` [`go.mod`](../src/cloud-api-adaptor/go.mod) and the `csi-wrapper` [`go.mod`](../src/csi-wrapper/go.mod).
-This can be done by running
-    ```
-    go get github.com/kata-containers/kata-containers/src/runtime@<release candidate branch e.g. CCv0>
-    go mod tidy
-    ```
-in the [cloud-api-adaptor](../src/cloud-api-adaptor/) directory and [csi-wrapper](../src/csi-wrapper/) directory.
+During the pre-release/release candidate phase we should verify that the kata-containers, guest-components
+and trustee versions were updated when their components released as listed above.
 
-- The attestation-agent that is built into the peer pod vm image, by updating the `git.guest-components.reference` value in [versions.yaml](../src/cloud-api-adaptor/versions.yaml)
+As the [CoCo operator](https://github.com/confidential-containers/operator/) doesn't release until after peer pods,
+the [current plan](https://github.com/confidential-containers/confidential-containers/pull/201#discussion_r1570606331),
+is to pick the latest operator commit to pin that in our released version's instructions of deploying the operator.
+To do this, we should edit the [Makefile](../src/cloud-api-adaptor/Makefile) to replace the
+*github.com/confidential-containers/operator/config/default* and
+*github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods* URLs:
+```
+operator_commit=<latest operator commit sha>
+sed -i "s#\(github.com/confidential-containers/operator/config/default\)#\1?ref=${operator_commit}#" Makefile
+sed -i "s#\(github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods\)#\1?ref=${operator_commit}#" Makefile
+```
 
-Please ensure podvm image build don't break:
-- build podvm image manually
-- or use the GHA [Publish pod VM Images](https://github.com/confidential-containers/cloud-api-adaptor/blob/main/.github/workflows/podvm_publish.yaml)
+<!-- TODO, should we worry about updating the e2e test reference in ../src/cloud-api-adaptor/test/provisioner/provision.go too?
+If so we need to also revert that post-release -->
 
-These updates should be done in a PR that is merged triggering the [project images publish workflow](../.github/workflows/publish_images_on_push.yaml) to create a new container image in
-[`quay.io/confidential-containers/cloud-api-adaptor`](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags) to use in testing.
+When this change is merged, it triggers the
+[project images publish workflow](../.github/workflows/publish_images_on_push.yaml) to create a new container image in
+[`quay.io/confidential-containers/cloud-api-adaptor`](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags)
+to use in testing.
 
 #### Tags and update go submodules
 
-As mentioned above we have some go submodules with dependencies in the cloud-api-adaptor repo, so in order to allow
+We have some go submodules with dependencies in the cloud-api-adaptor repo, so in order to allow
 people to use `go get` on these submodules, we need to ensure we create tags for each of the go modules we have in
 the correct order.
 
@@ -52,8 +75,7 @@ the correct order.
 > If you mess up, you need to restart the tagging with the next patch version.
 
 The process should go something like:
-- Get the release candidate version: `v<version>-alpha.1` (e.g. `v0.8.0-alpha.1` for the confidential containers `0.8.0` release release candidate).
-
+- Get the pre-release version: `v<version>-alpha.1` (e.g. `v0.8.0-alpha.1` for the confidential containers `0.8.0` release release candidate).
 - Update the [peerpod-ctrl go module](../src/peerpod-ctrl/go.mod) to use the release candidate version version of `cloud-providers`
 - Update the [cloud-api-adaptor go module](../src/cloud-api-adaptor/go.mod) to use the release candidate version version of `cloud-providers` and `peerpod-ctrl`
 - Update the [csi-wrapper go module](../src/csi-wrapper/go.mod) to use the the release candidate version version of `cloud-api-adaptor`
@@ -111,26 +133,18 @@ To github.com:confidential-containers/cloud-api-adaptor.git
 - After this we should create a cloud-api-adaptor [pre-release](https://github.com/confidential-containers/cloud-api-adaptor/releases/new)
 named `v<version>-alpha.1` to trigger the creation of the podvm build.
 
+- At this point we want to freeze the `main` branch to ensure that no accidental changes go in an destabilise the release selection.
+To do this contact an admin (e.g. Pradipta, or Steve) and ask them to lock the `main` branch.
+
 These versions should be tested to ensure that there are no breaking changes and the wider confidential-containers
 release team updated with the status. If there are any issues then this phase might be repeated until it is
 successful.
 
 ### Cutting releases
 
-During this phase the successful release candidates commits are used to cut proper releases for all the components
-and then the projects that use them updated to point to these releases and re-tested. This shouldn't introduce any
-instability and all these versions where tested in the release candidate testing phase.
+Once the pre-release versions are tested and stable, then we can go ahead and cut the release of "peer pods".
 
-For the cloud-api-adaptor we need to wait until the Kata Containers release tag has been created and the
-[Kata Containers runtime payload](https://github.com/kata-containers/kata-containers/actions/workflows/cc-payload.yaml)
-to have been built.
-Also we need to wait until the [CoCo operator](https://github.com/confidential-containers/operator/) release tag has been create to pin the URLs used by the make `deploy` target to install the operator. So edit the [Makefile](../src/cloud-api-adaptor/Makefile) to replace the *github.com/confidential-containers/operator/config/default* and *github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods* URLs, e.g.:
-```
-sed -i 's#\(github.com/confidential-containers/operator/config/release\)#\1?ref=v0.8.0#' Makefile
-sed -i 's#\(github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods\)#\1?ref=v0.8.0#' Makefile
-```
-
-Once this has been completed and merged in we should pin the cloud-api-adaptor image used on the deployment files. You should use the commit SHA-1 of the last built `quay.io/confidential-containers/cloud-api-adaptor` image to update the overlays kustomization files. For example, suppose the release image is `quay.io/confidential-containers/cloud-api-adaptor:6d7d2a3fe8243809b3c3a710792c8498292e2fc3`:
+As part of the release we should pin the cloud-api-adaptor image used on the deployment files. You should use the commit SHA-1 of the last built `quay.io/confidential-containers/cloud-api-adaptor` image to update the overlays kustomization files. For example, suppose the release image is `quay.io/confidential-containers/cloud-api-adaptor:6d7d2a3fe8243809b3c3a710792c8498292e2fc3`:
 
 ```
 RELEASE_TAG="6d7d2a3fe8243809b3c3a710792c8498292e2fc3"
@@ -152,6 +166,7 @@ release tags of the project dependencies e.g. `v0.8.0` and creating the tags wit
 - Update the [cloud-api-adaptor go module](../src/cloud-api-adaptor/go.mod) to use the release version version of `cloud-providers` and `peerpod-ctrl`
 - Update the [csi-wrapper go module](../src/csi-wrapper/go.mod) to use the the release version version of `cloud-api-adaptor`
 - Merge the 2 commits PR with this update to update the `main` branch
+    > **Note:** as the `main` branch is locked, this might require an admin to unlock, or bypass the merge restriction.
 - Create git tags for all go modules, you can use the [release-helper.sh](../hack/release-helper.sh) script to create related git commands, (e.g. `v0.8.0`)
 ```bash
 ./hack/release-helper.sh v0.8.0
@@ -204,6 +219,8 @@ confidential-containers release team to let them know it has completed successfu
 
 ### Post-release
 
+If the `main` branch was not already unlocked, then ask an admin to do this now.
+
 The CoCo operator URLs on the [Makefile](../src/cloud-api-adaptor/Makefile) should be reverted to use the latest version.
 
 The changes on the overlay kustomization files should be reverted to start using the latest cloud-api-adaptor images again:
@@ -213,16 +230,4 @@ for provider in aws azure ibmcloud ibmcloud-powervs libvirt vsphere; do cd ${pro
 popd
 ```
 
-References to Kata Containers should be reverted to the CCv0 branch in:
-
-* [podvm_builder.yaml workflow](../.github/workflows/podvm_builder.yaml)
-* [podvm_builder `Dockerfiles`](../src/cloud-api-adaptor/podvm/)
-* go modules (`cloud-api-adaptor` [`go.mod`](../src/cloud-api-adaptor/go.mod), and the `csi-wrapper` [`go.mod`](../src/csi-wrapper/go.mod))
-
 The `CITATION.cff` needs to be updated with the dates from the release.
-
-## Improvements
-
-Issues that we have to improve the release process that will impact this doc:
-
-- Build the podvm images on the [release candidate testing](#release-candidate-testing) phase ([Issue #1253](https://github.com/confidential-containers/cloud-api-adaptor/issues/1253))
