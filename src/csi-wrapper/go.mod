@@ -5,12 +5,12 @@ go 1.21
 require (
 	github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor v0.8.2
 	github.com/container-storage-interface/spec v1.8.0
-	github.com/containerd/ttrpc v1.2.2
+	github.com/containerd/ttrpc v1.2.3
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang/glog v1.1.2
 	github.com/golang/protobuf v1.5.4
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20240515045622-6a4ff08156f7
-	golang.org/x/net v0.24.0
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20240617195946-7df221a8f968
+	golang.org/x/net v0.25.0
 	google.golang.org/grpc v1.61.2
 	k8s.io/apimachinery v0.26.2
 	k8s.io/client-go v0.26.2
@@ -41,9 +41,9 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
-	golang.org/x/sys v0.19.0 // indirect
-	golang.org/x/term v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/term v0.20.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
