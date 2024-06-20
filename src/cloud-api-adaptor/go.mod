@@ -55,7 +55,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
-	github.com/tj/assert v0.0.3
 	golang.org/x/crypto v0.23.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	google.golang.org/protobuf v1.33.0

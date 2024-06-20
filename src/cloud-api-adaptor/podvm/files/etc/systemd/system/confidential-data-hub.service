@@ -1,6 +1,6 @@
 [Unit]
 Description=Confidential Data Hub TTRPC API Server
-After=network.target process-user-data.service
+After=network.target cloud-final.service process-user-data.service
 
 [Service]
 Type=simple
