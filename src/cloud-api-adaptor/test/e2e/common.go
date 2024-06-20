@@ -4,6 +4,7 @@
 package e2e
 
 import (
+	b64 "encoding/base64"
 	"net"
 	"os"
 	"testing"
@@ -147,6 +148,21 @@ func NewCurlPodWithName(namespace, podName string) *corev1.Pod {
 
 func NewBusyboxPodWithName(namespace, podName string) *corev1.Pod {
 	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+}
+
+func NewPodWithPolicy(namespace, podName, policyFilePath string) *corev1.Pod {
+	policyString, err := os.ReadFile(policyFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	encodedPolicy := b64.StdEncoding.EncodeToString([]byte(policyString))
+
+	containerName := "busybox"
+	imageName := BUSYBOX_IMAGE
+	annotationData := map[string]string{
+		"io.katacontainers.config.agent.policy": encodedPolicy,
+	}
+	return NewPod(namespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 }
 
 // NewConfigMap returns a new config map object.
