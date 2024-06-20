@@ -4,7 +4,7 @@ ARG MINOR=11
 
 FROM ${IMAGE}:v${VERSION}.${MINOR}
 
-RUN apt-get update && apt-get install -y sudo  && apt-get clean all
+RUN apt-get update && apt-get install -y sudo libpam-systemd && apt-get clean all
 
 
 RUN systemctl disable kubelet
