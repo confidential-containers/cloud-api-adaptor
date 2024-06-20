@@ -9,8 +9,7 @@ DefaultDependencies=no
 
 [Service]
 Type=oneshot
-ExecStartPre=/usr/local/bin/process-user-data provision-files
-ExecStart=/usr/local/bin/process-user-data update-agent-config
+ExecStart=/usr/local/bin/process-user-data provision-files
 RemainAfterExit=yes
 
 [Install]

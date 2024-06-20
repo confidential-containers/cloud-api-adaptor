@@ -23,8 +23,6 @@ ARCH        := $(or $(ARCH),$(HOST_ARCH))
 # Normalise x86_64 / amd64 for input ARCH
 ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
-AA_KBC      ?= offline_fs_kbc
-KBC_URI     ?= null
 LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
 RUST_ARCH   ?= $(subst ppc64le,powerpc64le,$(ARCH))
 RUST_TARGET := $(RUST_ARCH)-unknown-linux-$(LIBC)
@@ -76,8 +74,6 @@ PROCESS_USER_DATA = $(FILES_DIR)/usr/local/bin/process-user-data
 # Allow BINARIES to be overriden externally
 
 BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGENT) $(CONFIDENTIAL_DATA_HUB) $(API_SERVER_REST) $(PROCESS_USER_DATA)
-
-$(shell sed -i "s|\(aa_kbc_params = \)\"[^\"]*\"|\1\"${AA_KBC}::${KBC_URI}\"|g" $(FILES_DIR)/etc/agent-config.toml)
 
 KATA_CONTAINERS_SRC = $(ROOT_DIR)/../kata-containers
 KATA_AGENT_SRC = $(KATA_CONTAINERS_SRC)/src/agent

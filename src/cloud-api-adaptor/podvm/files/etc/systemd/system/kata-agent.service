@@ -2,7 +2,7 @@
 Description=Kata Agent
 BindsTo=netns@podns.service
 Wants=process-user-data.service
-After=netns@podns.service process-user-data.service
+After=netns@podns.service cloud-final.service process-user-data.service
 
 [Service]
 ExecStartPre=mkdir -p /run/kata-containers
