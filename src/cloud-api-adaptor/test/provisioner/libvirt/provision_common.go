@@ -319,6 +319,7 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 		"uri":           {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
 		"vxlan_port":    {"", "VXLAN_PORT"},
 		"AA_KBC_PARAMS": {"", "AA_KBC_PARAMS"},
+		"KBS_CERT":      {"", "KBS_CERT"},
 	}
 
 	for k, v := range mapProps {

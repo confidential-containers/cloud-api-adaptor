@@ -21,8 +21,9 @@ type Config struct {
 }
 
 type KBCConfig struct {
-	Name string `toml:"name"`
-	URL  string `toml:"url"`
+	Name    string `toml:"name"`
+	URL     string `toml:"url"`
+	KBSCERT string `toml:"kbs_cert"`
 }
 
 func parseAAKBCParams(aaKBCParams string) (*Config, error) {
@@ -31,12 +32,13 @@ func parseAAKBCParams(aaKBCParams string) (*Config, error) {
 		return nil, fmt.Errorf("Invalid aa-kbs-params input: %s", aaKBCParams)
 	}
 	name, url := parts[0], parts[1]
-	kbcConfig := KBCConfig{name, url}
+	kbcConfig := KBCConfig{name, url, ""}
 	return &Config{Socket, kbcConfig, []Credential{}}, nil
 }
 
-func CreateConfigFile(aaKBCParams string) (string, error) {
+func CreateConfigFile(aaKBCParams, kbsCert string) (string, error) {
 	config, err := parseAAKBCParams(aaKBCParams)
+	config.KBC.KBSCERT = kbsCert
 	if err != nil {
 		return "", err
 	}

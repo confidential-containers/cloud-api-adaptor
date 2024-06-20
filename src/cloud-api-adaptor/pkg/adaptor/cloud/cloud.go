@@ -77,7 +77,7 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, aaKBCParams, sshport string) Service {
+	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, aaKBCParams, kbsCert, sshport string) Service {
 	var err error
 	var sshClient *wnssh.SshClient
 
@@ -98,6 +98,7 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 		daemonPort:   daemonPort,
 		workerNode:   workerNode,
 		aaKBCParams:  aaKBCParams,
+		kbsCert:      kbsCert,
 		sshClient:    sshClient,
 	}
 	s.cond = sync.NewCond(&s.mutex)
@@ -242,6 +243,10 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		daemonConfig.AAKBCParams = s.aaKBCParams
 	}
 
+	if s.kbsCert != "" {
+		daemonConfig.KBSCERT = s.kbsCert
+	}
+
 	// Check if auth json file is present
 	if authJSON, err := os.ReadFile(cloudinit.DefaultAuthfileSrcPath); err == nil {
 		daemonConfig.AuthJson = string(authJSON)
@@ -271,7 +276,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	}
 
 	if s.aaKBCParams != "" {
-		toml, err := cdh.CreateConfigFile(s.aaKBCParams)
+		toml, err := cdh.CreateConfigFile(s.aaKBCParams, s.kbsCert)
 		if err != nil {
 			return nil, fmt.Errorf("creating CDH config: %w", err)
 		}
