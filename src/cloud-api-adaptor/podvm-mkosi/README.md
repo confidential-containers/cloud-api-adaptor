@@ -93,9 +93,9 @@ Another issue is s390x does not support UEFI. Instead, we can first use **mkosi*
 It requires a **s390x host** to build s390x image with make commands:
 ```
 make fedora-binaries-builder
-make binaries
+ATTESTER=se-attester make binaries
 make image
 # make image-debug
 ```
 
-The final output is `build/podvm-s390x.qcow2`, which can be used as the Pod VM image in libvirt environment.
+The final output is `build/podvm-s390x.qcow2` for `image-debug` or `build/podvm-s390x-se.qcow2` for `make image`, which can be used as the Pod VM image in libvirt environment.
