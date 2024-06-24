@@ -32,7 +32,7 @@ RUN cd cloud-api-adaptor/src/csi-wrapper/ && make ARCH=${TARGETARCH} ${BINARY}
 
 FROM ubuntu:20.04
 ARG BINARY
-ENV BINARY ${BINARY}
+ENV BINARY=${BINARY}
 WORKDIR /
 COPY --from=builder /src/cloud-api-adaptor/src/csi-wrapper/build/${BINARY}/${BINARY} /usr/bin/${BINARY}
 COPY --from=builder /src/cloud-api-adaptor/src/csi-wrapper/entrypoint.sh /usr/bin/entrypoint.sh
