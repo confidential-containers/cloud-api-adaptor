@@ -20,18 +20,18 @@ ARG UEFI=false
 # If not provided, uses system architecture
 ARG ARCH
 
-ENV CLOUD_PROVIDER ${CLOUD_PROVIDER}
-ENV PODVM_DISTRO ${PODVM_DISTRO}
-ENV ARCH ${ARCH}
-ENV UEFI ${UEFI}
-ENV SE_BOOT ${SE_BOOT}
+ENV CLOUD_PROVIDER=${CLOUD_PROVIDER}
+ENV PODVM_DISTRO=${PODVM_DISTRO}
+ENV ARCH=${ARCH}
+ENV UEFI=${UEFI}
+ENV SE_BOOT=${SE_BOOT}
 
 # Defaults to Ubuntu Focal amd64 release image. These variables can be overriden as needed
 ARG IMAGE_URL
 ARG IMAGE_CHECKSUM
 
-ENV IMAGE_URL ${IMAGE_URL}
-ENV IMAGE_CHECKSUM ${IMAGE_CHECKSUM}
+ENV IMAGE_URL=${IMAGE_URL}
+ENV IMAGE_CHECKSUM=${IMAGE_CHECKSUM}
 
 # Copy the binaries to podvm/files folder
 COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/cloud-api-adaptor/podvm/files/podvm-binaries.tar.gz

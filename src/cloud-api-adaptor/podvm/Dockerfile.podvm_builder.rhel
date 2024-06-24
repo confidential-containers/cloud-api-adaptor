@@ -19,7 +19,7 @@ ARG YQ_VERSION
 ARG YQ_CHECKSUM
 
 ENV SMDEV_CONTAINER_OFF=1
-ENV ARCH ${ARCH}
+ENV ARCH=${ARCH}
 
 # This registering RHEL when building on an unsubscribed system
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
@@ -62,10 +62,10 @@ RUN cd cloud-utils && make install
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${RUST_VERSION}"
 
-ENV PATH "/root/.cargo/bin:/usr/local/go/bin:$PATH"
+ENV PATH="/root/.cargo/bin:/usr/local/go/bin:$PATH"
 
 RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip && \
     unzip protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip
 
 WORKDIR /src
-ENV GOPATH /src
+ENV=GOPATH /src
