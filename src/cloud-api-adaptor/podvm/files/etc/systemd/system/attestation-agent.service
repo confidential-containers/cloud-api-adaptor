@@ -5,7 +5,11 @@ After=network.target cloud-final.service process-user-data.service
 [Service]
 Type=simple
 ExecStartPre=mkdir -p /run/confidential-containers/attestation-agent
-ExecStart=/bin/bash -c 'if [ -f /run/peerpod/aa.toml ]; then /usr/local/bin/attestation-agent -c /run/peerpod/aa.toml; else /usr/local/bin/attestation-agent; fi'
+ExecStart=/bin/bash -c \
+    'if [ -f /run/peerpod/aa.toml ]; \
+    then /usr/local/bin/attestation-agent -c /run/peerpod/aa.toml; \
+    else /usr/local/bin/attestation-agent; \
+    fi'
 RestartSec=1
 Restart=always
 
