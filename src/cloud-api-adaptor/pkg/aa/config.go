@@ -38,7 +38,9 @@ func CreateConfigFile(aaKBCParams string) (string, error) {
 	}
 
 	config := AAConfig{}
-	config.TokenCfg.CocoAs.URL = ""
+	// Assume KBS and AS has same endpoint
+	// Need a new parameter in addition to aaKBCParams if deploy AS and KBS separately.
+	config.TokenCfg.CocoAs.URL = url
 	config.TokenCfg.Kbs.URL = url
 
 	bytes, err := toml.Marshal(config)
