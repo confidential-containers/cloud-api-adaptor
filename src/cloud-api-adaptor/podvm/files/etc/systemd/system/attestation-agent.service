@@ -1,6 +1,6 @@
 [Unit]
 Description=Attestation Agent TTRPC API Server
-After=network.target cloud-final.service process-user-data.service
+After=network.target cloud-init.service process-user-data.service
 
 [Service]
 Type=simple
