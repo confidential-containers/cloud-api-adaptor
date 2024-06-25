@@ -272,6 +272,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	}
 
 	if s.aaKBCParams != "" {
+		logger.Printf("aaKBCParams: %s, support cc_kbc::*", s.aaKBCParams)
 		toml, err := cdh.CreateConfigFile(s.aaKBCParams)
 		if err != nil {
 			return nil, fmt.Errorf("creating CDH config: %w", err)
