@@ -1,6 +1,6 @@
 # TLS communication between `cloud-api-adaptor` and `agent-protocol-forwarder`
 
-`cloud-api-adaptor` running in a worker node communicates with `agent-protocol-forwarder` running in a peer pod VM using a mutual TLS connection. This mTLS connection is used to transfer TTRPC requests and responses of [agent protocol](https://github.com/kata-containers/kata-containers/blob/CCv0/src/libs/protocols/protos/agent.proto) between `kata-shim` and `kata-agent`.
+`cloud-api-adaptor` running in a worker node communicates with `agent-protocol-forwarder` running in a peer pod VM using a mutual TLS connection. This mTLS connection is used to transfer TTRPC requests and responses of [agent protocol](https://github.com/kata-containers/kata-containers/blob/main/src/libs/protocols/protos/agent.proto) between `kata-shim` and `kata-agent`.
 
 There are two options to configure mTLS connections.
 

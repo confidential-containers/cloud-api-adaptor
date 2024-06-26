@@ -14,7 +14,7 @@ In order to build locally it requires the source trees and softwares mentioned i
   $ apt-get install -y qemu-kvm cloud-utils qemu-utils protobuf-compiler pkg-config libdevmapper-dev libgpgme-dev
   ```
 
-You may need to link the agent with the musl C library. In this case, you should install the musl-tools (Ubuntu) package and setup the Rust toolchain as explained [here](https://github.com/kata-containers/kata-containers/blob/CCv0/src/agent/README.md#build-with-musl).
+You may need to link the agent with the musl C library. In this case, you should install the musl-tools (Ubuntu) package and setup the Rust toolchain as explained [here](https://github.com/kata-containers/kata-containers/blob/main/src/agent/README.md#build-with-musl).
 
 Finally run the following commands to build the qcow2 image:
 
@@ -57,10 +57,6 @@ currently accepted:
 
 | Argument          | Default value                                                | Description                                                     |
 | ----------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
-| CAA\_SRC          | https://github.com/confidential-containers/cloud-api-adaptor | The cloud-api-adaptor source repository                         |
-| CAA\_SRC\_REF     | main                                                         | cloud-api-adaptor repository branch or commit                   |
-| KATA\_SRC         | https://github.com/kata-containers/kata-containers           | The Kata Containers source repository                           |
-| KATA\_SRC\_BRANCH | CCv0                                                         | The Kata Containers repository branch                           |
 | GO\_VERSION       | 1.21.11                                                      | Go version                                                      |
 | PROTOC\_VERSION   | 3.15.0                                                       | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
 | RUST\_VERSION     | 1.72.0                                                       | Rust version                                                    |
