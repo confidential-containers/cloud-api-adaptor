@@ -239,10 +239,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		daemonConfig.TLSServerKey = string(keyPEM)
 	}
 
-	if s.aaKBCParams != "" {
-		daemonConfig.AAKBCParams = s.aaKBCParams
-	}
-
 	// Check if auth json file is present
 	if authJSON, err := os.ReadFile(cloudinit.DefaultAuthfileSrcPath); err == nil {
 		daemonConfig.AuthJson = string(authJSON)
