@@ -2,7 +2,8 @@
 
 # Introduction
 
-This repository contains the implementation of Kata [remote hypervisor](https://github.com/kata-containers/kata-containers/tree/CCv0).
+This repository contains the implementation of Kata Containers'
+[remote hypervisor interface](https://github.com/kata-containers/kata-containers/blob/main/src/runtime/virtcontainers/remote.go).
 Kata remote hypervisor enables creation of Kata VMs on any environment without requiring baremetal servers or nested
 virtualization support.
 

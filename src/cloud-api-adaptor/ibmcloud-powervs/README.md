@@ -11,7 +11,7 @@
 We will be using the tool `pvsadm` to customise and build the VM image. Download or install it using the below instructions.
 
 1. You can download the binary from Github releases [here](https://github.com/ppc64le-cloud/pvsadm/releases)
-   
+
 2. To install from source
    ```
    cd $GOPATH/src/github.com/
@@ -31,13 +31,13 @@ pvsadm image qcow2ova --prep-template-default > image-prep.template
 Add the following snippet to `image-prep.template`
 ```
 yum install -y gcc gcc-c++ git make
-git clone -b CCv0 https://github.com/kata-containers/kata-containers.git
+git clone -b main https://github.com/kata-containers/kata-containers.git
 git clone https://github.com/confidential-containers/cloud-api-adaptor.git
 cd cloud-api-adaptor/ibmcloud-powervs/image
 make build
 ```
 
-> NOTE: 
+> NOTE:
 > 1. If you intend to use DHCP network type for creating peer pod VMs with
 > PowerVS provider, you need to additionally add this to `image-prep.template`
 > ```
@@ -74,7 +74,7 @@ pvsadm image import -n <service-instance-name> -b <bucket-name> -o <file-name> -
 ## Running cloud-api-adaptor
 
 1. Setup necessary cloud resources such as PowerVS Service instance, network, API Key etc..
-   
+
 2. Populate an env file with the IBM Cloud API key
 
    ```bash
@@ -84,5 +84,5 @@ pvsadm image import -n <service-instance-name> -b <bucket-name> -o <file-name> -
    ```
 
 3. Update [kustomization.yaml](../install/overlays/ibmcloud-powervs/kustomization.yaml) with the required details
- 
+
 4. Deploy Cloud API Adaptor by following the [install](../install/README.md) guide

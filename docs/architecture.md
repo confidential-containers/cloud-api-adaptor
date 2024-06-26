@@ -3,7 +3,7 @@
 ## Overview
 
 The cloud-api-adaptor is an implementation of the
-[remote hypervisor interface](https://github.com/kata-containers/kata-containers/blob/CCv0/src/runtime/virtcontainers/remote.go)
+[remote hypervisor interface](https://github.com/kata-containers/kata-containers/blob/main/src/runtime/virtcontainers/remote.go)
 of [Kata Containers](https://github.com/kata-containers/kata-containers)
 
 It enables the creation of Kata Containers VMs on any machines without the need for bare metal worker nodes,
@@ -108,7 +108,7 @@ The [cloud-api-adaptor](../src/cloud-api-adaptor/cmd/cloud-api-adaptor) implemen
 each node and is responsible for receiving commands from the `containerd-shim-kata-v2` process and implementing them
 for peer pods. For example, when it receives commands that were related to Pod lifecycle that are traditionally
 serviced by a local hypervisor (like `CreateSandboxRequest` and `StopSandboxRequest`) it will use IaaS APIs (from the
-Cloud Service Provider, or locally for the `libvirt` implementation to creating and deleting the peer pod VMs. 
+Cloud Service Provider, or locally for the `libvirt` implementation to creating and deleting the peer pod VMs.
 
 When the VMs are created they make a CNI compatible network tunnel using VxLAN tunneling, between the worker node and
 peer pods VM to flow other commands like `CreateContainer` through to the the remote sandbox.
