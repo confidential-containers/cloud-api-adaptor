@@ -40,7 +40,6 @@ var testDaemonConfig string = `{
 	"tls-server-key": "-----BEGIN PRIVATE KEY-----\n....\n-----END PRIVATE KEY-----\n",
 	"tls-server-cert": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
 	"tls-client-ca": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n",
-	"aa-kbc-params": "cc_kbc::http://192.168.100.2:8080",
 	"auth-json": "{\"auths\":{}}"
 }
 `
@@ -376,9 +375,4 @@ func TestParseDaemonConfig(t *testing.T) {
 	if config.PodName != "nginx-866fdb5bfb-b98nw" {
 		t.Fatalf("config.PodName does not match test data: expected %q, got %q", "nginx-866fdb5bfb-b98nw", config.PodName)
 	}
-
-	if config.AAKBCParams != "cc_kbc::http://192.168.100.2:8080" {
-		t.Fatalf("config.AAKBCParams does not match test data: expected %q, got %q", "cc_kbc::http://192.168.100.2:8080", config.AAKBCParams)
-	}
-
 }
