@@ -40,7 +40,7 @@ type ServerConfig struct {
 	ForwarderPort           string
 	ProxyTimeout            time.Duration
 	AAKBCParams             string
-	KBSCERT                 string
+	KBSCert                 string
 	EnableCloudConfigVerify bool
 	SecureComms             bool
 	SecureCommsInbounds     string
