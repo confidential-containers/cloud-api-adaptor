@@ -19,6 +19,7 @@ import (
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/aa"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cdh"
@@ -239,14 +240,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		daemonConfig.TLSServerKey = string(keyPEM)
 	}
 
-	if s.aaKBCParams != "" {
-		daemonConfig.AAKBCParams = s.aaKBCParams
-	}
-
-	if s.kbsCert != "" {
-		daemonConfig.KBSCERT = s.kbsCert
-	}
-
 	// Check if auth json file is present
 	if authJSON, err := os.ReadFile(cloudinit.DefaultAuthfileSrcPath); err == nil {
 		daemonConfig.AuthJson = string(authJSON)
@@ -276,12 +269,22 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	}
 
 	if s.aaKBCParams != "" {
+		logger.Printf("aaKBCParams: %s, support cc_kbc::*", s.aaKBCParams)
 		toml, err := cdh.CreateConfigFile(s.aaKBCParams, s.kbsCert)
 		if err != nil {
 			return nil, fmt.Errorf("creating CDH config: %w", err)
 		}
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
 			Path:    cdh.ConfigFilePath,
+			Content: toml,
+		})
+
+		toml, err = aa.CreateConfigFile(s.aaKBCParams)
+		if err != nil {
+			return nil, fmt.Errorf("creating attestation agent config: %w", err)
+		}
+		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+			Path:    aa.DefaultAaConfigPath,
 			Content: toml,
 		})
 	}

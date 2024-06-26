@@ -43,9 +43,7 @@ type Config struct {
 	TLSServerCert string `json:"tls-server-cert,omitempty"`
 	TLSClientCA   string `json:"tls-client-ca,omitempty"`
 
-	AAKBCParams string `json:"aa-kbc-params,omitempty"`
-	KBSCERT     string `json:"kbs-cert,omitempty"`
-	AuthJson    string `json:"auth-json,omitempty"`
+	AuthJson string `json:"auth-json,omitempty"`
 }
 
 type Daemon interface {

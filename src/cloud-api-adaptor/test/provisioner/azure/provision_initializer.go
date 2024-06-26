@@ -68,6 +68,7 @@ func initAzureProperties(properties map[string]string) error {
 		CaaImage:            properties["CAA_IMAGE"],
 		KbsImage:            properties["KBS_IMAGE"],
 		KbsImageTag:         properties["KBS_IMAGE_TAG"],
+		InstanceSize:        properties["AZURE_INSTANCE_SIZE"],
 	}
 
 	CIManagedStr := properties["IS_CI_MANAGED_CLUSTER"]
@@ -104,7 +105,6 @@ func initAzureProperties(properties map[string]string) error {
 
 	AzureProps.VnetName = AzureProps.ClusterName + "_vnet"
 	AzureProps.SubnetName = AzureProps.ClusterName + "_subnet"
-	AzureProps.InstanceSize = "Standard_DC2as_v5"
 	AzureProps.NodeName = "caaaks"
 	AzureProps.OsType = "Ubuntu"
 

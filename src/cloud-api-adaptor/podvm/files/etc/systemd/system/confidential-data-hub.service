@@ -1,10 +1,14 @@
 [Unit]
 Description=Confidential Data Hub TTRPC API Server
-After=network.target process-user-data.service
+After=network.target cloud-init.service process-user-data.service
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/confidential-data-hub -c /run/confidential-containers/cdh.toml
+ExecStart=/bin/bash -c \
+    'if [ -f /run/confidential-containers/cdh.toml ]; \
+    then /usr/local/bin/confidential-data-hub -c /run/confidential-containers/cdh.toml; \
+    else /usr/local/bin/confidential-data-hub; \
+    fi'
 RestartSec=1
 Restart=always
 

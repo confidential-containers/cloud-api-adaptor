@@ -20,6 +20,7 @@ import (
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
 
 type paths struct {
+	aaConfig     string
 	authJson     string
 	cdhConfig    string
 	daemonConfig string
@@ -30,8 +31,8 @@ type Config struct {
 	paths        paths
 }
 
-func NewConfig(authJsonPath, daemonConfigPath, cdhConfig string, fetchTimeout int) *Config {
-	cfgPaths := paths{authJsonPath, cdhConfig, daemonConfigPath}
+func NewConfig(aaConfigPath, authJsonPath, daemonConfigPath, cdhConfig string, fetchTimeout int) *Config {
+	cfgPaths := paths{aaConfigPath, authJsonPath, cdhConfig, daemonConfigPath}
 	return &Config{fetchTimeout, cfgPaths}
 }
 
@@ -185,6 +186,12 @@ func processCloudConfig(cfg *Config, cc *CloudConfig) error {
 	}
 	if err = writeFile(cfg.paths.daemonConfig, bytes); err != nil {
 		return fmt.Errorf("failed to write daemon config file: %w", err)
+	}
+
+	if bytes := findConfigEntry(cfg.paths.aaConfig, cc); bytes != nil {
+		if err = writeFile(cfg.paths.aaConfig, bytes); err != nil {
+			return fmt.Errorf("failed to write aa config file: %w", err)
+		}
 	}
 
 	if bytes := findConfigEntry(cfg.paths.cdhConfig, cc); bytes != nil {

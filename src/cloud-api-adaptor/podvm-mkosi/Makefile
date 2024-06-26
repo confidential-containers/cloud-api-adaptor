@@ -3,6 +3,7 @@ include ../Makefile.defaults
 ATTESTER  ?= none
 ARCH      ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILDER   = fedora-binaries-builder-$(ARCH)
+SEDEBUG   ?= false
 
 REGISTRY ?= quay.io/confidential-containers
 PODVM_DISTRO ?= fedora
@@ -71,7 +72,11 @@ image-debug:
 	touch resources/buildDebugImage
 	rm -rf ./build
 	@echo "Building debug image..."
-ifeq ($(ARCH),s390x)
+ifeq ($(SEDEBUG),true)
+	touch resources/buildS390xImage
+	sudo mkosi --profile debug.conf
+	sudo -E ../hack/build-s390x-se-image.sh
+else ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-image.sh

@@ -1,8 +1,3 @@
 server_addr = "unix:///run/kata-containers/agent.sock"
-
-# This field sets up the KBC that attestation agent uses
-# This is replaced in the makefile steps so do not set it manually
-aa_kbc_params = ""
-
 # prevent the agent from launching coco guest-components
 guest_components_procs = "none"

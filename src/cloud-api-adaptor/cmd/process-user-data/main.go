@@ -7,7 +7,7 @@ import (
 	"os"
 
 	cmdUtil "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/cmd"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/agent"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/aa"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cdh"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/userdata"
@@ -19,8 +19,7 @@ const (
 	providerAzure = "azure"
 	providerAws   = "aws"
 
-	defaultAgentConfigPath = "/etc/agent-config.toml"
-	defaultAuthJsonPath    = "/run/peerpod/auth.json"
+	defaultAuthJsonPath = "/run/peerpod/auth.json"
 )
 
 var versionFlag bool
@@ -37,36 +36,25 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	var agentConfigPath, cdhConfigPath, daemonConfigPath string
+	var aaConfigPath, cdhConfigPath, daemonConfigPath string
 	var fetchTimeout int
 
 	rootCmd.PersistentFlags().BoolVarP(&versionFlag, "version", "v", false, "Print the version")
 	rootCmd.PersistentFlags().StringVarP(&daemonConfigPath, "daemon-config-path", "d", daemon.DefaultConfigPath, "Path to a daemon config file")
+	rootCmd.PersistentFlags().StringVarP(&aaConfigPath, "aa-config-path", "a", aa.DefaultAaConfigPath, "Path to a AA config file")
 	rootCmd.PersistentFlags().StringVarP(&cdhConfigPath, "cdh-config-path", "c", cdh.ConfigFilePath, "Path to a CDH config file")
 
 	var provisionFilesCmd = &cobra.Command{
 		Use:   "provision-files",
 		Short: "Provision required files based on user data",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cfg := userdata.NewConfig(defaultAuthJsonPath, daemonConfigPath, cdhConfigPath, fetchTimeout)
+			cfg := userdata.NewConfig(aaConfigPath, defaultAuthJsonPath, daemonConfigPath, cdhConfigPath, fetchTimeout)
 			return userdata.ProvisionFiles(cfg)
 		},
 		SilenceUsage: true, // Silence usage on error
 	}
 	provisionFilesCmd.Flags().IntVarP(&fetchTimeout, "user-data-fetch-timeout", "t", 180, "Timeout (in secs) for fetching user data")
 	rootCmd.AddCommand(provisionFilesCmd)
-
-	var updateAgentConfigCmd = &cobra.Command{
-		Use:   "update-agent-config",
-		Short: "Update the agent configuration file",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			cfg := agent.NewConfig(agentConfigPath, defaultAuthJsonPath, daemonConfigPath)
-			return agent.UpdateConfig(cfg)
-		},
-		SilenceUsage: true, // Silence usage on error
-	}
-	updateAgentConfigCmd.Flags().StringVarP(&agentConfigPath, "agent-config-file", "a", defaultAgentConfigPath, "Path to a agent config file")
-	rootCmd.AddCommand(updateAgentConfigCmd)
 }
 
 func main() {

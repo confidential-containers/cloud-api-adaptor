@@ -8,6 +8,6 @@ FROM scratch
 
 ARG ARCH=s390x
 
-ENV ARCH ${ARCH}
+ENV ARCH=${ARCH}
 
 COPY build/podvm-${ARCH}.qcow2 /

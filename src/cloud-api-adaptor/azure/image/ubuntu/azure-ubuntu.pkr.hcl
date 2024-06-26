@@ -30,7 +30,7 @@ source "azure-arm" "ubuntu" {
     image_name           = "${var.az_gallery_image_name}"
     image_version        = "${var.az_gallery_image_version}"
     storage_account_type = "Standard_LRS"
-    replication_regions  = ["eastus2", "westeurope"]
+    replication_regions  = ["eastus2", "northeurope"]
   }
 }
 
