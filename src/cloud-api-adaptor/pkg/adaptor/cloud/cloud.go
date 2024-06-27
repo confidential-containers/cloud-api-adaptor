@@ -279,7 +279,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 			Content: toml,
 		})
 
-		toml, err = aa.CreateConfigFile(s.aaKBCParams)
+		toml, err = aa.CreateConfigFile(s.aaKBCParams, s.kbsCert)
 		if err != nil {
 			return nil, fmt.Errorf("creating attestation agent config: %w", err)
 		}

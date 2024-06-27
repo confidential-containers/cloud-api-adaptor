@@ -5,7 +5,7 @@ import (
 )
 
 func Test_parseAAKBCParams(t *testing.T) {
-	url, err := parseAAKBCParams("cc_kbc::http://127.0.0.1:8080")
+	_, url, err := parseAAKBCParams("cc_kbc::http://127.0.0.1:8080")
 	if err != nil {
 		t.Error(err)
 	}
@@ -25,7 +25,47 @@ url = 'http://127.0.0.1:8080'
 url = 'http://127.0.0.1:8080'
 `
 
-	config, err := CreateConfigFile("cc_kbc::http://127.0.0.1:8080")
+	config, err := CreateConfigFile("cc_kbc::http://127.0.0.1:8080", "")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if config != refcfg {
+		t.Errorf("Expected: \n%s, got: \n%s", refcfg, config)
+	}
+}
+
+func TestConfigFileKBSCert(t *testing.T) {
+	refcfg := `[token_configs]
+[token_configs.coco_as]
+url = 'http://127.0.0.1:8080'
+
+[token_configs.kbs]
+url = 'http://127.0.0.1:8080'
+cert = 'testcert'
+`
+
+	config, err := CreateConfigFile("cc_kbc::http://127.0.0.1:8080", "testcert")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if config != refcfg {
+		t.Errorf("Expected: \n%s, got: \n%s", refcfg, config)
+	}
+}
+
+func TestConfigFileInvalidKBSCert(t *testing.T) {
+	refcfg := `[token_configs]
+[token_configs.coco_as]
+url = 'http://127.0.0.1:8080'
+
+[token_configs.kbs]
+url = 'http://127.0.0.1:8080'
+`
+
+	config, err := CreateConfigFile("abc_kbc::http://127.0.0.1:8080", "testcert")
+
 	if err != nil {
 		t.Error(err)
 	}

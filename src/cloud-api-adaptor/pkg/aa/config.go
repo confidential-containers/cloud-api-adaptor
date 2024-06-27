@@ -17,27 +17,31 @@ type AAConfig struct {
 			URL string `toml:"url"`
 		} `toml:"coco_as"`
 		Kbs struct {
-			URL string `toml:"url"`
+			URL  string `toml:"url"`
+			CERT string `toml:"cert,omitempty"`
 		} `toml:"kbs"`
 	} `toml:"token_configs"`
 }
 
-func parseAAKBCParams(aaKBCParams string) (string, error) {
+func parseAAKBCParams(aaKBCParams string) (string, string, error) {
 	parts := strings.SplitN(aaKBCParams, "::", 2)
 	if len(parts) != 2 {
-		return "", fmt.Errorf("Invalid aa-kbs-params input: %s", aaKBCParams)
+		return "", "", fmt.Errorf("Invalid aa-kbs-params input: %s", aaKBCParams)
 	}
-	_, url := parts[0], parts[1]
-	return url, nil
+	name, url := parts[0], parts[1]
+	return name, url, nil
 }
 
-func CreateConfigFile(aaKBCParams string) (string, error) {
-	url, err := parseAAKBCParams(aaKBCParams)
+func CreateConfigFile(aaKBCParams, kbsCert string) (string, error) {
+	name, url, err := parseAAKBCParams(aaKBCParams)
+	config := AAConfig{}
 	if err != nil {
 		return "", err
 	}
+	if kbsCert != "" && name == "cc_kbc" {
+		config.TokenCfg.Kbs.CERT = kbsCert
+	}
 
-	config := AAConfig{}
 	// Assume KBS and AS has same endpoint
 	// Need a new parameter in addition to aaKBCParams if deploy AS and KBS separately.
 	config.TokenCfg.CocoAs.URL = url

@@ -2,6 +2,8 @@ package cdh
 
 import (
 	"fmt"
+	"log"
+	"strings"
 	"testing"
 
 	"github.com/pelletier/go-toml/v2"
@@ -22,7 +24,7 @@ url = "http://1.2.3.4:8080"
 		panic(err)
 	}
 
-	config, err := parseAAKBCParams("cc_kbc::http://1.2.3.4:8080", "")
+	config, err := parseAAKBCParams("cc_kbc::http://1.2.3.4:8080")
 	if err != nil {
 		t.Error(err)
 	}
@@ -45,6 +47,7 @@ func TestCDHConfigFileFromAAKBCParamsKBSCert(t *testing.T) {
 	refdoc := `
 socket = "%s"
 credentials = []
+
 [kbc]
 name = "cc_kbc"
 url = "http://1.2.3.4:8080"
@@ -57,24 +60,26 @@ kbs_cert = "testcert"
 		panic(err)
 	}
 
-	config, err := parseAAKBCParams("cc_kbc::http://1.2.3.4:8080", "testcert")
+	configStr, err := CreateConfigFile("cc_kbc::http://1.2.3.4:8080", "testcert")
+	var cfg Config
+	err = toml.Unmarshal([]byte(configStr), &cfg)
+	if err != nil {
+		panic(err)
+	}
 	if err != nil {
 		t.Error(err)
 	}
 
-	if config.KBC.Name != refcfg.KBC.Name {
-		t.Errorf("Expected %s, got %s", refcfg.KBC.Name, config.KBC.Name)
+	if cfg.KBC.URL != refcfg.KBC.URL {
+		t.Errorf("Expected %s, got %s", refcfg.KBC.URL, cfg.KBC.URL)
 	}
-	if config.KBC.URL != refcfg.KBC.URL {
-		t.Errorf("Expected %s, got %s", refcfg.KBC.URL, config.KBC.URL)
+	if cfg.KBC.KBSCert != refcfg.KBC.KBSCert {
+		t.Errorf("Expected %s, got %s", refcfg.KBC.KBSCert, cfg.KBC.KBSCert)
 	}
-	if config.KBC.KBSCert != refcfg.KBC.KBSCert {
-		t.Errorf("Expected %s, got %s", refcfg.KBC.KBSCert, config.KBC.KBSCert)
+	if cfg.Socket != refcfg.Socket {
+		t.Errorf("Expected %s, got %s", refcfg.Socket, cfg.Socket)
 	}
-	if config.Socket != refcfg.Socket {
-		t.Errorf("Expected %s, got %s", refcfg.Socket, config.Socket)
-	}
-	if len(config.Credentials) != 0 {
+	if len(cfg.Credentials) != 0 {
 		t.Errorf("Expected empty credentials array")
 	}
 }
@@ -86,7 +91,7 @@ credentials = []
 [kbc]
 name = "abc_kbc"
 url = "http://1.2.3.4:8080"
-kbs_cert = "sdf"
+kbs_cert = "testcert"
 `
 	refdoc = fmt.Sprintf(refdoc, Socket)
 	var refcfg Config
@@ -95,24 +100,18 @@ kbs_cert = "sdf"
 		panic(err)
 	}
 
-	config, err := parseAAKBCParams("abc_kbc::http://1.2.3.4:8080", "testcert")
+	configStr, err := CreateConfigFile("abc_kbc::http://1.2.3.4:8080", "testcert")
+	log.Printf("config string %s", configStr)
+	if strings.Contains(configStr, "kbs_cert") {
+		t.Errorf("kbs_cert is not expected to be included in config file, but got %s", configStr)
+	}
+	var cfg Config
+	err = toml.Unmarshal([]byte(configStr), &cfg)
+	if err != nil {
+		panic(err)
+	}
 	if err != nil {
 		t.Error(err)
 	}
 
-	if config.KBC.Name != refcfg.KBC.Name {
-		t.Errorf("Expected %s, got %s", refcfg.KBC.Name, config.KBC.Name)
-	}
-	if config.KBC.URL != refcfg.KBC.URL {
-		t.Errorf("Expected %s, got %s", refcfg.KBC.URL, config.KBC.URL)
-	}
-	if config.KBC.KBSCert != "" {
-		t.Errorf("Expected %s, got %s", "", config.KBC.KBSCert)
-	}
-	if config.Socket != refcfg.Socket {
-		t.Errorf("Expected %s, got %s", refcfg.Socket, config.Socket)
-	}
-	if len(config.Credentials) != 0 {
-		t.Errorf("Expected empty credentials array")
-	}
 }
