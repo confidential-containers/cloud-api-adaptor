@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: modify-containerd-config
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: modify-containerd-config
+  template:
+    metadata:
+      labels:
+        name: modify-containerd-config
+    spec:
+      hostPID: true
+      containers:
+      - name: modify-containerd
+        image: busybox:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Checking containerd config...";
+          if ! grep -q "discard_unpacked_layers = false" /etc/containerd/config.toml; then
+            echo "Updating config...";
+            sed -i 's/discard_unpacked_layers = true/discard_unpacked_layers = false/' /etc/containerd/config.toml
+            systemctl restart containerd
+          fi
+          sleep infinity
+        securityContext:
+          privileged: true
+      terminationGracePeriodSeconds: 1
+      restartPolicy: Always
+      hostNetwork: true
+      volumes:
+      - name: containerd-config
+        hostPath:
+          path: /etc/containerd
