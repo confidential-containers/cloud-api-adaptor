@@ -67,7 +67,11 @@ IMAGE_FILE = $(IMAGE_NAME)$(IMAGE_SUFFIX)
 
 AGENT_PROTOCOL_FORWARDER = $(FILES_DIR)/usr/local/bin/agent-protocol-forwarder
 KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
-PAUSE         = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/pause
+
+# The pause binary can be named differently.
+PAUSE_BIN ?= pause
+PAUSE      = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/$(PAUSE_BIN)
+
 ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
 CONFIDENTIAL_DATA_HUB = $(FILES_DIR)/usr/local/bin/confidential-data-hub
 API_SERVER_REST  = $(FILES_DIR)/usr/local/bin/api-server-rest
