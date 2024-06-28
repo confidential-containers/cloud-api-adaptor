@@ -46,17 +46,7 @@ and trustee versions were updated when their components released as listed above
 As the [CoCo operator](https://github.com/confidential-containers/operator/) doesn't release until after peer pods,
 the [current plan](https://github.com/confidential-containers/confidential-containers/pull/201#discussion_r1570606331),
 is to pick the latest operator commit to pin that in our released version's instructions of deploying the operator.
-To do this, we should edit the [Makefile](../src/cloud-api-adaptor/Makefile) to replace the
-*github.com/confidential-containers/operator/config/default* and
-*github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods* URLs:
-```
-operator_commit=<latest operator commit sha>
-sed -i "s#\(github.com/confidential-containers/operator/config/default\)#\1?ref=${operator_commit}#" Makefile
-sed -i "s#\(github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods\)#\1?ref=${operator_commit}#" Makefile
-```
-
-<!-- TODO, should we worry about updating the e2e test reference in ../src/cloud-api-adaptor/test/provisioner/provision.go too?
-If so we need to also revert that post-release -->
+To do this, we should update the `git.coco-operator.reference` value in [versions.yaml](../src/cloud-api-adaptor/versions.yaml).
 
 When this change is merged, it triggers the
 [project images publish workflow](../.github/workflows/publish_images_on_push.yaml) to create a new container image in
@@ -221,7 +211,7 @@ confidential-containers release team to let them know it has completed successfu
 
 If the `main` branch was not already unlocked, then ask an admin to do this now.
 
-The CoCo operator URLs on the [Makefile](../src/cloud-api-adaptor/Makefile) should be reverted to use the latest version.
+The CoCo operator reference commit in the [versions.yaml](../src/cloud-api-adaptor/versions.yaml) should be reverted to use the latest version.
 
 The changes on the overlay kustomization files should be reverted to start using the latest cloud-api-adaptor images again:
 ```
