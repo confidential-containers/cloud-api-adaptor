@@ -13,7 +13,7 @@ source /etc/os-release || source /usr/lib/os-release
 ARCH=$(uname -m)
 TARGET_ARCH=${ARCH/x86_64/amd64}
 OS_DISTRO=ubuntu
-if [[ "$ID" == "rhel" ]]; then
+if [[ "$ID" == "rhel" || "$ID" == "centos" || "$ID" == "fedora" ]]; then
     OS_DISTRO=rhel
 fi
 
