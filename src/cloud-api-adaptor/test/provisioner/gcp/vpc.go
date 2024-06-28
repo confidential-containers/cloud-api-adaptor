@@ -25,7 +25,7 @@ type GCPVPC struct {
 // NewGCPVPC creates a new GCPVPC object.
 func NewGCPVPC(properties map[string]string) (*GCPVPC, error) {
 	defaults := map[string]string{
-		"vpc_name": "peer-pods-vpc",
+		"vpc_name": "default",
 	}
 
 	for key, value := range properties {
@@ -58,6 +58,12 @@ func (g *GCPVPC) CreateVPC(
 		return fmt.Errorf("GKE: compute.NewService: %v", err)
 	}
 
+  _, err = srv.Networks.Get(g.projectID, g.vpcName).Context(ctx).Do()
+  if err == nil {
+      log.Infof("GKE: Using existing VPC %s.\n", g.vpcName)
+      return nil
+  }
+
 	network := &compute.Network{
 		Name:                  g.vpcName,
 		AutoCreateSubnetworks: true,
@@ -74,6 +80,17 @@ func (g *GCPVPC) CreateVPC(
 	if err != nil {
 		return fmt.Errorf("GKE: Error waiting for VPC to be created: %v", err)
 	}
+
+	// subnetwork := &compute.Subnetwork{
+	//     Name:    "peer-pods-subnet",
+	//     Network: op.SelfLink,
+	//     Region:  "us-west1",
+	// }
+	//
+	// _, err = srv.Subnetworks.Insert(g.projectID, "us-west1", subnetwork).Context(ctx).Do()
+	// if err != nil {
+	//     return fmt.Errorf("GKE: Subnetworks.Insert: %v", err)
+	// }
 	return nil
 }
 

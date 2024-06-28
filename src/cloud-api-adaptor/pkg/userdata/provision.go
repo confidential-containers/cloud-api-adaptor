@@ -14,6 +14,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/aws"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/azure"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/docker"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/gcp"
 	"gopkg.in/yaml.v2"
 )
 
@@ -71,6 +72,14 @@ func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 	return aws.GetUserData(ctx, url)
 }
 
+type GCPUserDataProvider struct{ DefaultRetry }
+
+func (g GCPUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
+	url := gcp.GcpUserDataImdsUrl
+	logger.Printf("provider: GCP, userDataUrl: %s\n", url)
+	return aws.GetUserData(ctx, url)
+}
+
 type DockerUserDataProvider struct{ DefaultRetry }
 
 func (a DockerUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
@@ -92,6 +101,10 @@ func newProvider(ctx context.Context) (UserDataProvider, error) {
 
 	if aws.IsAWS(ctx) {
 		return AWSUserDataProvider{}, nil
+	}
+
+	if gcp.IsGCP(ctx) {
+		return GCPUserDataProvider{}, nil
 	}
 
 	return nil, fmt.Errorf("unsupported user data provider")

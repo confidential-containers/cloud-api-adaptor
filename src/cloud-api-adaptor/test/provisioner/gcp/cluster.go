@@ -91,6 +91,7 @@ func (g *GKECluster) CreateCluster(ctx context.Context) error {
 		InitialNodeCount: g.nodeCount,
 		NodeConfig: &container.NodeConfig{
 			MachineType: g.machineType,
+			ImageType:   "UBUNTU_CONTAINERD", // Default CO OS has a ro fs.
 		},
 	}
 

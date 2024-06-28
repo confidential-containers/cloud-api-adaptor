@@ -13,7 +13,6 @@ import (
 
 type GCPInstallOverlay struct {
 	Overlay  *pv.KustomizeOverlay
-	CaaImage string
 }
 
 func NewGCPInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
@@ -38,6 +37,15 @@ func (a *GCPInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) err
 func (a *GCPInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
 	var err error
 
+	image := properties["caa_image_name"]
+	log.Infof("Updating caa image with %s", image)
+	if image != "" {
+		err = a.Overlay.SetKustomizeImage("cloud-api-adaptor", "newName", image)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Mapping the internal properties to ConfigMapGenerator properties.
 	mapProps := map[string]string{
 		"pause_image":      "PAUSE_IMAGE",
@@ -47,15 +55,6 @@ func (a *GCPInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 		"zone":             "GCP_ZONE",
 		"network":          "GCP_NETWORK",
 		"vxlan_port":       "VXLAN_PORT",
-	}
-
-	if value, ok := properties["caa_image_name"]; ok {
-		if value != "" {
-			log.Infof("Updating caa image with %s", value)
-			if err = a.Overlay.SetKustomizeImage("cloud-api-adaptor", "newImage", value); err != nil {
-				return err
-			}
-		}
 	}
 
 	for k, v := range mapProps {
