@@ -28,6 +28,8 @@ rhel_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.ch
 rhel_s390x_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.url)
 rhel_s390x_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.checksum)
 
+COCO_OPERATOR_REF := $(or $(COCO_OPERATOR_REF),$(call query,git.coco-operator.reference))
+COCO_OPERATOR_REPO := $(or $(COCO_OPERATOR_REPO),$(call query,git.coco-operator.url))
 KATA_SRC := $(or $(KATA_SRC),$(call query,git.kata-containers.url))
 KATA_SRC_REF := $(or $(KATA_SRC_REF),$(call query,git.kata-containers.reference))
 GO_VERSION := $(or $(GO_VERSION),$(call query,tools.golang))
