@@ -27,6 +27,9 @@ tools:
   kcli: 99.0.202407031308
 # Referenced Git repositories
 git:
+  coco-operator:
+    url: https://github.com/confidential-containers/operator
+    reference: main
   guest-components:
     url: https://github.com/confidential-containers/guest-components
     reference: df60725afe0ba452a25a740cf460c2855442c49a
