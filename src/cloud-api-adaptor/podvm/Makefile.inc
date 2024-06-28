@@ -27,6 +27,9 @@ LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
 RUST_ARCH   ?= $(subst ppc64le,powerpc64le,$(ARCH))
 RUST_TARGET := $(RUST_ARCH)-unknown-linux-$(LIBC)
 
+# Auth json file for registry access. Used with skopeo
+AUTHFILE ?=
+
 ATTESTER ?= none
 CDH_RESOURCE_PROVIDER ?= kbs
 SEALED_SECRET ?= yes
@@ -152,7 +155,8 @@ $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
 	cd "$(UMOCI_SRC)" && CC= $(MAKE)
 
 $(PAUSE_SRC): $(SKOPEO_BIN)
-	$(SKOPEO_BIN) --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
+	$(SKOPEO_BIN) --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy \
+		$(if $(AUTHFILE),--authfile $(AUTHFILE)) "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
 
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
