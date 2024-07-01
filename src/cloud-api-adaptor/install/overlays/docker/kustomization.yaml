@@ -19,7 +19,7 @@ configMapGenerator:
       - CLOUD_PROVIDER="docker"
       - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
     #- DOCKER_HOST="unix:///var/run/docker.sock" # Uncomment and set if you want to use a specific docker host
-    #- DOCKER_API_VERSION="1.40" # Uncomment and set if you want to use a specific docker api version
+    #- DOCKER_API_VERSION="1.44" # Uncomment and set if you want to use a specific docker api version
     #- DOCKER_TLS_VERIFY="false" # Uncomment and set if you want to use tls
     #- DOCKER_CERT_PATH="" # Uncomment and set if you want to use tls
     #- DOCKER_PODVM_IMAGE="quay.io/confidential-containers/podvm-docker-image" # Uncomment and set if you want to use a specific podvm image
