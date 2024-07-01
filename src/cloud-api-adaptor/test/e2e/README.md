@@ -48,6 +48,12 @@ To leave the cluster untouched by the execution finish you should export `TEST_T
 
 To use existing cluster which have already installed Cloud API Adaptor, you should export `TEST_INSTALL_CAA=no`.
 
+While in development and/or debugging it's common that you want to run just a sub-set of tests rather than the entire suite. To accomplish that
+you should export an unanchored regular expression in the `RUN_TESTS` variable that matches the tests names (see `-run` in [go test flags](https://pkg.go.dev/cmd/go#hdr-Testing_flags) for the regular expression format accepted). For example, to run only the simple creation pod test:
+```
+$ RUN_TESTS=CreateSimplePod TEST_PROVISION=yes TEST_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
+```
+
 ## Attestation and KBS specific
 
 We need artifacts from the trustee repo when doing the attestation tests.
