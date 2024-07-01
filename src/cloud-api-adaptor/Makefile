@@ -21,6 +21,8 @@ SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 ATTESTER    ?= none
 # End-to-end tests overall run timeout.
 TEST_E2E_TIMEOUT ?= 60m
+# To run a sub-set of tests, set an unanchored regex matching the test's name as in go's test -run option.
+RUN_TESTS ?= ''
 
 RESOURCE_CTRL ?= true
 YQ_CHECKSUM_${ARCH} ?= $(YQ_CHECKSUM)
@@ -93,7 +95,7 @@ test: ## Run tests.
 .PHONY: test-e2e
 test-e2e: ## Run end-to-end tests for single provider.
 ifneq ($(CLOUD_PROVIDER),)
-	go test -v -tags=$(CLOUD_PROVIDER) -timeout $(TEST_E2E_TIMEOUT) -count=1 ./test/e2e
+	go test -v -tags=$(CLOUD_PROVIDER) -timeout $(TEST_E2E_TIMEOUT) -count=1 -run $(RUN_TESTS) ./test/e2e
 else
 	$(error CLOUD_PROVIDER is not set)
 endif
