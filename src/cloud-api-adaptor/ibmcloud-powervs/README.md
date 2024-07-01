@@ -30,27 +30,33 @@ pvsadm image qcow2ova --prep-template-default > image-prep.template
 
 Add the following snippet to `image-prep.template`
 ```
-yum install -y gcc gcc-c++ git make
-git clone -b main https://github.com/kata-containers/kata-containers.git
-git clone https://github.com/confidential-containers/cloud-api-adaptor.git
-cd cloud-api-adaptor/ibmcloud-powervs/image
-make build
+yum install -y gcc gcc-c++ git make wget perl
+wget https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_ppc64le
+chmod +x yq_linux_ppc64le && mv yq_linux_ppc64le /usr/local/bin/yq
+
+git clone -b ibmcloud-powervs https://github.com/Vaibhav-Nazare/cloud-api-adaptor.git
+cd cloud-api-adaptor/src/cloud-api-adaptor/ibmcloud-powervs/image
+AGENT_POLICY=no SEALED_SECRET=no make build
 ```
 
 > NOTE:
 > 1. If you intend to use DHCP network type for creating peer pod VMs with
-> PowerVS provider, you need to additionally add this to `image-prep.template`
+> PowerVS provider, you need to additionally add this to `image-prep.template` and setup a DHCP server.
 > ```
 > mkdir -p /etc/cloud/cloud.cfg.d
 > cat <<EOF >> /etc/cloud/cloud.cfg.d/99-custom-networking.cfg
 > network: {config: disabled}
 > EOF
 > ```
-> 2. To use a specific port or address for agent-protocol-forwarder, pass `FORWARDER_PORT=<port-number>` to the `make` command.
+> 2. Setup a DHCP server using pvsadm
+> ```
+> pvsadm dhcpserver create --workspace-id <workspace-id> -k  <api-key>
+> ```
+> 3. To use a specific port or address for agent-protocol-forwarder, pass `FORWARDER_PORT=<port-number>` to the `make` command.
 
 2. Download the qcow2 image and converts into ova type
 ```
-pvsadm image qcow2ova --image-name <name> --image-dist centos --image-url https://cloud.centos.org/centos/8-stream/ppc64le/images/CentOS-Stream-GenericCloud-8-latest.ppc64le.qcow2 --prep-template image-prep.template
+pvsadm image qcow2ova --image-name <name> --image-dist centos --image-url https://cloud.centos.org/centos/9-stream/ppc64le/images/CentOS-Stream-GenericCloud-9-latest.ppc64le.qcow2 --prep-template image-prep.template --image-size 20 
 ```
 
 
