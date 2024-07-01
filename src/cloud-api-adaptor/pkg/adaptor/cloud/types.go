@@ -36,6 +36,7 @@ type cloudService struct {
 	mutex        sync.Mutex
 	ppService    *k8sops.PeerPodService
 	aaKBCParams  string
+	kbsCert      string
 	sshClient    *wnssh.SshClient
 }
 
