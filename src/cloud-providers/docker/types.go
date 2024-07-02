@@ -9,4 +9,6 @@ type Config struct {
 	DockerCertPath   string
 	DockerTLSVerify  bool
 	DataDir          string
+	PodVMDockerImage string
+	NetworkName      string
 }

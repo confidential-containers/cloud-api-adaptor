@@ -26,6 +26,9 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&dockerCfg.DockerCertPath, "docker-cert-path", "", "Path to directory with Docker TLS certificates")
 	flags.BoolVar(&dockerCfg.DockerTLSVerify, "docker-tls-verify", false, "Use TLS and verify the remote server certificate")
 	flags.StringVar(&dockerCfg.DataDir, "data-dir", defaultDataDir, "docker storage dir")
+	flags.StringVar(&dockerCfg.PodVMDockerImage, "podvm-docker-image", defaultPodVMDockerImage, "Docker image to use for podvm")
+	// Docker network name to connect to
+	flags.StringVar(&dockerCfg.NetworkName, "docker-network-name", defaultDockerNetworkName, "Docker network name to connect to")
 }
 
 func (m *Manager) LoadEnv() {

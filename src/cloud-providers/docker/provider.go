@@ -20,8 +20,10 @@ import (
 var logger = log.New(log.Writer(), "[adaptor/cloud/docker] ", log.LstdFlags|log.Lmsgprefix)
 
 type dockerProvider struct {
-	Client  *client.Client
-	DataDir string
+	Client           *client.Client
+	DataDir          string
+	PodVMDockerImage string
+	NetworkName      string
 }
 
 const maxInstanceNameLen = 63
@@ -42,8 +44,10 @@ func NewProvider(config *Config) (*dockerProvider, error) {
 	}
 
 	return &dockerProvider{
-		Client:  cli,
-		DataDir: config.DataDir,
+		Client:           cli,
+		DataDir:          config.DataDir,
+		PodVMDockerImage: config.PodVMDockerImage,
+		NetworkName:      config.NetworkName,
 	}, nil
 }
 
@@ -86,7 +90,8 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s",
 		filepath.Join(p.DataDir, "image"), "/image"))
 
-	instanceID, ip, err := createContainer(ctx, p.Client, instanceName, volumeBinding)
+	instanceID, ip, err := createContainer(ctx, p.Client, instanceName, volumeBinding,
+		p.PodVMDockerImage, p.NetworkName)
 	if err != nil {
 		return nil, err
 	}

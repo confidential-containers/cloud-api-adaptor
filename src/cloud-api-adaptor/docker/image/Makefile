@@ -1,3 +1,5 @@
+include ../../Makefile.defaults
+
 ARCH    ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILDER = ubuntu-binaries-builder-$(ARCH)
 PODVM_IMG ?= quay.io/confidential-containers/podvm-docker-image

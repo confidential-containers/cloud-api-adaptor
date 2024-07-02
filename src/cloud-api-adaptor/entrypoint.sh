@@ -26,7 +26,6 @@ optionals+=""
 [[ "${SECURE_COMMS_OUTBOUNDS}" ]] && optionals+="-secure-comms-outbounds ${SECURE_COMMS_OUTBOUNDS} "
 [[ "${SECURE_COMMS_KBS_ADDR}" ]] && optionals+="-secure-comms-kbs ${SECURE_COMMS_KBS_ADDR} "
 
-
 test_vars() {
     for i in "$@"; do
         [ -z "${!i}" ] && echo "\$$i is NOT set" && EXT=1
@@ -166,6 +165,8 @@ docker() {
     [[ "${DOCKER_TLS_VERIFY}" ]] && optionals+="-docker-tls-verify ${DOCKER_TLS_VERIFY} "
     [[ "${DOCKER_CERT_PATH}" ]] && optionals+="-docker-cert-path ${DOCKER_CERT_PATH} "
     [[ "${DOCKER_API_VERSION}" ]] && optionals+="-docker-api-version ${DOCKER_API_VERSION} "
+    [[ "${DOCKER_PODVM_IMAGE}" ]] && optionals+="-podvm-docker-image ${DOCKER_PODVM_IMAGE} "
+    [[ "${DOCKER_NETWORK_NAME}" ]] && optionals+="-docker-network-name ${DOCKER_NETWORK_NAME} "
 
     set -x
     exec cloud-api-adaptor docker \
