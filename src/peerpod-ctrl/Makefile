@@ -63,7 +63,7 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
-BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere libvirt docker
+BUILTIN_CLOUD_PROVIDERS ?= aws azure gcp ibmcloud vsphere libvirt docker
 # Build tags required to build cloud-api-adaptor are derived from BUILTIN_CLOUD_PROVIDERS.
 # When libvirt is specified, CGO_ENABLED is set to 1.
 space := $() $()
