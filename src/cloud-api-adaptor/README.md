@@ -54,9 +54,9 @@ make podvm-builder podvm-binaries podvm-image
 # or to produce an s390x architecture image
 ARCH=s390x make podvm-builder podvm-binaries podvm-image
 # or to produce a rhel distribution image
-PODVM_DISTRO=rhel make podvm-builder podvm-binaries podvm-image
+PODVM_DISTRO=rhel IMAGE_LOCAL_PATH=/path/to/rhel.qcow2 make podvm-builder podvm-binaries podvm-image
 ```
 
-> N.B. This will populate the image using the component versions found in [versions.yaml](./versions.yaml).
+> N.B. This will populate the image using the component versions found in [versions.yaml](./versions.yaml) (for RHEL image download it and use IMAGE_LOCAL_PATH to point to it).
 
 You can find provider specific instructions on how to import the QCOW2 image for each cloud provider in their respective directories.

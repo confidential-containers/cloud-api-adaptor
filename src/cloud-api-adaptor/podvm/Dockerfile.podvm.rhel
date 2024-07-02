@@ -15,7 +15,7 @@ ARG PODVM_DISTRO=rhel
 ARG UEFI=false
 
 # If not provided, uses system architecture
-ARG ARCH=x86_64
+ARG ARCH
 ARG CAA_SRC=""
 ARG CAA_SRC_REF=""
 
