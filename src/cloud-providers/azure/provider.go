@@ -200,7 +200,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		if err := p.deleteDisk(context.Background(), diskName); err != nil {
 			logger.Printf("deleting disk (%s): %s", diskName, err)
 		}
-		if err := p.deleteNetworkInterfaceAsync(context.Background(), nicName); err != nil {
+		if err := p.deleteNetworkInterface(context.Background(), nicName); err != nil {
 			logger.Printf("deleting nic async (%s): %s", nicName, err)
 		}
 		return nil, fmt.Errorf("Creating instance (%v): %s", result, err)
@@ -273,7 +273,7 @@ func (p *azureProvider) deleteDisk(ctx context.Context, diskName string) error {
 	return nil
 }
 
-func (p *azureProvider) deleteNetworkInterfaceAsync(ctx context.Context, nicName string) error {
+func (p *azureProvider) deleteNetworkInterface(ctx context.Context, nicName string) error {
 	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
 	if err != nil {
 		return fmt.Errorf("creating network interface client: %w", err)
@@ -281,31 +281,30 @@ func (p *azureProvider) deleteNetworkInterfaceAsync(ctx context.Context, nicName
 	rg := p.serviceConfig.ResourceGroupName
 
 	// retry with exponential backoff
-	go func() {
-		err := retry.Do(func() error {
-			pollerResponse, err := nicClient.BeginDelete(ctx, rg, nicName, nil)
-			if err != nil {
-				return fmt.Errorf("beginning network interface deletion: %w", err)
-			}
-			_, err = pollerResponse.PollUntilDone(ctx, nil)
-			if err != nil {
-				return fmt.Errorf("waiting for network interface deletion: %w", err)
-			}
-			return nil
-		},
-			retry.Context(ctx),
-			retry.Attempts(4),
-			retry.Delay(180*time.Second),
-			retry.MaxDelay(180*time.Second),
-			retry.LastErrorOnly(true),
-		)
+	err = retry.Do(func() error {
+		pollerResponse, err := nicClient.BeginDelete(ctx, rg, nicName, nil)
 		if err != nil {
-			logger.Printf("deleting network interface in background (%s): %s", nicName, err)
-		} else {
-			logger.Printf("successfully deleted nic (%s) in background", nicName)
+			return fmt.Errorf("beginning network interface deletion: %w", err)
 		}
-	}()
+		_, err = pollerResponse.PollUntilDone(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("waiting for network interface deletion: %w", err)
+		}
+		return nil
+	},
+		retry.Context(ctx),
+		retry.Attempts(4),
+		retry.Delay(180*time.Second),
+		retry.MaxDelay(180*time.Second),
+		retry.LastErrorOnly(true),
+	)
 
+	if err != nil {
+		logger.Printf("deleting network interface (%s): %s", nicName, err)
+		return err
+	}
+
+	logger.Printf("successfully deleted nic (%s)", nicName)
 	return nil
 }
 
