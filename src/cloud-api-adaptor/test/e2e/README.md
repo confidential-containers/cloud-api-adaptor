@@ -50,9 +50,10 @@ To use existing cluster which have already installed Cloud API Adaptor, you shou
 
 ## Attestation and KBS specific
 
-We need artificats from trustee when do attestation test, to prepare trustee, do as following. 
+We need artifacts from the trustee repo when doing the attestation tests.
+To prepare trustee, execute the following steps:
 
-```
+```sh
 pushd ${cloud-api-adaptor-repo-dir}/src/cloud-api-adaptor/test
 git clone https://github.com/confidential-containers/trustee.git
 pushd trustee
@@ -65,15 +66,18 @@ popd
 ```
 
 We need build and use the PodVM image:
-```
+
+```sh
 pushd ${cloud-api-adaptor}
 make podvm-builder podvm-binaries podvm-image
 popd
 ```
+
 Then extract the PodVM image and use it following [extracting-the-qcow2-image](../../podvm/README.md#extracting-the-qcow2-image)
 
-To deploy the KBS service and test attestation related cases, export following variables like:
-```
+To deploy the KBS service and test attestation related cases, export the following variables like:
+
+```sh
 export DEPLOY_KBS=yes
 export KBS_IMAGE=$(./hack/yq-shim.sh '.oci.kbs.registry' ./versions.yaml)
 export KBS_IMAGE_TAG=$(./hack/yq-shim.sh '.oci.kbs.tag' ./versions.yaml)
@@ -81,7 +85,7 @@ export KBS_IMAGE_TAG=$(./hack/yq-shim.sh '.oci.kbs.tag' ./versions.yaml)
 
 ## Provision file specifics
 
-As mentioned on the previous section, a properties file can be passed to the cloud provisioner that will be used to controll the provisioning operations. The properties are specific of each cloud provider though, see on the sections below.
+As mentioned on the previous section, a properties file can be passed to the cloud provisioner that will be used to control the provisioning operations. The properties are specific of each cloud provider though, see on the sections below.
 
 ### AWS provision properties
 
