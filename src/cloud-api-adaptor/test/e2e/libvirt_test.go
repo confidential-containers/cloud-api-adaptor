@@ -112,3 +112,13 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 	_ = keyBrokerService.EnableKbsCustomizedPolicy("allow_all.rego")
 	DoTestKbsKeyRelease(t, testEnv, assert)
 }
+
+func TestLibvirtRestrictivePolicyBlocksExec(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestRestrictivePolicyBlocksExec(t, testEnv, assert)
+}
+
+func TestLibvirtPermissivePolicyAllowsExec(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPermissivePolicyAllowsExec(t, testEnv, assert)
+}
