@@ -1,6 +1,6 @@
 #!/bin/bash
 
-GO_VERSION="1.21.11"
+GO_VERSION="1.21.12"
 RUST_VERSION="1.72.0"
 
 # Install dependencies
