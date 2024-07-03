@@ -26,6 +26,7 @@ import (
 
 const CURL_IMAGE = "quay.io/curl/curl:latest"
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
+const NGINX_IMAGE = "quay.io/sjenning/nginx:1.15-alpine"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
 

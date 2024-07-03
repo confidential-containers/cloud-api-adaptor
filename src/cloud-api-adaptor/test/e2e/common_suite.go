@@ -429,7 +429,7 @@ func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert Clo
 	clientImageName := BUSYBOX_IMAGE
 	serverPodName := "nginx"
 	serverContainerName := "nginx"
-	serverImageName := "nginx:latest"
+	serverImageName := NGINX_IMAGE
 	serviceName := "nginx"
 	labels := map[string]string{
 		"app": "nginx",
@@ -470,7 +470,7 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 	clientImageName := "docker.io/curlimages/curl:8.4.0"
 	serverPodName := "nginx"
 	serverContainerName := "nginx"
-	serverImageName := "nginx:latest"
+	serverImageName := NGINX_IMAGE
 	caService, _ := tlsutil.NewCAService("nginx")
 	serverCACertPEM := caService.RootCertificate()
 	serverName := "nginx"

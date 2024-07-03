@@ -130,7 +130,7 @@ func TestCreatePeerPodWithPVC(t *testing.T) {
 		storageClassName := "ibmc-vpc-block-5iops-tier"
 		storageSize := "10Gi"
 		podName := "nginx-pvc-pod"
-		imageName := "nginx:latest"
+		imageName := NGINX_IMAGE
 		containerName := "nginx-pvc-container"
 		csiContainerName := "ibm-vpc-block-podvm-node-driver"
 		csiImageName := "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v5.2.0"
