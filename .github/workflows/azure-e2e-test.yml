@@ -11,6 +11,7 @@ env:
   BUILTIN_CLOUD_PROVIDERS: "azure"
   TEST_E2E_CREATE_RG: "no"
   ACR_URL: "${{ vars.AZURE_ACR_URL }}"
+  TEST_TAGS: "owner=github-actions,run=${{ github.run_id }}-${{ github.run_attempt }}"
 
 on:
   schedule:
@@ -110,6 +111,8 @@ jobs:
     needs:
     - generate-podvm-image-version
     - build-caa-container-image
+    # when none of required steps failed, skipped is ok
+    if: always() && !failure() && !cancelled()
     strategy:
       matrix:
         parameters:
@@ -117,7 +120,6 @@ jobs:
             machine_type: "Standard_DC2es_v5"
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
-    if: always() && !cancelled() && needs.build-caa-container-image.result != 'failure'
     steps:
     - uses: actions/checkout@v3
 
@@ -162,6 +164,7 @@ jobs:
           KBS_IMAGE="${KBS_IMAGE}"
           KBS_IMAGE_TAG="${KBS_IMAGE_TAG}"
           AZURE_INSTANCE_SIZE="${AZURE_INSTANCE_SIZE}"
+          TAGS="${{ env.TEST_TAGS }}"
         EOF
         cat "$TEST_PROVISION_FILE"
         # assert that no variable is unset
@@ -199,10 +202,10 @@ jobs:
       run:
         working-directory: src/cloud-api-adaptor
     needs:
-    - build-podvm-image
-    - build-caa-container-image
     - install-aks
-    - generate-podvm-image-version
+    - build-podvm-image
+    # when none of required steps failed, build-podvm-image can be skipped
+    if: always() && !failure() && !cancelled()
     strategy:
       matrix:
         parameters:
@@ -210,7 +213,6 @@ jobs:
             machine_type: "Standard_DC2es_v5"
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
-    if: always() && !cancelled() && needs.build-podvm-image.result != 'failure'
     steps:
     - uses: actions/checkout@v3
 
@@ -269,16 +271,12 @@ jobs:
           --name "${CLUSTER_NAME}"
         make test-e2e
 
-  cleanup-resources:
+  cleanup:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/cloud-api-adaptor
     needs:
-    - generate-podvm-image-version
-    - build-podvm-image
-    - build-caa-container-image
     - run-e2e-test
+    - generate-podvm-image-version
+    if: always()
     strategy:
       matrix:
         parameters:
@@ -286,28 +284,7 @@ jobs:
             machine_type: "Standard_DC2es_v5"
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
-    if: always()
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Extract go version number
-      run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
-
-    - name: Set up Go environment
-      uses: actions/setup-go@v4
-      with:
-        go-version: ${{ env.GO_VERSION }}
-
-    - name: Set Provisioner Environment Variables
-      run: |
-          echo "TEST_PROVISION_FILE=${{ format(env.TEST_PROVISION_PATH_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
-          echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
-
-    - name: Restore the configuration created before
-      uses: actions/download-artifact@v3
-      with:
-        name: e2e-configuration
-
     - uses: azure/login@v1
       name: 'Az CLI login'
       with:
@@ -315,13 +292,16 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
-    # Clean up step, run regardless of the failure state.
-    - name: Run deprovisioner
-      working-directory: src/cloud-api-adaptor/test/tools
+    - name: Delete coco namespace
+      # We want to delete the coco namespace because CAA might still spawn resources
+      # which prevents deletion of the AKS cluster
       run: |
-        make caa-provisioner-cli
-        # Ignore the error if the deprovision fails.
-        ./caa-provisioner-cli -action=deprovision || true
+        az aks get-credentials \
+          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" || true
+        namespace="confidential-containers-system"
+        kubectl patch namespace "$namespace" -p '{"metadata":{"finalizers": null }}' || true
+        kubectl delete namespace "$namespace" || true
 
     - name: Remove podvm image
       if: github.event.inputs.podvm-image-id == ''
@@ -345,11 +325,35 @@ jobs:
           --image "${ACR_URL}/cloud-api-adaptor:dev-${GITHUB_SHA}" \
           --yes || true
 
+    - name: Remove dangling VMs
+      # Remove any VMs that might have been left behind in failed test runs
+      run: |
+        vms=$(az resource list \
+          --tag owner=github-actions \
+          --tag run="${{ github.run_id }}-${{ github.run_attempt }}" \
+          -o tsv --query "[?type == 'Microsoft.Compute/virtualMachines'].name")
+        for vm in $vms; do
+          az vm delete -n "$vm" -g "${{ secrets.AZURE_RESOURCE_GROUP }}" --yes || true
+        done
+
+    - name: Remove dangling NICs
+      # Remove any NICs that might have been left behind in failed test runs
+      # NICs are reserved for 180s for VMs, even if they never launched
+      run: |
+        nics=$(az resource list \
+          --tag owner=github-actions \
+          --tag run="${{ github.run_id }}-${{ github.run_attempt }}" \
+          -o tsv --query "[?type == 'Microsoft.Network/networkInterfaces'].name")
+        sleep 180
+        for nic in $nics; do
+          az network nic delete -n "$nic" -g "${{ secrets.AZURE_RESOURCE_GROUP }}" || true
+        done
+
     - name: Remove AKS cluster
       run: |
         # Delete the cluster even if it has been deleted already or does not exists.
         az aks delete \
-          --name "${CLUSTER_NAME}" \
+          --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" \
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
           --no-wait \
           --yes || true

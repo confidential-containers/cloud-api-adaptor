@@ -35,6 +35,7 @@ type AzureProperties struct {
 	IsSelfManaged       bool
 	KbsImage            string
 	KbsImageTag         string
+	Tags                string
 
 	InstanceSize string
 	NodeName     string
@@ -69,6 +70,7 @@ func initAzureProperties(properties map[string]string) error {
 		KbsImage:            properties["KBS_IMAGE"],
 		KbsImageTag:         properties["KBS_IMAGE_TAG"],
 		InstanceSize:        properties["AZURE_INSTANCE_SIZE"],
+		Tags:                properties["TAGS"],
 	}
 
 	CIManagedStr := properties["IS_CI_MANAGED_CLUSTER"]
