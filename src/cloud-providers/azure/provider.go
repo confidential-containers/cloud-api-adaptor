@@ -126,6 +126,7 @@ func (p *azureProvider) createNetworkInterface(ctx context.Context, nicName stri
 				},
 			},
 		},
+		Tags: p.getResourceTags(),
 	}
 
 	if p.serviceConfig.SecurityGroupId != "" {
@@ -370,6 +371,16 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 	return nil
 }
 
+func (p *azureProvider) getResourceTags() map[string]*string {
+	tags := map[string]*string{}
+
+	// Add custom tags from serviceConfig.Tags
+	for k, v := range p.serviceConfig.Tags {
+		tags[k] = to.Ptr(v)
+	}
+	return tags
+}
+
 func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName string, vmNIC *armnetwork.Interface) (*armcompute.VirtualMachine, error) {
 	userDataB64 := base64.StdEncoding.EncodeToString([]byte(cloudConfig))
 
@@ -411,14 +422,6 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 		imgRef = &armcompute.ImageReference{
 			CommunityGalleryImageID: to.Ptr(p.serviceConfig.ImageId),
 		}
-	}
-
-	// Add tags to the instance
-	tags := map[string]*string{}
-
-	// Add custom tags from serviceConfig.Tags to the instance
-	for k, v := range p.serviceConfig.Tags {
-		tags[k] = to.Ptr(v)
 	}
 
 	vmParameters := armcompute.VirtualMachine{
@@ -469,8 +472,7 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 			},
 			UserData: to.Ptr(userDataB64),
 		},
-		// Add tags to the instance
-		Tags: tags,
+		Tags: p.getResourceTags(),
 	}
 
 	return &vmParameters, nil
