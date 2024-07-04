@@ -15,7 +15,7 @@ source "amazon-ebs" "rhel" {
   subnet_id     = "${var.subnet_id}"
   source_ami_filter {
     filters = {
-      name                = "RHEL-9.1.0_HVM-*"
+      name                = "RHEL-9.4.0_HVM-*"
       root-device-type    = "ebs"
       virtualization-type = "hvm"
       architecture        = "x86_64"
