@@ -46,12 +46,8 @@ and trustee versions were updated when their components released as listed above
 As the [CoCo operator](https://github.com/confidential-containers/operator/) doesn't release until after peer pods,
 the [current plan](https://github.com/confidential-containers/confidential-containers/pull/201#discussion_r1570606331),
 is to pick the latest operator commit to pin that in our released version's instructions of deploying the operator.
-To do this, we should update the `git.coco-operator.reference` value in [versions.yaml](../src/cloud-api-adaptor/versions.yaml).
-
-When this change is merged, it triggers the
-[project images publish workflow](../.github/workflows/publish_images_on_push.yaml) to create a new container image in
-[`quay.io/confidential-containers/cloud-api-adaptor`](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags)
-to use in testing.
+To do this, we should update the `git.coco-operator.reference` value in [versions.yaml](../src/cloud-api-adaptor/versions.yaml)
+and create a commit for this and add the following changes as a second commit to the same PR.
 
 #### Tags and update go submodules
 
@@ -73,13 +69,21 @@ The process should go something like:
 Please keep the local replace references for `cloud-providers`, `peerpod-ctrl` and `cloud-api-adaptor`
 and run `make tidy` under the [cloud-api-adaptor](../) to update packages for each go modules.
 
-- Merge the PR with this update to update the `main` branch
+- Create and merge the PR with the operator version and go module commits to update the `main` branch. When this change
+is merged, it triggers the [project images publish workflow](../.github/workflows/publish_images_on_push.yaml) to
+create a new container image in
+[`quay.io/confidential-containers/cloud-api-adaptor`](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags)
+to use in testing.
 
-- Create git tags for all go modules, you can use the [release-helper.sh](../hack/release-helper.sh) script to create related git commands, (e.g. `v0.8.0-alpha.1`)
+- Create git tags for all go modules. You can use the [release-helper.sh](../hack/release-helper.sh) script with the `go-tag` command
+to generate all the git commands needed.
+> **Note:** `hack/release-helper.sh` `go-tag` has an optional third parameter for the name of the upstream remote,
+which defaults to origin if not supplied
+e.g. To create the tags for the upstream branch with the `v0.8.0-alpha.1` release, run:
 ```bash
-./hack/release-helper.sh v0.8.0-alpha.1
+./hack/release-helper.sh go-tag v0.8.0-alpha.1 upstream
 
-The intput release tag: v0.8.0-alpha.1
+The input release tag: v0.8.0-alpha.1
 The follow git commands can be used to do release tags.
 *****************************IMPORTANT********************************************
 After a tag has been set, it cannot be moved!
@@ -87,17 +91,17 @@ The Go module proxy caches the hash of the first tag and will refuse any update.
 If you mess up, you need to restart the tagging with the next patch version.
 **********************************************************************************
 git tag src/cloud-api-adaptor/v0.8.0-alpha.1 main
-git push origin src/cloud-api-adaptor/v0.8.0-alpha.1
+git push upstream src/cloud-api-adaptor/v0.8.0-alpha.1
 git tag src/cloud-providers/v0.8.0-alpha.1 main
-git push origin src/cloud-providers/v0.8.0-alpha.1
+git push upstream src/cloud-providers/v0.8.0-alpha.1
 git tag src/csi-wrapper/v0.8.0-alpha.1 main
-git push origin src/csi-wrapper/v0.8.0-alpha.1
+git push upstream src/csi-wrapper/v0.8.0-alpha.1
 git tag src/peerpod-ctrl/v0.8.0-alpha.1 main
-git push origin src/peerpod-ctrl/v0.8.0-alpha.1
+git push upstream src/peerpod-ctrl/v0.8.0-alpha.1
 git tag src/peerpodconfig-ctrl/v0.8.0-alpha.1 main
-git push origin src/peerpodconfig-ctrl/v0.8.0-alpha.1
+git push upstream src/peerpodconfig-ctrl/v0.8.0-alpha.1
 git tag src/webhook/v0.8.0-alpha.1 main
-git push origin src/webhook/v0.8.0-alpha.1
+git push upstream src/webhook/v0.8.0-alpha.1
 ```
 Copy and paste the generated commands to create and push release candidate tags, the output looks like:
 ```bash
@@ -134,16 +138,15 @@ successful.
 
 Once the pre-release versions are tested and stable, then we can go ahead and cut the release of "peer pods".
 
-As part of the release we should pin the cloud-api-adaptor image used on the deployment files. You should use the commit SHA-1 of the last built `quay.io/confidential-containers/cloud-api-adaptor` image to update the overlays kustomization files. For example, suppose the release image is `quay.io/confidential-containers/cloud-api-adaptor:6d7d2a3fe8243809b3c3a710792c8498292e2fc3`:
+As part of the release we should pin the cloud-api-adaptor image used on the deployment files. You should use the
+commit SHA-1 of the last built `quay.io/confidential-containers/cloud-api-adaptor` image to update the overlays
+kustomization files. For example, suppose the release image is
+`quay.io/confidential-containers/cloud-api-adaptor:6d7d2a3fe8243809b3c3a710792c8498292e2fc3`, we can use the
+`release-helper.sh` script's `caa-image-tag` command to update all the cloud-providers:
 
 ```
 RELEASE_TAG="6d7d2a3fe8243809b3c3a710792c8498292e2fc3"
-pushd src/cloud-api-adaptor/install/overlays/
-for provider in aws azure ibmcloud ibmcloud-powervs vsphere; do cd ${provider}; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:${RELEASE_TAG}; cd -; done
-
-# Note that the libvirt use the tag with prefix 'dev-'
-cd libvirt; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:dev-${RELEASE_TAG};
-popd
+./hack/release-helper.sh caa-image-tag ${RELEASE_TAG}
 ```
 
 Include those changes within a commit and add the following changes as a second commit:
@@ -155,11 +158,13 @@ release tags of the project dependencies e.g. `v0.8.0` and creating the tags wit
 - Update the [peerpod-ctrl go module](../src/peerpod-ctrl/go.mod) to use the release version version of `cloud-providers`
 - Update the [cloud-api-adaptor go module](../src/cloud-api-adaptor/go.mod) to use the release version version of `cloud-providers` and `peerpod-ctrl`
 - Update the [csi-wrapper go module](../src/csi-wrapper/go.mod) to use the the release version version of `cloud-api-adaptor`
+- Run `make tidy` under the [cloud-api-adaptor](../) to update packages for each go modules.
 - Merge the 2 commits PR with this update to update the `main` branch
     > **Note:** as the `main` branch is locked, this might require an admin to unlock, or bypass the merge restriction.
-- Create git tags for all go modules, you can use the [release-helper.sh](../hack/release-helper.sh) script to create related git commands, (e.g. `v0.8.0`)
+
+- Create git tags for the release, for all go modules e.g. To create the tags for the upstream branch with the `v0.8.0` release, run:
 ```bash
-./hack/release-helper.sh v0.8.0
+./hack/release-helper.sh go-tag v0.8.0 upstream
 The intput release tag: v0.8.0
 The follow git commands can be used to do release tags.
 *****************************IMPORTANT********************************************
@@ -168,17 +173,17 @@ The Go module proxy caches the hash of the first tag and will refuse any update.
 If you mess up, you need to restart the tagging with the next patch version.
 **********************************************************************************
 git tag src/cloud-api-adaptor/v0.8.0 main
-git push origin src/cloud-api-adaptor/v0.8.0
+git push upstream src/cloud-api-adaptor/v0.8.0
 git tag src/cloud-providers/v0.8.0 main
-git push origin src/cloud-providers/v0.8.0
+git push upstream src/cloud-providers/v0.8.0
 git tag src/csi-wrapper/v0.8.0 main
-git push origin src/csi-wrapper/v0.8.0
+git push upstream src/csi-wrapper/v0.8.0
 git tag src/peerpod-ctrl/v0.8.0 main
-git push origin src/peerpod-ctrl/v0.8.0
+git push upstream src/peerpod-ctrl/v0.8.0
 git tag src/peerpodconfig-ctrl/v0.8.0 main
-git push origin src/peerpodconfig-ctrl/v0.8.0
+git push upstream src/peerpodconfig-ctrl/v0.8.0
 git tag src/webhook/v0.8.0 main
-git push origin src/webhook/v0.8.0
+git push upstream src/webhook/v0.8.0
 ```
 Copy and paste the generated commands to create and push release tags, the output looks like:
 ```bash
