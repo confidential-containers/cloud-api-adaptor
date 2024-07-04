@@ -122,8 +122,8 @@ image-with-arch: .git-commit ## Build the per arch image
 .PHONY: deploy
 deploy: ## Deploy cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
 ifneq ($(CLOUD_PROVIDER),)
-	kubectl apply -k "github.com/confidential-containers/operator/config/default?ref=v0.9.0-alpha1"
-	kubectl apply -k "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods?ref=v0.9.0-alpha1"
+	kubectl apply -k "github.com/confidential-containers/operator/config/default"
+	kubectl apply -k "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods"
 	kubectl apply -k install/overlays/$(CLOUD_PROVIDER)
 else
 	$(error CLOUD_PROVIDER is not set)
