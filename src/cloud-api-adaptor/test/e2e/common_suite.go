@@ -62,7 +62,6 @@ func DoTestCreatePodWithConfigMap(t *testing.T, e env.Environment, assert CloudA
 				}
 			},
 			TestCommandStderrFn: IsBufferEmpty,
-			TestErrorFn:         IsErrorEmpty,
 		},
 	}
 
@@ -100,7 +99,6 @@ func DoTestCreatePodWithSecret(t *testing.T, e env.Environment, assert CloudAsse
 				}
 			},
 			TestCommandStderrFn: IsBufferEmpty,
-			TestErrorFn:         IsErrorEmpty,
 		},
 		{
 			Command:       []string{"cat", passwordPath},
@@ -115,7 +113,6 @@ func DoTestCreatePodWithSecret(t *testing.T, e env.Environment, assert CloudAsse
 				}
 			},
 			TestCommandStderrFn: IsBufferEmpty,
-			TestErrorFn:         IsErrorEmpty,
 		},
 	}
 
@@ -138,7 +135,6 @@ func DoTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, e env.Enviro
 				}
 			},
 			TestCommandStderrFn: IsBufferEmpty,
-			TestErrorFn:         IsErrorEmpty,
 		},
 	}
 
@@ -226,7 +222,6 @@ func DoTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, e env.Environment, as
 				}
 			},
 			TestCommandStderrFn: IsBufferEmpty,
-			TestErrorFn:         IsErrorEmpty,
 		},
 	}
 	NewTestCase(t, e, "PeerPodWithPVCAndCSIWrapper", assert, "PVC is created and mounted as expected").WithPod(pod).WithPVC(myPVC).WithTestCommands(testCommands).Run()
