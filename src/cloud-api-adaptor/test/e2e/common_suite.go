@@ -615,3 +615,45 @@ func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert Cloud
 
 	NewTestCase(t, e, "DoTestKbsKeyReleaseForFailure", assert, "Kbs key release is failed").WithPod(pod).WithTestCommands(testCommands).Run()
 }
+
+func DoTestRestrictivePolicyBlocksExec(t *testing.T, e env.Environment, assert CloudAssert) {
+	allowAllExceptExecPolicyFilePath := "fixtures/policies/allow-all-except-exec-process.rego"
+	podName := "policy-exec-rejected"
+	pod := NewPodWithPolicy(E2eNamespace, podName, allowAllExceptExecPolicyFilePath)
+
+	testCommands := []TestCommand{
+		{
+			Command:       []string{"ls"},
+			ContainerName: pod.Spec.Containers[0].Name,
+			TestErrorFn: func(err error) bool {
+				if strings.Contains(err.Error(), "failed to exec in container") && strings.Contains(err.Error(), "ExecProcessRequest is blocked by policy") {
+					log.Infof("Exec process was blocked %s", err.Error())
+					return true
+				} else {
+					log.Errorf("Exec process was allowed: %s", err.Error())
+					return false
+				}
+			},
+		},
+	}
+	NewTestCase(t, e, "PodVMwithPolicyBlockingExec", assert, "Pod which blocks Exec Process").WithPod(pod).WithTestCommands(testCommands).Run()
+}
+
+func DoTestPermissivePolicyAllowsExec(t *testing.T, e env.Environment, assert CloudAssert) {
+	allowAllPolicyFilePath := "fixtures/policies/allow-all.rego"
+	podName := "policy-all-allowed"
+	pod := NewPodWithPolicy(E2eNamespace, podName, allowAllPolicyFilePath)
+
+	// Just check there are no errors and something returned
+	testCommands := []TestCommand{
+		{
+			Command:       []string{"ls"},
+			ContainerName: pod.Spec.Containers[0].Name,
+			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				return stdout.Len() > 0
+			},
+			TestCommandStderrFn: IsBufferEmpty,
+		},
+	}
+	NewTestCase(t, e, "PodVMwithPermissivePolicy", assert, "Pod which allows all kata agent APIs").WithPod(pod).WithTestCommands(testCommands).Run()
+}
