@@ -391,6 +391,8 @@ func AssessPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Po
 					} else {
 						return err.Error(), err
 					}
+				} else if testCommand.TestErrorFn != nil {
+					return "", fmt.Errorf("We expected an error from Pod %s, but it was not found", pod.Name)
 				}
 				if testCommand.TestCommandStderrFn != nil {
 					if !testCommand.TestCommandStderrFn(stderr) {
@@ -407,8 +409,6 @@ func AssessPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Po
 					}
 				}
 			}
-			//After command is executed in expected pod, it doesn't need to loop other pods.
-			break
 		}
 	}
 	return "", nil
