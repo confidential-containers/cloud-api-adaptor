@@ -18,12 +18,12 @@ ARG ACTIVATION_KEY
 ARG YQ_VERSION
 ARG YQ_CHECKSUM
 
-ENV SMDEV_CONTAINER_OFF=1
 ENV ARCH=${ARCH}
 
 # This registering RHEL when building on an unsubscribed system
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
 RUN if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
+    rm -f /etc/rhsm-host && rm -f /etc/pki/entitlement-host; \
     subscription-manager register --org=${ORG_ID} --activationkey=${ACTIVATION_KEY}; \
     fi
     
