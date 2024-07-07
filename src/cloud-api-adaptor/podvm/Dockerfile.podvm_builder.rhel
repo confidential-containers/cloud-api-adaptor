@@ -68,4 +68,4 @@ RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC
     unzip protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${ARCH/s390x/s390_64}.zip
 
 WORKDIR /src
-ENV=GOPATH /src
+ENV GOPATH=/src
