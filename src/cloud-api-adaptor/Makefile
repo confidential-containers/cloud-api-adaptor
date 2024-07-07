@@ -166,13 +166,11 @@ BINARIES_DOCKERFILE := Dockerfile.podvm_binaries$(DOCKERFILE_SUFFIX)
 PODVM_DOCKERFILE := Dockerfile.podvm$(DOCKERFILE_SUFFIX)
 
 podvm-builder:
-ifeq ($(PODVM_DISTRO),rhel)
 	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
 	--build-arg GO_VERSION=$(GO_VERSION) \
 	--build-arg ORG_ID=$(ORG_ID) \
-	--build-arg ARCH=$(ARCH) \
 	--build-arg ACTIVATION_KEY=$(ACTIVATION_KEY) \
-	--build-arg PACKER_VERSION=$(PACKER_VERSION) \
+	--build-arg ARCH=$(ARCH) \
 	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
 	--build-arg RUST_VERSION=$(RUST_VERSION) \
 	--build-arg YQ_VERSION=$(YQ_VERSION) \
@@ -180,16 +178,6 @@ ifeq ($(PODVM_DISTRO),rhel)
 	--build-arg YQ_ARCH=$(ARCH) \
 	--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390_64) \
 	$(DOCKER_OPTS) .
-else
-	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
-	--build-arg GO_VERSION=$(GO_VERSION) \
-	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
-	--build-arg RUST_VERSION=$(RUST_VERSION) \
-	--build-arg YQ_VERSION=$(YQ_VERSION) \
-	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
-	--build-arg YQ_ARCH=$(ARCH) \
-	$(DOCKER_OPTS) .
-endif
 
 podvm-binaries:
 	cp -rf ../../.git .git
