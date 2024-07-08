@@ -10,13 +10,13 @@ cloudimg:
         url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-s390x.img
         checksum: "sha256:24673aa86785573d3a92e15166ff81beff88cbb0abc01938f156eb1332e87cd3"
   rhel:
-    9: # dummy link, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
+    9: # dummy links, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
       amd64:
         url: https://access.redhat.com/downloads/content/479/ver=/rhel---9/9.4/x86_64/product-software
         checksum: "sha256:d362e72518a2d7415d850b8177c814f6fd87f42ca1640bda17e98855e1d6baad"
       s390x:
-        url: https://access.redhat.com/downloads/content/433/ver=/rhel---9/9.3%20Beta/s390x/product-software
-        checksum: "sha256:d436ffeac7d468f75526ca8b8bab1cba64ba3ab2889ccd11fa107a7323b267db"
+        url: https://access.redhat.com/downloads/content/72/ver=/rhel---9/9.4/s390x/product-software
+        checksum: "sha256:e1f1868484db0b7b2fedc708b8a589a4ebbe341fae142d776cba1475d4a93642"
 
 tools:
   bats: 1.10.0
