@@ -467,7 +467,7 @@ func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert Clo
 func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAssert) {
 	clientPodName := "curl"
 	clientContainerName := "curl"
-	clientImageName := "docker.io/curlimages/curl:8.4.0"
+	clientImageName := CURL_IMAGE
 	serverPodName := "nginx"
 	serverContainerName := "nginx"
 	serverImageName := NGINX_IMAGE

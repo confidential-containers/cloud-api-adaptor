@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const CURL_IMAGE = "quay.io/curl/curl:latest"
+const CURL_IMAGE = "quay.io/curl/curl:8.4.0"
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 const NGINX_IMAGE = "quay.io/sjenning/nginx:1.15-alpine"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
