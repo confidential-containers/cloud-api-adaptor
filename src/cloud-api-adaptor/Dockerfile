@@ -7,10 +7,10 @@ ARG BASE=registry.fedoraproject.org/fedora:39
 # binary into the container image of the target platform ($TARGETPLATFORM)
 # that was specified with --platform. For more details see:
 # https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
-FROM --platform=$BUILDPLATFORM $BUILDER_BASE as builder-release
+FROM --platform=$BUILDPLATFORM $BUILDER_BASE AS builder-release
 # For `dev` builds due to CGO constraints we have to emulate the target platform
 # instead of using Go's cross-compilation
-FROM --platform=$TARGETPLATFORM $BUILDER_BASE as builder-dev
+FROM --platform=$TARGETPLATFORM $BUILDER_BASE AS builder-dev
 
 RUN dnf install -y libvirt-devel && dnf clean all
 
@@ -37,9 +37,9 @@ COPY cloud-api-adaptor/proto ./proto
 
 RUN CC=gcc make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
 
-FROM --platform=$TARGETPLATFORM $BASE as base-release
+FROM --platform=$TARGETPLATFORM $BASE AS base-release
 
-FROM base-release as base-dev
+FROM base-release AS base-dev
 RUN dnf install -y libvirt-libs /usr/bin/ssh && dnf clean all
 
 FROM base-${BUILD_TYPE}
