@@ -20,6 +20,29 @@ END
 chmod +x /usr/share/oci/hooks/prestart/nvidia-container-toolkit.sh
 
 
+# according to https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/precompiled/
+# the correct way to install pre-compiled drivers is to update kernel and opt-into a precompiled modularity stream,
+# however, it may take some time between latest kernel version is released until the precompiled pkgs are available;
+# which may cause driver failure.
+# This function tries to update the kernel to the latest version supported by the nvidia precompiled drivers, if fails
+# it upgrades to the latest kernel version available.
+rhel_kernel_version_matching() {
+    dnf -q -y module enable nvidia-driver:${NVIDIA_DRIVER_VERSION}
+    local latest_nv_version # latest nvidia driver available version
+    local latest_kmod_pkg_name # latest version of kmod-nvidia pkg name
+    local matching_kernel_version # extracted matching kernel version from kmod-nvidia name
+    latest_nv_version=$(repoquery --latest-limit 1 nvidia-driver  --queryformat "%{version}" -q)
+    latest_kmod_pkg_name=$(repoquery --latest-limit 1 kmod-nvidia-${latest_nv_version}-* --queryformat "%{name}" -q | sort -V | tail -n 1)
+    matching_kernel_version=$(echo ${latest_kmod_pkg_name} | sed "s/kmod-nvidia-${latest_nv_version}-//")
+    echo "latest_nv_version: ${latest_nv_version}, latest_kmod_pkg_name: ${latest_kmod_pkg_name}, matching_kernel_version: ${matching_kernel_version}"
+    dnf -q -y install kernel-${matching_kernel_version}*  kernel-core-${matching_kernel_version}*  kernel-modules-core-${matching_kernel_version}*  kernel-modules-${matching_kernel_version}*
+    if [ $? -eq 0 ]; then
+        return 0
+    else
+        dnf -q -y update kernel kernel-core kernel-modules-core kernel-modules
+    fi
+}
+
 # PODVM_DISTRO variable is set as part of the podvm image build process
 # and available inside the packer VM
 # Add NVIDIA packages
@@ -34,11 +57,11 @@ if  [[ "$PODVM_DISTRO" == "ubuntu" ]]; then
 fi
 if  [[ "$PODVM_DISTRO" == "rhel" ]]; then
     dnf config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
+    rhel_kernel_version_matching
 
     dnf install -q -y "${NVIDIA_USERSPACE_PKGS[@]/%/-${NVIDIA_USERSPACE_VERSION}}"
     # This will use the default stream
     dnf -q -y module install nvidia-driver:${NVIDIA_DRIVER_VERSION}
-    dnf install -q -y kernel-modules
 fi
 
 # Configure the settings for nvidia-container-runtime
