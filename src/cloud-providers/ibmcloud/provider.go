@@ -76,7 +76,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	if config.VpcServiceURL == "" && ok {
 		// Assume in prod if fetching from labels for now
 		// TODO handle other environments
-		config.VpcServiceURL = fmt.Sprintf("https://%s.iaas.provider.ibm.com/v1", nodeRegion)
+		config.VpcServiceURL = fmt.Sprintf("https://%s.iaas.cloud.ibm.com/v1", nodeRegion)
 	}
 
 	vpcV1, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{
