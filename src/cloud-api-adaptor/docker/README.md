@@ -117,6 +117,9 @@ This will create a two node kind cluster, automatically download the pod VM
 image mentioned in the `provision_docker.properties` file and run the tests. On
 completion of the test, the kind cluster will be automatically deleted.
 
+If you want to run the tests on a crio based kind cluster, then update `CONTAINER_RUNTIME` to `crio`
+in the `provision_docker.properties` file.
+
 > **Note:**  To overcome docker rate limiting issue or to download images from private registries,
 create a `config.json` file under `/tmp` with your registry secrets.
 
@@ -142,7 +145,8 @@ This auth string needs to be used in `/tmp/config.json` as shown below:
 ```
 
 If you want to use a different location for the registry secret, then remember to update the same
-in the `src/cloud-api-adaptor/docker/kind-config.yaml` file.
+in the `src/cloud-api-adaptor/docker/kind-config.yaml` file if using `containerd` or
+in the `src/cloud-api-adaptor/docker/kind-config-crio.yaml` file if using `crio`.
 
 > **Note:** If you have executed the tests with `TEST_TEARDOWN=no`, then you'll
 > need to manually delete the `kind` created cluster by running the following
@@ -151,6 +155,7 @@ in the `src/cloud-api-adaptor/docker/kind-config.yaml` file.
 ```sh
 kind delete cluster --name peer-pods
 ```
+
 
 ## Run sample application
 
