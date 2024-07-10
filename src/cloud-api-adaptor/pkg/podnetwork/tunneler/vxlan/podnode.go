@@ -4,6 +4,7 @@
 package vxlan
 
 import (
+	"errors"
 	"fmt"
 	"net/netip"
 
@@ -12,8 +13,8 @@ import (
 )
 
 const (
-	podVxlanInterface = "vxlan0"
-	maxMTU            = 1450
+	hostVxlanInterface = "vxlan0"
+	maxMTU             = 1450
 )
 
 type podNodeTunneler struct {
@@ -24,6 +25,11 @@ func NewPodNodeTunneler() tunneler.Tunneler {
 }
 
 func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
+
+	podVxlanInterface := config.InterfaceName
+	if podVxlanInterface == "" {
+		return errors.New("InterfaceName is not specified")
+	}
 
 	nodeAddr := config.WorkerNodeIP
 
@@ -53,13 +59,17 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *
 		ID:    config.VXLANID,
 		Port:  config.VXLANPort,
 	}
-	vxlan, err := hostNS.LinkAdd(podVxlanInterface, vxlanDevice)
+	vxlan, err := hostNS.LinkAdd(hostVxlanInterface, vxlanDevice)
 	if err != nil {
-		return fmt.Errorf("failed to add vxlan interface %s: %w", podVxlanInterface, err)
+		return fmt.Errorf("failed to add vxlan interface %s: %w", hostVxlanInterface, err)
 	}
 
 	if err := vxlan.SetNamespace(podNS); err != nil {
-		return fmt.Errorf("failed to move vxlan interface %s to netns %s: %w", podVxlanInterface, podNS.Path(), err)
+		return fmt.Errorf("failed to move vxlan interface %s to netns %s: %w", hostVxlanInterface, podNS.Path(), err)
+	}
+
+	if err := vxlan.SetName(podVxlanInterface); err != nil {
+		return fmt.Errorf("failed to rename vxlan interface %s on netns %s: %w", hostVxlanInterface, podNS.Path(), err)
 	}
 
 	if err := vxlan.SetHardwareAddr(config.PodHwAddr); err != nil {
