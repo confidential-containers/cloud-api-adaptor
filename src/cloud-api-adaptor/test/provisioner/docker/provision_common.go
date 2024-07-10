@@ -31,15 +31,16 @@ type DockerInstallOverlay struct {
 }
 
 type DockerProperties struct {
-	DockerHost  string
-	ApiVer      string
-	ClusterName string
-	NetworkName string
-	PodvmImage  string
-	CaaImage    string
-	CaaImageTag string
-	KbsImage    string
-	KbsImageTag string
+	DockerHost       string
+	ApiVer           string
+	ClusterName      string
+	NetworkName      string
+	PodvmImage       string
+	CaaImage         string
+	CaaImageTag      string
+	KbsImage         string
+	KbsImageTag      string
+	ContainerRuntime string
 }
 
 var DockerProps = &DockerProperties{}
@@ -47,15 +48,16 @@ var DockerProps = &DockerProperties{}
 func initDockerProperties(properties map[string]string) error {
 
 	DockerProps = &DockerProperties{
-		DockerHost:  properties["DOCKER_HOST"],
-		ApiVer:      properties["DOCKER_API_VERSION"],
-		ClusterName: properties["CLUSTER_NAME"],
-		NetworkName: properties["DOCKER_NETWORK_NAME"],
-		PodvmImage:  properties["DOCKER_PODVM_IMAGE"],
-		CaaImage:    properties["CAA_IMAGE"],
-		CaaImageTag: properties["CAA_IMAGE_TAG"],
-		KbsImage:    properties["KBS_IMAGE"],
-		KbsImageTag: properties["KBS_IMAGE_TAG"],
+		DockerHost:       properties["DOCKER_HOST"],
+		ApiVer:           properties["DOCKER_API_VERSION"],
+		ClusterName:      properties["CLUSTER_NAME"],
+		NetworkName:      properties["DOCKER_NETWORK_NAME"],
+		PodvmImage:       properties["DOCKER_PODVM_IMAGE"],
+		CaaImage:         properties["CAA_IMAGE"],
+		CaaImageTag:      properties["CAA_IMAGE_TAG"],
+		KbsImage:         properties["KBS_IMAGE"],
+		KbsImageTag:      properties["KBS_IMAGE_TAG"],
+		ContainerRuntime: properties["CONTAINER_RUNTIME"],
 	}
 	return nil
 }
@@ -138,6 +140,7 @@ func (l *DockerProvisioner) GetProperties(ctx context.Context, cfg *envconf.Conf
 		"CAA_IMAGE_TAG":       DockerProps.CaaImageTag,
 		"KBS_IMAGE":           DockerProps.KbsImage,
 		"KBS_IMAGE_TAG":       DockerProps.KbsImageTag,
+		"CONTAINER_RUNTIME":   DockerProps.ContainerRuntime,
 	}
 }
 
@@ -164,8 +167,8 @@ func createKindCluster(workingDir string) error {
 	// TODO: better handle stderr. Messages getting out of order.
 	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
-	// Set CLUSTER_NAME if available. Also unset KUBECONFIG so that the default path is used.
-	cmd.Env = append(cmd.Env, "CLUSTER_NAME="+DockerProps.ClusterName, "KUBECONFIG=")
+	// Set CLUSTER_NAME and CONTAINER_RUNTIME if available. Also unset KUBECONFIG so that the default path is used.
+	cmd.Env = append(cmd.Env, "CLUSTER_NAME="+DockerProps.ClusterName, "KUBECONFIG=", "CONTAINER_RUNTIME="+DockerProps.ContainerRuntime)
 	err := cmd.Run()
 	if err != nil {
 		log.Errorf("Error creating Kind cluster: %v", err)

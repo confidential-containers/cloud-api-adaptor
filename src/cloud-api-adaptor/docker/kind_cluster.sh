@@ -8,6 +8,7 @@ newgrp docker <<EOF
 # delete: deletes a kind cluster
 
 CLUSTER_NAME="${CLUSTER_NAME:-peer-pods}"
+KIND_CONFIG_FILE="kind-config.yaml"
 
 if [ "$1" == "create" ]; then
     # Check if kind is installed
@@ -26,8 +27,16 @@ if [ "$1" == "create" ]; then
     sudo sysctl fs.inotify.max_user_instances=512
 
     # Create a kind cluster
+    echo "runtime: " "\$CONTAINER_RUNTIME"
+
+    if [ "$CONTAINER_RUNTIME" == "crio" ]; then
+        echo "Creating a kind cluster with crio runtime"
+        KIND_CONFIG_FILE="kind-config-crio.yaml"
+    fi
+
+    # Create a kind cluster
     echo "Creating a kind cluster"
-    kind create cluster --name "\$CLUSTER_NAME" --config kind-config.yaml || exit 1
+    kind create cluster --name "\$CLUSTER_NAME" --config "\$KIND_CONFIG_FILE" || exit 1
 
     # Deploy calico
     kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml || exit 1

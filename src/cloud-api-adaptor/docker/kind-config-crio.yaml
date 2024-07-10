@@ -1,0 +1,41 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  disableDefaultCNI: true # disable kindnet
+  podSubnet: 192.168.0.0/16 # set to Calico's default subnet
+nodes:
+  - role: control-plane
+    # Instructions to build - https://github.com/cri-o/cri-o/blob/main/tutorials/crio-in-kind.md#build-node-image
+    image: quay.io/confidential-containers/kind-crio:v1.29.4
+    extraMounts:
+      # The config.json file contains the registry secrets that you might
+      # need to pull images from a private registry or docker registry to avoid
+      # rate limiting.
+      - hostPath: /tmp/config.json
+        containerPath: /var/lib/kubelet/config.json
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          criSocket: unix:///var/run/crio/crio.sock
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          criSocket: unix:///var/run/crio/crio.sock
+  - role: worker
+    image: quay.io/confidential-containers/kind-crio:v1.29.4
+    extraMounts:
+      - hostPath: /var/run/docker.sock
+        containerPath: /var/run/docker.sock
+      - hostPath: /var/lib/docker
+        containerPath: /var/lib/docker
+      # The config.json file contains the registry secrets that you might
+      # need to pull images from a private registry or docker registry to avoid
+      # rate limiting.
+      - hostPath: /tmp/config.json
+        containerPath: /var/lib/kubelet/config.json
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          criSocket: unix:///var/run/crio/crio.sock
