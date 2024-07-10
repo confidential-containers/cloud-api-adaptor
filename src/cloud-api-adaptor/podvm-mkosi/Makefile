@@ -9,6 +9,7 @@ REGISTRY ?= quay.io/confidential-containers
 PODVM_DISTRO ?= fedora
 PODVM_TAG ?= $(VERSIONS_HASH)
 PODVM_NAME ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)-$(ARCH)
+PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image
 
 .DEFAULT_GOAL := all
 .PHONY: all
@@ -16,6 +17,9 @@ all: fedora-binaries-builder binaries image
 
 .PHONY: debug
 debug: fedora-binaries-builder binaries image-debug
+
+.PHONY: container
+container: fedora-binaries-builder binaries image-container
 
 PHONY: fedora-binaries-builder
 fedora-binaries-builder:
@@ -85,6 +89,15 @@ else
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
 endif
 
+PHONY: image-container
+image-container:
+	@echo "Building podvm container image..."
+	docker buildx build \
+		-t $(PODVM_CONTAINER_NAME):$(PODVM_TAG) \
+		-t $(PODVM_CONTAINER_NAME):latest \
+		-f Dockerfile.podvm .
+
+
 PHONY: push-image
 push-image:
 	@echo "Push podvm image to remote repository..."
@@ -95,6 +108,12 @@ ifeq ($(ARCH),s390x)
 		--load \
 		-f ../podvm/Dockerfile.podvm.fedora .
 endif
+
+PHONY: push-image-container
+push-image-container:
+	@echo "Push podvm container image to remote repository..."
+	docker push $(PODVM_CONTAINER_NAME):$(PODVM_TAG)
+	docker push $(PODVM_CONTAINER_NAME):latest
 
 PHONY: clean
 clean:

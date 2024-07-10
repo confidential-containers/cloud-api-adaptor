@@ -1,0 +1,44 @@
+# Adapted from https://github.com/kubernetes-sigs/kind/blob/main/images/base/Dockerfile
+
+ARG BASE_IMAGE=registry.fedoraproject.org/fedora:39
+FROM $BASE_IMAGE AS base
+
+RUN echo "Installing Packages ..." \
+    && dnf install -y \
+      systemd \
+      conntrack iptables nftables iproute ethtool util-linux kmod \
+      libseccomp pigz fuse-overlayfs \
+      nfs-utils which systemd-pam \
+      bash ca-certificates curl jq procps \
+    && find /lib/systemd/system/sysinit.target.wants/ -name "systemd-tmpfiles-setup.service" -delete \
+    && rm -f /lib/systemd/system/multi-user.target.wants/* \
+    && rm -f /etc/systemd/system/*.wants/* \
+    && rm -f /lib/systemd/system/local-fs.target.wants/* \
+    && rm -f /lib/systemd/system/sockets.target.wants/*udev* \
+    && rm -f /lib/systemd/system/sockets.target.wants/*initctl* \
+    && rm -f /lib/systemd/system/basic.target.wants/* \
+    && echo "ReadKMsg=no" >> /etc/systemd/journald.conf
+
+RUN echo "Enabling / Disabling services ... " \
+    && systemctl mask systemd-binfmt.service \
+    && systemctl enable systemd-logind dbus.socket
+
+
+# Add podvm resources
+COPY ./resources/binaries-tree/etc/ /etc/
+COPY ./resources/binaries-tree/usr/ /usr/
+COPY ./resources/binaries-tree/pause_bundle/ /pause_bundle/
+
+RUN curl -LO https://raw.githubusercontent.com/confidential-containers/cloud-api-adaptor/main/src/cloud-api-adaptor/podvm/qcow2/misc-settings.sh
+
+RUN PODVM_DISTRO=ubuntu CLOUD_PROVIDER=generic DISABLE_CLOUD_CONFIG=true bash ./misc-settings.sh
+
+COPY --chmod=0755 entrypoint.sh  /usr/local/bin/
+
+# https://systemd.io/CONTAINER_INTERFACE/
+ENV container=docker
+
+# systemd exits on SIGRTMIN+3, not SIGTERM (which re-executes it)
+# https://bugzilla.redhat.com/show_bug.cgi?id=1201657
+STOPSIGNAL SIGRTMIN+3
+ENTRYPOINT [ "/usr/local/bin/entrypoint.sh", "/sbin/init" ]

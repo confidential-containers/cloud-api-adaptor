@@ -27,26 +27,21 @@ export CLOUD_PROVIDER=docker
 
 - Build the required pod VM binaries
 
+The same binaries built for the mkosi image is used for the podvm docker image
+
 ```bash
-cd src/cloud-api-adaptor/docker/image
-make
+cd src/cloud-api-adaptor/podvm-mkosi
+make container
 ```
 
 This will build the required binaries inside a container and place
-it under `resources/binaries-tree`
+it under `resources/binaries-tree` and also build the pod VM container image
 
-- Build the pod VM image
-
-```bash
-make image
-cd ../../
-```
-
-This will build the podvm docker image. By default the image is named `quay.io/confidential-containers/podvm-docker-image`.
+By default the image is named `quay.io/confidential-containers/podvm-docker-image`.
 
 For quick changes you can just build the binaries of podvm components and
 update `./resources/binaries-tree/usr/local/bin` with the new components and
-run `make image` to build a new podvm image.
+run `make image-container` to build a new podvm container image.
 
 You can download a ready-to-use image on your worker node.
 
