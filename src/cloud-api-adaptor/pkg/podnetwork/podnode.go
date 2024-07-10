@@ -95,6 +95,26 @@ func (n *podNode) Setup() error {
 		return fmt.Errorf("failed to set up tunnel %q: %w", n.config.TunnelType, err)
 	}
 
+	// We need to process routes without gateway address first. Processing routes with a gateway causes an error if the gateway is not reachable.
+	// Calico sets up routes with this pattern.
+	// https://github.com/projectcalico/cni-plugin/blob/7495c0279c34faac315b82c1838bca638e23dbbe/pkg/dataplane/linux/dataplane_linux.go#L158-L167
+
+	var first, second []*tunneler.Route
+	for _, route := range n.config.Routes {
+		if !route.GW.IsValid() {
+			first = append(first, route)
+		} else {
+			second = append(second, route)
+		}
+	}
+	routes := append(first, second...)
+
+	for _, route := range routes {
+		if err := podNS.RouteAdd(&netops.Route{Destination: route.Dst, Gateway: route.GW, Device: route.Dev}); err != nil {
+			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", route.Dst, route.GW, podNS.Path(), err)
+		}
+	}
+
 	return nil
 }
 
