@@ -24,6 +24,10 @@ var (
 	keyBrokerService *pv.KeyBrokerService
 )
 
+const (
+	defaultContainerRuntime = "containerd"
+)
+
 func init() {
 	initLogger()
 }
@@ -122,6 +126,16 @@ func TestMain(m *testing.M) {
 				return ctx, fmt.Errorf("kbs image not provided")
 			}
 		}
+
+		// Set CONTAINER_RUNTIME env variable if present in the properties
+		// Default value is containerd.
+		containerRuntime := defaultContainerRuntime
+		if props["CONTAINER_RUNTIME"] != "" {
+			containerRuntime = props["CONTAINER_RUNTIME"]
+		}
+
+		log.Infof("Container runtime: %s", containerRuntime)
+		os.Setenv("CONTAINER_RUNTIME", containerRuntime)
 
 		if shouldProvisionCluster {
 			log.Info("Cluster provisioning")
