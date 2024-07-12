@@ -99,10 +99,13 @@ func TestWorkerNode(t *testing.T) {
 			require.Equal(t, expected.workerNodeIP, config.WorkerNodeIP.String(), "hostInterface=%q", hostInterface)
 			require.Equal(t, mockTunnelType, config.TunnelType, "hostInterface=%q", hostInterface)
 
-			require.Equal(t, len(config.Routes), 1, "hostInterface=%q", hostInterface)
+			require.Equal(t, len(config.Routes), 2, "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[0].Dst.String(), "0.0.0.0/0", "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[0].GW.String(), "172.16.0.1", "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[0].Dev, "eth0", "hostInterface=%q", hostInterface)
+			require.Equal(t, config.Routes[1].Dst.String(), "172.16.0.0/24", "hostInterface=%q", hostInterface)
+			require.Equal(t, config.Routes[1].GW.IsValid(), false, "hostInterface=%q", hostInterface)
+			require.Equal(t, config.Routes[1].Dev, "eth0", "hostInterface=%q", hostInterface)
 
 			err = workerNode.Teardown(workerPodNS.Path(), config)
 			require.Nil(t, err, "hostInterface=%q", hostInterface)
@@ -128,9 +131,6 @@ func TestPodNode(t *testing.T) {
 	tuntest.AddrAdd(t, podNodeNS, "ens1", "192.168.1.3/24")
 	tuntest.RouteAdd(t, podNodeNS, "", "192.168.0.1", "ens0")
 
-	podNS := tuntest.NewNamedNS(t, "test-pod")
-	defer tuntest.DeleteNamedNS(t, podNS)
-
 	for hostInterface, expected := range map[string]struct {
 		podNodeIP    string
 		workerNodeIP string
@@ -149,35 +149,48 @@ func TestPodNode(t *testing.T) {
 		},
 	} {
 
-		err := podNodeNS.Run(func() error {
+		podNS := tuntest.NewNamedNS(t, "test-pod")
+		func() {
+			defer tuntest.DeleteNamedNS(t, podNS)
 
-			config := &tunneler.Config{
-				PodIP: netip.MustParsePrefix("172.16.0.2/24"),
-				Routes: []*tunneler.Route{
-					{
-						GW:  netip.MustParseAddr("172.16.0.1"),
-						Dev: "eth0",
+			tuntest.BridgeAdd(t, podNS, "eth0")
+			tuntest.AddrAdd(t, podNS, "eth0", "172.16.0.2/24")
+
+			err := podNodeNS.Run(func() error {
+
+				config := &tunneler.Config{
+					PodIP: netip.MustParsePrefix("172.16.0.2/24"),
+					Routes: []*tunneler.Route{
+						{
+							Dst: netip.MustParsePrefix("0.0.0.0/0"),
+							GW:  netip.MustParseAddr("172.16.0.1"),
+							Dev: "eth0",
+						},
+						{
+							Dst: netip.MustParsePrefix("172.16.0.0/24"),
+							Dev: "eth0",
+						},
 					},
-				},
-				InterfaceName: "eth0",
-				MTU:           1500,
-				WorkerNodeIP:  netip.MustParsePrefix(expected.workerNodeIP),
-				TunnelType:    mockTunnelType,
-				Dedicated:     hostInterface == "ens1",
-			}
+					InterfaceName: "eth0",
+					MTU:           1500,
+					WorkerNodeIP:  netip.MustParsePrefix(expected.workerNodeIP),
+					TunnelType:    mockTunnelType,
+					Dedicated:     hostInterface == "ens1",
+				}
 
-			podNode := NewPodNode(podNS.Path(), hostInterface, config)
-			require.NotNil(t, podNode, "hostInterface=%q", hostInterface)
+				podNode := NewPodNode(podNS.Path(), hostInterface, config)
+				require.NotNil(t, podNode, "hostInterface=%q", hostInterface)
 
-			err := podNode.Setup()
+				err := podNode.Setup()
+				require.Nil(t, err, "hostInterface=%q", hostInterface)
+
+				err = podNode.Teardown()
+				require.Nil(t, err, "hostInterface=%q", hostInterface)
+
+				return nil
+			})
 			require.Nil(t, err, "hostInterface=%q", hostInterface)
-
-			err = podNode.Teardown()
-			require.Nil(t, err, "hostInterface=%q", hostInterface)
-
-			return nil
-		})
-		require.Nil(t, err, "hostInterface=%q", hostInterface)
+		}()
 	}
 }
 

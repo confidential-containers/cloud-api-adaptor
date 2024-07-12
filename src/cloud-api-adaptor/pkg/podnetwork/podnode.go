@@ -95,6 +95,22 @@ func (n *podNode) Setup() error {
 		return fmt.Errorf("failed to set up tunnel %q: %w", n.config.TunnelType, err)
 	}
 
+	if !n.config.PodIP.IsSingleIP() {
+		// Delete the nRoute that was automatically added by kernel for eth0
+		// CNI plugins like PTP and GKE need this trick, otherwise adding a route will fail in a later step.
+		// The deleted route will be restored again in the cases of usual CNI plugins such as Flannel and Calico.
+		// https://github.com/containernetworking/plugins/blob/acf8ddc8e1128e6f68a34f7fe91122afeb1fa93d/plugins/main/ptp/ptp.go#L58-L61
+
+		nRoute := netops.Route{
+			Destination: n.config.PodIP.Masked(),
+			Device:      n.config.InterfaceName,
+		}
+		if err := podNS.RouteDel(&nRoute); err != nil {
+			return fmt.Errorf("failed to remove route %s dev %s: %v", nRoute.Destination, nRoute.Device, err)
+		}
+		logger.Printf("removed route %s dev %s", nRoute.Destination, nRoute.Device)
+	}
+
 	// We need to process routes without gateway address first. Processing routes with a gateway causes an error if the gateway is not reachable.
 	// Calico sets up routes with this pattern.
 	// https://github.com/projectcalico/cni-plugin/blob/7495c0279c34faac315b82c1838bca638e23dbbe/pkg/dataplane/linux/dataplane_linux.go#L158-L167
@@ -110,7 +126,14 @@ func (n *podNode) Setup() error {
 	routes := append(first, second...)
 
 	for _, route := range routes {
-		if err := podNS.RouteAdd(&netops.Route{Destination: route.Dst, Gateway: route.GW, Device: route.Dev}); err != nil {
+		nRoute := netops.Route{
+			Destination: route.Dst,
+			Gateway:     route.GW,
+			Device:      route.Dev,
+			Protocol:    route.Protocol,
+			Scope:       route.Scope,
+		}
+		if err := podNS.RouteAdd(&nRoute); err != nil {
 			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", route.Dst, route.GW, podNS.Path(), err)
 		}
 	}

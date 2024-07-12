@@ -6,6 +6,8 @@ package tunneler
 import (
 	"fmt"
 	"net/netip"
+
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/netops"
 )
 
 type Tunneler interface {
@@ -28,9 +30,11 @@ type Config struct {
 }
 
 type Route struct {
-	Dst netip.Prefix
-	GW  netip.Addr
-	Dev string
+	Dst      netip.Prefix
+	GW       netip.Addr
+	Dev      string
+	Protocol netops.RouteProtocol
+	Scope    netops.RouteScope
 }
 
 type driver struct {
