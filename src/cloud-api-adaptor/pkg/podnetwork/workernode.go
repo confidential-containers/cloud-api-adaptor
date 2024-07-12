@@ -164,9 +164,11 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	for _, route := range routes {
 		r := &tunneler.Route{
-			Dst: route.Destination,
-			Dev: route.Device,
-			GW:  route.Gateway,
+			Dst:      route.Destination,
+			Dev:      route.Device,
+			GW:       route.Gateway,
+			Protocol: route.Protocol,
+			Scope:    route.Scope,
 		}
 		config.Routes = append(config.Routes, r)
 	}
