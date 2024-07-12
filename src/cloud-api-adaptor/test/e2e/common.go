@@ -125,6 +125,13 @@ func WithLabel(data map[string]string) PodOption {
 	}
 }
 
+// Option to handle SecurityContext
+func WithSecurityContext(sc *corev1.SecurityContext) PodOption {
+	return func(p *corev1.Pod) {
+		p.Spec.Containers[0].SecurityContext = sc
+	}
+}
+
 func NewPod(namespace string, podName string, containerName string, imageName string, options ...PodOption) *corev1.Pod {
 	runtimeClassName := "kata-remote"
 	pod := &corev1.Pod{
@@ -144,6 +151,13 @@ func NewPod(namespace string, podName string, containerName string, imageName st
 
 func NewBusyboxPod(namespace string) *corev1.Pod {
 	return NewBusyboxPodWithName(namespace, "busybox")
+}
+
+func NewPrivPod(namespace string, podName string) *corev1.Pod {
+	sc := &corev1.SecurityContext{
+		Privileged: func(b bool) *bool { return &b }(true),
+	}
+	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithSecurityContext(sc))
 }
 
 func NewCurlPodWithName(namespace, podName string) *corev1.Pod {
