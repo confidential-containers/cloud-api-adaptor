@@ -33,6 +33,10 @@ func isTestWithKbs() bool {
 	return os.Getenv("DEPLOY_KBS") == "true" || os.Getenv("DEPLOY_KBS") == "yes"
 }
 
+func isTestOnCrio() bool {
+	return os.Getenv("CONTAINER_RUNTIME") == "crio"
+}
+
 type PodOption func(*corev1.Pod)
 
 func WithRestartPolicy(restartPolicy corev1.RestartPolicy) PodOption {
