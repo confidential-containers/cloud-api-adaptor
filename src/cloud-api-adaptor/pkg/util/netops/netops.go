@@ -5,6 +5,7 @@ package netops
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/netip"
@@ -428,7 +429,8 @@ type Route struct {
 	Priority    int
 	Table       int
 	Type        int
-	Protocol    int
+	Protocol    RouteProtocol
+	Scope       RouteScope
 	Onlink      bool
 }
 
@@ -524,6 +526,7 @@ func (ns *namespace) RouteList(filters ...*Route) ([]*Route, error) {
 			{Table: unix.RT_TABLE_MAIN, Type: unix.RTN_UNICAST, Protocol: unix.RTPROT_STATIC},
 			{Table: unix.RT_TABLE_MAIN, Type: unix.RTN_UNICAST, Protocol: unix.RTPROT_BOOT},
 			{Table: unix.RT_TABLE_MAIN, Type: unix.RTN_UNICAST, Protocol: unix.RTPROT_DHCP},
+			{Table: unix.RT_TABLE_MAIN, Type: unix.RTN_UNICAST, Protocol: unix.RTPROT_KERNEL},
 		}
 		filters = append(filters, defaultFilters...)
 	}
@@ -556,7 +559,8 @@ func (ns *namespace) RouteList(filters ...*Route) ([]*Route, error) {
 				Priority:    r.Priority,
 				Table:       r.Table,
 				Type:        r.Type,
-				Protocol:    int(r.Protocol),
+				Protocol:    RouteProtocol(r.Protocol),
+				Scope:       RouteScope(r.Scope),
 				Onlink:      onlink,
 			}
 
@@ -581,6 +585,8 @@ func (ns *namespace) RouteAdd(route *Route) error {
 		Priority: route.Priority,
 		Table:    route.Table,
 		Type:     route.Type,
+		Scope:    netlink.Scope(route.Scope),
+		Protocol: netlink.RouteProtocol(route.Protocol),
 	}
 
 	if route.Device != "" {
@@ -611,7 +617,7 @@ func (ns *namespace) RouteDel(route *Route) error {
 	}
 
 	if len(routes) == 0 {
-		return fmt.Errorf("failed to identify routes to be deleted: dest: %s, gw: %s, dev %s: %w", route.Destination, route.Gateway, route.Device, err)
+		return fmt.Errorf("failed to identify routes to be deleted: dest: %s, gw: %s, dev %s", route.Destination, route.Gateway, route.Device)
 	}
 
 	for _, r := range routes {
@@ -619,6 +625,84 @@ func (ns *namespace) RouteDel(route *Route) error {
 			return fmt.Errorf("failed to delete a route: dest: %s, gw: %s, dev %s: %w", route.Destination, route.Gateway, route.Device, err)
 		}
 	}
+	return nil
+}
+
+func initLookupTable[T fmt.Stringer](s []T) map[string]T {
+
+	m := make(map[string]T)
+	for _, x := range s {
+		m[x.String()] = x
+	}
+	return m
+}
+
+func unmarshalJSON[T any](name string, data []byte, table map[string]T) (v T, _ error) {
+
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return v, fmt.Errorf("invalid %s: %v: %w", name, data, err)
+	}
+
+	v, ok := table[str]
+	if !ok {
+		return v, fmt.Errorf("unknown %s: %s", name, str)
+	}
+	return v, nil
+}
+
+type RouteProtocol netlink.RouteProtocol
+
+var routeProtocols = initLookupTable([]RouteProtocol{
+	unix.RTPROT_STATIC,
+	unix.RTPROT_BOOT,
+	unix.RTPROT_DHCP,
+	unix.RTPROT_KERNEL,
+})
+
+func (p RouteProtocol) String() string {
+	return netlink.RouteProtocol(p).String()
+}
+
+func (p RouteProtocol) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.String())
+}
+
+func (p *RouteProtocol) UnmarshalJSON(data []byte) error {
+
+	v, err := unmarshalJSON("route protocol", data, routeProtocols)
+	if err != nil {
+		return err
+	}
+	*p = v
+	return nil
+}
+
+type RouteScope netlink.Scope
+
+var routeScopes = initLookupTable([]netlink.Scope{
+	netlink.SCOPE_UNIVERSE,
+	netlink.SCOPE_SITE,
+	netlink.SCOPE_LINK,
+	netlink.SCOPE_HOST,
+	netlink.SCOPE_NOWHERE,
+})
+
+func (s RouteScope) String() string {
+	return netlink.Scope(s).String()
+}
+
+func (s RouteScope) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
+
+func (s *RouteScope) UnmarshalJSON(data []byte) error {
+
+	rs, err := unmarshalJSON("route scope", data, routeScopes)
+	if err != nil {
+		return err
+	}
+	*s = RouteScope(rs)
 	return nil
 }
 
