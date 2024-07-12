@@ -124,7 +124,11 @@ func DoTestCreatePodWithSecret(t *testing.T, e env.Environment, assert CloudAsse
 }
 
 func DoTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, e env.Environment, assert CloudAssert) {
-	pod := NewBusyboxPod(E2eNamespace)
+	// This test requires a container with the right capability otherwise the following error will be thrown:
+	// / # ping 8.8.8.8
+	// PING 8.8.8.8 (8.8.8.8): 56 data bytes
+	// ping: permission denied (are you root?)
+	pod := NewPrivPod(E2eNamespace, "busybox-priv")
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"ping", "-c", "1", "www.google.com"},
