@@ -43,7 +43,7 @@ func (a *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	mutatedPod, _ := removePodResourceSpec(pod)
+	mutatedPod, _ := a.mutatePod(pod)
 	marshaledPod, err := json.Marshal(mutatedPod)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)

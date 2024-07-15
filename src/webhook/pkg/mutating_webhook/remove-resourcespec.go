@@ -14,8 +14,9 @@ const (
 	POD_VM_EXTENDED_RESOURCE_DEFAULT = "kata.peerpods.io/vm"
 )
 
+// mutate POD spec
 // remove the POD resource spec
-func removePodResourceSpec(pod *corev1.Pod) (*corev1.Pod, error) {
+func (a *PodMutator) mutatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	var runtimeClassName string
 	mpod := pod.DeepCopy()
 
