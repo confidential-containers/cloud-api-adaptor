@@ -100,7 +100,11 @@ func TestMain(m *testing.M) {
 	}
 
 	// The DEPLOY_KBS is exported then provisioner will install kbs before installing CAA
-	shouldDeployKbs := isTestWithKbs()
+	shouldDeployKbs := false
+	if os.Getenv("DEPLOY_KBS") == "true" || os.Getenv("DEPLOY_KBS") == "yes" {
+		shouldDeployKbs = true
+		os.Setenv("TEST_KBS", "true")
+	}
 
 	if !shouldProvisionCluster {
 		// Look for a suitable kubeconfig file in the sequence: --kubeconfig flag,

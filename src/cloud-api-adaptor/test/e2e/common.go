@@ -30,7 +30,7 @@ const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
 
 func isTestWithKbs() bool {
-	return os.Getenv("DEPLOY_KBS") == "true" || os.Getenv("DEPLOY_KBS") == "yes"
+	return os.Getenv("TEST_KBS") == "yes"
 }
 
 func isTestOnCrio() bool {
