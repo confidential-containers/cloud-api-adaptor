@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -85,7 +86,12 @@ func main() {
 	}
 
 	setupLog.Info("Setting up webhook server")
-	mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: &mutating_webhook.PodMutator{Client: mgr.GetClient()}})
+	podMutator := &mutating_webhook.PodMutator{
+		Client:  mgr.GetClient(),
+		Decoder: admission.NewDecoder(mgr.GetScheme()),
+	}
+
+	mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: podMutator})
 
 	//+kubebuilder:scaffold:builder
 
