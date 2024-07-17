@@ -42,7 +42,6 @@ endif
 
 PHONY: binaries
 binaries:
-	docker buildx use default
 	@echo "Building binaries..."
 	rm -rf ./resources/binaries-tree
 	cp -rf ../../../.git ../../.git
