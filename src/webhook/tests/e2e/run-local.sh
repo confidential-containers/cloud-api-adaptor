@@ -16,7 +16,7 @@ readonly webhook_dir
 
 # Whether to run this script in debug mode or not.
 debug=0
-export IMG="peer-pods-webhook:test"
+export IMG="${IMG:-peer-pods-webhook:test}"
 
 cleanup () {
 	if [ $debug -eq 1 ]; then
