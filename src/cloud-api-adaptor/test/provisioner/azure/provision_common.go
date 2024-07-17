@@ -174,13 +174,12 @@ func (p *AzureCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Conf
 func createFederatedIdentityCredential(aksOIDCIssuer string) error {
 	namespace := "confidential-containers-system"
 	serviceAccountName := "cloud-api-adaptor"
-	log.Infof("Successfully created federated identity credential %q in resource group %q", AzureProps.federatedIdentityCredentialName, AzureProps.ResourceGroupName)
 
 	if _, err := AzureProps.FederatedIdentityCredentialsClient.CreateOrUpdate(
 		context.Background(),
 		AzureProps.ResourceGroupName,
 		AzureProps.ManagedIdentityName,
-		AzureProps.federatedIdentityCredentialName,
+		AzureProps.FederatedCredentialName,
 		armmsi.FederatedIdentityCredential{
 			Properties: &armmsi.FederatedIdentityCredentialProperties{
 				Audiences: []*string{to.Ptr("api://AzureADTokenExchange")},
@@ -193,7 +192,7 @@ func createFederatedIdentityCredential(aksOIDCIssuer string) error {
 		return fmt.Errorf("creating federated identity credential: %w", err)
 	}
 
-	log.Infof("Successfully created federated identity credential %q in resource group %q", AzureProps.federatedIdentityCredentialName, AzureProps.ResourceGroupName)
+	log.Infof("Successfully created federated identity credential %q in resource group %q", AzureProps.FederatedCredentialName, AzureProps.ResourceGroupName)
 
 	return nil
 }
@@ -203,13 +202,13 @@ func deleteFederatedIdentityCredential() error {
 		context.Background(),
 		AzureProps.ResourceGroupName,
 		AzureProps.ManagedIdentityName,
-		AzureProps.federatedIdentityCredentialName,
+		AzureProps.FederatedCredentialName,
 		nil,
 	); err != nil {
 		return fmt.Errorf("deleting federated identity credential: %w", err)
 	}
 
-	log.Infof("Successfully deleted federated identity credential %q in resource group %q", AzureProps.federatedIdentityCredentialName, AzureProps.ResourceGroupName)
+	log.Infof("Successfully deleted federated identity credential %q in resource group %q", AzureProps.FederatedCredentialName, AzureProps.ResourceGroupName)
 
 	return nil
 }
