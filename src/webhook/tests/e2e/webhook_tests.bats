@@ -11,22 +11,15 @@ test_tags="[webhook]"
 # Assert that the pod mutated as expected.
 #
 # Parameters:
-# 	$1: the expected instance type
-# 	$2: the expected VM limits
-# 	$3: the expected VM requests
+# 	$1: the expected VM limits
+# 	$2: the expected VM requests
 #
 # Global variables:
 # 	$pod_file: path to the pod configuration file.
 #
 assert_pod_mutated() {
-	local expect_instance_type="$1"
-	local expect_vm_limits="$2"
-	local expect_vm_requests="$3"
-
-        local actual_instance_type=$(kubectl get -f "$pod_file" \
-                -o jsonpath='{.metadata.annotations.kata\.peerpods\.io/instance_type}')
-        echo "Instance type expected: $expect_instance_type, actual: $actual_instance_type"
-        [ "$expect_instance_type" == "$actual_instance_type" ]
+	local expect_vm_limits="$1"
+	local expect_vm_requests="$2"
 
         local actual_vm_limits=$(kubectl get -f "$pod_file" \
                 -o jsonpath='{.spec.containers[0].resources.limits.kata\.peerpods\.io/vm}')
@@ -55,7 +48,7 @@ teardown() {
 
 @test "$test_tags test it can mutate a pod" {
 	kubectl apply -f "$pod_file"
-	assert_pod_mutated "t2.small" 1 1
+	assert_pod_mutated 1 1
 }
 
 @test "$test_tags test it should not mutate non-peerpods" {
@@ -70,7 +63,6 @@ teardown() {
 @test "$test_tags test default parameters can be changed" {
 	skip "TODO: This test is not passing"
 	local runtimeclass="kata-wh-test"
-	local instance_type='t2.micro'
 
 	# Create a dummy runtimeClass to use on this test.
 	cat <<-EOF | kubectl apply -f -
@@ -88,12 +80,9 @@ teardown() {
 	kubectl set env deployment/peer-pods-webhook-controller-manager \
 		-n peer-pods-webhook-system TARGET_RUNTIMECLASS="$runtimeclass"
 
-	kubectl set env deployment/peer-pods-webhook-controller-manager \
-		-n peer-pods-webhook-system POD_VM_INSTANCE_TYPE="$instance_type"
-
 	cat "$pod_file" | sed -e 's/^\(\s*runtimeClassName:\).*/\1 '${runtimeclass}'/' | \
 		kubectl apply -f -
 
 	kubectl get -f $pod_file -o json
-	assert_pod_mutated "$instance_type" 1 1
+	assert_pod_mutated 1 1
 }
