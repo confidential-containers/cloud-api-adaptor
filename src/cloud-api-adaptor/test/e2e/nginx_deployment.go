@@ -59,7 +59,7 @@ func NewDeployment(namespace, deploymentName, containerName, imageName string, o
 								ProbeHandler: v1.ProbeHandler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path: "/",
-										Port: intstr.FromInt(80),
+										Port: intstr.FromInt(8080),
 									},
 								},
 								InitialDelaySeconds: 5,
@@ -71,7 +71,7 @@ func NewDeployment(namespace, deploymentName, containerName, imageName string, o
 								ProbeHandler: v1.ProbeHandler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path: "/",
-										Port: intstr.FromInt(80),
+										Port: intstr.FromInt(8080),
 									},
 								},
 								InitialDelaySeconds: 3,
@@ -95,7 +95,7 @@ func NewDeployment(namespace, deploymentName, containerName, imageName string, o
 func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAssert) {
 	deploymentName := "nginx-deployment"
 	containerName := "nginx"
-	imageName := "nginx:latest"
+	imageName := "nginxinc/nginx-unprivileged"
 	replicas := int32(2)
 	deployment := NewDeployment(E2eNamespace, deploymentName, containerName, imageName, WithReplicaCount(replicas))
 
