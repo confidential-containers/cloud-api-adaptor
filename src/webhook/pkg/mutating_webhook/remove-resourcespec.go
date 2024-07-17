@@ -9,8 +9,6 @@ import (
 
 const (
 	RUNTIME_CLASS_NAME_DEFAULT       = "kata-remote"
-	POD_VM_ANNOTATION_INSTANCE_TYPE  = "kata.peerpods.io/instance_type"
-	POD_VM_INSTANCE_TYPE_DEFAULT     = "t2.small"
 	POD_VM_EXTENDED_RESOURCE_DEFAULT = "kata.peerpods.io/vm"
 )
 
@@ -27,17 +25,6 @@ func (a *PodMutator) mutatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	if mpod.Spec.RuntimeClassName == nil || *mpod.Spec.RuntimeClassName != runtimeClassName {
 		return mpod, nil
 	}
-
-	var podVmInstanceType string
-	if podVmInstanceType = os.Getenv("POD_VM_INSTANCE_TYPE"); podVmInstanceType == "" {
-		podVmInstanceType = POD_VM_INSTANCE_TYPE_DEFAULT
-	}
-
-	if mpod.Annotations == nil {
-		mpod.Annotations = map[string]string{}
-	}
-
-	mpod.Annotations[POD_VM_ANNOTATION_INSTANCE_TYPE] = podVmInstanceType
 
 	// Remove all resource specs
 	for idx := range mpod.Spec.Containers {

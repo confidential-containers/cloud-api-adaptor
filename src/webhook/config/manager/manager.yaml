@@ -36,8 +36,6 @@ spec:
         env:
         - name: TARGET_RUNTIMECLASS
           value: kata-remote
-        - name: POD_VM_INSTANCE_TYPE
-          value: t2.small
         - name: POD_VM_EXTENDED_RESOURCE
           value: kata.peerpods.io/vm
         securityContext:
