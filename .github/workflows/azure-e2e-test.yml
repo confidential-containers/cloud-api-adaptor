@@ -165,6 +165,7 @@ jobs:
           KBS_IMAGE_TAG="${KBS_IMAGE_TAG}"
           AZURE_INSTANCE_SIZE="${AZURE_INSTANCE_SIZE}"
           TAGS="${{ env.TEST_TAGS }}"
+          FEDERATED_CREDENTIAL_NAME="${{ env.CLUSTER_NAME }}"
         EOF
         cat "$TEST_PROVISION_FILE"
         # assert that no variable is unset
@@ -356,4 +357,11 @@ jobs:
           --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" \
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
           --no-wait \
+          --yes || true
+    - name: Remove federated credential
+      run: |
+        az identity federated-credential delete \
+          --identity-name "${{ secrets.AZURE_MANAGED_IDENTITY_NAME }}" \
+          --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" \
+          --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
           --yes || true
