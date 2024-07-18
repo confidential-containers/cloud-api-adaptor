@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -96,12 +97,21 @@ func saveToFile(filename string, content []byte) error {
 	return nil
 }
 
+func getHardwarePlatform() (string, error) {
+	out, err := exec.Command("uname", "-i").Output()
+	return strings.TrimSuffix(string(out), "\n"), err
+}
+
 func NewKeyBrokerService(clusterName string) (*KeyBrokerService, error) {
 	log.Info("creating key.bin")
 
 	// Create secret
 	content := []byte("This is my cluster name: " + clusterName)
-	filePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/overlays/key.bin")
+	platform, err := getHardwarePlatform()
+	if err != nil {
+		return nil, err
+	}
+	filePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/overlays/"+platform+"/key.bin")
 	// Create the file.
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -264,7 +274,7 @@ func GetInstallOverlay(provider string, installDir string) (InstallOverlay, erro
 
 func NewBaseKbsInstallOverlay(installDir string) (InstallOverlay, error) {
 	log.Info("Creating kbs install overlay")
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/base"))
+	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/base/"))
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +286,11 @@ func NewBaseKbsInstallOverlay(installDir string) (InstallOverlay, error) {
 
 func NewKbsInstallOverlay(installDir string) (InstallOverlay, error) {
 	log.Info("Creating kbs install overlay")
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/nodeport"))
+	platform, err := getHardwarePlatform()
+	if err != nil {
+		return nil, err
+	}
+	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/nodeport/"+platform))
 	if err != nil {
 		return nil, err
 	}
