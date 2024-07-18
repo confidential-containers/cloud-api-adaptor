@@ -345,6 +345,7 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 		}
 	}
 
+	// TODO - refactor with Ibm cloud
 	if cred := os.Getenv("REGISTRY_CREDENTIAL_ENCODED"); cred != "" {
 		authJSON := fmt.Sprintf(authJSONTemplate, cred)
 		if err := os.WriteFile(filepath.Join(lio.Overlay.ConfigDir, "auth.json"), []byte(authJSON), 0644); err != nil {
