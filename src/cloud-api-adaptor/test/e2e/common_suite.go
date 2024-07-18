@@ -684,3 +684,75 @@ func DoTestPermissivePolicyAllowsExec(t *testing.T, e env.Environment, assert Cl
 	}
 	NewTestCase(t, e, "PodVMwithPermissivePolicy", assert, "Pod which allows all kata agent APIs").WithPod(pod).WithTestCommands(testCommands).Run()
 }
+
+// Test to run pod with io.Kubernetes.cri-o.Devices annotation and check the devices are created in the pod
+func DoTestPodWithCrioDeviceAnnotation(t *testing.T, e env.Environment, assert CloudAssert) {
+	podName := "pod-with-devices"
+	containerName := "busybox"
+	imageName := BUSYBOX_IMAGE
+	devicesAnnotation := map[string]string{
+		"io.kubernetes.cri-o.Devices": "/dev/fuse",
+	}
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithRestartPolicy(v1.RestartPolicyNever), WithAnnotations(devicesAnnotation), WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+
+	testCommands := []TestCommand{
+		{
+			Command:       []string{"ls", "/dev/fuse"},
+			ContainerName: pod.Spec.Containers[0].Name,
+			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if strings.Contains(stdout.String(), "/dev/fuse") {
+					log.Infof("Device /dev/fuse is created in the pod")
+					return true
+				} else {
+					log.Errorf("Device /dev/fuse is not created in the pod")
+					return false
+				}
+			},
+			TestCommandStderrFn: IsBufferEmpty,
+		},
+	}
+
+	NewTestCase(t, e, "PodWithDevicesAnnotation", assert, "Pod with devices annotation").WithPod(pod).WithTestCommands(testCommands).Run()
+}
+
+// Test to run pod with incorrect annotation and check the devices are not created in the pod
+func DoTestPodWithIncorrectCrioDeviceAnnotation(t *testing.T, e env.Environment, assert CloudAssert) {
+	podName := "pod-with-devices"
+	containerName := "busybox"
+	imageName := BUSYBOX_IMAGE
+	devicesAnnotation := map[string]string{
+		"io.kubernetes.cri.Dev": "/dev/fuse",
+	}
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithRestartPolicy(v1.RestartPolicyNever), WithAnnotations(devicesAnnotation), WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+
+	testCommands := []TestCommand{
+		{
+			Command:             []string{"ls", "/dev/fuse"},
+			ContainerName:       pod.Spec.Containers[0].Name,
+			TestCommandStdoutFn: IsBufferEmpty,
+			TestCommandStderrFn: func(stderr bytes.Buffer) bool {
+				if strings.Contains(stderr.String(), "No such file or directory") {
+					log.Infof("Device /dev/fuse is not created in the pod")
+					return true
+				} else {
+					log.Errorf("Device /dev/fuse is created in the pod")
+					return false
+				}
+			},
+			// The command should throw the following error
+			// "command terminated with exit code 1"
+			TestErrorFn: func(err error) bool {
+				if strings.Contains(err.Error(), "command terminated with exit code 1") {
+					log.Infof("Command terminated with exit code 1")
+					return true
+				} else {
+					log.Errorf("Command did not terminate with exit code 1")
+					return false
+				}
+
+			},
+		},
+	}
+
+	NewTestCase(t, e, "PodWithIncorrectDevicesAnnotation", assert, "Pod with incorrect devices annotation").WithPod(pod).WithTestCommands(testCommands).Run()
+}

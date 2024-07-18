@@ -60,6 +60,24 @@ func TestPodVMwithAnnotationsInvalidInstanceTypeAzure(t *testing.T) {
 	DoTestPodVMwithAnnotationsInvalidInstanceType(t, testEnv, assert, instanceSize)
 }
 
+// Test with device annotation
+func TestPodWithCrioDeviceAnnotationAzure(t *testing.T) {
+	if !isTestOnCrio() {
+		t.Skip("Skipping test as it is not running on CRI-O")
+	}
+	t.Parallel()
+	DoTestPodWithCrioDeviceAnnotation(t, testEnv, assert)
+}
+
+// Negative test with device annotation
+func TestPodWithIncorrectDeviceAnnotationAzure(t *testing.T) {
+	if !isTestOnCrio() {
+		t.Skip("Skipping test as it is not running on CRI-O")
+	}
+	t.Parallel()
+	DoTestPodWithIncorrectCrioDeviceAnnotation(t, testEnv, assert)
+}
+
 func TestKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
