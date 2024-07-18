@@ -393,8 +393,9 @@ func (tc *TestCase) Run() {
 
 							}
 							if profile != "" {
+								t.Logf("PodVM Created with Instance Type: %v", profile)
 								if !tc.testInstanceTypes.testSuccessfn(profile) {
-									t.Fatal(fmt.Errorf("PodVM Created with Differenct Instance Type %v", profile))
+									t.Fatal(fmt.Errorf("PodVM Created with Different Instance Type %v", profile))
 								}
 							}
 							break
