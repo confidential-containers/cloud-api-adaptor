@@ -47,3 +47,11 @@ func TestKbsKeyRelease(t *testing.T) {
 	// _ = keyBrokerService.EnableKbsCustomizedPolicy("deny_all.rego")
 	// DoTestKbsKeyReleaseForFailure(t, testEnv, assert)
 }
+
+func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
+	if !isTestWithTrusteeOperator() {
+		t.Skip("Skipping kbs related test as Trustee Operator is not deployed")
+	}
+	t.Parallel()
+	DoTestTrusteeOperatorKeyReleaseForSpecificKey(t, testEnv, assert)
+}
