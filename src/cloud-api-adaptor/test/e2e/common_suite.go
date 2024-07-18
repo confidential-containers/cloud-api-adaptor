@@ -756,3 +756,12 @@ func DoTestPodWithIncorrectCrioDeviceAnnotation(t *testing.T, e env.Environment,
 
 	NewTestCase(t, e, "PodWithIncorrectDevicesAnnotation", assert, "Pod with incorrect devices annotation").WithPod(pod).WithTestCommands(testCommands).Run()
 }
+
+// Test to run a pod with init container and check the init container is executed successfully
+func DoTestPodWithInitContainer(t *testing.T, e env.Environment, assert CloudAssert) {
+
+	pod := NewPodWithInitContainer(E2eNamespace, "pod-with-init-container")
+
+	NewTestCase(t, e, "PodWithInitContainer", assert, "Pod with init container").WithPod(pod).Run()
+
+}
