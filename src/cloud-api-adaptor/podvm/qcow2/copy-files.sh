@@ -3,7 +3,6 @@
 # the correct location on the podvm image
 
 sudo mkdir -p /etc/containers
-sudo cp /tmp/files/etc/agent-config.toml /etc/agent-config.toml
 sudo cp /tmp/files/etc/aa-offline_fs_kbc-keys.json /etc/aa-offline_fs_kbc-keys.json
 sudo cp -a /tmp/files/etc/containers/* /etc/containers/
 sudo cp -a /tmp/files/etc/systemd/* /etc/systemd/

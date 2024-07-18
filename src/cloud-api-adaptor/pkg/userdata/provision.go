@@ -24,6 +24,7 @@ type paths struct {
 	authJson     string
 	cdhConfig    string
 	daemonConfig string
+	agentConfig  string
 }
 
 type Config struct {
@@ -31,8 +32,8 @@ type Config struct {
 	paths        paths
 }
 
-func NewConfig(aaConfigPath, authJsonPath, daemonConfigPath, cdhConfig string, fetchTimeout int) *Config {
-	cfgPaths := paths{aaConfigPath, authJsonPath, cdhConfig, daemonConfigPath}
+func NewConfig(aaConfigPath, agentConfig, authJsonPath, daemonConfigPath, cdhConfig string, fetchTimeout int) *Config {
+	cfgPaths := paths{aaConfigPath, agentConfig, authJsonPath, cdhConfig, daemonConfigPath}
 	return &Config{fetchTimeout, cfgPaths}
 }
 
@@ -176,7 +177,15 @@ func writeFile(path string, bytes []byte) error {
 }
 
 func processCloudConfig(cfg *Config, cc *CloudConfig) error {
-	bytes := findConfigEntry(cfg.paths.daemonConfig, cc)
+	bytes := findConfigEntry(cfg.paths.agentConfig, cc)
+	if bytes == nil {
+		return fmt.Errorf("failed to find agent config entry in cloud config")
+	}
+	if err := writeFile(cfg.paths.agentConfig, bytes); err != nil {
+		return fmt.Errorf("failed to write daemon config file: %w", err)
+	}
+
+	bytes = findConfigEntry(cfg.paths.daemonConfig, cc)
 	if bytes == nil {
 		return fmt.Errorf("failed to find daemon config entry in cloud config")
 	}

@@ -13,6 +13,7 @@ import (
 )
 
 const forwarderConfigPath = "/peerpod/daemon.json"
+const authJSONPath = "/run/peerpod/auth.json"
 
 func TestUserData(t *testing.T) {
 	cloudConfig := &CloudConfig{
@@ -92,7 +93,7 @@ func TestUserDataWithDaemonAndAuth(t *testing.T) {
 	cloudConfig := &CloudConfig{
 		WriteFiles: []WriteFile{
 			{Path: forwarderConfigPath, Content: string(testDaemonConfigJson)},
-			{Path: DefaultAuthfileDstPath, Content: testResourcesJson},
+			{Path: authJSONPath, Content: testResourcesJson},
 		},
 	}
 
@@ -111,8 +112,8 @@ func TestUserDataWithDaemonAndAuth(t *testing.T) {
 		t.Fatalf("Expect %q, got %q", forwarderConfigPath, userData)
 	}
 
-	if !strings.Contains(userData, DefaultAuthfileDstPath) {
-		t.Fatalf("Expect %q, got %q", DefaultAuthfileDstPath, userData)
+	if !strings.Contains(userData, authJSONPath) {
+		t.Fatalf("Expect %q, got %q", authJSONPath, userData)
 	}
 
 	var output CloudConfig
@@ -185,7 +186,7 @@ func TestUserDataWithDaemonAndAuthAndAAKBCParams(t *testing.T) {
 	cloudConfig := &CloudConfig{
 		WriteFiles: []WriteFile{
 			{Path: forwarderConfigPath, Content: string(testDaemonConfigJson)},
-			{Path: DefaultAuthfileDstPath, Content: testResourcesJson},
+			{Path: authJSONPath, Content: testResourcesJson},
 		},
 	}
 
@@ -204,8 +205,8 @@ func TestUserDataWithDaemonAndAuthAndAAKBCParams(t *testing.T) {
 		t.Fatalf("Expect %q, got %q", forwarderConfigPath, userData)
 	}
 
-	if !strings.Contains(userData, DefaultAuthfileDstPath) {
-		t.Fatalf("Expect %q, got %q", DefaultAuthfileDstPath, userData)
+	if !strings.Contains(userData, authJSONPath) {
+		t.Fatalf("Expect %q, got %q", authJSONPath, userData)
 	}
 
 	var output CloudConfig

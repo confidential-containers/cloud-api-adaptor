@@ -1,14 +1,14 @@
 [Unit]
 Description=Kata Agent
 BindsTo=netns@podns.service
-Wants=process-user-data.service
-After=netns@podns.service process-user-data.service
+Wants=process-user-data.service attestation-agent.service
+After=netns@podns.service process-user-data.service attestation-agent.service
 
 [Service]
 ExecStartPre=mkdir -p /run/kata-containers
-ExecStart=/usr/local/bin/kata-agent --config /etc/agent-config.toml
+ExecStart=/usr/local/bin/kata-agent --config /run/peerpod/agent-config.toml
 ExecStartPre=-umount /sys/fs/cgroup/misc
-ExecStopPost=/usr/local/bin/kata-agent-clean --config /etc/agent-config.toml
+ExecStopPost=/usr/local/bin/kata-agent-clean --config /run/peerpod/agent-config.toml
 SyslogIdentifier=kata-agent
 
 [Install]
