@@ -24,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const CURL_IMAGE = "quay.io/curl/curl:latest"
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
@@ -37,6 +36,10 @@ func isTestWithKbs() bool {
 // And is not handled as part of provisioning
 func isTestWithTrusteeOperator() bool {
 	return os.Getenv("TEST_TRUSTEE_OPERATOR") == "yes"
+}
+
+func isTestWithKbsIBMSE() bool {
+	return os.Getenv("IBM_SE_CREDS_DIR") != ""
 }
 
 func isTestOnCrio() bool {
@@ -185,10 +188,6 @@ func NewPodWithInitContainer(namespace string, podName string) *corev1.Pod {
 	}
 
 	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithInitContainers(initContainer))
-}
-
-func NewCurlPodWithName(namespace, podName string) *corev1.Pod {
-	return NewPod(namespace, podName, "curl", CURL_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 }
 
 func NewBusyboxPodWithName(namespace, podName string) *corev1.Pod {

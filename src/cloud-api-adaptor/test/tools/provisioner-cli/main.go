@@ -94,7 +94,7 @@ func main() {
 			if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
 				log.Fatal("kbs image not provided")
 			}
-			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"])
+			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -178,7 +178,7 @@ func main() {
 
 		if shouldDeployKbs {
 			props := provisioner.GetProperties(context.TODO(), cfg)
-			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"])
+			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg)
 			if err != nil {
 				log.Fatal(err)
 			}
