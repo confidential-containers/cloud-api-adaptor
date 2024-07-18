@@ -138,6 +138,13 @@ func WithSecurityContext(sc *corev1.SecurityContext) PodOption {
 	}
 }
 
+// Option to add InitContainers
+func WithInitContainers(initContainers []corev1.Container) PodOption {
+	return func(p *corev1.Pod) {
+		p.Spec.InitContainers = initContainers
+	}
+}
+
 func NewPod(namespace string, podName string, containerName string, imageName string, options ...PodOption) *corev1.Pod {
 	runtimeClassName := "kata-remote"
 	pod := &corev1.Pod{
@@ -164,6 +171,20 @@ func NewPrivPod(namespace string, podName string) *corev1.Pod {
 		Privileged: func(b bool) *bool { return &b }(true),
 	}
 	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithSecurityContext(sc))
+}
+
+// Method to create a Pod with initContainer
+func NewPodWithInitContainer(namespace string, podName string) *corev1.Pod {
+
+	initContainer := []corev1.Container{
+		{
+			Name:    "init-container",
+			Image:   BUSYBOX_IMAGE,
+			Command: []string{"/bin/sh", "-c", "echo 'init container'"},
+		},
+	}
+
+	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithInitContainers(initContainer))
 }
 
 func NewCurlPodWithName(namespace, podName string) *corev1.Pod {

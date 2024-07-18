@@ -78,6 +78,12 @@ func TestPodWithIncorrectDeviceAnnotationAzure(t *testing.T) {
 	DoTestPodWithIncorrectCrioDeviceAnnotation(t, testEnv, assert)
 }
 
+// Test with init container
+func TestPodWithInitContainerAzure(t *testing.T) {
+	t.Parallel()
+	DoTestPodWithInitContainer(t, testEnv, assert)
+}
+
 func TestKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
