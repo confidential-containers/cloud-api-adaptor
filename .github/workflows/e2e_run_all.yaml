@@ -171,3 +171,4 @@ jobs:
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
+    secrets: inherit
