@@ -6,7 +6,6 @@ REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/../..
 PODVM_DIR=${REPO_ROOT}/podvm
 
 sudo mkdir -p /etc/containers
-sudo cp ${PODVM_DIR}/files/etc/agent-config.toml /etc/agent-config.toml
 sudo cp /tmp/files/etc/aa-offline_fs_kbc-keys.json /etc/aa-offline_fs_kbc-keys.json
 
 if [ -n "${FORWARDER_PORT}" ]; then

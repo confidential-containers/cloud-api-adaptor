@@ -12,10 +12,6 @@ import (
 )
 
 const (
-	DefaultAuthfileSrcPath = "/root/containers/auth.json"
-
-	// Location of the container registry auth json file
-	DefaultAuthfileDstPath = "/etc/attestation-agent/auth.json"
 	DefaultAuthfileLimit   = 12288 // TODO: use a whole userdata limit mechanism instead of limiting authfile
 	DefaultAAKBCParamsPath = "/etc/attestation-agent/kbc-params.json"
 )

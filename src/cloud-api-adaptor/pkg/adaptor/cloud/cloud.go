@@ -22,6 +22,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/aa"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/agent"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cdh"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
@@ -34,7 +35,10 @@ import (
 )
 
 const (
-	Version = "0.0.0"
+	SrcAuthfilePath = "/root/containers/auth.json"
+	AgentConfigPath = "/run/peerpod/agent-config.toml"
+	AuthFilePath    = "/run/peerpod/auth.json"
+	Version         = "0.0.0"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -221,6 +225,25 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	agentProxy := s.proxyFactory.New(serverName, socketPath)
 
+	var authJSON []byte
+	var authFilePath string
+	_, err = os.Stat(SrcAuthfilePath)
+	if err != nil {
+		logger.Printf("credential file %s is not present, skipping image auth config", SrcAuthfilePath)
+	} else {
+		authJSON, err = os.ReadFile(SrcAuthfilePath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading %s: %v", SrcAuthfilePath, err)
+		}
+		authFilePath = AuthFilePath
+		logger.Printf("configure agent to use credentials file %s", SrcAuthfilePath)
+	}
+
+	agentConfig, err := agent.CreateConfigFile(authFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("creating agent config: %w", err)
+	}
+
 	daemonConfig := forwarder.Config{
 		PodNamespace: namespace,
 		PodName:      pod,
@@ -229,7 +252,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	}
 
 	if caService := agentProxy.CAService(); caService != nil {
-
 		certPEM, keyPEM, err := caService.Issue(serverName)
 		if err != nil {
 			return nil, fmt.Errorf("creating TLS certificate for communication between worker node and peer pod VM")
@@ -239,11 +261,8 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		daemonConfig.TLSServerKey = string(keyPEM)
 	}
 
-	// Check if auth json file is present
-	if authJSON, err := os.ReadFile(cloudinit.DefaultAuthfileSrcPath); err == nil {
+	if authJSON != nil {
 		daemonConfig.AuthJson = string(authJSON)
-	} else {
-		logger.Printf("Credentials file is not in a valid Json format, ignored")
 	}
 
 	daemonJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
@@ -260,6 +279,10 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	cloudConfig := &cloudinit.CloudConfig{
 		WriteFiles: []cloudinit.WriteFile{
+			{
+				Path:    AgentConfigPath,
+				Content: agentConfig,
+			},
 			{
 				Path:    forwarder.DefaultConfigPath,
 				Content: string(daemonJSON),

@@ -15,6 +15,10 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/azure"
 )
 
+var testAgentConfig string = `server_addr = 'unix:///run/kata-containers/agent.sock'
+guest_components_procs = 'none'
+`
+
 var testDaemonConfig string = `{
 	"pod-network": {
 		"podip": "10.244.0.19/24",
@@ -230,6 +234,13 @@ func indentTextBlock(text string, by int) string {
 
 // TestProcessCloudConfig tests parsing and provisioning of a daemon config
 func TestProcessCloudConfig(t *testing.T) {
+	// create temporary agent config file
+	tmpAgentConfigFile, err := os.CreateTemp("", "test")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpAgentConfigFile.Name())
+
 	// create temporary daemon config file
 	tmpDaemonConfigFile, err := os.CreateTemp("", "test")
 	if err != nil {
@@ -259,7 +270,12 @@ write_files:
 - path: %s
   content: |
 %s
+- path: %s
+  content: |
+%s
 `,
+		tmpAgentConfigFile.Name(),
+		indentTextBlock(testAgentConfig, 4),
 		tmpDaemonConfigFile.Name(),
 		indentTextBlock(testDaemonConfig, 4),
 		tmpCDHConfigFile.Name(),
@@ -274,6 +290,7 @@ write_files:
 
 	cfg := Config{
 		paths: paths{
+			agentConfig:  tmpAgentConfigFile.Name(),
 			daemonConfig: tmpDaemonConfigFile.Name(),
 			cdhConfig:    tmpCDHConfigFile.Name(),
 			authJson:     tmpAuthJsonFile.Name(),
@@ -284,8 +301,14 @@ write_files:
 	}
 
 	// check if files have been written correctly
-	data, _ := os.ReadFile(tmpDaemonConfigFile.Name())
+	data, _ := os.ReadFile(tmpAgentConfigFile.Name())
 	fileContent := string(data)
+	if fileContent != testAgentConfig {
+		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
+	}
+
+	data, _ = os.ReadFile(tmpDaemonConfigFile.Name())
+	fileContent = string(data)
 	if fileContent != testDaemonConfig {
 		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
 	}
@@ -304,6 +327,8 @@ write_files:
 }
 
 func TestProcessWithoutCDHConfig(t *testing.T) {
+	tmpAgentConfigFile, _ := os.CreateTemp("", "test")
+	defer os.Remove(tmpAgentConfigFile.Name())
 	tmpDaemonConfigFile, _ := os.CreateTemp("", "test")
 	defer os.Remove(tmpDaemonConfigFile.Name())
 	tmpAuthJsonFile, _ := os.CreateTemp("", "test")
@@ -316,7 +341,12 @@ write_files:
 - path: %s
   content: |
 %s
+- path: %s
+  content: |
+%s
 `,
+		tmpAgentConfigFile.Name(),
+		indentTextBlock(testAgentConfig, 4),
 		tmpDaemonConfigFile.Name(),
 		indentTextBlock(testDaemonConfig, 4))
 	provider := TestProvider{content: content}
@@ -328,6 +358,7 @@ write_files:
 
 	cfg := Config{
 		paths: paths{
+			agentConfig:  tmpAgentConfigFile.Name(),
 			daemonConfig: tmpDaemonConfigFile.Name(),
 			cdhConfig:    tmpCDHConfigFile.Name(),
 			authJson:     tmpAuthJsonFile.Name(),

@@ -1,3 +1,0 @@
-server_addr = "unix:///run/kata-containers/agent.sock"
-# prevent the agent from launching coco guest-components
-guest_components_procs = "none"
