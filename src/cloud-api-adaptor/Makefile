@@ -28,9 +28,9 @@ RESOURCE_CTRL ?= true
 YQ_CHECKSUM_${ARCH} ?= $(YQ_CHECKSUM)
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
-	BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere
+	BUILTIN_CLOUD_PROVIDERS ?= aws azure gcp ibmcloud vsphere
 else
-	BUILTIN_CLOUD_PROVIDERS ?= aws azure ibmcloud vsphere libvirt docker
+	BUILTIN_CLOUD_PROVIDERS ?= aws azure gcp ibmcloud vsphere libvirt docker
 endif
 
 all: build
