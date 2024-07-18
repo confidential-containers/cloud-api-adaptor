@@ -112,6 +112,9 @@ jobs:
 
       - name: run tests
         id: runTests
+        env:
+          AUTHENTICATED_REGISTRY_IMAGE: ${{ vars.AUTHENTICATED_REGISTRY_IMAGE }}
+          REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
         run: |
           export CLOUD_PROVIDER=libvirt
           export DEPLOY_KBS=true
