@@ -85,6 +85,21 @@ azure() {
         ${optionals}
 }
 
+gcp() {
+test_vars GCP_CREDENTIALS GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
+
+[[ "${PODVM_IMAGE_NAME}" ]] && optionals+="-gcp-image-name ${PODVM_IMAGE_NAME} "
+[[ "${GCP_PROJECT_ID}" ]] && optionals+="-gcp-project-id ${GCP_PROJECT_ID} "
+[[ "${GCP_ZONE}" ]] && optionals+="-gcp-zone ${GCP_ZONE} " # if not set retrieved from IMDS
+[[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-gcp-machine-type ${GCP_MACHINE_TYPE} " # default e2-medium
+[[ "${GCP_NETWORK}" ]] && optionals+="-gcp-network ${GCP_NETWORK} " # defaults to 'default'
+
+set -x
+exec cloud-api-adaptor gcp \
+	-pods-dir /run/peerpod/pods \
+	${optionals}
+}
+
 ibmcloud() {
     one_of IBMCLOUD_API_KEY IBMCLOUD_IAM_PROFILE_ID
 
@@ -179,9 +194,10 @@ docker() {
 help_msg() {
     cat <<EOF
 Usage:
-	CLOUD_PROVIDER=aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker $0
+	CLOUD_PROVIDER=aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker $0
 or
-	$0 aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker
+	$0 aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker
+
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
 EOF
@@ -191,6 +207,8 @@ if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
     aws
 elif [[ "$CLOUD_PROVIDER" == "azure" ]]; then
     azure
+elif [[ "$CLOUD_PROVIDER" == "gcp" ]]; then
+    gcp
 elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then
     ibmcloud
 elif [[ "$CLOUD_PROVIDER" == "ibmcloud-powervs" ]]; then
