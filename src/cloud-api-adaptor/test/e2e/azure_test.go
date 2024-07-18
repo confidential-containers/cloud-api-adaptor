@@ -46,6 +46,20 @@ func TestPodsMTLSCommunicationAzure(t *testing.T) {
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
 
+func TestPodVMwithAnnotationsInstanceTypeAzure(t *testing.T) {
+	SkipTestOnCI(t)
+	t.Parallel()
+	instanceSize := "Standard_DC2as_v5"
+	DoTestPodVMwithAnnotationsInstanceType(t, testEnv, assert, instanceSize)
+}
+
+func TestPodVMwithAnnotationsInvalidInstanceTypeAzure(t *testing.T) {
+	t.Parallel()
+	// Using an instance type that's not configured in the AZURE_INSTANCE_SIZE
+	instanceSize := "Standard_D8as_v5"
+	DoTestPodVMwithAnnotationsInvalidInstanceType(t, testEnv, assert, instanceSize)
+}
+
 func TestKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
