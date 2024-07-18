@@ -21,7 +21,7 @@ cloudimg:
 tools:
   bats: 1.10.0
   golang: 1.21.12
-  rust: 1.74.0
+  rust: 1.75.0
   protoc: 3.15.0
   packer: v1.9.4
   kcli: 99.0.202407031308
@@ -32,10 +32,10 @@ git:
     reference: main
   guest-components:
     url: https://github.com/confidential-containers/guest-components
-    reference: df60725afe0ba452a25a740cf460c2855442c49a
+    reference: v0.9.0
   kata-containers:
     url: https://github.com/kata-containers/kata-containers
-    reference: 3.6.0
+    reference: 3.7.0
   umoci:
     url: https://github.com/opencontainers/umoci
     reference: v0.4.7
@@ -44,11 +44,11 @@ git:
     reference: v1.5.0
   kbs:
     url: https://github.com/confidential-containers/trustee
-    reference: dc01f454264fb4350e5f69eba05683a9a1882c41
+    reference: e890fc90c384207668fa3a4d6a2f2a2d652797ee
 oci:
   pause:
     registry: docker://registry.k8s.io/pause
-    tag: 3.6
+    tag: 3.9
   kbs:
     registry: ghcr.io/confidential-containers/staged-images/kbs
-    tag: dc01f454264fb4350e5f69eba05683a9a1882c41
+    tag: e890fc90c384207668fa3a4d6a2f2a2d652797ee
