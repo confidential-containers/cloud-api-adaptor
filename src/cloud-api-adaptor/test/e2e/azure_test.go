@@ -36,6 +36,16 @@ func TestCreateNginxDeploymentAzure(t *testing.T) {
 	DoTestNginxDeployment(t, testEnv, assert)
 }
 
+func TestPodToServiceCommunicationAzure(t *testing.T) {
+	t.Parallel()
+	DoTestPodToServiceCommunication(t, testEnv, assert)
+}
+
+func TestPodsMTLSCommunicationAzure(t *testing.T) {
+	t.Parallel()
+	DoTestPodsMTLSCommunication(t, testEnv, assert)
+}
+
 func TestKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
