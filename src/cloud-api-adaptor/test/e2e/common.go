@@ -33,6 +33,12 @@ func isTestWithKbs() bool {
 	return os.Getenv("TEST_KBS") == "yes"
 }
 
+// Setup of Trustee Operator is required for this test
+// And is not handled as part of provisioning
+func isTestWithTrusteeOperator() bool {
+	return os.Getenv("TEST_TRUSTEE_OPERATOR") == "yes"
+}
+
 func isTestOnCrio() bool {
 	return os.Getenv("CONTAINER_RUNTIME") == "crio"
 }
