@@ -155,7 +155,7 @@ func TestMain(m *testing.M) {
 		var kbsparams string
 		if shouldDeployKbs {
 			log.Info("Deploying kbs")
-			if keyBrokerService, err = pv.NewKeyBrokerService(props["CLUSTER_NAME"]); err != nil {
+			if keyBrokerService, err = pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg); err != nil {
 				return ctx, err
 			}
 

@@ -585,7 +585,7 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), "This is my cluster name") {
-					log.Infof("Success to get key.bin %s", stdout.String())
+					log.Infof("Success to get key.bin: %s", stdout.String())
 					return true
 				} else {
 					log.Errorf("Failed to access key.bin: %s", stdout.String())
@@ -603,19 +603,26 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert) {
 
 	log.Info("Do test kbs key release failure case")
-	pod := NewCurlPodWithName(E2eNamespace, "curl-failure")
+	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget-failure")
 	testCommands := []TestCommand{
 		{
-			Command:       []string{"curl", "-s", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
+			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
 			ContainerName: pod.Spec.Containers[0].Name,
-			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
-				body := stdout.String()
-				if strings.Contains(strings.ToLower(body), "error") {
-					log.Infof("Pass failure case as: %s", stdout.String())
+			TestErrorFn: func(err error) bool {
+				if strings.Contains(err.Error(), "command terminated with exit code 1") {
 					return true
 				} else {
-					log.Errorf("Failed to faliure case as: %s", stdout.String())
+					log.Errorf("Got unexpected error: %s", err.Error())
 					return false
+				}
+			},
+			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if strings.Contains(stdout.String(), "This is my cluster name") {
+					log.Errorf("FAIL as successed to get key.bin: %s", stdout.String())
+					return false
+				} else {
+					log.Infof("PASS as failed to access key.bin: %s", stdout.String())
+					return true
 				}
 			},
 		},
