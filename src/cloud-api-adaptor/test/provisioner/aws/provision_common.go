@@ -107,6 +107,7 @@ type AWSProvisioner struct {
 	PauseImage string
 	Image      *AMIImage
 	Vpc        *Vpc
+	PublicIP   string
 	VxlanPort  string
 	SshKpName  string
 }
@@ -138,6 +139,8 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 	if properties["cluster_type"] == "" ||
 		properties["cluster_type"] == "onprem" {
 		cluster = NewOnPremCluster()
+		// The podvm should be created with public IP so CAA can connect
+		properties["use_public_ip"] = "true"
 	} else if properties["cluster_type"] == "eks" {
 		cluster = NewEKSCluster(cfg, vpc, properties["ssh_kp_name"])
 	} else {
@@ -159,6 +162,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		Image:      NewAMIImage(ec2Client, properties),
 		PauseImage: properties["pause_image"],
 		Vpc:        vpc,
+		PublicIP:   properties["use_public_ip"],
 		VxlanPort:  properties["vxlan_port"],
 		SshKpName:  properties["ssh_kp_name"],
 	}
@@ -261,6 +265,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"region":               a.AwsConfig.Region,
 		"access_key_id":        credentials.AccessKeyID,
 		"secret_access_key":    credentials.SecretAccessKey,
+		"use_public_ip":        a.PublicIP,
 		"vxlan_port":           a.VxlanPort,
 	}
 }
@@ -986,6 +991,7 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 		"ssh_kp_name":          "SSH_KP_NAME",
 		"region":               "AWS_REGION",
 		"vxlan_port":           "VXLAN_PORT",
+		"use_public_ip":        "USE_PUBLIC_IP",
 	}
 
 	for k, v := range mapProps {
