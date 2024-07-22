@@ -59,7 +59,7 @@ currently accepted:
 | ----------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
 | GO\_VERSION       | 1.21.12                                                      | Go version                                                      |
 | PROTOC\_VERSION   | 3.15.0                                                       | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
-| RUST\_VERSION     | 1.72.0                                                       | Rust version                                                    |
+| RUST\_VERSION     | 1.75.0                                                       | Rust version                                                    |
 | YQ\_VERSION       | v4.35.1                                                      | [yq](https://github.com/mikefarah/yq/) version                  |
 
 As it can be noted in the table above the cloud-api-adaptor repository is cloned within the builder image, so rather than
