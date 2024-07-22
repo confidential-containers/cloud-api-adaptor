@@ -3,7 +3,7 @@ include ../Makefile.defaults
 ATTESTER  ?= none
 ARCH      ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILDER   = fedora-binaries-builder-$(ARCH)
-SEDEBUG   ?= false
+SE_BOOT   ?= false
 IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
 
 REGISTRY ?= quay.io/confidential-containers
@@ -64,10 +64,26 @@ image:
 	rm -rf resources/build*Image
 	rm -rf ./build
 	@echo "Building image..."
-ifeq ($(ARCH),s390x)
+ifeq ($(SE_BOOT),true)
 	touch resources/buildS390xImage
 	sudo mkosi --profile production.conf --image system
 	sudo -E ../hack/build-s390x-se-image.sh
+	@echo "Building docker image..."
+	docker buildx build \
+		-t $(PODVM_NAME)-se:$(PODVM_TAG) \
+		-t $(PODVM_NAME)-se:latest \
+		--load \
+		-f ../podvm/Dockerfile.podvm.fedora .
+else ifeq ($(ARCH),s390x)
+	touch resources/buildS390xImage
+	sudo mkosi --profile production.conf --image system
+	sudo -E ../hack/build-s390x-image.sh
+	@echo "Building docker image..."
+	docker buildx build \
+		-t $(PODVM_NAME):$(PODVM_TAG) \
+		-t $(PODVM_NAME):latest \
+		--load \
+		-f ../podvm/Dockerfile.podvm.fedora .
 else
 	touch resources/buildBootableImage
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
@@ -80,14 +96,26 @@ image-debug:
 	touch resources/buildDebugImage
 	rm -rf ./build
 	@echo "Building debug image..."
-ifeq ($(SEDEBUG),true)
+ifeq ($(SE_BOOT),true)
 	touch resources/buildS390xImage
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-se-image.sh
+	@echo "Building docker image..."
+	docker buildx build \
+		-t $(PODVM_NAME)-se:$(PODVM_TAG) \
+		-t $(PODVM_NAME)-se:latest \
+		--load \
+		-f ../podvm/Dockerfile.podvm.fedora .
 else ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-image.sh
+	@echo "Building docker image..."
+	docker buildx build \
+		-t $(PODVM_NAME):$(PODVM_TAG) \
+		-t $(PODVM_NAME):latest \
+		--load \
+		-f ../podvm/Dockerfile.podvm.fedora .
 else
 	touch resources/buildBootableImage
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
@@ -101,16 +129,15 @@ image-container:
 		-t $(PODVM_CONTAINER_NAME):latest \
 		-f Dockerfile.podvm .
 
-
 PHONY: push-image
 push-image:
 	@echo "Push podvm image to remote repository..."
-ifeq ($(ARCH),s390x)
-	docker buildx build \
-		-t $(PODVM_NAME):$(PODVM_TAG) \
-		-t $(PODVM_NAME):latest \
-		--load \
-		-f ../podvm/Dockerfile.podvm.fedora .
+ifeq ($(SE_BOOT),true)
+	docker push $(PODVM_NAME)-se:$(PODVM_TAG)
+	docker push $(PODVM_NAME)-se:latest
+else
+	docker push $(PODVM_NAME):$(PODVM_TAG)
+	docker push $(PODVM_NAME):latest
 endif
 
 PHONY: push-image-container
