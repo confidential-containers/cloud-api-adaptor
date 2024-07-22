@@ -21,24 +21,25 @@ debug: fedora-binaries-builder binaries image-debug
 .PHONY: container
 container: fedora-binaries-builder binaries image-container
 
+ifeq ($(ARCH),s390x)
+YQ_CHECKSUM = $(YQ_CHECKSUM_s390x)
+endif
+
 PHONY: fedora-binaries-builder
 fedora-binaries-builder:
 	@echo "Building $(BUILDER) image..."
-ifeq ($(ARCH),s390x)
 	docker buildx build \
 		-t $(BUILDER) \
-		--build-arg ARCH=s390x \
-		--build-arg PROTOC_ARCH=s390x \
-		--build-arg YQ_ARCH=s390x \
-		--build-arg YQ_CHECKSUM=sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45 \
+		--build-arg GO_VERSION=$(GO_VERSION) \
+		--build-arg ARCH=$(ARCH) \
+		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
+		--build-arg RUST_VERSION=$(RUST_VERSION) \
+		--build-arg YQ_VERSION=$(YQ_VERSION) \
+		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
+		--build-arg YQ_ARCH=$(ARCH) \
+		--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390x) \
 		--load \
 		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
-else
-	docker buildx build \
-		-t $(BUILDER) \
-		--load \
-		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
-endif
 
 PHONY: binaries
 binaries:
