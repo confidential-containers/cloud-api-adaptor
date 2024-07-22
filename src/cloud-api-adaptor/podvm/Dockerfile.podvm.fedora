@@ -10,4 +10,4 @@ ARG ARCH=s390x
 
 ENV ARCH=${ARCH}
 
-COPY build/podvm-${ARCH}.qcow2 /
+COPY build/podvm-*.qcow2 /
