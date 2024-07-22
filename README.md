@@ -15,7 +15,7 @@ or nested virtualisation support.
 
 The background and description of the components involved in 'peer pods' can be found in the [architecture documentation](./docs/architecture.md).
 
-## Cloud Proviers
+## Cloud Providers
 [cloud-providers](./src/cloud-providers/) Cloud Providers for Kata remote hypervisor
 
 ## PeerPod controller
