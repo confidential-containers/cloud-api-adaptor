@@ -867,7 +867,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 
 	// Wait the import task to finish
 	waiter := ec2.NewSnapshotImportedWaiter(i.Client)
-	if err = waiter.Wait(context.TODO(), describeTasksInput, time.Minute*3); err != nil {
+	if err = waiter.Wait(context.TODO(), describeTasksInput, time.Minute*10); err != nil {
 		return err
 	}
 
