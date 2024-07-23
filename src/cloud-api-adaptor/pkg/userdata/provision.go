@@ -33,7 +33,8 @@ type Config struct {
 }
 
 func NewConfig(aaConfigPath, agentConfig, authJsonPath, daemonConfigPath, cdhConfig string, fetchTimeout int) *Config {
-	cfgPaths := paths{aaConfigPath, agentConfig, authJsonPath, cdhConfig, daemonConfigPath}
+	cfgPaths := paths{aaConfig: aaConfigPath, agentConfig: agentConfig, authJson: authJsonPath,
+		cdhConfig: cdhConfig, daemonConfig: daemonConfigPath}
 	return &Config{fetchTimeout, cfgPaths}
 }
 
