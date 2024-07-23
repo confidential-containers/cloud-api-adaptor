@@ -362,6 +362,7 @@ func getPropertiesImpl() map[string]string {
 		"KBS_IMAGE":             AzureProps.KbsImage,
 		"KBS_IMAGE_TAG":         AzureProps.KbsImageTag,
 		"TAGS":                  AzureProps.Tags,
+		"CONTAINER_RUNTIME":     AzureProps.ContainerRuntime,
 	}
 
 	return props
