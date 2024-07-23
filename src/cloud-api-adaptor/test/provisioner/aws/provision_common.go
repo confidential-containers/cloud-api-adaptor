@@ -34,6 +34,7 @@ import (
 const (
 	EksCniAddonVersion = "v1.12.5-eksbuild.2"
 	EksVersion         = "1.26"
+	AwsCredentialsFile = "aws-cred.env"
 )
 
 var AWSProps = &AWSProvisioner{}
@@ -958,8 +959,30 @@ func ConvertQcow2ToRaw(qcow2 string, raw string) error {
 	return nil
 }
 
+// createCredentialFile Creates the AWS credential file in the install overlay directory
+// that's used by kustomize the setup CAA
+func createCredentialFile(dir, access_key_id, secret_access_key string) error {
+	content := fmt.Sprintf("AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n", access_key_id, secret_access_key)
+	err := os.WriteFile(filepath.Join(dir, AwsCredentialsFile), []byte(content), 0666)
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
 func NewAwsInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
-	overlay, err := pv.NewKustomizeOverlay(filepath.Join(installDir, "overlays", provider))
+	overlayDir := filepath.Join(installDir, "overlays", provider)
+
+	// The credential file should exist in the overlay directory otherwise kustomize fails
+	// to load it. At this point we don't know the key id nor access key, so using empty
+	// values (later the file will be re-written properly).
+	err := createCredentialFile(overlayDir, "", "")
+	if err != nil {
+		return nil, err
+	}
+
+	overlay, err := pv.NewKustomizeOverlay(overlayDir)
 	if err != nil {
 		return nil, err
 	}
@@ -1003,17 +1026,13 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 		}
 	}
 
-	// Mapping the internal properties to SecretGenerator properties.
-	mapProps = map[string]string{
-		"access_key_id":     "AWS_ACCESS_KEY_ID",
-		"secret_access_key": "AWS_SECRET_ACCESS_KEY",
-	}
-	for k, v := range mapProps {
-		if properties[k] != "" {
-			if err = a.Overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret",
-				v, properties[k]); err != nil {
-				return err
-			}
+	if properties["access_key_id"] != "" && properties["secret_access_key"] != "" {
+		if err = createCredentialFile(a.Overlay.ConfigDir, properties["access_key_id"], properties["secret_access_key"]); err != nil {
+			return err
+		}
+
+		if err = a.Overlay.SetKustomizeSecretGeneratorEnv("peer-pods-secret", AwsCredentialsFile); err != nil {
+			return err
 		}
 	}
 
