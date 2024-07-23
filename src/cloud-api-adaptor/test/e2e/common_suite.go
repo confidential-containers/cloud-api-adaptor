@@ -765,3 +765,10 @@ func DoTestPodWithInitContainer(t *testing.T, e env.Environment, assert CloudAss
 	NewTestCase(t, e, "PodWithInitContainer", assert, "Pod with init container").WithPod(pod).Run()
 
 }
+
+// Test to run specific commands in a pod and check the output
+func DoTestPodWithSpecificCommands(t *testing.T, e env.Environment, assert CloudAssert, testCommands []TestCommand) {
+	pod := NewBusyboxPodWithName(E2eNamespace, "simple-test")
+
+	NewTestCase(t, e, "PodWithSpecificCommands", assert, "Pod with specific commands").WithPod(pod).WithTestCommands(testCommands).Run()
+}

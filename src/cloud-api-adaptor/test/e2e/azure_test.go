@@ -6,9 +6,12 @@
 package e2e
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/azure"
+	log "github.com/sirupsen/logrus"
 )
 
 func TestDeletePodAzure(t *testing.T) {
@@ -82,6 +85,38 @@ func TestPodWithIncorrectDeviceAnnotationAzure(t *testing.T) {
 func TestPodWithInitContainerAzure(t *testing.T) {
 	t.Parallel()
 	DoTestPodWithInitContainer(t, testEnv, assert)
+}
+
+// Test to check the presence if pod can access files from internet
+// Use DoTestPodWithSpecificCommands and provide the commands to be executed in the pod
+func TestPodToDownloadExternalFileAzure(t *testing.T) {
+	t.Parallel()
+
+	// Create TestCommand struct with the command to download index.html
+	command1 := TestCommand{
+		Command:             []string{"wget", "-q", "www.google.com"},
+		TestCommandStdoutFn: IsBufferEmpty,
+		TestCommandStderrFn: IsBufferEmpty,
+	}
+
+	// Check index.html is downloaded
+	command2 := TestCommand{
+		Command: []string{"ls", "index.html"},
+		TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+			if strings.Contains(stdout.String(), "index.html") {
+				log.Infof("index.html is present in the pod")
+				return true
+			} else {
+				log.Errorf("index.html is not present in the pod")
+				return false
+			}
+		},
+		TestCommandStderrFn: IsBufferEmpty,
+	}
+
+	commands := []TestCommand{command1, command2}
+
+	DoTestPodWithSpecificCommands(t, testEnv, assert, commands)
 }
 
 func TestKbsKeyRelease(t *testing.T) {
