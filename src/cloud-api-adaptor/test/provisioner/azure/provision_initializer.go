@@ -48,6 +48,7 @@ type AzureProperties struct {
 	ManagedVmClient                    *armcompute.VirtualMachinesClient
 	FederatedIdentityCredentialsClient *armmsi.FederatedIdentityCredentialsClient
 	FederatedCredentialName            string
+	ContainerRuntime                   string
 }
 
 var AzureProps = &AzureProperties{}
@@ -72,6 +73,7 @@ func initAzureProperties(properties map[string]string) error {
 		InstanceSize:            properties["AZURE_INSTANCE_SIZE"],
 		Tags:                    properties["TAGS"],
 		FederatedCredentialName: properties["FEDERATED_CREDENTIAL_NAME"],
+		ContainerRuntime:        properties["CONTAINER_RUNTIME"],
 	}
 
 	CIManagedStr := properties["IS_CI_MANAGED_CLUSTER"]
