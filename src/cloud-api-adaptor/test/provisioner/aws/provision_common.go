@@ -102,6 +102,7 @@ type AWSProvisioner struct {
 	AwsConfig  aws.Config
 	iamClient  *iam.Client
 	Cluster    Cluster
+	Disablecvm string
 	ec2Client  *ec2.Client
 	s3Client   *s3.Client
 	Bucket     *S3Bucket
@@ -161,6 +162,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		},
 		Cluster:    cluster,
 		Image:      NewAMIImage(ec2Client, properties),
+		Disablecvm: properties["disablecvm"],
 		PauseImage: properties["pause_image"],
 		Vpc:        vpc,
 		PublicIP:   properties["use_public_ip"],
@@ -256,6 +258,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 	credentials, _ := a.AwsConfig.Credentials.Retrieve(context.TODO())
 
 	return map[string]string{
+		"disablecvm":           a.Disablecvm,
 		"pause_image":          a.PauseImage,
 		"podvm_launchtemplate": "",
 		"podvm_ami":            a.Image.ID,
@@ -1005,6 +1008,7 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 
 	// Mapping the internal properties to ConfigMapGenerator properties.
 	mapProps := map[string]string{
+		"disablecvm":           "DISABLECVM",
 		"pause_image":          "PAUSE_IMAGE",
 		"podvm_launchtemplate": "PODVM_LAUNCHTEMPLATE_NAME",
 		"podvm_ami":            "PODVM_AMI_ID",
