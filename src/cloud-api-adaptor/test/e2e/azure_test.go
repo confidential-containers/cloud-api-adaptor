@@ -119,6 +119,13 @@ func TestPodToDownloadExternalFileAzure(t *testing.T) {
 	DoTestPodWithSpecificCommands(t, testEnv, assert, commands)
 }
 
+// Method to check external IP access using ping
+func TestCreatePeerPodContainerWithExternalIPAccessAzure(t *testing.T) {
+	SkipTestOnCI(t)
+	t.Parallel()
+	DoTestCreatePeerPodContainerWithExternalIPAccess(t, testEnv, assert)
+}
+
 func TestKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
