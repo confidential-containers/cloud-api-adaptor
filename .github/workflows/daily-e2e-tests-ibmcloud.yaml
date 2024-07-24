@@ -20,12 +20,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - type: e2e_amd64
+          - type: s390x-non-secure-execution
           - type: libvirt_amd64
           - type: libvirt_s390x
-          - type: s390x-non-secure-execution
-          - type: s390x-secure-execution
-          - type: csi_wrapper_x86_64
+          - type: ibmse
     steps:
       - name: Checkout the code
         uses: actions/checkout@v3
@@ -76,24 +74,22 @@ jobs:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
-      - name: Download and Push podvm ubuntu oci image
+      - name: Download and Push podvm oci images
         run: |
           caa_commit_id=$(cat caa_commitid)
           echo "The built podvm image is based on CAA commit_id: ${caa_commit_id}"
           arch_string=""
           podvm_docker_name=""
-          if [[ "${{matrix.type}}" != "csi_wrapper_x86_64" ]] && [[ "${{matrix.type}}" != "libvirt_amd64" ]] && [[ "${{matrix.type}}" != "libvirt_s390x" ]]; then
+          if [[ "${{matrix.type}}" == "libvirt_amd64" ]] || [[ "${{matrix.type}}" == "libvirt_s390x" ]]; then
             case "${{matrix.type}}" in
-              e2e_amd64)
+              libvirt_amd64)
                 arch_string="amd64"
                 ;;
-              s390x-non-secure-execution)
+              libvirt_s390x)
                 arch_string="s390x"
                 ;;
-              s390x-secure-execution)
-                arch_string="s390x-se"
-                ;;
             esac
+            echo "Checking built out generic ubuntu ${arch_string} docker images"
             podvm_image_tar_name="podvm-generic-ubuntu-${arch_string}-${caa_commit_id}.tar"
             podvm_docker_name="quay.io/confidential-containers/podvm-generic-ubuntu-${arch_string}:${caa_commit_id}"
             manifest_url="https://quay.io/v2/confidential-containers/podvm-generic-ubuntu-${arch_string}/manifests/${caa_commit_id}"
@@ -105,6 +101,28 @@ jobs:
               ibmcloud cos object-get --bucket daily-e2e-test-bucket --key=$podvm_image_tar_name $podvm_image_tar_name
               docker load -i $podvm_image_tar_name
               docker push ${podvm_docker_name}
+              echo "${podvm_docker_name} is pushed"
+            fi
+          fi
+          if [[ "${{matrix.type}}" == "ibmse" ]]; then
+            echo "Checking built out generic fedora s390x se enabled docker image"
+            podvm_image_tar_name="podvm-generic-fedora-s390x-se-${caa_commit_id}.tar"
+            echo "Checkouting commit: ${caa_commit_id}"
+            git checkout ${caa_commit_id}
+            image_tag=`sha256sum src/cloud-api-adaptor/versions.yaml | awk -F " " '{ print $1 }'`
+            echo "fedora s390x se image tag: $image_tag"
+            podvm_docker_name="quay.io/confidential-containers/podvm-generic-fedora-s390x-se:${image_tag}"
+            manifest_url="https://quay.io/v2/confidential-containers/podvm-generic-fedora-s390x-se/manifests/${image_tag}"
+            curl -I --silent "${manifest_url}" > header.txt
+            if grep -q "HTTP/2 200" "header.txt"; then
+              echo "${podvm_docker_name} exists."
+            else
+              echo "downloading ${podvm_image_tar_name}"
+              ibmcloud cos object-get --bucket daily-e2e-test-bucket --key=$podvm_image_tar_name $podvm_image_tar_name
+              docker load -i $podvm_image_tar_name
+              echo "show docker images"
+              docker images
+              echo docker push ${podvm_docker_name}
               echo "${podvm_docker_name} is pushed"
             fi
           fi
