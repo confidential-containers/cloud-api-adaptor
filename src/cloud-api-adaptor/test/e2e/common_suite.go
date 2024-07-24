@@ -211,7 +211,12 @@ func DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing
 func DoTestCreatePeerPodWithLargeImage(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "largeimage-pod"
 	imageName := "quay.io/confidential-containers/test-images:largeimage"
-	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure))
+	// Need more timeout to pull large image data
+	timeout := "300"
+	annotationData := map[string]string{
+		"io.katacontainers.config.runtime.create_container_timeout": timeout,
+	}
+	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure), WithAnnotations(annotationData))
 	NewTestCase(t, e, "LargeImagePeerPod", assert, "Peer pod with Large Image has been created").WithPod(pod).WithPodWatcher().Run()
 }
 

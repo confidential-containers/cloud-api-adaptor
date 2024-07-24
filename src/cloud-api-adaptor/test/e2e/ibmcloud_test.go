@@ -30,7 +30,7 @@ func TestCaaDaemonsetRollingUpdate(t *testing.T) {
 		}
 		DoTestCaaDaemonsetRollingUpdate(t, testEnv, &assert)
 	} else {
-		log.Infof("Ignore CAA DaemonSet upgrade  test")
+		t.Skip("Ignore CAA DaemonSet upgrade  test")
 	}
 }
 
@@ -44,7 +44,7 @@ func TestCreateConfidentialPod(t *testing.T) {
 		testCommands := CreateConfidentialPodCheckIBMSECommands()
 		DoTestCreateConfidentialPod(t, testEnv, assert, testCommands)
 	} else {
-		log.Infof("Ignore SE test for simple pod")
+		t.Skip("Ignore SE test for simple pod")
 	}
 
 }
@@ -139,7 +139,7 @@ func TestCreatePeerPodWithPVC(t *testing.T) {
 		myPodwithPVC := NewPodWithPVCFromIBMVPCBlockDriver(nameSpace, podName, containerName, imageName, csiContainerName, csiImageName, WithPVCBinding(mountPath, pvcName))
 		DoTestCreatePeerPodWithPVCAndCSIWrapper(t, testEnv, assert, myPVC, myPodwithPVC, mountPath)
 	} else {
-		log.Infof("Ignore PeerPod with PVC (CSI wrapper) test")
+		t.Skip("Ignore PeerPod with PVC (CSI wrapper) test")
 	}
 }
 
