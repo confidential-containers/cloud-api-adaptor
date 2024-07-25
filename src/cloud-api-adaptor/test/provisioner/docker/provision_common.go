@@ -5,7 +5,9 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"os"
 	"os/exec"
@@ -15,6 +17,8 @@ import (
 	"github.com/containerd/containerd/reference"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
@@ -254,6 +258,48 @@ func (lio *DockerInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, 
 			if err := lio.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm", k, v); err != nil {
 				return err
 			}
+		}
+	}
+
+	//TODO refactor with ibmcloud
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
+		registryName := "quay.io"
+		client, err := cfg.NewClient()
+		if err != nil {
+			return err
+		}
+		clientSet, err := kubernetes.NewForConfig(client.RESTConfig())
+		if err != nil {
+			return err
+		}
+		_, err = clientSet.CoreV1().Secrets("confidential-containers-system").Get(ctx, "auth-json-secret", metav1.GetOptions{})
+		if err == nil {
+			log.Info("Deleting pre-existing auth-json-secret...")
+			err = clientSet.CoreV1().Secrets("confidential-containers-system").Delete(ctx, "auth-json-secret", metav1.DeleteOptions{})
+			if err != nil {
+				return err
+			}
+		}
+		if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+			registryName = strings.Split(os.Getenv("AUTHENTICATED_REGISTRY_IMAGE"), "/")[0]
+		}
+		log.Info("Setting up auth.json")
+		data := map[string]interface{}{
+			"auths": map[string]interface{}{
+				registryName: map[string]interface{}{
+					"auth": os.Getenv("REGISTRY_CREDENTIAL_ENCODED"),
+				},
+			},
+		}
+		jsondata, err := json.MarshalIndent(data, "", " ")
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(lio.Overlay.ConfigDir, "auth.json"), jsondata, 0644); err != nil {
+			return err
+		}
+		if err = lio.Overlay.SetKustomizeSecretGeneratorFile("auth-json-secret", "auth.json"); err != nil {
+			return err
 		}
 	}
 

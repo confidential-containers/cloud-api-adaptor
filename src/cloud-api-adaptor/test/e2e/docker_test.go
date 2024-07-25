@@ -6,6 +6,7 @@
 package e2e
 
 import (
+	"os"
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/docker"
@@ -107,4 +108,31 @@ func TestDockerKbsKeyRelease(t *testing.T) {
 	DoTestKbsKeyReleaseForFailure(t, testEnv, assert)
 	_ = keyBrokerService.EnableKbsCustomizedPolicy("allow_all.rego")
 	DoTestKbsKeyRelease(t, testEnv, assert)
+}
+
+func TestDockerCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T) {
+	assert := DockerAssert{}
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t, testEnv, assert)
+	} else {
+		t.Skip("Registry Credentials, or authenticated image name not exported")
+	}
+}
+
+func TestDockerCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.T) {
+	assert := DockerAssert{}
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		DoTestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t, testEnv, assert)
+	} else {
+		t.Skip("Registry Credentials not exported")
+	}
+}
+
+func TestDockerCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
+	assert := DockerAssert{}
+	if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t, testEnv, assert)
+	} else {
+		t.Skip("Authenticated Image Name not exported")
+	}
 }
