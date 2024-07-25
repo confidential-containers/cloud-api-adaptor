@@ -1,0 +1,98 @@
+# (C) Copyright Confidential Containers Contributors 2024.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Run docker e2e tests.
+name: (Callable) docker e2e tests
+
+on:
+  workflow_call:
+    inputs:
+      podvm_image:
+        required: true
+        type: string
+      caa_image:
+        required: true
+        type: string
+      caa_image_tag:
+        required: false
+        default: "latest"
+        type: string
+      install_directory_artifact:
+        description: The archive name of the install directory
+        default: ''
+        required: false
+        type: string
+      git_ref:
+        default: 'main'
+        description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
+        required: false
+        type: string
+
+env:
+  CLOUD_PROVIDER: docker
+  DEBIAN_FRONTEND: noninteractive
+
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
+jobs:
+  test-docker:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.git_ref }}
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+
+      - name: Read properties from versions.yaml
+        run: |
+          sudo snap install yq
+          go_version="$(yq '.tools.golang' versions.yaml)"
+          [ -n "$go_version" ]
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Get the install directory
+        if: ${{ inputs.install_directory_artifact != '' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.install_directory_artifact }}
+          path: src/cloud-api-adaptor/install
+
+      - name: Config docker
+        run: |
+          cat <<- EOF > docker.properties
+          CAA_IMAGE="${{ inputs.caa_image }}"
+          CAA_IMAGE_TAG="${{ inputs.caa_image_tag }}"
+          CLUSTER_NAME="peer-pods"
+          DOCKER_PODVM_IMAGE="${{ inputs.podvm_image }}"
+          DOCKER_HOST="unix:///var/run/docker.sock"
+          DOCKER_NETWORK_NAME="kind"
+          EOF
+          # For debugging
+          cat docker.properties
+
+      - name: run tests
+        id: runTests
+        run: |
+          export CLOUD_PROVIDER=docker
+          export DEPLOY_KBS=false
+          export TEST_PROVISION=yes
+          export TEST_TEARDOWN=no
+          export TEST_PROVISION_FILE="$PWD/docker.properties"
+          export TEST_PODVM_IMAGE="${{ inputs.podvm_image }}"
+          export TEST_E2E_TIMEOUT="50m"
+
+          make test-e2e
