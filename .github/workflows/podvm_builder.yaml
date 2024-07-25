@@ -28,6 +28,7 @@ jobs:
       matrix:
         os:
           # Please keep this list in alphabetical order.
+          - fedora
           - ubuntu
         runner:
           - ubuntu-latest
