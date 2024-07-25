@@ -261,10 +261,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		daemonConfig.TLSServerKey = string(keyPEM)
 	}
 
-	if authJSON != nil {
-		daemonConfig.AuthJson = string(authJSON)
-	}
-
 	daemonJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
 	if err != nil {
 		return nil, fmt.Errorf("generating JSON data: %w", err)
@@ -309,6 +305,17 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 			Path:    aa.DefaultAaConfigPath,
 			Content: toml,
 		})
+	}
+
+	if authJSON != nil {
+		if len(authJSON) > cloudinit.DefaultAuthfileLimit {
+			logger.Printf("Credentials file is too large to be included in cloud-config")
+		} else {
+			cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+				Path:    AuthFilePath,
+				Content: string(authJSON),
+			})
+		}
 	}
 
 	sandbox := &sandbox{
