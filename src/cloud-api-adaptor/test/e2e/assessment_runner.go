@@ -44,7 +44,6 @@ type ExtraPod struct {
 	pod                  *v1.Pod
 	imagePullTimer       bool
 	expectedPodLogString string
-	isAuth               bool
 	testInstanceTypes    InstanceValidatorFunctions
 	podState             v1.PodPhase
 	testCommands         []TestCommand
@@ -71,10 +70,10 @@ type TestCase struct {
 	service              *v1.Service
 	testCommands         []TestCommand
 	expectedPodLogString string
+	expectedPodDescribe  string
 	podState             v1.PodPhase
 	imagePullTimer       bool
-	isAuth               bool
-	AuthImageStatus      string
+	noAuthJson           bool
 	deletionWithin       time.Duration
 	testInstanceTypes    InstanceValidatorFunctions
 	isNydusSnapshotter   bool
@@ -146,6 +145,11 @@ func (tc *TestCase) WithExpectedPodLogString(expectedPodLogString string) *TestC
 	return tc
 }
 
+func (tc *TestCase) WithExpectedPodDescribe(expectedPodDescribe string) *TestCase {
+	tc.expectedPodDescribe = expectedPodDescribe
+	return tc
+}
+
 func (tc *TestCase) WithCustomPodState(customPodState v1.PodPhase) *TestCase {
 	tc.podState = customPodState
 	return tc
@@ -156,13 +160,8 @@ func (tc *TestCase) WithPodWatcher() *TestCase {
 	return tc
 }
 
-func (tc *TestCase) WithAuthenticatedImage() *TestCase {
-	tc.isAuth = true
-	return tc
-}
-
-func (tc *TestCase) WithAuthImageStatus(status string) *TestCase {
-	tc.AuthImageStatus = status
+func (tc *TestCase) WithNoAuthJson() *TestCase {
+	tc.noAuthJson = true
 	return tc
 }
 
@@ -236,7 +235,7 @@ func (tc *TestCase) Run() {
 				}
 			}
 
-			if tc.AuthImageStatus == "WithoutCredentials" {
+			if tc.noAuthJson {
 				clientSet, err := kubernetes.NewForConfig(client.RESTConfig())
 				if err != nil {
 					t.Fatal(err)
@@ -367,12 +366,27 @@ func (tc *TestCase) Run() {
 					t.Logf("Log output of peer pod:%s", LogString)
 				}
 
-				if tc.isAuth {
-					if err := GetAuthenticatedImageStatus(ctx, client, tc.AuthImageStatus, *tc.pod); err != nil {
+				if tc.expectedPodDescribe != "" {
+					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
 						t.Fatal(err)
 					}
-
-					t.Logf("PodVM has successfully reached %v state with authenticated Image - %v", tc.AuthImageStatus, os.Getenv("AUTHENTICATED_REGISTRY_IMAGE"))
+					for _, podItem := range podlist.Items {
+						if podItem.ObjectMeta.Name == tc.pod.Name {
+							podEvent, err := PodEventExtractor(ctx, client, *tc.pod)
+							if err != nil {
+								t.Fatal(err)
+							}
+							t.Logf("podEvent: %+v\n", podEvent)
+							if strings.Contains(podEvent.EventDescription, tc.expectedPodDescribe) {
+								t.Logf("Output Log from Pod: %s", podEvent)
+							} else {
+								t.Errorf("Job Created pod with Invalid log")
+							}
+							break
+						} else {
+							t.Fatal("Pod Not Found...")
+						}
+					}
 				}
 
 				if tc.testInstanceTypes.testSuccessfn != nil && tc.testInstanceTypes.testFailurefn != nil {
@@ -507,10 +521,6 @@ func (tc *TestCase) Run() {
 							t.Fatal(err)
 						}
 						t.Logf("Log output of peer pod:%s", LogString)
-					}
-					if extraPod.isAuth {
-						// TBD
-						t.Fatal("Error: isAuth hasn't been implemented in extraPods. Please implement assess function for isAuth")
 					}
 					if extraPod.testInstanceTypes.testSuccessfn != nil && extraPod.testInstanceTypes.testFailurefn != nil {
 						// TBD
