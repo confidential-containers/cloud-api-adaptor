@@ -227,6 +227,7 @@ linters:
     - unused
     # Additional linters.
     - gofmt
+    - exhaustruct
 
   # Enable all available linters.
   # Default: false
