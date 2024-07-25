@@ -30,11 +30,11 @@ the kata-containers release version.
         go mod tidy
         ```
         in the [cloud-api-adaptor](../src/cloud-api-adaptor/) directory and [csi-wrapper](../src/csi-wrapper/) directory.
+1. The CoCo operator updates to use references to the other component releases and then releases itself
 1. cloud-api-adaptor releases with the following phases detailed below:
     - Pre-release testing
     - Cutting the release
     - Post release tasks
-1. The CoCo operator updates to use references to the other component releases and then releases itself
 
 ### Pre-release testing
 
@@ -43,11 +43,14 @@ In the pre-release/release candidate testing phase
 During the pre-release/release candidate phase we should verify that the kata-containers, guest-components
 and trustee versions were updated when their components released as listed above.
 
-As the [CoCo operator](https://github.com/confidential-containers/operator/) doesn't release until after peer pods,
-the [current plan](https://github.com/confidential-containers/confidential-containers/pull/201#discussion_r1570606331),
-is to pick the latest operator commit to pin that in our released version's instructions of deploying the operator.
-To do this, we should update the `git.coco-operator.reference` value in [versions.yaml](../src/cloud-api-adaptor/versions.yaml)
-and create a commit for this and add the following changes as a second commit to the same PR.
+Currently, the [CoCo operator](https://github.com/confidential-containers/operator/) only bumps the kata-containers
+payload to the Kata Containers' release version, during it's release.
+Therefore in order to have the correct version of the kata-containers payload in our peer pods releases, we need to
+wait for this CoCo operator release before we can start the peer pods release process. After this operator payload
+pinning is done, we should pick the matching operator release/commit containing this and update the
+`git.coco-operator.reference` value in [versions.yaml](../src/cloud-api-adaptor/versions.yaml)
+and create a commit for this. In order to save review cycles, this change can go in with the go module updates in
+the next section in the same PR.
 
 #### Tags and update go submodules
 
