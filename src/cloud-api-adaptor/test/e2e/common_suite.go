@@ -243,10 +243,9 @@ func DoTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, e env.Environment, as
 func DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T, e env.Environment, assert CloudAssert) {
 	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
 	podName := "authenticated-image-valid-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
-	expectedAuthStatus := "Completed"
 	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever))
-	NewTestCase(t, e, "ValidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Valid Credentials(Default service account) has been created").WithPod(pod).WithAuthenticatedImage().WithAuthImageStatus(expectedAuthStatus).WithCustomPodState(v1.PodPending).Run()
+	NewTestCase(t, e, "ValidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Valid Credentials(Default service account) has been created").WithPod(pod).WithCustomPodState(v1.PodRunning).Run()
 }
 
 func DoTestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.T, e env.Environment, assert CloudAssert) {
@@ -271,21 +270,21 @@ func DoTestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedAuthStatus := "ImagePullBackOff"
+	expectedErrorMessage := "invalid username/password: unauthorized: Invalid Username or Password"
 	secretData := map[string][]byte{v1.DockerConfigJsonKey: jsondata}
 	secret := NewSecret(E2eNamespace, secretName, secretData, v1.SecretTypeDockerConfigJson)
 	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever), WithImagePullSecrets(secretName))
-	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Invalid Credentials has been created").WithSecret(secret).WithPod(pod).WithAuthenticatedImage().WithAuthImageStatus(expectedAuthStatus).WithCustomPodState(v1.PodPending).Run()
+	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Invalid Credentials has been created").WithSecret(secret).WithPod(pod).WithExpectedPodDescribe(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T, e env.Environment, assert CloudAssert) {
 	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
 	podName := "authenticated-image-without-creds-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
-	expectedAuthStatus := "WithoutCredentials"
 	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever))
-	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image without Credentials has been created").WithPod(pod).WithAuthenticatedImage().WithAuthImageStatus(expectedAuthStatus).WithCustomPodState(v1.PodPending).Run()
+	expectedErrorString := "unauthorized: access to the requested resource is not authorized"
+	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image without Credentials has been created").WithPod(pod).WithNoAuthJson().WithExpectedPodDescribe(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestPodVMwithNoAnnotations(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
