@@ -4,6 +4,7 @@ ATTESTER  ?= none
 ARCH      ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILDER   = fedora-binaries-builder-$(ARCH)
 SEDEBUG   ?= false
+IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
 
 REGISTRY ?= quay.io/confidential-containers
 PODVM_DISTRO ?= fedora
@@ -46,6 +47,9 @@ binaries:
 	@echo "Building binaries..."
 	rm -rf ./resources/binaries-tree
 	cp -rf ../../../.git ../../.git
+ifeq ($(IS_DEBIAN),true)
+	docker buildx use default
+endif
 	docker buildx build \
 		--build-arg BUILDER_IMG=$(BUILDER) \
 		--build-arg ATTESTER=$(ATTESTER) \
