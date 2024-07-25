@@ -26,10 +26,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu]
-        arch: [amd64, s390x]
+        os:
+          - ubuntu
+        arch:
+          - amd64
+          - s390x
         include:
-          - os: ubuntu
+          - os: fedora
+            arch: amd64
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
