@@ -59,7 +59,6 @@ func NewTestCase(t *testing.T, e env.Environment, testName string, assert CloudA
 		assessMessage:  assessMessage,
 		podState:       v1.PodRunning,
 		imagePullTimer: false,
-		isAuth:         false,
 		deletionWithin: assert.DefaultTimeout(),
 	}
 
@@ -298,47 +297,6 @@ func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 	}
 
 	return successPod, errorPod, podLogString, nil
-}
-
-func GetAuthenticatedImageStatus(ctx context.Context, client klient.Client, expectedStatus string, authpod v1.Pod) error {
-	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
-	if err != nil {
-		return err
-	}
-	watcher, err := clientset.CoreV1().Events(authpod.ObjectMeta.Namespace).Watch(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	defer watcher.Stop()
-	for event := range watcher.ResultChan() {
-		if event.Object.(*v1.Event).InvolvedObject.Name == authpod.ObjectMeta.Name {
-			if event.Object.(*v1.Event).Type == "Normal" && event.Object.(*v1.Event).Reason == "Started" {
-				return nil
-			}
-			if event.Object.(*v1.Event).Type == "Warning" && (strings.Contains(event.Object.(*v1.Event).Message, "failed to authorize") || strings.Contains(event.Object.(*v1.Event).Message, "illegal base64 data at input byte") || strings.Contains(event.Object.(*v1.Event).Message, "401 UNAUTHORIZED")) {
-				if expectedStatus == "Completed" {
-					return errors.New("Invalid Credentials: " + event.Object.(*v1.Event).Message)
-				} else {
-					return nil
-				}
-			}
-
-			if event.Object.(*v1.Event).Type == "Warning" && strings.Contains(event.Object.(*v1.Event).Message, "not found") {
-				return errors.New("Invalid Image Name: " + event.Object.(*v1.Event).Message)
-			}
-
-			if event.Object.(*v1.Event).Type == "Warning" && strings.Contains(event.Object.(*v1.Event).Message, "failed to pull manifest Not authorized") {
-				if expectedStatus == "Completed" {
-					return errors.New("Invalid auth-json-secret: " + event.Object.(*v1.Event).Message)
-				} else {
-					return nil
-				}
-			}
-
-		}
-	}
-
-	return errors.New("PodVM Start Error")
 }
 
 // SkipTestOnCI skips the test if running on CI

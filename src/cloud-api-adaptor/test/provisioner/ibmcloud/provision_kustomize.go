@@ -8,14 +8,11 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
@@ -167,46 +164,11 @@ func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config
 			}
 		}
 	}
-	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
-		registryName := "quay.io"
-		client, err := cfg.NewClient()
-		if err != nil {
-			return err
-		}
-		clientSet, err := kubernetes.NewForConfig(client.RESTConfig())
-		if err != nil {
-			return err
-		}
-		_, err = clientSet.CoreV1().Secrets("confidential-containers-system").Get(ctx, "auth-json-secret", metav1.GetOptions{})
-		if err == nil {
-			log.Info("Deleting pre-existing auth-json-secret...")
-			err = clientSet.CoreV1().Secrets("confidential-containers-system").Delete(ctx, "auth-json-secret", metav1.DeleteOptions{})
-			if err != nil {
-				return err
-			}
-		}
-		if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
-			registryName = strings.Split(os.Getenv("AUTHENTICATED_REGISTRY_IMAGE"), "/")[0]
-		}
-		log.Info("Setting up auth.json")
-		data := map[string]interface{}{
-			"auths": map[string]interface{}{
-				registryName: map[string]interface{}{
-					"auth": os.Getenv("REGISTRY_CREDENTIAL_ENCODED"),
-				},
-			},
-		}
-		jsondata, err := json.MarshalIndent(data, "", " ")
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(filepath.Join(lio.Overlay.ConfigDir, "auth.json"), jsondata, 0644); err != nil {
-			return err
-		}
-		if err = lio.Overlay.SetKustomizeSecretGeneratorFile("auth-json-secret", "auth.json"); err != nil {
-			return err
-		}
+
+	if err = lio.Overlay.SetAuthJsonSecretIfApplicable(); err != nil {
+		return err
 	}
+
 	if err = lio.Overlay.YamlReload(); err != nil {
 		return err
 	}
