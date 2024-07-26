@@ -37,7 +37,7 @@ case "$image" in
     *)       echo "$0: image for unknown architecture: $image" 1>&2; exit 1 ;;
 esac
 
-[ "${SE_BOOT:-0}" = "1" ] && profile=bz2e-2x8
+[ "${SE_BOOT:-false}" = "true" ] && profile=bz2e-2x8
 
 name=$(printf "imagetest-%.8s-%s" "$(uuidgen)" "$image")
 

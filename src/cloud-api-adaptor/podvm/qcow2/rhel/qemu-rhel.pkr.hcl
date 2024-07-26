@@ -1,8 +1,31 @@
-
 locals {
   machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
   use_pflash   = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
   firmware     = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
+  se_qemuargs = [
+    ["-drive", "file=se-${var.qemu_image_name},if=none,cache=writeback,discard=ignore,format=qcow2,id=se-virtio-drive"],
+    ["-device", "virtio-blk,drive=se-virtio-drive,id=virtio-disk1"]
+  ]
+  qemuargs = "${var.se_boot}" == "true" ? (
+    [
+      ["-device", "virtio-blk,drive=virtio-drive,id=virtio-disk0,bootindex=1"],
+      ["-drive", "file=${var.output_directory}/${var.qemu_image_name},if=none,cache=writeback,discard=ignore,format=qcow2,id=virtio-drive"],
+      ["-cdrom", "${var.cloud_init_image}"],
+      ["-m", "${var.memory}"],
+      ["-smp", "cpus=${var.cpus}"],
+      ["-serial", "mon:stdio"],
+      ["-cpu", "${var.cpu_type}"]
+    ]
+    ) : (
+    [
+      ["-m", "${var.memory}"],
+      ["-smp", "cpus=${var.cpus}"],
+      ["-cdrom", "${var.cloud_init_image}"],
+      ["-serial", "mon:stdio"],
+      ["-cpu", "${var.cpu_type}"]
+    ]
+  )
+  final_qemuargs = "${var.se_boot}" == "true" ? concat(local.qemuargs, local.se_qemuargs) : local.qemuargs
 }
 
 source "qemu" "rhel" {
@@ -14,8 +37,8 @@ source "qemu" "rhel" {
   headless         = true
   iso_checksum     = "${var.cloud_image_checksum}"
   iso_url          = "${var.cloud_image_url}"
-  output_directory = "output"
-  qemuargs         = [["-m", "${var.memory}"], ["-smp", "cpus=${var.cpus}"], ["-cdrom", "${var.cloud_init_image}"], ["-serial", "mon:stdio"], ["-cpu", "${var.cpu_type}"]]
+  output_directory = "${var.output_directory}"
+  qemuargs         = "${local.final_qemuargs}"
   ssh_password     = "${var.ssh_password}"
   ssh_port         = 22
   ssh_username     = "${var.ssh_username}"
@@ -88,6 +111,34 @@ build {
     ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"
+    ]
+  }
+
+  provisioner "file" {
+    source      = "qcow2/build-s390x-se-image.sh"
+    destination = "~/build-s390x-se-image.sh"
+  }
+
+  provisioner "shell" {
+    remote_folder = "~"
+    environment_vars = [
+      "SE_BOOT=${var.se_boot}",
+      "PODVM_DISTRO=${var.podvm_distro}",
+      "ARCH=${var.os_arch}"
+    ]
+    inline = [
+      "sudo -E bash ~/build-s390x-se-image.sh"
+    ]
+  }
+
+  post-processor "shell-local" {
+    name   = "post-build-se-image"
+    script = "qcow2/build-s390x-se-image-post.sh"
+    environment_vars = [
+      "SE_BOOT=${var.se_boot}",
+      "ARCH=${var.os_arch}",
+      "OUTPUT_DIRECTORY=${var.output_directory}",
+      "IMAGE_NAME=${var.qemu_image_name}"
     ]
   }
 }

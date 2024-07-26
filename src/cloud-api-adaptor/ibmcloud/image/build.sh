@@ -34,12 +34,12 @@ if [[ -z "${base_img_path-}" || -z "${dst_img_path-}" || -z "${files_dir-}" ]]; 
     exit 1
 fi
 
-SE_BOOT=${SE_BOOT:-0}
+SE_BOOT=${SE_BOOT:-false}
 
-if [ "${SE_BOOT}" = "1" ]; then
+if [ "${SE_BOOT}" = "true" ]; then
     if [[ -z "${HOST_KEYS_DIR-}" ]]; then
         echo "HOST_KEYS_DIR is missed" 1>&2
-        echo "CLOUD_PROVIDER=ibmcloud SE_BOOT=1 HOST_KEYS_DIR=<host keys directory> make build"
+        echo "CLOUD_PROVIDER=ibmcloud SE_BOOT=true HOST_KEYS_DIR=<host keys directory> make build"
         exit 1
     fi
     umount ./rootkeys/ || true
@@ -65,7 +65,7 @@ fi
 
 function cleanup () {
     msg=$1
-    if [ "${SE_BOOT}" = "1" ]; then
+    if [ "${SE_BOOT}" = "true" ]; then
         for mnt in "$dst_mnt/boot-se" "$dst_mnt/etc/keys" "$dst_mnt/sys"; do
             mountpoint -q "$mnt" && umount "$mnt" || true
             [[ -d "$mnt" ]] && rmdir "$mnt" 2> /dev/null || true
@@ -100,7 +100,7 @@ modprobe nbd
 rm -f "$src_img_path" "$tmp_img_path"
 echo "Cleanuping build env"
 cleanup ""
-if [ "${SE_BOOT}" = "1" ]; then
+if [ "${SE_BOOT}" = "true" ]; then
     echo "Finding host key files"
     host_keys=""
     for i in "${HOST_KEYS_DIR}"/*.crt; do

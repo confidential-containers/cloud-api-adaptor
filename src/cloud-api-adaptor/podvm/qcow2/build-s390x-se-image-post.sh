@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "${SE_BOOT:-0}" != "1" ]; then
+if [ "${SE_BOOT:-false}" != "true" ]; then
     exit 0
 elif [ "${ARCH}" != "s390x" ]; then
     echo "Building of SE podvm image is only supported for s390x"
