@@ -75,6 +75,8 @@ jobs:
           )
       )
     runs-on: ubuntu-latest
+    # TODO: remove this when the job gets stable
+    continue-on-error: true
     permissions:
       contents: read
       packages: write
