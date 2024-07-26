@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
@@ -51,7 +50,7 @@ func Test_dockerProvider_CreateInstance(t *testing.T) {
 	// Create a CloudConfig struct
 	cloudConfig := &cloudinit.CloudConfig{
 		WriteFiles: []cloudinit.WriteFile{
-			{Path: forwarder.DefaultConfigPath, Content: string(testDaemonConfigJson)},
+			{Path: "/run/peerpod/daemon.json", Content: string(testDaemonConfigJson)},
 		},
 	}
 
