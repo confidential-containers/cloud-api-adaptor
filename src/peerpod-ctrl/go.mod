@@ -67,7 +67,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kdomanski/iso9660 v0.4.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/leodido/go-urn v1.2.3 // indirect
+	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect

@@ -81,7 +81,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20231130163424-59d733fafdf6 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/leodido/go-urn v1.2.3 // indirect
+	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
