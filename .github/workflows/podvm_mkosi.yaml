@@ -7,6 +7,13 @@ on:
         description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora"
         required: false
 
+  workflow_call:
+    inputs:
+      binaries-image:
+        description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora"
+        required: false
+        type: string
+
 defaults:
   run:
     working-directory: src/cloud-api-adaptor
@@ -14,7 +21,7 @@ defaults:
 jobs:
   build-binaries:
     name: Build binaries
-    if : ${{ github.event.inputs.binaries-image == '' }}
+    if : ${{ inputs.binaries-image == '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,13 +65,13 @@ jobs:
             "BUILDER_IMG=ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}"
 
   build-image:
-    name: Build image
+    name: Build mkosi image
     needs: [build-binaries]
     if: |
       always() && (
           needs.build-binaries.result == 'success' || (
               needs.build-binaries.result == 'skipped' &&
-              github.event.inputs.binaries-image != ''
+              inputs.binaries-image != ''
           )
       )
     runs-on: ubuntu-latest
@@ -102,10 +109,10 @@ jobs:
       - name: Decide on image to use
         id: binaries-image
         run: |
-          if [ -z "${{ github.event.inputs.binaries-image }}" ]; then
+          if [ -z "${{ inputs.binaries-image }}" ]; then
             echo "image=ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}" | tee -a "$GITHUB_OUTPUT"
           else
-            echo "image=${{ github.event.inputs.binaries-image }}" | tee -a "$GITHUB_OUTPUT"
+            echo "image=${{ inputs.binaries-image }}" | tee -a "$GITHUB_OUTPUT"
           fi
 
       - name: Download binaries and unpack into binaries-tree
@@ -117,7 +124,7 @@ jobs:
           tar xf podvm-binaries.tar -C podvm-mkosi/resources/binaries-tree
           rm podvm-binaries.tar
 
-      - name: Build image
+      - name: Build mkosi image
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: make image-debug
 
