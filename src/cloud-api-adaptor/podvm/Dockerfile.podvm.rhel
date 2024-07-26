@@ -24,6 +24,7 @@ ENV PODVM_DISTRO=${PODVM_DISTRO}
 ENV ARCH=${ARCH}
 ENV UEFI=${UEFI}
 
+ARG SE_BOOT
 ARG IMAGE_URL
 ARG IMAGE_CHECKSUM
 
@@ -31,6 +32,7 @@ ADD ${IMAGE_URL} /tmp/rhel.img
 ENV IMAGE_URL=/tmp/rhel.img
 ENV IMAGE_CHECKSUM=${IMAGE_CHECKSUM}
 
+ENV SE_BOOT=${SE_BOOT}
 # workaround to ensure hashicorp packer is called instead
 # of cracklib packer which is installed by default
 ENV PATH="/usr/bin:${PATH}"

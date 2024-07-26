@@ -81,7 +81,7 @@ When you obtain the host key document, please copy the downloaded host key docum
 ```bash
 $ docker build -t se_podvm_s390x \
          --build-arg ARCH=s390x \
-         --build-arg SE_BOOT=1 \
+         --build-arg SE_BOOT=true \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries_s390x \
          --build-arg UBUNTU_IMAGE_URL="" \
@@ -89,7 +89,7 @@ $ docker build -t se_podvm_s390x \
          -f Dockerfile.podvm .
 ```
 > **Note**
-> - You must passing the `SE_BOOT=1`, `ARCH=s390x`,`UBUNTU_IMAGE_URL=""` and `UBUNTU_IMAGE_CHECKSUM=""` build arguments to docker.
+> - You must passing the `SE_BOOT=true`, `ARCH=s390x`,`UBUNTU_IMAGE_URL=""` and `UBUNTU_IMAGE_CHECKSUM=""` build arguments to docker.
 > - Make sure passing the `BINARIES_IMG=podvm_binaries_s390x` build argument to docker, `podvm_binaries_s390x` is the image from the previous step.
 
 #### Upload the Secure Execution enabled peer pod VM image to IBM Cloud

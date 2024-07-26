@@ -95,7 +95,7 @@ fi
 image_ref="cos://$location/$cos_bucket/$object_key"
 
 arch=$(uname -m)
-[ "${SE_BOOT:-0}" = "1" ] && os_name="hyper-protect-1-0-s390x" || os_name="ubuntu-20-04-${arch/x86_64/amd64}"
+[ "${SE_BOOT:-false}" = "true" ] && os_name="hyper-protect-1-0-s390x" || os_name="ubuntu-20-04-${arch/x86_64/amd64}"
 
 echo -e "\nCreating image \"$image_name\" with $image_ref\n"
 image_json=$(ibmcloud is image-create "$image_name" --os-name "$os_name" --file "$image_ref" --output json)

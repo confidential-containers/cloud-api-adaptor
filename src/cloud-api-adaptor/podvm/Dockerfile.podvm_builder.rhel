@@ -23,7 +23,14 @@ ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2
 ARG ORG_ID
 ARG ACTIVATION_KEY
 
+# Without setting ENV gh-action is failing to use the correct values
+ENV GO_VERSION=${GO_VERSION}
+ENV RUST_VERSION=${RUST_VERSION}
+ENV PROTOC_VERSION=${PROTOC_VERSION}
+ENV PROTOC_ARCH=${PROTOC_ARCH}
 ENV ARCH=${ARCH}
+ENV YQ_ARCH=${YQ_ARCH}
+ENV YQ_VERSION=${YQ_VERSION}
 
 # This registering RHEL when building on an unsubscribed system
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container

@@ -53,8 +53,10 @@ else ifeq ($(PODVM_DISTRO),rhel)
 	@echo defined
 	$(eval OPTS := -var disk_size=11144)
 ifeq ($(ARCH),s390x)
+	$(eval OPTS += -var se_boot=${SE_BOOT})
 	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
 	$(eval OPTS += -var cpu_type=max)
+	$(eval OPTS += -var os_arch=s390x)
 ifndef QEMU_BINARY
 	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
 endif
@@ -80,14 +82,14 @@ $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
 	rm -f cloud-init.img
 	cloud-localds cloud-init.img qcow2/userdata.cfg
 	mkdir -p toupload
-	if [ "${SE_BOOT}" = "1" ] && [ "${ARCH}" = "s390x" ]; then \
+	if [ "${SE_BOOT}" = "true" ] && [ "${ARCH}" = "s390x" ]; then \
 		qemu-img create -f qcow2 "se-${IMAGE_FILE}" 100G; \
 	fi
 	packer init ./qcow2/${PODVM_DISTRO}
 	if [ "${ARCH}" = "x86_64" ]; then \
 		packer plugins install github.com/hashicorp/qemu v1.1.0; \
 	fi
-	packer build ${PACKER_DEFAULT_OPTS} ${OPTS} qcow2/$(PODVM_DISTRO)
+	packer build ${PACKER_DEFAULT_OPTS} ${OPTS} qcow2/${PODVM_DISTRO}
 	rm -fr toupload
 	rm -f cloud-init.img
 

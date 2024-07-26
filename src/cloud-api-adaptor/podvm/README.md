@@ -161,7 +161,7 @@ Running below command will build the Secure Execution enabled qcow2 image:
 ```bash
 $ docker build -t se_podvm_s390x \
          --build-arg ARCH=s390x \
-         --build-arg SE_BOOT=1 \
+         --build-arg SE_BOOT=true \
          --build-arg BUILDER_IMG=podvm_builder \
          --build-arg BINARIES_IMG=podvm_binaries_s390x \
          -f Dockerfile.podvm .
