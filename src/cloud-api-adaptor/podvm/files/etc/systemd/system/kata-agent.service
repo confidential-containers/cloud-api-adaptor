@@ -5,6 +5,7 @@ Wants=process-user-data.service attestation-agent.service
 After=netns@podns.service process-user-data.service attestation-agent.service
 
 [Service]
+Environment=OCICRYPT_KEYPROVIDER_CONFIG=/etc/ocicrypt_config.json
 ExecStartPre=mkdir -p /run/kata-containers
 ExecStart=/usr/local/bin/kata-agent --config /run/peerpod/agent-config.toml
 ExecStartPre=-umount /sys/fs/cgroup/misc
