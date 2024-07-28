@@ -46,6 +46,18 @@ func isTestOnCrio() bool {
 	return os.Getenv("CONTAINER_RUNTIME") == "crio"
 }
 
+func enableAllowAllPodPolicyOverride() bool {
+	return os.Getenv("POD_ALLOW_ALL_POLICY_OVERRIDE") == "yes"
+}
+
+func encodePolicyFile(policyFilePath string) string {
+	policyString, err := os.ReadFile(policyFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return b64.StdEncoding.EncodeToString([]byte(policyString))
+}
+
 type PodOption func(*corev1.Pod)
 
 func WithRestartPolicy(restartPolicy corev1.RestartPolicy) PodOption {
@@ -150,8 +162,12 @@ func WithInitContainers(initContainers []corev1.Container) PodOption {
 
 func NewPod(namespace string, podName string, containerName string, imageName string, options ...PodOption) *corev1.Pod {
 	runtimeClassName := "kata-remote"
+	annotationData := map[string]string{}
+
 	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{Name: podName, Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: podName,
+			Namespace:   namespace,
+			Annotations: annotationData},
 		Spec: corev1.PodSpec{
 			Containers:       []corev1.Container{{Name: containerName, Image: imageName, ImagePullPolicy: corev1.PullAlways}},
 			RuntimeClassName: &runtimeClassName,
@@ -160,6 +176,14 @@ func NewPod(namespace string, podName string, containerName string, imageName st
 
 	for _, option := range options {
 		option(pod)
+	}
+
+	// Don't override the policy annotation if it's already set
+	if enableAllowAllPodPolicyOverride() {
+		allowAllPolicyFilePath := "fixtures/policies/allow-all.rego"
+		if _, ok := pod.ObjectMeta.Annotations["io.katacontainers.config.agent.policy"]; !ok {
+			pod.ObjectMeta.Annotations["io.katacontainers.config.agent.policy"] = encodePolicyFile(allowAllPolicyFilePath)
+		}
 	}
 
 	return pod
@@ -195,16 +219,10 @@ func NewBusyboxPodWithName(namespace, podName string) *corev1.Pod {
 }
 
 func NewPodWithPolicy(namespace, podName, policyFilePath string) *corev1.Pod {
-	policyString, err := os.ReadFile(policyFilePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	encodedPolicy := b64.StdEncoding.EncodeToString([]byte(policyString))
-
 	containerName := "busybox"
 	imageName := BUSYBOX_IMAGE
 	annotationData := map[string]string{
-		"io.katacontainers.config.agent.policy": encodedPolicy,
+		"io.katacontainers.config.agent.policy": encodePolicyFile(policyFilePath),
 	}
 	return NewPod(namespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 }
