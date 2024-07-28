@@ -89,6 +89,29 @@ export KBS_IMAGE=$(./hack/yq-shim.sh '.oci.kbs.registry' ./versions.yaml)
 export KBS_IMAGE_TAG=$(./hack/yq-shim.sh '.oci.kbs.tag' ./versions.yaml)
 ````
 
+# Running end-to-end tests against pre-configured cluster
+
+Let's say you want to run the e2e tests against a pre-configured cluster in Azure:
+
+```sh
+TEST_PROVISION=no TEST_INSTALL_CAA=no make CLOUD_PROVIDER=azure TEST_PROVISION_FILE=azure_test.properties test-e2e
+```
+
+If your environment already has [Trustee operator](https://github.com/confidential-containers/trustee-operator) configured for attestation, then you can run e2e with the following command:
+
+```sh
+TEST_TRUSTEE_OPERATOR=yes TEST_PROVISION=no TEST_INSTALL_CAA=no make CLOUD_PROVIDER=azure TEST_PROVISION_FILE=azure_test.properties test-e2e
+```
+
+If your environment uses a pod VM image with restrict agent policy, then some of the e2e tests may fail.
+You can use the following command to override the test pods with a relaxed agent policy allowing all APIs.
+
+```sh
+POD_ALLOW_ALL_POLICY_OVERRIDE=yes TEST_PROVISION=no TEST_INSTALL_CAA=no make CLOUD_PROVIDER=azure TEST_PROVISION_FILE=azure_test.properties test-e2e
+```
+
+The `POD_ALLOW_ALL_POLICY_OVERRIDE` variable will not override the policy for a test pod if the `io.katacontainers.config.agent.policy` already exists in the pod spec.
+
 ## Provision file specifics
 
 As mentioned on the previous section, a properties file can be passed to the cloud provisioner that will be used to control the provisioning operations. The properties are specific of each cloud provider though, see on the sections below.
