@@ -172,7 +172,6 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 			podLogSlice := reverseSlice(strings.Split(podLogString, "\n"))
 			for _, line := range podLogSlice {
 				if nydusSnapshotterPullRegex.MatchString(line) {
-					t.Log("Pulled with nydus-snapshotter driver:" + line)
 					return true, nil
 				}
 			}

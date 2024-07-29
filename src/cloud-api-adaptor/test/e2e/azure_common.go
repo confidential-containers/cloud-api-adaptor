@@ -57,9 +57,9 @@ func (c AzureCloudAssert) HasPodVM(t *testing.T, id string) {
 	pod_vm_prefix := "podvm-" + id
 	rg := pv.AzureProps.ResourceGroupName
 	if checkVMExistence(rg, pod_vm_prefix) {
-		log.Infof("VM found in resource group")
+		t.Logf("VM %s found in resource group", id)
 	} else {
-		log.Infof("Virtual machine %s not found in resource group %s", id, rg)
+		t.Logf("Virtual machine %s not found in resource group %s", id, rg)
 		t.Error("PodVM was not created")
 	}
 }
@@ -70,14 +70,14 @@ func (c AzureCloudAssert) GetInstanceType(t *testing.T, podName string) (string,
 	prefixName := "podvm-" + podName
 	vm, err := findVM(pv.AzureProps.ResourceGroupName, prefixName)
 	if err != nil {
-		log.Infof("Virtual machine %s not found in resource group %s", podName, pv.AzureProps.ResourceGroupName)
+		t.Logf("Virtual machine %s not found in resource group %s", podName, pv.AzureProps.ResourceGroupName)
 		return "", err
 	}
 
 	// VM found
 	// Extract the VM size
 	if vm != nil && vm.Properties != nil && vm.Properties.HardwareProfile != nil {
-		log.Infof("The VM size for VM '%s' is: %s\n", podName, *vm.Properties.HardwareProfile.VMSize)
+		t.Logf("The VM size for VM '%s' is: %s\n", podName, *vm.Properties.HardwareProfile.VMSize)
 		return string(*vm.Properties.HardwareProfile.VMSize), nil
 	} else {
 		log.Errorf("Failed to get VM size for VM '%s'", podName)
