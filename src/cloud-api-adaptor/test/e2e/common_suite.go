@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -58,10 +57,10 @@ func DoTestCreatePodWithConfigMap(t *testing.T, e env.Environment, assert CloudA
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if stdout.String() == configMapContents {
-					log.Infof("Data Inside Configmap: %s", stdout.String())
+					t.Logf("Data Inside Configmap: %s", stdout.String())
 					return true
 				} else {
-					log.Errorf("Configmap has invalid Data: %s", stdout.String())
+					t.Errorf("Configmap has invalid Data: %s", stdout.String())
 					return false
 				}
 			},
@@ -95,10 +94,10 @@ func DoTestCreatePodWithSecret(t *testing.T, e env.Environment, assert CloudAsse
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if stdout.String() == username {
-					log.Infof("Username from secret inside pod: %s", stdout.String())
+					t.Logf("Username from secret inside pod: %s", stdout.String())
 					return true
 				} else {
-					log.Errorf("Username value from secret inside pod unexpected. Expected %s, got %s", username, stdout.String())
+					t.Errorf("Username value from secret inside pod unexpected. Expected %s, got %s", username, stdout.String())
 					return false
 				}
 			},
@@ -109,10 +108,10 @@ func DoTestCreatePodWithSecret(t *testing.T, e env.Environment, assert CloudAsse
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if stdout.String() == password {
-					log.Infof("Password from secret inside pod: %s", stdout.String())
+					t.Logf("Password from secret inside pod: %s", stdout.String())
 					return true
 				} else {
-					log.Errorf("Password value from secret inside pod unexpected. Expected %s, got %s", password, stdout.String())
+					t.Errorf("Password value from secret inside pod unexpected. Expected %s, got %s", password, stdout.String())
 					return false
 				}
 			},
@@ -135,10 +134,10 @@ func DoTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, e env.Enviro
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if stdout.String() != "" {
-					log.Infof("Output of ping command in busybox : %s", stdout.String())
+					t.Logf("Output of ping command in busybox : %s", stdout.String())
 					return true
 				} else {
-					log.Info("No output from ping command")
+					t.Log("No output from ping command")
 					return false
 				}
 			},
@@ -227,10 +226,10 @@ func DoTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, e env.Environment, as
 			ContainerName: pod.Spec.Containers[2].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), mountPath) {
-					log.Infof("PVC volume is mounted correctly: %s", stdout.String())
+					t.Logf("PVC volume is mounted correctly: %s", stdout.String())
 					return true
 				} else {
-					log.Errorf("PVC volume failed to be mounted at target path: %s", stdout.String())
+					t.Errorf("PVC volume failed to be mounted at target path: %s", stdout.String())
 					return false
 				}
 			},
@@ -297,10 +296,10 @@ func DoTestPodVMwithNoAnnotations(t *testing.T, e env.Environment, assert CloudA
 	testInstanceTypes := InstanceValidatorFunctions{
 		testSuccessfn: func(instance string) bool {
 			if instance == expectedType {
-				log.Infof("PodVM Created with %s Instance type successfully...", instance)
+				t.Logf("PodVM Created with %s Instance type successfully...", instance)
 				return true
 			} else {
-				log.Infof("Failed to Create PodVM with %s Instance type", expectedType)
+				t.Logf("Failed to Create PodVM with %s Instance type", expectedType)
 				return false
 			}
 		},
@@ -321,10 +320,10 @@ func DoTestPodVMwithAnnotationsInstanceType(t *testing.T, e env.Environment, ass
 	testInstanceTypes := InstanceValidatorFunctions{
 		testSuccessfn: func(instance string) bool {
 			if instance == expectedType {
-				log.Infof("PodVM Created with %s Instance type successfully...", instance)
+				t.Logf("PodVM Created with %s Instance type successfully...", instance)
 				return true
 			} else {
-				log.Infof("Failed to Create PodVM with %s Instance type", expectedType)
+				t.Logf("Failed to Create PodVM with %s Instance type", expectedType)
 				return false
 			}
 		},
@@ -346,10 +345,10 @@ func DoTestPodVMwithAnnotationsCPUMemory(t *testing.T, e env.Environment, assert
 	testInstanceTypes := InstanceValidatorFunctions{
 		testSuccessfn: func(instance string) bool {
 			if instance == expectedType {
-				log.Infof("PodVM Created with %s Instance type successfully...", instance)
+				t.Logf("PodVM Created with %s Instance type successfully...", instance)
 				return true
 			} else {
-				log.Infof("Failed to Create PodVM with %s Instance type", expectedType)
+				t.Logf("Failed to Create PodVM with %s Instance type", expectedType)
 				return false
 			}
 		},
@@ -371,10 +370,10 @@ func DoTestPodVMwithAnnotationsInvalidInstanceType(t *testing.T, e env.Environme
 		testSuccessfn: IsStringEmpty,
 		testFailurefn: func(errorMsg error) bool {
 			if strings.Contains(errorMsg.Error(), expectedErrorMessage) {
-				log.Infof("Got Expected Error: %v", errorMsg.Error())
+				t.Logf("Got Expected Error: %v", errorMsg.Error())
 				return true
 			} else {
-				log.Infof("Failed to Get Expected Error: %v", errorMsg.Error())
+				t.Logf("Failed to Get Expected Error: %v", errorMsg.Error())
 				return false
 			}
 		},
@@ -396,10 +395,10 @@ func DoTestPodVMwithAnnotationsLargerMemory(t *testing.T, e env.Environment, ass
 		testSuccessfn: IsStringEmpty,
 		testFailurefn: func(errorMsg error) bool {
 			if strings.Contains(errorMsg.Error(), expectedErrorMessage) {
-				log.Infof("Got Expected Error: %v", errorMsg.Error())
+				t.Logf("Got Expected Error: %v", errorMsg.Error())
 				return true
 			} else {
-				log.Infof("Failed to Get Expected Error: %v", errorMsg.Error())
+				t.Logf("Failed to Get Expected Error: %v", errorMsg.Error())
 				return false
 			}
 		},
@@ -425,11 +424,11 @@ func DoTestPodVMwithAnnotationsLargerCPU(t *testing.T, e env.Environment, assert
 		testFailurefn: func(errorMsg error) bool {
 			for _, i := range expectedErrorMessage {
 				if strings.Contains(errorMsg.Error(), i) {
-					log.Infof("Got Expected Error: %v", errorMsg.Error())
+					t.Logf("Got Expected Error: %v", errorMsg.Error())
 					return true
 				}
 			}
-			log.Infof("Failed to Get Expected Error: %v", errorMsg.Error())
+			t.Logf("Failed to Get Expected Error: %v", errorMsg.Error())
 			return false
 		},
 	}
@@ -455,10 +454,10 @@ func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert Clo
 			ContainerName: clientPod.pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), "Thank you for using nginx") {
-					log.Infof("Success to access nginx service. %s", stdout.String())
+					t.Logf("Success to access nginx service. %s", stdout.String())
 					return true
 				} else {
-					log.Errorf("Failed to access nginx service: %s", stdout.String())
+					t.Errorf("Failed to access nginx service: %s", stdout.String())
 					return false
 				}
 			},
@@ -548,10 +547,10 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 			ContainerName: clientPod.pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), "Thank you for using nginx") {
-					log.Infof("Success to access nginx service. %s", stdout.String())
+					t.Logf("Success to access nginx service. %s", stdout.String())
 					return true
 				} else {
-					log.Errorf("Failed to access nginx service: %s", stdout.String())
+					t.Errorf("Failed to access nginx service: %s", stdout.String())
 					return false
 				}
 			},
@@ -576,8 +575,7 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaning opa in kbs
 // as test cases might be run in parallel
 func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
-
-	log.Info("Do test kbs key release")
+	t.Log("Do test kbs key release")
 	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget")
 	testCommands := []TestCommand{
 		{
@@ -585,10 +583,10 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), "This is my cluster name") {
-					log.Infof("Success to get key.bin: %s", stdout.String())
+					t.Logf("Success to get key.bin: %s", stdout.String())
 					return true
 				} else {
-					log.Errorf("Failed to access key.bin: %s", stdout.String())
+					t.Errorf("Failed to access key.bin: %s", stdout.String())
 					return false
 				}
 			},
@@ -601,8 +599,7 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaning opa in kbs
 // as test cases might be run in parallel
 func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert) {
-
-	log.Info("Do test kbs key release failure case")
+	t.Log("Do test kbs key release failure case")
 	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget-failure")
 	testCommands := []TestCommand{
 		{
@@ -612,16 +609,16 @@ func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert Cloud
 				if strings.Contains(err.Error(), "command terminated with exit code 1") {
 					return true
 				} else {
-					log.Errorf("Got unexpected error: %s", err.Error())
+					t.Errorf("Got unexpected error: %s", err.Error())
 					return false
 				}
 			},
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), "This is my cluster name") {
-					log.Errorf("FAIL as successed to get key.bin: %s", stdout.String())
+					t.Errorf("FAIL as successed to get key.bin: %s", stdout.String())
 					return false
 				} else {
-					log.Infof("PASS as failed to access key.bin: %s", stdout.String())
+					t.Logf("PASS as failed to access key.bin: %s", stdout.String())
 					return true
 				}
 			},
@@ -633,8 +630,7 @@ func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert Cloud
 
 // Test to check for specific key value from Trustee Operator Deployment
 func DoTestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T, e env.Environment, assert CloudAssert) {
-
-	log.Info("Do test Trustee operator key release for specific key")
+	t.Log("Do test Trustee operator key release for specific key")
 	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget")
 	testCommands := []TestCommand{
 		{
@@ -642,10 +638,10 @@ func DoTestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T, e env.Environme
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), "res1val1") {
-					log.Infof("Success to get key %s", stdout.String())
+					t.Logf("Success to get key %s", stdout.String())
 					return true
 				} else {
-					log.Errorf("Failed to access key: %s", stdout.String())
+					t.Errorf("Failed to access key: %s", stdout.String())
 					return false
 				}
 			},
@@ -666,10 +662,10 @@ func DoTestRestrictivePolicyBlocksExec(t *testing.T, e env.Environment, assert C
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestErrorFn: func(err error) bool {
 				if strings.Contains(err.Error(), "failed to exec in container") && strings.Contains(err.Error(), "ExecProcessRequest is blocked by policy") {
-					log.Infof("Exec process was blocked %s", err.Error())
+					t.Logf("Exec process was blocked %s", err.Error())
 					return true
 				} else {
-					log.Errorf("Exec process was allowed: %s", err.Error())
+					t.Errorf("Exec process was allowed: %s", err.Error())
 					return false
 				}
 			},
@@ -713,10 +709,10 @@ func DoTestPodWithCrioDeviceAnnotation(t *testing.T, e env.Environment, assert C
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), "/dev/fuse") {
-					log.Infof("Device /dev/fuse is created in the pod")
+					t.Logf("Device /dev/fuse is created in the pod")
 					return true
 				} else {
-					log.Errorf("Device /dev/fuse is not created in the pod")
+					t.Errorf("Device /dev/fuse is not created in the pod")
 					return false
 				}
 			},
@@ -744,10 +740,10 @@ func DoTestPodWithIncorrectCrioDeviceAnnotation(t *testing.T, e env.Environment,
 			TestCommandStdoutFn: IsBufferEmpty,
 			TestCommandStderrFn: func(stderr bytes.Buffer) bool {
 				if strings.Contains(stderr.String(), "No such file or directory") {
-					log.Infof("Device /dev/fuse is not created in the pod")
+					t.Logf("Device /dev/fuse is not created in the pod")
 					return true
 				} else {
-					log.Errorf("Device /dev/fuse is created in the pod")
+					t.Errorf("Device /dev/fuse is created in the pod")
 					return false
 				}
 			},
@@ -755,10 +751,10 @@ func DoTestPodWithIncorrectCrioDeviceAnnotation(t *testing.T, e env.Environment,
 			// "command terminated with exit code 1"
 			TestErrorFn: func(err error) bool {
 				if strings.Contains(err.Error(), "command terminated with exit code 1") {
-					log.Infof("Command terminated with exit code 1")
+					t.Logf("Command terminated with exit code 1")
 					return true
 				} else {
-					log.Errorf("Command did not terminate with exit code 1")
+					t.Errorf("Command did not terminate with exit code 1")
 					return false
 				}
 

@@ -5,11 +5,9 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -105,12 +103,12 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 			if err != nil {
 				t.Fatal(err)
 			}
-			log.Info("Creating nginx deployment...")
+			t.Log("Creating nginx deployment...")
 			if err = client.Resources().Create(ctx, deployment); err != nil {
 				t.Fatal(err)
 			}
 			waitForNginxDeploymentAvailable(ctx, t, client, deployment, replicas)
-			log.Info("nginx deployment is available now")
+			t.Log("nginx deployment is available now")
 			return ctx
 		}).
 		Assess("Access for nginx deployment test", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -135,19 +133,19 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 				t.Fatal(err)
 			}
 
-			log.Info("Deleting webserver deployment...")
+			t.Log("Deleting webserver deployment...")
 			duration := 2 * time.Minute
 			if err = client.Resources().Delete(ctx, deployment); err != nil {
 				t.Fatal(err)
 			}
-			log.Infof("Deleting deployment %s...", deploymentName)
+			t.Logf("Deleting deployment %s...", deploymentName)
 			if err = wait.For(conditions.New(
 				client.Resources()).ResourceDeleted(deployment),
 				wait.WithInterval(5*time.Second),
 				wait.WithTimeout(duration)); err != nil {
 				t.Fatal(err)
 			}
-			log.Infof("Deployment %s has been successfully deleted within %.0fs", deploymentName, duration.Seconds())
+			t.Logf("Deployment %s has been successfully deleted within %.0fs", deploymentName, duration.Seconds())
 
 			return ctx
 		}).Feature()
@@ -159,12 +157,12 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(deployment, func(object k8s.Object) bool {
 		deployObj, ok := object.(*appsv1.Deployment)
 		if !ok {
-			log.Printf("Not a Deployment object: %v", object)
+			t.Logf("Not a Deployment object: %v", object)
 			return false
 		}
-		log.Printf("Current deployment available replicas: %d", deployObj.Status.AvailableReplicas)
+		t.Logf("Current deployment available replicas: %d", deployObj.Status.AvailableReplicas)
 		return deployObj.Status.AvailableReplicas == rc
-	}), wait.WithTimeout(WAIT_NGINX_DEPLOYMENT_TIMEOUT)); err != nil {
+	}), wait.WithTimeout(WAIT_NGINX_DEPLOYMENT_TIMEOUT), wait.WithInterval(10*time.Second)); err != nil {
 		var podlist v1.PodList
 		if err := client.Resources(deployment.ObjectMeta.Namespace).List(ctx, &podlist); err != nil {
 			t.Fatal(err)
@@ -172,19 +170,20 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 		for _, pod := range podlist.Items {
 			if pod.ObjectMeta.Labels["app"] == "nginx" {
 				//Added logs for debugging nightly tests
-				fmt.Printf("===================\n")
-				t.Logf("Debug infor for pod: %v", pod.ObjectMeta.Name)
+				t.Log("===================")
+				t.Logf("Debug info for pod: %v", pod.ObjectMeta.Name)
 				yamlData, err := yaml.Marshal(pod.Status)
 				if err != nil {
-					fmt.Println("Error marshaling pod.Status to YAML: ", err.Error())
+					t.Logf("Error marshaling pod.Status to YAML: %v", err.Error())
 				} else {
 					t.Logf("Current Pod State: %v", string(yamlData))
 				}
 				if pod.Status.Phase == v1.PodRunning {
-					fmt.Printf("Log of the pod %.v \n===================\n", pod.Name)
+					t.Logf("Log of the pod %.v", pod.Name)
+					t.Logf("===================")
 					podLogString, _ := GetPodLog(ctx, client, pod)
-					fmt.Println(podLogString)
-					fmt.Printf("===================\n")
+					t.Logf(podLogString)
+					t.Logf("===================")
 				}
 			}
 		}

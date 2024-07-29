@@ -143,17 +143,17 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 				t.Fatal(err)
 			}
 
-			log.Info("Creating webserver deployment...")
+			t.Log("Creating webserver deployment...")
 			if err = client.Resources().Create(ctx, deployment); err != nil {
 				t.Fatal(err)
 			}
 			waitForDeploymentAvailable(t, client, deployment, rc)
-			log.Info("webserver deployment is available now")
+			t.Log("webserver deployment is available now")
 
 			// Cache Pod VM instance IDs before upgrade
 			assert.CachePodVmIDs(t, deploymentName)
 
-			log.Info("Creating webserver Service")
+			t.Log("Creating webserver Service")
 			if err = client.Resources().Create(ctx, svc); err != nil {
 				t.Fatal(err)
 			}
@@ -196,7 +196,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 			if err = client.Resources().Get(ctx, caaDaemonSetName, caaNamespace, ds); err != nil {
 				t.Fatal(err)
 			}
-			log.Info("Force to update CAA pods by increasing StartupProbe.FailureThreshold")
+			t.Log("Force to update CAA pods by increasing StartupProbe.FailureThreshold")
 			ds.Spec.Template.Spec.Containers[0].StartupProbe.FailureThreshold += 1
 			if err = client.Resources().Update(ctx, ds); err != nil {
 				t.Fatal(err)
@@ -236,7 +236,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 			}
 
 			time.Sleep(OLD_VM_DELETION_TIMEOUT)
-			log.Info("Verify old VM instances have been deleted:")
+			t.Log("Verify old VM instances have been deleted:")
 			assert.VerifyOldVmDeleted(t)
 
 			return ctx
@@ -247,17 +247,17 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 				t.Fatal(err)
 			}
 
-			log.Info("Deleting verify pod...")
+			t.Log("Deleting verify pod...")
 			if err = client.Resources().Delete(ctx, verifyPod); err != nil {
 				t.Fatal(err)
 			}
 
-			log.Info("Deleting webserver service...")
+			t.Log("Deleting webserver service...")
 			if err = client.Resources().Delete(ctx, svc); err != nil {
 				t.Fatal(err)
 			}
 
-			log.Info("Deleting webserver deployment...")
+			t.Log("Deleting webserver deployment...")
 			if err = client.Resources().Delete(ctx, deployment); err != nil {
 				t.Fatal(err)
 			}
