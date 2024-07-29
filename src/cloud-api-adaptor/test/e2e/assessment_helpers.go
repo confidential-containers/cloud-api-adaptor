@@ -255,16 +255,19 @@ func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 		return 0, 0, "", err
 	}
 	for _, pod := range podlist.Items {
-		if pod.ObjectMeta.Labels["job-name"] == job.Name && pod.Status.Phase == v1.PodPending {
+		if pod.ObjectMeta.Labels["job-name"] != job.Name {
+			continue
+		}
+		if pod.Status.Phase == v1.PodPending {
 			if pod.Status.ContainerStatuses[0].State.Waiting.Reason == "ContainerCreating" {
 				return 0, 0, "", errors.New("Failed to Create PodVM")
 			}
 		}
-		if pod.ObjectMeta.Labels["job-name"] == job.Name && pod.Status.ContainerStatuses[0].State.Terminated.Reason == "StartError" {
+		if pod.Status.ContainerStatuses[0].State.Terminated.Reason == "StartError" {
 			errorPod++
 			t.Log("WARNING:", pod.ObjectMeta.Name, "-", pod.Status.ContainerStatuses[0].State.Terminated.Reason)
 		}
-		if pod.ObjectMeta.Labels["job-name"] == job.Name && pod.Status.ContainerStatuses[0].State.Terminated.Reason == "Completed" {
+		if pod.Status.ContainerStatuses[0].State.Terminated.Reason == "Completed" {
 			successPod++
 			watcher, err := clientset.CoreV1().Events(job.Namespace).Watch(ctx, metav1.ListOptions{})
 			if err != nil {

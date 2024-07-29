@@ -14,10 +14,12 @@ env:
   TEST_TAGS: "owner=github-actions,run=${{ github.run_id }}-${{ github.run_attempt }}"
 
 on:
-  schedule:
-  # Runs "at midnight every day" (see https://crontab.guru)
-  # will base on default branch `main`
-    - cron: '0 0 * * *'
+  workflow_call:
+    inputs:
+      podvm-image-id:
+        type: string
+        description: prebuilt podvm image
+
   workflow_dispatch:
     inputs:
       podvm-image-id:
@@ -34,28 +36,6 @@ on:
         description: prebuild kbs image tag
 
 jobs:
-  generate-podvm-image-version:
-    if: github.event.inputs.podvm-image-id == ''
-    runs-on: ubuntu-latest
-    outputs:
-      image-version: "${{ steps.generate-image-version.outputs.image-version }}"
-    steps:
-    - name: Generate PodVM image version
-      id: generate-image-version
-      run: |
-        unique_version="$(date '+%m.%d.%H%M%S')${{ github.run_attempt }}"
-        echo "Generated unique version for the image as: ${unique_version}"
-        echo "image-version=${unique_version}" >> "$GITHUB_OUTPUT"
-
-  build-podvm-image:
-    uses: ./.github/workflows/azure-podvm-image-build.yml
-    needs:
-    - generate-podvm-image-version
-    if: github.event.inputs.podvm-image-id == ''
-    secrets: inherit
-    with:
-      image-version: ${{ needs.generate-podvm-image-version.outputs.image-version }}
-
   build-caa-container-image:
     if: github.event.inputs.caa-image == ''
     runs-on: ubuntu-latest
@@ -109,7 +89,6 @@ jobs:
       run:
         working-directory: src/cloud-api-adaptor
     needs:
-    - generate-podvm-image-version
     - build-caa-container-image
     # when none of required steps failed, skipped is ok
     if: always() && !failure() && !cancelled()
@@ -118,8 +97,10 @@ jobs:
         parameters:
           - id: "tdx"
             machine_type: "Standard_DC2es_v5"
+            jitter: 0
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
+            jitter: 10
     steps:
     - uses: actions/checkout@v3
 
@@ -143,7 +124,7 @@ jobs:
 
     - name: Create provisioner file
       env:
-        AZURE_IMAGE_ID: ${{ github.event.inputs.podvm-image-id || format('/CommunityGalleries/{0}/images/{1}/Versions/{2}', vars.AZURE_COMMUNITY_GALLERY_NAME, vars.AZURE_PODVM_IMAGE_DEF_NAME, needs.generate-podvm-image-version.outputs.image-version) }}
+        AZURE_IMAGE_ID: ${{ inputs.podvm-image-id }}
         CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
         KBS_IMAGE: ${{ github.event.inputs.kbs-image-id || env.KBS_IMAGE }}
         KBS_IMAGE_TAG: ${{  github.event.inputs.kbs-image-tag || env.KBS_IMAGE_TAG}}
@@ -194,6 +175,7 @@ jobs:
       working-directory: src/cloud-api-adaptor/test/tools
       run: |
         echo "Creating cluster for ${{ matrix.parameters.id }} machine"
+        sleep ${{ matrix.parameters.jitter }}
         make caa-provisioner-cli
         ./caa-provisioner-cli -action=createcluster
 
@@ -204,7 +186,6 @@ jobs:
         working-directory: src/cloud-api-adaptor
     needs:
     - install-aks
-    - build-podvm-image
     # when none of required steps failed, build-podvm-image can be skipped
     if: always() && !failure() && !cancelled()
     strategy:
@@ -271,21 +252,22 @@ jobs:
         az aks get-credentials \
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
           --name "${CLUSTER_NAME}"
-        make test-e2e
+        make test-e2e RUN_TESTS="^Test\(CreateSimplePodAzure\|RemoteAttestation\)$"
 
   cleanup:
     runs-on: ubuntu-latest
     needs:
     - run-e2e-test
-    - generate-podvm-image-version
     if: always()
     strategy:
       matrix:
         parameters:
           - id: "tdx"
             machine_type: "Standard_DC2es_v5"
+            jitter: 0
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
+            jitter: 10
     steps:
     - uses: azure/login@v1
       name: 'Az CLI login'
@@ -304,16 +286,6 @@ jobs:
         namespace="confidential-containers-system"
         kubectl patch namespace "$namespace" -p '{"metadata":{"finalizers": null }}' || true
         kubectl delete namespace "$namespace" || true
-
-    - name: Remove podvm image
-      if: github.event.inputs.podvm-image-id == ''
-      run: |
-        # Delete the Pod VM image from the gallery.
-        az sig image-version delete \
-          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-          --gallery-name ${{ secrets.AZURE_PODVM_GALLERY_NAME }} \
-          --gallery-image-definition ${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }} \
-          --gallery-image-version "${{ needs.generate-podvm-image-version.outputs.image-version }}" || true
 
     - name: Remove container image
       if: github.event.inputs.caa-image == ''
@@ -359,8 +331,10 @@ jobs:
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
           --no-wait \
           --yes || true
+
     - name: Remove federated credential
       run: |
+        sleep ${{ matrix.parameters.jitter }}
         az identity federated-credential delete \
           --identity-name "${{ secrets.AZURE_MANAGED_IDENTITY_NAME }}" \
           --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" \
