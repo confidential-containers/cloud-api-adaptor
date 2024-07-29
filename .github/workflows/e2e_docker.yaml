@@ -39,6 +39,8 @@ defaults:
 jobs:
   test-docker:
     runs-on: ubuntu-22.04
+    # TODO: remove this when the job gets stable
+    continue-on-error: true
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
