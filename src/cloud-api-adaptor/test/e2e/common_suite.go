@@ -151,7 +151,8 @@ func DoTestCreatePeerPodContainerWithExternalIPAccess(t *testing.T, e env.Enviro
 
 func DoTestCreatePeerPodWithJob(t *testing.T, e env.Environment, assert CloudAssert) {
 	jobName := "job-pi"
-	job := NewJob(E2eNamespace, jobName)
+	image := "quay.io/prometheus/busybox:latest"
+	job := NewJob(E2eNamespace, jobName, 8, image)
 	expectedPodLogString := "3.14"
 	NewTestCase(t, e, "JobPeerPod", assert, "Job has been created").WithJob(job).WithExpectedPodLogString(expectedPodLogString).Run()
 }

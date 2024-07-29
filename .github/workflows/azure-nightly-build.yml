@@ -1,0 +1,37 @@
+name: azure-nightly-build
+
+on:
+  schedule:
+  # Runs "at midnight every day" (see https://crontab.guru)
+  # will base on default branch `main`
+  - cron: '0 3 * * *'
+
+jobs:
+  generate-podvm-image-version:
+    if: github.event.inputs.podvm-image-id == ''
+    runs-on: ubuntu-latest
+    outputs:
+      image-version: "${{ steps.generate-image-version.outputs.image-version }}"
+    steps:
+    - name: Generate PodVM image version
+      id: generate-image-version
+      run: |
+        nightly_version=$(date +'%Y.%m.%d')
+        echo "Generated nightly version for the image as: ${nightly_version}"
+        echo "image-version=${nightly_version}" >> "$GITHUB_OUTPUT"
+
+  build-podvm-image:
+    uses: ./.github/workflows/azure-podvm-image-build.yml
+    needs:
+    - generate-podvm-image-version
+    secrets: inherit
+    with:
+      image-version: ${{ needs.generate-podvm-image-version.outputs.image-version }}
+
+  run-e2e-test:
+    uses: ./.github/workflows/azure-e2e-test.yml
+    needs:
+    - build-podvm-image
+    secrets: inherit
+    with:
+      podvm-image-id: ${{ needs.build-podvm-image.outputs.image-id }}

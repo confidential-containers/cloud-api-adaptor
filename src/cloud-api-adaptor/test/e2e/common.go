@@ -245,9 +245,11 @@ func NewSecret(namespace, name string, data map[string][]byte, secretType corev1
 }
 
 // NewJob returns a new job
-func NewJob(namespace, name string) *batchv1.Job {
+func NewJob(namespace, name string, backoffLimit int32, image string, command ...string) *batchv1.Job {
+	if len(command) == 0 {
+		command = []string{"/bin/sh", "-c", "echo 'scale=5; 4*a(1)' | bc -l"}
+	}
 	runtimeClassName := "kata-remote"
-	BackoffLimit := int32(8)
 	TerminateGracePeriod := int64(0)
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -261,14 +263,14 @@ func NewJob(namespace, name string) *batchv1.Job {
 					TerminationGracePeriodSeconds: &TerminateGracePeriod,
 					Containers: []corev1.Container{{
 						Name:    name,
-						Image:   "quay.io/prometheus/busybox:latest",
-						Command: []string{"/bin/sh", "-c", "echo 'scale=5; 4*a(1)' | bc -l"},
+						Image:   image,
+						Command: command,
 					}},
 					RestartPolicy:    corev1.RestartPolicyNever,
 					RuntimeClassName: &runtimeClassName,
 				},
 			},
-			BackoffLimit: &BackoffLimit,
+			BackoffLimit: &backoffLimit,
 		},
 	}
 }
