@@ -1,0 +1,12 @@
+[Unit]
+Description=Remove SSH server on shutdown
+DefaultDependencies=no
+Before=shutdown.target reboot.target halt.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/remove-ssh.sh
+
+[Install]
+WantedBy=halt.target reboot.target shutdown.target
+
