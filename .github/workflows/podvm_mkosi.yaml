@@ -192,6 +192,13 @@ jobs:
           sudo ln -s $PWD/mkosi/bin/mkosi /usr/local/bin/mkosi
           mkosi --version
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install Nix
         if: matrix.platforms.runner == 'ubuntu-22.04'
         uses: cachix/install-nix-action@v22
@@ -284,3 +291,21 @@ jobs:
           PUSH: true
           REGISTRY: ${{ inputs.registry }}
           PODVM_TAG: ${{ steps.image_tag.outputs.image_tag }}
+
+      - name: Clean up some space for the docker provider build
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: |
+          sudo du --max-depth=2 /home/runner || true
+          sudo du --max-depth=2 /var/lib || true
+          sudo rm -rf /nix
+          sudo rm -rf ./build
+          sudo rm -rf ./mkosi.cache
+
+      - name: Build image for docker provider
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: |
+          make image-container
+        env:
+          PUSH: true
+          REGISTRY: ghcr.io/${{ github.repository }}
+          PODVM_TAG: ${{ github.sha }}
