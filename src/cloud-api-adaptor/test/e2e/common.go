@@ -29,7 +29,7 @@ const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
 
 func isTestWithKbs() bool {
-	return os.Getenv("TEST_KBS") == "yes"
+	return os.Getenv("TEST_KBS") == "yes" || os.Getenv("TEST_KBS") == "true"
 }
 
 // Setup of Trustee Operator is required for this test
