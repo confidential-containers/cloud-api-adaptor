@@ -84,6 +84,13 @@ $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
 	mkdir -p toupload
 	if [ "${SE_BOOT}" = "true" ] && [ "${ARCH}" = "s390x" ]; then \
 		qemu-img create -f qcow2 "se-${IMAGE_FILE}" 100G; \
+		# Temporary workaround for installing cryptsetup on RHEL 9.4 and below s390x base images for enabling se \
+		# Due to issue: https://gitlab.com/qemu-project/qemu/-/issues/2054 \
+		# Remove this if using the latest QEMU version (v9.0.0) \
+		if [ "${PODVM_DISTRO}" = "rhel" ]; then \
+			yum install -y cryptsetup; \
+			cp /usr/sbin/cryptsetup ./files; \
+		fi \
 	fi
 	packer init ./qcow2/${PODVM_DISTRO}
 	if [ "${ARCH}" = "x86_64" ]; then \
