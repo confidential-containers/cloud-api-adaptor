@@ -276,15 +276,15 @@ func (tc *TestCase) Run() {
 						t.Logf("Expected Pod State: %v", tc.podState)
 						yamlData, err := yaml.Marshal(pod.Status)
 						if err != nil {
-							fmt.Println("Error marshaling pod.Status to YAML: ", err.Error())
+							t.Logf("Error marshaling pod.Status to YAML: %v", err.Error())
 						} else {
 							t.Logf("Current Pod State: %v", string(yamlData))
 						}
 						if pod.Status.Phase == v1.PodRunning {
-							fmt.Printf("Log of the pod %.v \n===================\n", pod.Name)
+							t.Logf("Log of the pod %.v \n===================\n", pod.Name)
 							podLogString, _ := GetPodLog(ctx, client, *pod)
-							fmt.Println(podLogString)
-							fmt.Printf("===================\n")
+							t.Log(podLogString)
+							t.Logf("===================\n")
 						}
 						t.Fatal(err)
 					}
@@ -295,11 +295,11 @@ func (tc *TestCase) Run() {
 					t.Fatal(err)
 				}
 				clusterIP := WaitForClusterIP(t, client, tc.service)
-				log.Printf("webserver service is available on cluster IP: %s", clusterIP)
+				t.Logf("webserver service is available on cluster IP: %s", clusterIP)
 			}
 			if tc.extraPods != nil {
 				for _, extraPod := range tc.extraPods {
-					fmt.Printf("Provision extra pod %s", extraPod.pod.Name)
+					t.Logf("Provision extra pod %s", extraPod.pod.Name)
 					err := ProvisionPod(ctx, client, t, extraPod.pod, extraPod.podState, extraPod.testCommands)
 					if err != nil {
 						t.Fatal(err)
@@ -329,7 +329,7 @@ func (tc *TestCase) Run() {
 				}
 				if podLogString != "" {
 					if strings.Contains(podLogString, tc.expectedPodLogString) {
-						log.Printf("Output Log from Pod: %s", podLogString)
+						t.Logf("Output Log from Pod: %s", podLogString)
 					} else {
 						t.Errorf("Job Created pod with Invalid log")
 					}
@@ -435,7 +435,7 @@ func (tc *TestCase) Run() {
 							t.Fatal(error)
 						}
 					} else if profile != "" {
-						fmt.Printf("PodVM Created with Instance Type %v", profile)
+						t.Logf("PodVM Created with Instance Type %v", profile)
 						if tc.FailReason != "" {
 							var podlist v1.PodList
 							var podLogString string

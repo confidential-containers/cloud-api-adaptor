@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -158,7 +157,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 				t.Fatal(err)
 			}
 			clusterIP := WaitForClusterIP(t, client, svc)
-			log.Printf("webserver service is available on cluster IP: %s", clusterIP)
+			t.Logf("webserver service is available on cluster IP: %s", clusterIP)
 
 			// Update verify command
 			verifyPod.Spec.Containers[0].Command = append(
@@ -210,25 +209,25 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 			if err = client.Resources().Get(ctx, verifyPodName, E2eNamespace, verifyPod); err != nil {
 				t.Fatal(err)
 			}
-			log.Printf("verify pod status: %s", verifyPod.Status.Phase)
+			t.Logf("verify pod status: %s", verifyPod.Status.Phase)
 			if verifyPod.Status.Phase != v1.PodRunning {
 				clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 				if err != nil {
-					log.Printf("Failed to new client set: %v", err)
+					t.Logf("Failed to new client set: %v", err)
 				} else {
 					req := clientset.CoreV1().Pods(E2eNamespace).GetLogs(verifyPodName, &v1.PodLogOptions{})
 					podLogs, err := req.Stream(ctx)
 					if err != nil {
-						log.Printf("Failed to get pod logs: %v", err)
+						t.Logf("Failed to get pod logs: %v", err)
 					} else {
 						defer podLogs.Close()
 						buf := new(bytes.Buffer)
 						_, err = io.Copy(buf, podLogs)
 						if err != nil {
-							log.Printf("Failed to copy pod logs: %v", err)
+							t.Logf("Failed to copy pod logs: %v", err)
 						} else {
 							podLogString := strings.TrimSpace(buf.String())
-							log.Printf("verify pod logs: \n%s", podLogString)
+							t.Logf("verify pod logs: \n%s", podLogString)
 						}
 					}
 				}
@@ -272,12 +271,12 @@ func waitForCaaDaemonSetUpdated(t *testing.T, client klient.Client, ds *appsv1.D
 	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(ds, func(object k8s.Object) bool {
 		dsObj, ok := object.(*appsv1.DaemonSet)
 		if !ok {
-			log.Printf("Not a DaemonSet object: %v", object)
+			t.Logf("Not a DaemonSet object: %v", object)
 			return false
 		}
 
-		log.Printf("Current CAA DaemonSet UpdatedNumberScheduled: %d", dsObj.Status.UpdatedNumberScheduled)
-		log.Printf("Current CAA DaemonSet NumberAvailable: %d", dsObj.Status.NumberAvailable)
+		t.Logf("Current CAA DaemonSet UpdatedNumberScheduled: %d", dsObj.Status.UpdatedNumberScheduled)
+		t.Logf("Current CAA DaemonSet NumberAvailable: %d", dsObj.Status.NumberAvailable)
 		return dsObj.Status.UpdatedNumberScheduled == rc && dsObj.Status.NumberAvailable == rc
 	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
 		t.Fatal(err)
@@ -288,11 +287,11 @@ func waitForDeploymentAvailable(t *testing.T, client klient.Client, deployment *
 	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(deployment, func(object k8s.Object) bool {
 		deployObj, ok := object.(*appsv1.Deployment)
 		if !ok {
-			log.Printf("Not a Deployment object: %v", object)
+			t.Logf("Not a Deployment object: %v", object)
 			return false
 		}
 
-		log.Printf("Current deployment available replicas: %d", deployObj.Status.AvailableReplicas)
+		t.Logf("Current deployment available replicas: %d", deployObj.Status.AvailableReplicas)
 		return deployObj.Status.AvailableReplicas == rc
 	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
 		t.Fatal(err)
