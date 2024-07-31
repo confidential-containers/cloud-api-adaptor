@@ -264,6 +264,7 @@ jobs:
       env:
         TEST_PROVISION: "no"
         DEPLOY_KBS: "yes"
+        CUSTOM_PCCS_URL: "https://global.acccache.azure.net/sgx/certification/v4"
       run: |
         # Since we install the cluster in parallel, we need to get the credentials here.
         echo "running e2e test for ${{ matrix.parameters.id }} machine"
