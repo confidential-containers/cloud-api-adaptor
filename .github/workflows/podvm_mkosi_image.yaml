@@ -16,12 +16,6 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Take a pre-action for self-hosted runner
-        run: |
-          if [ -f ${HOME}/script/pre_action.sh ]; then
-            ${HOME}/script/pre_action.sh cc-caa
-          fi
-
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -64,11 +58,3 @@ jobs:
       - name: Push image
         run: make push-image
         working-directory: src/cloud-api-adaptor/podvm-mkosi
-
-      - name: Take a post-action
-        if: always()
-        run: |
-          if [ -f ${HOME}/script/post_action.sh ]; then
-            ${HOME}/script/post_action.sh cc-caa
-          fi
-
