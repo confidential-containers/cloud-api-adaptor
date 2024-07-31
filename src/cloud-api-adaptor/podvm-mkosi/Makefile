@@ -53,6 +53,10 @@ endif
 	docker buildx build \
 		--build-arg BUILDER_IMG=$(BUILDER) \
 		--build-arg ATTESTER=$(ATTESTER) \
+		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
+		--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
+		--build-arg PAUSE_BIN=$(PAUSE_BIN) \
+		$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		-o type=local,dest="./resources/binaries-tree" \
 		-f ../podvm/Dockerfile.podvm_binaries.fedora ../../
