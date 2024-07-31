@@ -314,6 +314,11 @@ func (tc *TestCase) Run() {
 			var podlist v1.PodList
 
 			if tc.job != nil {
+				conditions := tc.job.Status.Conditions
+				if len(conditions) == 1 && conditions[0].Type == batchv1.JobFailed {
+					t.Errorf("Job failed")
+				}
+
 				if err := client.Resources(tc.job.Namespace).List(ctx, &podlist); err != nil {
 					t.Fatal(err)
 				}
