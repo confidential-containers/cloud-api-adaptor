@@ -1,7 +1,7 @@
 ROOT_PATH := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 VERSIONS_SRC := $(ROOT_PATH)/versions.yaml
 YQ_COMMAND ?= $(ROOT_PATH)/hack/yq-shim.sh
-
+PAUSE_BIN ?= pause
 # As we need `yq` to be installed to fetch the values from versions.yaml
 # these values are hardcoded here, all other versions/references should be
 # stored in versions.yaml
