@@ -170,6 +170,57 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorLiteral(secretName string
 	return nil
 }
 
+// SetKustomizeSecretGeneratorEnvs updates the kustomization YAML by adding the `env` on the
+// `sgName` SecretGenerator env file.
+func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorEnv(sgName string, file string) (err error) {
+	oldwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	if err = os.Chdir(kh.ConfigDir); err != nil {
+		return err
+	}
+	defer func() {
+		err = os.Chdir(oldwd)
+	}()
+
+	kf, err := kustfile.NewKustomizationFile(fs.MakeRealFS())
+	if err != nil {
+		return err
+	}
+
+	m, err := kf.Read()
+	if err != nil {
+		return err
+	}
+
+	if len(m.SecretGenerator) == 0 {
+		m.SecretGenerator = append(m.SecretGenerator, ktypes.SecretArgs{
+			GeneratorArgs: ktypes.GeneratorArgs{
+				DataSources: ktypes.DataSources{
+					EnvSource: file,
+				},
+			},
+		})
+	} else {
+		i := slices.IndexFunc(m.SecretGenerator, func(sa ktypes.SecretArgs) bool { return sa.Name == sgName })
+		if i == -1 {
+			return fmt.Errorf("SecretGenerator %s not found\n", sgName)
+		}
+		gs := &m.SecretGenerator[i]
+		if !stringSliceContains(gs.GeneratorArgs.DataSources.FileSources, file) {
+			gs.GeneratorArgs.DataSources.EnvSource = file
+		}
+
+	}
+
+	if err = kf.Write(m); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // SetKustomizeSecretGeneratorFile updates the kustomization YAML by adding the `file` on the
 // `sgName` SecretGenerator files.
 func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorFile(sgName string, file string) (err error) {
