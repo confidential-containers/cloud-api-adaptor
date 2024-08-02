@@ -436,10 +436,10 @@ func DoTestPodVMwithAnnotationsLargerCPU(t *testing.T, e env.Environment, assert
 }
 
 func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert CloudAssert) {
-	clientPodName := "busybox"
+	clientPodName := "test-client"
 	clientContainerName := "busybox"
 	clientImageName := BUSYBOX_IMAGE
-	serverPodName := "nginx"
+	serverPodName := "test-server"
 	serverContainerName := "nginx"
 	serverImageName := "nginx:latest"
 	serviceName := "nginx"
@@ -477,10 +477,10 @@ func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert Clo
 }
 
 func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAssert) {
-	clientPodName := "curl"
+	clientPodName := "mtls-client"
 	clientContainerName := "curl"
 	clientImageName := "docker.io/curlimages/curl:8.4.0"
-	serverPodName := "nginx"
+	serverPodName := "mtls-server"
 	serverContainerName := "nginx"
 	serverImageName := "nginx:latest"
 	caService, _ := tlsutil.NewCAService("nginx")
@@ -576,7 +576,7 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 // as test cases might be run in parallel
 func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 	t.Log("Do test kbs key release")
-	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget")
+	pod := NewBusyboxPodWithName(E2eNamespace, "kbs-key-release")
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
@@ -600,7 +600,7 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 // as test cases might be run in parallel
 func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert) {
 	t.Log("Do test kbs key release failure case")
-	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget-failure")
+	pod := NewBusyboxPodWithName(E2eNamespace, "kbs-failure")
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
@@ -631,7 +631,7 @@ func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert Cloud
 // Test to check for specific key value from Trustee Operator Deployment
 func DoTestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T, e env.Environment, assert CloudAssert) {
 	t.Log("Do test Trustee operator key release for specific key")
-	pod := NewBusyboxPodWithName(E2eNamespace, "busybox-wget")
+	pod := NewBusyboxPodWithName(E2eNamespace, "op-key-release")
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/default/kbsres1/key1"},
@@ -776,7 +776,7 @@ func DoTestPodWithInitContainer(t *testing.T, e env.Environment, assert CloudAss
 
 // Test to run specific commands in a pod and check the output
 func DoTestPodWithSpecificCommands(t *testing.T, e env.Environment, assert CloudAssert, testCommands []TestCommand) {
-	pod := NewBusyboxPodWithName(E2eNamespace, "simple-test")
+	pod := NewBusyboxPodWithName(E2eNamespace, "command-test")
 
 	NewTestCase(t, e, "PodWithSpecificCommands", assert, "Pod with specific commands").WithPod(pod).WithTestCommands(testCommands).Run()
 }
