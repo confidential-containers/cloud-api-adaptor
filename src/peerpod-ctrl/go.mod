@@ -3,7 +3,7 @@ module github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl
 go 1.21
 
 require (
-	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.9.0-alpha.4
+	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.9.0
 	github.com/onsi/ginkgo/v2 v2.8.1
 	github.com/onsi/gomega v1.27.1
 	k8s.io/api v0.26.0
