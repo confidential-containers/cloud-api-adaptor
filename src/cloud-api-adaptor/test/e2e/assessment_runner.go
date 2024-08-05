@@ -611,11 +611,14 @@ func (tc *TestCase) Run() {
 
 			if tc.extraPods != nil {
 				for _, extraPod := range tc.extraPods {
-					err := DeletePod(ctx, client, extraPod.pod, &tc.deletionWithin)
+					pod := extraPod.pod
+					t.Logf("Deleting pod %s...", pod.Name)
+					err := DeletePod(ctx, client, pod, &tc.deletionWithin)
 					if err != nil {
 						t.Logf("Error occurs when delete pod: %s", extraPod.pod.Name)
 						t.Fatal(err)
 					}
+					t.Logf("Pod %s has been successfully deleted within %.0fs", pod.Name, tc.deletionWithin.Seconds())
 				}
 			}
 
