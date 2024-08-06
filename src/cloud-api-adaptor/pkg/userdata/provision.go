@@ -2,45 +2,52 @@ package userdata
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/aws"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/azure"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/docker"
+	toml "github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v2"
 )
 
-var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
+const (
+	ConfigParent = "/run/peerpod"
+	DigestPath   = "/run/peerpod/initdata.digest"
+	InitdataPath = "/run/peerpod/initdata"
+)
 
-type paths struct {
-	aaConfig     string
-	agentConfig  string
-	authJson     string
-	cdhConfig    string
-	daemonConfig string
-}
+var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
+var WriteFilesList = []string{"agent-config.toml", "daemon.json", "auth.json", "initdata"}
+var InitdDataFilesList = []string{"aa.toml", "cdh.toml", "policy.rego"}
 
 type Config struct {
-	fetchTimeout int
-	paths        paths
+	fetchTimeout  int
+	digestPath    string
+	initdataPath  string
+	parentPath    string
+	writeFiles    []string
+	initdataFiles []string
 }
 
-func NewConfig(aaConfigPath, agentConfig, authJsonPath, daemonConfigPath, cdhConfig string, fetchTimeout int) *Config {
-	ps := paths{
-		aaConfig:     aaConfigPath,
-		agentConfig:  agentConfig,
-		authJson:     authJsonPath,
-		cdhConfig:    cdhConfig,
-		daemonConfig: daemonConfigPath,
-	}
+func NewConfig(fetchTimeout int) *Config {
 	return &Config{
-		fetchTimeout: fetchTimeout,
-		paths:        ps,
+		fetchTimeout:  fetchTimeout,
+		parentPath:    ConfigParent,
+		initdataPath:  InitdataPath,
+		digestPath:    DigestPath,
+		writeFiles:    WriteFilesList,
+		initdataFiles: InitdDataFilesList,
 	}
 }
 
@@ -51,6 +58,12 @@ type WriteFile struct {
 
 type CloudConfig struct {
 	WriteFiles []WriteFile `yaml:"write_files"`
+}
+
+type InitData struct {
+	Algorithm string            `toml:"algorithm"`
+	Version   string            `toml:"version"`
+	Data      map[string]string `toml:"data,omitempty"`
 }
 
 type UserDataProvider interface {
@@ -149,58 +162,100 @@ func parseUserData(userData []byte) (*CloudConfig, error) {
 	return &cc, nil
 }
 
-func findConfigEntry(path string, cc *CloudConfig) []byte {
-	for _, wf := range cc.WriteFiles {
-		if wf.Path != path {
-			continue
-		}
-		return []byte(wf.Content)
-	}
-	return nil
-}
-
-type entry struct {
-	path     string
-	optional bool
-}
-
-func (f *entry) writeFile(cc *CloudConfig) error {
-	bytes := findConfigEntry(f.path, cc)
-	if bytes == nil {
-		if !f.optional {
-			return fmt.Errorf("failed to find %s entry in cloud config", f.path)
-		}
-		return nil
-	}
-
+func writeFile(path string, bytes []byte) error {
 	// Ensure the parent directory exists
-	err := os.MkdirAll(filepath.Dir(f.path), 0755)
+	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	err = os.WriteFile(f.path, bytes, 0644)
+	err = os.WriteFile(path, bytes, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
+		return fmt.Errorf("failed to write file %s: %w", path, err)
 	}
-	logger.Printf("Wrote %s\n", f.path)
+	logger.Printf("Wrote %s\n", path)
 	return nil
 }
 
+func isAllowed(path string, filesList []string) bool {
+	for _, listedFile := range filesList {
+		if listedFile == path {
+			return true
+		}
+		if strings.HasSuffix(path, listedFile) {
+			return true
+		}
+	}
+	return false
+}
+
 func processCloudConfig(cfg *Config, cc *CloudConfig) error {
-	entries := []entry{
-		{path: cfg.paths.agentConfig, optional: false},
-		{path: cfg.paths.daemonConfig, optional: false},
-		{path: cfg.paths.aaConfig, optional: true},
-		{path: cfg.paths.cdhConfig, optional: true},
-		{path: cfg.paths.authJson, optional: true},
+	for _, wf := range cc.WriteFiles {
+		path := wf.Path
+		bytes := []byte(wf.Content)
+		if isAllowed(path, cfg.writeFiles) {
+			if bytes != nil {
+				if err := writeFile(path, bytes); err != nil {
+					return fmt.Errorf("failed to write config file %s: %w", path, err)
+				}
+			}
+		} else {
+			logger.Printf("File: %s is not allowed in WriteFiles.\n", path)
+		}
 	}
 
-	for _, e := range entries {
-		err := e.writeFile(cc)
-		if err != nil {
-			return err
+	return nil
+}
+
+func extractInitdataAndHash(cfg *Config) error {
+	if _, err := os.Stat(cfg.initdataPath); err != nil {
+		return fmt.Errorf("Error stat initdata file: %w", err)
+	}
+
+	dataBytes, err := os.ReadFile(cfg.initdataPath)
+	if err != nil {
+		return fmt.Errorf("Error read initdata file: %w", err)
+	}
+
+	decodedBytes, err := base64.StdEncoding.DecodeString(string(dataBytes))
+	if err != nil {
+		return fmt.Errorf("Error base64 decode initdata: %w", err)
+	}
+	initdata := InitData{}
+	err = toml.Unmarshal(decodedBytes, &initdata)
+	if err != nil {
+		return fmt.Errorf("Error unmarshalling initdata: %w", err)
+	}
+
+	for key, value := range initdata.Data {
+		if isAllowed(key, cfg.initdataFiles) {
+			err := writeFile(filepath.Join(cfg.parentPath, key), []byte(value))
+			if err != nil {
+				return fmt.Errorf("Error write a file in initdata: %w", err)
+			}
+		} else {
+			logger.Printf("File: %s is not allowed in initdata.\n", key)
 		}
+	}
+
+	checksumStr := ""
+	switch initdata.Algorithm {
+	case "sha256":
+		hash := sha256.Sum256(dataBytes)
+		checksumStr = hex.EncodeToString(hash[:])
+	case "sha384":
+		hash := sha512.Sum384(dataBytes)
+		checksumStr = hex.EncodeToString(hash[:])
+	case "sha512":
+		hash := sha512.Sum512(dataBytes)
+		checksumStr = hex.EncodeToString(hash[:])
+	default:
+		return fmt.Errorf("Error creating initdata hash, the Algorithm %s not supported", initdata.Algorithm)
+	}
+
+	err = writeFile(cfg.digestPath, []byte(checksumStr)) // the hash in digestPath will also be used by attester
+	if err != nil {
+		return fmt.Errorf("failed to write file %s: %w", cfg.digestPath, err)
 	}
 
 	return nil
@@ -212,18 +267,25 @@ func ProvisionFiles(cfg *Config) error {
 	ctx, cancel := context.WithTimeout(bg, duration)
 	defer cancel()
 
-	provider, err := newProvider(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create UserData provider: %w", err)
+	// some providers provision config files via process-user-data
+	// some providers rely on cloud-init provision config files
+	// all providers need extract files from initdata and calculate the hash value for attesters usage
+	provider, _ := newProvider(ctx)
+	if provider != nil {
+		cc, err := retrieveCloudConfig(ctx, provider)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve cloud config: %w", err)
+		}
+
+		if err = processCloudConfig(cfg, cc); err != nil {
+			return fmt.Errorf("failed to process cloud config: %w", err)
+		}
+	} else {
+		logger.Printf("unsupported user data provider, we extract and calculate initdata hash only.\n")
 	}
 
-	cc, err := retrieveCloudConfig(ctx, provider)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve cloud config: %w", err)
-	}
-
-	if err = processCloudConfig(cfg, cc); err != nil {
-		return fmt.Errorf("failed to process cloud config: %w", err)
+	if err := extractInitdataAndHash(cfg); err != nil {
+		return fmt.Errorf("failed to extract initdata hash: %w", err)
 	}
 
 	return nil

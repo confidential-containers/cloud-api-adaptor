@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	ConfigFilePath = "/run/confidential-containers/cdh.toml"
+	ConfigFilePath = "/run/peerpod/cdh.toml"
 	Socket         = "unix:///run/confidential-containers/cdh.sock"
 )
 

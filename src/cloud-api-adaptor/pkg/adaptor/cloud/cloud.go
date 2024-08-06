@@ -26,12 +26,12 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cdh"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/wnssh"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/userdata"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	putil "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
-
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/wnssh"
 )
 
 const (
@@ -286,7 +286,25 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		},
 	}
 
-	if s.aaKBCParams != "" {
+	if authJSON != nil {
+		if len(authJSON) > cloudinit.DefaultAuthfileLimit {
+			logger.Printf("Credentials file is too large to be included in cloud-config")
+		} else {
+			cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+				Path:    AuthFilePath,
+				Content: string(authJSON),
+			})
+		}
+	}
+
+	initdataStr := util.GetInitdataFromAnnotation(req.Annotations)
+	logger.Printf("initdata: %s", initdataStr)
+	if initdataStr != "" {
+		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+			Path:    userdata.InitdataPath,
+			Content: initdataStr,
+		})
+	} else if s.aaKBCParams != "" { // Keep AA_KBC_PARAMS support as it is used by e2e test, KBS is dynamic k8s service in e2e test
 		logger.Printf("aaKBCParams: %s, support cc_kbc::*", s.aaKBCParams)
 		toml, err := cdh.CreateConfigFile(s.aaKBCParams)
 		if err != nil {
@@ -305,17 +323,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 			Path:    aa.DefaultAaConfigPath,
 			Content: toml,
 		})
-	}
-
-	if authJSON != nil {
-		if len(authJSON) > cloudinit.DefaultAuthfileLimit {
-			logger.Printf("Credentials file is too large to be included in cloud-config")
-		} else {
-			cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-				Path:    AuthFilePath,
-				Content: string(authJSON),
-			})
-		}
 	}
 
 	sandbox := &sandbox{
