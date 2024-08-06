@@ -5,8 +5,8 @@ After=network.target cloud-init.service process-user-data.service
 [Service]
 Type=simple
 ExecStart=/bin/bash -c \
-    'if [ -f /run/confidential-containers/cdh.toml ]; \
-    then /usr/local/bin/confidential-data-hub -c /run/confidential-containers/cdh.toml; \
+    'if [ -f /run/peerpod/cdh.toml ]; \
+    then /usr/local/bin/confidential-data-hub -c /run/peerpod/cdh.toml; \
     else /usr/local/bin/confidential-data-hub; \
     fi'
 RestartSec=1

@@ -69,6 +69,11 @@ func GetCPUAndMemoryFromAnnotation(annotations map[string]string) (int64, int64)
 	return vcpuInt, memoryInt
 }
 
+// Method to get initdata from annotation
+func GetInitdataFromAnnotation(annotations map[string]string) string {
+	return annotations["io.katacontainers.config.runtime.cc_init_data"]
+}
+
 // Method to check if a string exists in a slice
 func Contains(slice []string, s string) bool {
 	for _, item := range slice {
