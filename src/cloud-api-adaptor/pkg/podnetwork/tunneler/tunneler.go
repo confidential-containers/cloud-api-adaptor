@@ -22,6 +22,7 @@ type Config struct {
 	WorkerNodeIP  netip.Prefix `json:"worker-node-ip"`
 	TunnelType    string       `json:"tunnel-type"`
 	Routes        []*Route     `json:"routes"`
+	Neighbors     []*Neighbor  `json:"neighbors"`
 	MTU           int          `json:"mtu"`
 	Index         int          `json:"index"`
 	VXLANPort     int          `json:"vxlan-port,omitempty"`
@@ -35,6 +36,13 @@ type Route struct {
 	Dev      string               `json:"dev,omitempty"`
 	Protocol netops.RouteProtocol `json:"protocol,omitempty"`
 	Scope    netops.RouteScope    `json:"scope,omitempty"`
+}
+
+type Neighbor struct {
+	IP           netip.Addr           `json:"ip,omitempty"`
+	HardwareAddr string               `json:"hw-addr,omitempty"`
+	Dev          string               `json:"dev,omitempty"`
+	State        netops.NeighborState `json:"state,omitempty"`
 }
 
 type driver struct {

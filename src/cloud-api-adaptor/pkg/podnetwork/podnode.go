@@ -138,6 +138,19 @@ func (n *podNode) Setup() error {
 		}
 	}
 
+	for _, neighbor := range n.config.Neighbors {
+		nNeigh := netops.Neighbor{
+			IP:           neighbor.IP,
+			Dev:          neighbor.Dev,
+			HardwareAddr: neighbor.HardwareAddr,
+			State:        neighbor.State,
+		}
+		if err := podNS.NeighborAdd(&nNeigh); err != nil {
+			return fmt.Errorf("failed to add an ARP entry: %s dev %s lladdr %s %s on pod network namespace %s: %w",
+				neighbor.IP, neighbor.Dev, neighbor.HardwareAddr, neighbor.State, podNS.Path(), err)
+		}
+	}
+
 	return nil
 }
 
