@@ -164,7 +164,7 @@ It also calculates the digest `/run/peerpod/initdata.digest` based on the `algor
 
 `/run/peerpod/initdata.digest` could be used by the TEE drivers.
 
-The digest can be calculated manually and set to attestation service policy before hand if needed. To calculate the digest, use a tool (for example some online sha tools) to calculate the hash value based on the initdata annotation string. The calculated sha384 is: `9a9118fe416a0460023e146e580fb31d2155a22ac8b111f9a480d3eb7c6de8048b5f648a2961170f45b689526048a09a` for above sample.
+The digest can be calculated manually and set to attestation service policy before hand if needed. To calculate the digest, use a tool (for example some online sha tools) to calculate the hash value based on the initdata raw string. The calculated sha384 is: `52af3178dd7ad4bf551e629b84b45bfd1fbe1434b980120267181ae3575ea20ca9013b8eadf31d27eed7ff2552d500ef` for above sample.
 
 ## TODO
 A large policy bodies that cannot be provisioned via IMDS user-data, the limitation depends on providers IMDS limitation. We need add checking and limitations according to test result future. 
