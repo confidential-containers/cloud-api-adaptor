@@ -30,11 +30,11 @@ type Config struct {
 }
 
 type Route struct {
-	Dst      netip.Prefix
-	GW       netip.Addr
-	Dev      string
-	Protocol netops.RouteProtocol
-	Scope    netops.RouteScope
+	Dst      netip.Prefix         `json:"dst,omitempty"`
+	GW       netip.Addr           `json:"gw,omitempty"`
+	Dev      string               `json:"dev,omitempty"`
+	Protocol netops.RouteProtocol `json:"protocol,omitempty"`
+	Scope    netops.RouteScope    `json:"scope,omitempty"`
 }
 
 type driver struct {
