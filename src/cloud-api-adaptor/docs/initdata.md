@@ -2,6 +2,8 @@
 
 The document describes the implementation of the [initdata](https://github.com/confidential-containers/trustee/blob/main/kbs/docs/initdata.md) spec in PeerPods.
 
+Initdata is used when `AA_KBC_PARAMS` is not set at the moment, the plan is to remove `AA_KBC_PARAMS` support after `initdata` function works completely.
+
 ## Initdata example
 
 [attestation-agent](https://github.com/confidential-containers/guest-components/tree/main/attestation-agent) config file `aa.toml`, [confidential-data-hub](https://github.com/confidential-containers/guest-components/tree/main/confidential-data-hub) config file `cdh.toml` and a lightweight policy file `polciy.rego` can be passed into PeerPod via initdata.

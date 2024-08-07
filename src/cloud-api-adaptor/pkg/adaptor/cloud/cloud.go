@@ -27,7 +27,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/wnssh"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/userdata"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	putil "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
@@ -36,8 +35,8 @@ import (
 
 const (
 	SrcAuthfilePath = "/root/containers/auth.json"
-	AgentConfigPath = "/run/peerpod/agent-config.toml"
 	AuthFilePath    = "/run/peerpod/auth.json"
+	InitdataPath    = "/run/peerpod/initdata"
 	Version         = "0.0.0"
 )
 
@@ -276,7 +275,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	cloudConfig := &cloudinit.CloudConfig{
 		WriteFiles: []cloudinit.WriteFile{
 			{
-				Path:    AgentConfigPath,
+				Path:    agent.ConfigFilePath,
 				Content: agentConfig,
 			},
 			{
@@ -297,14 +296,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		}
 	}
 
-	initdataStr := util.GetInitdataFromAnnotation(req.Annotations)
-	logger.Printf("initdata: %s", initdataStr)
-	if initdataStr != "" {
-		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    userdata.InitdataPath,
-			Content: initdataStr,
-		})
-	} else if s.aaKBCParams != "" { // Keep AA_KBC_PARAMS support as it is used by e2e test, KBS is dynamic k8s service in e2e test
+	if s.aaKBCParams != "" { // Keep AA_KBC_PARAMS support as it is used by e2e test, KBS is dynamic k8s service in e2e test
 		logger.Printf("aaKBCParams: %s, support cc_kbc::*", s.aaKBCParams)
 		toml, err := cdh.CreateConfigFile(s.aaKBCParams)
 		if err != nil {
@@ -320,9 +312,23 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 			return nil, fmt.Errorf("creating attestation agent config: %w", err)
 		}
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    aa.DefaultAaConfigPath,
+			Path:    aa.ConfigFilePath,
 			Content: toml,
 		})
+	}
+
+	initdataStr := util.GetInitdataFromAnnotation(req.Annotations)
+	logger.Printf("initdata: %s", initdataStr)
+	if initdataStr != "" {
+		if s.aaKBCParams != "" {
+			logger.Printf("Initdata ignored because AA_KBC_PARAMS set")
+		} else {
+			logger.Printf("Set and use initdata when no AA_KBC_PARAMS")
+			cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+				Path:    InitdataPath,
+				Content: initdataStr,
+			})
+		}
 	}
 
 	sandbox := &sandbox{

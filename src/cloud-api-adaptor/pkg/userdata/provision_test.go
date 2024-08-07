@@ -284,10 +284,13 @@ func TestProcessCloudConfig(t *testing.T) {
 	tempDir, _ := os.MkdirTemp("", "tmp_writefiles_root")
 	defer os.RemoveAll(tempDir)
 
+	var aaCfgPath = filepath.Join(tempDir, "aa.toml")
 	var agentCfgPath = filepath.Join(tempDir, "agent-config.toml")
+	var cdhCfgPath = filepath.Join(tempDir, "cdh.toml")
 	var daemonPath = filepath.Join(tempDir, "daemon.json")
 	var authPath = filepath.Join(tempDir, "auth.json")
 	var initdataPath = filepath.Join(tempDir, "initdata")
+	var writeFilesList = []string{aaCfgPath, agentCfgPath, cdhCfgPath, daemonPath, authPath, initdataPath}
 
 	content := fmt.Sprintf(`#cloud-config
 write_files:
@@ -303,9 +306,19 @@ write_files:
 - path: %s
   content: |
 %s
+- path: %s
+  content: |
+%s
+- path: %s
+  content: |
+%s
 `,
+		aaCfgPath,
+		indentTextBlock(testAAConfig, 4),
 		agentCfgPath,
 		indentTextBlock(testAgentConfig, 4),
+		cdhCfgPath,
+		indentTextBlock(testCDHConfig, 4),
 		daemonPath,
 		indentTextBlock(testDaemonConfig, 4),
 		authPath,
@@ -325,7 +338,7 @@ write_files:
 		digestPath:    "",
 		initdataPath:  initdataPath,
 		parentPath:    tempDir,
-		writeFiles:    WriteFilesList,
+		writeFiles:    writeFilesList,
 		initdataFiles: nil,
 	}
 	if err := processCloudConfig(&cfg, cc); err != nil {
@@ -333,10 +346,22 @@ write_files:
 	}
 
 	// check if files have been written correctly
-	data, _ := os.ReadFile(agentCfgPath)
+	data, _ := os.ReadFile(aaCfgPath)
 	fileContent := string(data)
+	if fileContent != testAAConfig {
+		t.Fatalf("file content does not match aa config fixture: got %q", fileContent)
+	}
+
+	data, _ = os.ReadFile(agentCfgPath)
+	fileContent = string(data)
 	if fileContent != testAgentConfig {
-		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
+		t.Fatalf("file content does not match agent config fixture: got %q", fileContent)
+	}
+
+	data, _ = os.ReadFile(cdhCfgPath)
+	fileContent = string(data)
+	if fileContent != testCDHConfig {
+		t.Fatalf("file content does not match cdh config fixture: got %q", fileContent)
 	}
 
 	data, _ = os.ReadFile(daemonPath)
@@ -362,10 +387,13 @@ func TestProcessCloudConfigWithMalicious(t *testing.T) {
 	tempDir, _ := os.MkdirTemp("", "tmp_writefiles_root")
 	defer os.RemoveAll(tempDir)
 
+	var aaCfgPath = filepath.Join(tempDir, "aa.toml")
 	var agentCfgPath = filepath.Join(tempDir, "agent-config.toml")
+	var cdhCfgPath = filepath.Join(tempDir, "cdh.toml")
 	var daemonPath = filepath.Join(tempDir, "daemon.json")
 	var authPath = filepath.Join(tempDir, "auth.json")
 	var malicious = filepath.Join(tempDir, "malicious")
+	var writeFilesList = []string{aaCfgPath, agentCfgPath, cdhCfgPath, daemonPath, authPath}
 
 	content := fmt.Sprintf(`#cloud-config
 write_files:
@@ -381,9 +409,19 @@ write_files:
 - path: %s
   content: |
 %s
+- path: %s
+  content: |
+%s
+- path: %s
+  content: |
+%s
 `,
+		aaCfgPath,
+		indentTextBlock(testAAConfig, 4),
 		agentCfgPath,
 		indentTextBlock(testAgentConfig, 4),
+		cdhCfgPath,
+		indentTextBlock(testCDHConfig, 4),
 		daemonPath,
 		indentTextBlock(testDaemonConfig, 4),
 		authPath,
@@ -403,7 +441,7 @@ write_files:
 		digestPath:    "",
 		initdataPath:  "",
 		parentPath:    tempDir,
-		writeFiles:    WriteFilesList,
+		writeFiles:    writeFilesList,
 		initdataFiles: nil,
 	}
 	if err := processCloudConfig(&cfg, cc); err != nil {
@@ -411,10 +449,22 @@ write_files:
 	}
 
 	// check if files have been written correctly
-	data, _ := os.ReadFile(agentCfgPath)
+	data, _ := os.ReadFile(aaCfgPath)
 	fileContent := string(data)
+	if fileContent != testAAConfig {
+		t.Fatalf("file content does not match aa config fixture: got %q", fileContent)
+	}
+
+	data, _ = os.ReadFile(agentCfgPath)
+	fileContent = string(data)
 	if fileContent != testAgentConfig {
-		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
+		t.Fatalf("file content does not match agent config fixture: got %q", fileContent)
+	}
+
+	data, _ = os.ReadFile(cdhCfgPath)
+	fileContent = string(data)
+	if fileContent != testCDHConfig {
+		t.Fatalf("file content does not match cdh config fixture: got %q", fileContent)
 	}
 
 	data, _ = os.ReadFile(daemonPath)
@@ -466,13 +516,15 @@ func TestExtractInitdataAndHash(t *testing.T) {
 	var cdhPath = filepath.Join(tempDir, "cdh.toml")
 	var policyPath = filepath.Join(tempDir, "policy.rego")
 	var digestPath = filepath.Join(tempDir, "initdata.digest")
+	var initdDataFilesList = []string{aaPath, cdhPath, policyPath}
+
 	cfg := Config{
 		fetchTimeout:  180,
 		digestPath:    digestPath,
 		initdataPath:  initdataPath,
 		parentPath:    tempDir,
 		writeFiles:    nil,
-		initdataFiles: InitdDataFilesList,
+		initdataFiles: initdDataFilesList,
 	}
 
 	_ = writeFile(initdataPath, []byte(cc_init_data))
@@ -515,13 +567,15 @@ func TestExtractInitdataWithMalicious(t *testing.T) {
 	var cdhPath = filepath.Join(tempDir, "cdh.toml")
 	var policyPath = filepath.Join(tempDir, "malicious.rego")
 	var digestPath = filepath.Join(tempDir, "initdata.digest")
+	var initdDataFilesList = []string{aaPath, cdhPath, policyPath}
+
 	cfg := Config{
 		fetchTimeout:  180,
 		digestPath:    digestPath,
 		initdataPath:  initdataPath,
 		parentPath:    tempDir,
 		writeFiles:    nil,
-		initdataFiles: InitdDataFilesList,
+		initdataFiles: initdDataFilesList,
 	}
 
 	_ = writeFile(initdataPath, []byte(cc_init_data))
