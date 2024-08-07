@@ -10,10 +10,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/aa"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/agent"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cdh"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/aws"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/azure"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/docker"
@@ -24,12 +28,12 @@ import (
 const (
 	ConfigParent = "/run/peerpod"
 	DigestPath   = "/run/peerpod/initdata.digest"
-	InitdataPath = "/run/peerpod/initdata"
+	PolicyPath   = "/run/peerpod/policy.rego"
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
-var WriteFilesList = []string{"agent-config.toml", "daemon.json", "auth.json", "initdata"}
-var InitdDataFilesList = []string{"aa.toml", "cdh.toml", "policy.rego"}
+var WriteFilesList = []string{aa.ConfigFilePath, cdh.ConfigFilePath, agent.ConfigFilePath, forwarder.DefaultConfigPath, cloud.AuthFilePath, cloud.InitdataPath}
+var InitdDataFilesList = []string{aa.ConfigFilePath, cdh.ConfigFilePath, PolicyPath}
 
 type Config struct {
 	fetchTimeout  int
@@ -44,7 +48,7 @@ func NewConfig(fetchTimeout int) *Config {
 	return &Config{
 		fetchTimeout:  fetchTimeout,
 		parentPath:    ConfigParent,
-		initdataPath:  InitdataPath,
+		initdataPath:  cloud.InitdataPath,
 		digestPath:    DigestPath,
 		writeFiles:    WriteFilesList,
 		initdataFiles: InitdDataFilesList,
@@ -182,9 +186,6 @@ func isAllowed(path string, filesList []string) bool {
 		if listedFile == path {
 			return true
 		}
-		if strings.HasSuffix(path, listedFile) {
-			return true
-		}
 	}
 	return false
 }
@@ -194,10 +195,8 @@ func processCloudConfig(cfg *Config, cc *CloudConfig) error {
 		path := wf.Path
 		bytes := []byte(wf.Content)
 		if isAllowed(path, cfg.writeFiles) {
-			if bytes != nil {
-				if err := writeFile(path, bytes); err != nil {
-					return fmt.Errorf("failed to write config file %s: %w", path, err)
-				}
+			if err := writeFile(path, bytes); err != nil {
+				return fmt.Errorf("failed to write config file %s: %w", path, err)
 			}
 		} else {
 			logger.Printf("File: %s is not allowed in WriteFiles.\n", path)
@@ -228,9 +227,9 @@ func extractInitdataAndHash(cfg *Config) error {
 	}
 
 	for key, value := range initdata.Data {
-		if isAllowed(key, cfg.initdataFiles) {
-			err := writeFile(filepath.Join(cfg.parentPath, key), []byte(value))
-			if err != nil {
+		path := filepath.Join(cfg.parentPath, key)
+		if isAllowed(path, cfg.initdataFiles) {
+			if err := writeFile(path, []byte(value)); err != nil {
 				return fmt.Errorf("Error write a file in initdata: %w", err)
 			}
 		} else {

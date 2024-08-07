@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	DefaultAaConfigPath = "/run/peerpod/aa.toml"
+	ConfigFilePath = "/run/peerpod/aa.toml"
 )
 
 type AAConfig struct {
