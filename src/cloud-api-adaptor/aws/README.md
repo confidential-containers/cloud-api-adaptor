@@ -192,47 +192,10 @@ EOF
 
 ### Update the `kustomization.yaml` file
 
-Run the following command to update the [`kustomization.yaml`](../install/overlays/aws/kustomization.yaml) file:
+Run the following command to update the [`kustomization.yaml`](../install/overlays/aws/kustomization.yaml) file with the `PODVM_AMI_ID` value:
 
 ```bash
-cat <<EOF > install/overlays/aws/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-bases:
-- ../../yamls
-
-images:
-- name: cloud-api-adaptor
-  newName: quay.io/confidential-containers/cloud-api-adaptor # change image if needed
-  newTag: d4496d008b65c979a4d24767979a77ed1ba21e76
-
-generatorOptions:
-  disableNameSuffixHash: true
-
-configMapGenerator:
-- name: peer-pods-cm
-  namespace: confidential-containers-system
-  literals:
-  - CLOUD_PROVIDER="aws"   
-  - PODVM_AMI_ID="${PODVM_AMI_ID}"
-  - VXLAN_PORT="9000" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
-  #- PODVM_INSTANCE_TYPE="m6a.large" # default instance type to use
-  #- PODVM_INSTANCE_TYPES="" # comma separated list of supported instance types
-secretGenerator:
-- name: auth-json-secret
-  namespace: confidential-containers-system
-  files:
-  #- auth.json # set - path to auth.json pull credentials file
-- name: peer-pods-secret
-  namespace: confidential-containers-system
-  # This file should look like this (w/o quotes!):
-  # AWS_ACCESS_KEY_ID=...
-  # AWS_SECRET_ACCESS_KEY=...
-  envs:
-    - aws-cred.env
-patchesStrategicMerge:
-EOF
+sed -i -E "s/(PODVM_AMI_ID=).*/\1 \"${PODVM_AMI_ID}\"/" install/overlays/aws/kustomization.yaml
 ```
 
 ### Deploy CAA on the Kubernetes cluster
