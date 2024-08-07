@@ -240,13 +240,13 @@ func extractInitdataAndHash(cfg *Config) error {
 	checksumStr := ""
 	switch initdata.Algorithm {
 	case "sha256":
-		hash := sha256.Sum256(dataBytes)
+		hash := sha256.Sum256(decodedBytes)
 		checksumStr = hex.EncodeToString(hash[:])
 	case "sha384":
-		hash := sha512.Sum384(dataBytes)
+		hash := sha512.Sum384(decodedBytes)
 		checksumStr = hex.EncodeToString(hash[:])
 	case "sha512":
-		hash := sha512.Sum512(dataBytes)
+		hash := sha512.Sum512(decodedBytes)
 		checksumStr = hex.EncodeToString(hash[:])
 	default:
 		return fmt.Errorf("Error creating initdata hash, the Algorithm %s not supported", initdata.Algorithm)
