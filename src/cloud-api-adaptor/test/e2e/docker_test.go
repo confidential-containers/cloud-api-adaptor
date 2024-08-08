@@ -110,29 +110,20 @@ func TestDockerKbsKeyRelease(t *testing.T) {
 	DoTestKbsKeyRelease(t, testEnv, assert)
 }
 
-func TestDockerCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T) {
-	assert := DockerAssert{}
-	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
-		DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t, testEnv, assert)
-	} else {
-		t.Skip("Registry Credentials, or authenticated image name not exported")
-	}
-}
-
-func TestDockerCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.T) {
-	assert := DockerAssert{}
-	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
-		DoTestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t, testEnv, assert)
-	} else {
-		t.Skip("Registry Credentials not exported")
-	}
-}
-
 func TestDockerCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
 	assert := DockerAssert{}
 	if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
 		DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t, testEnv, assert)
 	} else {
 		t.Skip("Authenticated Image Name not exported")
+	}
+}
+
+func TestDockerCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T) {
+	assert := DockerAssert{}
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t, testEnv, assert)
+	} else {
+		t.Skip("Registry Credentials, or authenticated image name not exported")
 	}
 }

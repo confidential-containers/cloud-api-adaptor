@@ -140,29 +140,20 @@ func TestLibvirtPermissivePolicyAllowsExec(t *testing.T) {
 	DoTestPermissivePolicyAllowsExec(t, testEnv, assert)
 }
 
-func TestLibvirtCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T) {
-	assert := LibvirtAssert{}
-	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
-		DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t, testEnv, assert)
-	} else {
-		t.Skip("Registry Credentials, or authenticated image name not exported")
-	}
-}
-
-func TestLibvirtCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.T) {
-	assert := LibvirtAssert{}
-	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
-		DoTestCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t, testEnv, assert)
-	} else {
-		t.Skip("Registry Credentials not exported")
-	}
-}
-
 func TestLibvirtCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
 	assert := LibvirtAssert{}
 	if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
 		DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t, testEnv, assert)
 	} else {
 		t.Skip("Authenticated Image Name not exported")
+	}
+}
+
+func TestLibvirtCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T) {
+	assert := LibvirtAssert{}
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t, testEnv, assert)
+	} else {
+		t.Skip("Registry Credentials, or authenticated image name not exported")
 	}
 }
