@@ -77,31 +77,17 @@ $ docker build -t podvm_builder \
 
 ## Building the image containing the podvm binaries
 
-In order to build the binaries you should be using the corresponding dockerfile
-of the Linux distro for which the builder image was built.
-For example, if the builder image was built with *Dockerfile.podvm_builder.DISTRO* then
-you should use the *Dockerfile.podvm_binaries.DISTRO* to build the image with podvm binaries.
-
-Assuming you have built the podvm_builder image for Ubuntu as explained in the previous step,
-running the following command will build the image with the podvm binaries.
+We have make targets handy for you. Make sure you are under
+`src/cloud-api-adaptor` folder, and run the following command:
 
 ```bash
-$ docker build -t podvm_binaries \
-         --build-arg BUILDER_IMG=podvm_builder \
-         -f Dockerfile.podvm_binaries .
-
+$ make podvm-binaries
 ```
+
 The build process can take significant time.
 
-The binaries can be built for other architectures than `x86_64` by passing the `ARCH` build
-argument to docker. Currently this is only supported for Ubuntu `s390x` as shown below:
-
-```bash
-$ docker build -t podvm_binaries_s390x \
-         --build-arg BUILDER_IMG=podvm_builder \
-         --build-arg ARCH=s390x \
-         -f Dockerfile.podvm_binaries .
-```
+You can customize the build, but using some environment variables like ARCH,
+BUILDER_IMG, PODVM_DISTRO, and other things. For details visit the Makefile.
 
 ## Building the podvm qcow2 image
 
