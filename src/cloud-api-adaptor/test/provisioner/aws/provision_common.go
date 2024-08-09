@@ -34,6 +34,7 @@ import (
 const (
 	EksCniAddonVersion = "v1.12.5-eksbuild.2"
 	EksVersion         = "1.26"
+	AwsCredentialsFile = "aws-cred.env"
 )
 
 var AWSProps = &AWSProvisioner{}
@@ -101,12 +102,14 @@ type AWSProvisioner struct {
 	AwsConfig  aws.Config
 	iamClient  *iam.Client
 	Cluster    Cluster
+	Disablecvm string
 	ec2Client  *ec2.Client
 	s3Client   *s3.Client
 	Bucket     *S3Bucket
 	PauseImage string
 	Image      *AMIImage
 	Vpc        *Vpc
+	PublicIP   string
 	VxlanPort  string
 	SshKpName  string
 }
@@ -138,6 +141,8 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 	if properties["cluster_type"] == "" ||
 		properties["cluster_type"] == "onprem" {
 		cluster = NewOnPremCluster()
+		// The podvm should be created with public IP so CAA can connect
+		properties["use_public_ip"] = "true"
 	} else if properties["cluster_type"] == "eks" {
 		cluster = NewEKSCluster(cfg, vpc, properties["ssh_kp_name"])
 	} else {
@@ -157,8 +162,10 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		},
 		Cluster:    cluster,
 		Image:      NewAMIImage(ec2Client, properties),
+		Disablecvm: properties["disablecvm"],
 		PauseImage: properties["pause_image"],
 		Vpc:        vpc,
+		PublicIP:   properties["use_public_ip"],
 		VxlanPort:  properties["vxlan_port"],
 		SshKpName:  properties["ssh_kp_name"],
 	}
@@ -251,6 +258,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 	credentials, _ := a.AwsConfig.Credentials.Retrieve(context.TODO())
 
 	return map[string]string{
+		"disablecvm":           a.Disablecvm,
 		"pause_image":          a.PauseImage,
 		"podvm_launchtemplate": "",
 		"podvm_ami":            a.Image.ID,
@@ -261,6 +269,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"region":               a.AwsConfig.Region,
 		"access_key_id":        credentials.AccessKeyID,
 		"secret_access_key":    credentials.SecretAccessKey,
+		"use_public_ip":        a.PublicIP,
 		"vxlan_port":           a.VxlanPort,
 	}
 }
@@ -862,7 +871,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 
 	// Wait the import task to finish
 	waiter := ec2.NewSnapshotImportedWaiter(i.Client)
-	if err = waiter.Wait(context.TODO(), describeTasksInput, time.Minute*3); err != nil {
+	if err = waiter.Wait(context.TODO(), describeTasksInput, time.Minute*10); err != nil {
 		return err
 	}
 
@@ -953,8 +962,30 @@ func ConvertQcow2ToRaw(qcow2 string, raw string) error {
 	return nil
 }
 
+// createCredentialFile Creates the AWS credential file in the install overlay directory
+// that's used by kustomize the setup CAA
+func createCredentialFile(dir, access_key_id, secret_access_key string) error {
+	content := fmt.Sprintf("AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n", access_key_id, secret_access_key)
+	err := os.WriteFile(filepath.Join(dir, AwsCredentialsFile), []byte(content), 0666)
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
 func NewAwsInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
-	overlay, err := pv.NewKustomizeOverlay(filepath.Join(installDir, "overlays", provider))
+	overlayDir := filepath.Join(installDir, "overlays", provider)
+
+	// The credential file should exist in the overlay directory otherwise kustomize fails
+	// to load it. At this point we don't know the key id nor access key, so using empty
+	// values (later the file will be re-write properly).
+	err := createCredentialFile(overlayDir, "", "")
+	if err != nil {
+		return nil, err
+	}
+
+	overlay, err := pv.NewKustomizeOverlay(overlayDir)
 	if err != nil {
 		return nil, err
 	}
@@ -977,6 +1008,7 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 
 	// Mapping the internal properties to ConfigMapGenerator properties.
 	mapProps := map[string]string{
+		"disablecvm":           "DISABLECVM",
 		"pause_image":          "PAUSE_IMAGE",
 		"podvm_launchtemplate": "PODVM_LAUNCHTEMPLATE_NAME",
 		"podvm_ami":            "PODVM_AMI_ID",
@@ -986,6 +1018,7 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 		"ssh_kp_name":          "SSH_KP_NAME",
 		"region":               "AWS_REGION",
 		"vxlan_port":           "VXLAN_PORT",
+		"use_public_ip":        "USE_PUBLIC_IP",
 	}
 
 	for k, v := range mapProps {
@@ -997,17 +1030,13 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 		}
 	}
 
-	// Mapping the internal properties to SecretGenerator properties.
-	mapProps = map[string]string{
-		"access_key_id":     "AWS_ACCESS_KEY_ID",
-		"secret_access_key": "AWS_SECRET_ACCESS_KEY",
-	}
-	for k, v := range mapProps {
-		if properties[k] != "" {
-			if err = a.Overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret",
-				v, properties[k]); err != nil {
-				return err
-			}
+	if properties["access_key_id"] != "" && properties["secret_access_key"] != "" {
+		if err = createCredentialFile(a.Overlay.ConfigDir, properties["access_key_id"], properties["secret_access_key"]); err != nil {
+			return err
+		}
+
+		if err = a.Overlay.SetKustomizeSecretGeneratorEnv("peer-pods-secret", AwsCredentialsFile); err != nil {
+			return err
 		}
 	}
 
