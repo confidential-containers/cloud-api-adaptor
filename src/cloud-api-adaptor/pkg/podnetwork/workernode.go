@@ -162,6 +162,11 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 	}
 	config.MTU = mtu
 
+	neighbors, err := podNS.NeighborList(&netops.Neighbor{Dev: podInterface, State: netops.NEIGHBOR_STATE_PERMANENT})
+	if err != nil {
+		return nil, err
+	}
+
 	for _, route := range routes {
 		r := &tunneler.Route{
 			Dst:      route.Destination,
@@ -171,6 +176,16 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 			Scope:    route.Scope,
 		}
 		config.Routes = append(config.Routes, r)
+	}
+
+	for _, neighbor := range neighbors {
+		n := &tunneler.Neighbor{
+			IP:           neighbor.IP,
+			Dev:          neighbor.Dev,
+			HardwareAddr: neighbor.HardwareAddr,
+			State:        neighbor.State,
+		}
+		config.Neighbors = append(config.Neighbors, n)
 	}
 
 	if n.tunnelType == "vxlan" {

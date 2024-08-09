@@ -14,6 +14,8 @@ import (
 	"runtime"
 	"sort"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"golang.org/x/sys/unix"
@@ -33,6 +35,8 @@ type Namespace interface {
 	RuleAdd(rule *Rule) error
 	RuleDel(rule *Rule) error
 	RuleList(rule *Rule) ([]*Rule, error)
+	NeighborAdd(neighbor *Neighbor) error
+	NeighborList(filters ...*Neighbor) ([]*Neighbor, error)
 	Run(fn func() error) error
 }
 
@@ -774,6 +778,139 @@ func (ns *namespace) RuleList(rule *Rule) ([]*Rule, error) {
 	}
 
 	return rules, nil
+}
+
+type Neighbor struct {
+	IP           netip.Addr
+	HardwareAddr string
+	Dev          string
+	State        NeighborState
+}
+
+type NeighborState uint16
+
+const NEIGHBOR_STATE_PERMANENT = netlink.NUD_PERMANENT
+
+var neighorStateMap = map[NeighborState]string{
+	netlink.NUD_NONE:       "none",
+	netlink.NUD_INCOMPLETE: "incomplete",
+	netlink.NUD_REACHABLE:  "reachable",
+	netlink.NUD_STALE:      "stale",
+	netlink.NUD_DELAY:      "delay",
+	netlink.NUD_PROBE:      "probe",
+	netlink.NUD_FAILED:     "failed",
+	netlink.NUD_NOARP:      "noarp",
+	netlink.NUD_PERMANENT:  "permanent",
+}
+
+func (s NeighborState) String() string {
+
+	str, ok := neighorStateMap[s]
+	if !ok {
+		return "unknown"
+	}
+	return str
+}
+
+var neighborStates = initLookupTable(maps.Keys(neighorStateMap))
+
+func (s NeighborState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
+
+func (s *NeighborState) UnmarshalJSON(data []byte) error {
+
+	v, err := unmarshalJSON("neighbor state", data, neighborStates)
+	if err != nil {
+		return err
+	}
+	*s = v
+	return nil
+}
+
+// NeighborAdd adds a new neighbor entry
+
+func (ns *namespace) NeighborAdd(neighbor *Neighbor) error {
+
+	if !neighbor.IP.IsValid() {
+		return fmt.Errorf("failed to add a new neighbor entry: invalid IP address %q", neighbor.IP)
+	}
+
+	if neighbor.Dev == "" {
+		return fmt.Errorf("failed to add a new neighbor entry: no device name")
+	}
+
+	link, err := ns.handle.LinkByName(neighbor.Dev)
+	if err != nil {
+		return fmt.Errorf("failed to add a new neighbor entry: device %s not found: %w", neighbor.Dev, err)
+	}
+
+	hwAddr, err := net.ParseMAC(neighbor.HardwareAddr)
+	if err != nil {
+		return fmt.Errorf("failed to add a new neighbor entry: invalid hardware address %q", neighbor.HardwareAddr)
+	}
+
+	state := neighbor.State
+	if state.String() == "none" || state.String() == "unknown" {
+		return fmt.Errorf("failed to add a new neighbor entry: invalid neighbor state %q", state.String())
+	}
+
+	nlNeigh := &netlink.Neigh{
+		IP:           toIP(neighbor.IP),
+		LinkIndex:    link.Attrs().Index,
+		HardwareAddr: hwAddr,
+		State:        int(state),
+	}
+
+	if err := ns.handle.NeighAdd(nlNeigh); err != nil {
+		return fmt.Errorf("failed to add a new neighbor entry %q: %w", nlNeigh, err)
+	}
+
+	return nil
+}
+
+// NeighborList gets a list of neighbors
+func (ns *namespace) NeighborList(filters ...*Neighbor) ([]*Neighbor, error) {
+
+	var neighbors []*Neighbor
+	for _, filter := range filters {
+
+		msg := netlink.Ndmsg{
+			Family: netlink.FAMILY_V4,
+			State:  uint16(filter.State),
+		}
+
+		if filter.Dev != "" {
+			link, err := ns.handle.LinkByName(filter.Dev)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get a list of neighbors on network namespace %s: %w", ns.Path(), err)
+			}
+			msg.Index = uint32(link.Attrs().Index)
+		}
+		nlNeighbors, err := ns.handle.NeighListExecute(msg)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, nlNeigh := range nlNeighbors {
+
+			link, err := ns.handle.LinkByIndex(nlNeigh.LinkIndex)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get a link with index %d of neighbor %s: %w", nlNeigh.LinkIndex, nlNeigh.String(), err)
+			}
+
+			dev := link.Attrs().Name
+			n := &Neighbor{
+				IP:           toAddr(nlNeigh.IP),
+				Dev:          dev,
+				HardwareAddr: nlNeigh.HardwareAddr.String(),
+				State:        filter.State,
+			}
+			neighbors = append(neighbors, n)
+		}
+	}
+
+	return neighbors, nil
 }
 
 // RedirectAdd adds a tc ingress qdisc and redirect filter that redirects all traffic from src to dst
