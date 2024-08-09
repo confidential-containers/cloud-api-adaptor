@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/azure"
-	log "github.com/sirupsen/logrus"
 )
 
 func TestDeletePodAzure(t *testing.T) {
@@ -91,7 +90,6 @@ func TestPodWithInitContainerAzure(t *testing.T) {
 // Use DoTestPodWithSpecificCommands and provide the commands to be executed in the pod
 func TestPodToDownloadExternalFileAzure(t *testing.T) {
 	t.Parallel()
-
 	// Create TestCommand struct with the command to download index.html
 	command1 := TestCommand{
 		Command:             []string{"wget", "-q", "www.google.com"},
@@ -104,10 +102,10 @@ func TestPodToDownloadExternalFileAzure(t *testing.T) {
 		Command: []string{"ls", "index.html"},
 		TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 			if strings.Contains(stdout.String(), "index.html") {
-				log.Infof("index.html is present in the pod")
+				t.Logf("index.html is present in the pod")
 				return true
 			} else {
-				log.Errorf("index.html is not present in the pod")
+				t.Logf("index.html is not present in the pod")
 				return false
 			}
 		},
@@ -132,10 +130,14 @@ func TestKbsKeyRelease(t *testing.T) {
 	}
 	t.Parallel()
 	DoTestKbsKeyRelease(t, testEnv, assert)
+}
 
-	// @Magnus @Kartik, are you going to enable this negative test for azure?
-	// _ = keyBrokerService.EnableKbsCustomizedPolicy("deny_all.rego")
-	// DoTestKbsKeyReleaseForFailure(t, testEnv, assert)
+func TestRemoteAttestation(t *testing.T) {
+	t.Parallel()
+	if !isTestWithKbs() {
+		t.Skip("Skipping kbs related test as kbs is not deployed")
+	}
+	DoTestRemoteAttestation(t, testEnv, assert)
 }
 
 func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
