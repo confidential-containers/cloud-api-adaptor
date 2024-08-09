@@ -614,6 +614,22 @@ func TestExtractInitdataAndHash(t *testing.T) {
 	}
 }
 
+func TestWithoutInitdata(t *testing.T) {
+	cfg := Config{
+		fetchTimeout:  0,
+		digestPath:    "",
+		initdataPath:  "/does/not/exist",
+		parentPath:    "",
+		writeFiles:    nil,
+		initdataFiles: []string{},
+	}
+
+	err := extractInitdataAndHash(&cfg)
+	if err != nil {
+		t.Fatalf("extractInitdataAndHash returned err: %v", err)
+	}
+}
+
 func TestExtractInitdataWithMalicious(t *testing.T) {
 	tempDir, _ := os.MkdirTemp("", "tmp_initdata_root")
 	defer os.RemoveAll(tempDir)
