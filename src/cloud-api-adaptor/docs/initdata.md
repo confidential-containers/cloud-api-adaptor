@@ -166,5 +166,16 @@ It also calculates the digest `/run/peerpod/initdata.digest` based on the `algor
 
 The digest can be calculated manually and set to attestation service policy before hand if needed. To calculate the digest, use a tool (for example some online sha tools) to calculate the hash value based on the initdata raw string. The calculated sha384 is: `52af3178dd7ad4bf551e629b84b45bfd1fbe1434b980120267181ae3575ea20ca9013b8eadf31d27eed7ff2552d500ef` for above sample.
 
+For example, for [IBM SE](https://github.com/confidential-containers/trustee/blob/main/attestation-service/docs/parsed_claims.md#ibm-secure-execution-se), the `se.user_data` can be set as:
+```
+allow if {
+    ...
+    input["se.user_data"] == "353261663331373864643761643462663535316536323962383462343562666431666265313433346239383031323032363731383161653335373565613230636139303133623865616466333164323765656437666632353532643530306566"
+    ...
+}
+```
+
+`se.user_data` is the HEX of the initdata digest string `52af3178dd7ad4bf551e629b84b45bfd1fbe1434b980120267181ae3575ea20ca9013b8eadf31d27eed7ff2552d500ef`.
+
 ## TODO
 A large policy bodies that cannot be provisioned via IMDS user-data, the limitation depends on providers IMDS limitation. We need add checking and limitations according to test result future. 
