@@ -19,14 +19,6 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-const authJSONTemplate string = `{
-	"auths": {
-		"quay.io": {
-			"auth": "%s"
-		}
-	}
-}`
-
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
 	conn          *libvirt.Connect // Libvirt connection
@@ -345,14 +337,8 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 		}
 	}
 
-	if cred := os.Getenv("REGISTRY_CREDENTIAL_ENCODED"); cred != "" {
-		authJSON := fmt.Sprintf(authJSONTemplate, cred)
-		if err := os.WriteFile(filepath.Join(lio.Overlay.ConfigDir, "auth.json"), []byte(authJSON), 0644); err != nil {
-			return err
-		}
-		if err = lio.Overlay.SetKustomizeSecretGeneratorFile("auth-json-secret", "auth.json"); err != nil {
-			return err
-		}
+	if err = lio.Overlay.SetAuthJsonSecretIfApplicable(); err != nil {
+		return err
 	}
 
 	if err = lio.Overlay.YamlReload(); err != nil {
