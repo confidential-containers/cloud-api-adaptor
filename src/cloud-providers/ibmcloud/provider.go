@@ -249,7 +249,7 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		return nil, err
 	}
 
-	imageID, err := p.selectImage(ctx, spec)
+	imageID, err := p.selectImage(ctx, spec, instanceProfile)
 	if err != nil {
 		return nil, err
 	}
@@ -321,11 +321,11 @@ func (p *ibmcloudVPCProvider) updateInstanceProfileSpecList() error {
 
 	// Iterate over the instance types and populate the instanceProfileSpecList
 	for _, profileType := range instanceProfiles {
-		vcpus, memory, err := p.getProfileNameInformation(profileType)
+		vcpus, memory, arch, err := p.getProfileNameInformation(profileType)
 		if err != nil {
 			return err
 		}
-		instanceProfileSpecList = append(instanceProfileSpecList, provider.InstanceTypeSpec{InstanceType: profileType, VCPUs: vcpus, Memory: memory})
+		instanceProfileSpecList = append(instanceProfileSpecList, provider.InstanceTypeSpec{InstanceType: profileType, VCPUs: vcpus, Memory: memory, Arch: arch})
 	}
 
 	// Sort the instanceProfileSpecList by Memory and update the serviceConfig
@@ -335,7 +335,7 @@ func (p *ibmcloudVPCProvider) updateInstanceProfileSpecList() error {
 }
 
 // Add a method to retrieve cpu, memory, and storage from the profile name
-func (p *ibmcloudVPCProvider) getProfileNameInformation(profileName string) (vcpu int64, memory int64, err error) {
+func (p *ibmcloudVPCProvider) getProfileNameInformation(profileName string) (vcpu int64, memory int64, arch string, err error) {
 
 	// Get the profile information from the instance type using IBMCloud API
 	result, details, err := p.vpc.GetInstanceProfileWithContext(context.Background(),
@@ -345,19 +345,31 @@ func (p *ibmcloudVPCProvider) getProfileNameInformation(profileName string) (vcp
 	)
 
 	if err != nil {
-		return 0, 0, fmt.Errorf("instance profile name %s not found, due to %w\nFurther Details:\n%v", profileName, err, details)
+		return 0, 0, "", fmt.Errorf("instance profile name %s not found, due to %w\nFurther Details:\n%v", profileName, err, details)
 	}
 
 	vcpu = int64(*result.VcpuCount.(*vpcv1.InstanceProfileVcpu).Value)
 	// Value returned is in GiB, convert to MiB
 	memory = int64(*result.Memory.(*vpcv1.InstanceProfileMemory).Value) * 1024
-	return vcpu, memory, nil
+	arch = string(*result.VcpuArchitecture.Value)
+	return vcpu, memory, arch, nil
 }
 
 // Select Image from list, invalid image IDs should have already been removed
-func (p *ibmcloudVPCProvider) selectImage(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
+func (p *ibmcloudVPCProvider) selectImage(ctx context.Context, spec provider.InstanceTypeSpec, selectedInstanceProfile string) (string, error) {
+
+	specArch := spec.Arch
+	if specArch == "" {
+		for _, instanceProfileSpec := range p.serviceConfig.InstanceProfileSpecList {
+			if instanceProfileSpec.InstanceType == selectedInstanceProfile {
+				specArch = instanceProfileSpec.Arch
+				break
+			}
+		}
+	}
+
 	for _, image := range p.serviceConfig.Images {
-		if spec.Arch != "" && image.Arch != spec.Arch {
+		if specArch != "" && image.Arch != specArch {
 			continue
 		}
 		logger.Printf("selected image with ID <%s> out of %d images", image.ID, len(p.serviceConfig.Images))
