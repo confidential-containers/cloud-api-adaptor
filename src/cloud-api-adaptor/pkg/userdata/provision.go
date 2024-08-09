@@ -6,6 +6,7 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -207,11 +208,17 @@ func processCloudConfig(cfg *Config, cc *CloudConfig) error {
 }
 
 func extractInitdataAndHash(cfg *Config) error {
-	if _, err := os.Stat(cfg.initdataPath); err != nil {
+	path := cfg.initdataPath
+	_, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			logger.Printf("File %s not found, skipped initdata processing.\n", path)
+			return nil
+		}
 		return fmt.Errorf("Error stat initdata file: %w", err)
 	}
 
-	dataBytes, err := os.ReadFile(cfg.initdataPath)
+	dataBytes, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("Error read initdata file: %w", err)
 	}
