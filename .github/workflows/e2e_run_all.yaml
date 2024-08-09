@@ -100,7 +100,7 @@ jobs:
     needs: [image]
     runs-on: ubuntu-latest
     env:
-      PROVIDERS: "libvirt"
+      PROVIDERS: "docker libvirt"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -169,6 +169,31 @@ jobs:
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
+      install_directory_artifact: install_directory
+      git_ref: ${{ inputs.git_ref }}
+    secrets: inherit
+
+  # Run docker e2e tests if pull request labeled 'test_e2e_docker'
+  docker:
+    name: docker
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    needs: [podvm, image, prep_install]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - fedora
+        provider:
+          - docker
+        arch:
+          - amd64
+    uses: ./.github/workflows/e2e_docker.yaml
+    with:
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor
+      caa_image_tag: ${{ inputs.caa_image_tag }}
+      podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-image:${{ inputs.podvm_image_tag }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
     secrets: inherit
