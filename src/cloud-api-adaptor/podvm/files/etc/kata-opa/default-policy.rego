@@ -1,1 +1,1 @@
-allow-all.rego
+/run/peerpod/policy.rego

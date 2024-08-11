@@ -29,3 +29,4 @@ sudo cp -a /tmp/files/pause_bundle /
 # Copy the kata-agent OPA policy files
 sudo mkdir -p /etc/kata-opa
 sudo cp -a /tmp/files/etc/kata-opa/* /etc/kata-opa/
+sudo cp -a /tmp/files/etc/tmpfiles.d/policy.conf /etc/tmpfiles.d/
