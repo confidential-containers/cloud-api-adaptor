@@ -46,7 +46,6 @@ PHONY: binaries
 binaries:
 	@echo "Building binaries..."
 	rm -rf ./resources/binaries-tree
-	cp -rf ../../../.git ../../.git
 ifeq ($(IS_DEBIAN),true)
 	docker buildx use default
 endif
@@ -56,11 +55,11 @@ endif
 		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 		--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
 		--build-arg PAUSE_BIN=$(PAUSE_BIN) \
+		--build-arg IMAGE_NAME=mkosi-podvm-binaries \
 		$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		-o type=local,dest="./resources/binaries-tree" \
 		-f ../podvm/Dockerfile.podvm_binaries.fedora ../../
-	rm -rf ../../.git
 
 PHONY: image
 image:
