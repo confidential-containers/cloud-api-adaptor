@@ -219,13 +219,11 @@ confidential-containers release team to let them know it has completed successfu
 
 If the `main` branch was not already unlocked, then ask an admin to do this now.
 
-The CoCo operator reference commit in the [versions.yaml](../src/cloud-api-adaptor/versions.yaml) should be reverted to use the latest version.
+The CoCo operator reference commit in the [versions.yaml](../src/cloud-api-adaptor/versions.yaml) should be reverted to use `main` branch.
 
 The changes on the overlay kustomization files should be reverted to start using the latest cloud-api-adaptor images again:
 ```
-pushd src/cloud-api-adaptor/install/overlays/
-for provider in aws azure ibmcloud ibmcloud-powervs libvirt vsphere; do cd ${provider}; kustomize edit set image cloud-api-adaptor=quay.io/confidential-containers/cloud-api-adaptor:latest; cd -; done
-popd
+./hack/release-helper.sh caa-image-tag latest
 ```
 
 The `CITATION.cff` needs to be updated with the dates from the release.
