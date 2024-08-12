@@ -6,6 +6,7 @@
 package e2e
 
 import (
+	"os"
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/libvirt"
@@ -141,4 +142,22 @@ func TestLibvirtRestrictivePolicyBlocksExec(t *testing.T) {
 func TestLibvirtPermissivePolicyAllowsExec(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPermissivePolicyAllowsExec(t, testEnv, assert)
+}
+
+func TestLibvirtCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
+	assert := LibvirtAssert{}
+	if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t, testEnv, assert)
+	} else {
+		t.Skip("Authenticated Image Name not exported")
+	}
+}
+
+func TestLibvirtCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T) {
+	assert := LibvirtAssert{}
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t, testEnv, assert)
+	} else {
+		t.Skip("Registry Credentials, or authenticated image name not exported")
+	}
 }
