@@ -5,7 +5,7 @@ ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
 include $(ROOT_DIR)podvm/Makefile.inc
 
 
-.PHONY: image clean default-vpc
+.PHONY: image clean default-vpc image-debug
 
 INSTANCE_TYPE ?= c4.xlarge
 
@@ -14,9 +14,13 @@ VOLUME_SIZE ?= 30
 ENABLE_NVIDIA_GPU ?= yes
 export ENABLE_NVIDIA_GPU
 
+
 image: $(IMAGE_FILE)
 
-$(IMAGE_FILE): setopts $(BINARIES) $(FILES)
+image-debug: DEBUG=true
+image-debug: image
+
+$(IMAGE_FILE): prepare setopts $(BINARIES) $(FILES)
 	mkdir -p toupload
 	packer init ./${PODVM_DISTRO}/
 	packer build ${OPTS} \

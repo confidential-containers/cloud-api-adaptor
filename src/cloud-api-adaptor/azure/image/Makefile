@@ -5,13 +5,16 @@
 ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
 include $(ROOT_DIR)podvm/Makefile.inc
 
-.PHONY: image clean
+.PHONY: image clean image-debug
 
 ENABLE_NVIDIA_GPU ?= yes
 
+image-debug: DEBUG=true
+image-debug: image
+
 image: $(IMAGE_FILE)
 
-$(IMAGE_FILE): $(BINARIES) $(FILES)
+$(IMAGE_FILE): prepare $(BINARIES) $(FILES)
 	mkdir -p toupload
 	# export the required packer variables as PKR_VAR_<var_name>
 	# export PKR_VAR_client_id="${AZURE_CLIENT_ID}"

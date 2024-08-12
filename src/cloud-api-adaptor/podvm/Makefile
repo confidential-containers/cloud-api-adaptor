@@ -6,7 +6,7 @@ SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 include $(SELF_DIR)Makefile.inc
 
-.PHONY: image clean clean_sources
+.PHONY: image image-debug clean clean_sources
 
 IMAGE_SUFFIX := .qcow2
 PODVM_DISTRO ?= ubuntu
@@ -31,12 +31,16 @@ UEFI_FIRMWARE_LOCATION ?=
 
 SE_BOOT ?= 0
 
+
 # Env variable for default qemu builder options across distros/arch
 PACKER_DEFAULT_OPTS ?= -var qemu_image_name=${IMAGE_FILE} \
 	-var cloud_image_url=${IMAGE_URL} \
 	-var cloud_image_checksum=${IMAGE_CHECKSUM}
 
 image: $(IMAGE_FILE)
+
+image-debug: DEBUG=true
+image-debug: image
 
 setopts:
 ifeq ($(PODVM_DISTRO),ubuntu)
@@ -77,7 +81,7 @@ ifdef UEFI_FIRMWARE_LOCATION
 endif
 endif
 
-$(IMAGE_FILE): $(BINARIES) $(FILES) setopts
+$(IMAGE_FILE): prepare $(BINARIES) $(FILES) setopts
 	rm -fr output
 	rm -f cloud-init.img
 	cloud-localds cloud-init.img qcow2/userdata.cfg

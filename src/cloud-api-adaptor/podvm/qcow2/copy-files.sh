@@ -30,3 +30,8 @@ sudo cp -a /tmp/files/pause_bundle /
 sudo mkdir -p /etc/kata-opa
 sudo cp -a /tmp/files/etc/kata-opa/* /etc/kata-opa/
 sudo cp -a /tmp/files/etc/tmpfiles.d/policy.conf /etc/tmpfiles.d/
+
+# Copy cloud-init config
+if [ -d /tmp/files/etc/cloud/cloud.cfg.d/ ] && [ -n "$(ls /tmp/files/etc/cloud/cloud.cfg.d/*.cfg)" ]; then
+	sudo cp /tmp/files/etc/cloud/cloud.cfg.d/*.cfg /etc/cloud/cloud.cfg.d/
+fi
