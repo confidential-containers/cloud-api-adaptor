@@ -2,7 +2,7 @@
 
 [![daily e2e tests for libvirt](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/daily-e2e-tests-libvirt.yaml/badge.svg)](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/daily-e2e-tests-libvirt.yaml)
 
-[![daily e2e tests for azure](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/azure-e2e-test.yml/badge.svg)](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/azure-e2e-test.yml)
+[![nightly build for azure](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/azure-nightly-build.yml/badge.svg)](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/azure-nightly-build.yml)
 
 # Introduction
 
