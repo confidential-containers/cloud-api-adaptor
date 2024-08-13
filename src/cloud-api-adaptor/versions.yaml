@@ -29,7 +29,7 @@ tools:
 git:
   coco-operator:
     url: https://github.com/confidential-containers/operator
-    reference: v0.9.0
+    reference: main
   guest-components:
     url: https://github.com/confidential-containers/guest-components
     reference: v0.9.0
