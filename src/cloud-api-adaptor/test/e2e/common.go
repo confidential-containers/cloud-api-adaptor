@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -25,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
 
@@ -104,6 +104,15 @@ func isTestOnCrio() bool {
 
 func enableAllowAllPodPolicyOverride() bool {
 	return os.Getenv("POD_ALLOW_ALL_POLICY_OVERRIDE") == "yes"
+}
+
+// Convenience method as we follow this pattern a lot
+func getBusyboxTestImage(t *testing.T) string {
+	image, err := utils.GetImage("busybox")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return image
 }
 
 func encodePolicyFile(policyFilePath string) string {
@@ -281,51 +290,90 @@ func NewPod(namespace string, podName string, containerName string, imageName st
 	return pod
 }
 
-func NewBusyboxPod(namespace string) *corev1.Pod {
+// Struct for convenience
+type PodOrError struct {
+	pod *corev1.Pod
+	err error
+}
+
+func fromError(err error) PodOrError {
+	return PodOrError{pod: nil, err: err}
+}
+
+func fromPod(pod *corev1.Pod) PodOrError {
+	return PodOrError{pod: pod, err: nil}
+}
+
+func (p PodOrError) GetPodOrFatal(t *testing.T) *corev1.Pod {
+	if p.err != nil {
+		t.Fatal(p.err)
+	}
+	return p.pod
+}
+
+func NewBusyboxPod(namespace string) PodOrError {
 	return NewBusyboxPodWithName(namespace, "busybox")
 }
 
-func NewPrivPod(namespace string, podName string) *corev1.Pod {
+func NewPrivPod(namespace string, podName string) PodOrError {
 	sc := &corev1.SecurityContext{
 		Privileged: func(b bool) *bool { return &b }(true),
 	}
-	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithSecurityContext(sc))
+	busyboxImage, err := utils.GetImage("busybox")
+	if err != nil {
+		return fromError(err)
+	}
+	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithSecurityContext(sc)))
 }
 
 // Method to create a Pod with initContainer
-func NewPodWithInitContainer(namespace string, podName string) *corev1.Pod {
-
+func NewPodWithInitContainer(namespace string, podName string) PodOrError {
+	busyboxImage, err := utils.GetImage("busybox")
+	if err != nil {
+		return fromError(err)
+	}
 	initContainer := []corev1.Container{
 		{
 			Name:    "init-container",
-			Image:   BUSYBOX_IMAGE,
+			Image:   busyboxImage,
 			Command: []string{"/bin/sh", "-c", "echo 'init container'"},
 		},
 	}
 
-	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithInitContainers(initContainer))
+	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithInitContainers(initContainer)))
 }
 
-func NewBusyboxPodWithName(namespace, podName string) *corev1.Pod {
-	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+func NewBusyboxPodWithName(namespace, podName string) PodOrError {
+	busyboxImage, err := utils.GetImage("busybox")
+	if err != nil {
+		return fromError(err)
+	}
+	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"})))
 }
 
-func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string) *corev1.Pod {
+func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string) PodOrError {
 	initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
 	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
 	annotationData := map[string]string{
 		"io.katacontainers.config.runtime.cc_init_data": b64Data,
 	}
-	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+	busyboxImage, err := utils.GetImage("busybox")
+	if err != nil {
+		return fromError(err)
+	}
+	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData)))
 }
 
-func NewPodWithPolicy(namespace, podName, policyFilePath string) *corev1.Pod {
+func NewPodWithPolicy(namespace, podName, policyFilePath string) PodOrError {
 	containerName := "busybox"
-	imageName := BUSYBOX_IMAGE
+	imageName, err := utils.GetImage("busybox")
+	if err != nil {
+		return fromError(err)
+	}
 	annotationData := map[string]string{
 		"io.katacontainers.config.agent.policy": encodePolicyFile(policyFilePath),
 	}
-	return NewPod(namespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+	return fromPod(NewPod(namespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData)))
 }
 
 // NewConfigMap returns a new config map object.
