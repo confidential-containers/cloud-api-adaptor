@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -93,7 +94,10 @@ func NewDeployment(namespace, deploymentName, containerName, imageName string, o
 func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAssert) {
 	deploymentName := "nginx-deployment"
 	containerName := "nginx"
-	imageName := "nginxinc/nginx-unprivileged"
+	imageName, err := utils.GetImage("unprivileged-nginx")
+	if err != nil {
+		t.Fatal(err)
+	}
 	replicas := int32(2)
 	deployment := NewDeployment(E2eNamespace, deploymentName, containerName, imageName, WithReplicaCount(replicas))
 

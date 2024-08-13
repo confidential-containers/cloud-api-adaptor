@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -359,7 +360,10 @@ func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert Clo
 	clientImageName := BUSYBOX_IMAGE
 	serverPodName := "test-server"
 	serverContainerName := "nginx"
-	serverImageName := "nginx:latest"
+	serverImageName, err := utils.GetImage("nginx")
+	if err != nil {
+		t.Fatal(err)
+	}
 	serviceName := "nginx-server"
 	labels := map[string]string{
 		"app": "nginx-server",
@@ -397,10 +401,16 @@ func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert Clo
 func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAssert) {
 	clientPodName := "mtls-client"
 	clientContainerName := "curl"
-	clientImageName := "docker.io/curlimages/curl:8.4.0"
+	clientImageName, err := utils.GetImage("curl")
+	if err != nil {
+		t.Fatal(err)
+	}
 	serverPodName := "mtls-server"
 	serverContainerName := "nginx"
-	serverImageName := "nginx:latest"
+	serverImageName, err := utils.GetImage("nginx")
+	if err != nil {
+		t.Fatal(err)
+	}
 	caService, _ := tlsutil.NewCAService("nginx")
 	serverCACertPEM := caService.RootCertificate()
 	serviceName := "nginx-mtls"

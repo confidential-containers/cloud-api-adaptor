@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
-
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/ibmcloud"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestCreateSimplePod(t *testing.T) {
@@ -130,7 +130,10 @@ func TestCreatePeerPodWithPVC(t *testing.T) {
 		storageClassName := "ibmc-vpc-block-5iops-tier"
 		storageSize := "10Gi"
 		podName := "nginx-pvc-pod"
-		imageName := "nginx:latest"
+		imageName, err := utils.GetImage("nginx")
+		if err != nil {
+			t.Fatal(err)
+		}
 		containerName := "nginx-pvc-container"
 		csiContainerName := "ibm-vpc-block-podvm-node-driver"
 		csiImageName := "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v5.2.0"
