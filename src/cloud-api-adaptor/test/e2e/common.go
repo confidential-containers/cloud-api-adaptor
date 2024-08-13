@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -104,6 +105,14 @@ func isTestOnCrio() bool {
 
 func enableAllowAllPodPolicyOverride() bool {
 	return os.Getenv("POD_ALLOW_ALL_POLICY_OVERRIDE") == "yes"
+}
+
+func getTestImage(t *testing.T, image string) string {
+	image, err := utils.GetImage(image)
+	if err != nil {
+		t.Errorf("Failed to read image: %s, with error %s", image, err.Error())
+	}
+	return image
 }
 
 func encodePolicyFile(policyFilePath string) string {
