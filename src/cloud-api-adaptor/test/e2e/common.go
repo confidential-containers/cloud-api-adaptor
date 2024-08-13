@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// TODO remove busybox fully
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
@@ -281,7 +282,7 @@ func NewPrivPod(namespace string, podName string) *corev1.Pod {
 
 // Method to create a Pod with initContainer
 func NewPodWithInitContainer(namespace string, podName string) *corev1.Pod {
-
+	// TODO how to read busyboxImage without throwing error?
 	initContainer := []corev1.Container{
 		{
 			Name:    "init-container",
