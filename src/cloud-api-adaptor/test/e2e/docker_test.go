@@ -101,10 +101,11 @@ func TestDockerKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
-	_ = keyBrokerService.EnableKbsCustomizedPolicy("deny_all.rego")
+	keyBrokerService.SetSampleSecretKey()
+	keyBrokerService.EnableKbsCustomizedResourcePolicy("deny_all.rego")
 	assert := DockerAssert{}
 	t.Parallel()
 	DoTestKbsKeyReleaseForFailure(t, testEnv, assert)
-	_ = keyBrokerService.EnableKbsCustomizedPolicy("allow_all.rego")
+	keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
 	DoTestKbsKeyRelease(t, testEnv, assert)
 }
