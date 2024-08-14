@@ -74,7 +74,15 @@ installKcli() {
     if ! command -v kcli >/dev/null; then
         echo "Installing kcli"
         kcli_version="$(./hack/yq-shim.sh '.tools.kcli' versions.yaml)"
-        sudo pip3 install kcli==${kcli_version}
+        if [ $OS_DISTRO == "ubuntu" ]; then
+            # Work around newer Ubuntu's python venv errors by using pipx to install kcli
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install pipx -y
+            # export PATH="$PATH:$HOME/.local/bin"
+            pipx install kcli==${kcli_version}
+            pipx ensurepath
+        else
+            sudo pip3 install kcli==${kcli_version}
+        fi
     fi
 }
 
@@ -116,3 +124,8 @@ KBS_IMAGE=$(./hack/yq-shim.sh '.oci.kbs.registry' ./versions.yaml)
 KBS_IMAGE_TAG=$(./hack/yq-shim.sh '.oci.kbs.tag' ./versions.yaml)
 [ -z ${KBS_IMAGE} ] || echo "KBS_IMAGE=\"${KBS_IMAGE}\"" >> libvirt.properties
 [ -z ${KBS_IMAGE_TAG} ] || echo "KBS_IMAGE_TAG=\"${KBS_IMAGE_TAG}\"" >> libvirt.properties
+
+if [ $OS_DISTRO == "ubuntu" ]; then
+    # Reload shell so that pipx install PATH is available
+    exec $SHELL
+fi
