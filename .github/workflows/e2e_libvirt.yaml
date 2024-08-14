@@ -113,6 +113,8 @@ jobs:
           ./libvirt/config_libvirt.sh
           # For debugging
           cat libvirt.properties
+          # Add the kcli install directory to PATH for later steps
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install gh cli
         run: |
