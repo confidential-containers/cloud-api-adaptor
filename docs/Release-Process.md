@@ -211,9 +211,6 @@ If the `main` branch was not already unlocked, then ask an admin to do this now.
 
 The CoCo operator reference commit in the [versions.yaml](../src/cloud-api-adaptor/versions.yaml) should be reverted to use `main` branch.
 
-The changes on the overlay kustomization files should be reverted to start using the latest cloud-api-adaptor images again:
-```
-./hack/release-helper.sh caa-image-tag latest
-```
+The commit that pinned the overlay kustomization files should be reverted to start using the latest cloud-api-adaptor images again.
 
 The `CITATION.cff` needs to be updated with the dates from the release.
