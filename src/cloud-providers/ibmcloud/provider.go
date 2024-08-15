@@ -90,6 +90,9 @@ func NewProvider(config *Config) (provider.Provider, error) {
 
 	// If this label exists assume we are in an IKS cluster
 	primarySubnetID, iks := nodeLabels["ibm-provider.kubernetes.io/subnet-id"]
+	if !iks {
+		primarySubnetID, iks = nodeLabels["ibm-cloud.kubernetes.io/subnet-id"]
+	}
 	if iks {
 		if config.ZoneName == "" {
 			config.ZoneName = nodeLabels["topology.kubernetes.io/zone"]
