@@ -73,6 +73,8 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		DialContext(ctx context.Context, network, address string) (net.Conn, error)
 	}
 
+	netDialer := &net.Dialer{Timeout: p.proxyTimeout}
+
 	if p.tlsConfig != nil {
 
 		// Create a TLS configuration object
@@ -94,10 +96,11 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		}
 
 		dialer = &tls.Dialer{
-			Config: config,
+			NetDialer: netDialer,
+			Config:    config,
 		}
 	} else {
-		dialer = &net.Dialer{}
+		dialer = netDialer
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, p.proxyTimeout)
