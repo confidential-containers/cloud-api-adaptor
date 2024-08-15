@@ -111,21 +111,22 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 	_ = keyBrokerService.SetSampleSecretKey()
 	_ = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
 	_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("deny_all.rego")
+	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
 	assert := LibvirtAssert{}
 	t.Parallel()
-	DoTestKbsKeyReleaseForFailure(t, testEnv, assert)
+	DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint)
 	if isTestWithKbsIBMSE() {
 		t.Log("KBS with ibmse cases")
 		// the allow_*_.rego file is created by follow document
 		// https://github.com/confidential-containers/trustee/blob/main/deps/verifier/src/se/README.md#set-attestation-policy
 		_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_with_wrong_image_tag.rego")
-		DoTestKbsKeyReleaseForFailure(t, testEnv, assert)
+		DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint)
 		_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_with_correct_claims.rego")
-		DoTestKbsKeyRelease(t, testEnv, assert)
+		DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint)
 	} else {
 		t.Log("KBS normal cases")
 		_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
-		DoTestKbsKeyRelease(t, testEnv, assert)
+		DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint)
 	}
 }
 

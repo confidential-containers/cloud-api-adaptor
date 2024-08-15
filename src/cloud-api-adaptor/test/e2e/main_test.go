@@ -152,7 +152,6 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		var kbsparams string
 		if shouldDeployKbs {
 			log.Info("Deploying kbs")
 			if keyBrokerService, err = pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg); err != nil {
@@ -167,8 +166,7 @@ func TestMain(m *testing.M) {
 				return ctx, err
 			}
 
-			kbsparams = "cc_kbc::" + kbsEndpoint
-			log.Infof("KBS PARAMS: %s", kbsparams)
+			log.Infof("kbsEndpoint: %s", kbsEndpoint)
 		}
 
 		if podvmImage != "" {
@@ -186,7 +184,6 @@ func TestMain(m *testing.M) {
 			}
 
 			props = provisioner.GetProperties(ctx, cfg)
-			props["AA_KBC_PARAMS"] = kbsparams
 			log.Info("Deploy the Cloud API Adaptor")
 			if err = cloudAPIAdaptor.Deploy(ctx, cfg, props); err != nil {
 				return ctx, err

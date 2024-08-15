@@ -2,7 +2,6 @@
 
 The document describes the implementation of the [initdata](https://github.com/confidential-containers/trustee/blob/main/kbs/docs/initdata.md) spec in PeerPods.
 
-Initdata is used when `AA_KBC_PARAMS` is not set at the moment, the plan is to remove `AA_KBC_PARAMS` support after `initdata` function works completely.
 
 ## Initdata example
 

@@ -24,8 +24,7 @@ import (
 )
 
 const (
-	programName           = "cloud-api-adaptor"
-	AA_KBC_PARAMS_DEFAULT = "cc_kbc::http://127.0.0.1:8080"
+	programName = "cloud-api-adaptor"
 )
 
 type daemonConfig struct {
@@ -122,7 +121,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.StringVar(&cfg.networkConfig.HostInterface, "host-interface", "", "Host Interface")
 		flags.IntVar(&cfg.networkConfig.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
 		flags.IntVar(&cfg.networkConfig.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
-		flags.StringVar(&cfg.serverConfig.AAKBCParams, "aa-kbc-params", "", "attestation-agent KBC parameters")
 		flags.BoolVar(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "Enable cloud config verify - should use it for production")
 
 		cloud.ParseCmd(flags)
@@ -142,8 +140,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		cfg.serverConfig.SecureCommsInbounds = secureCommsInbounds
 		cfg.serverConfig.SecureCommsOutbounds = secureCommsOutbounds
 		cfg.serverConfig.SecureCommsKbsAddress = secureCommsKbsAddr
-
-		cfg.serverConfig.AAKBCParams = AA_KBC_PARAMS_DEFAULT
 	} else {
 		if !disableTLS {
 			cfg.serverConfig.TLSConfig = &tlsConfig

@@ -576,9 +576,9 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaining opa in kbs
 // as test cases might be run in parallel
-func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
+func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
 	t.Log("Do test kbs key release")
-	pod := NewBusyboxPodWithName(E2eNamespace, "kbs-key-release")
+	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-key-release", kbsEndpoint)
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
@@ -600,9 +600,9 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert) {
 
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaining opa in kbs
 // as test cases might be run in parallel
-func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert) {
+func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
 	t.Log("Do test kbs key release failure case")
-	pod := NewBusyboxPodWithName(E2eNamespace, "kbs-failure")
+	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-failure", kbsEndpoint)
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
@@ -631,9 +631,9 @@ func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert Cloud
 }
 
 // Test to check for specific key value from Trustee Operator Deployment
-func DoTestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T, e env.Environment, assert CloudAssert) {
+func DoTestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
 	t.Log("Do test Trustee operator key release for specific key")
-	pod := NewBusyboxPodWithName(E2eNamespace, "op-key-release")
+	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "op-key-release", kbsEndpoint)
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/default/kbsres1/key1"},

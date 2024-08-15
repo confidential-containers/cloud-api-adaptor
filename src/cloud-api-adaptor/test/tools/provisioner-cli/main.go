@@ -109,11 +109,9 @@ func main() {
 				log.Fatal(err)
 			}
 
-			kbsparams := "cc_kbc::" + kbsEndpoint
-			log.Infof("KBS PARAMS: %s", kbsparams)
+			log.Infof("keyBrokerService: %s", kbsEndpoint)
 
 			props = provisioner.GetProperties(context.TODO(), cfg)
-			props["AA_KBC_PARAMS"] = kbsparams
 		}
 
 		cloudAPIAdaptor, err := pv.NewCloudAPIAdaptor(cloudProvider, installDirectory)

@@ -393,6 +393,13 @@ func getNodeIPForSvc(deploymentName string, service corev1.Service, cfg *envconf
 	return "", fmt.Errorf("Node IP not found for Service %s", service.Name)
 }
 
+func (p *KeyBrokerService) GetCachedKbsEndpoint() (string, error) {
+	if p.endpoint != "" {
+		return p.endpoint, nil
+	}
+	return "", fmt.Errorf("KeyBrokerService not found")
+}
+
 func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Config) (string, error) {
 	client, err := cfg.NewClient()
 	if err != nil {

@@ -5,6 +5,7 @@ package e2e
 
 import (
 	b64 "encoding/base64"
+	"fmt"
 	"net"
 	"os"
 	"testing"
@@ -27,6 +28,61 @@ import (
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
+
+var testInitdata string = `algorithm = "sha384"
+version = "0.1.0"
+
+[data]
+"aa.toml" = '''
+[token_configs]
+[token_configs.coco_as]
+url = '%s'
+
+[token_configs.kbs]
+url = '%s'
+'''
+
+"cdh.toml"  = '''
+socket = 'unix:///run/confidential-containers/cdh.sock'
+credentials = []
+
+[kbc]
+name = 'cc_kbc'
+url = '%s'
+'''
+
+"policy.rego" = '''
+package agent_policy
+
+import future.keywords.in
+import future.keywords.every
+
+import input
+
+# Default values, returned by OPA when rules cannot be evaluated to true.
+default CopyFileRequest := true
+default CreateContainerRequest := true
+default CreateSandboxRequest := true
+default DestroySandboxRequest := true
+default ExecProcessRequest := true
+default GetOOMEventRequest := true
+default GuestDetailsRequest := true
+default OnlineCPUMemRequest := true
+default PullImageRequest := true
+default ReadStreamRequest := true
+default RemoveContainerRequest := true
+default RemoveStaleVirtiofsShareMountsRequest := true
+default SignalProcessRequest := true
+default StartContainerRequest := true
+default StatsContainerRequest := true
+default TtyWinResizeRequest := true
+default UpdateEphemeralMountsRequest := true
+default UpdateInterfaceRequest := true
+default UpdateRoutesRequest := true
+default WaitProcessRequest := true
+default WriteStreamRequest := true
+'''
+`
 
 func isTestWithKbs() bool {
 	return os.Getenv("TEST_KBS") == "yes" || os.Getenv("TEST_KBS") == "true"
@@ -216,6 +272,15 @@ func NewPodWithInitContainer(namespace string, podName string) *corev1.Pod {
 
 func NewBusyboxPodWithName(namespace, podName string) *corev1.Pod {
 	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+}
+
+func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string) *corev1.Pod {
+	initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
+	annotationData := map[string]string{
+		"io.katacontainers.config.runtime.cc_init_data": b64Data,
+	}
+	return NewPod(namespace, podName, "busybox", BUSYBOX_IMAGE, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 }
 
 func NewPodWithPolicy(namespace, podName, policyFilePath string) *corev1.Pod {

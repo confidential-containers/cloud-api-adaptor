@@ -35,7 +35,6 @@ type cloudService struct {
 	daemonPort   string
 	mutex        sync.Mutex
 	ppService    *k8sops.PeerPodService
-	aaKBCParams  string
 	sshClient    *wnssh.SshClient
 }
 
