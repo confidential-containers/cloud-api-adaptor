@@ -350,7 +350,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res *pb.StartVMResponse, err error) {
 	defer func() {
 		if err != nil {
-			logger.Print(err)
+			logger.Printf("error starting instance: %v", err)
 		}
 	}()
 
@@ -368,7 +368,7 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 
 	if s.ppService != nil {
 		if err := s.ppService.OwnPeerPod(sandbox.podName, sandbox.podNamespace, instance.ID); err != nil {
-			logger.Printf("failed to create PeerPod: %s", err.Error())
+			logger.Printf("failed to create PeerPod: %v", err)
 		}
 	}
 
@@ -388,7 +388,7 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 		}
 
 		if err := ci.Start(); err != nil {
-			return nil, fmt.Errorf("failed SshClientInstance.Start: %s", err)
+			return nil, fmt.Errorf("failed SshClientInstance.Start: %w", err)
 		}
 
 		// Set agentProxy
@@ -428,7 +428,8 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	case <-sandbox.agentProxy.Ready():
 	}
 
-	logger.Printf("agent proxy is ready")
+	logger.Print("agent proxy is ready")
+
 	return &pb.StartVMResponse{}, nil
 }
 
