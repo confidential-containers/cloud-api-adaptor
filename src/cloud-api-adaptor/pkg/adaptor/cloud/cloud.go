@@ -43,7 +43,6 @@ const (
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
 
 func (s *cloudService) addSandbox(sid sandboxID, sandbox *sandbox) error {
-
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -57,7 +56,6 @@ func (s *cloudService) addSandbox(sid sandboxID, sandbox *sandbox) error {
 }
 
 func (s *cloudService) getSandbox(sid sandboxID) (*sandbox, error) {
-
 	if sid == "" {
 		return nil, errors.New("empty sandbox id")
 	}
@@ -81,7 +79,8 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, aaKBCParams, sshport string) Service {
+	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, aaKBCParams, sshport string,
+) Service {
 	var err error
 	var sshClient *wnssh.SshClient
 
@@ -122,7 +121,6 @@ func (s *cloudService) ConfigVerifier() error {
 }
 
 func (s *cloudService) setInstance(sid sandboxID, instanceID, instanceName string) error {
-
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -140,7 +138,6 @@ func (s *cloudService) setInstance(sid sandboxID, instanceID, instanceName strin
 }
 
 func (s *cloudService) GetInstanceID(ctx context.Context, podNamespace, podName string, wait bool) (string, error) {
-
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -170,7 +167,6 @@ func (s *cloudService) Version(ctx context.Context, req *pb.VersionRequest) (*pb
 }
 
 func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (res *pb.CreateVMResponse, err error) {
-
 	defer func() {
 		if err != nil {
 			logger.Print(err)
@@ -267,7 +263,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	// Store daemon.json in worker node for debugging
 	daemonJSONPath := filepath.Join(podDir, "daemon.json")
-	if err := os.WriteFile(daemonJSONPath, daemonJSON, 0666); err != nil {
+	if err := os.WriteFile(daemonJSONPath, daemonJSON, 0o666); err != nil {
 		return nil, fmt.Errorf("storing %s: %w", daemonJSONPath, err)
 	}
 	logger.Printf("stored %s", daemonJSONPath)
@@ -352,7 +348,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 }
 
 func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res *pb.StartVMResponse, err error) {
-
 	defer func() {
 		if err != nil {
 			logger.Print(err)
@@ -438,7 +433,6 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 }
 
 func (s *cloudService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.StopVMResponse, error) {
-
 	sid := sandboxID(req.Id)
 
 	sandbox, err := s.getSandbox(sid)
