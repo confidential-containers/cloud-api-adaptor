@@ -41,6 +41,7 @@ DEFAULT_AGENT_POLICY_FILE ?= allow-all.rego
 
 FORCE_TARGET := $(if $(FORCE),force,)
 
+SHELL := env PATH=$(PATH) /bin/bash
 
 ifneq ($(HOST_ARCH),$(ARCH))
     ifeq ($(CC),cc)
@@ -82,10 +83,6 @@ PROCESS_USER_DATA = $(FILES_DIR)/usr/local/bin/process-user-data
 
 BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGENT) $(CONFIDENTIAL_DATA_HUB) $(API_SERVER_REST) $(PROCESS_USER_DATA)
 
-KATA_CONTAINERS_SRC = $(ROOT_DIR)/../kata-containers
-KATA_AGENT_SRC = $(KATA_CONTAINERS_SRC)/src/agent
-KATA_AGENT_BUILD_TYPE = release
-
 SKOPEO_SRC ?= skopeo
 SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo
 
@@ -96,12 +93,6 @@ UMOCI_SRC   = umoci
 PAUSE_SRC     = pause
 # Allows to override
 PAUSE_BUNDLE  ?= pause_bundle
-
-# Static libseccomp is necessary for kata-agent
-# https://github.com/kata-containers/kata-containers/issues/5044#issuecomment-1239773921
-STATIC_LIBSECCOMP_BUILDER = $(KATA_CONTAINERS_SRC)/ci/install_libseccomp.sh
-STATIC_LIBSECCOMP_DIR     = $(abspath staticlib)
-STATIC_LIBSECCOMP         = $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp/lib/libseccomp.a
 
 GUEST_COMPONENTS_SRC = ../../../guest-components
 
@@ -119,6 +110,15 @@ define git_clone_repo_ref
 		git reset --hard FETCH_HEAD
 endef
 
+# Ensure that the oras tags is converted to something valid
+# $(1) - return value
+# $(2) - initial_tag
+define generate_tag
+	$(eval $0_tag_length_limit=$(shell expr 128 - $(shell echo "-$(ARCH)" | wc -c)))
+	processed_tag=$(shell echo $(2) | tr -dc '[:print:]' | tr -c '[a-zA-Z0-9\_\.\-]' _ | head -c $(shell echo $($0_tag_length_limit)))
+	$(1) := $$(processed_tag)-$(ARCH)
+endef
+
 binaries: $(BINARIES)
 
 $(AGENT_PROTOCOL_FORWARDER): always
@@ -129,16 +129,11 @@ $(PROCESS_USER_DATA): always
 	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) process-user-data
 	install -D --compare "$(ROOT_DIR)/process-user-data" "$@"
 
-$(KATA_AGENT): $(FORCE_TARGET) | $(STATIC_LIBSECCOMP)
-	cd "$(KATA_AGENT_SRC)" && $(RUST_FLAGS) $(MAKE) BUILD_TYPE=$(KATA_AGENT_BUILD_TYPE) SEALED_SECRET=${SEALED_SECRET} AGENT_POLICY=${AGENT_POLICY} LIBSECCOMP_LINK_TYPE=static LIBSECCOMP_LIB_PATH=$(dir $(STATIC_LIBSECCOMP))
-	install -D --compare "$(KATA_AGENT_SRC)/target/$(RUST_TARGET)/$(KATA_AGENT_BUILD_TYPE)/$(@F)" "$@"
-
-$(STATIC_LIBSECCOMP): $(KATA_CONTAINERS_SRC)
-	INSTALL_IN_GOPATH=false $(KATA_CONTAINERS_SRC)/ci/install_yq.sh
-	$(RUST_FLAGS) $(STATIC_LIBSECCOMP_BUILDER) $(STATIC_LIBSECCOMP_DIR)/kata-libseccomp $(STATIC_LIBSECCOMP_DIR)/kata-gperf
-
-$(KATA_CONTAINERS_SRC):
-	$(call git_clone_repo_ref,$(KATA_SRC),$(KATA_CONTAINERS_SRC),$(KATA_SRC_REF))
+$(KATA_AGENT): $(FORCE_TARGET)
+	$(eval $(call generate_tag,tag,$(KATA_SRC_REF)))
+	oras pull ghcr.io/kata-containers/cached-artefacts/agent:${tag}
+	tar xvJpf kata-static-agent.tar.xz
+	install -D --compare "./usr/bin/kata-agent" "$@"
 
 # Skopeo package packages are available in RHEL/CentOS 8 or later and Ubuntu 20.10 or later
 $(SKOPEO_SRC):
@@ -185,11 +180,9 @@ $(API_SERVER_REST): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
 
 clean_sources:
 	[ -d "$(GUEST_COMPONENTS_SRC)" ] && cd "$(GUEST_COMPONENTS_SRC)" && git clean -xfd
-	[ -d "$(KATA_AGENT_SRC)" ] && cd "$(KATA_AGENT_SRC)" && git clean -xfd
 	[ -d "$(ROOT_DIR)" ] && cd "$(ROOT_DIR)" && git clean -xfd -e podvm
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci
-	[ -d "$(KATA_CONTAINERS_SRC)" ] && cd "$(KATA_CONTAINERS_SRC)" && git clean -xfd
 
 .PHONY: force always
 always force:
