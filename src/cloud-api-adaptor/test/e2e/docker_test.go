@@ -103,9 +103,10 @@ func TestDockerKbsKeyRelease(t *testing.T) {
 	}
 	keyBrokerService.SetSampleSecretKey()
 	keyBrokerService.EnableKbsCustomizedResourcePolicy("deny_all.rego")
+	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
 	assert := DockerAssert{}
 	t.Parallel()
-	DoTestKbsKeyReleaseForFailure(t, testEnv, assert)
+	DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint)
 	keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
-	DoTestKbsKeyRelease(t, testEnv, assert)
+	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint)
 }

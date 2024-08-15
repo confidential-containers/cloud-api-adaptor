@@ -282,7 +282,6 @@ optionals+=""
 [[ "${CERT_FILE}" ]] && [[ "${CERT_KEY}" ]] && optionals+="-cert-file ${CERT_FILE} -cert-key ${CERT_KEY} "
 [[ "${TLS_SKIP_VERIFY}" ]] && optionals+="-tls-skip-verify "
 [[ "${PROXY_TIMEOUT}" ]] && optionals+="-proxy-timeout ${PROXY_TIMEOUT} "
-[[ "${AA_KBC_PARAMS}" ]] && optionals+="-aa-kbc-params ${AA_KBC_PARAMS} "
 [[ "${FORWARDER_PORT}" ]] && optionals+="-forwarder-port ${FORWARDER_PORT} "
 [[ "${CLOUD_CONFIG_VERIFY}" == "true" ]] && optionals+="-cloud-config-verify "
 
@@ -396,7 +395,7 @@ cloud-api-adaptor version v0.8.2-dev
 cloud-api-adaptor: starting Cloud API Adaptor daemon for "libvirt"
 2024/04/17 04:34:56 [adaptor/cloud/libvirt] libvirt config: &libvirt.Config{URI:"qemu+ssh://root@192.168.122.1/system?no_verify=1", PoolName:"default", NetworkName:"default", DataDir:"/opt/data-dir", DisableCVM:true, VolName:"podvm-base.qcow2", LaunchSecurity:"", Firmware:"/usr/share/edk2/ovmf/OVMF_CODE.fd"}
 2024/04/17 04:34:56 [adaptor/cloud/libvirt] Created libvirt connection
-2024/04/17 04:34:56 [adaptor] server config: &adaptor.ServerConfig{TLSConfig:(*tlsutil.TLSConfig)(0xc0000d4080), SocketPath:"/run/peerpod/hypervisor.sock", CriSocketPath:"", PauseImage:"", PodsDir:"/run/peerpod/pods", ForwarderPort:"15150", ProxyTimeout:300000000000, AAKBCParams:"", EnableCloudConfigVerify:false}
+2024/04/17 04:34:56 [adaptor] server config: &adaptor.ServerConfig{TLSConfig:(*tlsutil.TLSConfig)(0xc0000d4080), SocketPath:"/run/peerpod/hypervisor.sock", CriSocketPath:"", PauseImage:"", PodsDir:"/run/peerpod/pods", ForwarderPort:"15150", ProxyTimeout:300000000000, EnableCloudConfigVerify:false}
 2024/04/17 04:34:56 [util/k8sops] initialized PeerPodService
 2024/04/17 04:34:56 [probe/probe] Using port: 8000
 2024/04/17 04:34:56 [adaptor] server started

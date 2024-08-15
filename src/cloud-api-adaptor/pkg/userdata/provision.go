@@ -14,10 +14,8 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/aa"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/agent"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cdh"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/aws"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/azure"
@@ -33,8 +31,8 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
-var WriteFilesList = []string{aa.ConfigFilePath, cdh.ConfigFilePath, agent.ConfigFilePath, forwarder.DefaultConfigPath, cloud.AuthFilePath, cloud.InitdataPath}
-var InitdDataFilesList = []string{aa.ConfigFilePath, cdh.ConfigFilePath, PolicyPath}
+var WriteFilesList = []string{cloud.AaFilePath, cloud.CdhFilePath, agent.ConfigFilePath, forwarder.DefaultConfigPath, cloud.AuthFilePath, cloud.InitdataPath}
+var InitdDataFilesList = []string{cloud.AaFilePath, cloud.CdhFilePath, PolicyPath}
 
 type Config struct {
 	fetchTimeout  int

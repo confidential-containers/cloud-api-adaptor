@@ -19,11 +19,9 @@ import (
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/aa"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/agent"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cdh"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/wnssh"
@@ -35,7 +33,9 @@ import (
 
 const (
 	SrcAuthfilePath = "/root/containers/auth.json"
+	AaFilePath      = "/run/peerpod/aa.toml"
 	AuthFilePath    = "/run/peerpod/auth.json"
+	CdhFilePath     = "/run/peerpod/cdh.toml"
 	InitdataPath    = "/run/peerpod/initdata"
 	Version         = "0.0.0"
 )
@@ -79,8 +79,7 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, aaKBCParams, sshport string,
-) Service {
+	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, sshport string) Service {
 	var err error
 	var sshClient *wnssh.SshClient
 
@@ -100,7 +99,6 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 		podsDir:      podsDir,
 		daemonPort:   daemonPort,
 		workerNode:   workerNode,
-		aaKBCParams:  aaKBCParams,
 		sshClient:    sshClient,
 	}
 	s.cond = sync.NewCond(&s.mutex)
@@ -292,39 +290,13 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		}
 	}
 
-	if s.aaKBCParams != "" { // Keep AA_KBC_PARAMS support as it is used by e2e test, KBS is dynamic k8s service in e2e test
-		logger.Printf("aaKBCParams: %s, support cc_kbc::*", s.aaKBCParams)
-		toml, err := cdh.CreateConfigFile(s.aaKBCParams)
-		if err != nil {
-			return nil, fmt.Errorf("creating CDH config: %w", err)
-		}
-		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    cdh.ConfigFilePath,
-			Content: toml,
-		})
-
-		toml, err = aa.CreateConfigFile(s.aaKBCParams)
-		if err != nil {
-			return nil, fmt.Errorf("creating attestation agent config: %w", err)
-		}
-		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    aa.ConfigFilePath,
-			Content: toml,
-		})
-	}
-
 	initdataStr := util.GetInitdataFromAnnotation(req.Annotations)
 	logger.Printf("initdata: %s", initdataStr)
 	if initdataStr != "" {
-		if s.aaKBCParams != "" {
-			logger.Printf("Initdata ignored because AA_KBC_PARAMS set")
-		} else {
-			logger.Printf("Set and use initdata when no AA_KBC_PARAMS")
-			cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-				Path:    InitdataPath,
-				Content: initdataStr,
-			})
-		}
+		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+			Path:    InitdataPath,
+			Content: initdataStr,
+		})
 	}
 
 	sandbox := &sandbox{

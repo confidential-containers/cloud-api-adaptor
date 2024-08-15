@@ -206,7 +206,7 @@ func NewDockerInstallOverlay(installDir, provider string) (pv.InstallOverlay, er
 
 func isDockerKustomizeConfigMapKey(key string) bool {
 	switch key {
-	case "CLOUD_PROVIDER", "DOCKER_HOST", "DOCKER_API_VERSION", "DOCKER_PODVM_IMAGE", "DOCKER_NETWORK_NAME", "AA_KBC_PARAMS":
+	case "CLOUD_PROVIDER", "DOCKER_HOST", "DOCKER_API_VERSION", "DOCKER_PODVM_IMAGE", "DOCKER_NETWORK_NAME":
 		return true
 	default:
 		return false

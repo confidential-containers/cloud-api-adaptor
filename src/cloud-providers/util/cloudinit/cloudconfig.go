@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	DefaultAuthfileLimit   = 12288 // TODO: use a whole userdata limit mechanism instead of limiting authfile
-	DefaultAAKBCParamsPath = "/etc/attestation-agent/kbc-params.json"
+	DefaultAuthfileLimit = 12288 // TODO: use a whole userdata limit mechanism instead of limiting authfile
 )
 
 // https://cloudinit.readthedocs.io/en/latest/topics/format.html#cloud-config-data

@@ -129,7 +129,8 @@ func TestKbsKeyRelease(t *testing.T) {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
 	t.Parallel()
-	DoTestKbsKeyRelease(t, testEnv, assert)
+	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
+	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint)
 }
 
 func TestRemoteAttestation(t *testing.T) {
@@ -145,5 +146,6 @@ func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
 		t.Skip("Skipping kbs related test as Trustee Operator is not deployed")
 	}
 	t.Parallel()
-	DoTestTrusteeOperatorKeyReleaseForSpecificKey(t, testEnv, assert)
+	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
+	DoTestTrusteeOperatorKeyReleaseForSpecificKey(t, testEnv, assert, kbsEndpoint)
 }
