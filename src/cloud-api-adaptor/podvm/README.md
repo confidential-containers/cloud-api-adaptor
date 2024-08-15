@@ -43,42 +43,32 @@ The builder image packages the cloud-api-adaptor and Kata Containers sources as 
 the binaries (e.g. *kata-agent* and *agent-protocol-forwarder*) that should be installed in the podvm image.
 
 The builder image is agnostic to cloud providers in the sense that one can be used to build for multiple providers, however it is
-dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)), and RHEL 9 ([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
+dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each
+supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)),
+Fedora 39 ([Dockerfile.podvm_builder.fedora](./Dockerfile.podvm_builder)) and RHEL 9
+([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
 
-As an example, to build the builder image for Ubuntu, run:
-
+You can create the builder image using the make target by running:
 ```bash
-$ docker build -t podvm_builder \
-         -f Dockerfile.podvm_builder .
+$ make -C .. podvm-builder
 ```
 
-Use `--build-arg` to pass build arguments to docker to overwrite default values if needed. Following are the arguments
-currently accepted:
+You can optionally customize the builder image, by specify shell variables to the `make` command:
+| Variable            | Default value  | Description                                                     |
+| ------------------- | -------------- | --------------------------------------------------------------- |
+| `ARCH`              | `amd64`/`s390x`| Architecture of the podvm image to be built. Defaults to the architecture the of the current machine |
+| `PODVM_DISTRO`      | `ubuntu`       | Valid options are `ubuntu`, `fedora` and `rhel` |
+| `ORG_ID`            | `""`           | rhel only: the organization ID for Red Hat Subscription Management (RHSM) |
+| `ACTIVATION_KEY`    | `""`           | rhel only: the activation key for Red Hat Subscription Management (RHSM)  |
 
-| Argument          | Default value                                                | Description                                                     |
-| ----------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
-| GO\_VERSION       | 1.22.7                                                       | Go version                                                      |
-| PROTOC\_VERSION   | 3.15.0                                                       | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
-| RUST\_VERSION     | 1.75.0                                                       | Rust version                                                    |
-| YQ\_VERSION       | v4.35.1                                                      | [yq](https://github.com/mikefarah/yq/) version                  |
-
-As it can be noted in the table above the cloud-api-adaptor repository is cloned within the builder image, so rather than
-copying the local source tree, it will be using the upstream source. But if you want to test local changes then you should:
-
-* Push the changes to your fork in github (e.g. https://github.com/$USER/cloud-api-adaptor/tree/my-changes-in-a-branch).
-* Overwrite the *CAA_SRC* and *CAA_SRC_REF* arguments as shown below:
-
-```bash
-$ docker build -t podvm_builder \
-         --build-arg CAA_SRC=https://github.com/$USER/cloud-api-adaptor \
-         --build-arg CAA_SRC_REF=my-changes-in-a-branch \
-         -f Dockerfile.podvm_builder .
+e.g. to produce an s390x architecture builder image
+```
+ARCH=s390x make -C .. podvm-builder
 ```
 
 ## Building the image containing the podvm binaries
 
-We have make targets handy for you. Make sure you are under the
-`src/cloud-api-adaptor` folder.
+Like the builder image, we have make targets for the binaries image in the parent directory.
 
 > **Note:** The `BUILDER_IMG` environment variable is crucial as it specifies
 > the builder image, which is the result of the previous step build. Ensure you
@@ -87,7 +77,7 @@ We have make targets handy for you. Make sure you are under the
 To build the binaries image, use the following command:
 
 ```bash
-$ BUILDER_IMG=<your_builder_image> make podvm-binaries
+$ BUILDER_IMG=<your_builder_image> make -C .. podvm-binaries
 ```
 
 The build process can take significant time.
