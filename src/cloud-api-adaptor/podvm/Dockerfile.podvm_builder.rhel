@@ -12,15 +12,13 @@ ARG ARCH="amd64"
 ARG YQ_ARCH="amd64"
 # PROTOC_ARCH="x86_64" | "s390_64"
 ARG PROTOC_ARCH="x86_64"
-ARG GO_VERSION="1.22.7"
-ARG PROTOC_VERSION="3.15.0"
-ARG RUST_VERSION="1.75.0"
-ARG YQ_VERSION="v4.35.1"
-ARG PACKER_VERSION="v1.9.4"
-# amd64: YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
-# s390x: YQ_CHECKSUM="sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
-ARG YQ_CHECKSUM="sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
+ARG GO_VERSION
+ARG PROTOC_VERSION
+ARG RUST_VERSION
+ARG PACKER_VERSION
 ARG ORAS_VERSION
+ARG YQ_VERSION
+ARG YQ_CHECKSUM
 ARG ORG_ID
 ARG ACTIVATION_KEY
 
@@ -33,6 +31,7 @@ ENV ARCH=${ARCH}
 ENV YQ_ARCH=${YQ_ARCH}
 ENV YQ_VERSION=${YQ_VERSION}
 ENV ORAS_VERSION=${ORAS_VERSION}
+ENV PACKER_VERSION=${PACKER_VERSION}
 
 # This registering RHEL when building on an unsubscribed system
 # If you are running a UBI container on a registered and subscribed RHEL host, the main RHEL Server repository is enabled inside the standard UBI container
@@ -55,7 +54,7 @@ RUN chmod a+x /usr/local/bin/yq && \
     rm -f go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-# Install packer. Packer doesn't does not have prebuilt s390x arch binaries above Packer version 0.1.5
+# Install packer. Packer doesn't have prebuilt s390x arch binaries beyond Packer version 0.1.5
 RUN if [ "${ARCH}" == "s390x" ]; then \
     git clone --depth 1 --single-branch https://github.com/hashicorp/packer.git -b ${PACKER_VERSION}; \
     cd packer; \
