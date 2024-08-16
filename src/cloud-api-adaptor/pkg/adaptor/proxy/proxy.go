@@ -107,7 +107,9 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 	err := retry.Do(
 		func() error {
 			var err error
-			conn, err = dialer.DialContext(ctx, "tcp", address)
+			if conn, err = dialer.DialContext(ctx, "tcp", address); err != nil {
+				logger.Printf("Retrying agent proxy connection to %s...", address)
+			}
 			return err
 		},
 		retry.Attempts(0),
