@@ -54,7 +54,6 @@ type agentProxy struct {
 }
 
 func NewAgentProxy(serverName, socketPath, pauseImage string, tlsConfig *tlsutil.TLSConfig, caService tlsutil.CAService, proxyTimeout time.Duration) AgentProxy {
-
 	return &agentProxy{
 		serverName:   serverName,
 		socketPath:   socketPath,
@@ -68,7 +67,6 @@ func NewAgentProxy(serverName, socketPath, pauseImage string, tlsConfig *tlsutil
 }
 
 func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error) {
-
 	var conn net.Conn
 
 	var dialer interface {
@@ -116,7 +114,6 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		retry.Context(ctx),
 		retry.MaxDelay(5*time.Second),
 	)
-
 	if err != nil {
 		err = fmt.Errorf("failed to establish agent proxy connection to %s: %w", address, err)
 		logger.Print(err)
@@ -128,7 +125,6 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 }
 
 func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
-
 	if err := os.MkdirAll(filepath.Dir(p.socketPath), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create parent directories for socket: %s", p.socketPath)
 	}
@@ -136,7 +132,7 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 		return fmt.Errorf("failed to remove %s: %w", p.socketPath, err)
 	}
 
-	logger.Printf("Listening on %s\n", p.socketPath)
+	logger.Printf("Listening on %s", p.socketPath)
 
 	listener, err := net.Listen("unix", p.socketPath)
 	if err != nil {
@@ -215,7 +211,6 @@ func (p *agentProxy) CAService() tlsutil.CAService {
 }
 
 func (p *agentProxy) ClientCA() (certPEM []byte) {
-
 	if p.tlsConfig == nil {
 		return nil
 	}
