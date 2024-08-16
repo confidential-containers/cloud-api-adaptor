@@ -421,7 +421,11 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 
 	select {
 	case <-ctx.Done():
-		_ = sandbox.agentProxy.Shutdown()
+		// Start VM operation interrupted (calling context canceled)
+		logger.Printf("Error: start instance interrupted (%v). Cleaning up...", ctx.Err())
+		if err := sandbox.agentProxy.Shutdown(); err != nil {
+			logger.Printf("stopping agent proxy: %v", err)
+		}
 		return nil, ctx.Err()
 	case err := <-errCh:
 		return nil, err
