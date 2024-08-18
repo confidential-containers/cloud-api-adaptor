@@ -86,7 +86,6 @@ func (s *SshServer) kubernetesPhase(kubernetesPhaseConfig *ssh.ServerConfig) {
 		peer.AddTags(s.inbounds, s.outbounds)
 		peer.Ready()
 
-		close(s.readyCh)
 		peer.Wait()
 		logger.Printf("KubernetesSShService exiting")
 	}
@@ -144,6 +143,7 @@ func (s *SshServer) Start(ctx context.Context) error {
 	if err != nil {
 		logger.Fatal("Failed to listen for connection: ", err)
 	}
+	close(s.readyCh) // notify systemd that the service is ready
 
 	go func() {
 		kubernetesPhaseConfig := s.attestationPhase()

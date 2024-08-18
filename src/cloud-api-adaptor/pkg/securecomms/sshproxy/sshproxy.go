@@ -34,7 +34,6 @@ var logger = sshutil.Logger
 type SshPeer struct {
 	sid            string
 	phase          string
-	terminated     string
 	sshConn        ssh.Conn
 	ctx            context.Context
 	done           chan bool
@@ -43,6 +42,7 @@ type SshPeer struct {
 	wg             sync.WaitGroup
 	upgrade        bool
 	outboundsReady chan bool
+	closeOnce      sync.Once
 }
 
 // Inbound side of the Tunnel - incoming tcp connections from local clients
@@ -298,12 +298,11 @@ func (peer *SshPeer) Wait() {
 }
 
 func (peer *SshPeer) Close(who string) {
-	if peer.terminated == "" {
+	peer.closeOnce.Do(func() {
 		logger.Printf("%s phase: peer done by >>> %s <<<", peer.phase, who)
-		peer.terminated = who
 		peer.sshConn.Close()
 		close(peer.done)
-	}
+	})
 }
 
 func (peer *SshPeer) IsUpgraded() bool {
