@@ -32,8 +32,8 @@ See [Secure Comms Architecture Slides](./SecureComms.pdf) for more details.
 ### Deploy CAA
 Use any of the option for installing CAA depending on the cloud driver used.
 
-### Deploy KBS-Operator
-Deploy KBS-Operator by following instructions at [KBS Operator Getting Started](https://github.com/confidential-containers/kbs-operator?tab=readme-ov-file#getting-started).
+### Deploy Trustee-Operator
+Deploy Trustee-Operator by following instructions at [trustee Operator Getting Started](https://github.com/confidential-containers/trustee-operator?tab=readme-ov-file#getting-started).
 
 Make sure to uncomment the secret generation as recommended for both public and private key (`kbs-auth-public-key` and `kbs-client` secrets). 
 
@@ -46,15 +46,10 @@ kubectl get secret kbs-client -n kbs-operator-system -o json|jq --arg ns "confid
 For a testing environment, you may need to change the policy of the KBS and AS using the KBS Client to allow all or fit your own policy. One way to do that is:
 
 ```sh
-kubectl -n kbs-operator-system exec deployment/kbs-deployment --container as -it -- /bin/bash
-        apt update
-        apt install vim
-        vim /opt/confidential-containers/attestation-service/opa/default.rego // replace to `default allow = true`
+kubectl -n kbs-operator-system exec deployment/trustee-deployment --container as -it -- /bin/bash
+        sed -i.bak 's/^default allow = false/default allow = true/' /opt/confidential-containers/attestation-service/opa/default.rego
 
-kubectl -n kbs-operator-system exec deployment/kbs-deployment --container kbs -it -- /bin/bash
-        apt update
-        apt install vim
-        vim /opa/confidential-containers/kbs/policy.rego // replace to `default allow = true`
+kubectl -n kbs-operator-system get cm resource-policy -o yaml | sed "s/default allow = false/default allow = true/"|kubectl apply -f -
 ```
 
 ### Build a podvm that enforces Secure-Comms
