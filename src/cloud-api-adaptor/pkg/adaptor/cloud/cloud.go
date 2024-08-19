@@ -79,7 +79,7 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, sshport string) Service {
+	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, globalInitdata, sshport string) Service {
 	var err error
 	var sshClient *wnssh.SshClient
 
@@ -93,13 +93,14 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 	}
 
 	s := &cloudService{
-		provider:     provider,
-		proxyFactory: proxyFactory,
-		sandboxes:    map[sandboxID]*sandbox{},
-		podsDir:      podsDir,
-		daemonPort:   daemonPort,
-		workerNode:   workerNode,
-		sshClient:    sshClient,
+		provider:       provider,
+		proxyFactory:   proxyFactory,
+		sandboxes:      map[sandboxID]*sandbox{},
+		podsDir:        podsDir,
+		daemonPort:     daemonPort,
+		globalInitdata: globalInitdata,
+		workerNode:     workerNode,
+		sshClient:      sshClient,
 	}
 	s.cond = sync.NewCond(&s.mutex)
 	s.ppService, err = k8sops.NewPeerPodService()
@@ -291,7 +292,13 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	}
 
 	initdataStr := util.GetInitdataFromAnnotation(req.Annotations)
-	logger.Printf("initdata: %s", initdataStr)
+	logger.Printf("initdata in Pod annotation: %s", initdataStr)
+
+	if initdataStr == "" {
+		logger.Printf("initdata in pod annotation is empty, use global initdata: %s", s.globalInitdata)
+		initdataStr = s.globalInitdata
+	}
+
 	if initdataStr != "" {
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
 			Path:    InitdataPath,

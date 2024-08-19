@@ -117,7 +117,7 @@ func TestCloudService(t *testing.T) {
 		podsDir: dir,
 	}
 
-	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, false, "", "", "", dir, forwarder.DefaultListenPort, "")
+	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, false, "", "", "", dir, forwarder.DefaultListenPort, "", "")
 
 	assert.NotNil(t, s)
 
@@ -172,7 +172,7 @@ func TestCloudServiceWithSecureComms(t *testing.T) {
 		podsDir: dir,
 	}
 
-	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, true, "", "", "127.0.0.1:9009", dir, forwarder.DefaultListenPort, sshport)
+	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, true, "", "", "127.0.0.1:9009", dir, forwarder.DefaultListenPort, "", sshport)
 
 	assert.NotNil(t, s)
 

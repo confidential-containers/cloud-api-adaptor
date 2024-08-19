@@ -121,6 +121,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.StringVar(&cfg.networkConfig.HostInterface, "host-interface", "", "Host Interface")
 		flags.IntVar(&cfg.networkConfig.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
 		flags.IntVar(&cfg.networkConfig.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
+		flags.StringVar(&cfg.serverConfig.GlobalInitdata, "global-initdata", "", "Default initdata for all Pods")
 		flags.BoolVar(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "Enable cloud config verify - should use it for production")
 
 		cloud.ParseCmd(flags)

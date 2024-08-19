@@ -39,6 +39,7 @@ type ServerConfig struct {
 	PodsDir                 string
 	ForwarderPort           string
 	ProxyTimeout            time.Duration
+	GlobalInitdata          string
 	EnableCloudConfigVerify bool
 	SecureComms             bool
 	SecureCommsInbounds     string
@@ -70,7 +71,7 @@ func NewServer(provider provider.Provider, cfg *ServerConfig, workerNode podnetw
 
 	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout)
 	cloudService := cloud.NewService(provider, agentFactory, workerNode,
-		cfg.SecureComms, cfg.SecureCommsInbounds, cfg.SecureCommsOutbounds, cfg.SecureCommsKbsAddress, cfg.PodsDir, cfg.ForwarderPort, sshutil.SSHPORT)
+		cfg.SecureComms, cfg.SecureCommsInbounds, cfg.SecureCommsOutbounds, cfg.SecureCommsKbsAddress, cfg.PodsDir, cfg.ForwarderPort, cfg.GlobalInitdata, sshutil.SSHPORT)
 	vmInfoService := vminfo.NewService(cloudService)
 
 	return &server{
