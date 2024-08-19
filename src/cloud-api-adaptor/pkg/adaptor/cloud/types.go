@@ -26,16 +26,17 @@ type Service interface {
 }
 
 type cloudService struct {
-	provider     provider.Provider
-	proxyFactory proxy.Factory
-	workerNode   podnetwork.WorkerNode
-	sandboxes    map[sandboxID]*sandbox
-	cond         *sync.Cond
-	podsDir      string
-	daemonPort   string
-	mutex        sync.Mutex
-	ppService    *k8sops.PeerPodService
-	sshClient    *wnssh.SshClient
+	provider       provider.Provider
+	proxyFactory   proxy.Factory
+	workerNode     podnetwork.WorkerNode
+	sandboxes      map[sandboxID]*sandbox
+	cond           *sync.Cond
+	podsDir        string
+	daemonPort     string
+	mutex          sync.Mutex
+	ppService      *k8sops.PeerPodService
+	globalInitdata string
+	sshClient      *wnssh.SshClient
 }
 
 type sandboxID string
