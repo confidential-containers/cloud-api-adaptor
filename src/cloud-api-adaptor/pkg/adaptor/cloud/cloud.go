@@ -33,9 +33,9 @@ import (
 
 const (
 	SrcAuthfilePath = "/root/containers/auth.json"
-	AaFilePath      = "/run/peerpod/aa.toml"
+	AAConfigPath    = "/run/peerpod/aa.toml"
 	AuthFilePath    = "/run/peerpod/auth.json"
-	CdhFilePath     = "/run/peerpod/cdh.toml"
+	CDHConfigPath   = "/run/peerpod/cdh.toml"
 	InitdataPath    = "/run/peerpod/initdata"
 	Version         = "0.0.0"
 )
@@ -79,7 +79,7 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, globalInitdata, sshport string) Service {
+	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, initdata, sshport string) Service {
 	var err error
 	var sshClient *wnssh.SshClient
 
@@ -93,14 +93,14 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 	}
 
 	s := &cloudService{
-		provider:       provider,
-		proxyFactory:   proxyFactory,
-		sandboxes:      map[sandboxID]*sandbox{},
-		podsDir:        podsDir,
-		daemonPort:     daemonPort,
-		globalInitdata: globalInitdata,
-		workerNode:     workerNode,
-		sshClient:      sshClient,
+		provider:     provider,
+		proxyFactory: proxyFactory,
+		sandboxes:    map[sandboxID]*sandbox{},
+		podsDir:      podsDir,
+		daemonPort:   daemonPort,
+		initdata:     initdata,
+		workerNode:   workerNode,
+		sshClient:    sshClient,
 	}
 	s.cond = sync.NewCond(&s.mutex)
 	s.ppService, err = k8sops.NewPeerPodService()
@@ -295,8 +295,8 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	logger.Printf("initdata in Pod annotation: %s", initdataStr)
 
 	if initdataStr == "" {
-		logger.Printf("initdata in pod annotation is empty, use global initdata: %s", s.globalInitdata)
-		initdataStr = s.globalInitdata
+		logger.Printf("initdata in pod annotation is empty, use global initdata: %s", s.initdata)
+		initdataStr = s.initdata
 	}
 
 	if initdataStr != "" {
