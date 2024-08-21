@@ -5,6 +5,7 @@ package cloud
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	putil "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
+	toml "github.com/pelletier/go-toml/v2"
 )
 
 const (
@@ -39,6 +41,12 @@ const (
 	InitdataPath    = "/run/peerpod/initdata"
 	Version         = "0.0.0"
 )
+
+type InitData struct {
+	Algorithm string            `toml:"algorithm"`
+	Version   string            `toml:"version"`
+	Data      map[string]string `toml:"data,omitempty"`
+}
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
 
@@ -300,6 +308,16 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	}
 
 	if initdataStr != "" {
+		decodedBytes, err := base64.StdEncoding.DecodeString(initdataStr)
+		if err != nil {
+			return nil, fmt.Errorf("Error base64 decode initdata: %w", err)
+		}
+		initdata := InitData{}
+		err = toml.Unmarshal(decodedBytes, &initdata)
+		if err != nil {
+			return nil, fmt.Errorf("Error unmarshalling initdata: %w", err)
+		}
+
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
 			Path:    InitdataPath,
 			Content: initdataStr,

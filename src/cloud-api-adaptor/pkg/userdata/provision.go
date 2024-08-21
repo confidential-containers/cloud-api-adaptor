@@ -63,12 +63,6 @@ type CloudConfig struct {
 	WriteFiles []WriteFile `yaml:"write_files"`
 }
 
-type InitData struct {
-	Algorithm string            `toml:"algorithm"`
-	Version   string            `toml:"version"`
-	Data      map[string]string `toml:"data,omitempty"`
-}
-
 type UserDataProvider interface {
 	GetUserData(ctx context.Context) ([]byte, error)
 	GetRetryDelay() time.Duration
@@ -225,7 +219,7 @@ func extractInitdataAndHash(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("Error base64 decode initdata: %w", err)
 	}
-	initdata := InitData{}
+	initdata := cloud.InitData{}
 	err = toml.Unmarshal(decodedBytes, &initdata)
 	if err != nil {
 		return fmt.Errorf("Error unmarshalling initdata: %w", err)
