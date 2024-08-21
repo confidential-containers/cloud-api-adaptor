@@ -32,8 +32,8 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
-var WriteFilesList = []string{cloud.AaFilePath, cloud.CdhFilePath, agent.ConfigFilePath, forwarder.DefaultConfigPath, cloud.AuthFilePath, cloud.InitdataPath}
-var InitdDataFilesList = []string{cloud.AaFilePath, cloud.CdhFilePath, PolicyPath}
+var WriteFilesList = []string{cloud.AAConfigPath, cloud.CDHConfigPath, agent.ConfigFilePath, forwarder.DefaultConfigPath, cloud.AuthFilePath, cloud.InitdataPath}
+var InitdDataFilesList = []string{cloud.AAConfigPath, cloud.CDHConfigPath, PolicyPath}
 
 type Config struct {
 	fetchTimeout  int
