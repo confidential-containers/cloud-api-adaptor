@@ -68,6 +68,10 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, confi
 		}
 	}()
 
+	if err := iptablesSetup(hostNS, dstAddr, config.VXLANPort, config.VXLANID); err != nil {
+		return err
+	}
+
 	index := 1
 
 	links, err := hostNS.LinkList()
@@ -184,8 +188,27 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 		return fmt.Errorf("failed to find vxlan interface %q on pod netns %s to %s: %w", secondPodInterface, podNS.Path(), secondPodInterface, err)
 	}
 
+	device, err := podVxlanInterface.GetDevice()
+	if err != nil {
+		return fmt.Errorf("failed to get device info of %s: %w", secondPodInterface, err)
+	}
+
+	vxlanDevice, ok := device.(*netops.VXLAN)
+	if !ok {
+		return fmt.Errorf("not a VXLAN interface: %s", secondPodInterface)
+	}
+
+	dstAddr := vxlanDevice.Group
+	dstPort := vxlanDevice.Port
+	vxlanID := vxlanDevice.ID
+
 	if err := podVxlanInterface.Delete(); err != nil {
 		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", secondPodInterface, podNS.Path(), err)
 	}
+
+	if err := iptablesTeardown(hostNS, dstAddr, dstPort, vxlanID); err != nil {
+		return err
+	}
+
 	return nil
 }

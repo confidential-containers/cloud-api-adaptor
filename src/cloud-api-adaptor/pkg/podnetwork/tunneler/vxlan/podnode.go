@@ -54,6 +54,10 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *
 	}
 	defer podNS.Close()
 
+	if err := iptablesSetup(hostNS, nodeAddr.Addr(), config.VXLANPort, config.VXLANID); err != nil {
+		return err
+	}
+
 	vxlanDevice := &netops.VXLAN{
 		Group: nodeAddr.Addr(),
 		ID:    config.VXLANID,
@@ -96,5 +100,47 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *
 }
 
 func (t *podNodeTunneler) Teardown(nsPath, hostInterface string, config *tunneler.Config) error {
+
+	ifName := config.InterfaceName
+
+	hostNS, err := netops.OpenCurrentNamespace()
+	if err != nil {
+		return fmt.Errorf("failed to get host network namespace: %w", err)
+	}
+	defer hostNS.Close()
+
+	podNS, err := netops.OpenNamespace(nsPath)
+	if err != nil {
+		return fmt.Errorf("failed to get a pod network namespace: %s: %w", nsPath, err)
+	}
+	defer podNS.Close()
+
+	vxlan, err := podNS.LinkFind(ifName)
+	if err != nil {
+		return fmt.Errorf("failed to find vxlan interface %q on netns %s: %w", ifName, podNS.Path(), err)
+	}
+
+	device, err := vxlan.GetDevice()
+	if err != nil {
+		return fmt.Errorf("failed to get device info of %s: %w", ifName, err)
+	}
+
+	vxlanDevice, ok := device.(*netops.VXLAN)
+	if !ok {
+		return fmt.Errorf("not a VXLAN interface: %s", ifName)
+	}
+
+	dstAddr := vxlanDevice.Group
+	dstPort := vxlanDevice.Port
+	vxlanID := vxlanDevice.ID
+
+	if err := vxlan.Delete(); err != nil {
+		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", secondPodInterface, podNS.Path(), err)
+	}
+
+	if err := iptablesTeardown(hostNS, dstAddr, dstPort, vxlanID); err != nil {
+		return err
+	}
+
 	return nil
 }
