@@ -186,6 +186,7 @@ type Link interface {
 	SetHardwareAddr(hwAddr string) error
 	GetMTU() (int, error)
 	SetMTU(mtu int) error
+	GetDevice() (Device, error)
 
 	SetMaster(master Link) error
 	SetNamespace(target Namespace) error
@@ -314,6 +315,22 @@ func (l *link) Delete() error {
 		return fmt.Errorf("failed to delete an interface of %s: %s:  %w", l.Name(), l.Type(), err)
 	}
 	return nil
+}
+
+func (l *link) GetDevice() (dev Device, err error) {
+
+	switch v := l.nlLink.(type) {
+	case *netlink.Vxlan:
+		dev = &VXLAN{
+			Group: toAddr(v.Group),
+			ID:    v.VxlanId,
+			Port:  v.Port,
+		}
+	default:
+		// TODO: Support Bridge, VXLAN, ...
+		return nil, fmt.Errorf("device info is not available: %s", l.nlLink.Type())
+	}
+	return dev, nil
 }
 
 type Device interface {
