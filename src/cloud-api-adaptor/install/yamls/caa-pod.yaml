@@ -59,6 +59,11 @@ spec:
         - mountPath: /run/netns
           mountPropagation: HostToContainer
           name: netns
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+        - mountPath: /lib/modules
+          name: lib-modules
+          readOnly: true
         # # setting for cloud provider external plugin
         # - mountPath: /cloud-providers
         #   name: provider-dir
@@ -83,6 +88,14 @@ spec:
       - hostPath:
           path: /run/netns
         name: netns
+      - hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+        name: xtables-lock
+      - hostPath:
+          path: /lib/modules
+          type: ""
+        name: lib-modules
       # # setting for cloud provider external plugin
       # - hostPath:
       #     path: /opt/cloud-api-adaptor/plugins
