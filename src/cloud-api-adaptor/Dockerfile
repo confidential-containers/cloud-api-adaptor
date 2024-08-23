@@ -8,10 +8,14 @@ ARG BASE=registry.fedoraproject.org/fedora:39
 # that was specified with --platform. For more details see:
 # https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
 FROM --platform=$BUILDPLATFORM $BUILDER_BASE AS builder-release
+ARG YQ_VERSION
+RUN go install github.com/mikefarah/yq/v4@$YQ_VERSION
+
 # For `dev` builds due to CGO constraints we have to emulate the target platform
 # instead of using Go's cross-compilation
 FROM --platform=$TARGETPLATFORM $BUILDER_BASE AS builder-dev
-
+ARG YQ_VERSION
+RUN go install github.com/mikefarah/yq/v4@$YQ_VERSION
 RUN dnf install -y libvirt-devel && dnf clean all
 
 FROM builder-${BUILD_TYPE} AS builder
@@ -19,9 +23,6 @@ ARG RELEASE_BUILD
 ARG COMMIT
 ARG VERSION
 ARG TARGETARCH
-ARG YQ_VERSION
-
-RUN go install github.com/mikefarah/yq/v4@$YQ_VERSION
 
 WORKDIR /work
 COPY cloud-api-adaptor/go.mod cloud-api-adaptor/go.sum ./cloud-api-adaptor/
@@ -37,7 +38,24 @@ COPY cloud-api-adaptor/proto ./proto
 
 RUN CC=gcc make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
 
+FROM builder-release AS iptables
+
+ARG TARGETARCH
+
+WORKDIR /iptables
+RUN --mount=type=bind,target=/versions.yaml,source=cloud-api-adaptor/versions.yaml,readonly \
+    version=$(yq -r .tools.iptables-wrapper /versions.yaml) && \
+    GOARCH=$TARGETARCH go install "github.com/kubernetes-sigs/iptables-wrappers@$version" && \
+    shopt -s globstar && \
+    cp /go/bin/**/iptables-wrappers ./iptables-wrapper && \
+    curl -L -o iptables-wrapper-installer.sh "https://raw.githubusercontent.com/kubernetes-sigs/iptables-wrappers/${version#v*-*-}/iptables-wrapper-installer.sh" && \
+    chmod 755 iptables-wrapper-installer.sh
+
 FROM --platform=$TARGETPLATFORM $BASE AS base-release
+
+RUN dnf install -y iptables iptables-legacy iptables-nft nftables && dnf clean all
+RUN --mount=type=cache,target=/iptables,from=iptables,source=/iptables,readonly \
+    cd /iptables && ./iptables-wrapper-installer.sh --no-sanity-check --no-cleanup
 
 FROM base-release AS base-dev
 RUN dnf install -y libvirt-libs /usr/bin/ssh && dnf clean all
