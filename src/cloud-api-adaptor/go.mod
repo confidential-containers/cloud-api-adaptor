@@ -20,7 +20,7 @@ require (
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20240717205640-6aff5f300a98
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20240821155010-09a13da8ece6
 	github.com/opencontainers/runtime-spec v1.1.1-0.20230922153023-c0e90434df2a
 	github.com/stretchr/testify v1.9.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
