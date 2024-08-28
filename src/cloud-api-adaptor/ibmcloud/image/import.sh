@@ -9,7 +9,7 @@ error(){
     echo $1 1>&2 && exit 1
 }
 
-script_dir=$(dirname "$0")
+script_dir=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 
 function usage() {
     echo "Usage: $0 <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint> --os <operating-system>]"
