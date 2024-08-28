@@ -94,7 +94,7 @@ PAUSE_SRC     = pause
 # Allows to override
 PAUSE_BUNDLE  ?= pause_bundle
 
-GUEST_COMPONENTS_SRC = ../../../guest-components
+GUEST_COMPONENTS = ../guest-components
 
 # Clone a specific commit/tag/branch of a repo.
 # $(1) - Repository URL
@@ -160,26 +160,22 @@ $(PAUSE_SRC): $(SKOPEO_BIN)
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
 
-$(GUEST_COMPONENTS_SRC):
-	$(call git_clone_repo_ref,$(GUEST_COMPONENTS_REPO),$(GUEST_COMPONENTS_SRC),$(GUEST_COMPONENTS_VERSION))
+$(GUEST_COMPONENTS):
+	mkdir -p "$(GUEST_COMPONENTS)"
+	$(eval $(call generate_tag,tag,$(GUEST_COMPONENTS_VERSION)))
+	oras pull ghcr.io/kata-containers/cached-artefacts/coco-guest-components:${tag}
+	tar xvJpf kata-static-coco-guest-components.tar.xz -C "$(GUEST_COMPONENTS)"
 
-$(ATTESTATION_AGENT): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
-	cd "$(GUEST_COMPONENTS_SRC)/attestation-agent" && CC= ARCH=$(ARCH) $(MAKE) ATTESTER=$(ATTESTER) ttrpc=true LIBC="$(LIBC)"
-	mkdir -p "$(@D)"
-	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
+$(ATTESTATION_AGENT): $(FORCE_TARGET) | $(GUEST_COMPONENTS)
+	install -D --compare "$(GUEST_COMPONENTS)/usr/local/bin/attestation-agent" "$@"
 
-$(CONFIDENTIAL_DATA_HUB): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
-	cd "$(GUEST_COMPONENTS_SRC)/confidential-data-hub" && CC= ARCH=$(ARCH) $(MAKE) RESOURCE_PROVIDER="$(CDH_RESOURCE_PROVIDER)" LIBC="$(LIBC)"
-	mkdir -p "$(@D)"
-	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/confidential-data-hub" "$@"
+$(CONFIDENTIAL_DATA_HUB): $(FORCE_TARGET) | $(GUEST_COMPONENTS)
+	install -D --compare "$(GUEST_COMPONENTS)/usr/local/bin/confidential-data-hub" "$@"
 
-$(API_SERVER_REST): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
-	cd "$(GUEST_COMPONENTS_SRC)/api-server-rest" && CC= ARCH=$(ARCH) $(MAKE) LIBC="$(LIBC)"
-	mkdir -p "$(@D)"
-	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/api-server-rest" "$@"
+$(API_SERVER_REST): $(FORCE_TARGET) | $(GUEST_COMPONENTS)
+	install -D --compare "$(GUEST_COMPONENTS)/usr/local/bin/api-server-rest" "$@"
 
 clean_sources:
-	[ -d "$(GUEST_COMPONENTS_SRC)" ] && cd "$(GUEST_COMPONENTS_SRC)" && git clean -xfd
 	[ -d "$(ROOT_DIR)" ] && cd "$(ROOT_DIR)" && git clean -xfd -e podvm
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci
