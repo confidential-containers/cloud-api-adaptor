@@ -173,6 +173,10 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 				&vpcv1.SecurityGroupIdentityByID{ID: &p.serviceConfig.PrimarySecurityGroupID},
 			},
 		},
+		MetadataService: &vpcv1.InstanceMetadataServicePrototype{
+			Enabled:  core.BoolPtr(true),
+			Protocol: core.StringPtr(vpcv1.InstanceMetadataServicePatchProtocolHTTPConst),
+		},
 	}
 
 	if p.serviceConfig.KeyID != "" {
