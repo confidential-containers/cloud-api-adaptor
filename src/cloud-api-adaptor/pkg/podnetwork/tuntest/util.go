@@ -16,8 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/netops"
 )
 
@@ -276,33 +274,5 @@ func ConnectToHTTPServer(t *testing.T, ns netops.Namespace, addr, localAddr neti
 
 	}); err != nil {
 		t.Fatalf("failed to run a HTTP client at a network namespace: %v", err)
-	}
-}
-
-func CheckVRF(t *testing.T, ns netops.Namespace) {
-	t.Helper()
-
-	name := "vrf0dummy"
-
-	vrf, err := ns.LinkAdd(name, &netops.VRF{Table: 12345})
-	if err != nil {
-
-		if errors.Is(err, unix.ENOTSUP) {
-			t.Log(
-				"vrf is not enabled in the Linux kernel\n",
-				"========================================================\n",
-				"  Please load the vrf module.\n",
-				"  In Ubuntu, run the following commands.\n",
-				"    apt-get install \"linux-modules-extra-$(uname -r)\"\n",
-				"    modprobe vrf\n",
-				"========================================================\n",
-			)
-		}
-
-		t.Fatalf("failed to create a VRF interface: %v\n", err)
-	}
-
-	if err := vrf.Delete(); err != nil {
-		t.Fatalf("failed to delete a VRF interface %s: %v\n", name, err)
 	}
 }

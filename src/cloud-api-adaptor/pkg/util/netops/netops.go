@@ -372,16 +372,6 @@ func (d *VXLAN) getLink() netlink.Link {
 	}
 }
 
-type VRF struct {
-	Table uint32
-}
-
-func (d *VRF) getLink() netlink.Link {
-	return &netlink.Vrf{
-		Table: d.Table,
-	}
-}
-
 func (ns *namespace) LinkFind(name string) (Link, error) {
 
 	nlLinks, err := ns.handle.LinkList()

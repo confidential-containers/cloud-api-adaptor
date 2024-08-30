@@ -81,8 +81,6 @@ func TestShim(t *testing.T) {
 	switch t := os.Getenv("SHIMTEST_TUNNEL_TYPE"); t {
 	case "", "mock":
 		workerNode = &mockWorkerNode{}
-	case "routing":
-		workerNode = podnetwork.NewWorkerNode("routing", "ens4", 0, 0)
 	default:
 		workerNode = podnetwork.NewWorkerNode(t, "", 0, 0)
 	}
