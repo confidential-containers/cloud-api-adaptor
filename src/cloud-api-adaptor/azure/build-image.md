@@ -92,7 +92,6 @@ sudo apt install \
 
 - Install `yq` by following instructions [here](https://mikefarah.gitbook.io/yq/#install).
 - Install Golang by following instructions [here](https://go.dev/doc/install).
-- Install Rust (`cargo`) by following instructions [here](https://www.rust-lang.org/tools/install).
 - Install packer by following [these instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
 
 **Build**

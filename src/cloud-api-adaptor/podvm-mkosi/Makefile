@@ -34,7 +34,6 @@ fedora-binaries-builder:
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg ARCH=$(ARCH) \
 		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
-		--build-arg RUST_VERSION=$(RUST_VERSION) \
 		--build-arg YQ_VERSION=$(YQ_VERSION) \
 		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
 		--build-arg YQ_ARCH=$(ARCH) \
