@@ -282,7 +282,7 @@ optionals+=""
 [[ "${CERT_FILE}" ]] && [[ "${CERT_KEY}" ]] && optionals+="-cert-file ${CERT_FILE} -cert-key ${CERT_KEY} "
 [[ "${TLS_SKIP_VERIFY}" ]] && optionals+="-tls-skip-verify "
 [[ "${PROXY_TIMEOUT}" ]] && optionals+="-proxy-timeout ${PROXY_TIMEOUT} "
-[[ "${INITDATA}" ]] && optionals+="-global-initdata ${INITDATA} "
+[[ "${INITDATA}" ]] && optionals+="-initdata ${INITDATA} "
 [[ "${FORWARDER_PORT}" ]] && optionals+="-forwarder-port ${FORWARDER_PORT} "
 [[ "${CLOUD_CONFIG_VERIFY}" == "true" ]] && optionals+="-cloud-config-verify "
 
