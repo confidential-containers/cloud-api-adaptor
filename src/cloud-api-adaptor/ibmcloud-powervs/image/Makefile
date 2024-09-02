@@ -10,7 +10,7 @@ export FORWARDER_PORT ?=
 ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
 include $(ROOT_DIR)podvm/Makefile.inc
 
-export PATH := $(PATH):/usr/local/go/bin:$(HOME)/.cargo/bin
+export PATH := $(PATH):/usr/local/go/bin
 
 .PHONY: build clean
 
