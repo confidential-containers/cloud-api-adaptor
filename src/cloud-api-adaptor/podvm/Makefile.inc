@@ -119,6 +119,13 @@ define git_clone_repo_ref
 		git reset --hard FETCH_HEAD
 endef
 
+prepare:
+ifdef DEBUG
+	rm -f "$(FILES_DIR)/etc/cloud/cloud.cfg.d/99_allowed_modules.cfg"
+else
+	ln -s -f "99_allowed_modules.cfg.template" "$(FILES_DIR)/etc/cloud/cloud.cfg.d/99_allowed_modules.cfg"
+endif
+
 binaries: $(BINARIES)
 
 $(AGENT_PROTOCOL_FORWARDER): always
@@ -191,5 +198,5 @@ clean_sources:
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci
 	[ -d "$(KATA_CONTAINERS_SRC)" ] && cd "$(KATA_CONTAINERS_SRC)" && git clean -xfd
 
-.PHONY: force always
+.PHONY: force always prepare
 always force:

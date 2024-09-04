@@ -1,0 +1,16 @@
+cloud_init_modules:
+  - migrator
+  - set_hostname
+  - update_hostname
+
+cloud_config_modules:
+  - locale
+  - rh_subscription
+  - ntp
+  - timezone
+  - disable_ec2_metadata
+
+cloud_final_modules:
+  - phone_home
+  - final_message
+  - power_state_change
