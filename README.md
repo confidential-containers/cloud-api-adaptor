@@ -26,9 +26,6 @@ The background and description of the components involved in 'peer pods' can be 
 ## Cloud API Adaptor
 [cloud-api-adaptor](./src/cloud-api-adaptor/) Ability to create Kata pods using cloud provider APIs aka the peer-pods approach
 
-## PeerPodConfig controller
-[peerpodconfig-ctrl](./src/peerpodconfig-ctrl/) PeerPodConfig controller is watching the PeerPodConfig CRD object and manages the creation and deletion lifecycle of all required components to run peer pods.
-
 ## CSI Wrapper
 [csi-wrapper](./src/csi-wrapper/) CSI Wrapper solution for Peer Pod Storage
 

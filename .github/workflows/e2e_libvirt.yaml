@@ -138,9 +138,6 @@ jobs:
           echo "::group::cloud-api-adaptor logs"
           kubectl logs -l app=cloud-api-adaptor -n confidential-containers-system
           echo "::endgroup::"
-          echo "::group::peerpodconfig-ctrl-caa-daemon logs"
-          kubectl logs ds/peerpodconfig-ctrl-caa-daemon -n confidential-containers-system
-          echo "::endgroup::"
 
           for pod in $(kubectl get pods -o name 2>/dev/null); do
             echo "::group::Describe $pod"

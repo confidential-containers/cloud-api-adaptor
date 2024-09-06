@@ -118,11 +118,6 @@ The [webhook](../src/webhook/) is an mutating admission controller that modifies
 remove all resources entries and replace it with peer-pod extended resource. This is needed as unlike a standard pod, a
 peer pod will not consume the worker node's resources in the same way.
 
-### peerpodconfig-ctrl
-
-The [peerpodconfig-ctrl](../src/peerpodconfig-ctrl/) is a Kubernetes controller that manages the creation and deletion of
-components required to run peer pods.
-
 ### peerpod-ctrl
 
 The [peerpod-ctrl](../src/peerpod-ctrl/) is a Kubernetes controller that is used to track the cloud provider resources for
