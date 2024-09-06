@@ -3,14 +3,41 @@ name: Create a Pod VM image with mkosi
 on:
   workflow_dispatch:
     inputs:
-      binaries-image:
-        description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora"
+      registry:
+        default: 'quay.io/confidential-containers'
         required: false
+        type: string
+      image_tag:
+        default: ''
+        required: false
+        type: string
+      git_ref:
+        description: Git ref to checkout the cloud-api-adaptor repository.
+        required: true
+        type: string
+      arch:
+        description: Which arch we are building the mkosi image for
+        default: 'amd64'
+        required: false
+        type: string
 
   workflow_call:
     inputs:
-      binaries-image:
-        description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora"
+      registry:
+        default: 'quay.io/confidential-containers'
+        required: false
+        type: string
+      image_tag:
+        default: ''
+        required: false
+        type: string
+      git_ref:
+        description: Git ref to checkout the cloud-api-adaptor repository.
+        required: true
+        type: string
+      arch:
+        description: Which arch we are building the mkosi image for
+        default: 'amd64'
         required: false
         type: string
 
@@ -19,117 +46,159 @@ defaults:
     working-directory: src/cloud-api-adaptor
 
 jobs:
-  build-binaries:
-    name: Build binaries
-    if : ${{ inputs.binaries-image == '' }}
-    runs-on: ubuntu-24.04
+  build-image:
+    name: Build mkosi image
+    runs-on: ${{ inputs.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
     permissions:
       contents: read
       packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      - name: Login to quay Container Registry
+        if: ${{ startsWith(inputs.registry, 'quay.io') }}
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Login to the ghcr Container registry
+        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build builder
-        uses: docker/build-push-action@v6
-        with:
-          tags: ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}
-          context: src
-          file: src/cloud-api-adaptor/podvm/Dockerfile.podvm_builder.fedora
-          push: true
-
-      # Build binaries need git commit id as part of image name
-      - name: Prepare .git folder
-        working-directory: ./
+      - name: Install build dependencies
         run: |
-          cp -rf .git src/.git
+          sudo apt-get update -y
+          sudo apt-get install -y bubblewrap alien dnf qemu-utils uidmap
+          sudo snap install yq
+
+      - name: Read properties from versions.yaml
+        if: ${{ inputs.arch == 's390x' }}
+        run: |
+          go_version="$(yq '.tools.golang' versions.yaml)"
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        if: ${{ inputs.arch == 's390x' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build builder
+        id: build_builder
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: |
+          # If the builder image matching our git sha exists, then skip this build
+          builder_image=${{ inputs.registry }}/podvm-builder-fedora-${{ inputs.arch }}
+          tag=$(git rev-parse --short HEAD)
+
+          if ! docker manifest inspect "${builder_image}:${tag}"; then
+            PODVM_BUILDER_IMAGE="${builder_image}:${tag}" make fedora-binaries-builder
+          fi
+          echo "image=${builder_image}:${tag}" | tee -a "$GITHUB_OUTPUT"
+
+          # If the input has a different image-tag then also push it with that tag
+          if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
+            docker pull "${builder_image}:${tag}"
+            docker tag "${builder_image}:${tag}" ${builder_image}:${{ inputs.image_tag }}
+            docker push "${builder_image}:${{ inputs.image_tag }}"
+          fi
+        env:
+          PUSH: true
+          ARCH: ${{ inputs.arch }}
 
       - name: Build binaries
-        uses: docker/build-push-action@v6
-        with:
-          tags: ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}
-          context: src
-          file: src/cloud-api-adaptor/podvm/Dockerfile.podvm_binaries.fedora
-          push: true
-          build-args:
-            "BUILDER_IMG=ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}"
+        id: build_binaries
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: |
+          # If the binaries which matching git sha exists, then skip this build
+          binaries_image=${{ inputs.registry }}/podvm-binaries-fedora-${{ inputs.arch }}
+          tag="$(git rev-parse --short HEAD)"
+          echo "image_tag=${image_tag}" | tee -a "$GITHUB_OUTPUT"
 
-  build-image:
-    name: Build mkosi image
-    needs: [build-binaries]
-    if: |
-      always() && (
-          needs.build-binaries.result == 'success' || (
-              needs.build-binaries.result == 'skipped' &&
-              inputs.binaries-image != ''
-          )
-      )
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+          if ! docker manifest inspect "${binaries_image}:${tag}"; then
+            PODVM_BINARIES_IMAGE="${binaries_image}:${tag}" make binaries
+          fi
+          echo "image=${binaries_image}:${tag}" | tee -a "$GITHUB_OUTPUT"
+
+          # If the input has a different image-tag then also push it with that tag
+          if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
+            docker pull "${binaries_image}:${tag}"
+            docker tag "${binaries_image}:${tag}" ${binaries_image}:${{ inputs.image_tag }}
+            docker push "${binaries_image}:${{ inputs.image_tag }}"
+          fi
+        env:
+          PUSH: true
+          ARCH: ${{ inputs.arch }}
+          PODVM_BUILDER_IMAGE: ${{ steps.build_builder.outputs.image }}
+
+      - name: Install mkosi
+        if: ${{ inputs.arch == 's390x' }}
+        run: |
+          git clone -b v22 https://github.com/systemd/mkosi
+          sudo rm -f /usr/local/bin/mkosi
+          sudo ln -s "$PWD/mkosi/bin/mkosi" /usr/local/bin/mkosi
+          mkosi --version
 
       - name: Install Nix
+        if: ${{ inputs.arch == 'amd64' }}
         uses: cachix/install-nix-action@v30
 
       - name: Build nix shell to cache dependencies
+        if: ${{ inputs.arch == 'amd64' }}
         run: nix build .#devShells.x86_64-linux.podvm-mkosi
 
-      - name: Install crane
+      - name: Install crane with nix
+        if: ${{ inputs.arch == 'amd64' }}
         run: nix profile install nixpkgs#crane
 
-        # This removes the checkout and creates a btrfs volume with maximized
-        # build space.
-      - name: Maximize build space
-        uses: katexochen/maximize-build-space@btrfs
-        with:
-          swap-size-mb: 1024
-          remove-dotnet: "true"
-          remove-android: "true"
-          remove-haskell: "true"
-          remove-codeql: "true"
-          remove-docker-images: "true"
+      - name: Install crane with go
+        if: ${{ inputs.arch == 's390x' }}
+        run: |
+          go install github.com/google/go-containerregistry/cmd/crane@latest
+          echo "PATH=${PATH}:$(go env GOPATH)/bin" >> "$GITHUB_ENV"
 
       - name: Second checkout
+        if: ${{ inputs.arch == 'amd64' }}
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
 
-      - name: Decide on image to use
-        id: binaries-image
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
         run: |
-          if [ -z "${{ inputs.binaries-image }}" ]; then
-            echo "image=ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}" | tee -a "$GITHUB_OUTPUT"
-          else
-            echo "image=${{ inputs.binaries-image }}" | tee -a "$GITHUB_OUTPUT"
-          fi
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
       - name: Download binaries and unpack into binaries-tree
         run: |
           crane export \
-            ${{ steps.binaries-image.outputs.image }} \
+            ${{ steps.build_binaries.outputs.image }} \
             podvm-binaries.tar
           mkdir -p podvm-mkosi/resources/binaries-tree
           tar xf podvm-binaries.tar -C podvm-mkosi/resources/binaries-tree
           rm podvm-binaries.tar
 
-      - name: Build mkosi image
+      - name: Build mkosi debug image
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: make image-debug
-
-      - name: Upload image
-        uses: actions/upload-artifact@v4
-        with:
-          name: podvm-mkosi-${{ github.sha }}
-          path: src/cloud-api-adaptor/podvm-mkosi/build/system.raw
