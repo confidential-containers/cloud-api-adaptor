@@ -34,6 +34,7 @@ configMapGenerator:
   #- USE_PUBLIC_IP="true" # Uncomment if you want to use public ip for podvm
   #- ROOT_VOLUME_SIZE="30" # Uncomment and set if you want to use a specific root volume size. Defaults to 30
   #- FORWARDER_PORT="" # Uncomment and set if you want to use a specific port for agent-protocol-forwarder. Defaults to 15150
+  #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
 ##TLS_SETTINGS
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS
