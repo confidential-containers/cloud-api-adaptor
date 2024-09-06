@@ -4,14 +4,38 @@ on:
   workflow_dispatch:
     inputs:
       binaries-image:
-        description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora"
+        description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora-<arch>"
         required: false
+      registry:
+        default: 'quay.io/confidential-containers'
+        required: false
+        type: string
+      image_tag:
+        default: ''
+        required: false
+        type: string
+      git_ref:
+        description: Git ref to checkout the cloud-api-adaptor repository.
+        required: true
+        type: string
 
   workflow_call:
     inputs:
       binaries-image:
-        description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora"
+        description: "Prebuild fedora binaries image, as produced by this workflow under ghcr.io/confidential-containers/cloud-api-adaptor/podvm/binaries-fedora-<arch>"
         required: false
+        type: string
+      registry:
+        default: 'quay.io/confidential-containers'
+        required: false
+        type: string
+      image_tag:
+        default: ''
+        required: false
+        type: string
+      git_ref:
+        description: Git ref to checkout the cloud-api-adaptor repository.
+        required: true
         type: string
 
 defaults:
@@ -21,51 +45,89 @@ defaults:
 jobs:
   build-binaries:
     name: Build binaries
-    if : ${{ inputs.binaries-image == '' }}
-    runs-on: ubuntu-latest
+    # TODO - better to enable mechanism to check if the image of matching hash already exists and then just pull it locally
+    if: ${{ inputs.binaries-image == '' }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [S390X, ubuntu-22.04]
     permissions:
       contents: read
       packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      - name: Login to quay Container Registry
+        if: ${{ startsWith(inputs.registry, 'quay.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Login to the ghcr Container registry
+        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build builder
-        uses: docker/build-push-action@v5
-        with:
-          tags: ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}
-          context: src
-          file: src/cloud-api-adaptor/podvm/Dockerfile.podvm_builder.fedora
-          push: true
-
-      # Build binaries need git commit id as part of image name
-      - name: Prepare .git folder
-        working-directory: ./
+      - name: Install build dependencies
         run: |
-          cp -rf .git src/.git
+          sudo apt-get update -y
+          sudo apt-get install -y bubblewrap alien dnf qemu-utils uidmap
+          sudo snap install yq
+
+      - name: Decide on image_tag to use
+        id: image_tag
+        run: |
+          image_tag="${{ inputs.image_tag }}"
+          if [ -z "${image_tag}" ]; then
+            image_tag=${{ github.sha }}
+          fi
+          echo "image_tag=${image_tag}" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Build builder
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: make fedora-binaries-builder
+        env:
+          PUSH: true
+          REGISTRY: ${{ inputs.registry }}
+          PODVM_TAG: ${{ steps.image_tag.outputs.image_tag }}
 
       - name: Build binaries
-        uses: docker/build-push-action@v5
-        with:
-          tags: ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}
-          context: src
-          file: src/cloud-api-adaptor/podvm/Dockerfile.podvm_binaries.fedora
-          push: true
-          build-args:
-            "BUILDER_IMG=ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}"
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: make binaries
+        env:
+          PUSH: true
+          REGISTRY: ${{ inputs.registry }}
+          PODVM_TAG: ${{ steps.image_tag.outputs.image_tag }}
 
   build-image:
     name: Build mkosi image
+    runs-on: ${{ matrix.platforms.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platforms: [
+          { arch: "amd64", runner: "ubuntu-22.04"},
+          { arch: "s390x", runner: "S390X" },
+        ]
     needs: [build-binaries]
     if: |
       always() && (
@@ -74,26 +136,87 @@ jobs:
               inputs.binaries-image != ''
           )
       )
-    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+
+      - name: Login to quay Container Registry
+        if: ${{ startsWith(inputs.registry, 'quay.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Login to the ghcr Container registry
+        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y bubblewrap alien dnf qemu-utils uidmap
+          sudo snap install yq
+
+      - name: Install mkosi
+        if: matrix.platforms.runner != 'ubuntu-22.04'
+        run: |
+          git clone -b v22 https://github.com/systemd/mkosi
+          sudo rm -f /usr/local/bin/mkosi
+          sudo ln -s $PWD/mkosi/bin/mkosi /usr/local/bin/mkosi
+          mkosi --version
 
       - name: Install Nix
+        if: matrix.platforms.runner == 'ubuntu-22.04'
         uses: cachix/install-nix-action@v22
 
       - name: Build nix shell to cache dependencies
+        if: matrix.platforms.runner == 'ubuntu-22.04'
         run: nix build .#devShells.x86_64-linux.podvm-mkosi
 
-      - name: Install crane
+      - name: Install crane with nix
+        if: matrix.platforms.runner == 'ubuntu-22.04'
         run: nix profile install nixpkgs#crane
+
+      - name: Read properties from versions.yaml
+        if: matrix.platforms.runner != 'ubuntu-22.04'
+        run: |
+          sudo snap install yq
+          go_version="$(yq '.tools.golang' versions.yaml)"
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        if: matrix.platforms.runner != 'ubuntu-22.04'
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install crane with go
+        if: matrix.platforms.runner != 'ubuntu-22.04'
+        run: |
+          go install github.com/google/go-containerregistry/cmd/crane@latest
+          echo "PATH=${PATH}:`go env GOPATH`/bin" >> $GITHUB_ENV
 
         # This removes the checkout and creates a btrfs volume with maximized
         # build space.
       - name: Maximize build space
+        if: matrix.platforms.runner == 'ubuntu-22.04'
         uses: katexochen/maximize-build-space@btrfs
         with:
           swap-size-mb: 1024
@@ -104,13 +227,26 @@ jobs:
           remove-docker-images: "true"
 
       - name: Second checkout
+        if: matrix.platforms.runner == 'ubuntu-22.04'
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
+
+      - name: Decide on image_tag to use
+        id: image_tag
+        run: |
+          image_tag="${{ inputs.image_tag }}"
+          if [ -z "${image_tag}" ]; then
+            image_tag=${{ github.sha }}
+          fi
+          echo "image_tag=${image_tag}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Decide on image to use
         id: binaries-image
         run: |
           if [ -z "${{ inputs.binaries-image }}" ]; then
-            echo "image=ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}" | tee -a "$GITHUB_OUTPUT"
+            echo "image=${{ inputs.registry }}/podvm-binaries-fedora-${{ matrix.platforms.arch }}:${{ steps.image_tag.outputs.image_tag }}" | tee -a "$GITHUB_OUTPUT"
           else
             echo "image=${{ inputs.binaries-image }}" | tee -a "$GITHUB_OUTPUT"
           fi
@@ -124,12 +260,10 @@ jobs:
           tar xf podvm-binaries.tar -C podvm-mkosi/resources/binaries-tree
           rm podvm-binaries.tar
 
-      - name: Build mkosi image
+      - name: Build mkosi debug image
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: make image-debug
-
-      - name: Upload image
-        uses: actions/upload-artifact@v2
-        with:
-          name: podvm-mkosi-${{ github.sha }}
-          path: src/cloud-api-adaptor/podvm-mkosi/build/system.raw
+        env:
+          PUSH: true
+          REGISTRY: ${{ inputs.registry }}
+          PODVM_TAG: ${{ steps.image_tag.outputs.image_tag }}
