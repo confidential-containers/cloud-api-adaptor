@@ -73,6 +73,28 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-status-patcher
+rules:
+- apiGroups: [""]
+  resources: ["nodes/status"]
+  verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-status-patcher
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: confidential-containers-system
+roleRef:
+  kind: ClusterRole
+  name: node-status-patcher
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: pp-secrets
