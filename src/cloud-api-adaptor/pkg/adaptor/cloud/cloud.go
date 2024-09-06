@@ -87,7 +87,8 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir, daemonPort, initdata, sshport string) Service {
+	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir,
+	daemonPort, initdata, sshport string) Service {
 	var err error
 	var sshClient *wnssh.SshClient
 

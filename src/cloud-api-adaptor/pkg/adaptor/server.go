@@ -16,6 +16,7 @@ import (
 	pbHypervisor "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/cloud"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/vminfo"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
@@ -45,6 +46,7 @@ type ServerConfig struct {
 	SecureCommsInbounds     string
 	SecureCommsOutbounds    string
 	SecureCommsKbsAddress   string
+	PeerPodsLimitPerNode    int
 }
 
 type Server interface {
@@ -63,6 +65,7 @@ type server struct {
 	socketPath              string
 	stopOnce                sync.Once
 	enableCloudConfigVerify bool
+	PeerPodsLimitPerNode    int
 }
 
 func NewServer(provider provider.Provider, cfg *ServerConfig, workerNode podnetwork.WorkerNode) Server {
@@ -71,7 +74,8 @@ func NewServer(provider provider.Provider, cfg *ServerConfig, workerNode podnetw
 
 	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout)
 	cloudService := cloud.NewService(provider, agentFactory, workerNode,
-		cfg.SecureComms, cfg.SecureCommsInbounds, cfg.SecureCommsOutbounds, cfg.SecureCommsKbsAddress, cfg.PodsDir, cfg.ForwarderPort, cfg.Initdata, sshutil.SSHPORT)
+		cfg.SecureComms, cfg.SecureCommsInbounds, cfg.SecureCommsOutbounds,
+		cfg.SecureCommsKbsAddress, cfg.PodsDir, cfg.ForwarderPort, cfg.Initdata, sshutil.SSHPORT)
 	vmInfoService := vminfo.NewService(cloudService)
 
 	return &server{
@@ -82,6 +86,7 @@ func NewServer(provider provider.Provider, cfg *ServerConfig, workerNode podnetw
 		readyCh:                 make(chan struct{}),
 		stopCh:                  make(chan struct{}),
 		enableCloudConfigVerify: cfg.EnableCloudConfigVerify,
+		PeerPodsLimitPerNode:    cfg.PeerPodsLimitPerNode,
 	}
 }
 
@@ -91,6 +96,11 @@ func (s *server) Start(ctx context.Context) (err error) {
 		if verifierErr != nil {
 			return err
 		}
+	}
+	// Advertise node resources
+	err = k8sops.AdvertiseExtendedResources(s.PeerPodsLimitPerNode)
+	if err != nil {
+		return err
 	}
 
 	ttRpc, err := ttrpc.NewServer()
@@ -146,6 +156,8 @@ func (s *server) Shutdown() error {
 	s.stopOnce.Do(func() {
 		close(s.stopCh)
 	})
+
+	_ = k8sops.RemoveExtendedResources()
 
 	return s.cloudService.Teardown()
 }
