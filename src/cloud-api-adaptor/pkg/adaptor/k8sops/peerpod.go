@@ -27,7 +27,7 @@ var ppFinalizer string = "peer.pod/finalizer"
 
 type PeerPodService struct {
 	client        *kubernetes.Clientset
-	uclient       *rest.RESTClient // use generated client instaed
+	uclient       *rest.RESTClient // use generated client instead
 	cloudProvider string
 	podToPP       map[string]string // map Pod UID to owned PeerPod Name
 }
@@ -38,12 +38,12 @@ func NewPeerPodService() (*PeerPodService, error) {
 		return nil, errors.New("NewPeerPodService: failed to get cloudProvider")
 	}
 
-	config, err := rest.InClusterConfig()
+	config, err := getKubeConfig()
 	if err != nil {
 		return nil, fmt.Errorf("NewPeerPodService: failed to get config: %w", err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := getClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("NewPeerPodService: failed to create clientset: %w", err)
 	}

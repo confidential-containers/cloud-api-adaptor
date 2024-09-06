@@ -92,6 +92,7 @@ func TestShim(t *testing.T) {
 		ForwarderPort:           port,
 		ProxyTimeout:            5 * time.Second,
 		EnableCloudConfigVerify: false,
+		PeerPodsLimitPerNode:    -1,
 	}
 
 	provider := &mockProvider{primaryIP: primaryIP, secondaryIP: secondaryIP}

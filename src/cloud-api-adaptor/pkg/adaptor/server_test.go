@@ -156,6 +156,7 @@ func newServer(t *testing.T, socketPath, podsDir string) Server {
 		ForwarderPort:           port,
 		ProxyTimeout:            5 * time.Second,
 		EnableCloudConfigVerify: false,
+		PeerPodsLimitPerNode:    -1,
 	}
 	return NewServer(provider, serverConfig, &mockWorkerNode{})
 }
