@@ -74,7 +74,6 @@ jobs:
       matrix:
         controller:
           - peerpod-ctrl
-          - peerpodconfig-ctrl
     defaults:
       run:
         working-directory: src/${{ matrix.controller }}

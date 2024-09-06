@@ -101,8 +101,6 @@ git tag src/csi-wrapper/v0.8.0-alpha.1 main
 git push upstream src/csi-wrapper/v0.8.0-alpha.1
 git tag src/peerpod-ctrl/v0.8.0-alpha.1 main
 git push upstream src/peerpod-ctrl/v0.8.0-alpha.1
-git tag src/peerpodconfig-ctrl/v0.8.0-alpha.1 main
-git push upstream src/peerpodconfig-ctrl/v0.8.0-alpha.1
 git tag src/webhook/v0.8.0-alpha.1 main
 git push upstream src/webhook/v0.8.0-alpha.1
 ```
@@ -120,9 +118,6 @@ To github.com:confidential-containers/cloud-api-adaptor.git
 Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
 To github.com:confidential-containers/cloud-api-adaptor.git
  * [new tag]         src/peerpod-ctrl/v0.8.0-alpha.1 -> src/peerpod-ctrl/v0.8.0-alpha.1
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
-To github.com:confidential-containers/cloud-api-adaptor.git
- * [new tag]         src/peerpodconfig-ctrl/v0.8.0-alpha.1 -> src/peerpodconfig-ctrl/v0.8.0-alpha.1
 Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
 To github.com:confidential-containers/cloud-api-adaptor.git
  * [new tag]         src/webhook/v0.8.0-alpha.1 -> src/webhook/v0.8.0-alpha.1
@@ -183,8 +178,6 @@ git tag src/csi-wrapper/v0.8.0 main
 git push upstream src/csi-wrapper/v0.8.0
 git tag src/peerpod-ctrl/v0.8.0 main
 git push upstream src/peerpod-ctrl/v0.8.0
-git tag src/peerpodconfig-ctrl/v0.8.0 main
-git push upstream src/peerpodconfig-ctrl/v0.8.0
 git tag src/webhook/v0.8.0 main
 git push upstream src/webhook/v0.8.0
 ```
@@ -202,10 +195,7 @@ To github.com:confidential-containers/cloud-api-adaptor.git
 Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
 To github.com:confidential-containers/cloud-api-adaptor.git
  * [new tag]         src/peerpod-ctrl/v0.8.0 -> src/peerpod-ctrl/v0.8.0
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
-To github.com:confidential-containers/cloud-api-adaptor.git
- * [new tag]         src/peerpodconfig-ctrl/v0.8.0 -> src/peerpodconfig-ctrl/v0.8.0
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0) 
 To github.com:confidential-containers/cloud-api-adaptor.git
  * [new tag]         src/webhook/v0.8.0 -> src/webhook/v0.8.0
 ```
