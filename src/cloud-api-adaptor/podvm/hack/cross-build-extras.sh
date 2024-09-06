@@ -17,5 +17,14 @@ libc=$([[ $ARCH =~ s390x ]] && echo "gnu" || echo "musl")
 rustTarget="$ARCH-unknown-linux-$libc"
 
 rustup target add "$rustTarget"
-apt install -y "qemu-system-$ARCH"
-apt install -y "gcc-$ARCH-linux-$libc"
+
+source /etc/os-release || source /usr/lib/os-release
+if [[ ${ID_LIKE:-} == *"debian"* ]]; then
+    apt install -y "qemu-system-$ARCH"
+    apt install -y "gcc-$ARCH-linux-$libc"
+elif [[ "${ID_LIKE:-}" =~ "fedora" ]] || [[ "${ID:-}" =~ "fedora" ]]; then
+    dnf install -y "qemu-system-$ARCH"
+    dnf install -y "gcc-$ARCH-linux-$libc"
+else
+    echo "Unsupported distro $ID"; exit 1
+fi
