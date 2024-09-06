@@ -24,7 +24,7 @@ RUN dnf groupinstall -y 'Development Tools' && \
     dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
     device-mapper-devel unzip libassuan-devel \
     perl-FindBin openssl-devel tpm2-tss-devel \
-    clang which && \
+    clang which xz && \
     dnf clean all
 
 ADD https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz go${GO_VERSION}.linux-${ARCH}.tar.gz
@@ -42,7 +42,7 @@ RUN chmod a+x rustup && ./rustup -y --default-toolchain ${RUST_VERSION}
 ADD https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
 RUN unzip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
 
-ADD https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz oras_${ORAS_VERSION}_linux_amd64.tar.gz
+ADD https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz
 RUN rm -rf /usr/local/bin/oras && tar -C /usr/local/bin -xzf oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz && rm -f oras_${ORAS_VERSION}_linux_${ARCH}.tar.gz
 
 WORKDIR /src
