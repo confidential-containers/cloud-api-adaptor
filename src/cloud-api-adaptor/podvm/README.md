@@ -57,7 +57,7 @@ currently accepted:
 
 | Argument          | Default value                                                | Description                                                     |
 | ----------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
-| GO\_VERSION       | 1.21.12                                                      | Go version                                                      |
+| GO\_VERSION       | 1.22.7                                                       | Go version                                                      |
 | PROTOC\_VERSION   | 3.15.0                                                       | [Protobuf](https://github.com/protocolbuffers/protobuf) version |
 | RUST\_VERSION     | 1.75.0                                                       | Rust version                                                    |
 | YQ\_VERSION       | v4.35.1                                                      | [yq](https://github.com/mikefarah/yq/) version                  |
