@@ -148,6 +148,107 @@ func (p *azureProvider) createNetworkInterface(ctx context.Context, nicName stri
 	return &resp.Interface, nil
 }
 
+// Method to update the network Interface with the public IP
+func (p *azureProvider) attachPublicIpAddr(ctx context.Context, vmNic *armnetwork.Interface,
+	publicIpAddr *armnetwork.PublicIPAddress) error {
+	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating network interface client: %w", err)
+	}
+
+	// Update the network interface with the public IP
+	vmNic.Properties.IPConfigurations[0].Properties.PublicIPAddress = &armnetwork.PublicIPAddress{
+		ID: publicIpAddr.ID,
+	}
+
+	pollerResponse, err := nicClient.BeginCreateOrUpdate(ctx, p.serviceConfig.ResourceGroupName, *vmNic.Name, *vmNic, nil)
+	if err != nil {
+		return fmt.Errorf("beginning update of network interface: %w", err)
+	}
+
+	_, err = pollerResponse.PollUntilDone(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("polling network interface update: %w", err)
+	}
+
+	return nil
+}
+
+// Method to create a public IP
+func (p *azureProvider) createPublicIP(ctx context.Context, publicIPName string) (*armnetwork.PublicIPAddress, error) {
+	publicIPClient, err := armnetwork.NewPublicIPAddressesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating public IP client: %w", err)
+	}
+
+	parameters := armnetwork.PublicIPAddress{
+		Name:     to.Ptr(publicIPName),
+		Location: to.Ptr(p.serviceConfig.Region),
+		SKU: &armnetwork.PublicIPAddressSKU{
+			Name: to.Ptr(armnetwork.PublicIPAddressSKUNameBasic),
+			Tier: to.Ptr(armnetwork.PublicIPAddressSKUTierRegional),
+		},
+		Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+			PublicIPAddressVersion:   to.Ptr(armnetwork.IPVersionIPv4),
+			PublicIPAllocationMethod: to.Ptr(armnetwork.IPAllocationMethodStatic),
+			// Delete the public IP when the associated VM is deleted
+			DeleteOption: to.Ptr(armnetwork.DeleteOptionsDelete),
+		},
+
+		Tags: p.getResourceTags(),
+	}
+
+	pollerResponse, err := publicIPClient.BeginCreateOrUpdate(ctx, p.serviceConfig.ResourceGroupName, publicIPName, parameters, nil)
+	if err != nil {
+		return nil, fmt.Errorf("beginning creation or update of public IP: %w", err)
+	}
+
+	resp, err := pollerResponse.PollUntilDone(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("polling public IP creation: %w", err)
+	}
+
+	return &resp.PublicIPAddress, nil
+
+}
+
+// Method to delete the public IP
+func (p *azureProvider) deletePublicIP(ctx context.Context, publicIpAddrName string) error {
+	publicIPClient, err := armnetwork.NewPublicIPAddressesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating public IP client: %w", err)
+	}
+
+	rg := p.serviceConfig.ResourceGroupName
+
+	// retry with exponential backoff
+	err = retry.Do(func() error {
+		pollerResponse, err := publicIPClient.BeginDelete(ctx, rg, publicIpAddrName, nil)
+		if err != nil {
+			return fmt.Errorf("beginning public IP deletion: %w", err)
+		}
+		_, err = pollerResponse.PollUntilDone(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("waiting for public IP deletion: %w", err)
+		}
+		return nil
+	},
+		retry.Context(ctx),
+		retry.Attempts(4),
+		retry.Delay(180*time.Second),
+		retry.MaxDelay(180*time.Second),
+		retry.LastErrorOnly(true),
+	)
+
+	if err != nil {
+		logger.Printf("deleting network interface (%s): %s", publicIpAddrName, err)
+		return err
+	}
+
+	logger.Printf("successfully deleted nic (%s)", publicIpAddrName)
+	return nil
+}
+
 func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
@@ -189,6 +290,34 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
+	// Create public IP if serviceConfig.UsePublicIP is true
+	var publicIpAddr *armnetwork.PublicIPAddress
+	var publicIpName string
+
+	if p.serviceConfig.UsePublicIP {
+		publicIpName = fmt.Sprintf("%s-ip", instanceName)
+		publicIpAddr, err = p.createPublicIP(ctx, publicIpName)
+		if err != nil {
+			err = fmt.Errorf("creating public IP: %w", err)
+			logger.Printf("%v", err)
+			return nil, err
+		}
+
+		logger.Printf("public IP (%s) created with address: %s", *publicIpAddr.Name, *publicIpAddr.Properties.IPAddress)
+
+		// Attach the public IP to the NIC
+		err = p.attachPublicIpAddr(ctx, vmNIC, publicIpAddr)
+		if err != nil {
+			logger.Printf("error in attaching public IP to the NIC: %v", err)
+			// Delete the public IP if attaching fails
+			if err := p.deletePublicIP(ctx, publicIpName); err != nil {
+				logger.Printf("deleting public IP (%s): %s", publicIpName, err)
+			}
+			return nil, err
+		}
+
+	}
+
 	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, vmNIC)
 	if err != nil {
 		return nil, err
@@ -204,6 +333,13 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		if err := p.deleteNetworkInterface(context.Background(), nicName); err != nil {
 			logger.Printf("deleting nic async (%s): %s", nicName, err)
 		}
+
+		if p.serviceConfig.UsePublicIP {
+			if err := p.deletePublicIP(context.Background(), publicIpName); err != nil {
+				logger.Printf("deleting public IP (%s): %s", publicIpName, err)
+			}
+		}
+
 		return nil, fmt.Errorf("Creating instance (%v): %s", result, err)
 	}
 
@@ -213,6 +349,17 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	if err != nil {
 		logger.Printf("getting IPs for the instance : %v ", err)
 		return nil, err
+	}
+
+	if p.serviceConfig.UsePublicIP && publicIpAddr != nil {
+		// Replace the first IP address with the public IP address
+		ip, err := netip.ParseAddr(*publicIpAddr.Properties.IPAddress)
+		if err != nil {
+			return nil, fmt.Errorf("parsing pod node public IP %q: %w", *publicIpAddr.Properties.IPAddress, err)
+		}
+		logger.Printf("publicIP=%s", ip.String())
+		ips[0] = ip
+
 	}
 
 	instance := &provider.Instance{
