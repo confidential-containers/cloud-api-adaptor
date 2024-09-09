@@ -73,6 +73,7 @@ jobs:
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       arch: amd64
+      debug: true
     secrets: inherit
 
   podvm_mkosi_s390x:
@@ -82,6 +83,7 @@ jobs:
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       arch: s390x
+      debug: true
     secrets: inherit
 
   # Build and push the cloud-api-adaptor image

@@ -64,6 +64,7 @@ jobs:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
       arch: ${{ matrix.arch}}
+      debug: false
     secrets: inherit
 
   webhook:
