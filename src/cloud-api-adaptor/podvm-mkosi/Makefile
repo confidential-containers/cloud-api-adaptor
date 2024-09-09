@@ -137,7 +137,7 @@ image-container:
 		-t $(PODVM_CONTAINER_NAME):$(PODVM_TAG) \
 		-t $(PODVM_CONTAINER_NAME):latest \
 		$(DOCKER_OPTS) \
-		-f Dockerfile.podvm .
+		-f Dockerfile.podvm_docker_provider .
 
 PHONY: push-image
 push-image:
