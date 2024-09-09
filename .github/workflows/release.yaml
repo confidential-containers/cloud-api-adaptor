@@ -54,6 +54,13 @@ jobs:
       git_ref: ${{ github.ref }}
     secrets: inherit
 
+  podvm-mkosi:
+    uses: ./.github/workflows/podvm_mkosi.yaml
+    with:
+      image_tag: ${{ github.event.release.tag_name }}
+      git_ref: ${{ github.ref }}
+    secrets: inherit
+
   webhook:
     uses: ./.github/workflows/webhook_image.yaml
     with:

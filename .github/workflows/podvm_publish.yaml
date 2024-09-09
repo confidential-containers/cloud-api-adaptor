@@ -30,3 +30,10 @@ jobs:
       git_ref: ${{ github.sha }}
       image_tag: ${{ github.sha }}
     secrets: inherit
+
+  podvm-mkosi:
+    uses: ./.github/workflows/podvm_mkosi.yaml
+    with:
+      git_ref: ${{ github.sha }}
+      image_tag: ${{ github.sha }}
+    secrets: inherit
