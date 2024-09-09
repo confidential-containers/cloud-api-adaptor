@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # FIXME to pickup these values from versions.yaml
-GO_VERSION="1.21.12"
+GO_VERSION="1.22.7"
 RUST_VERSION="1.75.0"
 
 # Install dependencies
