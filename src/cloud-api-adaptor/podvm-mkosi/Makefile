@@ -2,15 +2,22 @@ include ../Makefile.defaults
 
 ATTESTER  ?= none
 ARCH      ?= $(subst x86_64,amd64,$(shell uname -m))
-BUILDER   = fedora-binaries-builder-$(ARCH)
 SE_BOOT   ?= false
 IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
 
 REGISTRY ?= quay.io/confidential-containers
 PODVM_DISTRO ?= fedora
-PODVM_TAG ?= $(VERSIONS_HASH)
-PODVM_NAME ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)-$(ARCH)
-PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image
+ifeq ($(PODVM_TAG),)
+	PODVM_TAG := $(VERSIONS_HASH)
+endif
+PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO)-$(ARCH):$(PODVM_TAG)
+PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(PODVM_TAG)
+PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT),true),-se,)-$(ARCH):$(PODVM_TAG)
+PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(ARCH)
+
+PUSH ?= false
+# If not pushing `--load` into the local docker cache
+DOCKER_OPTS := $(if $(filter $(PUSH),true),--push,--load) $(EXTRA_DOCKER_OPTS)
 
 .DEFAULT_GOAL := all
 .PHONY: all
@@ -30,7 +37,7 @@ PHONY: fedora-binaries-builder
 fedora-binaries-builder:
 	@echo "Building $(BUILDER) image..."
 	docker buildx build \
-		-t $(BUILDER) \
+		-t $(PODVM_BUILDER_IMAGE) \
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg ARCH=$(ARCH) \
 		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
@@ -40,7 +47,7 @@ fedora-binaries-builder:
 		--build-arg YQ_ARCH=$(ARCH) \
 		--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390x) \
 		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
-		--load \
+		$(DOCKER_OPTS) \
 		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
 
 PHONY: binaries
@@ -51,7 +58,8 @@ ifeq ($(IS_DEBIAN),true)
 	docker buildx use default
 endif
 	docker buildx build \
-		--build-arg BUILDER_IMG=$(BUILDER) \
+		-t $(PODVM_BINARIES_IMAGE) \
+		--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
 		--build-arg ATTESTER=$(ATTESTER) \
 		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 		--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
@@ -59,7 +67,8 @@ endif
 		--build-arg IMAGE_NAME=mkosi-podvm-binaries \
 		$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
-		-o type=local,dest="./resources/binaries-tree" \
+		$(if $(PUSH),,-o type=local,dest="./resources/binaries-tree") \
+		$(DOCKER_OPTS) \
 		-f ../podvm/Dockerfile.podvm_binaries.fedora ../../
 
 PHONY: image
@@ -74,9 +83,8 @@ ifeq ($(SE_BOOT),true)
 	sudo -E ../hack/build-s390x-se-image.sh
 	@echo "Building docker image..."
 	docker buildx build \
-		-t $(PODVM_NAME)-se:$(PODVM_TAG) \
-		-t $(PODVM_NAME)-se:latest \
-		--load \
+		-t $(PODVM_IMAGE) \
+		$(DOCKER_OPTS) \
 		-f ../podvm/Dockerfile.podvm.fedora .
 else ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
@@ -84,9 +92,8 @@ else ifeq ($(ARCH),s390x)
 	sudo -E ../hack/build-s390x-image.sh
 	@echo "Building docker image..."
 	docker buildx build \
-		-t $(PODVM_NAME):$(PODVM_TAG) \
-		-t $(PODVM_NAME):latest \
-		--load \
+		-t $(PODVM_IMAGE) \
+		$(DOCKER_OPTS) \
 		-f ../podvm/Dockerfile.podvm.fedora .
 else
 	touch resources/buildBootableImage
@@ -106,9 +113,8 @@ ifeq ($(SE_BOOT),true)
 	sudo -E ../hack/build-s390x-se-image.sh
 	@echo "Building docker image..."
 	docker buildx build \
-		-t $(PODVM_NAME)-se:$(PODVM_TAG) \
-		-t $(PODVM_NAME)-se:latest \
-		--load \
+		-t $(addsuffix -debug,$(PODVM_IMAGE)) \
+		$(DOCKER_OPTS) \
 		-f ../podvm/Dockerfile.podvm.fedora .
 else ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
@@ -116,9 +122,8 @@ else ifeq ($(ARCH),s390x)
 	sudo -E ../hack/build-s390x-image.sh
 	@echo "Building docker image..."
 	docker buildx build \
-		-t $(PODVM_NAME):$(PODVM_TAG) \
-		-t $(PODVM_NAME):latest \
-		--load \
+		-t $(addsuffix -debug,$(PODVM_IMAGE)) \
+		$(DOCKER_OPTS) \
 		-f ../podvm/Dockerfile.podvm.fedora .
 else
 	touch resources/buildBootableImage
@@ -131,6 +136,7 @@ image-container:
 	docker buildx build \
 		-t $(PODVM_CONTAINER_NAME):$(PODVM_TAG) \
 		-t $(PODVM_CONTAINER_NAME):latest \
+		$(DOCKER_OPTS) \
 		-f Dockerfile.podvm .
 
 PHONY: push-image
