@@ -59,6 +59,7 @@ jobs:
     with:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
+      debug: false
     secrets: inherit
 
   webhook:

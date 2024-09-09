@@ -72,6 +72,7 @@ jobs:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
+      debug: true
     secrets: inherit
 
   # Build and push the cloud-api-adaptor image

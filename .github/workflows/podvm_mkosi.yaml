@@ -18,6 +18,11 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository.
         required: true
         type: string
+      debug:
+        description: Whether to build the image in debug mode
+        default: false
+        required: false
+        type: boolean
 
   workflow_call:
     inputs:
@@ -37,6 +42,11 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository.
         required: true
         type: string
+      debug:
+        description: Whether to build the image in debug mode
+        default: false
+        required: false
+        type: boolean
 
 defaults:
   run:
@@ -260,9 +270,16 @@ jobs:
           tar xf podvm-binaries.tar -C podvm-mkosi/resources/binaries-tree
           rm podvm-binaries.tar
 
-      - name: Build mkosi debug image
+      - name: Build mkosi image
         working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: make image-debug
+        run: |
+          if [ "${{inputs.debug}}" = "true" ]; then
+            echo "Making debug image"
+            make image-debug
+          else
+            echo "Making non-debug image"
+            make image
+          fi
         env:
           PUSH: true
           REGISTRY: ${{ inputs.registry }}
