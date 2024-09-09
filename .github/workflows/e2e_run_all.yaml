@@ -66,6 +66,24 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
     secrets: inherit
 
+  podvm_mkosi_amd64:
+    uses: ./.github/workflows/podvm_mkosi.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      image_tag: ${{ inputs.podvm_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      arch: amd64
+    secrets: inherit
+
+  podvm_mkosi_s390x:
+    uses: ./.github/workflows/podvm_mkosi.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      image_tag: ${{ inputs.podvm_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      arch: s390x
+    secrets: inherit
+
   # Build and push the cloud-api-adaptor image
   #
   # By using a reusable `workflow_call` workflow we are hitting two

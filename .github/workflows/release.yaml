@@ -54,6 +54,18 @@ jobs:
       git_ref: ${{ github.ref }}
     secrets: inherit
 
+  podvm-mkosi:
+    uses: ./.github/workflows/podvm_mkosi.yaml
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, s390x]
+    with:
+      image_tag: ${{ github.event.release.tag_name }}
+      git_ref: ${{ github.ref }}
+      arch: ${{ matrix.arch}}
+    secrets: inherit
+
   webhook:
     uses: ./.github/workflows/webhook_image.yaml
     with:
