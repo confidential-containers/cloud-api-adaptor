@@ -41,4 +41,5 @@ jobs:
       git_ref: ${{ github.sha }}
       image_tag: ${{ github.sha }}
       arch: ${{ matrix.arch}}
+      debug: false
     secrets: inherit
