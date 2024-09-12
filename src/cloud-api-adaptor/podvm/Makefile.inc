@@ -129,11 +129,15 @@ $(PROCESS_USER_DATA): always
 	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) process-user-data
 	install -D --compare "$(ROOT_DIR)/process-user-data" "$@"
 
-$(KATA_AGENT): $(FORCE_TARGET)
+$(KATA_AGENT): $(FORCE_TARGET) | default-policy
 	$(eval $(call generate_tag,tag,$(KATA_SRC_REF)))
 	oras pull ghcr.io/kata-containers/cached-artefacts/agent:${tag}
 	tar xvJpf kata-static-agent.tar.xz
 	install -D --compare "./usr/bin/kata-agent" "$@"
+
+default-policy:
+	cd $(AGENT_POLICY_PATH) && ln -s -f $(DEFAULT_AGENT_POLICY_FILE) /run/peerpod/policy.rego
+
 
 # Skopeo package packages are available in RHEL/CentOS 8 or later and Ubuntu 20.10 or later
 $(SKOPEO_SRC):
