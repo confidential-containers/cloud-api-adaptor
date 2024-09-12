@@ -189,9 +189,12 @@ func (p *azureProvider) createPublicIP(ctx context.Context, publicIPName string)
 			Tier: to.Ptr(armnetwork.PublicIPAddressSKUTierRegional),
 		},
 		Properties: &armnetwork.PublicIPAddressPropertiesFormat{
-			PublicIPAddressVersion:   to.Ptr(armnetwork.IPVersionIPv4),
+			PublicIPAddressVersion: to.Ptr(armnetwork.IPVersionIPv4),
+			// Dynamic allocation method for the public IP is not working as expected
 			PublicIPAllocationMethod: to.Ptr(armnetwork.IPAllocationMethodStatic),
 			// Delete the public IP when the associated VM is deleted
+			// However for static allocation, the public IP is not deleted when the VM is deleted
+			// Need to delete it explicitly when the VM is deleted
 			DeleteOption: to.Ptr(armnetwork.DeleteOptionsDelete),
 		},
 
@@ -295,7 +298,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	var publicIpName string
 
 	if p.serviceConfig.UsePublicIP {
-		publicIpName = fmt.Sprintf("%s-ip", instanceName)
+		publicIpName = fmt.Sprintf("%s-ipv4", instanceName)
 		publicIpAddr, err = p.createPublicIP(ctx, publicIpName)
 		if err != nil {
 			err = fmt.Errorf("creating public IP: %w", err)
@@ -397,6 +400,16 @@ func (p *azureProvider) DeleteInstance(ctx context.Context, instanceID string) e
 	}
 
 	logger.Printf("deleted VM successfully: %s", vmName)
+
+	// Delete the public IP
+	publicIpAddrName := fmt.Sprintf("%s-ipv4", vmName)
+	err = p.deletePublicIP(ctx, publicIpAddrName)
+	if err != nil {
+		logger.Printf("deleting public IP (%s): %s", publicIpAddrName, err)
+		return err
+	}
+
+	logger.Printf("deleted public IP (%s) successfully", publicIpAddrName)
 	return nil
 }
 
