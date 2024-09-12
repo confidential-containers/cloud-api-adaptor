@@ -61,6 +61,10 @@ create () {
 			-P arch=$ARCH \
 			-P multus=false \
 			-P autolabeller=false "
+	elif [[ ${TARGET_ARCH} == "aarch64" ]]; then
+		parameters="$parameters \
+			-P arch=$ARCH \
+			-P machine=virt"
 	fi
 	echo "Download $CLUSTER_IMAGE ${TARGET_ARCH} image"
 	# kcli support download image with archs: 'x86_64', 'aarch64', 'ppc64le', 's390x'

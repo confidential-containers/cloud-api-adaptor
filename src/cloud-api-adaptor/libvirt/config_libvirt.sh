@@ -11,7 +11,13 @@ set -o pipefail
 
 source /etc/os-release || source /usr/lib/os-release
 ARCH=$(uname -m)
-TARGET_ARCH=${ARCH/x86_64/amd64}
+if [[ "${ARCH}" == "x86_64" ]]; then
+    TARGET_ARCH=amd64
+elif [[ "${ARCH}" == "aarch64" ]]; then
+    TARGET_ARCH=arm64
+else
+    TARGET_ARCH=${ARCH}
+fi
 OS_DISTRO=ubuntu
 if [[ "$ID" == "rhel" || "$ID" == "centos" || "$ID" == "fedora" ]]; then
     OS_DISTRO=rhel
