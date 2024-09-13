@@ -13,13 +13,11 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/avast/retry-go/v4"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
@@ -60,10 +58,29 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
-func getIPs(nic *armnetwork.Interface) ([]netip.Addr, error) {
-	var podNodeIPs []netip.Addr
+func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachine) ([]netip.Addr, error) {
+	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating network interfaces client: %w", err)
+	}
+	rgName := p.serviceConfig.ResourceGroupName
+	nicRefs := vm.Properties.NetworkProfile.NetworkInterfaces
 
-	for i, ipc := range nic.Properties.IPConfigurations {
+	var ips []netip.Addr
+	var ipcs []*armnetwork.InterfaceIPConfiguration
+
+	for _, nicRef := range nicRefs {
+		nicId := *nicRef.ID
+		// the last segment of a nic id is the name
+		nicName := nicId[strings.LastIndex(nicId, "/")+1:]
+		nic, err := nicClient.Get(ctx, rgName, nicName, nil)
+		if err != nil {
+			return nil, fmt.Errorf("get network interface: %w", err)
+		}
+		ipcs = append(ipcs, nic.Properties.IPConfigurations...)
+	}
+
+	for i, ipc := range ipcs {
 		addr := ipc.Properties.PrivateIPAddress
 
 		if addr == nil || *addr == "" || *addr == "0.0.0.0" {
@@ -75,11 +92,11 @@ func getIPs(nic *armnetwork.Interface) ([]netip.Addr, error) {
 			return nil, fmt.Errorf("parsing pod node IP %q: %w", *addr, err)
 		}
 
-		podNodeIPs = append(podNodeIPs, ip)
+		ips = append(ips, ip)
 		logger.Printf("podNodeIP[%d]=%s", i, ip.String())
 	}
 
-	return podNodeIPs, nil
+	return ips, nil
 }
 
 func (p *azureProvider) create(ctx context.Context, parameters *armcompute.VirtualMachine) (*armcompute.VirtualMachine, error) {
@@ -105,47 +122,31 @@ func (p *azureProvider) create(ctx context.Context, parameters *armcompute.Virtu
 	return &resp.VirtualMachine, nil
 }
 
-func (p *azureProvider) createNetworkInterface(ctx context.Context, nicName string) (*armnetwork.Interface, error) {
-	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating network interfaces client: %w", err)
-	}
-
-	parameters := armnetwork.Interface{
-		Location: to.Ptr(p.serviceConfig.Region),
-		Properties: &armnetwork.InterfacePropertiesFormat{
-			IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
-				{
-					Name: to.Ptr(fmt.Sprintf("%s-ipConfig", nicName)),
-					Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-						PrivateIPAllocationMethod: to.Ptr(armnetwork.IPAllocationMethodDynamic),
-						Subnet: &armnetwork.Subnet{
-							ID: to.Ptr(p.serviceConfig.SubnetId),
-						},
-					},
-				},
+func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMachineNetworkInterfaceConfiguration {
+	ipConfig := armcompute.VirtualMachineNetworkInterfaceIPConfiguration{
+		Name: to.Ptr("ip-config"),
+		Properties: &armcompute.VirtualMachineNetworkInterfaceIPConfigurationProperties{
+			Subnet: &armcompute.SubResource{
+				ID: to.Ptr(p.serviceConfig.SubnetId),
 			},
 		},
-		Tags: p.getResourceTags(),
+	}
+
+	config := armcompute.VirtualMachineNetworkInterfaceConfiguration{
+		Name: to.Ptr(nicName),
+		Properties: &armcompute.VirtualMachineNetworkInterfaceConfigurationProperties{
+			DeleteOption:     to.Ptr(armcompute.DeleteOptionsDelete),
+			IPConfigurations: []*armcompute.VirtualMachineNetworkInterfaceIPConfiguration{&ipConfig},
+		},
 	}
 
 	if p.serviceConfig.SecurityGroupId != "" {
-		parameters.Properties.NetworkSecurityGroup = &armnetwork.SecurityGroup{
+		config.Properties.NetworkSecurityGroup = &armcompute.SubResource{
 			ID: to.Ptr(p.serviceConfig.SecurityGroupId),
 		}
 	}
 
-	pollerResponse, err := nicClient.BeginCreateOrUpdate(ctx, p.serviceConfig.ResourceGroupName, nicName, parameters, nil)
-	if err != nil {
-		return nil, fmt.Errorf("beginning creation or update of network interface: %w", err)
-	}
-
-	resp, err := pollerResponse.PollUntilDone(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("polling network interface creation: %w", err)
-	}
-
-	return &resp.Interface, nil
+	return &config
 }
 
 func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
@@ -181,42 +182,26 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
-	// Get NIC using subnet and allow ports on the ssh group
-	vmNIC, err := p.createNetworkInterface(ctx, nicName)
-	if err != nil {
-		err = fmt.Errorf("creating VM network interface: %w", err)
-		logger.Printf("%v", err)
-		return nil, err
-	}
-
-	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, vmNIC)
+	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, nicName)
 	if err != nil {
 		return nil, err
 	}
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
-	result, err := p.create(ctx, vmParameters)
+	vm, err := p.create(ctx, vmParameters)
 	if err != nil {
-		if err := p.deleteDisk(context.Background(), diskName); err != nil {
-			logger.Printf("deleting disk (%s): %s", diskName, err)
-		}
-		if err := p.deleteNetworkInterface(context.Background(), nicName); err != nil {
-			logger.Printf("deleting nic async (%s): %s", nicName, err)
-		}
-		return nil, fmt.Errorf("Creating instance (%v): %s", result, err)
+		return nil, fmt.Errorf("Creating instance (%v): %s", vm, err)
 	}
 
-	instanceID := *result.ID
-
-	ips, err := getIPs(vmNIC)
+	ips, err := p.getIPs(ctx, vm)
 	if err != nil {
 		logger.Printf("getting IPs for the instance : %v ", err)
 		return nil, err
 	}
 
 	instance := &provider.Instance{
-		ID:   instanceID,
+		ID:   *vm.ID,
 		Name: instanceName,
 		IPs:  ips,
 	}
@@ -250,62 +235,6 @@ func (p *azureProvider) DeleteInstance(ctx context.Context, instanceID string) e
 	}
 
 	logger.Printf("deleted VM successfully: %s", vmName)
-	return nil
-}
-
-func (p *azureProvider) deleteDisk(ctx context.Context, diskName string) error {
-	diskClient, err := armcompute.NewDisksClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
-	if err != nil {
-		return fmt.Errorf("creating disk client: %w", err)
-	}
-
-	pollerResponse, err := diskClient.BeginDelete(ctx, p.serviceConfig.ResourceGroupName, diskName, nil)
-	if err != nil {
-		return fmt.Errorf("beginning disk deletion: %w", err)
-	}
-
-	_, err = pollerResponse.PollUntilDone(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("waiting for the disk deletion: %w", err)
-	}
-
-	logger.Printf("deleted disk successfully: %s", diskName)
-
-	return nil
-}
-
-func (p *azureProvider) deleteNetworkInterface(ctx context.Context, nicName string) error {
-	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
-	if err != nil {
-		return fmt.Errorf("creating network interface client: %w", err)
-	}
-	rg := p.serviceConfig.ResourceGroupName
-
-	// retry with exponential backoff
-	err = retry.Do(func() error {
-		pollerResponse, err := nicClient.BeginDelete(ctx, rg, nicName, nil)
-		if err != nil {
-			return fmt.Errorf("beginning network interface deletion: %w", err)
-		}
-		_, err = pollerResponse.PollUntilDone(ctx, nil)
-		if err != nil {
-			return fmt.Errorf("waiting for network interface deletion: %w", err)
-		}
-		return nil
-	},
-		retry.Context(ctx),
-		retry.Attempts(4),
-		retry.Delay(180*time.Second),
-		retry.MaxDelay(180*time.Second),
-		retry.LastErrorOnly(true),
-	)
-
-	if err != nil {
-		logger.Printf("deleting network interface (%s): %s", nicName, err)
-		return err
-	}
-
-	logger.Printf("successfully deleted nic (%s)", nicName)
 	return nil
 }
 
@@ -380,7 +309,7 @@ func (p *azureProvider) getResourceTags() map[string]*string {
 	return tags
 }
 
-func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName string, vmNIC *armnetwork.Interface) (*armcompute.VirtualMachine, error) {
+func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string) (*armcompute.VirtualMachine, error) {
 	userDataB64 := base64.StdEncoding.EncodeToString([]byte(cloudConfig))
 
 	// Azure limits the base64 encrypted userData to 64KB.
@@ -423,6 +352,8 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 		}
 	}
 
+	networkConfig := p.buildNetworkConfig(nicName)
+
 	vmParameters := armcompute.VirtualMachine{
 		Location: to.Ptr(p.serviceConfig.Region),
 		Properties: &armcompute.VirtualMachineProperties{
@@ -454,14 +385,8 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 				},
 			},
 			NetworkProfile: &armcompute.NetworkProfile{
-				NetworkInterfaces: []*armcompute.NetworkInterfaceReference{
-					{
-						ID: vmNIC.ID,
-						Properties: &armcompute.NetworkInterfaceReferenceProperties{
-							DeleteOption: to.Ptr(armcompute.DeleteOptionsDelete),
-						},
-					},
-				},
+				NetworkAPIVersion:              to.Ptr(armcompute.NetworkAPIVersionTwoThousandTwenty1101),
+				NetworkInterfaceConfigurations: []*armcompute.VirtualMachineNetworkInterfaceConfiguration{networkConfig},
 			},
 			SecurityProfile: securityProfile,
 			DiagnosticsProfile: &armcompute.DiagnosticsProfile{
