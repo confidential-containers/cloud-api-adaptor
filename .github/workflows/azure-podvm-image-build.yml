@@ -47,11 +47,9 @@ jobs:
         path: cloud-api-adaptor
         ref: "${{ inputs.git-ref || 'main' }}"
 
-    - name: Clone rust repos
-      run: |
-        # we have to clone prior to cache loading
-        make ../../podvm/..//../kata-containers
-        make ../../../guest-components
+    # we have to clone prior to cache loading
+    - name: Clone guest-componetns
+      run: make ../../../guest-components
 
     - name: Read properties from versions.yaml
       working-directory: cloud-api-adaptor/src/cloud-api-adaptor
@@ -63,6 +61,10 @@ jobs:
         rust_version="$(yq '.tools.rust' versions.yaml)"
         [ -n "$rust_version" ]
         echo "RUST_VERSION=${rust_version}" >> "$GITHUB_ENV"
+
+        oras_version="$(yq '.tools.oras' versions.yaml)"
+        [ -n "$oras_version" ]
+        echo "ORAS_VERSION=${oras_version}" >> "$GITHUB_ENV"
 
     - name: Set up Go environment
       uses: actions/setup-go@v4
@@ -77,12 +79,15 @@ jobs:
         target: x86_64-unknown-linux-musl
         default: true
 
+    - uses: oras-project/setup-oras@v1
+      with:
+        version: ${{ env.ORAS_VERSION }}
+
     - name: Install build dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           clang \
-          gcc \
           libdevmapper-dev \
           libgpgme-dev \
           libssl-dev \
@@ -98,13 +103,7 @@ jobs:
           ~/.cargo/registry/index/
           ~/.cargo/registry/cache/
           guest-components/target
-          kata-containers/src/agent/target
         key: rust-${{ env.RUST_VERSION }}
-
-    - name: Build kata-agent
-      env:
-        GOPATH: /home/runner/go
-      run: make "$(realpath ../../podvm/files/usr/local/bin/kata-agent)" LIBC=gnu
 
     - name: Build binaries
       run: make binaries \
