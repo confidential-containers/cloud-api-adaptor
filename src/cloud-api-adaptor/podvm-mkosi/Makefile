@@ -81,26 +81,22 @@ ifeq ($(SE_BOOT),true)
 	touch resources/buildS390xImage
 	sudo mkosi --profile production.conf --image system
 	sudo -E ../hack/build-s390x-se-image.sh
-	@echo "Building docker image..."
-	sudo chown -R $(USER): build
-	docker buildx build \
-		-t $(PODVM_IMAGE) \
-		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm.fedora .
 else ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
 	sudo mkosi --profile production.conf --image system
 	sudo -E ../hack/build-s390x-image.sh
+else
+	touch resources/buildBootableImage
+	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-amd64.qcow2
+endif
 	@echo "Building docker image..."
 	sudo chown -R $(USER): build
 	docker buildx build \
 		-t $(PODVM_IMAGE) \
+		--build-arg ARCH=$(ARCH) \
 		$(DOCKER_OPTS) \
 		-f ../podvm/Dockerfile.podvm.fedora .
-else
-	touch resources/buildBootableImage
-	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
-endif
 
 PHONY: image-debug
 image-debug:
@@ -114,25 +110,22 @@ ifeq ($(SE_BOOT),true)
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-se-image.sh
 	@echo "Building docker image..."
-	sudo chown -R $(USER): build
-	docker buildx build \
-		-t $(addsuffix -debug,$(PODVM_IMAGE)) \
-		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm.fedora .
 else ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-image.sh
 	@echo "Building docker image..."
-	sudo chown -R $(USER): build
-	docker buildx build \
-		-t $(addsuffix -debug,$(PODVM_IMAGE)) \
-		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm.fedora .
 else
 	touch resources/buildBootableImage
 	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-amd64.qcow2
 endif
+	sudo chown -R $(USER): build
+	docker buildx build \
+		-t $(addsuffix -debug,$(PODVM_IMAGE)) \
+		--build-arg ARCH=$(ARCH) \
+		$(DOCKER_OPTS) \
+		-f ../podvm/Dockerfile.podvm.fedora .
 
 PHONY: image-container
 image-container:
