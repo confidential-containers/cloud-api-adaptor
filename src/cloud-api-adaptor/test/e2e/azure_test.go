@@ -7,6 +7,7 @@ package e2e
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 
@@ -135,10 +136,15 @@ func TestKbsKeyRelease(t *testing.T) {
 
 func TestRemoteAttestation(t *testing.T) {
 	t.Parallel()
-	if !isTestWithKbs() {
-		t.Skip("Skipping kbs related test as kbs is not deployed")
+	var kbsEndpoint string
+	if ep := os.Getenv("KBS_ENDPOINT"); ep != "" {
+		kbsEndpoint = ep
+	} else if keyBrokerService == nil {
+		t.Skip("Skipping because KBS config is missing")
+	} else {
+		kbsEndpoint, _ = keyBrokerService.GetCachedKbsEndpoint()
 	}
-	DoTestRemoteAttestation(t, testEnv, assert)
+	DoTestRemoteAttestation(t, testEnv, assert, kbsEndpoint)
 }
 
 func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {

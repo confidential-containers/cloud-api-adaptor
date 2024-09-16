@@ -152,6 +152,20 @@ func WithCommand(command []string) PodOption {
 	}
 }
 
+type JobOption func(*batchv1.Job)
+
+func WithJobCommand(command []string) JobOption {
+	return func(j *batchv1.Job) {
+		j.Spec.Template.Spec.Containers[0].Command = command
+	}
+}
+
+func WithJobAnnotations(data map[string]string) JobOption {
+	return func(j *batchv1.Job) {
+		j.Spec.Template.ObjectMeta.Annotations = data
+	}
+}
+
 func WithEnvironmentalVariables(envVar []corev1.EnvVar) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].Env = envVar
@@ -310,13 +324,12 @@ func NewSecret(namespace, name string, data map[string][]byte, secretType corev1
 }
 
 // NewJob returns a new job
-func NewJob(namespace, name string, backoffLimit int32, image string, command ...string) *batchv1.Job {
-	if len(command) == 0 {
-		command = []string{"/bin/sh", "-c", "echo 'scale=5; 4*a(1)' | bc -l"}
-	}
+func NewJob(namespace, name string, backoffLimit int32, image string, options ...JobOption) *batchv1.Job {
+	command := []string{"/bin/sh", "-c", "echo 'scale=5; 4*a(1)' | bc -l"}
+
 	runtimeClassName := "kata-remote"
 	TerminateGracePeriod := int64(0)
-	return &batchv1.Job{
+	job := batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -338,6 +351,12 @@ func NewJob(namespace, name string, backoffLimit int32, image string, command ..
 			BackoffLimit: &backoffLimit,
 		},
 	}
+
+	for _, option := range options {
+		option(&job)
+	}
+
+	return &job
 }
 
 // NewPVC returns a new pvc object.
