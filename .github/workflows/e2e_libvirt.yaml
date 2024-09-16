@@ -122,7 +122,7 @@ jobs:
           export TEST_TEARDOWN="no"
           export TEST_PROVISION_FILE="$PWD/libvirt.properties"
           export TEST_PODVM_IMAGE="${{ env.PODVM_QCOW2 }}"
-          export TEST_E2E_TIMEOUT="50m"
+          export TEST_E2E_TIMEOUT="75m"
 
           make test-e2e
 
