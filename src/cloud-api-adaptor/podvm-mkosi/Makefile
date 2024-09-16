@@ -82,23 +82,14 @@ ifeq ($(SE_BOOT),true)
 	touch resources/buildS390xImage
 	sudo mkosi --profile production.conf --image system
 	sudo -E ../hack/build-s390x-se-image.sh
-	@echo "Building docker image..."
-	docker buildx build \
-		-t $(PODVM_IMAGE) \
-		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm.fedora .
 else ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
 	sudo mkosi --profile production.conf --image system
 	sudo -E ../hack/build-s390x-image.sh
-	@echo "Building docker image..."
-	docker buildx build \
-		-t $(PODVM_IMAGE) \
-		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm.fedora .
 else
 	touch resources/buildBootableImage
-	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
+	sudo -E env PATH=$(PATH) nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
 
 PHONY: image-debug
@@ -112,24 +103,16 @@ ifeq ($(SE_BOOT),true)
 	touch resources/buildS390xImage
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-se-image.sh
-	@echo "Building docker image..."
-	docker buildx build \
-		-t $(addsuffix -debug,$(PODVM_IMAGE)) \
-		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm.fedora .
 else ifeq ($(ARCH),s390x)
 	touch resources/buildS390xImage
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-image.sh
-	@echo "Building docker image..."
-	docker buildx build \
-		-t $(addsuffix -debug,$(PODVM_IMAGE)) \
-		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm.fedora .
 else
 	touch resources/buildBootableImage
-	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
+	sudo -E env PATH=$(PATH) nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
+	sudo chown -R $(USER): build
 
 PHONY: image-container
 image-container:
