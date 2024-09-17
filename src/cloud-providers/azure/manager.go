@@ -32,11 +32,12 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&azurecfg.SSHKeyPath, "ssh-key-path", "$HOME/.ssh/id_rsa.pub", "Path to SSH public key")
 	flags.StringVar(&azurecfg.SSHUserName, "ssh-username", "peerpod", "SSH User Name")
 	flags.BoolVar(&azurecfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
-	// Add a List parameter to indicate differet type of instance sizes to be used for the Pod VMs
+	// Add a List parameter to indicate different types of instance sizes to be used for the Pod VMs
 	flags.Var(&azurecfg.InstanceSizes, "instance-sizes", "Instance sizes to be used for the Pod VMs, comma separated")
 	// Add a key value list parameter to indicate custom tags to be used for the Pod VMs
 	flags.Var(&azurecfg.Tags, "tags", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
 	flags.BoolVar(&azurecfg.EnableSecureBoot, "enable-secure-boot", false, "Enable secure boot for the VMs")
+	flags.BoolVar(&azurecfg.UsePublicIP, "use-public-ip", false, "Assign public IP to the PoD VM and use to connect to kata-agent")
 }
 
 func (_ *Manager) LoadEnv() {

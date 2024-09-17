@@ -48,6 +48,7 @@ type Config struct {
 	// Disabled by default, we want to do measured boot.
 	// Secure boot brings no additional security.
 	EnableSecureBoot bool
+	UsePublicIP      bool
 }
 
 func (c Config) Redact() Config {

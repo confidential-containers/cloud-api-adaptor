@@ -58,10 +58,22 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
+func parseIP(addr string) (*netip.Addr, error) {
+	if addr == "" || addr == "0.0.0.0" {
+		return nil, errNotReady
+	}
+
+	ip, err := netip.ParseAddr(addr)
+	if err != nil {
+		return nil, fmt.Errorf("parse pod vm IP %q: %w", addr, err)
+	}
+	return &ip, nil
+}
+
 func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachine) ([]netip.Addr, error) {
 	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
 	if err != nil {
-		return nil, fmt.Errorf("creating network interfaces client: %w", err)
+		return nil, fmt.Errorf("create network interfaces client: %w", err)
 	}
 	rgName := p.serviceConfig.ResourceGroupName
 	nicRefs := vm.Properties.NetworkProfile.NetworkInterfaces
@@ -80,20 +92,46 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 		ipcs = append(ipcs, nic.Properties.IPConfigurations...)
 	}
 
+	// we add the public ip addresses as first elements, if available
+	if p.serviceConfig.UsePublicIP {
+		publicIPClient, err := armnetwork.NewPublicIPAddressesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+		if err != nil {
+			return nil, fmt.Errorf("create public ip client: %w", err)
+		}
+		for i, ipc := range ipcs {
+			if ipc.Properties.PublicIPAddress == nil {
+				continue
+			}
+			ipID := *ipc.Properties.PublicIPAddress.ID
+			// the last segment of a ip id is the name
+			ipName := ipID[strings.LastIndex(ipID, "/")+1:]
+			publicIP, err := publicIPClient.Get(ctx, rgName, ipName, nil)
+			if err != nil {
+				return nil, fmt.Errorf("get public ip: %w", err)
+			}
+			addr := publicIP.Properties.IPAddress
+			if addr != nil {
+				ip, err := parseIP(*addr)
+				if err != nil {
+					return nil, err
+				}
+				ips = append(ips, *ip)
+				logger.Printf("pod vm IP[%d][public]=%s", i, ip.String())
+			}
+		}
+	}
+
 	for i, ipc := range ipcs {
 		addr := ipc.Properties.PrivateIPAddress
-
-		if addr == nil || *addr == "" || *addr == "0.0.0.0" {
-			return nil, errNotReady
+		if addr == nil {
+			return nil, fmt.Errorf("private IP address not found in IP configuration %d", i)
 		}
-
-		ip, err := netip.ParseAddr(*addr)
+		ip, err := parseIP(*addr)
 		if err != nil {
-			return nil, fmt.Errorf("parsing pod node IP %q: %w", *addr, err)
+			return nil, err
 		}
-
-		ips = append(ips, ip)
-		logger.Printf("podNodeIP[%d]=%s", i, ip.String())
+		ips = append(ips, *ip)
+		logger.Printf("pod vm IP[%d][private]=%s", i, ip.String())
 	}
 
 	return ips, nil
@@ -130,6 +168,16 @@ func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMa
 				ID: to.Ptr(p.serviceConfig.SubnetId),
 			},
 		},
+	}
+
+	if p.serviceConfig.UsePublicIP {
+		publicIpConfig := armcompute.VirtualMachinePublicIPAddressConfiguration{
+			Name: to.Ptr(nicName),
+			Properties: &armcompute.VirtualMachinePublicIPAddressConfigurationProperties{
+				DeleteOption: to.Ptr(armcompute.DeleteOptionsDelete),
+			},
+		}
+		ipConfig.Properties.PublicIPAddressConfiguration = &publicIpConfig
 	}
 
 	config := armcompute.VirtualMachineNetworkInterfaceConfiguration{
