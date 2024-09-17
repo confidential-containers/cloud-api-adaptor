@@ -183,10 +183,14 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 					t.Logf("Current Pod State: %v", string(yamlData))
 				}
 				if pod.Status.Phase == v1.PodRunning {
-					t.Logf("Log of the pod %.v", pod.Name)
+					t.Logf("Log of the pod %v", pod.Name)
 					t.Logf("===================")
 					podLogString, _ := GetPodLog(ctx, client, &pod)
-					t.Logf(podLogString)
+					if podLogString != "" {
+						t.Logf(podLogString)
+					} else {
+						t.Logf("No logs found")
+					}
 					t.Logf("===================")
 				}
 			}
