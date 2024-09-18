@@ -10,7 +10,6 @@ RUN echo "Installing Packages ..." \
       libseccomp pigz fuse-overlayfs \
       nfs-utils which systemd-pam \
       bash ca-certificates curl jq procps \
-    && find /lib/systemd/system/sysinit.target.wants/ -name "systemd-tmpfiles-setup.service" -delete \
     && rm -f /lib/systemd/system/multi-user.target.wants/* \
     && rm -f /etc/systemd/system/*.wants/* \
     && rm -f /lib/systemd/system/local-fs.target.wants/* \
