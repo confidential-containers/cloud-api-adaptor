@@ -168,16 +168,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu
-        provider:
-          - generic
-        arch:
-          - amd64
+        platforms: [
+          { os: ubuntu, provider: generic, arch: "amd64", runner: "az-ubuntu-2204", debug_flag: ""},
+          { os: fedora, provider: generic, arch: "amd64", runner: "az-ubuntu-2204", debug_flag: "-debug"},
+          { os: ubuntu, provider: generic, arch: "s390x", runner: "S390X", debug_flag: "" },
+          { os: fedora, provider: generic,arch: "s390x", runner: "S390X", debug_flag: "-debug" },
+        ]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
+      runner: ${{ matrix.platforms.runner }}
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
-      podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
+      podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.platforms.provider }}-${{ matrix.platforms.os }}-${{ matrix.platforms.arch }}:${{ inputs.podvm_image_tag }}${{ matrix.platforms.debug_flag }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
     secrets: inherit
