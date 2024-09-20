@@ -1,6 +1,6 @@
 # Adapted from https://github.com/kubernetes-sigs/kind/blob/main/images/base/Dockerfile
 
-ARG BASE_IMAGE=registry.fedoraproject.org/fedora:39
+ARG BASE_IMAGE=registry.fedoraproject.org/fedora:40
 FROM $BASE_IMAGE AS base
 
 RUN echo "Installing Packages ..." \
