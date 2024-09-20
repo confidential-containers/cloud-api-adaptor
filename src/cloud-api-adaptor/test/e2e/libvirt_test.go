@@ -77,6 +77,9 @@ func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *te
 }
 
 func TestLibvirtCreateNginxDeployment(t *testing.T) {
+	// This test is causing issues on CI with instability, so skip until we can resolve this.
+	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/2046
+	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestNginxDeployment(t, testEnv, assert)
 }
