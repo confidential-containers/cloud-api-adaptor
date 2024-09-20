@@ -43,18 +43,18 @@ fi
 
 [ -z "$container_binary" ] && error "please install docker or podman"
 
-if [[ -z "$platform" ]]; then
-    # Check if the image name includes "podvm-generic-fedora-s390x-se"
-    # The "podvm-generic-fedora-s390x-se" docker image is built on s390x host, so here must use s390x platform
-    if [[ "$image" == *"podvm-generic-fedora-s390x-se"* ]]; then
-        platform="s390x"
-    else
-        platform="amd64"
-    fi
+platform_flag=""
+if [[ -n "${platform}" ]]; then
+    platform_flag="--platform=${platform}"
+elif [[ "${image}" == *"podvm-generic-ubuntu-s390x"* ]]; then
+    # The podvm-generic-ubuntu-s390x image (which will be deprecated soon) is built on amd64
+    # and therefore has the incorrect platform type, so we need to override it to create the
+    # container to extract the image from. Others can use their default platform
+    platform_flag="--platform=amd64"
 fi
 
 # Create a non-running container to extract image
-$container_binary create --pull=always --platform="$platform" --name "$container_name" "$image" /bin/sh >/dev/null 2>&1;
+$container_binary create --pull=always ${platform_flag} --name "$container_name" "$image" /bin/sh >/dev/null 2>&1;
 # Destory container after use
 rm-container(){
     $container_binary rm -f "$container_name" >/dev/null 2>&1;
