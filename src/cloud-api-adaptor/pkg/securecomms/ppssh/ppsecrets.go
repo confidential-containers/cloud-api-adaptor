@@ -5,7 +5,6 @@ import (
 )
 
 type PpSecrets struct {
-	keys      []string
 	secrets   map[string][]byte
 	getSecret GetSecret
 }
@@ -14,44 +13,54 @@ type GetSecret func(name string) ([]byte, error)
 
 func NewPpSecrets(getSecret GetSecret) *PpSecrets {
 	return &PpSecrets{
-		keys:      []string{},
 		secrets:   make(map[string][]byte),
 		getSecret: getSecret,
 	}
 }
 
-func (fs *PpSecrets) AddKey(key string) {
-	fs.keys = append(fs.keys, key)
+func (sec *PpSecrets) AddKey(key string) {
+	if _, ok := sec.secrets[key]; ok {
+		return
+	}
+	sec.secrets[key] = nil
 }
 
-func (fs *PpSecrets) GetKey(key string) []byte {
-	return fs.secrets[key]
+func (sec *PpSecrets) GetKey(key string) []byte {
+	return sec.secrets[key]
 }
 
-func (fs *PpSecrets) Go() {
+func (sec *PpSecrets) SetKey(key string, keydata []byte) {
+	sec.secrets[key] = keydata
+}
+
+func (sec *PpSecrets) Go() {
 	sleeptime := time.Duration(1)
 
-	for len(fs.keys) > 0 {
-		key := fs.keys[0]
-		logger.Printf("PpSecrets obtaining key %s", key)
-
-		data, err := fs.getSecret(key)
-		if err == nil && len(data) > 0 {
-			logger.Printf("PpSecrets %s success", key)
-			fs.secrets[key] = data
-			fs.keys = fs.keys[1:]
+	for key, keydata := range sec.secrets {
+		if keydata != nil {
 			continue
 		}
-		if err != nil {
-			logger.Printf("PpSecrets %s getSecret err: %v", key, err)
-		} else {
-			logger.Printf("PpSecrets %s getSecret returned an empty secret", key)
-		}
+		logger.Printf("PpSecrets obtaining key %s", key)
 
-		time.Sleep(sleeptime * time.Second)
-		sleeptime *= 2
-		if sleeptime > 30 {
-			sleeptime = 30
+		// loop until we get a valid key
+		for {
+			keydata, err := sec.getSecret(key)
+			if err == nil && len(keydata) > 0 {
+				logger.Printf("PpSecrets %s success", key)
+				sec.secrets[key] = keydata
+				break
+			}
+			if err != nil {
+				logger.Printf("PpSecrets %s getSecret err: %v", key, err)
+			} else {
+				logger.Printf("PpSecrets %s getSecret returned an empty secret", key)
+			}
+
+			time.Sleep(sleeptime * time.Second)
+			sleeptime *= 2
+			if sleeptime > 30 {
+				sleeptime = 30
+			}
 		}
 	}
 }

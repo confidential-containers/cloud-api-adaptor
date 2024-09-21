@@ -183,7 +183,12 @@ func TestPpssh(t *testing.T) {
 	// Forwarder Initialization
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
-	sshServer := NewSshServer([]string{"BOTH_PHASES:KBS:9002"}, []string{"KUBERNETES_PHASE:ABC:127.0.0.1:7105"}, GetSecret(getKey), sshport)
+
+	ppSecrets := NewPpSecrets(GetSecret(getKey))
+	ppSecrets.AddKey(WN_PUBLIC_KEY)
+	ppSecrets.AddKey(PP_PRIVATE_KEY)
+
+	sshServer := NewSshServer([]string{"BOTH_PHASES:KBS:9002"}, []string{"KUBERNETES_PHASE:ABC:127.0.0.1:7105"}, ppSecrets, sshport)
 	_ = sshServer.Start(ctx)
 	clientSshPeer, conn := getAttestationClient(t, sshport)
 	clientSshPeer.AddTags(inbounds, outbounds)

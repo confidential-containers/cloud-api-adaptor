@@ -30,7 +30,7 @@ type SshServer struct {
 	outbounds sshproxy.Outbounds
 	wg        sync.WaitGroup
 	readyCh   chan struct{}
-	getSecret GetSecret
+	ppSecrets *PpSecrets
 	sshport   string
 	listener  net.Listener
 	ctx       context.Context
@@ -42,9 +42,9 @@ type SshServer struct {
 // Structure of an inbound tag: "<MyPort>:<InboundName>:<phase>"
 // Structure of an outbound tag: "<DesPort>:<DesHost>:<outboundName>:<phase>"
 // Phase may be "A" (Attestation), "K" (Kubernetes), or "B" (Both)
-func NewSshServer(inbound_strings, outbounds_strings []string, getSecret GetSecret, sshport string) *SshServer {
+func NewSshServer(inbound_strings, outbounds_strings []string, ppSecrets *PpSecrets, sshport string) *SshServer {
 	s := &SshServer{
-		getSecret: getSecret,
+		ppSecrets: ppSecrets,
 		sshport:   sshport,
 		readyCh:   make(chan struct{}),
 	}
@@ -119,11 +119,8 @@ func (s *SshServer) attestationPhase() *ssh.ServerConfig {
 
 	for ctx.Err() == nil {
 		logger.Printf("Attestation phase: getting keys from KBS\n")
-		ppSecrets := NewPpSecrets(s.getSecret)
-		ppSecrets.AddKey(WN_PUBLIC_KEY)
-		ppSecrets.AddKey(PP_PRIVATE_KEY)
-		ppSecrets.Go() // wait for the keys
-		config, err := initKubernetesPhaseSshConfig(ppSecrets)
+		s.ppSecrets.Go() // wait for the keys
+		config, err := initKubernetesPhaseSshConfig(s.ppSecrets)
 		if err == nil {
 			logger.Printf("Attestation phase: InitKubernetesPhaseSshConfig is ready\n")
 			peer.Upgrade()

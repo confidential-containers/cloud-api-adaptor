@@ -21,7 +21,7 @@ func WN() bool {
 	test.HttpServer("26443")
 
 	// CAA Initialization
-	sshClient, err := wnssh.InitSshClient([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, []string{"BOTH_PHASES:KBS:9004", "KUBERNETES_PHASE:KUBEAPI:26443", "KUBERNETES_PHASE:DNS:8053"}, "127.0.0.1:9004", sshutil.SSHPORT)
+	sshClient, err := wnssh.InitSshClient([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, []string{"BOTH_PHASES:KBS:9004", "KUBERNETES_PHASE:KUBEAPI:26443", "KUBERNETES_PHASE:DNS:8053"}, true, "127.0.0.1:9004", sshutil.SSHPORT)
 	if err != nil {
 		log.Fatalf("InitSshClient %v", err)
 	}
@@ -30,7 +30,7 @@ func WN() bool {
 	ipAddr, _ := netip.ParseAddr("127.0.0.1") // ipAddr of the VM
 	ipAddrs := []netip.Addr{ipAddr}
 	ctx := context.Background()
-	ci := sshClient.InitPP(ctx, "sid", ipAddrs)
+	ci, _ := sshClient.InitPP(ctx, "sid")
 	if ci == nil {
 		log.Fatalf("failed InitiatePeerPodTunnel")
 	}
@@ -41,7 +41,7 @@ func WN() bool {
 		log.Fatalf("failed find port")
 	}
 
-	if err := ci.Start(); err != nil {
+	if err := ci.Start(ipAddrs); err != nil {
 		log.Fatalf("failed ci.Start: %s", err)
 	}
 

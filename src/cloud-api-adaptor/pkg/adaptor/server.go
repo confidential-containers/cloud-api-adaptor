@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/containerd/ttrpc"
 	pbHypervisor "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
@@ -21,7 +20,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/vminfo"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/sshutil"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	pbPodVMInfo "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/proto/podvminfo"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
@@ -32,22 +30,6 @@ const (
 	DefaultSocketPath = "/run/peerpod/hypervisor.sock"
 	DefaultPodsDir    = "/run/peerpod/pods"
 )
-
-type ServerConfig struct {
-	TLSConfig               *tlsutil.TLSConfig
-	SocketPath              string
-	PauseImage              string
-	PodsDir                 string
-	ForwarderPort           string
-	ProxyTimeout            time.Duration
-	Initdata                string
-	EnableCloudConfigVerify bool
-	SecureComms             bool
-	SecureCommsInbounds     string
-	SecureCommsOutbounds    string
-	SecureCommsKbsAddress   string
-	PeerPodsLimitPerNode    int
-}
 
 type Server interface {
 	Start(ctx context.Context) error
@@ -68,14 +50,12 @@ type server struct {
 	PeerPodsLimitPerNode    int
 }
 
-func NewServer(provider provider.Provider, cfg *ServerConfig, workerNode podnetwork.WorkerNode) Server {
+func NewServer(provider provider.Provider, cfg *cloud.ServerConfig, workerNode podnetwork.WorkerNode) Server {
 
 	logger.Printf("server config: %#v", cfg)
 
 	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout)
-	cloudService := cloud.NewService(provider, agentFactory, workerNode,
-		cfg.SecureComms, cfg.SecureCommsInbounds, cfg.SecureCommsOutbounds,
-		cfg.SecureCommsKbsAddress, cfg.PodsDir, cfg.ForwarderPort, cfg.Initdata, sshutil.SSHPORT)
+	cloudService := cloud.NewService(provider, agentFactory, workerNode, cfg, sshutil.SSHPORT)
 	vmInfoService := vminfo.NewService(cloudService)
 
 	return &server{

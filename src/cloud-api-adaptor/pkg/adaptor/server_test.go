@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
@@ -150,7 +151,7 @@ func newServer(t *testing.T, socketPath, podsDir string) Server {
 
 	port := startAgentServer(t)
 	provider := &mockProvider{}
-	serverConfig := &ServerConfig{
+	serverConfig := &cloud.ServerConfig{
 		SocketPath:              socketPath,
 		PodsDir:                 podsDir,
 		ForwarderPort:           port,
