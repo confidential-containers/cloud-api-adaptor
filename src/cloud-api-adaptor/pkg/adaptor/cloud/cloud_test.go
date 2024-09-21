@@ -117,7 +117,14 @@ func TestCloudService(t *testing.T) {
 		podsDir: dir,
 	}
 
-	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, false, "", "", "", dir, forwarder.DefaultListenPort, "", "")
+	cfg := &ServerConfig{
+		SecureComms:   false,
+		PodsDir:       dir,
+		ForwarderPort: forwarder.DefaultListenPort,
+	}
+
+	// false, "", "", "", "", "", dir, forwarder.DefaultListenPort, ""
+	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, cfg, "")
 
 	assert.NotNil(t, s)
 
@@ -163,7 +170,12 @@ func TestCloudServiceWithSecureComms(t *testing.T) {
 	// create a podvm
 	gkc := test.NewGetKeyClient("9019")
 	ctx2, cancel := context.WithCancel(context.Background())
-	sshServer := ppssh.NewSshServer([]string{"BOTH_PHASES:KBS:9019"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7111"}, ppssh.GetSecret(gkc.GetKey), sshport)
+
+	ppSecrets := ppssh.NewPpSecrets(ppssh.GetSecret(gkc.GetKey))
+	ppSecrets.AddKey(ppssh.WN_PUBLIC_KEY)
+	ppSecrets.AddKey(ppssh.PP_PRIVATE_KEY)
+
+	sshServer := ppssh.NewSshServer([]string{"BOTH_PHASES:KBS:9019"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7111"}, ppSecrets, sshport)
 	_ = sshServer.Start(ctx2)
 	defer func() {
 		cancel()
@@ -175,7 +187,15 @@ func TestCloudServiceWithSecureComms(t *testing.T) {
 		podsDir: dir,
 	}
 
-	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, true, "", "", "127.0.0.1:9009", dir, forwarder.DefaultListenPort, "", sshport)
+	cfg := &ServerConfig{
+		SecureComms:           true,
+		SecureCommsTrustee:    true,
+		PodsDir:               dir,
+		ForwarderPort:         forwarder.DefaultListenPort,
+		SecureCommsKbsAddress: "127.0.0.1:9009",
+	}
+
+	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, cfg, sshport)
 
 	assert.NotNil(t, s)
 

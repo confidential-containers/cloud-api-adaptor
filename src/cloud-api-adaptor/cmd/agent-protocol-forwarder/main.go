@@ -93,7 +93,9 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		return nil, err
 	}
 
-	if secureComms {
+	if secureComms || cfg.daemonConfig.SecureComms {
+		var inbounds, outbounds []string
+
 		ppssh.Singleton()
 		host, port, err := net.SplitHostPort(cfg.listenAddr)
 		if err != nil {
@@ -103,15 +105,32 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 			logger.Printf("Address %s is changed to 127.0.0.1:%s since secure-comms is enabled.", cfg.listenAddr, port)
 			cfg.listenAddr = "127.0.0.1:" + port
 		}
-		inbounds := append([]string{"BOTH_PHASES:KBS:8080"}, strings.Split(secureCommsInbounds, ",")...)
-		outbounds := append([]string{"KUBERNETES_PHASE:KATAAGENT:" + port}, strings.Split(secureCommsOutbounds, ",")...)
 
 		// Create a Client that will approach the api-server-rest service at the podns
 		// To obtain secrets from KBS, we approach the api-server-rest service which then approaches the CDH asking for a secret resource
 		// the CDH than contact the KBS (possibly after approaching Attestation Agent for a token) and the KBS serves the requested key
 		// The communication between the CDH (and Attestation Agent) and the KBS is performed via an SSH tunnel named  "KBS"
 		apic := apic.NewApiClient(API_SERVER_REST_PORT, cfg.podNamespace)
-		services = append(services, ppssh.NewSshServer(inbounds, outbounds, ppssh.GetSecret(apic.GetKey), sshutil.SSHPORT))
+
+		ppSecrets := ppssh.NewPpSecrets(ppssh.GetSecret(apic.GetKey))
+
+		if secureComms {
+			// CoCo
+			ppSecrets.AddKey(ppssh.WN_PUBLIC_KEY)
+			ppSecrets.AddKey(ppssh.PP_PRIVATE_KEY)
+		} else {
+			// non-CoCo
+			ppSecrets.SetKey(ppssh.WN_PUBLIC_KEY, cfg.daemonConfig.WnPublicKey)
+			ppSecrets.SetKey(ppssh.PP_PRIVATE_KEY, cfg.daemonConfig.PpPrivateKey)
+		}
+
+		inbounds = append([]string{"BOTH_PHASES:KBS:8080"}, strings.Split(secureCommsInbounds, ",")...)
+		inbounds = append(inbounds, strings.Split(cfg.daemonConfig.SecureCommsInbounds, ",")...)
+
+		outbounds = append([]string{"KUBERNETES_PHASE:KATAAGENT:" + port}, strings.Split(secureCommsOutbounds, ",")...)
+		outbounds = append(outbounds, strings.Split(cfg.daemonConfig.SecureCommsOutbounds, ",")...)
+
+		services = append(services, ppssh.NewSshServer(inbounds, outbounds, ppSecrets, sshutil.SSHPORT))
 	} else {
 		if !disableTLS {
 			cfg.tlsConfig = &tlsConfig

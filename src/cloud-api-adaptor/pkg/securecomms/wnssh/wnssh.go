@@ -25,6 +25,7 @@ type SshClient struct {
 	inboundStrings  []string
 	outboundStrings []string
 	sshport         string
+	wnPublicKey     []byte
 }
 
 type SshClientInstance struct {
@@ -51,7 +52,7 @@ func PpSecretName(sid string) string {
 // Structure of an inbound tag: "<MyPort>:<InboundName>:<phase>"
 // Structure of an outbound tag: "<DesPort>:<DesHost>:<outboundName>:<phase>"
 // Phase may be "A" (Attestation), "K" (Kubernetes), or "B" (Both)
-func InitSshClient(inbound_strings, outbound_strings []string, kbsAddress string, sshport string) (*SshClient, error) {
+func InitSshClient(inbound_strings, outbound_strings []string, secureCommsTrustee bool, kbsAddress string, sshport string) (*SshClient, error) {
 	logger.Printf("Using PP SecureComms: InitSshClient version %s", sshutil.PpSecureCommsVersion)
 
 	// Read WN Secret
@@ -72,22 +73,25 @@ func InitSshClient(inbound_strings, outbound_strings []string, kbsAddress string
 		return nil, fmt.Errorf("unable to parse private key: %v", err)
 	}
 
-	kbscPrivateKey, _, err := kubemgr.KubeMgr.ReadSecret(sshutil.KBS_CLIENT_SECRET)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read KBS client secret: %w", err)
-	}
+	var kc *KbsClient
+	if secureCommsTrustee {
+		kbscPrivateKey, _, err := kubemgr.KubeMgr.ReadSecret(sshutil.KBS_CLIENT_SECRET)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read KBS client secret: %w", err)
+		}
 
-	kc := InitKbsClient(kbsAddress)
-	err = kc.SetPemSecret(kbscPrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("KbsClient - %v", err)
-	}
+		kc = InitKbsClient(kbsAddress)
+		err = kc.SetPemSecret(kbscPrivateKey)
+		if err != nil {
+			return nil, fmt.Errorf("KbsClient - %v", err)
+		}
 
-	wnSecretPath := "default/sshclient/publicKey"
-	logger.Printf("Updating KBS with secret for: %s", wnSecretPath)
-	err = kc.PostResource(wnSecretPath, wnPublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to PostResource WN Secret: %v", err)
+		wnSecretPath := "default/sshclient/publicKey"
+		logger.Printf("Updating KBS with secret for: %s", wnSecretPath)
+		err = kc.PostResource(wnSecretPath, wnPublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to PostResource WN Secret: %v", err)
+		}
 	}
 
 	sshClient := &SshClient{
@@ -96,6 +100,7 @@ func InitSshClient(inbound_strings, outbound_strings []string, kbsAddress string
 		inboundStrings:  inbound_strings,
 		outboundStrings: outbound_strings,
 		sshport:         sshport,
+		wnPublicKey:     wnPublicKey,
 	}
 
 	return sshClient, nil
@@ -123,9 +128,13 @@ func (ci *SshClientInstance) DisconnectPP(sid string) {
 	kubemgr.KubeMgr.DeleteSecret(PpSecretName(sid))
 }
 
-func (c *SshClient) InitPP(ctx context.Context, sid string, ipAddr []netip.Addr) *SshClientInstance {
+func (c *SshClient) GetWnPublicKey() []byte {
+	return c.wnPublicKey
+}
+
+func (c *SshClient) InitPP(ctx context.Context, sid string) (ci *SshClientInstance, ppPrivateKey []byte) {
 	// Create peerPod Secret named peerPodId
-	var ppPublicKey, ppPrivateKey []byte
+	var ppPublicKey []byte
 	var err error
 	var kubernetesPhase bool
 
@@ -136,43 +145,39 @@ func (c *SshClient) InitPP(ctx context.Context, sid string, ipAddr []netip.Addr)
 		ppPrivateKey, ppPublicKey, err = kubemgr.KubeMgr.CreateSecret(PpSecretName(sid))
 		if err != nil {
 			logger.Printf("Failed to create PP secret: %v", err)
-			return nil
+			return
 		}
 	} else {
 		// we already have a store secret for this PP
 		kubernetesPhase = true
 	}
 
-	// >>> Update the KBS about the SID's Secret !!! <<<
-	sidSecretPath := fmt.Sprintf("default/pp-%s/privateKey", sid)
-	logger.Printf("Updating KBS with secret for: %s", sidSecretPath)
-	err = c.kc.PostResource(sidSecretPath, ppPrivateKey)
-	if err != nil {
-		logger.Printf("Failed to PostResource PP Secret: %v", err)
-		return nil
-	}
+	if c.kc != nil {
+		// >>> Update the KBS about the SID's Secret !!! <<<
+		sidSecretPath := fmt.Sprintf("default/pp-%s/privateKey", sid)
+		logger.Printf("Updating KBS with secret for: %s", sidSecretPath)
+		err = c.kc.PostResource(sidSecretPath, ppPrivateKey)
+		if err != nil {
+			logger.Printf("Failed to PostResource PP Secret: %v", err)
+			return
+		}
 
+	}
 	var ppSshPublicKeyBytes []byte
 
 	if len(ppPublicKey) > 0 {
 		ppSshPublicKey, _, _, _, err := ssh.ParseAuthorizedKey(ppPublicKey)
 		if err != nil {
 			logger.Printf("Unable to ParseAuthorizedKey serverPublicKey: %v", err)
-			return nil
+			return
 		}
 		ppSshPublicKeyBytes = ppSshPublicKey.Marshal()
 	}
 
-	ppAddr := make([]string, len(ipAddr))
-	for i, ip := range ipAddr {
-		ppAddr[i] = ip.String() + ":" + c.sshport
-	}
-
 	ctx, cancel := context.WithCancel(ctx)
-	ci := &SshClientInstance{
+	ci = &SshClientInstance{
 		sid:             sid,
 		ppPublicKey:     ppSshPublicKeyBytes,
-		ppAddr:          ppAddr,
 		sshClient:       c,
 		ctx:             ctx,
 		cancel:          cancel,
@@ -188,10 +193,17 @@ func (c *SshClient) InitPP(ctx context.Context, sid string, ipAddr []netip.Addr)
 		logger.Fatalf("Failed to parse outbound tag %v: %v", c.outboundStrings, err)
 	}
 
-	return ci
+	return
 }
 
-func (ci *SshClientInstance) Start() error {
+func (ci *SshClientInstance) Start(ipAddr []netip.Addr) error {
+	ppAddr := make([]string, len(ipAddr))
+	for i, ip := range ipAddr {
+		ppAddr[i] = ip.String() + ":" + ci.sshClient.sshport
+	}
+
+	ci.ppAddr = ppAddr
+
 	if !ci.kubernetesPhase {
 		// Attestation phase
 		logger.Println("Attestation phase: starting")

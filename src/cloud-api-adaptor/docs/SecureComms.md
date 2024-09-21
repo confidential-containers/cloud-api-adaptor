@@ -2,30 +2,94 @@
 
 Here, we describe how to set up the Secure Communications (`Secure Comms` for short) feature of the `cloud-api-adaptor` (`Adaptor`) and `agent-protocol-forwarder` (`Forwarder`).
 
-The `Secure Comms` feature establishes an SSH channel by the `Adaptor` as an SSH client and the `Forwarder` as an SSH server. All control communications then use this SSH channel between the `Adaptor` and `Forwarder`. Secure Comms use a two-phase approach:
+The `Secure Comms` feature establishes an SSH channel by the `Adaptor`, as an SSH client, and the `Forwarder`, as an SSH server. All control communications then use this SSH channel between the `Adaptor` and `Forwarder`. This feature is an alternative to using `TLS encryption` feature between the `Adaptor` and `Forwarder`. 
+
+Both `Secure Comms` and `TLS encryption` supports a method of delivering keys to encrypt the control-plane traffic between the `Adaptor` and the `Forwarder` via user-data during pod VM creation. Delivering the keys via the user-data may allow a malicious entity on the cloud provider side to gain access to the keys and modify any communication between the Worker Nodes and Peer Pods. For this reason, `Secure Comms` also supports an alternate mode where the keys are delivered to the Peer Pod via `Trustee`. The keys are delivered to the Peer Pod after an attestation phase (See diagram below). Delivering the keys via `Trustee` protects the Peer Pod from a malicious entity on the cloud provider side. 
+We name this mode of operation as `Trustee Mode`. The option of delivering keys via user-data is named  as `NoTrustee Mode`.
+
+<p align="center">
+  <img width="500"  src="SecureComms_TLS.png">
+</p>
+
+
+To deliver the secrets via `Trustee`, `Secure Comms` under `Trustee Mode` uses a two-phase approach:
 - Attestation Phase: In this phase, an SSH channel is created to enable the Peer Pod to attest against an attestation service. The attestation traffic is tunneled from the Peer Pod to the CAA and from there sent to a KBS as configured at the CAA. Once attestation is achieved, the Forwarder obtains Peer Pod keys from the KBS. The Peer Pod keys are dynamically added to the KBS by the CAA prior to starting the Peer Pod.
 - Kubernetes Phase: In this phase, an SSH channel is created to enable the runtime to communicate with the Kata Agent running in the Peer Pod. This phase uses the keys obtained during the Attestation Phase, ensuring that the communication is secured.
 
 Additional tunnels can be established via the SSH channel by configuring the Adaptor and Forwarder as described below.
 
 ## Secure Comms Architecture
-`Secure Comms` secures the communication between  the cluster Worker Nodes and Peer Pods. The Worker Nodes are assumed to be protected by a firewall and can be kept unreachable from outside of the cluster of Worker Nodes. To communicate with Peer Pods, an SSH channel is created from the Worker Node allocated to run the Peer Pod and the Peer Pod VM. This SSH channel can then be used for all communication between the Peer Pod and the cluster and any back end services running at the cluster or elsewhere. As shown in the diagram, once the SSH channel is created, clients at the Peer Pod VM side such as `KBC`, `Attestation Agent`, etc. may connect to services offered by the cluster side such as `KBS`, `Attestation Services`, etc. At the same time, clients located at the cluster side such as the `Runtime shim`, may connect to services offered by the Peer Pod VM side such as the `Kata Agent`.
+`Secure Comms` uses a Go SSH Lib to secure the communication between the cluster Worker Nodes and Peer Pods. To communicate with the Peer Pods, an SSH channel is created between the `Adaptor` in the Worker Node and the `Forwarder` in the Peer Pod. 
+The Worker Node is the client part of the channel, and the Peer Pod is the server part of the SSH channel. All communications between the Peer Pod and any services available on the Worker Node side can be configured to use the SSH channel.
 
+Once an SSH channel is established, a Port Forwarding layer, implemented on top of the Go SSH Lib, is used to secure any port to port communication initiated between the `Adaptor` and `Forwarder` and vice versa (see diagram). A client (1) seeking to communicate to the other side, comunicates with a local Inbound component (2) instead. The local Inbound act as a local server for the client. Once a connection is made to the Inbound, a tunnel (3) is created between the local Inbound and a remote Outbound component (4) via the SSH channel. The remote Outbound than acts as a client on behalf of the real client (1) and connect to the remote server (5) to establish an end to end session between the real client (1) and real server (5).
+
+<p align="center">
+  <img width="500"  src="ScPortForwarding.png">
+</p>
+
+
+Once the SSH channel is created, clients at the Peer Pod side such as `Attestation Agent` connects to the services offered by the cluster side such as `KBS` using the channel. Likewise, clients located at the cluster side such as the `Kata shim`, connects to the services on the Peer Pod side such as the `Kata Agent` using the same channel.
+
+As shown in the following diagram, using `SecureComms`, each Peer Pod is consequently served using a single communication channel implemented as an SSH channel. This single TCP session is initiated from the Worker Node and terminated at the Peer Pod. It is used for any control communication between the Worker Node and Peer Pod and vice versa. This consolidation of communication between a Worker Node and Peer Pod via a single SSH channel improves the operational aspects of Worker Node and Peer Pod communication, especially when Worker Node and Peer Pod are in different networks. The Worker Node network does not need to open ingress ports to expose services to Peer Pod. For example, when the communication between CDH (in Peer Pod) and the Trustee (in the Worker Node network) is via the SSH channel, the Trustee service port does not need to be open to enable communication with CDH (Peer Pod).
 
 <p align="center">
   <img width="500"  src="SecureComms.png">
 </p>
 
-SecureComms uses the following sequence of steps:
+`SecureComms` in `Trustee Mode` uses the following sequence of steps:
 - Worker Node creates keys for the Peer Pod and updates Trustee
 - Worker Node creates the Peer Pod VM
 - Worker Node establishes an "Attestation Phase" SSH channel with the Peer Pod VM
 - Peer Pod VM attests and obtain keys from Trustee. The Peer Pod then signal to the Worker Node that the "Attestation Phase" has ended and terminates the "Attestation Phase" SSH channel.
-- Worker Node establishes an "Kubernetes Phase" SSH channel with the Peer Pod VM  - Both sides verify the identity of the other side using the keys delivered via Trustee.
+- Worker Node establishes a "Kubernetes Phase" SSH channel with the Peer Pod VM - Both sides verify the identity of the other side using the keys delivered via Trustee.
 
-Once the "Kubernetes Phase" SSH channel is established, Secure Comms connects the `Runtime shim` to the `Kata Agent` and may also connect other services required by the Peer Pod VM or by containers running inside the Peer Pod.
+`SecureComms` in `NoTrustee Mode` uses the following sequence of steps:
+- Worker Node creates keys for the Peer Pod
+- Worker Node creates the Peer Pod VM and deliver the keys via daemonConfig as part of the userdata of the Cloud API.
+- Peer Pod VM obtain keys from daemonConfig.
+- Worker Node establishes a "Kubernetes Phase" SSH channel with the Peer Pod VM - Both sides verify the identity of the other side using the keys delivered via daemonConfig.
+
+Once the "Kubernetes Phase" SSH channel is established, Secure Comms connects the `Kata shim` to the `Kata Agent` and may also connect other services required by the Peer Pod VM or by containers running inside the Peer Pod.
 
 See [Secure Comms Architecture Slides](./SecureComms.pdf) for more details.
+
+## Setup for testing and for non-CoCo peerpods with NoTrustee mode
+
+### Deploy CAA
+Use any of the option for installing CAA depending on the cloud driver used.
+
+
+### Activate Secure-Comms feature from CAA side
+Make the following parameter changes to the `peer-pods-cm` configMap in the `confidential-containers-system` namespace.
+- Activate Secure-Comms from CAA side by setting the `SECURE_COMMS` parameter to `"true"`.  
+- Deactivate Secure-Comms use of Trustee by setting the `SECURE_COMMS_NO_TRUSTEE` parameter to `"true"`.  
+
+Use `kubectl edit cm peer-pods-cm -n confidential-containers-system` to make such changes in the configMap, for example:
+```sh
+apiVersion: v1
+data:
+    ...
+    SECURE_COMMS: "true"
+    SECURE_COMMS_NO_TRUSTEE: "true"
+    ...
+```
+
+You may also include additional Inbounds and Outbounds configurations to the Adaptor side using the `SECURE_COMMS_INBOUNDS` and `SECURE_COMMS_OUTBOUNDS` config points.
+You may also add Inbounds and Outbounds configurations to the Forwarder (I.e. Peer Pod, PP) side using the `SECURE_COMMS_PP_INBOUNDS` and `SECURE_COMMS_PP_OUTBOUNDS` config points. [See more details regarding Inbounds and Outbounds below.](#adding-named-tunnels-to-the-ssh-channel)
+
+Use `kubectl edit cm peer-pods-cm -n confidential-containers-system` to make such changes in the configMap, for example:
+```sh
+apiVersion: v1
+data:
+    ...
+    SECURE_COMMS: "true"
+    SECURE_COMMS_NO_TRUSTEE: "true"
+    SECURE_COMMS_OUTBOUNDS: "KUBERNETES_PHASE:mytunnel:149.81.64.62:7777"
+    SECURE_COMMS_PP_INBOUNDS: "KUBERNETES_PHASE:mytunnel:podns:6666"
+  
+    ...
+```
 
 ## Setup for CoCo with Trustee
 
@@ -160,7 +224,7 @@ Testing securecomms as a standalone can be done by using:
 cd src/cloud-api-adaptor
 go run ./test/securecomms/double/main.go
 ```
-This will create a client and a server and mimic the connection between a CAA client to a PP Server
+This will create a client and a server and mimic the connection between a CAA client to a Peer Pod Server
 Successful connection result in exit code of 0
 
 Alternatively, the client and server can be separately executed in independent terminals using `./test/securecomms/double/wnssh.go` and `./test/securecomms/ppssh/main.go` respectively.
@@ -172,6 +236,4 @@ To facilitate end-to-end testing, the libvirt github workflow `e2e_libvirt.yaml`
 ## Future Plans
 
 - Add DeleteResource() support in KBS, KBC, api-server-rest, than cleanup resources added by Secure Comms to KBS whenever a Peer Pod fail to be created or when a Peer Pod is terminated.
-- Add support for running the vxlan tunnel traffic via a Secure Comms SSH tunnel
-- Add support for non-confidential Peer Pods which do not go via an Attestation Phase.
 - Add support for KBS identities allowing a Peer Pod to register its own identity in KBS and replace the current Secure Comms mechanism which delivers a private key to the Peer Pod via the KBS
