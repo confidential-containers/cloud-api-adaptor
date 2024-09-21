@@ -295,7 +295,15 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		}
 	}
 
-	fmt.Printf("Wait for the %s runtimeclass be created\n", p.runtimeClass.GetName())
+	cmd = exec.Command("kubectl", "get", "cm", "peer-pods-cm", "-n", "confidential-containers-system", "-o", "yaml")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err = cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Wait for the %s runtimeclass be created\n", p.runtimeClass.GetName())
 	if err = wait.For(conditions.New(resources).ResourcesFound(&nodev1.RuntimeClassList{Items: []nodev1.RuntimeClass{*p.runtimeClass}}),
 		wait.WithTimeout(time.Second*60)); err != nil {
 		return err
