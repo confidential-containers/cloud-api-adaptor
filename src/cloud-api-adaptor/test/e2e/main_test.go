@@ -5,7 +5,9 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"testing"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
@@ -58,6 +60,12 @@ func TestMain(m *testing.M) {
 	// unless it is running with an in-cluster configuration.
 	testEnv = env.New()
 
+	// TEST_CAA_LOG is an option variable which specifies whether the CAA Log should be
+	// presented at the end of the test or not
+	shouldCaaLog := true
+	if os.Getenv("TEST_CAA_LOG") == "no" {
+		shouldCaaLog = false
+	}
 	// TEST_TEARDOWN is an option variable which specifies whether the teardown code path
 	// should run or not.
 	shouldTeardown := true
@@ -192,6 +200,18 @@ func TestMain(m *testing.M) {
 
 	// Run *once* after the tests.
 	testEnv.Finish(func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+
+		if shouldCaaLog {
+			fmt.Printf("CAA LOG: STARTING\n")
+			caaLogTailCmd := exec.Command("kubectl", "logs", "daemonset/cloud-api-adaptor-daemonset", "-n", "confidential-containers-system")
+			caaLogTailCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+			caaLogTailCmd.Stdout = os.Stdout
+			caaLogTailCmd.Stderr = os.Stderr
+			if err := caaLogTailCmd.Run(); err != nil {
+				return ctx, err
+			}
+		}
+
 		if !shouldTeardown {
 			return ctx, nil
 		}
