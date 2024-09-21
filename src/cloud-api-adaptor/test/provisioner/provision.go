@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -220,7 +221,6 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 		wait.WithTimeout(time.Minute*1)); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -295,7 +295,17 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		}
 	}
 
-	fmt.Printf("Wait for the %s runtimeclass be created\n", p.runtimeClass.GetName())
+	log.Trace("CAA ConfigMap:\n")
+	caaConfigMap := exec.Command("kubectl", "get", "cm", "peer-pods-cm", "-n", "confidential-containers-system", "-o", "yaml")
+	caaConfigMap.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	caaConfigMapOut := new(strings.Builder)
+	caaConfigMap.Stdout = caaConfigMapOut
+	if err = caaConfigMap.Run(); err != nil {
+		return err
+	}
+	log.Tracef("%v, CAA ConfigMap: \n%s", caaConfigMap, caaConfigMapOut.String())
+
+	log.Infof("Wait for the %s runtimeclass be created\n", p.runtimeClass.GetName())
 	if err = wait.For(conditions.New(resources).ResourcesFound(&nodev1.RuntimeClassList{Items: []nodev1.RuntimeClass{*p.runtimeClass}}),
 		wait.WithTimeout(time.Second*60)); err != nil {
 		return err
