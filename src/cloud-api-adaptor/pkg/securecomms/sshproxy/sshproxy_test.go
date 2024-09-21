@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
+	"io/fs"
 	"net"
 	"sync"
 	"testing"
@@ -11,6 +13,9 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/sshutil"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/securecomms/test"
+	"github.com/google/uuid"
+	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -126,6 +131,78 @@ func TestSshProxy(t *testing.T) {
 	inbounds.DelAll()
 }
 
+func TestSshProxyWithNamespace(t *testing.T) {
+	var wg sync.WaitGroup
+
+	clientSshPeer, serverSshPeer := getPeers(t)
+
+	namespace := uuid.NewString()
+	nsPath := "/run/netns/" + namespace
+	// Create a new network namespace
+	newns, err := netns.NewNamed(namespace)
+	if err != nil && !errors.Is(err, fs.ErrExist) {
+		if errors.Is(err, fs.ErrPermission) {
+			t.Skip("Skip due to missing permissions - run privileged!")
+		}
+		t.Errorf("netns.NewNamed(%s) returned err %s", namespace, err.Error())
+	}
+	defer func() {
+		newns.Close()
+		if err := netns.DeleteNamed(namespace); err != nil {
+			t.Errorf("failed to delete a named network namespace %s: %v", namespace, err)
+		}
+	}()
+
+	link, err := netlink.LinkByName("lo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// bring the interface up
+	if err := netlink.LinkSetUp(link); err != nil {
+		t.Fatal(err)
+	}
+
+	outbounds := Outbounds{}
+	if err := outbounds.AddTags([]string{"ATTESTATION_PHASE:ABC:127.0.0.1:7020", "  	"}); err != nil {
+		t.Error(err)
+		return
+	}
+	inboundPorts := map[string]string{}
+	inbounds := Inbounds{}
+	if err := inbounds.AddTags([]string{"ATTESTATION_PHASE:ABC:" + namespace + ":7010", "  	"}, inboundPorts, &wg); err != nil {
+		t.Error(err)
+		return
+	}
+
+	serverSshPeer.AddOutbounds(outbounds)
+	clientSshPeer.AddInbounds(inbounds)
+
+	clientSshPeer.Ready()
+	serverSshPeer.Ready()
+
+	s := test.HttpServer("7020")
+	success := test.HttpClientInNamespace("http://127.0.0.1:7010", nsPath)
+	if !success {
+		t.Error("Failed - not successful")
+		return
+	}
+	if err := s.Shutdown(context.Background()); err != nil {
+		t.Error(err)
+		return
+	}
+
+	serverSshPeer.Upgrade()
+	serverSshPeer.Close("Test Finish")
+
+	clientSshPeer.Wait()
+	if !clientSshPeer.IsUpgraded() {
+		t.Errorf("attestation phase closed without being upgraded")
+		return
+	}
+	inbounds.DelAll()
+}
+
 func TestSshProxyReverse(t *testing.T) {
 	var wg sync.WaitGroup
 
@@ -201,5 +278,46 @@ func TestSshProxyReverseKBS(t *testing.T) {
 	clientSshPeer.Wait()
 	if !clientSshPeer.IsUpgraded() {
 		t.Errorf("attestation phase closed without being upgraded")
+	}
+}
+
+func TestParseTag(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		tag       string
+		wantPort  int
+		wantHost  string
+		wantName  string
+		wantPhase string
+		wantErr   bool
+	}{
+		{name: "<Phase>:<Name>:<Port>", tag: "KUBERNETES_PHASE:nn:12", wantPort: 12, wantHost: "", wantName: "nn", wantPhase: "KUBERNETES_PHASE", wantErr: false},
+		{name: "<Phase>:<Name>:<Host/NS>:<Port>", tag: "ATTESTATION_PHASE:nn:12", wantPort: 12, wantHost: "", wantName: "nn", wantPhase: "ATTESTATION_PHASE", wantErr: false},
+		{name: "<Bad Phase>:<Name>:<Port>", tag: "MY_PHASE:nn:12", wantPort: 12, wantHost: "", wantName: "nn", wantPhase: "MY_PHASE", wantErr: true},
+		{name: "<X>:<Y>", tag: "ATTESTATION_PHASE:12", wantPort: 0, wantHost: "", wantName: "", wantPhase: "", wantErr: true},
+		{name: "<X>", tag: "ATTESTATION_PHASE", wantPort: 0, wantHost: "", wantName: "", wantPhase: "", wantErr: true},
+		{name: "<X>:<Y>:<Z><A><B>", tag: "ATTESTATION_PHASE:12", wantPort: 0, wantHost: "", wantName: "", wantPhase: "", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotPort, gotHost, gotName, gotPhase, err := ParseTag(tt.tag)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseTag() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotPort != tt.wantPort {
+				t.Errorf("ParseTag() gotPort = %v, want %v", gotPort, tt.wantPort)
+			}
+			if gotHost != tt.wantHost {
+				t.Errorf("ParseTag() gotHost = %v, want %v", gotHost, tt.wantHost)
+			}
+			if gotName != tt.wantName {
+				t.Errorf("ParseTag() gotName = %v, want %v", gotName, tt.wantName)
+			}
+			if gotPhase != tt.wantPhase {
+				t.Errorf("ParseTag() gotPhase = %v, want %v", gotPhase, tt.wantPhase)
+			}
+		})
 	}
 }
