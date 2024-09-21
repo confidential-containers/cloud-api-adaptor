@@ -18,6 +18,11 @@ func TestLibvirtCreateSimplePod(t *testing.T) {
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
+func TestLibvirtCreateSimplePodWithSecureCommsIsValid(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestLibvirtCreateSimplePodWithSecureCommsIsValid(t, testEnv, assert)
+}
+
 func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)

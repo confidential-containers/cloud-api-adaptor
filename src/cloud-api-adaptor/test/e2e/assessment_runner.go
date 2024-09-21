@@ -72,6 +72,7 @@ type TestCase struct {
 	expectedInstanceType        string
 	isNydusSnapshotter          bool
 	alternateImageName          string
+	secureCommsIsActive         bool
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -131,6 +132,11 @@ func (tc *TestCase) WithExpectedInstanceType(expectedInstanceType string) *TestC
 
 func (tc *TestCase) WithAlternateImage(alternateImageName string) *TestCase {
 	tc.alternateImageName = alternateImageName
+	return tc
+}
+
+func (tc *TestCase) WithSecureCommsIsActive() *TestCase {
+	tc.secureCommsIsActive = true
 	return tc
 }
 
@@ -418,6 +424,13 @@ func (tc *TestCase) Run() {
 					err := VerifyAlternateImage(ctx, t, client, tc.pod, tc.alternateImageName)
 					if err != nil {
 						t.Errorf("VerifyAlternateImage failed: %v", err)
+					}
+				}
+
+				if tc.secureCommsIsActive {
+					err := VerifySecureCommsActivated(ctx, t, client, tc.pod)
+					if err != nil {
+						t.Errorf("VerifySecureCommsActivated failed: %v", err)
 					}
 				}
 			}
