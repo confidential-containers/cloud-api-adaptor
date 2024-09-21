@@ -42,6 +42,12 @@ type Config struct {
 	TLSServerKey  string `json:"tls-server-key,omitempty"`
 	TLSServerCert string `json:"tls-server-cert,omitempty"`
 	TLSClientCA   string `json:"tls-client-ca,omitempty"`
+
+	PpPrivateKey         []byte `json:"sc-pp-prv,omitempty"`
+	WnPublicKey          []byte `json:"sc-wn-pub,omitempty"`
+	SecureCommsInbounds  string `json:"sc-inbounds,omitempty"`
+	SecureCommsOutbounds string `json:"sc-outbounds,omitempty"`
+	SecureComms          bool   `json:"sc,omitempty"`
 }
 
 type Daemon interface {
