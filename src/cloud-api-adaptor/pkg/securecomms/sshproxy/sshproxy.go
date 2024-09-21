@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/sshutil"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/netops"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -102,11 +104,11 @@ func (inbounds *Inbounds) AddTags(tags []string, inboundPorts map[string]string,
 		if tag == "" {
 			continue
 		}
-		inPort, _, name, phase, err := ParseTag(tag)
+		inPort, namespace, name, phase, err := ParseTag(tag)
 		if err != nil {
 			return fmt.Errorf("failed to parse inbound tag %s: %v", tag, err)
 		}
-		retPort, err := inbounds.Add(inPort, name, phase, wg)
+		retPort, err := inbounds.Add(namespace, inPort, name, phase, wg)
 		if err != nil {
 			return fmt.Errorf("failed to add inbound: %v", err)
 		}
@@ -117,12 +119,34 @@ func (inbounds *Inbounds) AddTags(tags []string, inboundPorts map[string]string,
 	return nil
 }
 
-func (inbounds *Inbounds) Add(inPort int, name, phase string, wg *sync.WaitGroup) (string, error) {
+func (inbounds *Inbounds) listen(namespace string, tcpAddr *net.TCPAddr, name string) (tcpListener *net.TCPListener, err error) {
+	if namespace == "" {
+		return net.ListenTCP("tcp", tcpAddr)
+	}
+
+	var ns netops.Namespace
+	ns, netopsErr := netops.OpenNamespace(filepath.Join("/run/netns", namespace))
+	if netopsErr != nil {
+		return nil, fmt.Errorf("inbound %s failed to OpenNamespace '%s': %w", name, namespace, netopsErr)
+	}
+	defer ns.Close()
+
+	netopsErr = ns.Run(func() error {
+		tcpListener, err = net.ListenTCP("tcp", tcpAddr)
+		return err
+	})
+	if netopsErr != nil {
+		return nil, fmt.Errorf("inbound %s failed to ListenTCP '%s': %w", name, namespace, netopsErr)
+	}
+	return
+}
+
+func (inbounds *Inbounds) Add(namespace string, inPort int, name, phase string, wg *sync.WaitGroup) (string, error) {
 	tcpAddr := &net.TCPAddr{
 		IP:   net.IPv4(127, 0, 0, 1),
 		Port: inPort,
 	}
-	tcpListener, err := net.ListenTCP("tcp", tcpAddr)
+	tcpListener, err := inbounds.listen(namespace, tcpAddr, name)
 	if err != nil {
 		return "", fmt.Errorf("inbound failed to listen to host: %s port '%d' - err: %v", name, inPort, err)
 	}
@@ -130,7 +154,7 @@ func (inbounds *Inbounds) Add(inPort int, name, phase string, wg *sync.WaitGroup
 	if err != nil {
 		panic(err)
 	}
-	logger.Printf("Inbound listening to port %s", retPort)
+	logger.Printf("Inbound listening to port %s in namespace %s", retPort, namespace)
 
 	inbound := &Inbound{
 		Phase:       phase,
@@ -162,6 +186,22 @@ func (inbounds *Inbounds) DelAll() {
 	inbounds.list = [](*Inbound){}
 }
 
+// ParseTag() parses an inbound or outbound tag
+// Outbound tags with structure <Phase>:<Name>:<Port>
+//
+//	are interperted to approach 127.0.0.1:<Port>
+//
+// Outbound tags with structure <Phase>:<Name>:<Host>:<Port>
+//
+//	are interperted to approach <Host>:<Port>
+//
+// Inbound tags with structure <Phase>:<Name>:<Port>
+//
+//	are interperted to serve 127.0.0.1:<Port> on host network namespace
+//
+// Inbound tags with structure <Phase>:<Name>:<Namespace>:<Port>
+//
+//	are interperted to serve 127.0.0.1:<Port> on <Namespace> network namepsace
 func ParseTag(tag string) (port int, host, name, phase string, err error) {
 	var inPort string
 	var uint64port uint64
@@ -174,7 +214,7 @@ func ParseTag(tag string) (port int, host, name, phase string, err error) {
 	} else if len(splits) == 4 {
 		phase = splits[0]
 		name = splits[1]
-		host = splits[2]
+		host = splits[2] // host for outbound or network namespace for inbound
 		inPort = splits[3]
 	} else {
 		err = fmt.Errorf("illegal tag: %s", tag)
