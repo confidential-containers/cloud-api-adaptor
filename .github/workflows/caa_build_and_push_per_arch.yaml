@@ -115,7 +115,7 @@ jobs:
             cd src/cloud-api-adaptor && ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: image-artifacts
           retention-days: 1
