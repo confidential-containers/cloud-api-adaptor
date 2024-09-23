@@ -142,7 +142,7 @@ jobs:
           done
 
       - name: Upload install directory for next test runs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: install_directory
           path: src/cloud-api-adaptor/install/

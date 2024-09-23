@@ -122,7 +122,7 @@ jobs:
         run: make image-debug
 
       - name: Upload image
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: podvm-mkosi-${{ github.sha }}
           path: src/cloud-api-adaptor/podvm-mkosi/build/system.raw
