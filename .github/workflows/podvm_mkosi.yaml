@@ -34,7 +34,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build builder
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           tags: ghcr.io/${{ github.repository }}/podvm/builder-fedora:${{ github.sha }}
           context: src
@@ -48,7 +48,7 @@ jobs:
           cp -rf .git src/.git
 
       - name: Build binaries
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           tags: ghcr.io/${{ github.repository }}/podvm/binaries-fedora:${{ github.sha }}
           context: src

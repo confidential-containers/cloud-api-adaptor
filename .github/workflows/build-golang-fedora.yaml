@@ -106,7 +106,7 @@ jobs:
           password: ${{ secrets.QUAY_PASSWORD }}
 
       - name: Build the container image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: hack
           file: hack/Dockerfile.golang
