@@ -140,8 +140,14 @@ jobs:
         run: |
           export KUBECONFIG="${HOME}/.kcli/clusters/peer-pods/auth/kubeconfig"
 
+          echo "::group::KBS installation"
+          kubectl get pods -n coco-tenant
+          kubectl describe pods -n coco-tenant
+          echo "::endgroup::"
+
           echo "::group::CoCo and Peer Pods installation"
           kubectl get pods -n confidential-containers-system
+          kubectl describe pods -n confidential-containers-system
           echo "::endgroup::"
 
           echo "::group::cloud-api-adaptor logs"
