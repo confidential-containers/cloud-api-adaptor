@@ -616,29 +616,6 @@ func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert Cloud
 	NewTestCase(t, e, "DoTestKbsKeyReleaseForFailure", assert, "Kbs key release is failed").WithPod(pod).WithTestCommands(testCommands).Run()
 }
 
-// Test to check for specific key value from Trustee Operator Deployment
-func DoTestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
-	t.Log("Do test Trustee operator key release for specific key")
-	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "op-key-release", kbsEndpoint).GetPodOrFatal(t)
-	testCommands := []TestCommand{
-		{
-			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/default/kbsres1/key1"},
-			ContainerName: pod.Spec.Containers[0].Name,
-			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
-				if strings.Contains(stdout.String(), "res1val1") {
-					t.Logf("Success to get key %s", stdout.String())
-					return true
-				} else {
-					t.Errorf("Failed to access key: %s", stdout.String())
-					return false
-				}
-			},
-		},
-	}
-
-	NewTestCase(t, e, "KbsKeyReleasePod", assert, "Kbs key release from Trustee Operator is successful").WithPod(pod).WithTestCommands(testCommands).Run()
-}
-
 func DoTestRestrictivePolicyBlocksExec(t *testing.T, e env.Environment, assert CloudAssert) {
 	allowAllExceptExecPolicyFilePath := "fixtures/policies/allow-all-except-exec-process.rego"
 	podName := "policy-exec-rejected"
