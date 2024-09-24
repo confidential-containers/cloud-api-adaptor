@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/docker"
+	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
 func TestDockerCreateSimplePod(t *testing.T) {
@@ -102,14 +103,16 @@ func TestDockerKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
-	keyBrokerService.SetSampleSecretKey()
+	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
+	resourcePath := "caa/workload_key/test_key.bin"
+	keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
 	keyBrokerService.EnableKbsCustomizedResourcePolicy("deny_all.rego")
 	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
 	assert := DockerAssert{}
 	t.Parallel()
-	DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint)
+	DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 	keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
-	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint)
+	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
 func TestDockerCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
