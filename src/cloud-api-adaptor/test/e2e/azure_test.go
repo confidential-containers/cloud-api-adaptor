@@ -135,6 +135,9 @@ func TestKbsKeyRelease(t *testing.T) {
 	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
 	resourcePath := "caa/workload_key/test_key.bin"
 	err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
