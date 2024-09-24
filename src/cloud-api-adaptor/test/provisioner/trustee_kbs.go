@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -68,20 +69,9 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 	}
 
 	filePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
-	// Create the file.
-	file, err := os.Create(filePath)
-	if err != nil {
-		err = fmt.Errorf("creating file: %w\n", err)
-		log.Errorf("%v", err)
-		return nil, err
-	}
-	defer file.Close()
 
-	// Write the content to the file.
-	err = saveToFile(filePath, content)
+	err = os.WriteFile(filePath, content, 0644)
 	if err != nil {
-		err = fmt.Errorf("writing to the file: %w\n", err)
-		log.Errorf("%v", err)
 		return nil, err
 	}
 
@@ -502,11 +492,25 @@ func (p *KeyBrokerService) setSecretKey(resource string, path string) error {
 	cmd.Dir = trusteeRepoPath
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	log.Tracef("%v, status: %v, output: %s", cmd, err, stdoutStderr)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (p *KeyBrokerService) SetSecret(resourcePath string, secret []byte) error {
+	tempDir, _ := os.MkdirTemp("", "kbs_resource_files")
+
+	defer os.RemoveAll(tempDir)
+
+	var secretFilePath = filepath.Join(tempDir, path.Base(resourcePath))
+	err := os.WriteFile(secretFilePath, secret, 0644)
+	if err != nil {
+		return err
+	}
+
+	return p.setSecretKey(resourcePath, secretFilePath)
 }
 
 func (p *KeyBrokerService) SetImageDecryptionKey(keyID string, key []byte) error {
@@ -523,15 +527,6 @@ func (p *KeyBrokerService) SetImageDecryptionKey(keyID string, key []byte) error
 		return err
 	}
 	return p.setSecretKey(keyID, path.Name())
-}
-
-func (p *KeyBrokerService) SetSampleSecretKey() error {
-	overlaysPath, err := getOverlaysPath()
-	if err != nil {
-		return err
-	}
-	path := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
-	return p.setSecretKey("reponame/workload_key/key.bin", path)
 }
 
 func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {

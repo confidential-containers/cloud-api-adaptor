@@ -547,9 +547,9 @@ func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, 
 	NewTestCase(t, e, "TestImageDecryption", assert, "Encrypted image layers have been decrypted").WithPod(pod).WithDeleteAssertion(&duration).Run()
 }
 
-func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
+func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string, resourcePath, expectedSecret string) {
 	key := "MY_SECRET"
-	value := CreateSealedSecretValue("kbs:///" + KBS_SECRET)
+	value := CreateSealedSecretValue("kbs:///" + resourcePath)
 	podName := "sealed-secret"
 	imageName := getBusyboxTestImage(t)
 	env := []v1.EnvVar{{Name: key, Value: value}}
@@ -557,25 +557,24 @@ func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbs
 
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithEnvironmentVariables(env), WithInitdata(kbsEndpoint), WithCommand(cmd))
 
-	expectedPodLogString := "This is my"
-	NewTestCase(t, e, "TestSealedSecret", assert, "Unsealed secret has been set to ENV").WithPod(pod).WithExpectedPodLogString(expectedPodLogString).Run()
+	NewTestCase(t, e, "TestSealedSecret", assert, "Unsealed secret has been set to ENV").WithPod(pod).WithExpectedPodLogString(expectedSecret).Run()
 }
 
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaining opa in kbs
 // as test cases might be run in parallel
-func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
+func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
 	t.Log("Do test kbs key release")
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-key-release", kbsEndpoint).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
-			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + KBS_SECRET},
+			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + resourcePath},
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
-				if strings.Contains(stdout.String(), "This is my cluster name") {
-					t.Logf("Success to get key.bin: %s", stdout.String())
+				if strings.Contains(stdout.String(), expectedSecret) {
+					t.Logf("Success to get secret key: %s", stdout.String())
 					return true
 				} else {
-					t.Errorf("Failed to access key.bin: %s", stdout.String())
+					t.Errorf("Failed to access secret key: %s", stdout.String())
 					return false
 				}
 			},
@@ -587,12 +586,12 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kb
 
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaining opa in kbs
 // as test cases might be run in parallel
-func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
+func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
 	t.Log("Do test kbs key release failure case")
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-failure", kbsEndpoint).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
-			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + KBS_SECRET},
+			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + resourcePath},
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestErrorFn: func(err error) bool {
 				if strings.Contains(err.Error(), "command terminated with exit code 1") {
@@ -603,11 +602,11 @@ func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert Cloud
 				}
 			},
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
-				if strings.Contains(stdout.String(), "This is my cluster name") {
-					t.Errorf("FAIL as successed to get key.bin: %s", stdout.String())
+				if strings.Contains(stdout.String(), expectedSecret) {
+					t.Errorf("FAIL as succeed to get secret key: %s", stdout.String())
 					return false
 				} else {
-					t.Logf("PASS as failed to access key.bin: %s", stdout.String())
+					t.Logf("PASS as failed to access secret key: %s", stdout.String())
 					return true
 				}
 			},
