@@ -105,13 +105,25 @@ func TestDockerKbsKeyRelease(t *testing.T) {
 	}
 	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
 	resourcePath := "caa/workload_key/test_key.bin"
-	keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
-	keyBrokerService.EnableKbsCustomizedResourcePolicy("deny_all.rego")
-	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
+	err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("deny_all.rego")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 	assert := DockerAssert{}
 	t.Parallel()
 	DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
-	keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
