@@ -29,7 +29,6 @@ import (
 
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
-const KBS_SECRET = "reponame/workload_key/key.bin"
 
 var testInitdata string = `algorithm = "sha384"
 version = "0.1.0"
