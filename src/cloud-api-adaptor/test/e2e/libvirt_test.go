@@ -141,10 +141,22 @@ func TestLibvirtSealedSecret(t *testing.T) {
 
 	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
 	resourcePath := "caa/workload_key/test_key.bin"
-	_ = keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
-	_ = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
-	_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
-	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
+	err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
+	if err != nil {
+		t.Fatalf("SetSecret failed with: %v", err)
+	}
+	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+	if err != nil {
+		t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
+	}
+	err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
+	if err != nil {
+		t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
+	}
+	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	if err != nil {
+		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+	}
 	assert := LibvirtAssert{}
 	DoTestSealedSecret(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
@@ -156,10 +168,22 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 
 	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
 	resourcePath := "caa/workload_key/test_key.bin"
-	_ = keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
-	_ = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
-	_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("deny_all.rego")
-	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
+	err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
+	if err != nil {
+		t.Fatalf("SetSecret failed with: %v", err)
+	}
+	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+	if err != nil {
+		t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
+	}
+	err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("deny_all.rego")
+	if err != nil {
+		t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
+	}
+	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	if err != nil {
+		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+	}
 	assert := LibvirtAssert{}
 	t.Parallel()
 	DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
@@ -167,13 +191,22 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 		t.Log("KBS with ibmse cases")
 		// the allow_*_.rego file is created by follow document
 		// https://github.com/confidential-containers/trustee/blob/main/deps/verifier/src/se/README.md#set-attestation-policy
-		_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_with_wrong_image_tag.rego")
+		err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_with_wrong_image_tag.rego")
+		if err != nil {
+			t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
+		}
 		DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
-		_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_with_correct_claims.rego")
+		err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_with_correct_claims.rego")
+		if err != nil {
+			t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
+		}
 		DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 	} else {
 		t.Log("KBS normal cases")
-		_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
+		err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
+		if err != nil {
+			t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
+		}
 		DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 	}
 }
