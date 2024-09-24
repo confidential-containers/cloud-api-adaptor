@@ -157,7 +157,7 @@ func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
 	}
 	t.Parallel()
 	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
-	DoTestTrusteeOperatorKeyReleaseForSpecificKey(t, testEnv, assert, kbsEndpoint)
+	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, "default/kbsres1/key1", "res1val1")
 }
 
 func TestAzureImageDecryption(t *testing.T) {
