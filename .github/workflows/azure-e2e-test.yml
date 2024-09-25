@@ -206,10 +206,20 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
 
+    - name: Install cidr calculator
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sipcalc
+
     - name: Set Provisioner Environment Variables
       run: |
           echo "TEST_PROVISION_FILE=${{ format(env.TEST_PROVISION_PATH_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
           echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
+
+    - name: Restore the configuration created before
+      uses: actions/download-artifact@v3
+      with:
+        name: e2e-configuration
 
     - uses: azure/login@v1
       name: 'Az CLI login'
@@ -218,16 +228,17 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
-    - name: Restore the configuration created before
-      uses: actions/download-artifact@v3
-      with:
-        name: e2e-configuration
-
-    - name: Add AKS Cluster Subnet ID to test provision file
+    - name: Create peerpod subnet
       run: |
-        NODE_RESOURCE_GROUP="$(az aks show -g ${{ secrets.AZURE_RESOURCE_GROUP }} -n "$CLUSTER_NAME" --query nodeResourceGroup -o tsv)"
-        SUBNET_ID="$(az network vnet list -g "$NODE_RESOURCE_GROUP" --query '[0].subnets[0].id' -o tsv)"
-        test -n "$SUBNET_ID"
+        NODE_RG="$(az aks show -g ${{ secrets.AZURE_RESOURCE_GROUP }} -n "$CLUSTER_NAME" --query nodeResourceGroup -o tsv)"
+        VNET_NAME="$(az network vnet list -g "$NODE_RG" --query '[].name' -o tsv)"
+        NODE_CIDR="$(az network vnet show -n "$VNET_NAME" -g "$NODE_RG" --query "subnets[?name == 'aks-subnet'].addressPrefix" -o tsv)"
+        MASK="${NODE_CIDR#*/}"
+        PEERPOD_CIDR="$(sipcalc "$NODE_CIDR" -n 2 | grep ^Network | grep -v current | cut -d' ' -f2)/${MASK}"
+        az network public-ip create -g "$NODE_RG" -n peerpod
+        az network nat gateway create -g "$NODE_RG" -l ${{ secrets.AZURE_REGION }} --public-ip-addresses peerpod -n peerpod
+        az network vnet subnet create -g "$NODE_RG" --vnet-name "$VNET_NAME" --nat-gateway peerpod --address-prefixes "$PEERPOD_CIDR" -n peerpod
+        SUBNET_ID="$(az network vnet subnet show -g "$NODE_RG" --vnet-name "$VNET_NAME" -n peerpod --query id -o tsv)"
         echo "AZURE_SUBNET_ID=\"${SUBNET_ID}\"" >> "$TEST_PROVISION_FILE"
 
     - name: Extract kbs reference
