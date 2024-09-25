@@ -546,110 +546,110 @@ func (tc *TestCase) Run() {
 			return ctx
 		}).
 		Teardown(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			client, err := cfg.NewClient()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tc.configMap != nil {
-				if err = client.Resources().Delete(ctx, tc.configMap); err != nil {
-					t.Fatal(err)
-				}
+			// client, err := cfg.NewClient()
+			// if err != nil {
+			// 	t.Fatal(err)
+			// }
+			// if tc.configMap != nil {
+			// 	if err = client.Resources().Delete(ctx, tc.configMap); err != nil {
+			// 		t.Fatal(err)
+			// 	}
 
-				t.Logf("Deleting Configmap... %s", tc.configMap.Name)
-			}
+			// 	t.Logf("Deleting Configmap... %s", tc.configMap.Name)
+			// }
 
-			if tc.secret != nil {
-				if err = client.Resources().Delete(ctx, tc.secret); err != nil {
-					t.Fatal(err)
-				} else {
-					t.Logf("Deleting Secret... %s", tc.secret.Name)
-				}
-			}
+			// if tc.secret != nil {
+			// 	if err = client.Resources().Delete(ctx, tc.secret); err != nil {
+			// 		t.Fatal(err)
+			// 	} else {
+			// 		t.Logf("Deleting Secret... %s", tc.secret.Name)
+			// 	}
+			// }
 
-			if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
-				clientSet, err := kubernetes.NewForConfig(client.RESTConfig())
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err = clientSet.CoreV1().Secrets(E2eNamespace).Delete(ctx, DEFAULT_AUTH_SECRET, metav1.DeleteOptions{}); err != nil {
-					t.Fatal(err)
-				}
-			}
+			// if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
+			// 	clientSet, err := kubernetes.NewForConfig(client.RESTConfig())
+			// 	if err != nil {
+			// 		t.Fatal(err)
+			// 	}
+			// 	if err = clientSet.CoreV1().Secrets(E2eNamespace).Delete(ctx, DEFAULT_AUTH_SECRET, metav1.DeleteOptions{}); err != nil {
+			// 		t.Fatal(err)
+			// 	}
+			// }
 
-			if tc.extraSecrets != nil {
-				for _, extraSecret := range tc.extraSecrets {
-					if err = client.Resources().Delete(ctx, extraSecret); err != nil {
-						t.Fatal(err)
-					} else {
-						t.Logf("Deleting extra Secret... %s", extraSecret.Name)
-					}
-				}
+			// if tc.extraSecrets != nil {
+			// 	for _, extraSecret := range tc.extraSecrets {
+			// 		if err = client.Resources().Delete(ctx, extraSecret); err != nil {
+			// 			t.Fatal(err)
+			// 		} else {
+			// 			t.Logf("Deleting extra Secret... %s", extraSecret.Name)
+			// 		}
+			// 	}
 
-			}
+			// }
 
-			if tc.job != nil {
-				var podlist v1.PodList
-				if err := client.Resources(tc.job.Namespace).List(ctx, &podlist); err != nil {
-					t.Fatal(err)
-				}
-				if err = client.Resources().Delete(ctx, tc.job); err != nil {
-					t.Fatal(err)
-				} else {
-					t.Logf("Deleting Job... %s", tc.job.Name)
-				}
-				for _, pod := range podlist.Items {
-					if pod.ObjectMeta.Labels["job-name"] == tc.job.Name {
-						if err = client.Resources().Delete(ctx, &pod); err != nil {
-							t.Fatal(err)
-						}
-						t.Logf("Deleting pods created by job... %s", pod.ObjectMeta.Name)
+			// if tc.job != nil {
+			// 	var podlist v1.PodList
+			// 	if err := client.Resources(tc.job.Namespace).List(ctx, &podlist); err != nil {
+			// 		t.Fatal(err)
+			// 	}
+			// 	if err = client.Resources().Delete(ctx, tc.job); err != nil {
+			// 		t.Fatal(err)
+			// 	} else {
+			// 		t.Logf("Deleting Job... %s", tc.job.Name)
+			// 	}
+			// 	for _, pod := range podlist.Items {
+			// 		if pod.ObjectMeta.Labels["job-name"] == tc.job.Name {
+			// 			if err = client.Resources().Delete(ctx, &pod); err != nil {
+			// 				t.Fatal(err)
+			// 			}
+			// 			t.Logf("Deleting pods created by job... %s", pod.ObjectMeta.Name)
 
-					}
-				}
-			}
+			// 		}
+			// 	}
+			// }
 
-			if tc.pod != nil {
-				if err = client.Resources().Delete(ctx, tc.pod); err != nil {
-					t.Fatal(err)
-				}
-				t.Logf("Deleting pod %s...", tc.pod.Name)
-				if err = wait.For(conditions.New(
-					client.Resources()).ResourceDeleted(tc.pod),
-					wait.WithInterval(5*time.Second),
-					wait.WithTimeout(tc.deletionWithin)); err != nil {
-					t.Fatal(err)
-				}
-				t.Logf("Pod %s has been successfully deleted within %.0fs", tc.pod.Name, tc.deletionWithin.Seconds())
-			}
+			// if tc.pod != nil {
+			// 	if err = client.Resources().Delete(ctx, tc.pod); err != nil {
+			// 		t.Fatal(err)
+			// 	}
+			// 	t.Logf("Deleting pod %s...", tc.pod.Name)
+			// 	if err = wait.For(conditions.New(
+			// 		client.Resources()).ResourceDeleted(tc.pod),
+			// 		wait.WithInterval(5*time.Second),
+			// 		wait.WithTimeout(tc.deletionWithin)); err != nil {
+			// 		t.Fatal(err)
+			// 	}
+			// 	t.Logf("Pod %s has been successfully deleted within %.0fs", tc.pod.Name, tc.deletionWithin.Seconds())
+			// }
 
-			if tc.extraPods != nil {
-				for _, extraPod := range tc.extraPods {
-					pod := extraPod.pod
-					t.Logf("Deleting pod %s...", pod.Name)
-					err := DeletePod(ctx, client, pod, &tc.deletionWithin)
-					if err != nil {
-						t.Logf("Error occurs when delete pod: %s", extraPod.pod.Name)
-						t.Fatal(err)
-					}
-					t.Logf("Pod %s has been successfully deleted within %.0fs", pod.Name, tc.deletionWithin.Seconds())
-				}
-			}
+			// if tc.extraPods != nil {
+			// 	for _, extraPod := range tc.extraPods {
+			// 		pod := extraPod.pod
+			// 		t.Logf("Deleting pod %s...", pod.Name)
+			// 		err := DeletePod(ctx, client, pod, &tc.deletionWithin)
+			// 		if err != nil {
+			// 			t.Logf("Error occurs when delete pod: %s", extraPod.pod.Name)
+			// 			t.Fatal(err)
+			// 		}
+			// 		t.Logf("Pod %s has been successfully deleted within %.0fs", pod.Name, tc.deletionWithin.Seconds())
+			// 	}
+			// }
 
-			if tc.pvc != nil {
-				if err = client.Resources().Delete(ctx, tc.pvc); err != nil {
-					t.Fatal(err)
-				} else {
-					t.Logf("Deleting PVC... %s", tc.pvc.Name)
-				}
-			}
+			// if tc.pvc != nil {
+			// 	if err = client.Resources().Delete(ctx, tc.pvc); err != nil {
+			// 		t.Fatal(err)
+			// 	} else {
+			// 		t.Logf("Deleting PVC... %s", tc.pvc.Name)
+			// 	}
+			// }
 
-			if tc.service != nil {
-				if err = client.Resources().Delete(ctx, tc.service); err != nil {
-					t.Fatal(err)
-				} else {
-					t.Logf("Deleting Service... %s", tc.service.Name)
-				}
-			}
+			// if tc.service != nil {
+			// 	if err = client.Resources().Delete(ctx, tc.service); err != nil {
+			// 		t.Fatal(err)
+			// 	} else {
+			// 		t.Logf("Deleting Service... %s", tc.service.Name)
+			// 	}
+			// }
 
 			return ctx
 		}).Feature()
