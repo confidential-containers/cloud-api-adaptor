@@ -30,7 +30,7 @@ import (
 const TRUSTEE_REPO_PATH = "../trustee"
 
 func getHardwarePlatform() (string, error) {
-	out, err := exec.Command("uname", "-i").Output()
+	out, err := exec.Command("uname", "-m").Output()
 	return strings.TrimSuffix(string(out), "\n"), err
 }
 
