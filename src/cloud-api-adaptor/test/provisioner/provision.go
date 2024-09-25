@@ -239,6 +239,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
+		log.Errorf("Operator apply failed with err %v, stdout & stdErr: %s", err, stdoutStderr)
 		return err
 	}
 
