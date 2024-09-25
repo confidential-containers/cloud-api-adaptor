@@ -472,6 +472,7 @@ func AssessPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Po
 		return "Failed to list pod", err
 	}
 	for _, testCommand := range testCommands {
+		log.Tracef("Running test command: %v", testCommand)
 		var stdout, stderr bytes.Buffer
 		for _, podItem := range podlist.Items {
 			if podItem.ObjectMeta.Name == pod.Name {
@@ -480,24 +481,24 @@ func AssessPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Po
 				if err := client.Resources(pod.Namespace).ExecInPod(ctx, pod.Namespace, pod.Name, testCommand.ContainerName, testCommand.Command, &stdout, &stderr); err != nil {
 					if testCommand.TestErrorFn != nil {
 						if !testCommand.TestErrorFn(err) {
-							return err.Error(), fmt.Errorf("Command %v running in container %s produced unexpected output on error: %s", testCommand.Command, testCommand.ContainerName, err.Error())
+							return err.Error(), fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
 						}
 					} else {
-						return err.Error(), err
+						return err.Error(), fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
 					}
 				} else if testCommand.TestErrorFn != nil {
 					return "", fmt.Errorf("We expected an error from Pod %s, but it was not found", pod.Name)
 				}
 				if testCommand.TestCommandStderrFn != nil {
 					if !testCommand.TestCommandStderrFn(stderr) {
-						return stderr.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stderr: %s", testCommand.Command, testCommand.ContainerName, stderr.String())
+						return stderr.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stderr: %s, stdout: %s", testCommand.Command, testCommand.ContainerName, stderr.String(), stdout.String())
 					} else {
 						return stderr.String(), nil
 					}
 				}
 				if testCommand.TestCommandStdoutFn != nil {
 					if !testCommand.TestCommandStdoutFn(stdout) {
-						return stdout.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s", testCommand.Command, testCommand.ContainerName, stdout.String())
+						return stdout.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, stdout.String(), stderr.String())
 					} else {
 						return stdout.String(), nil
 					}

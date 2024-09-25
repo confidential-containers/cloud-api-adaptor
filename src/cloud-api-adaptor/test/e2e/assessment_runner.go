@@ -393,11 +393,9 @@ func (tc *TestCase) Run() {
 
 				if tc.podState == v1.PodRunning {
 					if len(tc.testCommands) > 0 {
-						if len(tc.testCommands) > 0 {
-							logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
-							if err != nil {
-								t.Errorf("AssessPodTestCommands failed, with output: %s and error: %v", logString, err)
-							}
+						logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
+						if err != nil {
+							t.Errorf("AssessPodTestCommands failed, with output: %s and error: %v", logString, err)
 						}
 					}
 
