@@ -430,12 +430,10 @@ func (tc *TestCase) Run() {
 						t.Fatal(err)
 					}
 					if len(tc.testCommands) > 0 {
-						if len(tc.testCommands) > 0 {
-							logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
-							t.Logf("Output when execute test commands: %s", logString)
-							if err != nil {
-								t.Fatal(err)
-							}
+						logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
+						t.Logf("Output when execute test commands: %s", logString)
+						if err != nil {
+							t.Fatal(err)
 						}
 					}
 
