@@ -1,3 +1,4 @@
+ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
 
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/confidential-containers/peer-pods-webhook:latest
@@ -109,7 +110,6 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 kind-cluster: ## create a kind cluster for testing 
 	kind create cluster --image "kindest/node:v$(ENVTEST_K8S_VERSION)" \
 		--wait 120s --name "$(KIND_CLUSTER_NAME)"
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.yaml
 
 .PHONY: kind-delete
 kind-delete: ## delete the kind test cluster
@@ -121,6 +121,25 @@ kind-load: ## load the image in the local kind cluster
 
 .PHONY: kind-deploy
 kind-deploy: docker-build kind-load deploy ## deploy the webhook in the local kind cluster
+
+.PHONY: deploy-cert-manager
+deploy-cert-manager: ## Deploy cert-manager for webhook.
+	curl -fsSL -o cmctl https://github.com/cert-manager/cmctl/releases/latest/download/cmctl_linux_${ARCH}
+	chmod +x cmctl
+	# Deploy cert-manager
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.15.3/cert-manager.yaml
+	# Wait for service to be up
+	kubectl wait --timeout=30s -n cert-manager endpoints/cert-manager --for=jsonpath='{.subsets[0].addresses[0].ip}'
+	kubectl wait --timeout=30s -n cert-manager endpoints/cert-manager-webhook --for=jsonpath='{.subsets[0].addresses[0].ip}'
+	# Wait for few seconds for the cert-manager API to be ready
+	# otherwise you'll hit the error "x509: certificate signed by unknown authority"
+	# Best is to use cmctl - https://cert-manager.io/docs/installation/kubectl/#2-optional-wait-for-cert-manager-webhook-to-be-ready
+	./cmctl check api --wait=2m
+	rm -f ./cmctl
+
+.PHONY: delete-cert-manager
+delete-cert-manager: ## Delete cert-manager
+	kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/v1.15.3/cert-manager.yaml
 
 ##@ Build Dependencies
 
