@@ -34,7 +34,7 @@ git:
     reference: main
   guest-components:
     url: https://github.com/confidential-containers/guest-components
-    reference: v0.10.0
+    reference: c2022037d8fbb076f569529e93b2cbe63a3968bb
   kata-containers:
     url: https://github.com/kata-containers/kata-containers
     reference: 3.9.0
