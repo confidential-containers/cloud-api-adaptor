@@ -241,6 +241,27 @@ func ComparePodEventWarningDescriptions(ctx context.Context, t *testing.T, clien
 	return err
 }
 
+func CompareInstanceType(ctx context.Context, t *testing.T, client klient.Client, pod v1.Pod, expectedInstanceType string, getInstanceTypeFn func(t *testing.T, podName string) (string, error)) error {
+	var podlist v1.PodList
+	if err := client.Resources(pod.Namespace).List(ctx, &podlist); err != nil {
+		return err
+	}
+	for _, podItem := range podlist.Items {
+		if podItem.ObjectMeta.Name == pod.Name {
+			instanceType, err := getInstanceTypeFn(t, pod.Name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if instanceType == expectedInstanceType {
+				return nil
+			} else {
+				return fmt.Errorf("error: Pod instance type was %s, but we expected %s ", instanceType, expectedInstanceType)
+			}
+		}
+	}
+	return fmt.Errorf("no pod matching %v, was found", pod)
+}
+
 func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod v1.Pod) (string, error) {
 	var getNodeName = func(ctx context.Context, client klient.Client, pod v1.Pod) (string, error) {
 		return pod.Spec.NodeName, nil
