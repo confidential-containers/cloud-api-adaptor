@@ -255,7 +255,7 @@ func DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T, e
 	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever))
 	expectedErrorString := "401 UNAUTHORIZED"
-	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image without Credentials has been created").WithPod(pod).WithNoAuthJson().WithExpectedPodDescribe(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
+	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image without Credentials has been created").WithPod(pod).WithNoAuthJson().WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestPodVMwithNoAnnotations(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
@@ -264,19 +264,7 @@ func DoTestPodVMwithNoAnnotations(t *testing.T, e env.Environment, assert CloudA
 	containerName := "busybox"
 	imageName := BUSYBOX_IMAGE
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
-	testInstanceTypes := InstanceValidatorFunctions{
-		testSuccessfn: func(instance string) bool {
-			if instance == expectedType {
-				t.Logf("PodVM Created with %s Instance type successfully...", instance)
-				return true
-			} else {
-				t.Logf("Failed to Create PodVM with %s Instance type", expectedType)
-				return false
-			}
-		},
-		testFailurefn: IsErrorEmpty,
-	}
-	NewTestCase(t, e, "PodVMWithNoAnnotations", assert, "PodVM with No Annotation is created").WithPod(pod).WithInstanceTypes(testInstanceTypes).Run()
+	NewTestCase(t, e, "PodVMWithNoAnnotations", assert, "PodVM with No Annotation is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
 }
 
 func DoTestPodVMwithAnnotationsInstanceType(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
@@ -287,20 +275,7 @@ func DoTestPodVMwithAnnotationsInstanceType(t *testing.T, e env.Environment, ass
 		"io.katacontainers.config.hypervisor.machine_type": expectedType,
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
-
-	testInstanceTypes := InstanceValidatorFunctions{
-		testSuccessfn: func(instance string) bool {
-			if instance == expectedType {
-				t.Logf("PodVM Created with %s Instance type successfully...", instance)
-				return true
-			} else {
-				t.Logf("Failed to Create PodVM with %s Instance type", expectedType)
-				return false
-			}
-		},
-		testFailurefn: IsErrorEmpty,
-	}
-	NewTestCase(t, e, "PodVMwithAnnotationsInstanceType", assert, "PodVM with Annotation is created").WithPod(pod).WithInstanceTypes(testInstanceTypes).Run()
+	NewTestCase(t, e, "PodVMwithAnnotationsInstanceType", assert, "PodVM with Annotation is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
 }
 
 func DoTestPodVMwithAnnotationsCPUMemory(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
@@ -312,98 +287,45 @@ func DoTestPodVMwithAnnotationsCPUMemory(t *testing.T, e env.Environment, assert
 		"io.katacontainers.config.hypervisor.default_memory": "12288",
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
-
-	testInstanceTypes := InstanceValidatorFunctions{
-		testSuccessfn: func(instance string) bool {
-			if instance == expectedType {
-				t.Logf("PodVM Created with %s Instance type successfully...", instance)
-				return true
-			} else {
-				t.Logf("Failed to Create PodVM with %s Instance type", expectedType)
-				return false
-			}
-		},
-		testFailurefn: IsErrorEmpty,
-	}
-	NewTestCase(t, e, "PodVMwithAnnotationsCPUMemory", assert, "PodVM with Annotations CPU Memory is created").WithPod(pod).WithInstanceTypes(testInstanceTypes).Run()
+	NewTestCase(t, e, "PodVMwithAnnotationsCPUMemory", assert, "PodVM with Annotations CPU Memory is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
 }
 
 func DoTestPodVMwithAnnotationsInvalidInstanceType(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
 	podName := "annotations-invalid-instance-type"
 	containerName := "busybox"
 	imageName := BUSYBOX_IMAGE
-	expectedErrorMessage := `requested instance type ("` + expectedType + `") is not part of supported instance types list`
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.machine_type": expectedType,
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
-	testInstanceTypes := InstanceValidatorFunctions{
-		testSuccessfn: IsStringEmpty,
-		testFailurefn: func(errorMsg error) bool {
-			if strings.Contains(errorMsg.Error(), expectedErrorMessage) {
-				t.Logf("Got Expected Error: %v", errorMsg.Error())
-				return true
-			} else {
-				t.Logf("Failed to Get Expected Error: %v", errorMsg.Error())
-				return false
-			}
-		},
-	}
-	NewTestCase(t, e, "PodVMwithAnnotationsInvalidInstanceType", assert, "Failed to Create PodVM with Annotations Invalid InstanceType").WithPod(pod).WithInstanceTypes(testInstanceTypes).WithCustomPodState(v1.PodPending).Run()
+	expectedErrorMessage := `requested instance type ("` + expectedType + `") is not part of supported instance types list`
+	NewTestCase(t, e, "PodVMwithAnnotationsInvalidInstanceType", assert, "Failed to Create PodVM with Annotations Invalid InstanceType").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodFailed).Run()
 }
 
 func DoTestPodVMwithAnnotationsLargerMemory(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "annotations-too-big-mem"
 	containerName := "busybox"
 	imageName := BUSYBOX_IMAGE
-	expectedErrorMessage := "failed to get instance type based on vCPU and memory annotations: no instance type found for the given vcpus (2) and memory (18432)"
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.default_vcpus":  "2",
 		"io.katacontainers.config.hypervisor.default_memory": "18432",
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
-	testInstanceTypes := InstanceValidatorFunctions{
-		testSuccessfn: IsStringEmpty,
-		testFailurefn: func(errorMsg error) bool {
-			if strings.Contains(errorMsg.Error(), expectedErrorMessage) {
-				t.Logf("Got Expected Error: %v", errorMsg.Error())
-				return true
-			} else {
-				t.Logf("Failed to Get Expected Error: %v", errorMsg.Error())
-				return false
-			}
-		},
-	}
-	NewTestCase(t, e, "PodVMwithAnnotationsLargerMemory", assert, "Failed to Create PodVM with Annotations Larger Memory").WithPod(pod).WithInstanceTypes(testInstanceTypes).WithCustomPodState(v1.PodPending).Run()
+	expectedErrorMessage := "failed to get instance type based on vCPU and memory annotations: no instance type found for the given vcpus (2) and memory (18432)"
+	NewTestCase(t, e, "PodVMwithAnnotationsLargerMemory", assert, "Failed to Create PodVM with Annotations Larger Memory").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodFailed).Run()
 }
 
 func DoTestPodVMwithAnnotationsLargerCPU(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "annotations-too-big-cpu"
 	containerName := "busybox"
 	imageName := BUSYBOX_IMAGE
-	expectedErrorMessage := []string{
-		"no instance type found for the given vcpus (3) and memory (12288)",
-		"Number of cpus 3 specified in annotation default_vcpus is greater than the number of CPUs 2 on the system",
-	}
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.default_vcpus":  "3",
 		"io.katacontainers.config.hypervisor.default_memory": "12288",
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
-	testInstanceTypes := InstanceValidatorFunctions{
-		testSuccessfn: IsStringEmpty,
-		testFailurefn: func(errorMsg error) bool {
-			for _, i := range expectedErrorMessage {
-				if strings.Contains(errorMsg.Error(), i) {
-					t.Logf("Got Expected Error: %v", errorMsg.Error())
-					return true
-				}
-			}
-			t.Logf("Failed to Get Expected Error: %v", errorMsg.Error())
-			return false
-		},
-	}
-	NewTestCase(t, e, "PodVMwithAnnotationsLargerCPU", assert, "Failed to Create PodVM with Annotations Larger CPU").WithPod(pod).WithInstanceTypes(testInstanceTypes).WithCustomPodState(v1.PodPending).Run()
+	expectedErrorMessage := "no instance type found for the given vcpus (3) and memory (12288)"
+	NewTestCase(t, e, "PodVMwithAnnotationsLargerCPU", assert, "Failed to Create PodVM with Annotations Larger CPU").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodFailed).Run()
 }
 
 func DoTestCreatePeerPodContainerWithValidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert, alternateImageName string) {

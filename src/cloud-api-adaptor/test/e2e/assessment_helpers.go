@@ -46,12 +46,6 @@ func timeExtractor(log string) (string, error) {
 	return matchString[0], nil
 }
 
-type PodEvents struct {
-	EventType        string
-	EventDescription string
-	EventReason      string
-}
-
 func NewTestCase(t *testing.T, e env.Environment, testName string, assert CloudAssert, assessMessage string) *TestCase {
 	testCase := &TestCase{
 		testing:        t,
@@ -77,29 +71,6 @@ func NewExtraPod(namespace string, podName string, containerName string, imageNa
 		podState: v1.PodRunning,
 	}
 	return extPod
-}
-
-func PodEventExtractor(ctx context.Context, client klient.Client, pod v1.Pod) (*PodEvents, error) {
-	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
-	if err != nil {
-		return nil, err
-	}
-	watcher, err := clientset.CoreV1().Events(pod.Namespace).Watch(ctx, metav1.ListOptions{FieldSelector: fmt.Sprintf("involvedObject.name=%s", pod.Name)})
-	if err != nil {
-		return nil, err
-	}
-	defer watcher.Stop()
-	for event := range watcher.ResultChan() {
-
-		if event.Object.(*v1.Event).Type == v1.EventTypeWarning {
-			var newPodEvents PodEvents
-			newPodEvents.EventType = event.Object.(*v1.Event).Type
-			newPodEvents.EventDescription = event.Object.(*v1.Event).Message
-			newPodEvents.EventType = event.Object.(*v1.Event).Reason
-			return &newPodEvents, nil
-		}
-	}
-	return nil, errors.New("No Events Found in PodVM")
 }
 
 func WatchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod, pod v1.Pod) (string, error) {
@@ -216,6 +187,58 @@ func ComparePodLogString(ctx context.Context, client klient.Client, customPod v1
 	}
 
 	return podLogString, nil
+}
+
+// Note: there are currently two event types: Normal and Warning, so Warning includes errors
+func GetPodEventWarningDescriptions(ctx context.Context, client klient.Client, pod v1.Pod) (string, error) {
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		return "", err
+	}
+
+	events, err := clientset.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{FieldSelector: fmt.Sprintf("involvedObject.name=%s", pod.Name)})
+	if err != nil {
+		return "", err
+	}
+
+	var descriptionsBuilder strings.Builder
+	for _, event := range events.Items {
+		if event.Type == v1.EventTypeWarning {
+			descriptionsBuilder.WriteString(event.Message)
+		}
+	}
+	return descriptionsBuilder.String(), nil
+}
+
+// This function takes an expected pod event "warning" string (note warning also covers errors) and checks to see if it
+// shows up in the event log of the pod. Some pods error in failed state, so can be immediately checks, others fail
+// in waiting state (e.g. ImagePullBackoff errors), so we need to poll for errors showing up on these pods
+func ComparePodEventWarningDescriptions(ctx context.Context, t *testing.T, client klient.Client, pod v1.Pod, expectedPodEvent string) error {
+	retries := 1
+	delay := 10 * time.Second
+
+	if pod.Status.Phase != v1.PodFailed {
+		// If not failed state we might have to wait/retry until the error happens
+		retries = int(WAIT_POD_RUNNING_TIMEOUT / delay)
+	}
+
+	var err error = nil
+	for retries > 0 {
+		podEventsDescriptions, podErr := getStringFromPod(ctx, client, pod, GetPodEventWarningDescriptions)
+		if podErr != nil {
+			return podErr
+		}
+
+		t.Logf("podEvents: %s\n", podEventsDescriptions)
+		if !strings.Contains(podEventsDescriptions, expectedPodEvent) {
+			err = fmt.Errorf("error: Pod Events don't contain Expected String %s", expectedPodEvent)
+		} else {
+			return nil
+		}
+		retries--
+		time.Sleep(delay)
+	}
+	return err
 }
 
 func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod v1.Pod) (string, error) {

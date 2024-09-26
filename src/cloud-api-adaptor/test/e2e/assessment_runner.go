@@ -6,7 +6,6 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -44,41 +43,35 @@ type ExtraPod struct {
 	pod                  *v1.Pod
 	imagePullTimer       bool
 	expectedPodLogString string
-	testInstanceTypes    InstanceValidatorFunctions
 	podState             v1.PodPhase
 	testCommands         []TestCommand
-}
-
-type InstanceValidatorFunctions struct {
-	testSuccessfn func(instance string) bool
-	testFailurefn func(error error) bool
 }
 
 type TestCase struct {
-	testing              *testing.T
-	testEnv              env.Environment
-	testName             string
-	assert               CloudAssert
-	assessMessage        string
-	pod                  *v1.Pod
-	extraPods            []*ExtraPod
-	configMap            *v1.ConfigMap
-	secret               *v1.Secret
-	extraSecrets         []*v1.Secret
-	pvc                  *v1.PersistentVolumeClaim
-	job                  *batchv1.Job
-	service              *v1.Service
-	testCommands         []TestCommand
-	expectedPodLogString string
-	expectedPodDescribe  string
-	podState             v1.PodPhase
-	imagePullTimer       bool
-	noAuthJson           bool
-	deletionWithin       time.Duration
-	testInstanceTypes    InstanceValidatorFunctions
-	isNydusSnapshotter   bool
-	FailReason           string
-	alternateImageName   string
+	testing                     *testing.T
+	testEnv                     env.Environment
+	testName                    string
+	assert                      CloudAssert
+	assessMessage               string
+	pod                         *v1.Pod
+	extraPods                   []*ExtraPod
+	configMap                   *v1.ConfigMap
+	secret                      *v1.Secret
+	extraSecrets                []*v1.Secret
+	pvc                         *v1.PersistentVolumeClaim
+	job                         *batchv1.Job
+	service                     *v1.Service
+	testCommands                []TestCommand
+	expectedPodLogString        string
+	expectedPodEventErrorString string
+	podState                    v1.PodPhase
+	imagePullTimer              bool
+	noAuthJson                  bool
+	deletionWithin              time.Duration
+	expectedInstanceType        string
+	isNydusSnapshotter          bool
+	FailReason                  string
+	alternateImageName          string
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -131,8 +124,8 @@ func (tc *TestCase) WithTestCommands(TestCommands []TestCommand) *TestCase {
 	return tc
 }
 
-func (tc *TestCase) WithInstanceTypes(testInstanceTypes InstanceValidatorFunctions) *TestCase {
-	tc.testInstanceTypes = testInstanceTypes
+func (tc *TestCase) WithExpectedInstanceType(expectedInstanceType string) *TestCase {
+	tc.expectedInstanceType = expectedInstanceType
 	return tc
 }
 
@@ -151,8 +144,8 @@ func (tc *TestCase) WithExpectedPodLogString(expectedPodLogString string) *TestC
 	return tc
 }
 
-func (tc *TestCase) WithExpectedPodDescribe(expectedPodDescribe string) *TestCase {
-	tc.expectedPodDescribe = expectedPodDescribe
+func (tc *TestCase) WithExpectedPodEventError(expectedPodEventMessage string) *TestCase {
+	tc.expectedPodEventErrorString = expectedPodEventMessage
 	return tc
 }
 
@@ -372,56 +365,34 @@ func (tc *TestCase) Run() {
 					t.Logf("Log output of peer pod:%s", LogString)
 				}
 
-				if tc.expectedPodDescribe != "" {
-					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
+				if tc.expectedPodEventErrorString != "" {
+					err := ComparePodEventWarningDescriptions(ctx, t, client, *tc.pod, tc.expectedPodEventErrorString)
+					if err != nil {
 						t.Fatal(err)
 					}
-					for _, podItem := range podlist.Items {
-						if podItem.ObjectMeta.Name == tc.pod.Name {
-							podEvent, err := PodEventExtractor(ctx, client, *tc.pod)
-							if err != nil {
-								t.Fatal(err)
-							}
-							t.Logf("podEvent: %+v\n", podEvent)
-							if strings.Contains(podEvent.EventDescription, tc.expectedPodDescribe) {
-								t.Logf("Output Log from Pod: %s", podEvent)
-							} else {
-								t.Errorf("Job Created pod with Invalid log")
-							}
-							break
-						} else {
-							t.Fatal("Pod Not Found...")
-						}
+				} else {
+					// There shouldn't have been any pod event warnings/errors
+					warnings, err := GetPodEventWarningDescriptions(ctx, client, *tc.pod)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if warnings != "" {
+						t.Fatal(fmt.Errorf("unexpected warning/error event(s): %s", warnings))
 					}
 				}
 
-				if tc.testInstanceTypes.testSuccessfn != nil && tc.testInstanceTypes.testFailurefn != nil {
+				if tc.expectedInstanceType != "" {
 					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
 						t.Fatal(err)
 					}
-
 					for _, podItem := range podlist.Items {
 						if podItem.ObjectMeta.Name == tc.pod.Name {
-							profile, error := tc.assert.GetInstanceType(t, tc.pod.Name)
-							if error != nil {
-								if error.Error() == "Failed to Create PodVM Instance" {
-									podEvent, err := PodEventExtractor(ctx, client, *tc.pod)
-									if err != nil {
-										t.Fatal(err)
-									}
-									if !tc.testInstanceTypes.testFailurefn(errors.New(podEvent.EventDescription)) {
-										t.Fatal(fmt.Errorf("Pod Failed to execute expected error message %v", error.Error()))
-									}
-								} else {
-									t.Fatal(error)
-								}
-
+							profile, err := tc.assert.GetInstanceType(t, tc.pod.Name)
+							if err != nil {
+								t.Fatal(err)
 							}
-							if profile != "" {
-								t.Logf("PodVM Created with Instance Type: %v", profile)
-								if !tc.testInstanceTypes.testSuccessfn(profile) {
-									t.Fatal(fmt.Errorf("PodVM Created with Different Instance Type %v", profile))
-								}
+							if profile != tc.expectedInstanceType {
+								t.Errorf("PodVM was expected to have instance type %s, but has %s", tc.expectedInstanceType, profile)
 							}
 							break
 						} else {
@@ -457,12 +428,7 @@ func (tc *TestCase) Run() {
 				if tc.podState != v1.PodRunning && tc.podState != v1.PodSucceeded {
 					profile, error := tc.assert.GetInstanceType(t, tc.pod.Name)
 					if error != nil {
-						if error.Error() == "Failed to Create PodVM Instance" {
-							_, err := PodEventExtractor(ctx, client, *tc.pod)
-							if err != nil {
-								t.Fatal(err)
-							}
-						} else {
+						if error.Error() != "Failed to Create PodVM Instance" {
 							t.Fatal(error)
 						}
 					} else if profile != "" {
@@ -533,10 +499,6 @@ func (tc *TestCase) Run() {
 							t.Fatal(err)
 						}
 						t.Logf("Log output of peer pod:%s", LogString)
-					}
-					if extraPod.testInstanceTypes.testSuccessfn != nil && extraPod.testInstanceTypes.testFailurefn != nil {
-						// TBD
-						t.Fatal("Error: testInstanceTypes hasn't been implemented in extraPods. Please implement assess for function testInstanceTypes.")
 					}
 					if extraPod.podState == v1.PodRunning {
 						if len(extraPod.testCommands) > 0 {
