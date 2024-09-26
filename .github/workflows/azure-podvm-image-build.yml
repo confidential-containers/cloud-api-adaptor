@@ -30,15 +30,17 @@ env:
   AZURE_PODVM_IMAGE_VERSION: "${{ inputs.image-version }}"
   COMMUNITY_GALLERY_PREFIX: "/CommunityGalleries/${{ vars.AZURE_COMMUNITY_GALLERY_NAME }}"
   PODVM_IMAGE_NAME: "peerpod-image-${{ github.run_id }}-${{ github.run_attempt }}"
+  UPLOSI_VERSION: "0.3.0"
+  UPLOSI_SHA256: "687bcab7398ab0fda65a3809492e8cd4d6a25aad1573927be5ec75ac1c4cbc35"
 
 jobs:
   build-podvm-image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: cloud-api-adaptor/src/cloud-api-adaptor/azure/image
+        working-directory: cloud-api-adaptor/src/cloud-api-adaptor/podvm-mkosi
     outputs:
-      image-id: "${{ steps.create-image.outputs.image-id }}"
+      image-id: "${{ steps.upload-image.outputs.image-id }}"
 
     steps:
     - name: Clone cloud-api-adaptor repository
@@ -47,68 +49,28 @@ jobs:
         path: cloud-api-adaptor
         ref: "${{ inputs.git-ref || 'main' }}"
 
-    # we have to clone prior to cache loading
-    - name: Clone guest-componetns
-      run: make ../../../guest-components
+    - uses: cachix/install-nix-action@v27
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
 
-    - name: Read properties from versions.yaml
-      working-directory: cloud-api-adaptor/src/cloud-api-adaptor
+    - name: Install uplosi
       run: |
-        go_version="$(yq '.tools.golang' versions.yaml)"
-        [ -n "$go_version" ]
-        echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
-
-        rust_version="$(yq '.tools.rust' versions.yaml)"
-        [ -n "$rust_version" ]
-        echo "RUST_VERSION=${rust_version}" >> "$GITHUB_ENV"
-
-        oras_version="$(yq '.tools.oras' versions.yaml)"
-        [ -n "$oras_version" ]
-        echo "ORAS_VERSION=${oras_version}" >> "$GITHUB_ENV"
-
-    - name: Set up Go environment
-      uses: actions/setup-go@v4
-      with:
-        go-version: ${{ env.GO_VERSION }}
-        cache-dependency-path: cloud-api-adaptor/src/cloud-api-adaptor/go.sum
-
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: ${{ env.RUST_VERSION }}
-        target: x86_64-unknown-linux-musl
-        default: true
-
-    - uses: oras-project/setup-oras@v1
-      with:
-        version: ${{ env.ORAS_VERSION }}
-
-    - name: Install build dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          clang \
-          libdevmapper-dev \
-          libgpgme-dev \
-          libssl-dev \
-          libtss2-dev \
-          pkg-config \
-          protobuf-compiler
-
-    - name: Set up rust build cache
-      uses: actions/cache@v4
-      continue-on-error: false
-      with:
-        path: |
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          guest-components/target
-        key: rust-${{ env.RUST_VERSION }}
+        wget "https://github.com/edgelesssys/uplosi/releases/download/v${UPLOSI_VERSION}/uplosi_${UPLOSI_VERSION}_linux_amd64.tar.gz"
+        sha256sum -c <(echo "$UPLOSI_SHA256"  "uplosi_${UPLOSI_VERSION}_linux_amd64.tar.gz")
+        tar xzf uplosi_0.3.0_linux_amd64.tar.gz uplosi
+        sudo mv uplosi /usr/local/bin
 
     - name: Build binaries
-      run: make binaries \
-        ATTESTER="az-snp-vtpm-attester,az-tdx-vtpm-attester" \
-        LIBC=gnu
+      run: |
+        make fedora-binaries-builder
+        ATTESTER="az-snp-vtpm-attester,az-tdx-vtpm-attester" make binaries
+
+    - name: Build image
+      run: |
+        touch resources/buildBootableImage
+        sudo mkosi --environment=VARIANT_ID=production
+        ln -s "$(which nix)" /usr/local/bin/nix
+        sudo make image-debug
 
     - uses: azure/login@v2
       name: 'Az CLI login'
@@ -117,40 +79,29 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
-    - name: Create image
-      id: create-image
-      env:
-        IMAGE_ID: "${{ env.COMMUNITY_GALLERY_PREFIX }}/images/${{ env.AZURE_PODVM_IMAGE_DEF_NAME }}/versions/${{ env.AZURE_PODVM_IMAGE_VERSION }}"
-        PKR_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        PKR_VAR_resource_group: ${{ secrets.AZURE_RESOURCE_GROUP }}
-        PKR_VAR_location: ${{ secrets.AZURE_REGION }}
-        PKR_VAR_az_image_name: ${{ env.PODVM_IMAGE_NAME }}
-        PKR_VAR_vm_size: "Standard_D2as_v5"
-        PKR_VAR_ssh_username: "peerpod"
-        PKR_VAR_az_gallery_name: ${{ secrets.AZURE_PODVM_GALLERY_NAME }}
-        PKR_VAR_az_gallery_image_name: ${{ env.AZURE_PODVM_IMAGE_DEF_NAME }}
-        PKR_VAR_az_gallery_image_version: ${{ env.AZURE_PODVM_IMAGE_VERSION }}
-        PKR_VAR_use_azure_cli_auth: "true"
+    - name: upload image
+      id: upload-image
       run: |
-        make image \
-          CLOUD_PROVIDER=azure \
-          PODVM_DISTRO=ubuntu
+        SHARING_NAME_PREFIX="$(echo ${{ vars.AZURE_COMMUNITY_GALLERY_NAME }} | cut -d'-' -f1)"
+        cat <<EOF> uplosi.conf
+        [base]
+        imageVersion = "$AZURE_PODVM_IMAGE_VERSION"
+        name = "$AZURE_PODVM_IMAGE_DEF_NAME"
+
+        [base.azure]
+        subscriptionID = "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        location = "eastus"
+        resourceGroup = "${{ secrets.AZURE_RESOURCE_GROUP }}"
+        sharedImageGallery = "${{ secrets.AZURE_PODVM_GALLERY_NAME }}"
+        sharingNamePrefix = "$SHARING_NAME_PREFIX"
+
+        [variant.default]
+        provider = "azure"
+
+        [variant.default.azure]
+        replicationRegions = ["eastus","westeurope","northeurope"]
+        EOF
+
+        uplosi upload build/system.raw
         echo "successfully built $IMAGE_ID"
         echo "image-id=${IMAGE_ID}" >> "$GITHUB_OUTPUT"
-
-    # Above build can take a > 10 minutes and the login assertion is valid only
-    # for 5 minutes, so re-login before we cleanup the intermediate image.
-    - uses: azure/login@v2
-      name: 'Az CLI login'
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-
-    - name: Cleanup intermediate image
-      if: always()
-      run: |
-        # Delete intermediate image
-        az image delete \
-          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-          --name ${{ env.PODVM_IMAGE_NAME }}
