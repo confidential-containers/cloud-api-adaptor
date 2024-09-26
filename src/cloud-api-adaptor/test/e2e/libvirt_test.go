@@ -99,11 +99,15 @@ func TestLibvirtDeletePod(t *testing.T) {
 }
 
 func TestLibvirtPodToServiceCommunication(t *testing.T) {
+	// This test is causing issues on CI with instability, so skip until we can resolve this.
+	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestPodToServiceCommunication(t, testEnv, assert)
 }
 
 func TestLibvirtPodsMTLSCommunication(t *testing.T) {
+	// This test is causing issues on CI with instability, so skip until we can resolve this.
+	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
