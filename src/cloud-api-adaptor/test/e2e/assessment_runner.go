@@ -382,24 +382,10 @@ func (tc *TestCase) Run() {
 				}
 
 				if tc.expectedInstanceType != "" {
-					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
+					err := CompareInstanceType(ctx, t, client, *tc.pod, tc.expectedPodEventErrorString, tc.assert.GetInstanceType)
+					if err != nil {
 						t.Fatal(err)
 					}
-					for _, podItem := range podlist.Items {
-						if podItem.ObjectMeta.Name == tc.pod.Name {
-							profile, err := tc.assert.GetInstanceType(t, tc.pod.Name)
-							if err != nil {
-								t.Fatal(err)
-							}
-							if profile != tc.expectedInstanceType {
-								t.Errorf("PodVM was expected to have instance type %s, but has %s", tc.expectedInstanceType, profile)
-							}
-							break
-						} else {
-							t.Fatal("Pod Not Found...")
-						}
-					}
-
 				}
 
 				if tc.podState == v1.PodRunning {
