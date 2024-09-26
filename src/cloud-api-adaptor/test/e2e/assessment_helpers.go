@@ -199,30 +199,19 @@ func GetPodLog(ctx context.Context, client klient.Client, pod v1.Pod) (string, e
 	if err != nil {
 		return "", err
 	}
-	return buf.String(), nil
+	return strings.TrimSpace(buf.String()), nil
 }
 
-func ComparePodLogString(ctx context.Context, client klient.Client, customPod v1.Pod, expectedPodlogString string) (string, error) {
-	podLogString := ""
-	var podlist v1.PodList
-	if err := client.Resources(customPod.Namespace).List(ctx, &podlist); err != nil {
-		return podLogString, err
-	}
-	//adding sleep time to intialize container and ready for logging
+func ComparePodLogString(ctx context.Context, client klient.Client, customPod v1.Pod, expectedPodLogString string) (string, error) {
+	//adding sleep time to initialize container and ready for logging
 	time.Sleep(5 * time.Second)
-	for _, pod := range podlist.Items {
-		if pod.ObjectMeta.Name == customPod.Name {
-			var err error
-			podLogString, err = GetPodLog(ctx, client, pod)
-			if err != nil {
-				return "", err
-			}
-			podLogString = strings.TrimSpace(podLogString)
-			break
-		}
+
+	podLogString, err := getStringFromPod(ctx, client, customPod, GetPodLog)
+	if err != nil {
+		return "", err
 	}
 
-	if !strings.Contains(podLogString, expectedPodlogString) {
+	if !strings.Contains(podLogString, expectedPodLogString) {
 		return podLogString, errors.New("Error: Pod Log doesn't contain Expected String")
 	}
 
@@ -230,17 +219,10 @@ func ComparePodLogString(ctx context.Context, client klient.Client, customPod v1
 }
 
 func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod v1.Pod) (string, error) {
-	var podlist v1.PodList
-	if err := client.Resources(customPod.Namespace).List(ctx, &podlist); err != nil {
-		return "", err
+	var getNodeName = func(ctx context.Context, client klient.Client, pod v1.Pod) (string, error) {
+		return pod.Spec.NodeName, nil
 	}
-
-	for _, pod := range podlist.Items {
-		if pod.ObjectMeta.Name == customPod.Name {
-			return pod.Spec.NodeName, nil
-		}
-	}
-	return "", errors.New("Pod wasn't found")
+	return getStringFromPod(ctx, client, customPod, getNodeName)
 }
 
 func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klient.Client, job batchv1.Job) (int, int, string, error) {
@@ -563,4 +545,19 @@ func GetPodNamesByLabel(ctx context.Context, client klient.Client, t *testing.T,
 	}
 
 	return pods, nil
+}
+
+type podToString func(context.Context, klient.Client, v1.Pod) (string, error)
+
+func getStringFromPod(ctx context.Context, client klient.Client, pod v1.Pod, fn podToString) (string, error) {
+	var podlist v1.PodList
+	if err := client.Resources(pod.Namespace).List(ctx, &podlist); err != nil {
+		return "", err
+	}
+	for _, podItem := range podlist.Items {
+		if podItem.ObjectMeta.Name == pod.Name {
+			return fn(ctx, client, podItem)
+		}
+	}
+	return "", fmt.Errorf("no pod matching %v, was found", pod)
 }
