@@ -132,12 +132,22 @@ else
 endif
 ifeq ($(RESOURCE_CTRL),true)
 	$(MAKE) -C ../peerpod-ctrl deploy
+	@if kubectl get svc -n cert-manager cert-manager-webhook > /dev/null 2>&1; then \
+		echo "Installing webhook" ;\
+		$(MAKE) -C ../webhook deploy ;\
+	else \
+		echo "Installing cert-manager" ;\
+		$(MAKE) -C ../webhook deploy-cert-manager ;\
+		echo "Installing webhook" ;\
+		$(MAKE) -C ../webhook deploy ;\
+	fi
 endif
 
 .PHONY: delete
 delete: ## Delete cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
 ifeq ($(RESOURCE_CTRL),true)
 	$(MAKE) -C ../peerpod-ctrl undeploy
+	$(MAKE) -C ../webhook undeploy
 endif
 ifneq ($(CLOUD_PROVIDER),)
 	kubectl delete -k install/overlays/$(CLOUD_PROVIDER)
