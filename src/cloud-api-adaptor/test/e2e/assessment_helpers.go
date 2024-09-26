@@ -46,12 +46,6 @@ func timeExtractor(log string) (string, error) {
 	return matchString[0], nil
 }
 
-type PodEvents struct {
-	EventType        string
-	EventDescription string
-	EventReason      string
-}
-
 func NewTestCase(t *testing.T, e env.Environment, testName string, assert CloudAssert, assessMessage string) *TestCase {
 	testCase := &TestCase{
 		testing:        t,
@@ -77,29 +71,6 @@ func NewExtraPod(namespace string, podName string, containerName string, imageNa
 		podState: v1.PodRunning,
 	}
 	return extPod
-}
-
-func PodEventExtractor(ctx context.Context, client klient.Client, pod v1.Pod) (*PodEvents, error) {
-	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
-	if err != nil {
-		return nil, err
-	}
-	watcher, err := clientset.CoreV1().Events(pod.Namespace).Watch(ctx, metav1.ListOptions{FieldSelector: fmt.Sprintf("involvedObject.name=%s", pod.Name)})
-	if err != nil {
-		return nil, err
-	}
-	defer watcher.Stop()
-	for event := range watcher.ResultChan() {
-
-		if event.Object.(*v1.Event).Type == v1.EventTypeWarning {
-			var newPodEvents PodEvents
-			newPodEvents.EventType = event.Object.(*v1.Event).Type
-			newPodEvents.EventDescription = event.Object.(*v1.Event).Message
-			newPodEvents.EventType = event.Object.(*v1.Event).Reason
-			return &newPodEvents, nil
-		}
-	}
-	return nil, errors.New("No Events Found in PodVM")
 }
 
 func WatchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod, pod v1.Pod) (string, error) {
@@ -216,6 +187,40 @@ func ComparePodLogString(ctx context.Context, client klient.Client, customPod v1
 	}
 
 	return podLogString, nil
+}
+
+// Note: there are currently two event types: Normal and Warning, so Warning includes errors
+func GetPodEventWarningDescriptions(ctx context.Context, client klient.Client, pod v1.Pod) (string, error) {
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		return "", err
+	}
+
+	events, err := clientset.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{FieldSelector: fmt.Sprintf("involvedObject.name=%s", pod.Name)})
+	if err != nil {
+		return "", err
+	}
+
+	var descriptionsBuilder strings.Builder
+	for _, event := range events.Items {
+		if event.Type == v1.EventTypeWarning {
+			descriptionsBuilder.WriteString(event.Message)
+		}
+	}
+	return descriptionsBuilder.String(), nil
+}
+
+func ComparePodEventWarningDescriptions(ctx context.Context, t *testing.T, client klient.Client, pod v1.Pod, expectedPodEventDescribe string) error {
+	podEventsDescriptions, err := getStringFromPod(ctx, client, pod, GetPodEventWarningDescriptions)
+	if err != nil {
+		return err
+	}
+
+	t.Logf("podEvents: %+v\n", podEventsDescriptions)
+	if !strings.Contains(podEventsDescriptions, expectedPodEventDescribe) {
+		return fmt.Errorf("error: Pod Descriptions don't contain Expected String %s", expectedPodEventDescribe)
+	}
+	return nil
 }
 
 func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod v1.Pod) (string, error) {
