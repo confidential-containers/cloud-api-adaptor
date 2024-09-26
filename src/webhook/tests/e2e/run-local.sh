@@ -35,23 +35,8 @@ cleanup () {
 cluster_up() {
 	pushd "$webhook_dir" >/dev/null
 	make kind-cluster
+	make deploy-cert-manager
 	popd >/dev/null
-
-	local cert_manager_ns="cert-manager"
-	local cert_manager_pods
-	cert_manager_pods="$(kubectl get pods -n "$cert_manager_ns" 2>/dev/null | \
-		grep cert-manager-webhook |awk '{ print $1}')"
-
-	if [ -z "$cert_manager_pods" ]; then
-		echo "ERROR: failed to get the certification manager webhook pods"
-		exit 1
-	fi
-
-	local pod
-	for pod in $cert_manager_pods; do
-		kubectl wait --for=condition=Ready --timeout=60s \
-			-n "$cert_manager_ns" "pod/$pod"
-	done
 }
 
 # Install the webhook and ensure it is ready to use.
