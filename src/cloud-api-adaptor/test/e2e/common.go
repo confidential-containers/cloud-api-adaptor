@@ -152,6 +152,28 @@ func WithCommand(command []string) PodOption {
 	}
 }
 
+func WithCpuMemRequestAndLimit(cpuRequest, memRequest, cpuLimit, memLimit string) PodOption {
+	// If any of the parameters is empty, don't set it
+	return func(p *corev1.Pod) {
+		p.Spec.Containers[0].Resources = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{},
+			Limits:   corev1.ResourceList{},
+		}
+		if cpuRequest != "" {
+			p.Spec.Containers[0].Resources.Requests[corev1.ResourceCPU] = resource.MustParse(cpuRequest)
+		}
+		if memRequest != "" {
+			p.Spec.Containers[0].Resources.Requests[corev1.ResourceMemory] = resource.MustParse(memRequest)
+		}
+		if cpuLimit != "" {
+			p.Spec.Containers[0].Resources.Limits[corev1.ResourceCPU] = resource.MustParse(cpuLimit)
+		}
+		if memLimit != "" {
+			p.Spec.Containers[0].Resources.Limits[corev1.ResourceMemory] = resource.MustParse(memLimit)
+		}
+	}
+}
+
 type JobOption func(*batchv1.Job)
 
 func WithJobCommand(command []string) JobOption {

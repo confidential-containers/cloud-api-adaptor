@@ -439,6 +439,12 @@ func (tc *TestCase) Run() {
 						}
 					}
 
+					err := AssessPodRequestAndLimit(ctx, client, tc.pod)
+					if err != nil {
+						t.Logf("request and limit for podvm extended resource are not set to 1")
+						t.Fatal(err)
+					}
+
 					tc.assert.HasPodVM(t, tc.pod.Name)
 				}
 
