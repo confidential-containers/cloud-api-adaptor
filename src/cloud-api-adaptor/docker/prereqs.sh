@@ -86,14 +86,14 @@ install_os_packages() {
 # the function will download the packages, extract them and install them in /usr/local/bin
 # Following are the packages that are installed:
 # yq=https://github.com/mikefarah/yq/releases/download/v4.44.2/yq_linux_amd64
-# kubectl=https://storage.googleapis.com/kubernetes-release/release/v1.27.11/bin/linux/amd64/kubectl
+# kubectl=https://storage.googleapis.com/kubernetes-release/release/v1.29.4/bin/linux/amd64/kubectl
 # kind=https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64
 
 install_binary_packages() {
     # Define the required binary packages
     REQUIRED_BINARY_PACKAGES=(
         "yq=https://github.com/mikefarah/yq/releases/download/v4.44.2/yq_linux_amd64"
-        "kubectl=https://storage.googleapis.com/kubernetes-release/release/v1.27.11/bin/linux/amd64/kubectl"
+        "kubectl=https://storage.googleapis.com/kubernetes-release/release/v1.29.4/bin/linux/amd64/kubectl"
         "kind=https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64"
     )
 
