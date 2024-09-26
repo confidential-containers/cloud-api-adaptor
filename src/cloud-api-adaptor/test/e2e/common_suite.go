@@ -350,20 +350,7 @@ func DoTestCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T, e env.E
 		"io.katacontainers.config.hypervisor.image": nonExistingImageName,
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
-
-	testInstanceTypes := InstanceValidatorFunctions{
-		testSuccessfn: IsStringEmpty,
-		testFailurefn: func(errorMsg error) bool {
-			if strings.Contains(errorMsg.Error(), expectedErrorMessage) {
-				t.Logf("Got Expected Error: %v", errorMsg.Error())
-				return true
-			} else {
-				t.Logf("Failed to Get Expected Error: %v", errorMsg.Error())
-				return false
-			}
-		},
-	}
-	NewTestCase(t, e, "PodVMwithAnnotationsInvalidAlternateImage", assert, "Failed to Create PodVM with a non-existent image").WithPod(pod).WithInstanceTypes(testInstanceTypes).WithCustomPodState(v1.PodPending).Run()
+	NewTestCase(t, e, "PodVMwithAnnotationsInvalidAlternateImage", assert, "Failed to Create PodVM with a non-existent image").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert CloudAssert) {
