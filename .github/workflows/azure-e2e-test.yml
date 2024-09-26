@@ -217,7 +217,7 @@ jobs:
           echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
 
     - name: Restore the configuration created before
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: e2e-configuration
 
