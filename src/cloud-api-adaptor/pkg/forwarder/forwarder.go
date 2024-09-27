@@ -30,7 +30,7 @@ const (
 	DefaultConfigPath          = "/run/peerpod/daemon.json"
 	DefaultPodNetworkSpecPath  = "/run/peerpod/podnetwork.json"
 	DefaultKataAgentSocketPath = "/run/kata-containers/agent.sock"
-	DefaultKataAgentNamespace  = "/run/netns/podns"
+	DefaultPodNamespace        = "/run/netns/podns"
 	AgentURLPath               = "/agent"
 )
 
