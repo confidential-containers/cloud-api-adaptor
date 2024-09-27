@@ -37,7 +37,7 @@ type Config struct {
 	configPath          string
 	listenAddr          string
 	kataAgentSocketPath string
-	kataAgentNamespace  string
+	podNamespace        string
 	HostInterface       string
 }
 
@@ -71,7 +71,7 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		flags.StringVar(&cfg.configPath, "config", daemon.DefaultConfigPath, "Path to a daemon config file")
 		flags.StringVar(&cfg.listenAddr, "listen", daemon.DefaultListenAddr, "Listen address")
 		flags.StringVar(&cfg.kataAgentSocketPath, "kata-agent-socket", daemon.DefaultKataAgentSocketPath, "Path to a kata agent socket")
-		flags.StringVar(&cfg.kataAgentNamespace, "kata-agent-namespace", daemon.DefaultKataAgentNamespace, "Path to the network namespace where kata agent runs")
+		flags.StringVar(&cfg.podNamespace, "pod-namespace", daemon.DefaultPodNamespace, "Path to the network namespace where the pod runs")
 		flags.StringVar(&cfg.HostInterface, "host-interface", "", "network interface name that is used for network tunnel traffic")
 		flags.StringVar(&tlsConfig.CAFile, "ca-cert-file", "", "CA cert file")
 		flags.StringVar(&tlsConfig.CertFile, "cert-file", "", "cert file")
@@ -110,7 +110,7 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		// To obtain secrets from KBS, we approach the api-server-rest service which then approaches the CDH asking for a secret resource
 		// the CDH than contact the KBS (possibly after approaching Attestation Agent for a token) and the KBS serves the requested key
 		// The communication between the CDH (and Attestation Agent) and the KBS is performed via an SSH tunnel named  "KBS"
-		apic := apic.NewApiClient(API_SERVER_REST_PORT, cfg.kataAgentNamespace)
+		apic := apic.NewApiClient(API_SERVER_REST_PORT, cfg.podNamespace)
 		services = append(services, ppssh.NewSshServer(inbounds, outbounds, ppssh.GetSecret(apic.GetKey), sshutil.SSHPORT))
 	} else {
 		if !disableTLS {
@@ -118,9 +118,9 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		}
 	}
 
-	interceptor := interceptor.NewInterceptor(cfg.kataAgentSocketPath, cfg.kataAgentNamespace)
+	interceptor := interceptor.NewInterceptor(cfg.kataAgentSocketPath, cfg.podNamespace)
 
-	podNode := podnetwork.NewPodNode(cfg.kataAgentNamespace, cfg.HostInterface, cfg.daemonConfig.PodNetwork)
+	podNode := podnetwork.NewPodNode(cfg.podNamespace, cfg.HostInterface, cfg.daemonConfig.PodNetwork)
 
 	services = append(services, daemon.NewDaemon(&cfg.daemonConfig, cfg.listenAddr, cfg.tlsConfig, interceptor, podNode))
 
