@@ -3,6 +3,7 @@ package mutating_webhook
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/webhook/pkg/utils"
 
@@ -80,11 +81,12 @@ func adjustResourceSpec(pod *corev1.Pod) *corev1.Pod {
 
 	// Add cpu annotation
 	if !cpuRequest.IsZero() && cpuLimit.Cmp(cpuRequest) >= 0 {
-		logger.Printf("Adding CPU annotation based on cpuLimit: %s", cpuLimit.String())
-		annotations[PEERPODS_CPU_ANNOTATION] = cpuLimit.String()
+		logger.Printf("Adding CPU annotation based on cpuLimit (integer value): %d", cpuLimit.Value())
+		// We need the scaled value for the annotation and not the raw value like 1000m, 0.4 etc for CPU
+		annotations[PEERPODS_CPU_ANNOTATION] = strconv.FormatInt(cpuLimit.Value(), 10)
 	} else if cpuRequest.Sign() == 1 {
-		logger.Printf("Adding CPU annotation based on cpuRequest: %s", cpuRequest.String())
-		annotations[PEERPODS_CPU_ANNOTATION] = cpuRequest.String()
+		logger.Printf("Adding CPU annotation based on cpuRequest (integer value): %d", cpuRequest.Value())
+		annotations[PEERPODS_CPU_ANNOTATION] = strconv.FormatInt(cpuRequest.Value(), 10)
 	}
 
 	// Add memory annotation

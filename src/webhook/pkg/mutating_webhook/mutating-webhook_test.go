@@ -566,3 +566,226 @@ func TestMutatePod_NoChangeForDifferentRuntimeClass(t *testing.T) {
 		}
 	}
 }
+
+// Add test case with fractional CPU requests (eg 200m, 0.5) and limits (eg 500m, 0.5)
+func TestMutatePod_FractionalCpu(t *testing.T) {
+	// Mock environment variable
+	os.Setenv("TARGET_RUNTIMECLASS", "kata-remote")
+	os.Setenv("POD_VM_EXTENDED_RESOURCE", "kata.peerpods.io/vm")
+
+	// Create a sample pod spec with fractional CPU requests and limits
+	runtimeClassName := "kata-remote"
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			RuntimeClassName: &runtimeClassName,
+			Containers: []corev1.Container{
+				{
+					Name:  "container1",
+					Image: "busybox",
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("500m"),
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	podMutator := &PodMutator{}
+	mutatedPod, err := podMutator.mutatePod(pod)
+	if err != nil {
+		t.Fatalf("mutatePod() error = %v", err)
+	}
+
+	// Check annotations
+	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "1" {
+		t.Errorf("Expected CPU annotation to be 1, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	}
+
+	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "4096" {
+		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	}
+
+	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	}
+
+	// Check resource requirements for all containers are cleared
+	// Except for the first container which has the peer-pod resource added
+	for idx, container := range mutatedPod.Spec.Containers {
+		// Skip the first container
+		if idx == 0 {
+			continue
+		}
+
+		if len(container.Resources.Requests) != 0 || len(container.Resources.Limits) != 0 {
+			t.Errorf("Expected resources to be cleared for container %d, got Requests: %v, Limits: %v",
+				idx, container.Resources.Requests, container.Resources.Limits)
+		}
+	}
+
+	expectedResource := resource.MustParse("1")
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+		t.Errorf("Expected peer-pod VM resource request to be 1, got %v",
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+	}
+}
+
+func TestMutatePod_FractionalCpuMoreThanOne(t *testing.T) {
+	// Mock environment variable
+	os.Setenv("TARGET_RUNTIMECLASS", "kata-remote")
+	os.Setenv("POD_VM_EXTENDED_RESOURCE", "kata.peerpods.io/vm")
+
+	// Create a sample pod spec with fractional CPU requests and limits
+	runtimeClassName := "kata-remote"
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			RuntimeClassName: &runtimeClassName,
+			Containers: []corev1.Container{
+				{
+					Name:  "container1",
+					Image: "busybox",
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1500m"),
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	podMutator := &PodMutator{}
+	mutatedPod, err := podMutator.mutatePod(pod)
+	if err != nil {
+		t.Fatalf("mutatePod() error = %v", err)
+	}
+
+	// Check annotations
+	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "2" {
+		t.Errorf("Expected CPU annotation to be 1, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	}
+
+	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "4096" {
+		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	}
+
+	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	}
+
+	// Check resource requirements for all containers are cleared
+	// Except for the first container which has the peer-pod resource added
+	for idx, container := range mutatedPod.Spec.Containers {
+		// Skip the first container
+		if idx == 0 {
+			continue
+		}
+
+		if len(container.Resources.Requests) != 0 || len(container.Resources.Limits) != 0 {
+			t.Errorf("Expected resources to be cleared for container %d, got Requests: %v, Limits: %v",
+				idx, container.Resources.Requests, container.Resources.Limits)
+		}
+	}
+
+	expectedResource := resource.MustParse("1")
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+		t.Errorf("Expected peer-pod VM resource request to be 1, got %v",
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+	}
+}
+
+// Add test case with fractional CPU requests (eg 200m, 0.5) and limits (eg 500m, 0.5)
+// Add multiple containers and init containers
+
+func TestMutatePod_FractionalCpu_MultipleContainers(t *testing.T) {
+	// Mock environment variable
+	os.Setenv("TARGET_RUNTIMECLASS", "kata-remote")
+	os.Setenv("POD_VM_EXTENDED_RESOURCE", "kata.peerpods.io/vm")
+
+	// Create a sample pod spec with fractional CPU requests and limits
+	runtimeClassName := "kata-remote"
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			RuntimeClassName: &runtimeClassName,
+			InitContainers: []corev1.Container{
+				{
+					Name:  "init-container1",
+					Image: "busybox",
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("0.7"),
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+					},
+				},
+			},
+			Containers: []corev1.Container{
+				{
+					Name:  "container1",
+					Image: "busybox",
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("0.5"),
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	podMutator := &PodMutator{}
+	mutatedPod, err := podMutator.mutatePod(pod)
+	if err != nil {
+		t.Fatalf("mutatePod() error = %v", err)
+	}
+
+	// Check annotations
+	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "2" {
+		t.Errorf("Expected CPU annotation to be 2, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	}
+
+	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "8192" {
+		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	}
+
+	// Check resource requirements for all containers are cleared
+	// Except for the first container which has the peer-pod resource added
+	for idx, container := range mutatedPod.Spec.Containers {
+		// Skip the first container
+		if idx == 0 {
+			continue
+		}
+
+		if len(container.Resources.Requests) != 0 || len(container.Resources.Limits) != 0 {
+			t.Errorf("Expected resources to be cleared for container %d, got Requests: %v, Limits: %v",
+				idx, container.Resources.Requests, container.Resources.Limits)
+		}
+	}
+
+	expectedResource := resource.MustParse("1")
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+		t.Errorf("Expected peer-pod VM resource request to be 1, got %v",
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+	}
+}
