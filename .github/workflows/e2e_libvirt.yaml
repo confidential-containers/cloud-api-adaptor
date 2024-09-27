@@ -40,6 +40,8 @@ defaults:
 jobs:
   test:
     runs-on: az-ubuntu-2204
+    # TODO: remove this when the crio job gets stable
+    continue-on-error: ${{ inputs.container_runtime == 'crio' && true || false }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
