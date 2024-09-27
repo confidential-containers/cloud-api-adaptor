@@ -1,6 +1,5 @@
 include ../Makefile.defaults
 
-ATTESTER  ?= none
 ARCH      ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILDER   = fedora-binaries-builder-$(ARCH)
 SE_BOOT   ?= false
@@ -34,7 +33,6 @@ fedora-binaries-builder:
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg ARCH=$(ARCH) \
 		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
-		--build-arg RUST_VERSION=$(RUST_VERSION) \
 		--build-arg YQ_VERSION=$(YQ_VERSION) \
 		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
 		--build-arg YQ_ARCH=$(ARCH) \
@@ -51,8 +49,9 @@ ifeq ($(IS_DEBIAN),true)
 	docker buildx use default
 endif
 	docker buildx build \
+		--progress=plain \
 		--build-arg BUILDER_IMG=$(BUILDER) \
-		--build-arg ATTESTER=$(ATTESTER) \
+		--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
 		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 		--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
 		--build-arg PAUSE_BIN=$(PAUSE_BIN) \

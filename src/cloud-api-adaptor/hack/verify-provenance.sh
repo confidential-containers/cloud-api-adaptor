@@ -18,12 +18,12 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 "
-  echo "  -a <oci-artifact w/ sha256 digest>"
-  echo "  -d <expected git sha1 from which the artifact was built>"
-  echo "  -r <repository on which the artifact was built>"
-  echo "  [-g] (optional. fetch attestation using github api)"
-  exit 1
+	echo "Usage: $0 "
+	echo "  -a <oci-artifact w/ sha256 digest>"
+	echo "  -d <expected git sha1 from which the artifact was built>"
+	echo "  -r <repository on which the artifact was built>"
+	echo "  [-g] (optional. fetch attestation using github api)"
+	exit 1
 }
 
 oci_artifact=""

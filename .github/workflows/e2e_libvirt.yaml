@@ -53,10 +53,10 @@ jobs:
           sudo snap install yq
           echo "KBS_REPO=$(yq -e '.git.kbs.url' versions.yaml)" >> "$GITHUB_ENV"
           echo "KBS_VERSION=$(yq -e '.git.kbs.reference' versions.yaml)" >> "$GITHUB_ENV"
-          echo "RUST_VERSION=$(yq -e '.tools.rust' versions.yaml)" >> "$GITHUB_ENV"
           go_version="$(yq '.tools.golang' versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+          echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
         uses: actions/setup-go@v5
@@ -95,6 +95,10 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
           override: true
           profile: minimal
+
+      - uses: oras-project/setup-oras@v1
+        with:
+          version: ${{ env.ORAS_VERSION }}
 
       - name: Install gh cli
         run: |

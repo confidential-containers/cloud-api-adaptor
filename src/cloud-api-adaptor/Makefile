@@ -18,7 +18,6 @@ BINARIES    := cloud-api-adaptor agent-protocol-forwarder process-user-data
 SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
-ATTESTER    ?= none
 # End-to-end tests overall run timeout.
 TEST_E2E_TIMEOUT ?= 60m
 # To run a sub-set of tests, set an unanchored regex matching the test's name as in go's test -run option.
@@ -172,7 +171,6 @@ podvm-builder:
 	--build-arg ACTIVATION_KEY=$(ACTIVATION_KEY) \
 	--build-arg ARCH=$(ARCH) \
 	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
-	--build-arg RUST_VERSION=$(RUST_VERSION) \
 	--build-arg YQ_VERSION=$(YQ_VERSION) \
 	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
 	--build-arg YQ_ARCH=$(ARCH) \
@@ -187,7 +185,7 @@ podvm-binaries:
 	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
 	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
 	--build-arg ARCH=$(ARCH) \
-	--build-arg ATTESTER=$(ATTESTER) \
+	--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
 	--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 	--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
 	--build-arg PAUSE_BIN=$(PAUSE_BIN) \
