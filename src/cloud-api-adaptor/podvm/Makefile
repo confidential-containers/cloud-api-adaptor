@@ -20,8 +20,6 @@ ifndef IMAGE_CHECKSUM
 $(error "IMAGE_CHECKSUM is not defined")
 endif
 
-KATA_AGENT_SRC := ../../kata-containers/src/agent
-STATIC_LIBSECCOMP_BUILDER := ../../kata-containers/ci/install_libseccomp.sh
 AGENT_PROTOCOL_FORWARDER_SRC := ../
 
 QEMU_MACHINE_TYPE_s390x := s390-ccw-virtio
@@ -104,5 +102,4 @@ clean:
 	rm -f "$(IMAGE_FILE)" "$(UBUNTU_IMAGE_FILE)" $(BINARIES)
 	rm -fr "$(SKOPEO_SRC)" "$(UMOCI_SRC)" "$(PAUSE_SRC)" "$(FILES_DIR)/$(PAUSE_BUNDLE)"
 	rm -fr "$(OPA_SRC)"
-
 
