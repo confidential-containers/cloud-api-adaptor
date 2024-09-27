@@ -144,6 +144,7 @@ Use the properties on the table below for Libvirt:
 
 |Property|Description|Default|
 |---|---|---|
+|container_runtime|Test cluster configured container runtime. Either **containerd** or **crio** |containerd|
 |libvirt_network|Libvirt Network|"default"|
 |libvirt_storage|Libvirt storage pool|"default"|
 |libvirt_vol_name|Volume name|"podvm-base.qcow2"|
