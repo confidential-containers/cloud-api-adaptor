@@ -38,6 +38,11 @@ on:
         default: false
         required: false
         type: boolean
+      container_runtime:
+        default: 'containerd'
+        description: Name of the container runtime. Either containerd or crio.
+        required: false
+        type: string
 
 env:
   CLOUD_PROVIDER: libvirt
@@ -111,6 +116,7 @@ jobs:
         run: |
           export TEST_E2E_SECURE_COMMS="${{ inputs.secure_comms }}"
           ./libvirt/config_libvirt.sh
+          echo "container_runtime=\"${{ inputs.container_runtime }}\"" >> libvirt.properties
           # For debugging
           cat libvirt.properties
 
@@ -163,6 +169,7 @@ jobs:
           REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
         run: |
           export CLOUD_PROVIDER=libvirt
+          export CONTAINER_RUNTIME="${{ inputs.container_runtime }}"
           export DEPLOY_KBS=true
           export TEST_PROVISION="yes"
           export TEST_TEARDOWN="no"
