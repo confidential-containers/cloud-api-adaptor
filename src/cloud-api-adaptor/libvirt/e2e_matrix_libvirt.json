@@ -1,4 +1,5 @@
 {
+    "container_runtime": ["containerd", "crio"],
     "secure_comms": ["none"],
     "os": ["ubuntu"],
     "provider": ["generic"],
