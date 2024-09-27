@@ -226,24 +226,23 @@ jobs:
         SUBNET_ID="$(az network vnet subnet show -g "$NODE_RG" --vnet-name "$VNET_NAME" -n peerpod --query id -o tsv)"
         echo "AZURE_SUBNET_ID=\"${SUBNET_ID}\"" >> "$TEST_PROVISION_FILE"
 
-    - name: Extract kbs reference
-      run: echo "KBS_VERSION=$(yq -e '.git.kbs.reference' versions.yaml)" >> "$GITHUB_ENV"
+    - name: Extract kbs repo & reference
+      run: |
+        echo "KBS_REPO=$(yq -e '.git.kbs.url' versions.yaml)" >> "$GITHUB_ENV"
+        echo "KBS_VERSION=$(yq -e '.git.kbs.reference' versions.yaml)" >> "$GITHUB_ENV"
 
     - name: Checkout kbs Repository
       run: |
         rm -rf test/trustee
-        git clone https://github.com/confidential-containers/trustee test/trustee
-        pushd test/trustee
+        git clone "${KBS_REPO}" test/trustee
+        cd test/trustee/kbs/config/kubernetes/base
         git checkout "${KBS_VERSION}"
-        pushd kbs/config/kubernetes/base/
         # Trustee only updates their staging image reliably with sha tags,
         # so switch to use that and convert the version to the sha
         KBS_SHA=$(gh api repos/confidential-containers/trustee/commits/${KBS_VERSION} -q .sha)
         kustomize edit set image kbs-container-image=ghcr.io/confidential-containers/staged-images/kbs:${KBS_SHA}
         # For debugging
-        echo "Trustee deployment: $(cat kustomization.yaml). Images: $(cat kustomization.yaml | grep -A 5 images:)"
-        popd
-        popd
+        echo -e "Trustee deployment:\n$(cat kustomization.yaml)\nImages:\n$(cat kustomization.yaml | grep -A 5 images:)"
 
     - name: Run e2e test
       env:
