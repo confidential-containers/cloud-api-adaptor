@@ -23,14 +23,15 @@ const AlternateVolumeName = "another-podvm-base.qcow2"
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
-	conn         *libvirt.Connect // Libvirt connection
-	network      string           // Network name
-	ssh_key_file string           // SSH key file used to connect to Libvirt
-	storage      string           // Storage pool name
-	uri          string           // Libvirt URI
-	wd           string           // libvirt's directory path on this repository
-	volumeName   string           // Podvm volume name
-	clusterName  string           // Cluster name
+	conn             *libvirt.Connect // Libvirt connection
+	containerRuntime string           // Name of the container runtime
+	network          string           // Network name
+	ssh_key_file     string           // SSH key file used to connect to Libvirt
+	storage          string           // Storage pool name
+	uri              string           // Libvirt URI
+	wd               string           // libvirt's directory path on this repository
+	volumeName       string           // Podvm volume name
+	clusterName      string           // Cluster name
 }
 
 // LibvirtInstallOverlay implements the InstallOverlay interface
@@ -84,14 +85,15 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
-		conn:         conn,
-		network:      network,
-		ssh_key_file: ssh_key_file,
-		storage:      storage,
-		uri:          uri,
-		wd:           wd,
-		volumeName:   vol_name,
-		clusterName:  clusterName,
+		conn:             conn,
+		containerRuntime: properties["container_runtime"],
+		network:          network,
+		ssh_key_file:     ssh_key_file,
+		storage:          storage,
+		uri:              uri,
+		wd:               wd,
+		volumeName:       vol_name,
+		clusterName:      clusterName,
 	}, nil
 }
 
@@ -196,11 +198,12 @@ func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config)
 
 func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
-		"network":      l.network,
-		"podvm_volume": l.volumeName,
-		"ssh_key_file": l.ssh_key_file,
-		"storage":      l.storage,
-		"uri":          l.uri,
+		"CONTAINER_RUNTIME": l.containerRuntime,
+		"network":           l.network,
+		"podvm_volume":      l.volumeName,
+		"ssh_key_file":      l.ssh_key_file,
+		"storage":           l.storage,
+		"uri":               l.uri,
 	}
 }
 
