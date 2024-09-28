@@ -122,7 +122,13 @@ kubectl -n trustee-operator-system exec deployment/trustee-deployment --containe
 kubectl -n trustee-operator-system get cm resource-policy -o yaml | sed "s/default allow = false/default allow = true/"|kubectl apply -f -
 ```
 
-### Build a podvm that enforces Secure-Comms
+### Build a podvm that enforces Secure-Comms (Optional)
+
+This stage is optional, it should be used in following two cases:
+1. Constructing a podvm that enforces Secure Comms to always be activated
+2. Configuring the podvm for Secure-Comms Inbounds and outbounds 
+
+An alternative to this stage is to use InitData to enforce Secure Comms to be activated. From security standpoint, this alternative is helpful in production when InitData is measured and attested together with the podvm measurement.
 
 Change the `src/cloud-api-adaptor/podvm/files/etc/systemd/system/agent-protocol-forwarder.service` to include:
 ```sh
@@ -170,6 +176,7 @@ url = 'http://127.0.0.1:8080'
 EOF
 export INITDATA=`base64 -w 0 /tmp/initdata.txt`
 kubectl -n confidential-containers-system  get cm peer-pods-cm  -o yaml | sed 's/^\s*INITDATA: .*/  INITDATA: '$INITDATA'/'|kubectl apply -f -
+
 ```
 
 You may also include additional Inbounds and Outbounds configurations to the Adaptor using the `SECURE_COMMS_INBOUNDS` and `SECURE_COMMS_OUTBOUNDS` config points. [See more details regarding Inbounds and Outbounds below.](#adding-named-tunnels-to-the-ssh-channel)

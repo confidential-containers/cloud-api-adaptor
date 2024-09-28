@@ -119,6 +119,16 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		initdata = properties["INITDATA"]
 	}
 
+	secure_comms := "false"
+	if properties["SECURE_COMMS"] != "" {
+		secure_comms = properties["SECURE_COMMS"]
+	}
+
+	secure_comms_kbs_addr := ""
+	if properties["SECURE_COMMS_KBS_ADDR"] != "" {
+		secure_comms_kbs_addr = properties["SECURE_COMMS_KBS_ADDR"]
+	}
+
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
 		conn:                    conn,
@@ -373,6 +383,7 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 
 	for k, v := range mapProps {
 		if properties[k] != v[0] {
+			fmt.Printf("TESTONLY setting  %s: %s\n", v[1], properties[k])
 			if err = lio.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm",
 				v[1], properties[k]); err != nil {
 				return err

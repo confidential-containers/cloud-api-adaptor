@@ -56,6 +56,7 @@ type CloudAPIAdaptor struct {
 	installOverlay       InstallOverlay       // Pointer to the kustomize overlay
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
 	rootSrcDir           string               // The root src directory of cloud-api-adaptor
+	finish               chan bool            // The test was finished
 }
 
 type NewInstallOverlayFunc func(installDir, provider string) (InstallOverlay, error)
@@ -105,6 +106,7 @@ func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, e
 		installOverlay:       overlay,
 		runtimeClass:         &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata-remote", Namespace: ""}},
 		rootSrcDir:           filepath.Dir(installDir),
+		finish:               make(chan bool),
 	}, nil
 }
 
@@ -221,6 +223,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 		return err
 	}
 
+	close(p.finish)
 	return nil
 }
 

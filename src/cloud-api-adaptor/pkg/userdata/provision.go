@@ -17,6 +17,7 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v2"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 )
@@ -38,7 +39,7 @@ const (
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
 var WriteFilesList = []string{AACfgPath, CDHCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath}
-var InitdDataFilesList = []string{AACfgPath, CDHCfgPath, PolicyPath}
+var InitdDataFilesList = []string{AACfgPath, CDHCfgPath, PolicyPath, forwarder.DefaultAPFConfigPath}
 
 type Config struct {
 	fetchTimeout  int
