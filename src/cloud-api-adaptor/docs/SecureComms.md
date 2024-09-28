@@ -58,28 +58,58 @@ kubectl -n trustee-operator-system exec deployment/trustee-deployment --containe
 kubectl -n trustee-operator-system get cm resource-policy -o yaml | sed "s/default allow = false/default allow = true/"|kubectl apply -f -
 ```
 
-### Build a podvm that enforces Secure-Comms
-
-Change the `src/cloud-api-adaptor/podvm/files/etc/systemd/system/agent-protocol-forwarder.service` to include:
-```sh
-ExecStart=/usr/local/bin/agent-protocol-forwarder -pod-namespace /run/netns/podns -secure-comms -kata-agent-socket /run/kata-containers/agent.sock $TLS_OPTIONS $OPTIONS
-```
-
-You may also include additional Inbounds and Outbounds configurations to the Forwarder using the `-secure-comms-inbounds` and `-secure-comms-outbounds` flags.  [See more details regarding Inbounds and Outbounds below.](#adding-named-tunnels-to-the-ssh-channel)
-
-For example:
-```sh
-ExecStart=/usr/local/bin/agent-protocol-forwarder -kata-agent-namespace /run/netns/podns -secure-comms -secure-comms-inbounds KUBERNETES_PHASE:mytunnel:podns:6666 -kata-agent-socket /run/kata-containers/agent.sock $TLS_OPTIONS $OPTIONS
-```
-
-Once you changed `podvm/files/etc/systemd/system/agent-protocol-forwarder.service`, you will need to [rebuild the podvm](./../podvm/README.md).
-
-
-### Activate CAA Secure-Comms feature
-Activate Secure-Comms of CAA by changing the `SECURE_COMMS` parameter of the `peer-pods-cm` configMap in the `confidential-containers-system` namespace to `"true"`.  
+### Activate the Secure-Comms feature
+Activate Secure-Comms at the CAA by changing the `SECURE_COMMS` parameter of the `peer-pods-cm` configMap in the `confidential-containers-system` namespace to `"true"`.  
 
 ```sh
 kubectl -n confidential-containers-system  get cm peer-pods-cm  -o yaml | sed "s/SECURE_COMMS: \"false\"/SECURE_COMMS: \"true\"/"|kubectl apply -f -
+```
+
+Next, we need to signal the Peer Pod to also activate the Secure-Comms feature. This can be done using an `apf.json` file included in the InitData. InitData must be measured and attested together with the podvm measurement to be trusted. In use cases where the InitData is not trusted, [use a podvm image with Secure-Comms enabled by default as shown below.](#build-a-podvm-that-enforces-secure-comms-optional)
+
+
+Set InitData to point AA and KBC services to IP address 127.0.0.1 and activate Secure-Comms at the Peer Pod:
+```sh
+cat <<EOF > /tmp/initdata.txt
+algorithm = "sha384"
+version = "0.1.0"
+
+[data]
+"aa.toml" = '''
+[token_configs]
+[token_configs.coco_as]
+url = 'http://127.0.0.1:8080'
+
+[token_configs.kbs]
+url = 'http://127.0.0.1:8080'
+'''
+"apf.json" = '''
+{
+    secure-comms: true
+}
+'''
+"cdh.toml"  = '''
+socket = 'unix:///run/confidential-containers/cdh.sock'
+credentials = []
+[kbc]
+name = 'cc_kbc'
+url = 'http://127.0.0.1:8080'
+'''
+EOF
+export INITDATA=`base64 -w 0 /tmp/initdata.txt`
+kubectl -n confidential-containers-system  get cm peer-pods-cm  -o yaml | sed 's/^  INITDATA: .*/  INITDATA: '$INITDATA'/'|kubectl apply -f -
+
+```
+On the Worker Node side, you may include additional Inbounds and Outbounds configurations to the Adaptor using the `SECURE_COMMS_INBOUNDS` and `SECURE_COMMS_OUTBOUNDS` config points. [See more details regarding Inbounds and Outbounds below.](#adding-named-tunnels-to-the-ssh-channel)
+
+Use `kubectl edit cm peer-pods-cm -n confidential-containers-system` to make such changes in the configMap, for example:
+```sh
+apiVersion: v1
+data:
+    ...
+    SECURE_COMMS: "true"
+    SECURE_COMMS_OUTBOUNDS: "KUBERNETES_PHASE:mytunnel:149.81.64.62:7777"
+    ...
 ```
 
 Set InitData to point KBC services to IP address 127.0.0.1 
@@ -116,7 +146,7 @@ apiVersion: v1
 data:
     ...
     SECURE_COMMS: "true"
-    SECURE_COMMS_OUTBOUNDS: "KUBERNETES_PHASE:mytunnel:149.81.64.62:7777"
+    SECURE_COMMS_OUTBOUNDS: "KUBERNETES_PHASE:mytunnel:podns:149.81.64.62:7777"
     ...
 ```
 
@@ -152,6 +182,24 @@ Each outbound tag is structured as `Phase:Name:Host:Port` or `Phase:Name:Port` w
 - Port is the destination port to forward the information to.
 
 For example, an outbound tag such as `KUBERNETES_PHASE:ABC:myhost.com:1234` means that during the `Kubernetes phase`, an output of a tunnel named `ABC` is registered, such that information from a client connecting to ABC Inbound will be tunneled and forwarded to `myhost.com` port `1234`).
+
+### Build a podvm that enforces Secure-Comms (Optional)
+
+This stage is optional, it can be used to activate Secure Comms in the podvm for cases in which InitData is not trusted. InitData must be measured and attested together with the podvm measurement to be trusted. The below procedure can be used in cases where such measurement is not used. In such cases, you may force the a podvm to activate Secure-Comms using a flag as described below.  
+
+Change the `src/cloud-api-adaptor/podvm/files/etc/systemd/system/agent-protocol-forwarder.service` to include:
+```sh
+ExecStart=/usr/local/bin/agent-protocol-forwarder -pod-namespace /run/netns/podns -secure-comms -kata-agent-socket /run/kata-containers/agent.sock $TLS_OPTIONS $OPTIONS
+```
+
+You may also include additional Inbounds and Outbounds configurations to the Forwarder using the `-secure-comms-inbounds` and `-secure-comms-outbounds` flags.  [See more details regarding Inbounds and Outbounds below.](#adding-named-tunnels-to-the-ssh-channel)
+
+For example:
+```sh
+ExecStart=/usr/local/bin/agent-protocol-forwarder -kata-agent-namespace /run/netns/podns -secure-comms -secure-comms-inbounds KUBERNETES_PHASE:mytunnel:podns:6666 -kata-agent-socket /run/kata-containers/agent.sock $TLS_OPTIONS $OPTIONS
+```
+
+Once you changed `podvm/files/etc/systemd/system/agent-protocol-forwarder.service`, you will need to [rebuild the podvm](./../podvm/README.md).
 
 ## Testing
 
