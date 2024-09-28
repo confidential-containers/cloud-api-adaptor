@@ -69,7 +69,7 @@ jobs:
         env:
           bucket_name : "daily-e2e-test-bucket"
       - name: Login to Quay container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
