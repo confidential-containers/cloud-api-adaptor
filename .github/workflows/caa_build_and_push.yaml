@@ -97,7 +97,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           # We are not interested in timeout but this field is required
           # so setting to 4x the time it usually take to complete.
