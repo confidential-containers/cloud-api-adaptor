@@ -4,11 +4,14 @@
 package provisioner
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -56,6 +59,7 @@ type CloudAPIAdaptor struct {
 	installOverlay       InstallOverlay       // Pointer to the kustomize overlay
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
 	rootSrcDir           string               // The root src directory of cloud-api-adaptor
+	finish               chan bool            // The test was finished
 }
 
 type NewInstallOverlayFunc func(installDir, provider string) (InstallOverlay, error)
@@ -105,6 +109,7 @@ func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, e
 		installOverlay:       overlay,
 		runtimeClass:         &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata-remote", Namespace: ""}},
 		rootSrcDir:           filepath.Dir(installDir),
+		finish:               make(chan bool),
 	}, nil
 }
 
@@ -221,6 +226,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 		return err
 	}
 
+	close(p.finish)
 	return nil
 }
 
@@ -294,6 +300,52 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 			}
 		}
 	}
+
+	fmt.Printf("CAA ConfigMap:\n")
+	caaConfigMap := exec.Command("kubectl", "get", "cm", "peer-pods-cm", "-n", "confidential-containers-system", "-o", "yaml")
+	caaConfigMap.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	caaConfigMapOut := new(strings.Builder)
+	caaConfigMap.Stdout = caaConfigMapOut
+	caaConfigMap.Run()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%v, CAA ConfigMap: \n%s", caaConfigMap, caaConfigMapOut.String())
+
+	fmt.Printf("CAA LOG: STARTING\n")
+	ctx, cancel := context.WithCancel(context.Background())
+	caaLogTailCmd := exec.CommandContext(ctx, "kubectl", "logs", "-l", "app=cloud-api-adaptor", "-n", "confidential-containers-system")
+	caaLogTailCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdout, err := caaLogTailCmd.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := caaLogTailCmd.Start(); err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		defer cancel()
+		rd := bufio.NewReader(stdout)
+		for {
+			line, err := rd.ReadString('\n')
+			if err == nil {
+				fmt.Printf("CAA LOG: %s\n", line)
+				continue
+			}
+			if err != io.EOF {
+				fmt.Printf("CAA LOG: exit with error: %v\n", err)
+				return
+			}
+			select {
+			case <-p.finish:
+				fmt.Printf("CAA LOG: finished\n")
+				return
+			case <-time.After(time.Second):
+				continue
+			}
+		}
+	}()
 
 	fmt.Printf("Wait for the %s runtimeclass be created\n", p.runtimeClass.GetName())
 	if err = wait.For(conditions.New(resources).ResourcesFound(&nodev1.RuntimeClassList{Items: []nodev1.RuntimeClass{*p.runtimeClass}}),
