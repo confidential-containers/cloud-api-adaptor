@@ -35,21 +35,28 @@ Use any of the option for installing CAA depending on the cloud driver used.
 ### Deploy Trustee-Operator
 Deploy Trustee-Operator by following instructions at [trustee Operator Getting Started](https://github.com/confidential-containers/trustee-operator?tab=readme-ov-file#getting-started).
 
-Make sure to uncomment the secret generation as recommended for both public and private key (`kbs-auth-public-key` and `kbs-client` secrets). 
-
-Copy the kbs-client secret from the `kbs-operator-system` namespace to the `confidential-containers-system` ns. This can be done using:
+Make sure to uncomment the secret generation as recommended for both public and private key (`kbs-auth-public-key` and `kbs-client` secrets). After this installation step you should now have the following secrets in the `trustee-operator-system` namespace:
 
 ```sh
-kubectl get secret kbs-client -n kbs-operator-system -o json|jq --arg ns "confidential-containers-system" 'del(.metadata["creationTimestamp","resourceVersion","selfLink","uid","annotations"]) | .metadata.namespace |= $ns' |kubectl apply -f -
+kubectl get secrets -n trustee-operator-system
+NAME                  TYPE     DATA   AGE
+kbs-auth-public-key   Opaque   1      28h
+kbs-client            Opaque   1      28h
+```
+
+Now, you should copy the kbs-client secret from the `trustee-operator-system` namespace to the `confidential-containers-system` namespace. This can be done using:
+
+```sh
+kubectl get secret kbs-client -n trustee-operator-system -o json|jq --arg ns "confidential-containers-system" 'del(.metadata["creationTimestamp","resourceVersion","selfLink","uid","annotations"]) | .metadata.namespace |= $ns' |kubectl apply -f -
 ```
 
 For a testing environment, you may need to change the policy of the KBS and AS using the KBS Client to allow all or fit your own policy. One way to do that is:
 
 ```sh
-kubectl -n kbs-operator-system exec deployment/trustee-deployment --container as -it -- /bin/bash
+kubectl -n trustee-operator-system exec deployment/trustee-deployment --container as -it -- /bin/bash
         sed -i.bak 's/^default allow = false/default allow = true/' /opt/confidential-containers/attestation-service/opa/default.rego
 
-kubectl -n kbs-operator-system get cm resource-policy -o yaml | sed "s/default allow = false/default allow = true/"|kubectl apply -f -
+kubectl -n trustee-operator-system get cm resource-policy -o yaml | sed "s/default allow = false/default allow = true/"|kubectl apply -f -
 ```
 
 ### Build a podvm that enforces Secure-Comms
@@ -74,16 +81,50 @@ data:
     ...
 ```
 
+Set InitData to point KBC services to IP address 127.0.0.1 
+```sh
+cat <<EOF > /tmp/initdata.txt
+algorithm = "sha384"
+version = "0.1.0"
+[data]
+"aa.toml" = '''
+[token_configs]
+[token_configs.coco_as]
+url = 'http://127.0.0.1:8080'
+
+[token_configs.kbs]
+url = 'http://127.0.0.1:8080'
+'''
+"cdh.toml"  = '''
+socket = 'unix:///run/confidential-containers/cdh.sock'
+credentials = []
+[kbc]
+name = 'cc_kbc'
+url = 'http://127.0.0.1:8080'
+'''
+EOF
+export INITDATA=`base64 -w 0 /tmp/initdata.txt`
+kubectl -n confidential-containers-system  get cm peer-pods-cm  -o yaml | sed 's/^\s*INITDATA: .*/  INITDATA: '$INITDATA'/'|kubectl apply -f -
+
+```
+
 You may also include additional Inbounds and Outbounds configurations to the Adaptor using the `SECURE_COMMS_INBOUNDS` and `SECURE_COMMS_OUTBOUNDS` config points. See more details regarding Inbounds and Outbounds below.
 
 You may also set the KBS address using the `SECURE_COMMS_KBS_ADDR` config point.
+
+> [!NOTE]
+> After changing peer-pods-cm ConfigMap, reload the CAA damonset using:
+> ```
+> kubectl rollout restart daemonset cloud-api-adaptor-daemonset -n confidential-containers-system
+> ```
+>
 
 
 ### Adding named tunnels to the SSH channel
 Named tunnels can be added to the SSH channel. Adding a named tunnel requires adding an Inbound at one of the SSH channel peers and an Outbound at the other SSH channel peer. The Inbound and Outbound both carry the name of the tunnel being created.
 
-        |---------Tunnel----------| 
-Client->Inbound----------->Outbound->Server
+            |---------Tunnel----------| 
+    Client->Inbound----------->Outbound->Server
 
 
 Inbounds and Outbounds take the form of a comma separated inbound/outbound tags such that Inbounds are formed as "InboundTag1,InboundTag2,InboundTag3,..." and Outbounds are formed as "OutboundTag1,OutboundTag2,outboundTag3,..."
