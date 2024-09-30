@@ -31,7 +31,7 @@ tools:
 git:
   coco-operator:
     url: https://github.com/confidential-containers/operator
-    reference: main
+    reference: v0.10.0
   guest-components:
     url: https://github.com/confidential-containers/guest-components
     reference: c2022037d8fbb076f569529e93b2cbe63a3968bb
