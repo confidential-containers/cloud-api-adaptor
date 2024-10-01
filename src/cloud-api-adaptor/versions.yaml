@@ -46,7 +46,7 @@ git:
     reference: v1.5.0
   kbs:
     url: https://github.com/confidential-containers/trustee
-    reference: v0.10.1
+    reference: f287fcd60b0b3ddbef5546d646669813b9e68f8d
 oci:
   pause:
     registry: docker://registry.k8s.io/pause
