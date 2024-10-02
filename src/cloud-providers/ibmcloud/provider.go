@@ -335,8 +335,8 @@ func (p *ibmcloudVPCProvider) updateInstanceProfileSpecList() error {
 		instanceProfileSpecList = append(instanceProfileSpecList, provider.InstanceTypeSpec{InstanceType: profileType, VCPUs: vcpus, Memory: memory, Arch: arch})
 	}
 
-	// Sort the instanceProfileSpecList by Memory and update the serviceConfig
-	p.serviceConfig.InstanceProfileSpecList = provider.SortInstanceTypesOnMemory(instanceProfileSpecList)
+	// Sort the instanceProfileSpecList and update the serviceConfig
+	p.serviceConfig.InstanceProfileSpecList = provider.SortInstanceTypesOnResources(instanceProfileSpecList)
 	logger.Printf("instanceProfileSpecList (%v)", p.serviceConfig.InstanceProfileSpecList)
 	return nil
 }
