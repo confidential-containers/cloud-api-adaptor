@@ -350,8 +350,8 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 		}
 	}
 
-	// Sort the InstanceSizeSpecList by Memory and update the serviceConfig
-	p.serviceConfig.InstanceSizeSpecList = provider.SortInstanceTypesOnMemory(instanceSizeSpecList)
+	// Sort the InstanceSizeSpecList and update the serviceConfig
+	p.serviceConfig.InstanceSizeSpecList = provider.SortInstanceTypesOnResources(instanceSizeSpecList)
 	logger.Printf("instanceSizeSpecList (%v)", p.serviceConfig.InstanceSizeSpecList)
 	return nil
 }

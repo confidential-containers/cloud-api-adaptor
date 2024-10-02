@@ -92,7 +92,7 @@ func TestVerifyCloudInstanceType(t *testing.T) {
 	}
 }
 
-func TestSortInstanceTypesOnMemory(t *testing.T) {
+func TestSortInstanceTypesOnResources(t *testing.T) {
 	type args struct {
 		instanceTypeSpecList []InstanceTypeSpec
 	}
@@ -222,16 +222,63 @@ func TestSortInstanceTypesOnMemory(t *testing.T) {
 				},
 			},
 		},
+
+		// Add test case with instanceTypeSpecList=[{p2.medium, 4, 8, 2}, {p2.small, 2, 6, 1}, {p2.large, 8, 16, 4}]
+		{
+			name: "instanceTypeSpecList=[{p2.medium, 4, 8, 2}, {p2.small, 2, 6, 1}, {p2.large, 8, 16, 4}]",
+			args: args{
+				instanceTypeSpecList: []InstanceTypeSpec{
+					{
+						InstanceType: "p2.medium",
+						VCPUs:        4,
+						Memory:       8,
+						GPUs:         2,
+					},
+					{
+						InstanceType: "p2.small",
+						VCPUs:        2,
+						Memory:       6,
+						GPUs:         1,
+					},
+					{
+						InstanceType: "p2.large",
+						VCPUs:        8,
+						Memory:       16,
+						GPUs:         4,
+					},
+				},
+			},
+			want: []InstanceTypeSpec{
+				{
+					InstanceType: "p2.small",
+					VCPUs:        2,
+					Memory:       6,
+					GPUs:         1,
+				},
+				{
+					InstanceType: "p2.medium",
+					VCPUs:        4,
+					Memory:       8,
+					GPUs:         2,
+				},
+				{
+					InstanceType: "p2.large",
+					VCPUs:        8,
+					Memory:       16,
+					GPUs:         4,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Add benchmark
 			start := time.Now()
-			if got := SortInstanceTypesOnMemory(tt.args.instanceTypeSpecList); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SortInstanceTypesOnMemory() = %v, want %v", got, tt.want)
+			if got := SortInstanceTypesOnResources(tt.args.instanceTypeSpecList); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortInstanceTypesOnResources() = %v, want %v", got, tt.want)
 			}
 			elapsed := time.Since(start)
-			fmt.Printf("SortInstanceTypesOnMemory() took %s\n", elapsed)
+			fmt.Printf("SortInstanceTypesOnResources() took %s\n", elapsed)
 		})
 	}
 }

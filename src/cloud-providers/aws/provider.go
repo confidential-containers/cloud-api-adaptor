@@ -360,21 +360,23 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 
 	// Iterate over the instance types and populate the instanceTypeSpecList
 	for _, instanceType := range instanceTypes {
-		vcpus, memory, err := p.getInstanceTypeInformation(instanceType)
+		vcpus, memory, gpuCount, err := p.getInstanceTypeInformation(instanceType)
 		if err != nil {
 			return err
 		}
-		instanceTypeSpecList = append(instanceTypeSpecList, provider.InstanceTypeSpec{InstanceType: instanceType, VCPUs: vcpus, Memory: memory})
+		instanceTypeSpecList = append(instanceTypeSpecList,
+			provider.InstanceTypeSpec{InstanceType: instanceType, VCPUs: vcpus, Memory: memory, GPUs: gpuCount})
 	}
 
-	// Sort the instanceTypeSpecList by Memory and update the serviceConfig
-	p.serviceConfig.InstanceTypeSpecList = provider.SortInstanceTypesOnMemory(instanceTypeSpecList)
+	// Sort the instanceTypeSpecList and update the serviceConfig
+	p.serviceConfig.InstanceTypeSpecList = provider.SortInstanceTypesOnResources(instanceTypeSpecList)
 	logger.Printf("InstanceTypeSpecList (%v)", p.serviceConfig.InstanceTypeSpecList)
 	return nil
 }
 
 // Add a method to retrieve cpu, memory, and storage from the instance type
-func (p *awsProvider) getInstanceTypeInformation(instanceType string) (vcpu int64, memory int64, err error) {
+func (p *awsProvider) getInstanceTypeInformation(instanceType string) (vcpu int64, memory int64,
+	gpuCount int64, err error) {
 
 	// Get the instance type information from the instance type using AWS API
 	input := &ec2.DescribeInstanceTypesInput{
@@ -385,16 +387,25 @@ func (p *awsProvider) getInstanceTypeInformation(instanceType string) (vcpu int6
 	// Get the instance type information from the instance type using AWS API
 	result, err := p.ec2Client.DescribeInstanceTypes(context.Background(), input)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
-	// Get the vcpu and memory from the result
+	// Get the vcpu, memory and gpu from the result
 	if len(result.InstanceTypes) > 0 {
-		vcpu = int64(*result.InstanceTypes[0].VCpuInfo.DefaultVCpus)
-		memory = int64(*result.InstanceTypes[0].MemoryInfo.SizeInMiB)
-		return vcpu, memory, nil
+		instanceInfo := result.InstanceTypes[0]
+		vcpu = int64(*instanceInfo.VCpuInfo.DefaultVCpus)
+		memory = int64(*instanceInfo.MemoryInfo.SizeInMiB)
+		// Get the GPU information
+		gpuCount = int64(0)
+		if instanceInfo.GpuInfo != nil {
+			for _, gpu := range instanceInfo.GpuInfo.Gpus {
+				gpuCount += int64(*gpu.Count)
+			}
+		}
+
+		return vcpu, memory, gpuCount, nil
 	}
-	return 0, 0, fmt.Errorf("instance type %s not found", instanceType)
+	return 0, 0, 0, fmt.Errorf("instance type %s not found", instanceType)
 
 }
 

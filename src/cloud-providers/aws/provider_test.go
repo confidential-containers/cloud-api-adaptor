@@ -69,26 +69,46 @@ func (m mockEC2Client) DescribeInstanceTypes(ctx context.Context,
 
 	// Take instance type from params
 	instanceType := params.InstanceTypes[0]
-	// Check if instance type is t2.medium, else return an error
-	if instanceType != "t2.medium" {
-		return nil, fmt.Errorf("Unsupported instance type")
-	}
 
-	// Return a mock DescribeInstanceTypesOutput
-	return &ec2.DescribeInstanceTypesOutput{
-		InstanceTypes: []types.InstanceTypeInfo{
-			{
-				InstanceType: instanceType,
-				// Add vCPU info for t2.medium
-				VCpuInfo: &types.VCpuInfo{
-					DefaultVCpus: aws.Int32(2),
-				},
-				// Add memory info for t2.medium
-				MemoryInfo: &types.MemoryInfo{
-					SizeInMiB: aws.Int64(4096),
+	var instanceInfo types.InstanceTypeInfo
+
+	switch instanceType {
+	case "t2.medium":
+		instanceInfo = types.InstanceTypeInfo{
+			InstanceType: types.InstanceTypeT2Medium,
+			VCpuInfo: &types.VCpuInfo{
+				DefaultVCpus: aws.Int32(2),
+			},
+			MemoryInfo: &types.MemoryInfo{
+				SizeInMiB: aws.Int64(4096),
+			},
+		}
+	case "p3.8xlarge":
+		instanceInfo = types.InstanceTypeInfo{
+			InstanceType: types.InstanceTypeP38xlarge,
+			VCpuInfo: &types.VCpuInfo{
+				DefaultVCpus: aws.Int32(32),
+			},
+			MemoryInfo: &types.MemoryInfo{
+				SizeInMiB: aws.Int64(244000),
+			},
+			GpuInfo: &types.GpuInfo{
+				Gpus: []types.GpuDeviceInfo{
+					{
+						Count:        aws.Int32(4),
+						Manufacturer: aws.String("NVIDIA"),
+						Name:         aws.String("Tesla"),
+					},
 				},
 			},
-		},
+		}
+	default:
+		return nil, fmt.Errorf("Unsupported instance type: %s", instanceType)
+	}
+
+	// Return a mock DescribeInstanceTypesOutput with only the requested instance type
+	return &ec2.DescribeInstanceTypesOutput{
+		InstanceTypes: []types.InstanceTypeInfo{instanceInfo},
 	}, nil
 }
 
@@ -219,7 +239,7 @@ var serviceConfigEmptyInstanceTypes = &Config{
 	InstanceTypes: []string{},
 }
 
-// Create a serviceConfig with emtpy ImageId
+// Create a serviceConfig with empty ImageId
 var serviceConfigEmptyImageId = &Config{
 	Region: "us-east-1",
 	// Add instance type to serviceConfig
@@ -495,6 +515,7 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 		args       args
 		wantVcpu   int64
 		wantMemory int64
+		wantGpu    int64
 		wantErr    bool
 	}{
 		// Test getting instance type information for a valid instance type
@@ -509,6 +530,23 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 			},
 			wantVcpu:   2,
 			wantMemory: 4096,
+			wantGpu:    0,
+			// Test should not return an error
+			wantErr: false,
+		},
+		// Test getting instance type information for a valid instance type
+		{
+			name: "getInstanceTypeInformationValidInstanceType",
+			fields: fields{
+				ec2Client:     newMockEC2Client(),
+				serviceConfig: serviceConfig,
+			},
+			args: args{
+				instanceType: "p3.8xlarge",
+			},
+			wantVcpu:   32,
+			wantMemory: 244000,
+			wantGpu:    4,
 			// Test should not return an error
 			wantErr: false,
 		},
@@ -524,6 +562,7 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 			},
 			wantVcpu:   0,
 			wantMemory: 0,
+			wantGpu:    0,
 			// Test should return an error
 			wantErr: true,
 		},
@@ -534,16 +573,23 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 				ec2Client:     tt.fields.ec2Client,
 				serviceConfig: tt.fields.serviceConfig,
 			}
-			gotVcpu, gotMemory, err := p.getInstanceTypeInformation(tt.args.instanceType)
+			gotVcpu, gotMemory, gotGpu, err := p.getInstanceTypeInformation(tt.args.instanceType)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("awsProvider.getInstanceTypeInformation() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
+			t.Logf("Instance info => type: %s, vcpu: %d, mem: %d, gpu: %d",
+				tt.args.instanceType, gotVcpu, gotMemory, gotGpu)
+
 			if gotVcpu != tt.wantVcpu {
 				t.Errorf("awsProvider.getInstanceTypeInformation() gotVcpu = %v, want %v", gotVcpu, tt.wantVcpu)
 			}
 			if gotMemory != tt.wantMemory {
 				t.Errorf("awsProvider.getInstanceTypeInformation() gotMemory = %v, want %v", gotMemory, tt.wantMemory)
+			}
+			if gotGpu != tt.wantGpu {
+				t.Errorf("awsProvider.getInstanceTypeInformation() gotGpu = %v, want %v", gotGpu, tt.wantGpu)
 			}
 		})
 	}
