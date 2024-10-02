@@ -29,8 +29,21 @@ import (
 const TRUSTEE_REPO_PATH = "../trustee"
 
 func getHardwarePlatform() (string, error) {
-	out, err := exec.Command("uname", "-i").Output()
+	out, err := exec.Command("uname", "-m").Output()
 	return strings.TrimSuffix(string(out), "\n"), err
+}
+
+func getOverlaysPath() (string, error) {
+	platform, err := getHardwarePlatform()
+	if err != nil {
+		return "", err
+	}
+
+	overlaysPath := "overlays"
+	if platform == "s390x" && os.Getenv("IBM_SE_CREDS_DIR") != "" {
+		overlaysPath += "/ibm-se"
+	}
+	return overlaysPath, nil
 }
 
 func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerService, error) {
@@ -38,11 +51,11 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 
 	// Create secret
 	content := []byte("This is my cluster name: " + clusterName)
-	platform, err := getHardwarePlatform()
+	overlaysPath, err := getOverlaysPath()
 	if err != nil {
 		return nil, err
 	}
-	filePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/overlays/"+platform+"/key.bin")
+	filePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/"+overlaysPath+"/key.bin")
 	// Create the file.
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -150,13 +163,18 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("Creating PV for kbs with ibmse")
-		pvFilePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/overlays/s390x/pv.yaml")
+		log.Infof("Creating PV for kbs with ibm-se")
+
+		overlaysPath, err := getOverlaysPath()
+		if err != nil {
+			return nil, err
+		}
+		pvFilePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/"+overlaysPath+"/pv.yaml")
 		err = createPVonTargetWorkerNode(pvFilePath, workerNodeName, cfg)
 		if err != nil {
 			return nil, err
 		}
-		patchFile := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/overlays/s390x/patch.yaml")
+		patchFile := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/"+overlaysPath+"/patch.yaml")
 		// skip the SE related certs check as we are running the test case on a dev machine
 		err = skipSeCertsVerification(patchFile)
 		if err != nil {
@@ -324,7 +342,7 @@ func NewKbsInstallOverlay(installDir string) (InstallOverlay, error) {
 		log.Info("CUSTOM_PCCS_URL is provided on x86_64, deploy with custom pccs config")
 		overlayFolder = "kbs/config/kubernetes/custom_pccs"
 	} else {
-		overlayFolder = "kbs/config/kubernetes/nodeport/" + platform
+		overlayFolder = "kbs/config/kubernetes/nodeport/"
 	}
 
 	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, overlayFolder))
@@ -477,11 +495,11 @@ func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFil
 func (p *KeyBrokerService) SetSampleSecretKey() error {
 	kbsClientDir := filepath.Join(TRUSTEE_REPO_PATH, "target/release")
 	privateKey := "../../kbs/config/kubernetes/base/kbs.key"
-	platform, err := getHardwarePlatform()
+	overlaysPath, err := getOverlaysPath()
 	if err != nil {
 		return err
 	}
-	keyFilePath := "../../kbs/config/kubernetes/overlays/" + platform + "/key.bin"
+	keyFilePath := "../../kbs/config/kubernetes/" + overlaysPath + "/key.bin"
 	log.Info("set key resource: ", keyFilePath)
 	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource", "--path", "reponame/workload_key/key.bin", "--resource-file", keyFilePath)
 	cmd.Dir = kbsClientDir
