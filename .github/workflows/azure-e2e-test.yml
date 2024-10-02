@@ -28,12 +28,6 @@ on:
       caa-image:
         type: string
         description: prebuilt caa image
-      kbs-image-id:
-        type: string
-        description: prebuild kbs image
-      kbs-image-tag:
-        type: string
-        description: prebuild kbs image tag
 
 jobs:
   build-caa-container-image:
@@ -117,17 +111,10 @@ jobs:
           echo "TEST_PROVISION_FILE=${{ format(env.TEST_PROVISION_PATH_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
           echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
 
-    - name: Extract provisioner environment
-      run: |
-        echo "KBS_IMAGE=$(yq -e '.oci.kbs.registry' versions.yaml)" >> "$GITHUB_ENV"
-        echo "KBS_IMAGE_TAG=$(yq -e '.oci.kbs.tag' versions.yaml)" >> "$GITHUB_ENV"
-
     - name: Create provisioner file
       env:
         AZURE_IMAGE_ID: ${{ inputs.podvm-image-id }}
         CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
-        KBS_IMAGE: ${{ github.event.inputs.kbs-image-id || env.KBS_IMAGE }}
-        KBS_IMAGE_TAG: ${{  github.event.inputs.kbs-image-tag || env.KBS_IMAGE_TAG}}
         AZURE_INSTANCE_SIZE: ${{ matrix.parameters.machine_type }}
       run: |
         echo "Provisioner file for ${{ matrix.parameters.id }}"
@@ -142,8 +129,6 @@ jobs:
           IS_CI_MANAGED_CLUSTER="true"
           MANAGED_IDENTITY_NAME="${{ secrets.AZURE_MANAGED_IDENTITY_NAME}}"
           CAA_IMAGE="${CAA_IMAGE}"
-          KBS_IMAGE="${KBS_IMAGE}"
-          KBS_IMAGE_TAG="${KBS_IMAGE_TAG}"
           AZURE_INSTANCE_SIZE="${AZURE_INSTANCE_SIZE}"
           TAGS="${{ env.TEST_TAGS }}"
           FEDERATED_CREDENTIAL_NAME="${{ env.CLUSTER_NAME }}"
@@ -250,6 +235,14 @@ jobs:
         git clone https://github.com/confidential-containers/trustee test/trustee
         pushd test/trustee
         git checkout "${KBS_VERSION}"
+        pushd kbs/config/kubernetes/base/
+        # Trustee only updates their staging image reliably with sha tags,
+        # so switch to use that and convert the version to the sha
+        KBS_SHA=$(gh api repos/confidential-containers/trustee/commits/${KBS_VERSION} -q .sha)
+        kustomize edit set image kbs-container-image=ghcr.io/confidential-containers/staged-images/kbs:${KBS_SHA}
+        # For debugging
+        echo "Trustee deployment: $(cat kustomization.yaml). Images: $(cat kustomization.yaml | grep -A 5 images:)"
+        popd
         popd
 
     - name: Run e2e test

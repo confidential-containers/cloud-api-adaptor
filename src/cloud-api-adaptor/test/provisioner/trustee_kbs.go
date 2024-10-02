@@ -346,17 +346,7 @@ func (lio *KbsInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) e
 }
 
 func (lio *KbsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
-	var err error
-	log.Infof("Updating kbs image with %q", props["KBS_IMAGE"])
-	if err = lio.overlay.SetKustomizeImage("kbs-container-image", "newName", props["KBS_IMAGE"]); err != nil {
-		return err
-	}
-
-	log.Infof("Updating kbs image tag with %q", props["KBS_IMAGE_TAG"])
-	if err = lio.overlay.SetKustomizeImage("kbs-container-image", "newTag", props["KBS_IMAGE_TAG"]); err != nil {
-		return err
-	}
-
+	// No edits needed here at the moment
 	return nil
 }
 

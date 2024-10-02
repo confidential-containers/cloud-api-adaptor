@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
@@ -123,13 +122,7 @@ func TestMain(m *testing.M) {
 		var err error
 
 		// Get properties
-
 		props := provisioner.GetProperties(ctx, cfg)
-		if shouldDeployKbs {
-			if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
-				return ctx, fmt.Errorf("kbs image not provided")
-			}
-		}
 
 		// Set CONTAINER_RUNTIME env variable if present in the properties
 		// Default value is containerd.

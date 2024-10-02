@@ -91,9 +91,7 @@ func main() {
 
 		if shouldDeployKbs {
 			log.Info("Deploying kbs")
-			if props["KBS_IMAGE"] == "" || props["KBS_IMAGE_TAG"] == "" {
-				log.Fatal("kbs image not provided")
-			}
+
 			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg)
 			if err != nil {
 				log.Fatal(err)
