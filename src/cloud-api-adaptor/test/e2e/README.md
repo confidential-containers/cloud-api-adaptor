@@ -63,8 +63,15 @@ To prepare trustee, execute the following steps:
 pushd ${cloud-api-adaptor-repo-dir}/src/cloud-api-adaptor/test
 git clone https://github.com/confidential-containers/trustee.git
 pushd trustee
-git checkout $(../../hack/yq-shim.sh '.git.kbs.reference' ../../versions.yaml)
+KBS_VERSION=$(../../hack/yq-shim.sh '.git.kbs.reference' ../../versions.yaml)
+git checkout ${KBS_VERSION}
 pushd kbs
+pushd config/kubernetes/base/
+# Trustee only updates their staging image reliably with sha tags,
+# so switch to use that and convert the version to the sha
+KBS_SHA=$(gh api repos/confidential-containers/trustee/commits/${KBS_VERSION} -q .sha)
+kustomize edit set image kbs-container-image=ghcr.io/confidential-containers/staged-images/kbs:${KBS_SHA}
+popd
 make CLI_FEATURES=sample_only cli
 popd
 popd
@@ -81,12 +88,10 @@ popd
 
 Then extract the PodVM image and use it following [extracting-the-qcow2-image](../../podvm/README.md#extracting-the-qcow2-image)
 
-To deploy the KBS service and test attestation related cases, export the following variables like:
+To deploy the KBS service and test attestation related cases, export the following variable:
 
 ```sh
 export DEPLOY_KBS=yes
-export KBS_IMAGE=$(./hack/yq-shim.sh '.oci.kbs.registry' ./versions.yaml)
-export KBS_IMAGE_TAG=$(./hack/yq-shim.sh '.oci.kbs.tag' ./versions.yaml)
 ````
 
 # Running end-to-end tests against pre-configured cluster

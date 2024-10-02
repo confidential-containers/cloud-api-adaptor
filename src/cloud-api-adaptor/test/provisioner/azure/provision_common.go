@@ -359,8 +359,6 @@ func getPropertiesImpl() map[string]string {
 		"AZURE_IMAGE_ID":        AzureProps.ImageID,
 		"AZURE_SUBNET_ID":       AzureProps.SubnetID,
 		"AZURE_INSTANCE_SIZE":   AzureProps.InstanceSize,
-		"KBS_IMAGE":             AzureProps.KbsImage,
-		"KBS_IMAGE_TAG":         AzureProps.KbsImageTag,
 		"TAGS":                  AzureProps.Tags,
 		"CONTAINER_RUNTIME":     AzureProps.ContainerRuntime,
 	}

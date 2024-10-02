@@ -38,8 +38,6 @@ type DockerProperties struct {
 	PodvmImage       string
 	CaaImage         string
 	CaaImageTag      string
-	KbsImage         string
-	KbsImageTag      string
 	ContainerRuntime string
 }
 
@@ -55,8 +53,6 @@ func initDockerProperties(properties map[string]string) error {
 		PodvmImage:       properties["DOCKER_PODVM_IMAGE"],
 		CaaImage:         properties["CAA_IMAGE"],
 		CaaImageTag:      properties["CAA_IMAGE_TAG"],
-		KbsImage:         properties["KBS_IMAGE"],
-		KbsImageTag:      properties["KBS_IMAGE_TAG"],
 		ContainerRuntime: properties["CONTAINER_RUNTIME"],
 	}
 	return nil
@@ -138,8 +134,6 @@ func (l *DockerProvisioner) GetProperties(ctx context.Context, cfg *envconf.Conf
 		"DOCKER_PODVM_IMAGE":  DockerProps.PodvmImage,
 		"CAA_IMAGE":           DockerProps.CaaImage,
 		"CAA_IMAGE_TAG":       DockerProps.CaaImageTag,
-		"KBS_IMAGE":           DockerProps.KbsImage,
-		"KBS_IMAGE_TAG":       DockerProps.KbsImageTag,
 		"CONTAINER_RUNTIME":   DockerProps.ContainerRuntime,
 	}
 }

@@ -51,6 +51,3 @@ oci:
   pause:
     registry: docker://registry.k8s.io/pause
     tag: 3.9
-  kbs:
-    registry: ghcr.io/confidential-containers/key-broker-service
-    tag: built-in-as-v0.10.1
