@@ -1,6 +1,6 @@
 module github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers
 
-go 1.22
+go 1.22.0
 
 require (
 	cloud.google.com/go/compute v1.23.3
