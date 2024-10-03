@@ -746,8 +746,19 @@ func (v *Vpc) deleteVpc() error {
 
 // createBucket Creates the S3 bucket
 func (b *S3Bucket) createBucket() error {
-	// No harm creating a bucket that already exist.
-	_, err := b.Client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
+	buckets, err := b.Client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
+	if err != nil {
+		return err
+	}
+
+	for _, bucket := range buckets.Buckets {
+		if *bucket.Name == b.Name {
+			// Bucket exists
+			return nil
+		}
+	}
+
+	_, err = b.Client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
 		Bucket: &b.Name,
 	})
 	if err != nil {
