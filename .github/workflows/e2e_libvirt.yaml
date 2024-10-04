@@ -7,6 +7,11 @@ name: (Callable) libvirt e2e tests
 on:
   workflow_call:
     inputs:
+      runner:
+        default: 'az-ubuntu-2204'
+        description: The runner to execute the workflow on. Defaults to 'az-ubuntu-2204'.
+        required: false
+        type: string
       podvm_image:
         required: true
         type: string
@@ -34,7 +39,7 @@ defaults:
 
 jobs:
   test:
-    runs-on: az-ubuntu-2204
+    runs-on: ${{ inputs.runner }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -116,6 +121,10 @@ jobs:
           AUTHENTICATED_REGISTRY_IMAGE: ${{ vars.AUTHENTICATED_REGISTRY_IMAGE }}
           REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
         run: |
+          # s390x on non-TEE need a dummy directory for the KBS
+          if [[ "${{ inputs.runner }}" == "S390X" ]]; then
+            export IBM_SE_CREDS_DIR="$(mktemp -d -t ibmse.creds.XXXXXXXXXX)"
+          fi
           export CLOUD_PROVIDER=libvirt
           export DEPLOY_KBS=true
           export TEST_PROVISION="yes"
@@ -131,8 +140,14 @@ jobs:
         run: |
           export KUBECONFIG="${HOME}/.kcli/clusters/peer-pods/auth/kubeconfig"
 
+          echo "::group::KBS installation"
+          kubectl get pods -n coco-tenant
+          kubectl describe pods -n coco-tenant
+          echo "::endgroup::"
+
           echo "::group::CoCo and Peer Pods installation"
           kubectl get pods -n confidential-containers-system
+          kubectl describe pods -n confidential-containers-system
           echo "::endgroup::"
 
           echo "::group::cloud-api-adaptor logs"
@@ -175,3 +190,7 @@ jobs:
           echo "::endgroup::"
         # Avoid running with `set -e` as command fails should be allowed
         shell: bash {0}
+
+      - name: Clean-up cluster
+        if: always()
+        run: ./libvirt/kcli_cluster.sh delete

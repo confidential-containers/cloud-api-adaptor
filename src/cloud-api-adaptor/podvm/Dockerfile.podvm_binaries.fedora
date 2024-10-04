@@ -46,6 +46,8 @@ ENV IMAGE_CHECKSUM="none"
 COPY . /src
 
 WORKDIR /src/cloud-api-adaptor/podvm
+# Installs add-ons for foreign target, if required
+RUN ./hack/cross-build-extras.sh
 
 RUN LIBC=gnu make binaries
 
