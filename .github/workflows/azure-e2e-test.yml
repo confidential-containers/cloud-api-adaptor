@@ -56,7 +56,7 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
         cache-dependency-path: go.sum
 
-    - uses: azure/login@v1
+    - uses: azure/login@v2
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -163,7 +163,7 @@ jobs:
           ${{ env.TEST_PROVISION_FILE }}
         name: e2e-configuration
 
-    - uses: azure/login@v1
+    - uses: azure/login@v2
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -221,7 +221,7 @@ jobs:
       with:
         name: e2e-configuration
 
-    - uses: azure/login@v1
+    - uses: azure/login@v2
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -280,7 +280,7 @@ jobs:
             machine_type: "Standard_DC2as_v5"
             jitter: 10
     steps:
-    - uses: azure/login@v1
+    - uses: azure/login@v2
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
