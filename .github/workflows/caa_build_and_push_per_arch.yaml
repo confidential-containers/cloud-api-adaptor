@@ -135,7 +135,7 @@ jobs:
           ref: "${{ inputs.git_ref }}"
 
       - name: Download release commits file
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: image-artifacts
           path: src/cloud-api-adaptor
