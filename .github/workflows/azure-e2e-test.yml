@@ -161,7 +161,7 @@ jobs:
         path: |
           src/cloud-api-adaptor/install/overlays/azure/id_rsa.pub
           ${{ env.TEST_PROVISION_FILE }}
-        name: e2e-configuration
+        name: e2e-configuration-${{ matrix.parameters.id }}
 
     - uses: azure/login@v2
       name: 'Az CLI login'
@@ -219,7 +219,7 @@ jobs:
     - name: Restore the configuration created before
       uses: actions/download-artifact@v4
       with:
-        name: e2e-configuration
+        name: e2e-configuration-${{ matrix.parameters.id }}
 
     - uses: azure/login@v2
       name: 'Az CLI login'
