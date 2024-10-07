@@ -29,8 +29,35 @@ defaults:
     working-directory: src/cloud-api-adaptor
 
 jobs:
+  upload_tags:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
+
+      - name: Create tags.txt
+        run: |
+          # Matches expected logic in ./hack/build.sh
+          commit=$(git rev-parse HEAD)
+          dev_tags=${{ inputs.dev_tags }}
+          release_tags=${{ inputs.release_tags }}
+          echo "dev_tags=${dev_tags:-latest,dev-${commit}}" > tags.txt
+          echo "release_tags=${release_tags:-${commit}}" >> tags.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-tags
+          retention-days: 1
+          path: |
+            src/cloud-api-adaptor/tags.txt
+
   build_push_job:
     name: build and push
+    needs: [upload_tags]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -65,13 +92,16 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+
       - name: Install build dependencies
         if: ${{ startsWith(matrix.type, 'dev-') }}
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libvirt-dev
+
       - name: Login to quay Container Registry
         if: ${{ startsWith(inputs.registry, 'quay.io') }}
         uses: docker/login-action@v3
@@ -117,12 +147,11 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: image-artifacts
+          name: tags-architectures-${{matrix.type}}
           retention-days: 1
           path: |
-            src/cloud-api-adaptor/tags.txt
             src/cloud-api-adaptor/tags-architectures-*
-      
+
   manifest_job:
     name: generate images manifest
     runs-on: ubuntu-latest
@@ -134,11 +163,18 @@ jobs:
           fetch-depth: 0
           ref: "${{ inputs.git_ref }}"
 
+      - name: Download release tags.txt
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tags
+          path: src/cloud-api-adaptor
+
       - name: Download release commits file
         uses: actions/download-artifact@v4
         with:
-          name: image-artifacts
-          path: src/cloud-api-adaptor
+          pattern: tags-architectures-*
+          merge-multiple: true
+          path: src/cloud-api-adaptor/
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
