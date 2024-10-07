@@ -26,7 +26,7 @@ jobs:
         working-directory: src/cloud-api-adaptor
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Read properties from versions.yaml
         run: |
           go_version="$(yq '.tools.golang' versions.yaml)"

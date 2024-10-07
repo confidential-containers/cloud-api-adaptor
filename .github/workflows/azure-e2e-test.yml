@@ -39,7 +39,7 @@ jobs:
     outputs:
       caa-image: "${{ steps.build-container.outputs.caa-image }}"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Extract go version number
       run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
@@ -96,7 +96,7 @@ jobs:
             machine_type: "Standard_DC2as_v5"
             jitter: 10
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Extract go version number
       run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
@@ -181,7 +181,7 @@ jobs:
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Extract go version number
       run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"

@@ -33,7 +33,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout cloud-api-adaptor repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Container tags from input and repository state
         id: tags
