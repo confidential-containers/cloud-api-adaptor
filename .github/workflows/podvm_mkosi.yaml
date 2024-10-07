@@ -21,7 +21,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -73,7 +73,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Nix
         uses: cachix/install-nix-action@v22
@@ -97,7 +97,7 @@ jobs:
           remove-docker-images: "true"
 
       - name: Second checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Decide on image to use
         id: binaries-image

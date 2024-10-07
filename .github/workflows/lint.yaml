@@ -20,7 +20,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Read properties from versions.yaml
         run: |
           go_version="$(yq '.tools.golang' src/cloud-api-adaptor/versions.yaml)"
@@ -46,7 +46,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Read properties from versions.yaml
         run: |
           go_version="$(yq '.tools.golang' src/cloud-api-adaptor/versions.yaml)"
@@ -78,7 +78,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Run shellcheck
         run: make shellcheck
 
@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Read properties from versions.yaml
         run: |
           go_version="$(yq '.tools.golang' src/cloud-api-adaptor/versions.yaml)"
@@ -105,7 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Read properties from versions.yaml
         run: |
           go_version="$(yq '.tools.golang' src/cloud-api-adaptor/versions.yaml)"
@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Run packer check
         run: make packer-check
 
@@ -138,6 +138,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Run terraform check
         run: make terraform-check
