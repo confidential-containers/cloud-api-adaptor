@@ -51,7 +51,7 @@ jobs:
       run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
 
     - name: Set up Go environment
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ env.GO_VERSION }}
         cache-dependency-path: go.sum
@@ -108,7 +108,7 @@ jobs:
       run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
 
     - name: Set up Go environment
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ env.GO_VERSION }}
 
@@ -202,7 +202,7 @@ jobs:
       run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
 
     - name: Set up Go environment
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ env.GO_VERSION }}
 
