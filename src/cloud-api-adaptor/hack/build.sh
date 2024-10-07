@@ -22,7 +22,6 @@ release_tags=${RELEASE_TAGS:-"${commit}"}
 
 supported_arches=${ARCHES:-"linux/amd64"}
 
-tags_file="${script_dir}/../tags.txt"
 arch_file_prefix="${script_dir}/../tags-architectures-"
 arch_prefix="linux/"
 
@@ -84,8 +83,6 @@ function build_caa_payload_arch_specific() {
 
 	arch=${supported_arches#"$arch_prefix"}
 
-	echo "dev_tags="$dev_tags > "$tags_file"
-	echo "release_tags="$release_tags >> "$tags_file"
 	echo "arch="$arch >> "$arch_file_prefix$arch"
 
 	local tag_string
