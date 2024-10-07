@@ -115,7 +115,7 @@ jobs:
             cd src/cloud-api-adaptor && ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: image-artifacts
           retention-days: 1
@@ -129,13 +129,13 @@ jobs:
     needs: [build_push_job]
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: "${{ inputs.git_ref }}"
 
       - name: Download release commits file
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: image-artifacts
           path: src/cloud-api-adaptor
