@@ -21,16 +21,18 @@ import (
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
-	conn          *libvirt.Connect // Libvirt connection
-	network       string           // Network name
-	ssh_key_file  string           // SSH key file used to connect to Libvirt
-	storage       string           // Storage pool name
-	uri           string           // Libvirt URI
-	wd            string           // libvirt's directory path on this repository
-	volumeName    string           // Podvm volume name
-	clusterName   string           // Cluster name
-	kbs_image     string           // KBS Service OCI Image URL
-	kbs_image_tag string           // KBS Service OCI Image Tag
+	conn                  *libvirt.Connect // Libvirt connection
+	network               string           // Network name
+	ssh_key_file          string           // SSH key file used to connect to Libvirt
+	storage               string           // Storage pool name
+	uri                   string           // Libvirt URI
+	wd                    string           // libvirt's directory path on this repository
+	volumeName            string           // Podvm volume name
+	clusterName           string           // Cluster name
+	kbs_image             string           // KBS Service OCI Image URL
+	kbs_image_tag         string           // KBS Service OCI Image Tag
+	secure_comms          string           // Activate CAA SECURE_COMMS
+	secure_comms_kbs_addr string           // KBS URL or "false"
 }
 
 // LibvirtInstallOverlay implements the InstallOverlay interface
@@ -92,18 +94,30 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		kbs_image_tag = properties["KBS_IMAGE_TAG"]
 	}
 
+	secure_comms := "false"
+	if properties["SECURE_COMMS"] != "" {
+		secure_comms = properties["SECURE_COMMS"]
+	}
+
+	secure_comms_kbs_addr := ""
+	if properties["SECURE_COMMS_KBS_ADDR"] != "" {
+		secure_comms_kbs_addr = properties["SECURE_COMMS_KBS_ADDR"]
+	}
+
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
-		conn:          conn,
-		network:       network,
-		ssh_key_file:  ssh_key_file,
-		storage:       storage,
-		uri:           uri,
-		wd:            wd,
-		volumeName:    vol_name,
-		clusterName:   clusterName,
-		kbs_image:     kbs_image,
-		kbs_image_tag: kbs_image_tag,
+		conn:                  conn,
+		network:               network,
+		ssh_key_file:          ssh_key_file,
+		storage:               storage,
+		uri:                   uri,
+		wd:                    wd,
+		volumeName:            vol_name,
+		clusterName:           clusterName,
+		kbs_image:             kbs_image,
+		kbs_image_tag:         kbs_image_tag,
+		secure_comms:          secure_comms,
+		secure_comms_kbs_addr: secure_comms_kbs_addr,
 	}, nil
 }
 
@@ -203,13 +217,15 @@ func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config)
 
 func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
-		"network":       l.network,
-		"podvm_volume":  l.volumeName,
-		"ssh_key_file":  l.ssh_key_file,
-		"storage":       l.storage,
-		"uri":           l.uri,
-		"KBS_IMAGE":     l.kbs_image,
-		"KBS_IMAGE_TAG": l.kbs_image_tag,
+		"network":               l.network,
+		"podvm_volume":          l.volumeName,
+		"ssh_key_file":          l.ssh_key_file,
+		"storage":               l.storage,
+		"uri":                   l.uri,
+		"KBS_IMAGE":             l.kbs_image,
+		"KBS_IMAGE_TAG":         l.kbs_image_tag,
+		"SECURE_COMMS":          l.secure_comms,
+		"SECURE_COMMS_KBS_ADDR": l.secure_comms_kbs_addr,
 	}
 }
 
@@ -312,17 +328,20 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 
 	// Mapping the internal properties to ConfigMapGenerator properties and their default values.
 	mapProps := map[string][2]string{
-		"network":      {"default", "LIBVIRT_NET"},
-		"storage":      {"default", "LIBVIRT_POOL"},
-		"pause_image":  {"", "PAUSE_IMAGE"},
-		"podvm_volume": {"", "LIBVIRT_VOL_NAME"},
-		"uri":          {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
-		"vxlan_port":   {"", "VXLAN_PORT"},
-		"INITDATA":     {"", "INITDATA"},
+		"network":               {"default", "LIBVIRT_NET"},
+		"storage":               {"default", "LIBVIRT_POOL"},
+		"pause_image":           {"", "PAUSE_IMAGE"},
+		"podvm_volume":          {"", "LIBVIRT_VOL_NAME"},
+		"uri":                   {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
+		"vxlan_port":            {"", "VXLAN_PORT"},
+		"INITDATA":              {"", "INITDATA"},
+		"SECURE_COMMS":          {"", "SECURE_COMMS"},
+		"SECURE_COMMS_KBS_ADDR": {"", "SECURE_COMMS_KBS_ADDR"},
 	}
 
 	for k, v := range mapProps {
 		if properties[k] != v[0] {
+			fmt.Printf("TESTONLY setting  %s: %s\n", v[1], properties[k])
 			if err = lio.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm",
 				v[1], properties[k]); err != nil {
 				return err

@@ -122,3 +122,5 @@ KBS_IMAGE=$(./hack/yq-shim.sh '.oci.kbs.registry' ./versions.yaml)
 KBS_IMAGE_TAG=$(./hack/yq-shim.sh '.oci.kbs.tag' ./versions.yaml)
 [ -z ${KBS_IMAGE} ] || echo "KBS_IMAGE=\"${KBS_IMAGE}\"" >> libvirt.properties
 [ -z ${KBS_IMAGE_TAG} ] || echo "KBS_IMAGE_TAG=\"${KBS_IMAGE_TAG}\"" >> libvirt.properties
+echo "SECURE_COMMS=\"true\"" >> libvirt.properties
+echo "SECURE_COMMS_KBS_ADDR=\"kbs.coco-tenant\"" >> libvirt.properties
