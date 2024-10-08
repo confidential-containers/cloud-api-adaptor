@@ -30,6 +30,9 @@ func TestLibvirtCreatePodWithSecret(t *testing.T) {
 
 func TestLibvirtCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 	SkipTestOnCI(t)
+	if isTestOnCrio() {
+		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
+	}
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodContainerWithExternalIPAccess(t, testEnv, assert)
 
@@ -101,6 +104,9 @@ func TestLibvirtDeletePod(t *testing.T) {
 func TestLibvirtPodToServiceCommunication(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
 	SkipTestOnCI(t)
+	if isTestOnCrio() {
+		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
+	}
 	assert := LibvirtAssert{}
 	DoTestPodToServiceCommunication(t, testEnv, assert)
 }
@@ -108,6 +114,9 @@ func TestLibvirtPodToServiceCommunication(t *testing.T) {
 func TestLibvirtPodsMTLSCommunication(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
 	SkipTestOnCI(t)
+	if isTestOnCrio() {
+		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
+	}
 	assert := LibvirtAssert{}
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
