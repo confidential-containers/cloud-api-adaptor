@@ -632,8 +632,10 @@ func DoTestRestrictivePolicyBlocksExec(t *testing.T, e env.Environment, assert C
 			Command:       []string{"ls"},
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestErrorFn: func(err error) bool {
-				if strings.Contains(err.Error(), "failed to exec in container") && strings.Contains(err.Error(), "ExecProcessRequest is blocked by policy") {
-					t.Logf("Exec process was blocked %s", err.Error())
+				if (strings.Contains(err.Error(), "failed to exec in container") || // containerd
+					strings.Contains(err.Error(), "error executing command in container")) && // cri-o
+					strings.Contains(err.Error(), "ExecProcessRequest is blocked by policy") {
+					t.Logf("Exec process was blocked: %s", err.Error())
 					return true
 				} else {
 					t.Errorf("Exec process was allowed: %s", err.Error())

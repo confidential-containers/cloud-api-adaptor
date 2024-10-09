@@ -15,6 +15,7 @@ CLUSTER_NAME="${CLUSTER_NAME:-peer-pods}"
 CLUSTER_IMAGE="${CLUSTER_IMAGE:-ubuntu2204}"
 CLUSTER_VERSION="${CLUSTER_VERSION:-1.30.0}"
 CLUSTER_WORKERS="${CLUSTER_WORKERS:-1}"
+CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-containerd}" # Either "containerd" or "crio"
 LIBVIRT_NETWORK="${LIBVIRT_NETWORK:-default}"
 LIBVIRT_POOL="${LIBVIRT_POOL:-default}"
 
@@ -53,7 +54,8 @@ create () {
 		-P sdn=flannel \
 		-P nfs=false \
 		-P disk_size=$CLUSTER_DISK_SIZE \
-		-P version=$CLUSTER_VERSION"
+		-P version=$CLUSTER_VERSION \
+		-P engine=$CONTAINER_RUNTIME"
 	# The autolabeller and multus images do not support s390x arch yet
 	# disable them for s390x cluster
 	if [[ ${TARGET_ARCH} == "s390x" ]]; then
@@ -120,7 +122,8 @@ usage () {
 	          CLUSTER_VERSION         (default "${CLUSTER_VERSION}")
 	          LIBVIRT_NETWORK         (default "${LIBVIRT_NETWORK}")
 	          LIBVIRT_POOL            (default "${LIBVIRT_POOL}")
-	          CLUSTER_WORKERS         (default "${CLUSTER_WORKERS}").
+	          CLUSTER_WORKERS         (default "${CLUSTER_WORKERS}")
+	          CONTAINER_RUNTIME       (default "${CONTAINER_RUNTIME}")
 	delete    Delete the cluster. Specify the cluster name with
 	          CLUSTER_NAME (default "${CLUSTER_NAME}").
 	EOF
