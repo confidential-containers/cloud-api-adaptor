@@ -66,4 +66,5 @@ type InstanceTypeSpec struct {
 	Memory       int64
 	Arch         string
 	GPUs         int64
+	Image        string
 }
