@@ -115,6 +115,7 @@ virsh -c "qemu+ssh://${USER}@${IP}/system?keyfile=$(pwd)/id_rsa&no_verify=1" nod
 popd
 
 rm -f libvirt.properties
+#rm -f libvirt.securecomms.properties
 echo "libvirt_uri=\"qemu+ssh://${USER}@${IP}/system?no_verify=1\"" >> libvirt.properties
 echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
 echo "CLUSTER_NAME=\"peer-pods\"" >> libvirt.properties
@@ -122,3 +123,8 @@ KBS_IMAGE=$(./hack/yq-shim.sh '.oci.kbs.registry' ./versions.yaml)
 KBS_IMAGE_TAG=$(./hack/yq-shim.sh '.oci.kbs.tag' ./versions.yaml)
 [ -z ${KBS_IMAGE} ] || echo "KBS_IMAGE=\"${KBS_IMAGE}\"" >> libvirt.properties
 [ -z ${KBS_IMAGE_TAG} ] || echo "KBS_IMAGE_TAG=\"${KBS_IMAGE_TAG}\"" >> libvirt.properties
+#cp libvirt.properties libvirt.securecomms.properties
+#echo "SECURE_COMMS=\"true\"" >> libvirt.securecomms.properties
+#echo "SECURE_COMMS_KBS_ADDR=\"false\"" >> libvirt.securecomms.properties
+echo "SECURE_COMMS=\"true\"" >> libvirt.properties
+echo "SECURE_COMMS_KBS_ADDR=\"false\"" >> libvirt.properties
