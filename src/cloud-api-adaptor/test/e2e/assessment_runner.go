@@ -78,6 +78,7 @@ type TestCase struct {
 	testInstanceTypes    InstanceValidatorFunctions
 	isNydusSnapshotter   bool
 	FailReason           string
+	alternateImageName   string
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -132,6 +133,11 @@ func (tc *TestCase) WithTestCommands(TestCommands []TestCommand) *TestCase {
 
 func (tc *TestCase) WithInstanceTypes(testInstanceTypes InstanceValidatorFunctions) *TestCase {
 	tc.testInstanceTypes = testInstanceTypes
+	return tc
+}
+
+func (tc *TestCase) WithAlternateImage(alternateImageName string) *TestCase {
+	tc.alternateImageName = alternateImageName
 	return tc
 }
 
@@ -544,6 +550,25 @@ func (tc *TestCase) Run() {
 
 				}
 
+			}
+
+			if tc.alternateImageName != "" {
+				var caaPod v1.Pod
+				caaPod.Namespace = "confidential-containers-system"
+				expectedSuccessMessage := "Choosing " + tc.alternateImageName
+
+				pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.Namespace, "app", "cloud-api-adaptor")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				caaPod.Name = pods.Items[0].Name
+				LogString, err := ComparePodLogString(ctx, client, caaPod, expectedSuccessMessage)
+				if err != nil {
+					t.Logf("Output:%s", LogString)
+					t.Fatal(err)
+				}
+				t.Logf("PodVM was brought up using the alternate PodVM image %s", tc.alternateImageName)
 			}
 			return ctx
 		}).

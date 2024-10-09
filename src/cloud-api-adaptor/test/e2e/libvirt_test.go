@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/libvirt"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/libvirt"
 )
 
 func TestLibvirtCreateSimplePod(t *testing.T) {
@@ -33,6 +33,16 @@ func TestLibvirtCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodContainerWithExternalIPAccess(t, testEnv, assert)
 
+}
+
+func TestLibvirtCreatePeerPodContainerWithValidAlternateImage(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestCreatePeerPodContainerWithValidAlternateImage(t, testEnv, assert, libvirt.AlternateVolumeName)
+}
+
+func TestLibvirtCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestCreatePeerPodContainerWithInvalidAlternateImage(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePeerPodWithJob(t *testing.T) {
