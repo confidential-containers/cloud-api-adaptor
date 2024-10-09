@@ -114,3 +114,42 @@ func TestGetInstanceTypeFromAnnotation(t *testing.T) {
 		})
 	}
 }
+
+func TestGetImageFromAnnotation(t *testing.T) {
+	type args struct {
+		annotations map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		// Add test cases with annotations for only image name
+		{
+			name: "image name only",
+			args: args{
+				annotations: map[string]string{
+					hypannotations.ImagePath: "rhel9-os",
+				},
+			},
+			want: "rhel9-os",
+		},
+		// Add test cases with annotations for only image name with empty value
+		{
+			name: "image name only with empty value",
+			args: args{
+				annotations: map[string]string{
+					hypannotations.ImagePath: "",
+				},
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetImageFromAnnotation(tt.args.annotations); got != tt.want {
+				t.Errorf("GetImageFromAnnotation() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
