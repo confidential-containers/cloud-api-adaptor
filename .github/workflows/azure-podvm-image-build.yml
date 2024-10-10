@@ -1,4 +1,4 @@
-name: Azure PodVM image build
+name: azure-podvm-image-build
 
 on:
   workflow_call:
@@ -28,10 +28,10 @@ permissions:
 env:
   AZURE_PODVM_IMAGE_DEF_NAME: "${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
   AZURE_PODVM_IMAGE_VERSION: "${{ inputs.image-version }}"
-  COMMUNITY_GALLERY_PREFIX: "/CommunityGalleries/${{ vars.AZURE_COMMUNITY_GALLERY_NAME }}"
   PODVM_IMAGE_NAME: "peerpod-image-${{ github.run_id }}-${{ github.run_attempt }}"
   UPLOSI_VERSION: "0.3.0"
   UPLOSI_SHA256: "687bcab7398ab0fda65a3809492e8cd4d6a25aad1573927be5ec75ac1c4cbc35"
+  IMAGE_ID: "/CommunityGalleries/${{ vars.AZURE_COMMUNITY_GALLERY_NAME }}/Images/${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}/Versions/${{ inputs.image-version }}"
 
 jobs:
   build-podvm-image:
