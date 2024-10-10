@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -25,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// TODO remove busybox fully
 const BUSYBOX_IMAGE = "quay.io/prometheus/busybox:latest"
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
@@ -104,6 +106,14 @@ func isTestOnCrio() bool {
 
 func enableAllowAllPodPolicyOverride() bool {
 	return os.Getenv("POD_ALLOW_ALL_POLICY_OVERRIDE") == "yes"
+}
+
+func getTestImage(t *testing.T, image string) string {
+	image, err := utils.GetImage(image)
+	if err != nil {
+		t.Errorf("Failed to read image: %s, with error %s", image, err.Error())
+	}
+	return image
 }
 
 func encodePolicyFile(policyFilePath string) string {
@@ -272,7 +282,7 @@ func NewPrivPod(namespace string, podName string) *corev1.Pod {
 
 // Method to create a Pod with initContainer
 func NewPodWithInitContainer(namespace string, podName string) *corev1.Pod {
-
+	// TODO how to read busyboxImage without throwing error?
 	initContainer := []corev1.Container{
 		{
 			Name:    "init-container",
