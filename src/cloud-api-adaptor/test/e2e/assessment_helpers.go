@@ -338,6 +338,7 @@ func AssessPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Po
 		return "Failed to list pod", err
 	}
 	for _, testCommand := range testCommands {
+		log.Tracef("Running test command: %v", testCommand)
 		var stdout, stderr bytes.Buffer
 		for _, podItem := range podlist.Items {
 			if podItem.ObjectMeta.Name == pod.Name {

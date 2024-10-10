@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -29,7 +30,7 @@ import (
 const TRUSTEE_REPO_PATH = "../trustee"
 
 func getHardwarePlatform() (string, error) {
-	out, err := exec.Command("uname", "-i").Output()
+	out, err := exec.Command("uname", "-m").Output()
 	return strings.TrimSuffix(string(out), "\n"), err
 }
 
@@ -43,20 +44,9 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		return nil, err
 	}
 	filePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/overlays/"+platform+"/key.bin")
-	// Create the file.
-	file, err := os.Create(filePath)
-	if err != nil {
-		err = fmt.Errorf("creating file: %w\n", err)
-		log.Errorf("%v", err)
-		return nil, err
-	}
-	defer file.Close()
 
-	// Write the content to the file.
-	err = saveToFile(filePath, content)
+	err = createAndWriteFile(filePath, content)
 	if err != nil {
-		err = fmt.Errorf("writing to the file: %w\n", err)
-		log.Errorf("%v", err)
 		return nil, err
 	}
 
@@ -173,6 +163,24 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		installOverlay: overlay,
 		endpoint:       "",
 	}, nil
+}
+
+func createAndWriteFile(filePath string, content []byte) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		err = fmt.Errorf("creating file: %w", err)
+		log.Errorf("%v", err)
+		return err
+	}
+	defer file.Close()
+
+	// Write the content to the file.
+	err = saveToFile(filePath, content)
+	if err != nil {
+		log.Errorf("%v", err)
+		return err
+	}
+	return nil
 }
 
 func saveToFile(filename string, content []byte) error {
@@ -474,20 +482,25 @@ func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFil
 	return nil
 }
 
-func (p *KeyBrokerService) SetSampleSecretKey() error {
+func (p *KeyBrokerService) SetSecret(resourcePath string, secret []byte) error {
 	kbsClientDir := filepath.Join(TRUSTEE_REPO_PATH, "target/release")
 	privateKey := "../../kbs/config/kubernetes/base/kbs.key"
-	platform, err := getHardwarePlatform()
+
+	tempDir, _ := os.MkdirTemp("", "kbs_resource_files")
+	defer os.RemoveAll(tempDir)
+
+	var secretFilePath = filepath.Join(tempDir, path.Base(resourcePath))
+	err := createAndWriteFile(secretFilePath, secret)
 	if err != nil {
 		return err
 	}
-	keyFilePath := "../../kbs/config/kubernetes/overlays/" + platform + "/key.bin"
-	log.Info("set key resource: ", keyFilePath)
-	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource", "--path", "reponame/workload_key/key.bin", "--resource-file", keyFilePath)
+
+	log.Info("set resource: ", resourcePath)
+	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource", "--path", resourcePath, "--resource-file", secretFilePath)
 	cmd.Dir = kbsClientDir
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	log.Tracef("%v, status: %v, output: %s", cmd, err, stdoutStderr)
 	if err != nil {
 		return err
 	}

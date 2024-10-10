@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/azure"
+	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
 func TestDeletePodAzure(t *testing.T) {
@@ -131,7 +132,13 @@ func TestKbsKeyRelease(t *testing.T) {
 	}
 	t.Parallel()
 	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
-	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint)
+	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
+	resourcePath := "caa/workload_key/test_key.bin"
+	err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
 func TestRemoteAttestation(t *testing.T) {
@@ -153,5 +160,5 @@ func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
 	}
 	t.Parallel()
 	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
-	DoTestTrusteeOperatorKeyReleaseForSpecificKey(t, testEnv, assert, kbsEndpoint)
+	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, "default/kbsres1/key1", "res1val1")
 }
