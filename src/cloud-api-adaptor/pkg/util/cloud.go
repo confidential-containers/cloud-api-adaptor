@@ -35,6 +35,14 @@ func GetInstanceTypeFromAnnotation(annotations map[string]string) string {
 	return annotations[hypannotations.MachineType]
 }
 
+// Method to get image from annotation
+func GetImageFromAnnotation(annotations map[string]string) string {
+	// The image annotation in Kata refers to image path
+	// For example image for Kata/Qemu refers to /hypervisor/image.img etc.
+	// We use the same annotation for Kata/remote to refer to image name
+	return annotations[hypannotations.ImagePath]
+}
+
 // Method to get vCPU and memory from annotations
 func GetCPUAndMemoryFromAnnotation(annotations map[string]string) (int64, int64) {
 

@@ -525,3 +525,20 @@ func AddImagePullSecretToDefaultServiceAccount(ctx context.Context, client klien
 	}
 	return nil
 }
+
+func GetPodNamesByLabel(ctx context.Context, client klient.Client, t *testing.T, namespace string, labelName string, labelValue string) (*v1.PodList, error) {
+
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		t.Fatal(err)
+		return nil, err
+	}
+
+	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelName + "=" + labelValue})
+	if err != nil {
+		t.Fatal(err)
+		return nil, err
+	}
+
+	return pods, nil
+}

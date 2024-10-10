@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
+const AlternateVolumeName = "another-podvm-base.qcow2"
+
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
 	conn         *libvirt.Connect // Libvirt connection
@@ -138,30 +140,35 @@ func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config)
 		return fmt.Errorf("Storage pool '%s' not found. It should be created beforehand", l.storage)
 	}
 
-	// Create the podvm storage volume if it does not exist.
-	if _, err = sPool.LookupStorageVolByName(l.volumeName); err != nil {
-		volCfg := libvirtxml.StorageVolume{
-			Name: l.volumeName,
-			Capacity: &libvirtxml.StorageVolumeSize{
-				Unit:  "GiB",
-				Value: 20,
-			},
-			Allocation: &libvirtxml.StorageVolumeSize{
-				Unit:  "GiB",
-				Value: 2,
-			},
-			Target: &libvirtxml.StorageVolumeTarget{
-				Format: &libvirtxml.StorageVolumeTargetFormat{
-					Type: "qcow2",
+	// Create two volumes to test the multiple podvm image scenario.
+	lVolumes := [2]string{l.volumeName, AlternateVolumeName}
+
+	// Create the podvm storage volumes if it does not exist.
+	for _, volume := range lVolumes {
+		if _, err = sPool.LookupStorageVolByName(volume); err != nil {
+			volCfg := libvirtxml.StorageVolume{
+				Name: volume,
+				Capacity: &libvirtxml.StorageVolumeSize{
+					Unit:  "GiB",
+					Value: 20,
 				},
-			},
-		}
-		xml, err := volCfg.Marshal()
-		if err != nil {
-			return err
-		}
-		if _, err = sPool.StorageVolCreateXML(xml, libvirt.STORAGE_VOL_CREATE_PREALLOC_METADATA); err != nil {
-			return err
+				Allocation: &libvirtxml.StorageVolumeSize{
+					Unit:  "GiB",
+					Value: 2,
+				},
+				Target: &libvirtxml.StorageVolumeTarget{
+					Format: &libvirtxml.StorageVolumeTargetFormat{
+						Type: "qcow2",
+					},
+				},
+			}
+			xml, err := volCfg.Marshal()
+			if err != nil {
+				return err
+			}
+			if _, err = sPool.StorageVolCreateXML(xml, libvirt.STORAGE_VOL_CREATE_PREALLOC_METADATA); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -211,52 +218,56 @@ func (l *LibvirtProvisioner) UploadPodvm(imagePath string, ctx context.Context, 
 	}
 	length := fileStat.Size()
 
-	sVol, err := sPool.LookupStorageVolByName(l.volumeName)
-	if err != nil {
-		return err
-	}
+	lVolumes := [2]string{l.volumeName, AlternateVolumeName}
 
-	stream, err := l.conn.NewStream(0)
-	if err != nil {
-		return err
-	}
-
-	if err := sVol.Upload(stream, 0, uint64(length), libvirt.STORAGE_VOL_UPLOAD_SPARSE_STREAM); err != nil {
-		return err
-	}
-
-	fileByteSlice, err := os.ReadFile(imagePath)
-	if err != nil {
-		return err
-	}
-
-	sent := 0
-	source := func(stream *libvirt.Stream, nbytes int) ([]byte, error) {
-		tosend := nbytes
-		if tosend > (len(fileByteSlice) - sent) {
-			tosend = len(fileByteSlice) - sent
+	for _, volume := range lVolumes {
+		sVol, err := sPool.LookupStorageVolByName(volume)
+		if err != nil {
+			return err
 		}
 
-		if tosend == 0 {
-			return []byte{}, nil
+		stream, err := l.conn.NewStream(0)
+		if err != nil {
+			return err
 		}
 
-		data := fileByteSlice[sent : sent+tosend]
-		sent += tosend
+		if err := sVol.Upload(stream, 0, uint64(length), libvirt.STORAGE_VOL_UPLOAD_SPARSE_STREAM); err != nil {
+			return err
+		}
 
-		return data, nil
-	}
+		fileByteSlice, err := os.ReadFile(imagePath)
+		if err != nil {
+			return err
+		}
 
-	if err := stream.SendAll(source); err != nil {
-		return err
-	}
+		sent := 0
+		source := func(stream *libvirt.Stream, nbytes int) ([]byte, error) {
+			tosend := nbytes
+			if tosend > (len(fileByteSlice) - sent) {
+				tosend = len(fileByteSlice) - sent
+			}
 
-	if err := stream.Finish(); err != nil {
-		return err
-	}
+			if tosend == 0 {
+				return []byte{}, nil
+			}
 
-	if err := stream.Free(); err != nil {
-		return err
+			data := fileByteSlice[sent : sent+tosend]
+			sent += tosend
+
+			return data, nil
+		}
+
+		if err := stream.SendAll(source); err != nil {
+			return err
+		}
+
+		if err := stream.Finish(); err != nil {
+			return err
+		}
+
+		if err := stream.Free(); err != nil {
+			return err
+		}
 	}
 
 	return nil
