@@ -100,6 +100,12 @@ jobs:
         run: |
           sudo apt install -y gh
 
+      - name: Install kustomize
+        run: |
+          command -v kustomize >/dev/null || \
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
+            bash -s /usr/local/bin
+
       - name: Checkout kbs Repository and build kbs-client
         run: |
           sudo apt-get update -y

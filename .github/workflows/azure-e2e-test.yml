@@ -196,6 +196,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y sipcalc
 
+    - name: Install kustomize
+      run: |
+        command -v kustomize >/dev/null || \
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
+          bash -s /usr/local/bin
+
     - name: Set Provisioner Environment Variables
       run: |
           echo "TEST_PROVISION_FILE=${{ format(env.TEST_PROVISION_PATH_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
