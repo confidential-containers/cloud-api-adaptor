@@ -235,21 +235,9 @@ jobs:
     - name: Extract kbs reference
       run: echo "KBS_VERSION=$(yq -e '.git.kbs.reference' versions.yaml)" >> "$GITHUB_ENV"
 
-    - name: Checkout kbs Repository
+    - name: Checkout KBS Repository
       run: |
-        rm -rf test/trustee
-        git clone https://github.com/confidential-containers/trustee test/trustee
-        pushd test/trustee
-        git checkout "${KBS_VERSION}"
-        pushd kbs/config/kubernetes/base/
-        # Trustee only updates their staging image reliably with sha tags,
-        # so switch to use that and convert the version to the sha
-        KBS_SHA=$(gh api repos/confidential-containers/trustee/commits/${KBS_VERSION} -q .sha)
-        kustomize edit set image kbs-container-image=ghcr.io/confidential-containers/staged-images/kbs:${KBS_SHA}
-        # For debugging
-        echo "Trustee deployment: $(cat kustomization.yaml). Images: $(cat kustomization.yaml | grep -A 5 images:)"
-        popd
-        popd
+        test/utils/checkout_kbs.sh
 
     - name: Run e2e test
       env:

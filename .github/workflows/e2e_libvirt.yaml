@@ -106,27 +106,9 @@ jobs:
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
             bash -s /usr/local/bin
 
-      - name: Checkout kbs Repository and build kbs-client
+      - name: Checkout KBS Repository
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y build-essential pkg-config libssl-dev
-          git clone "${KBS_REPO}" test/trustee
-          pushd test/trustee
-          git checkout "${KBS_VERSION}"
-          pushd kbs
-          make CLI_FEATURES=sample_only cli
-          pushd config/kubernetes/base/
-          # Trustee only updates their staging image reliably with sha tags,
-          # so switch to use that and convert the version to the sha
-          KBS_SHA=$(gh api repos/confidential-containers/trustee/commits/${KBS_VERSION} -q .sha)
-          kustomize edit set image kbs-container-image=ghcr.io/confidential-containers/staged-images/kbs:${KBS_SHA}
-          # For debugging
-          echo "Trustee deployment: $(cat kustomization.yaml). Images: $(cat kustomization.yaml | grep -A 5 images:)"
-          popd
-          popd
-          # For debugging
-          ls ./target/release
-          popd
+          test/utils/checkout_kbs.sh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
