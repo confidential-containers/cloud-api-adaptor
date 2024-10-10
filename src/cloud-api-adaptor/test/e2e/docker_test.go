@@ -129,3 +129,29 @@ func TestDockerCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testin
 		t.Skip("Registry Credentials, or authenticated image name not exported")
 	}
 }
+
+func TestDockerCreateWithCpuLimit(t *testing.T) {
+	// This test is covered as part of unit test and hence skipping to optimise CI time
+	SkipTestOnCI(t)
+	assert := DockerAssert{}
+	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "", "", "200m", "")
+}
+
+func TestDockerCreateWithMemLimit(t *testing.T) {
+	// This test is covered as part of unit test and hence skipping to optimise CI time
+	SkipTestOnCI(t)
+	assert := DockerAssert{}
+	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "", "", "", "200Mi")
+}
+
+func TestDockerCreateWithCpuAndMemLimit(t *testing.T) {
+	// This test is covered as part of unit test and hence skipping to optimise CI time
+	SkipTestOnCI(t)
+	assert := DockerAssert{}
+	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "", "", "200m", "200Mi")
+}
+
+func TestDockerCreateWithCpuAndMemRequestLimit(t *testing.T) {
+	assert := DockerAssert{}
+	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "200Mi")
+}
