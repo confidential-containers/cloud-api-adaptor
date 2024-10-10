@@ -114,7 +114,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.BoolVar(&secureComms, "secure-comms", false, "Use SSH to secure communication between cluster and peer pods")
 		flags.StringVar(&secureCommsInbounds, "secure-comms-inbounds", "", "Inbound tags for secure communication tunnels")
 		flags.StringVar(&secureCommsOutbounds, "secure-comms-outbounds", "", "Outbound tags for secure communication tunnels")
-		flags.StringVar(&secureCommsKbsAddr, "secure-comms-kbs", "kbs-service.kbs-operator-system:8080", "Address of a KBS Service for Secure-Comms")
+		flags.StringVar(&secureCommsKbsAddr, "secure-comms-kbs", "kbs-service.trustee-operator-system:8080", "Address of a Trustee Service for Secure-Comms")
 		flags.DurationVar(&cfg.serverConfig.ProxyTimeout, "proxy-timeout", proxy.DefaultProxyTimeout, "Maximum timeout in minutes for establishing agent proxy connection")
 
 		flags.StringVar(&cfg.networkConfig.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
