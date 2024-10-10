@@ -57,25 +57,10 @@ $ RUN_TESTS=CreateSimplePod TEST_PROVISION=yes TEST_PODVM_IMAGE="path/to/podvm-b
 ## Attestation and KBS specific
 
 We need artifacts from the trustee repo when doing the attestation tests.
-To prepare trustee, execute the following steps:
+To prepare trustee, execute the following helper script:
 
 ```sh
-pushd ${cloud-api-adaptor-repo-dir}/src/cloud-api-adaptor/test
-git clone https://github.com/confidential-containers/trustee.git
-pushd trustee
-KBS_VERSION=$(../../hack/yq-shim.sh '.git.kbs.reference' ../../versions.yaml)
-git checkout ${KBS_VERSION}
-pushd kbs
-pushd config/kubernetes/base/
-# Trustee only updates their staging image reliably with sha tags,
-# so switch to use that and convert the version to the sha
-KBS_SHA=$(gh api repos/confidential-containers/trustee/commits/${KBS_VERSION} -q .sha)
-kustomize edit set image kbs-container-image=ghcr.io/confidential-containers/staged-images/kbs:${KBS_SHA}
-popd
-make CLI_FEATURES=sample_only cli
-popd
-popd
-popd
+${cloud-api-adaptor-repo-dir}/src/cloud-api-adaptor/test/utils/checkout_kbs.sh
 ```
 
 We need build and use the PodVM image:
