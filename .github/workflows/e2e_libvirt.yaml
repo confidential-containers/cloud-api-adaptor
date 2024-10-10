@@ -96,6 +96,10 @@ jobs:
           override: true
           profile: minimal
 
+      - name: Install gh cli
+        run: |
+          sudo apt install -y gh
+
       - name: Checkout kbs Repository and build kbs-client
         run: |
           sudo apt-get update -y
@@ -117,6 +121,8 @@ jobs:
           # For debugging
           ls ./target/release
           popd
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: run tests
         id: runTests
