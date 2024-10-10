@@ -32,12 +32,6 @@ git:
   coco-operator:
     url: https://github.com/confidential-containers/operator
     reference: main
-  guest-components:
-    url: https://github.com/confidential-containers/guest-components
-    reference: c2022037d8fbb076f569529e93b2cbe63a3968bb
-  kata-containers:
-    url: https://github.com/kata-containers/kata-containers
-    reference: 3.9.0
   umoci:
     url: https://github.com/opencontainers/umoci
     reference: v0.4.7
@@ -47,7 +41,16 @@ git:
   kbs:
     url: https://github.com/confidential-containers/trustee
     reference: v0.10.1
+# If a tag is given it will attempt to pull the exact oci image, if a reference
+# is specified the corresponding tag will be constructed using the reference and
+# suffixes like architecture or tee.
 oci:
   pause:
-    registry: docker://registry.k8s.io/pause
+    registry: registry.k8s.io/pause
     tag: 3.9
+  kata-containers:
+    registry: ghcr.io/kata-containers/cached-artefacts
+    reference: 3.9.0
+  guest-components:
+    registry: ghcr.io/confidential-containers/guest-components
+    reference: d8da69072424e496486dfb5421a26f16ff2a7abf

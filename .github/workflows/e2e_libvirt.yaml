@@ -27,6 +27,8 @@ on:
 env:
   CLOUD_PROVIDER: libvirt
   DEBIAN_FRONTEND: noninteractive
+  KBS_REGISTRY: ghcr.io/confidential-containers/staged-images/kbs
+  KBS_CLIENT_REGISTRY: ghcr.io/confidential-containers/staged-images/kbs-client
 
 defaults:
   run:
@@ -53,10 +55,10 @@ jobs:
           sudo snap install yq
           echo "KBS_REPO=$(yq -e '.git.kbs.url' versions.yaml)" >> "$GITHUB_ENV"
           echo "KBS_VERSION=$(yq -e '.git.kbs.reference' versions.yaml)" >> "$GITHUB_ENV"
-          echo "RUST_VERSION=$(yq -e '.tools.rust' versions.yaml)" >> "$GITHUB_ENV"
           go_version="$(yq '.tools.golang' versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+          echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
         uses: actions/setup-go@v5
@@ -89,19 +91,20 @@ jobs:
           # For debugging
           cat libvirt.properties
 
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: oras-project/setup-oras@v1
         with:
-          toolchain: ${{ env.RUST_VERSION }}
-          override: true
-          profile: minimal
+          version: ${{ env.ORAS_VERSION }}
 
-      - name: Checkout kbs Repository and build kbs-client
+      - name: Download kbs-client via ORAS
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y build-essential pkg-config libssl-dev
+          KBS_SHA=$(gh api repos/confidential-containers/trustee/commits/${KBS_VERSION} -q .sha)
+          oras pull "${KBS_CLIENT_REGISTRY}:sample_only-x86_64-linux-gnu-${KBS_SHA}"
+          chmod +x ./kbs-client
+
+      - name: Clone KBS
+        run: |
           git clone "${KBS_REPO}" test/trustee
-          pushd test/trustee
+          cd test/trustee/kbs
           git checkout "${KBS_VERSION}"
           pushd kbs
           make CLI_FEATURES=sample_only cli

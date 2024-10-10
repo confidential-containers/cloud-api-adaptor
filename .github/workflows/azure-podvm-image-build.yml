@@ -63,7 +63,7 @@ jobs:
     - name: Build binaries
       run: |
         make fedora-binaries-builder
-        ATTESTER="az-snp-vtpm-attester,az-tdx-vtpm-attester" make binaries
+        TEE_PLATFORM=az-cvm-vtpm make binaries
 
     - name: Build image
       run: make image
