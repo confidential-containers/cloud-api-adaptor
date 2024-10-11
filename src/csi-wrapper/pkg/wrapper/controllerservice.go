@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
@@ -46,6 +48,9 @@ const (
 	// We only later know the real volume name when we process the CR again in [NodeService.NodePublishVolume].
 	peerpodVolumeNamePlaceholder = "peerpod-volume-name-placeholder"
 )
+
+// azureVMRegexp checks if used to validate an Azure resource ID for a VM, or scale set VM.
+var azureVMRegexp = regexp.MustCompile(`(?i)^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Compute/(virtualMachines|virtualMachineScaleSets/[^/]+/virtualMachines)/[^/]+$`)
 
 type ControllerService struct {
 	TargetEndpoint      string
@@ -362,6 +367,13 @@ func (s *ControllerService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.Pee
 	if peerPodVolume.Status.State == peerpodvolumeV1alpha1.PeerPodVSIIDReady && peerPodVolume.Spec.DevicePath == "" {
 		// After peerpod vsi id is ready in crd object, we can reproduce the ControllerPublishVolumeRequest
 		vsiID := peerPodVolume.Spec.VMID
+
+		// The azure csi driver requires the nodeID to be just the name of the VM,
+		// not the full Azure Resource ID, as it is saved in the PeerpodVolume object
+		if azureVMRegexp.MatchString(vsiID) {
+			vsiID = filepath.Base(vsiID)
+		}
+
 		// Replace the nodeID with peerpod vsi instance id in ControllerPublishVolumeRequest and pass
 		// the modified ControllerPublishVolumeRequest to original controller service
 		wrapperRequest := peerPodVolume.Spec.WrapperControllerPublishVolumeReq
