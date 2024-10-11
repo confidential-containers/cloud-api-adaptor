@@ -34,7 +34,9 @@ var logger = log.New(log.Writer(), "[forwarder] ", log.LstdFlags|log.Lmsgprefix)
 type Config struct {
 	tlsConfig           *tlsutil.TLSConfig
 	daemonConfig        daemon.Config
-	configPath          string
+	apfConfig           daemon.ApfConfig
+	daemonConfigPath    string
+	apfConfigPath       string
 	listenAddr          string
 	kataAgentSocketPath string
 	podNamespace        string
@@ -52,6 +54,8 @@ func load(path string, obj interface{}) error {
 		return fmt.Errorf("failed to decode a Agent Protocol Forwarder config file file: %s: %w", path, err)
 	}
 
+	logger.Printf("Succesfully loading config from %s\n", path)
+
 	return nil
 }
 
@@ -68,7 +72,8 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 
 	cmd.Parse(programName, os.Args, func(flags *flag.FlagSet) {
 		flags.BoolVar(&showVersion, "version", false, "Show version")
-		flags.StringVar(&cfg.configPath, "config", daemon.DefaultConfigPath, "Path to a daemon config file")
+		flags.StringVar(&cfg.daemonConfigPath, "config", daemon.DefaultDaemonConfigPath, "Path to a daemon config file")
+		flags.StringVar(&cfg.apfConfigPath, "apf-config", daemon.DefaultAPFConfigPath, "Path to APF config file")
 		flags.StringVar(&cfg.listenAddr, "listen", daemon.DefaultListenAddr, "Listen address")
 		flags.StringVar(&cfg.kataAgentSocketPath, "kata-agent-socket", daemon.DefaultKataAgentSocketPath, "Path to a kata agent socket")
 		flags.StringVar(&cfg.podNamespace, "pod-namespace", daemon.DefaultPodNamespace, "Path to the network namespace where the pod runs")
@@ -89,8 +94,16 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		cmd.Exit(0)
 	}
 
-	if err := load(cfg.configPath, &cfg.daemonConfig); err != nil {
+	if err := load(cfg.daemonConfigPath, &cfg.daemonConfig); err != nil {
 		return nil, err
+	}
+
+	if err := load(cfg.apfConfigPath, &cfg.apfConfig); err != nil {
+		return nil, err
+	}
+
+	if cfg.apfConfig.SecureComms {
+		secureComms = true
 	}
 
 	if secureComms {
