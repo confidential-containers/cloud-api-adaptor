@@ -103,8 +103,8 @@ jobs:
       - name: Install kustomize
         run: |
           command -v kustomize >/dev/null || \
-          sudo curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-          sudo install -o root -g root -m 0755 kustomize /usr/local/bin/kustomize
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
+            sudo bash -s /usr/local/bin
 
       - name: Checkout KBS Repository
         run: |

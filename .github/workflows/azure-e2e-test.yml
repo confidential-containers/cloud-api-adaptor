@@ -200,7 +200,7 @@ jobs:
       run: |
         command -v kustomize >/dev/null || \
         curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
-          bash -s /usr/local/bin
+          sudo bash -s /usr/local/bin
 
     - name: Set Provisioner Environment Variables
       run: |
