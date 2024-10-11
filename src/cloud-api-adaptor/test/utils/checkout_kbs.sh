@@ -19,6 +19,7 @@ rm -rf "${TEST_DIR}/trustee"
 git clone "${KBS_REPO}" "${TEST_DIR}/trustee"
 pushd "${TEST_DIR}/trustee"
 git checkout "${KBS_VERSION}"
+KBS_SHA="$(git rev-parse HEAD)"
 
 # kbs-client setup - to be removed when we use the cached version instead
 sudo apt-get update -y
@@ -30,7 +31,6 @@ popd
 pushd kbs/config/kubernetes/base/
 # Trustee only updates their staging image reliably with sha tags,
 # so switch to use that and convert the version to the sha
-KBS_SHA=$(gh api repos/confidential-containers/trustee/commits/${KBS_VERSION} -q .sha)
 kustomize edit set image kbs-container-image=ghcr.io/confidential-containers/staged-images/kbs:${KBS_SHA}
 # For debugging
 echo "Trustee deployment: $(cat kustomization.yaml). Images: $(grep -A 5 images: kustomization.yaml)"
