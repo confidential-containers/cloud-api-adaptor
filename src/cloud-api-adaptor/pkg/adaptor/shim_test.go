@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/cloud"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
@@ -86,7 +87,7 @@ func TestShim(t *testing.T) {
 		workerNode = podnetwork.NewWorkerNode(t, "", 0, 0)
 	}
 
-	serverConfig := &ServerConfig{
+	serverConfig := &cloud.ServerConfig{
 		SocketPath:              helperSocketPath,
 		PodsDir:                 podsDir,
 		ForwarderPort:           port,

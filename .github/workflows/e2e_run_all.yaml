@@ -165,10 +165,12 @@ jobs:
           - generic
         arch:
           - amd64
+        secure_comms: [none, withoutKbs]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
+      secure_comms: ${{ matrix.provider }}
     secrets: inherit

@@ -23,7 +23,11 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
         required: false
         type: string
-
+      e2e:
+        default: 'none'
+        description: SecureComms configuration. Defaults to none.
+        required: false
+        type: string
 env:
   CLOUD_PROVIDER: libvirt
   DEBIAN_FRONTEND: noninteractive
@@ -36,6 +40,11 @@ jobs:
   test:
     runs-on: az-ubuntu-2204
     steps:
+      - name: Test The Test
+        run: |
+          echo "This is a test - remove it!"
+          echo "secure_comms=\"${{ inputs.secure_comms }}\""
+
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
@@ -84,7 +93,8 @@ jobs:
 
       - name: Config Libvirt
         run: |
-          ./libvirt/config_libvirt.sh
+          echo "secure_comms=\"${{ inputs.secure_comms }}\""
+          ./libvirt/config_libvirt.sh ${{ inputs.secure_comms }}
           echo "CAA_IMAGE=\"${{ inputs.caa_image }}\"" >> libvirt.properties
           # For debugging
           cat libvirt.properties
