@@ -36,6 +36,20 @@ AGENT_POLICY ?= yes
 AGENT_POLICY_PATH := $(FILES_DIR)/etc/kata-opa
 DEFAULT_AGENT_POLICY_FILE ?= allow-all.rego
 
+# Run github artifact provenance verifications
+VERIFY_PROVENANCE ?= no
+GUEST_COMPONENTS_REPO := confidential-containers/guest-components
+
+# probe version if the ref does not appear to be a git commit digest
+ifeq ($(shell echo $(GUEST_COMPONENTS_REF) | grep -E "[0-9a-f]{40}"),)
+	GUEST_COMPONENTS_COMMIT := $(shell curl \
+		--silent \
+		--retry 3 \
+		https://api.github.com/repos/$(GUEST_COMPONENTS_REPO)/commits/v$(GUEST_COMPONENTS_REF) \
+		| jq -e -r .sha)
+else
+	GUEST_COMPONENTS_COMMIT := $(GUEST_COMPONENTS_REF)
+endif
 
 FORCE_TARGET := $(if $(FORCE),force,)
 
@@ -71,7 +85,14 @@ PROCESS_USER_DATA = $(FILES_DIR)/usr/local/bin/process-user-data
 
 # Allow BINARIES to be overriden externally
 
-BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGENT) $(CONFIDENTIAL_DATA_HUB) $(API_SERVER_REST) $(PROCESS_USER_DATA)
+BINARIES ?= \
+	$(AGENT_PROTOCOL_FORWARDER) \
+	$(API_SERVER_REST) \
+	$(ATTESTATION_AGENT) \
+	$(CONFIDENTIAL_DATA_HUB) \
+	$(KATA_AGENT) \
+	$(PAUSE) \
+	$(PROCESS_USER_DATA)
 
 SKOPEO_SRC ?= skopeo
 SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo
@@ -83,6 +104,20 @@ UMOCI_SRC   = umoci
 PAUSE_SRC     = pause
 # Allows to override
 PAUSE_BUNDLE  ?= pause_bundle
+
+# $(1) - Artifact name
+# $(2) - Tag suffix
+define pull_gc_artifact
+	$(eval $(call generate_tag,tag,$(GUEST_COMPONENTS_REF),$(2)))
+	$(eval OCI_IMAGE := $(GUEST_COMPONENTS_REGISTRY)/$(1))
+	$(eval OCI_DIGEST := $(shell oras resolve $(OCI_IMAGE):${tag}))
+	$(eval OCI_REF := $(OCI_IMAGE)@$(OCI_DIGEST))
+	$(if $(filter yes,$(VERIFY_PROVENANCE)),$(ROOT_DIR)hack/verify-provenance.sh \
+		-a $(OCI_REF) \
+		-r $(GUEST_COMPONENTS_REPO) \
+		-d $(GUEST_COMPONENTS_COMMIT))
+	oras pull $(OCI_REF)
+endef
 
 # Clone a specific commit/tag/branch of a repo.
 # $(1) - Repository URL
@@ -150,21 +185,17 @@ $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
 
 $(ATTESTATION_AGENT): $(FORCE_TARGET)
-	$(eval SUFFIX := $(TEE_PLATFORM)_$(ARCH))
-	$(eval $(call generate_tag,tag,$(GUEST_COMPONENTS_REF),$(SUFFIX)))
-	oras pull $(GUEST_COMPONENTS_REGISTRY)/attestation-agent:${tag}
+	$(call pull_gc_artifact,attestation-agent,$(TEE_PLATFORM)_$(ARCH))
 	tar xvJpf attestation-agent.tar.xz
 	install -D --compare attestation-agent "$@"
 
 $(CONFIDENTIAL_DATA_HUB): $(FORCE_TARGET)
-	$(eval $(call generate_tag,tag,$(GUEST_COMPONENTS_REF),$(ARCH)))
-	oras pull $(GUEST_COMPONENTS_REGISTRY)/confidential-data-hub:${tag}
+	$(call pull_gc_artifact,confidential-data-hub,$(ARCH))
 	tar xvJpf confidential-data-hub.tar.xz
 	install -D --compare confidential-data-hub "$@"
 
 $(API_SERVER_REST): $(FORCE_TARGET)
-	$(eval $(call generate_tag,tag,$(GUEST_COMPONENTS_REF),$(ARCH)))
-	oras pull $(GUEST_COMPONENTS_REGISTRY)/api-server-rest:${tag}
+	$(call pull_gc_artifact,api-server-rest,$(ARCH))
 	tar xvJpf api-server-rest.tar.xz
 	install -D --compare api-server-rest "$@"
 

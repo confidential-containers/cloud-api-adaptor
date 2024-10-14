@@ -61,9 +61,12 @@ jobs:
         sudo mv uplosi /usr/local/bin
 
     - name: Build binaries
+      env:
+        TEE_PLATFORM: az-cvm-vtpm
+        VERIFY_PROVENANCE: yes
       run: |
         make fedora-binaries-builder
-        TEE_PLATFORM=az-cvm-vtpm make binaries
+        make binaries
 
     - name: Build image
       run: make image
