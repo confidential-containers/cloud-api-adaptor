@@ -79,6 +79,14 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	}
 	logger.Printf("LaunchSecurityType: %s", vm.launchSecurityType.String())
 
+	if spec.Image != "" {
+		logger.Printf("Choosing %s as libvirt volume for the PodVM image", spec.Image)
+		p.libvirtClient.volName = spec.Image
+	} else if spec.Image == "" && p.serviceConfig.VolName != p.libvirtClient.volName {
+		logger.Printf("Choosing the default %s as libvirt volume for the PodVM image", p.serviceConfig.VolName)
+		p.libvirtClient.volName = p.serviceConfig.VolName
+	}
+
 	result, err := CreateDomain(ctx, p.libvirtClient, vm)
 	if err != nil {
 		logger.Printf("failed to create an instance : %v", err)
