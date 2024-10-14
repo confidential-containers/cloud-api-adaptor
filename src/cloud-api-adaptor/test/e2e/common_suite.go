@@ -406,6 +406,44 @@ func DoTestPodVMwithAnnotationsLargerCPU(t *testing.T, e env.Environment, assert
 	NewTestCase(t, e, "PodVMwithAnnotationsLargerCPU", assert, "Failed to Create PodVM with Annotations Larger CPU").WithPod(pod).WithInstanceTypes(testInstanceTypes).WithCustomPodState(v1.PodPending).Run()
 }
 
+func DoTestCreatePeerPodContainerWithValidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert, alternateImageName string) {
+	podName := "annotations-valid-alternate-image"
+	containerName := "busybox"
+	imageName := BUSYBOX_IMAGE
+	annotationData := map[string]string{
+		"io.katacontainers.config.hypervisor.image": alternateImageName,
+	}
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+
+	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithAlternateImage(alternateImageName).Run()
+}
+
+func DoTestCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert) {
+	podName := "annotations-invalid-alternate-image"
+	containerName := "busybox"
+	imageName := BUSYBOX_IMAGE
+	nonExistingImageName := "non-existing-image"
+	expectedErrorMessage := "Error in creating volume: Can't retrieve volume " + nonExistingImageName
+	annotationData := map[string]string{
+		"io.katacontainers.config.hypervisor.image": nonExistingImageName,
+	}
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+
+	testInstanceTypes := InstanceValidatorFunctions{
+		testSuccessfn: IsStringEmpty,
+		testFailurefn: func(errorMsg error) bool {
+			if strings.Contains(errorMsg.Error(), expectedErrorMessage) {
+				t.Logf("Got Expected Error: %v", errorMsg.Error())
+				return true
+			} else {
+				t.Logf("Failed to Get Expected Error: %v", errorMsg.Error())
+				return false
+			}
+		},
+	}
+	NewTestCase(t, e, "PodVMwithAnnotationsInvalidAlternateImage", assert, "Failed to Create PodVM with a non-existent image").WithPod(pod).WithInstanceTypes(testInstanceTypes).WithCustomPodState(v1.PodPending).Run()
+}
+
 func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert CloudAssert) {
 	clientPodName := "test-client"
 	clientContainerName := "busybox"
