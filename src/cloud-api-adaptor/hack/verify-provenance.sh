@@ -62,6 +62,11 @@ if [[ "$oci_artifact" =~ @sha256:[a-fA-F0-9]{32}$ ]]; then
 	exit 1
 fi
 
+cleanup() {
+    rm -f "$attestation_bundle"
+}
+trap cleanup EXIT SIGINT SIGTERM
+
 # Convention by gh cli
 attestation_bundle="${oci_artifact#*@}.jsonl"
 

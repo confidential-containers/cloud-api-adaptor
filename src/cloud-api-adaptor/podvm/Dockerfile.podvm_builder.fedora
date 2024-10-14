@@ -21,8 +21,12 @@ RUN dnf groupinstall -y 'Development Tools' && \
     dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
     device-mapper-devel unzip libassuan-devel \
     perl-FindBin openssl-devel tpm2-tss-devel \
-    clang which xz && \
+    clang which xz jq && \
     dnf clean all
+
+RUN dnf install 'dnf-command(config-manager)' && \
+	dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
+	dnf install -y gh --repo gh-cli
 
 ADD https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz go${GO_VERSION}.linux-${ARCH}.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && rm -f go${GO_VERSION}.linux-${ARCH}.tar.gz

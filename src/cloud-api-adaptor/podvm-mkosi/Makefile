@@ -10,6 +10,7 @@ PODVM_DISTRO ?= fedora
 PODVM_TAG ?= $(VERSIONS_HASH)
 PODVM_NAME ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)-$(ARCH)
 PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image
+VERIFY_PROVENANCE ?= no
 
 .DEFAULT_GOAL := all
 .PHONY: all
@@ -56,6 +57,7 @@ endif
 		--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
 		--build-arg PAUSE_BIN=$(PAUSE_BIN) \
 		--build-arg IMAGE_NAME=mkosi-podvm-binaries \
+		--build-arg VERIFY_PROVENANCE=$(VERIFY_PROVENANCE) \
 		$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		-o type=local,dest="./resources/binaries-tree" \
