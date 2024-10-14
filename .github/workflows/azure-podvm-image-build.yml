@@ -95,7 +95,7 @@ jobs:
         provider = "azure"
 
         [variant.default.azure]
-        replicationRegions = ["eastus","westeurope","northeurope"]
+        replicationRegions = ["eastus","eastus2","westeurope","northeurope"]
         EOF
 
         uplosi upload build/system.raw
