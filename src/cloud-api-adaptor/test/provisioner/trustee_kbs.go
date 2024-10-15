@@ -25,8 +25,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-// trustee repo related base path
-const TRUSTEE_REPO_PATH = "../trustee"
+var trusteeRepoPath string
 
 func getHardwarePlatform() (string, error) {
 	out, err := exec.Command("uname", "-m").Output()
@@ -46,7 +45,19 @@ func getOverlaysPath() (string, error) {
 	return overlaysPath, nil
 }
 
+func getKbsKubernetesFilePath() string {
+	return filepath.Join(trusteeRepoPath, "/kbs/config/kubernetes/")
+}
+
 func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerService, error) {
+	e2e_dir, err := os.Getwd()
+	if err != nil {
+		err = fmt.Errorf("getting the current working directory: %w\n", err)
+		log.Errorf("%v", err)
+		return nil, err
+	}
+	trusteeRepoPath = filepath.Join(e2e_dir, "../trustee")
+
 	log.Info("creating key.bin")
 
 	// Create secret
@@ -55,7 +66,8 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 	if err != nil {
 		return nil, err
 	}
-	filePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/"+overlaysPath+"/key.bin")
+
+	filePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
 	// Create the file.
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -73,16 +85,9 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		return nil, err
 	}
 
-	k8sCnfDir, err := os.Getwd()
-	if err != nil {
-		err = fmt.Errorf("getting the current working directory: %w\n", err)
-		log.Errorf("%v", err)
-		return nil, err
-	}
-
-	kbsCert := filepath.Join(k8sCnfDir, TRUSTEE_REPO_PATH, "kbs/config/kubernetes/base/kbs.pem")
+	kbsCert := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.pem")
 	if _, err := os.Stat(kbsCert); os.IsNotExist(err) {
-		kbsKey := filepath.Join(k8sCnfDir, TRUSTEE_REPO_PATH, "kbs/config/kubernetes/base/kbs.key")
+		kbsKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
 		keyOutputFile, err := os.Create(kbsKey)
 		if err != nil {
 			err = fmt.Errorf("creating key file: %w\n", err)
@@ -143,7 +148,7 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 	customPCCSURL := os.Getenv("CUSTOM_PCCS_URL")
 	if customPCCSURL != "" {
 		log.Info("CUSTOM_PCCS_URL is provided, write custom PCCS config")
-		configFilePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/custom_pccs/sgx_default_qcnl.conf")
+		configFilePath := filepath.Join(getKbsKubernetesFilePath(), "custom_pccs/sgx_default_qcnl.conf")
 		collateralUrl := "https://api.trustedservices.intel.com/sgx/certification/v4/"
 		config := fmt.Sprintf(`{ "pccs_url": "%s", "collateral_service": "%s"}`, customPCCSURL, collateralUrl)
 		err = saveToFile(configFilePath, []byte(config))
@@ -169,12 +174,12 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		if err != nil {
 			return nil, err
 		}
-		pvFilePath := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/"+overlaysPath+"/pv.yaml")
+		pvFilePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "pv.yaml")
 		err = createPVonTargetWorkerNode(pvFilePath, workerNodeName, cfg)
 		if err != nil {
 			return nil, err
 		}
-		patchFile := filepath.Join(TRUSTEE_REPO_PATH, "/kbs/config/kubernetes/"+overlaysPath+"/patch.yaml")
+		patchFile := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "patch.yaml")
 		// skip the SE related certs check as we are running the test case on a dev machine
 		err = skipSeCertsVerification(patchFile)
 		if err != nil {
@@ -182,7 +187,7 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		}
 	}
 
-	overlay, err := NewBaseKbsInstallOverlay(TRUSTEE_REPO_PATH)
+	overlay, err := NewBaseKbsInstallOverlay(trusteeRepoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -461,9 +466,9 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile string) error {
-	kbsClientDir := filepath.Join(TRUSTEE_REPO_PATH, "target/release")
-	privateKey := "../../kbs/config/kubernetes/base/kbs.key"
-	policyFile := filepath.Join("../../kbs/sample_policies", customizedOpaFile)
+	kbsClientDir := filepath.Join(trusteeRepoPath, "target/release")
+	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
+	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
 	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
 	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource-policy", "--policy-file", policyFile)
 	cmd.Dir = kbsClientDir
@@ -477,9 +482,9 @@ func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile s
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFile string) error {
-	kbsClientDir := filepath.Join(TRUSTEE_REPO_PATH, "target/release")
-	privateKey := "../../kbs/config/kubernetes/base/kbs.key"
-	policyFile := filepath.Join("../../kbs/sample_policies", customizedOpaFile)
+	kbsClientDir := filepath.Join(trusteeRepoPath, "target/release")
+	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
+	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
 	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
 	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-attestation-policy", "--policy-file", policyFile)
 	cmd.Dir = kbsClientDir
@@ -493,13 +498,13 @@ func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFil
 }
 
 func (p *KeyBrokerService) SetSampleSecretKey() error {
-	kbsClientDir := filepath.Join(TRUSTEE_REPO_PATH, "target/release")
-	privateKey := "../../kbs/config/kubernetes/base/kbs.key"
+	kbsClientDir := filepath.Join(trusteeRepoPath, "target/release")
+	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
 	overlaysPath, err := getOverlaysPath()
 	if err != nil {
 		return err
 	}
-	keyFilePath := "../../kbs/config/kubernetes/" + overlaysPath + "/key.bin"
+	keyFilePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
 	log.Info("set key resource: ", keyFilePath)
 	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource", "--path", "reponame/workload_key/key.bin", "--resource-file", keyFilePath)
 	cmd.Dir = kbsClientDir
@@ -519,7 +524,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 	}
 
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay(TRUSTEE_REPO_PATH)
+	tmpoverlay, err := NewKbsInstallOverlay(trusteeRepoPath)
 	if err != nil {
 		return err
 	}
@@ -533,7 +538,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 
 func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) error {
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay(TRUSTEE_REPO_PATH)
+	tmpoverlay, err := NewKbsInstallOverlay(trusteeRepoPath)
 	if err != nil {
 		return err
 	}
