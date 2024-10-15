@@ -15,7 +15,7 @@ on:
 jobs:
   vet-and-fmt:
     name: vet and fmt
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -41,7 +41,7 @@ jobs:
 
   golangci-lint:
     name: golangci-lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -73,7 +73,7 @@ jobs:
 
   shellcheck:
     name: shellcheck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -84,7 +84,7 @@ jobs:
 
   go-tidy:
     name: go mod tidy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
 
   govulncheck:
     name: govulncheck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v4
@@ -126,7 +126,7 @@ jobs:
 
   packer:
     name: Packer check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v4
@@ -135,7 +135,8 @@ jobs:
 
   terraform:
     name: Terraform check
-    runs-on: ubuntu-latest
+    # The 24.04 image doesn't have terraform installed, so stick with 22.04 here
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout the pull request code
         uses: actions/checkout@v4
