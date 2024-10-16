@@ -466,12 +466,11 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile string) error {
-	kbsClientDir := filepath.Join(trusteeRepoPath, "target/release")
 	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
 	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
 	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
 	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource-policy", "--policy-file", policyFile)
-	cmd.Dir = kbsClientDir
+	cmd.Dir = trusteeRepoPath
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
@@ -482,12 +481,11 @@ func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile s
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFile string) error {
-	kbsClientDir := filepath.Join(trusteeRepoPath, "target/release")
 	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
 	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
 	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
 	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-attestation-policy", "--policy-file", policyFile)
-	cmd.Dir = kbsClientDir
+	cmd.Dir = trusteeRepoPath
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
@@ -498,7 +496,6 @@ func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFil
 }
 
 func (p *KeyBrokerService) SetSampleSecretKey() error {
-	kbsClientDir := filepath.Join(trusteeRepoPath, "target/release")
 	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
 	overlaysPath, err := getOverlaysPath()
 	if err != nil {
@@ -507,7 +504,7 @@ func (p *KeyBrokerService) SetSampleSecretKey() error {
 	keyFilePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
 	log.Info("set key resource: ", keyFilePath)
 	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource", "--path", "reponame/workload_key/key.bin", "--resource-file", keyFilePath)
-	cmd.Dir = kbsClientDir
+	cmd.Dir = trusteeRepoPath
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
