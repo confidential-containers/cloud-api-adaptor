@@ -138,18 +138,20 @@ func (s *PodVMNodeService) ReproduceNodeStageVolume(peerPodVolume *peerpodvolume
 	} else {
 		// The cached NodeStageVolumeRequest contains a faked PublishContext from [ControllerService.ControllerPublishVolume].
 		// Since a CSI driver may depend on PublishContext to pass required information from ControllerPublishVolume to NodeStageVolume,
-		// we need to update the cached PublishContext in NodeStageVolumeRequest with the real one from
+		// we need to replace the PublishContext in the cached NodeStageVolumeRequest with the real one from
 		// the cached ControllerPublishVolumeResponse.
+		publishContext := make(map[string]string)
 		controllerPublishVolumeResJSON := peerPodVolume.Spec.WrapperControllerPublishVolumeRes
 		var controllerPublishVolumeRes csi.ControllerPublishVolumeResponse
 		if err := (&jsonpb.Unmarshaler{}).Unmarshal(bytes.NewReader([]byte(controllerPublishVolumeResJSON)), &controllerPublishVolumeRes); err != nil {
 			glog.Errorf("Failed to convert to ControllerPublishVolumeResponse, err: %s", err)
 		}
 		for k, v := range controllerPublishVolumeRes.PublishContext {
-			modifiedRequest.PublishContext[k] = v
+			publishContext[k] = v
 		}
+		publishContext["device-path"] = peerPodVolume.Spec.DevicePath
+		modifiedRequest.PublishContext = publishContext
 
-		modifiedRequest.PublishContext["device-path"] = peerPodVolume.Spec.DevicePath
 		glog.Infof("The modified NodeStageVolumeRequest is :%v", modifiedRequest)
 		ctx := context.Background()
 		count := 0
