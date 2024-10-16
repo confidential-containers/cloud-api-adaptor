@@ -15,7 +15,7 @@ defaults:
 
 jobs:
   list-dockerfiles:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ env.MATRIX }}
     steps:
@@ -25,7 +25,7 @@ jobs:
   build:
     name: Create Test Images
     needs: list-dockerfiles
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:

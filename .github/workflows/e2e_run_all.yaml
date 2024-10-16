@@ -98,7 +98,7 @@ jobs:
   # "aws libvirt").
   prep_install:
     needs: [image]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     env:

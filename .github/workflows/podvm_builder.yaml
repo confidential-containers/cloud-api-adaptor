@@ -30,7 +30,7 @@ jobs:
           # Please keep this list in alphabetical order.
           - ubuntu
         runner:
-          - ubuntu-latest
+          - ubuntu-24.04
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4

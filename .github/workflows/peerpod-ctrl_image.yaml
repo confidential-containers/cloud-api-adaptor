@@ -26,7 +26,7 @@ on:
 jobs:
   peerpod_push:
     name: build and push peerpod-ctrl
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: src/peerpod-ctrl
