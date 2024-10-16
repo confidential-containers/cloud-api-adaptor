@@ -32,7 +32,7 @@ concurrency:
 
 jobs:
   authorize:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt')
     steps:
       - run: "true"

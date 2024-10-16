@@ -30,7 +30,7 @@ defaults:
 
 jobs:
   upload_tags:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout the code
         uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
   build_push_job:
     name: build and push
     needs: [upload_tags]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -155,7 +155,7 @@ jobs:
 
   manifest_job:
     name: generate images manifest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [build_push_job]
     steps:
       - name: Checkout the code

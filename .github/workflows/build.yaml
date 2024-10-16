@@ -24,7 +24,7 @@ jobs:
           - dev
           - release
         runner:
-          - ubuntu-latest
+          - ubuntu-24.04
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
@@ -73,7 +73,7 @@ jobs:
 
   controllers:
     name: controllers
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -118,7 +118,7 @@ jobs:
 
   volumes:
     name: volume controllers
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -170,7 +170,7 @@ jobs:
           echo "::endgroup::"
 
   webhook:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: src/webhook

@@ -32,7 +32,7 @@ on:
 jobs:
   build-caa-container-image:
     if: github.event.inputs.caa-image == ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
@@ -64,7 +64,7 @@ jobs:
         echo "caa-image=${ACR_URL}/cloud-api-adaptor:dev-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
   install-aks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
@@ -152,7 +152,7 @@ jobs:
         ./caa-provisioner-cli -action=createcluster
 
   run-e2e-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
@@ -238,7 +238,7 @@ jobs:
         make test-e2e RUN_TESTS="^Test\(CreateSimplePodAzure\|RemoteAttestation\)$"
 
   cleanup:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
     - run-e2e-test
     if: always()

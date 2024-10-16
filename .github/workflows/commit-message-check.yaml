@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   commit-message-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: Commit Message Check
     steps:
       - name: Get PR Commits
