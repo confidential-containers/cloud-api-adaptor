@@ -122,6 +122,8 @@ else
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-amd64.qcow2
 endif
 	sudo chown -R $(USER): build
+# TODO - once we ditch the packer approach we should consider using oras to wrap
+# the qcow2, rather than our own very similar approach
 	docker buildx build \
 		-t $(addsuffix -debug,$(PODVM_IMAGE)) \
 		--build-arg ARCH=$(ARCH) \
