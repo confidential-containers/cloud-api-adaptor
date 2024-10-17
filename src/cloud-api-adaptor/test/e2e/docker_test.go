@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/docker"
+	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
 func TestDockerCreateSimplePod(t *testing.T) {
@@ -102,14 +103,28 @@ func TestDockerKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
-	keyBrokerService.SetSampleSecretKey()
-	keyBrokerService.EnableKbsCustomizedResourcePolicy("deny_all.rego")
-	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
+	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
+	resourcePath := "caa/workload_key/test_key.bin"
+	err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("deny_all.rego")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 	assert := DockerAssert{}
 	t.Parallel()
-	DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint)
-	keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
-	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint)
+	DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
+	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
 func TestDockerCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
