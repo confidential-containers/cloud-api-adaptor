@@ -27,7 +27,35 @@ Once the "Kubernetes Phase" SSH channel is established, Secure Comms connects th
 
 See [Secure Comms Architecture Slides](./SecureComms.pdf) for more details.
 
-## Setup
+## Setup for for testing without Trustee (and for non-CoCo peerpods)
+
+### Deploy CAA
+Use any of the option for installing CAA depending on the cloud driver used.
+
+
+### Activate Secure-Comms feature from CAA side
+Activate Secure-Comms from CAA side by changing the `SECURE_COMMS` parameter of the `peer-pods-cm` configMap in the `confidential-containers-system` namespace to `"true"`.  
+
+```sh
+kubectl -n confidential-containers-system  get cm peer-pods-cm  -o yaml | sed "s/SECURE_COMMS: \"false\"/SECURE_COMMS: \"true\"/"|kubectl apply -f -
+```
+
+You may also include additional Inbounds and Outbounds configurations to the Adaptor side using the `SECURE_COMMS_INBOUNDS` and `SECURE_COMMS_OUTBOUNDS` config points.
+You may also add Inbounds and Outbounds configurations to the Forwarder side using the `SECURE_COMMS_PP_INBOUNDS` and `SECURE_COMMS_PP_OUTBOUNDS` config points. [See more details regarding Inbounds and Outbounds below.](#adding-named-tunnels-to-the-ssh-channel)
+
+Use `kubectl edit cm peer-pods-cm -n confidential-containers-system` to make such changes in the configMap, for example:
+```sh
+apiVersion: v1
+data:
+    ...
+    SECURE_COMMS: "true"
+    SECURE_COMMS_OUTBOUNDS: "KUBERNETES_PHASE:mytunnel:149.81.64.62:7777"
+    SECURE_COMMS_PP_INBOUNDS: "KUBERNETES_PHASE:mytunnel:6666"
+    SECURE_COMMS_KBS_ADDR: "false"
+    ...
+```
+
+## Setup for CoCo with Trustee
 
 ### Deploy CAA
 Use any of the option for installing CAA depending on the cloud driver used.
@@ -53,8 +81,7 @@ kubectl get secret kbs-client -n trustee-operator-system -o json|jq --arg ns "co
 For a testing environment, you may need to change the policy of the KBS and AS using the KBS Client to allow all or fit your own policy. One way to do that is:
 
 ```sh
-kubectl -n trustee-operator-system exec deployment/trustee-deployment --container as -it -- /bin/bash
-        sed -i.bak 's/^default allow = false/default allow = true/' /opt/confidential-containers/attestation-service/opa/default.rego
+kubectl -n trustee-operator-system exec deployment/trustee-deployment --container as -it -- sed -i.bak 's/^default allow = false/default allow = true/' /opt/confidential-containers/attestation-service/opa/default.rego
 
 kubectl -n trustee-operator-system get cm resource-policy -o yaml | sed "s/default allow = false/default allow = true/"|kubectl apply -f -
 ```
@@ -66,18 +93,61 @@ Change the `src/cloud-api-adaptor/podvm/files/etc/systemd/system/agent-protocol-
 ExecStart=/usr/local/bin/agent-protocol-forwarder -pod-namespace /run/netns/podns -secure-comms -kata-agent-socket /run/kata-containers/agent.sock $TLS_OPTIONS $OPTIONS
 ```
 
-You may also include additional Inbounds and Outbounds configurations to the Forwarder using the `-secure-comms-inbounds` and `-secure-comms-outbounds` flags. See more details regarding Inbounds and Outbounds below.
+You may also include additional Inbounds and Outbounds configurations to the Forwarder using the `-secure-comms-inbounds` and `-secure-comms-outbounds` flags.  [See more details regarding Inbounds and Outbounds below.](#adding-named-tunnels-to-the-ssh-channel)
+
+For example:
+```sh
+ExecStart=/usr/local/bin/agent-protocol-forwarder -kata-agent-namespace /run/netns/podns -secure-comms -secure-comms-inbounds KUBERNETES_PHASE:mytunnel:6666 -kata-agent-socket /run/kata-containers/agent.sock $TLS_OPTIONS $OPTIONS
+```
 
 Once you changed `podvm/files/etc/systemd/system/agent-protocol-forwarder.service`, you will need to [rebuild the podvm](./../podvm/README.md).
 
 
 ### Activate CAA Secure-Comms feature
-Use `kubectl edit cm peer-pods-cm -n confidential-containers-system` to add to the `peer-pods-cm` config map at the `confidential-containers-system` namespace:
+Activate Secure-Comms of CAA by changing the `SECURE_COMMS` parameter of the `peer-pods-cm` configMap in the `confidential-containers-system` namespace to `"true"`.  
+
+```sh
+kubectl -n confidential-containers-system  get cm peer-pods-cm  -o yaml | sed "s/SECURE_COMMS: \"false\"/SECURE_COMMS: \"true\"/"|kubectl apply -f -
+```
+
+Set InitData to point KBC services to IP address 127.0.0.1 
+```sh
+cat <<EOF > /tmp/initdata.txt
+algorithm = "sha384"
+version = "0.1.0"
+
+[data]
+"aa.toml" = '''
+[token_configs]
+[token_configs.coco_as]
+url = 'http://127.0.0.1:8080'
+
+[token_configs.kbs]
+url = 'http://127.0.0.1:8080'
+'''
+"cdh.toml"  = '''
+socket = 'unix:///run/confidential-containers/cdh.sock'
+credentials = []
+
+[kbc]
+name = 'cc_kbc'
+url = 'http://127.0.0.1:8080'
+'''
+EOF
+export INITDATA=`base64 -w 0 /tmp/initdata.txt`
+kubectl -n confidential-containers-system  get cm peer-pods-cm  -o yaml | sed 's/^INITDATA: .*/INITDATA: '$INITDATA'/'|kubectl apply -f -
+
+```
+
+You may also include additional Inbounds and Outbounds configurations to the Adaptor using the `SECURE_COMMS_INBOUNDS` and `SECURE_COMMS_OUTBOUNDS` config points. [See more details regarding Inbounds and Outbounds below.](#adding-named-tunnels-to-the-ssh-channel)
+
+Use `kubectl edit cm peer-pods-cm -n confidential-containers-system` to make such changes in the configMap, for example:
 ```sh
 apiVersion: v1
 data:
     ...
     SECURE_COMMS: "true"
+    SECURE_COMMS_OUTBOUNDS: "KUBERNETES_PHASE:mytunnel:149.81.64.62:7777"
     ...
 ```
 
@@ -120,7 +190,7 @@ You may also set the KBS address using the `SECURE_COMMS_KBS_ADDR` config point.
 >
 
 
-### Adding named tunnels to the SSH channel
+## Adding named tunnels to the SSH channel
 Named tunnels can be added to the SSH channel. Adding a named tunnel requires adding an Inbound at one of the SSH channel peers and an Outbound at the other SSH channel peer. The Inbound and Outbound both carry the name of the tunnel being created.
 
             |---------Tunnel----------| 
@@ -158,5 +228,4 @@ Alternatively, the client and server can be separately executed in independent t
 
 - Add DeleteResource() support in KBS, KBC, api-server-rest, than cleanup resources added by Secure Comms to KBS whenever a Peer Pod fail to be created or when a Peer Pod is terminated.
 - Add support for running the vxlan tunnel traffic via a Secure Comms SSH tunnel
-- Add support for non-confidential Peer Pods which do not go via an Attestation Phase.
 - Add support for KBS identities allowing a Peer Pod to register its own identity in KBS and replace the current Secure Comms mechanism which delivers a private key to the Peer Pod via the KBS
