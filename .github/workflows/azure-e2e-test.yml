@@ -232,9 +232,6 @@ jobs:
         SUBNET_ID="$(az network vnet subnet show -g "$NODE_RG" --vnet-name "$VNET_NAME" -n peerpod --query id -o tsv)"
         echo "AZURE_SUBNET_ID=\"${SUBNET_ID}\"" >> "$TEST_PROVISION_FILE"
 
-    - name: Extract kbs reference
-      run: echo "KBS_VERSION=$(yq -e '.git.kbs.reference' versions.yaml)" >> "$GITHUB_ENV"
-
     - name: Checkout KBS Repository
       run: |
         test/utils/checkout_kbs.sh

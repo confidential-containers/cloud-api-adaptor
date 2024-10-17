@@ -18,12 +18,12 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 "
-  echo "  -a <oci-artifact w/ sha256 digest>"
-  echo "  -d <expected git sha1 from which the artifact was built>"
-  echo "  -r <repository on which the artifact was built>"
-  echo "  [-g] (optional. fetch attestation using github api)"
-  exit 1
+	echo "Usage: $0 "
+	echo "  -a <oci-artifact w/ sha256 digest>"
+	echo "  -d <expected git sha1 from which the artifact was built>"
+	echo "  -r <repository on which the artifact was built>"
+	echo "  [-g] (optional. fetch attestation using github api)"
+	exit 1
 }
 
 oci_artifact=""
@@ -61,6 +61,11 @@ if [[ "$oci_artifact" =~ @sha256:[a-fA-F0-9]{32}$ ]]; then
 	echo "The OCI artifact should be specified using its digest: my-repo.io/my-image@sha256:abc..."
 	exit 1
 fi
+
+cleanup() {
+    rm -f "$attestation_bundle"
+}
+trap cleanup EXIT SIGINT SIGTERM
 
 # Convention by gh cli
 attestation_bundle="${oci_artifact#*@}.jsonl"

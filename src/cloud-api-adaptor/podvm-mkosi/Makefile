@@ -1,6 +1,5 @@
 include ../Makefile.defaults
 
-ATTESTER  ?= none
 ARCH      ?= $(subst x86_64,amd64,$(shell uname -m))
 BUILDER   = fedora-binaries-builder-$(ARCH)
 SE_BOOT   ?= false
@@ -11,6 +10,7 @@ PODVM_DISTRO ?= fedora
 PODVM_TAG ?= $(VERSIONS_HASH)
 PODVM_NAME ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)-$(ARCH)
 PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image
+VERIFY_PROVENANCE ?= no
 
 .DEFAULT_GOAL := all
 .PHONY: all
@@ -34,7 +34,6 @@ fedora-binaries-builder:
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg ARCH=$(ARCH) \
 		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
-		--build-arg RUST_VERSION=$(RUST_VERSION) \
 		--build-arg YQ_VERSION=$(YQ_VERSION) \
 		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
 		--build-arg YQ_ARCH=$(ARCH) \
@@ -51,12 +50,14 @@ ifeq ($(IS_DEBIAN),true)
 	docker buildx use default
 endif
 	docker buildx build \
+		--progress=plain \
 		--build-arg BUILDER_IMG=$(BUILDER) \
-		--build-arg ATTESTER=$(ATTESTER) \
+		--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
 		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 		--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
 		--build-arg PAUSE_BIN=$(PAUSE_BIN) \
 		--build-arg IMAGE_NAME=mkosi-podvm-binaries \
+		--build-arg VERIFY_PROVENANCE=$(VERIFY_PROVENANCE) \
 		$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		-o type=local,dest="./resources/binaries-tree" \
