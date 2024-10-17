@@ -35,7 +35,7 @@ wait_for_process() {
 
 	while ! eval "$cmd" && [ "$wait_time" -gt 0 ]; do
 		sleep "$sleep_time"
-		wait_time=$((wait_time-"$sleep_time"))
+		wait_time=$((wait_time - "$sleep_time"))
 	done
 
 	[ "$wait_time" -ge 0 ]
@@ -43,7 +43,7 @@ wait_for_process() {
 
 # Create the cluster.
 #
-create () {
+create() {
 	parameters="-P domain=kata.com \
 		-P pool=$LIBVIRT_POOL \
 		-P ctlplanes=$CLUSTER_CONTROL_NODES \
@@ -97,32 +97,46 @@ create () {
 		kubectl get pods -A
 		exit 1
 	fi
+
+	## Install cert-manager
+	curl -fsSL -o cmctl https://github.com/cert-manager/cmctl/releases/latest/download/cmctl_linux_${TARGET_ARCH}
+	chmod +x cmctl
+	# Deploy cert-manager
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.15.3/cert-manager.yaml
+	# Wait for service to be up
+	kubectl wait --timeout=30s -n cert-manager endpoints/cert-manager --for=jsonpath='{.subsets[0].addresses[0].ip}'
+	kubectl wait --timeout=30s -n cert-manager endpoints/cert-manager-webhook --for=jsonpath='{.subsets[0].addresses[0].ip}'
+	# Wait for few seconds for the cert-manager API to be ready
+	# otherwise you'll hit the error "x509: certificate signed by unknown authority"
+	# Best is to use cmctl - https://cert-manager.io/docs/installation/kubectl/#2-optional-wait-for-cert-manager-webhook-to-be-ready
+	./cmctl check api --wait=2m
+	rm -f ./cmctl
 }
 
 # Delete the cluster.
 #
-delete () {
+delete() {
 	kcli delete -y kube "${CLUSTER_NAME}"
 }
 
-usage () {
+usage() {
 	cat <<-EOF
-	Create/delete a Kubernetes cluster with kcli tool.
+		Create/delete a Kubernetes cluster with kcli tool.
 
-	Use: $0 [-h|help] COMMAND
-	where COMMAND can be:
-	create    Create the cluster. Use the following environment variables
-	          to change the creation parameters:
-	          CLUSTER_DISK_SIZE       (default "${CLUSTER_DISK_SIZE}")
-	          CLUSTER_IMAGE           (default "${CLUSTER_IMAGE}")
-	          CLUSTER_CONTROL_NODES   (default "${CLUSTER_CONTROL_NODES}")
-	          CLUSTER_NAME            (default "${CLUSTER_NAME}")
-	          CLUSTER_VERSION         (default "${CLUSTER_VERSION}")
-	          LIBVIRT_NETWORK         (default "${LIBVIRT_NETWORK}")
-	          LIBVIRT_POOL            (default "${LIBVIRT_POOL}")
-	          CLUSTER_WORKERS         (default "${CLUSTER_WORKERS}").
-	delete    Delete the cluster. Specify the cluster name with
-	          CLUSTER_NAME (default "${CLUSTER_NAME}").
+		Use: $0 [-h|help] COMMAND
+		where COMMAND can be:
+		create    Create the cluster. Use the following environment variables
+		          to change the creation parameters:
+		          CLUSTER_DISK_SIZE       (default "${CLUSTER_DISK_SIZE}")
+		          CLUSTER_IMAGE           (default "${CLUSTER_IMAGE}")
+		          CLUSTER_CONTROL_NODES   (default "${CLUSTER_CONTROL_NODES}")
+		          CLUSTER_NAME            (default "${CLUSTER_NAME}")
+		          CLUSTER_VERSION         (default "${CLUSTER_VERSION}")
+		          LIBVIRT_NETWORK         (default "${LIBVIRT_NETWORK}")
+		          LIBVIRT_POOL            (default "${LIBVIRT_POOL}")
+		          CLUSTER_WORKERS         (default "${CLUSTER_WORKERS}").
+		delete    Delete the cluster. Specify the cluster name with
+		          CLUSTER_NAME (default "${CLUSTER_NAME}").
 	EOF
 }
 
@@ -140,7 +154,7 @@ main() {
 	fi
 
 	kcli_version="$(kcli version | awk '{ print $2}')"
-	if [ "${kcli_version/.*/}" -lt "${kcli_version_min/.*/}" ];then
+	if [ "${kcli_version/.*/}" -lt "${kcli_version_min/.*/}" ]; then
 		echo "ERROR: kcli version >= ${kcli_version_min} is required"
 		exit 1
 	elif [ "${kcli_version}" = "${kcli_version_min}" ]; then
@@ -158,15 +172,17 @@ main() {
 		exit 1
 	fi
 	case "$1" in
-		-h|help)
-			usage
-			exit 0;;
-		create) create;;
-		delete) delete;;
-		*)
-			echo "Unknown command: $1"
-			usage
-			exit 1;;
+	-h | help)
+		usage
+		exit 0
+		;;
+	create) create ;;
+	delete) delete ;;
+	*)
+		echo "Unknown command: $1"
+		usage
+		exit 1
+		;;
 	esac
 }
 

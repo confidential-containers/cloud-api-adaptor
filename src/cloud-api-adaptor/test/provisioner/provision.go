@@ -322,6 +322,37 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		return err
 	}
 
+	log.Info("Installing cert-manager")
+	cmd = exec.Command("make", "-C", "../webhook", "deploy-cert-manager")
+	// Run the deployment from the root src dir
+	cmd.Dir = p.rootSrcDir
+	stdoutStderr, err = cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return err
+	}
+
+	log.Info("Installing webhook")
+	cmd = exec.Command("make", "-C", "../webhook", "deploy")
+	// Run the deployment from the root src dir
+	cmd.Dir = p.rootSrcDir
+	// Set the KUBECONFIG env var
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	stdoutStderr, err = cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return err
+	}
+
+	// Wait for the webhook deployment to be ready
+	log.Info("Wait for the webhook deployment to be available")
+	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "peer-pods-webhook-controller-manager", Namespace: "peer-pods-webhook-system"}},
+		appsv1.DeploymentAvailable, corev1.ConditionTrue),
+		wait.WithTimeout(time.Minute*5)); err != nil {
+		return err
+	}
+
 	return nil
 }
 
