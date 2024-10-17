@@ -6,6 +6,7 @@ package wrapper
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -125,10 +126,17 @@ func (s *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		podUid, volumeName := s.getPodUIDandVolumeName(targetPath)
 		savedPeerpodvolume.Labels["podUid"] = podUid
 		savedPeerpodvolume.Spec.PodUid = podUid
-		if volumeName != savedPeerpodvolume.Labels["volumeName"] {
-			glog.Error("The volume name from target path doesn't match with the CRD")
-			return
+		savedVolumeName := savedPeerpodvolume.Spec.VolumeName
+		if volumeName != savedVolumeName && savedVolumeName != peerpodVolumeNamePlaceholder {
+			glog.Error("The volume name from target path doesn't match with the CR")
+			return nil, errors.New("the volume name from target path doesn't match with the CR")
 		}
+		if savedVolumeName == peerpodVolumeNamePlaceholder {
+			glog.Info("Detected a placeholder volume name in the CR. Updating the CR with the volume name from the target path")
+			savedPeerpodvolume.Labels["volumeName"] = volumeName
+			savedPeerpodvolume.Spec.VolumeName = volumeName
+		}
+
 		savedPeerpodvolume.Spec.WrapperNodePublishVolumeReq = nodePublishVolumeRequest
 		_, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
