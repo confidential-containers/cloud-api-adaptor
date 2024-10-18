@@ -6,15 +6,13 @@ find [here](../docs/consuming-prebuilt-podvm-images.md) information on how to co
 
 # How to build locally
 
-In order to build locally it requires the source trees and softwares mentioned in the [developer's guide](../docs/DEVELOPMENT.md) to build this project binaries. It will also need [packer](https://www.packer.io/) (to build the qcow2), [rust](https://www.rust-lang.org/tools/install) (to build the Kata Containers's agent), as well as the following packages:
+In order to build locally it requires the source trees and softwares mentioned in the [developer's guide](../docs/DEVELOPMENT.md) to build this project binaries. It will also need [packer](https://www.packer.io/) (to build the qcow2) as well as the following packages:
 
 * On Ubuntu:
 
   ```bash
   $ apt-get install -y qemu-kvm cloud-utils qemu-utils protobuf-compiler pkg-config libdevmapper-dev libgpgme-dev
   ```
-
-You may need to link the agent with the musl C library. In this case, you should install the musl-tools (Ubuntu) package and setup the Rust toolchain as explained [here](https://github.com/kata-containers/kata-containers/blob/main/src/agent/README.md#build-with-musl).
 
 Finally run the following commands to build the qcow2 image:
 
@@ -192,7 +190,7 @@ Follow the steps below, replacing `DISTRO` with the name of the distribution bei
 
 1. Create the builder dockerfile by copying `Dockerfile.podvm_builder` to `Dockerfile.podvm_builder.DISTRO` and
    adjusting the file properly (e.g. replace `FROM ubuntu:20.04` with `FROM DISTRO`). Try to keep the same
-   software versions (e.g. Golang, Rust) as much as possible.
+   software versions (e.g. Golang) as much as possible.
 2. Create the podvm image dockerfile by copying `Dockerfile.podvm` to `Dockerfile.podvm.DISTRO` and adjusting the file
    properly likewise. In particular, the *PODVM_DISTRO* and *BUILDER_IMG* arguments should be changed.
 3. Create the podvm binaries dockerfile by copying `Dockerfile.podvm_binaries`

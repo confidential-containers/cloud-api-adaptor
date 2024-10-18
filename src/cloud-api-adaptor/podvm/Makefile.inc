@@ -24,13 +24,11 @@ ARCH        := $(or $(ARCH),$(HOST_ARCH))
 ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
 LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
-RUST_ARCH   ?= $(subst ppc64le,powerpc64le,$(ARCH))
-RUST_TARGET := $(RUST_ARCH)-unknown-linux-$(LIBC)
 
 # Auth json file for registry access. Used with skopeo
 AUTHFILE ?=
 
-ATTESTER ?= none
+TEE_PLATFORM ?= none
 CDH_RESOURCE_PROVIDER ?= kbs
 SEALED_SECRET ?= yes
 
@@ -38,18 +36,36 @@ AGENT_POLICY ?= yes
 AGENT_POLICY_PATH := $(FILES_DIR)/etc/kata-opa
 DEFAULT_AGENT_POLICY_FILE ?= allow-all.rego
 
+# Run github artifact provenance verifications
+VERIFY_PROVENANCE ?= no
+GUEST_COMPONENTS_REPO := confidential-containers/guest-components
+KATA_REPO := kata-containers/kata-containers
+
+# probe version if the ref does not appear to be a git commit digest
+ifeq ($(shell echo $(GUEST_COMPONENTS_REF) | grep -E "[0-9a-f]{40}"),)
+	GUEST_COMPONENTS_COMMIT := $(shell curl \
+		--silent \
+		--retry 3 \
+		https://api.github.com/repos/$(GUEST_COMPONENTS_REPO)/commits/v$(GUEST_COMPONENTS_REF) \
+		| jq -e -r .sha)
+else
+	GUEST_COMPONENTS_COMMIT := $(GUEST_COMPONENTS_REF)
+endif
+
+# probe version if the ref does not appear to be a git commit digest
+ifeq ($(shell echo $(KATA_REF) | grep -E "[0-9a-f]{40}"),)
+	KATA_COMMIT := $(shell curl \
+		--silent \
+		--retry 3 \
+		https://api.github.com/repos/$(KATA_REPO)/commits/v$(KATA_REF) \
+		| jq -e -r .sha)
+else
+	KATA_COMMIT := $(KATA_REF)
+endif
 
 FORCE_TARGET := $(if $(FORCE),force,)
 
 SHELL := env PATH=$(PATH) /bin/bash
-
-ifneq ($(HOST_ARCH),$(ARCH))
-    ifeq ($(CC),cc)
-		CC := $(ARCH)-linux-$(LIBC)-gcc
-        $(warning A foreign ARCH was passed, but no CC alternative. Using $(CC) as best guess)
-	endif
-RUST_FLAGS := CC=$(CC) ARCH=$(ARCH)
-endif
 
 ifndef IMAGE_NAME
 COMMIT := $(shell	commit=$$(git describe --match '' --dirty --always) && \
@@ -81,7 +97,14 @@ PROCESS_USER_DATA = $(FILES_DIR)/usr/local/bin/process-user-data
 
 # Allow BINARIES to be overriden externally
 
-BINARIES ?= $(AGENT_PROTOCOL_FORWARDER) $(KATA_AGENT) $(PAUSE) $(ATTESTATION_AGENT) $(CONFIDENTIAL_DATA_HUB) $(API_SERVER_REST) $(PROCESS_USER_DATA)
+BINARIES ?= \
+	$(AGENT_PROTOCOL_FORWARDER) \
+	$(API_SERVER_REST) \
+	$(ATTESTATION_AGENT) \
+	$(CONFIDENTIAL_DATA_HUB) \
+	$(KATA_AGENT) \
+	$(PAUSE) \
+	$(PROCESS_USER_DATA)
 
 SKOPEO_SRC ?= skopeo
 SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo
@@ -94,7 +117,31 @@ PAUSE_SRC     = pause
 # Allows to override
 PAUSE_BUNDLE  ?= pause_bundle
 
-GUEST_COMPONENTS_SRC = ../../../guest-components
+define pull_agent_artifact
+	$(eval $(call generate_tag,tag,$(KATA_REF),$(ARCH)))
+	$(eval OCI_IMAGE := $(KATA_REGISTRY)/agent)
+	$(eval OCI_DIGEST := $(shell oras resolve $(OCI_IMAGE):${tag}))
+	$(eval OCI_REF := $(OCI_IMAGE)@$(OCI_DIGEST))
+	$(if $(filter yes,$(VERIFY_PROVENANCE)),$(ROOT_DIR)hack/verify-provenance.sh \
+		-a $(OCI_REF) \
+		-r $(KATA_REPO) \
+		-d $(KATA_COMMIT))
+	oras pull $(OCI_REF)
+endef
+
+# $(1) - Artifact name
+# $(2) - Tag suffix
+define pull_gc_artifact
+	$(eval $(call generate_tag,tag,$(GUEST_COMPONENTS_REF),$(2)))
+	$(eval OCI_IMAGE := $(GUEST_COMPONENTS_REGISTRY)/$(1))
+	$(eval OCI_DIGEST := $(shell oras resolve $(OCI_IMAGE):${tag}))
+	$(eval OCI_REF := $(OCI_IMAGE)@$(OCI_DIGEST))
+	$(if $(filter yes,$(VERIFY_PROVENANCE)),$(ROOT_DIR)hack/verify-provenance.sh \
+		-a $(OCI_REF) \
+		-r $(GUEST_COMPONENTS_REPO) \
+		-d $(GUEST_COMPONENTS_COMMIT))
+	oras pull $(OCI_REF)
+endef
 
 # Clone a specific commit/tag/branch of a repo.
 # $(1) - Repository URL
@@ -113,10 +160,11 @@ endef
 # Ensure that the oras tags is converted to something valid
 # $(1) - return value
 # $(2) - initial_tag
+# $(3) - suffix
 define generate_tag
-	$(eval $0_tag_length_limit=$(shell expr 128 - $(shell echo "-$(ARCH)" | wc -c)))
+	$(eval $0_tag_length_limit=$(shell expr 128 - $(shell echo "-$(3)" | wc -c)))
 	processed_tag=$(shell echo $(2) | tr -dc '[:print:]' | tr -c '[a-zA-Z0-9\_\.\-]' _ | head -c $(shell echo $($0_tag_length_limit)))
-	$(1) := $$(processed_tag)-$(ARCH)
+	$(1) := $$(processed_tag)-$(3)
 endef
 
 binaries: $(BINARIES)
@@ -130,8 +178,7 @@ $(PROCESS_USER_DATA): always
 	install -D --compare "$(ROOT_DIR)/process-user-data" "$@"
 
 $(KATA_AGENT): $(FORCE_TARGET)
-	$(eval $(call generate_tag,tag,$(KATA_SRC_REF)))
-	oras pull ghcr.io/kata-containers/cached-artefacts/agent:${tag}
+	$(call pull_agent_artifact)
 	tar xvJpf kata-static-agent.tar.xz
 	install -D --compare "./usr/bin/kata-agent" "$@"
 
@@ -155,31 +202,27 @@ $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
 
 $(PAUSE_SRC): $(SKOPEO_BIN)
 	$(SKOPEO_BIN) --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy \
-		$(if $(AUTHFILE),--authfile $(AUTHFILE)) "$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
+		$(if $(AUTHFILE),--authfile $(AUTHFILE)) "docker://$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
 
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci
 	$(UMOCI_SRC)/umoci unpack --rootless --image "$(PAUSE_SRC):$(PAUSE_VERSION)" "${FILES_DIR}/$(PAUSE_BUNDLE)"
 
-$(GUEST_COMPONENTS_SRC):
-	$(call git_clone_repo_ref,$(GUEST_COMPONENTS_REPO),$(GUEST_COMPONENTS_SRC),$(GUEST_COMPONENTS_VERSION))
+$(ATTESTATION_AGENT): $(FORCE_TARGET)
+	$(call pull_gc_artifact,attestation-agent,$(TEE_PLATFORM)_$(ARCH))
+	tar xvJpf attestation-agent.tar.xz
+	install -D --compare attestation-agent "$@"
 
-$(ATTESTATION_AGENT): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
-	cd "$(GUEST_COMPONENTS_SRC)/attestation-agent" && CC= ARCH=$(ARCH) $(MAKE) ATTESTER=$(ATTESTER) ttrpc=true LIBC="$(LIBC)"
-	mkdir -p "$(@D)"
-	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/attestation-agent" "$@"
+$(CONFIDENTIAL_DATA_HUB): $(FORCE_TARGET)
+	$(call pull_gc_artifact,confidential-data-hub,$(ARCH))
+	tar xvJpf confidential-data-hub.tar.xz
+	install -D --compare confidential-data-hub "$@"
 
-$(CONFIDENTIAL_DATA_HUB): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
-	cd "$(GUEST_COMPONENTS_SRC)/confidential-data-hub" && CC= ARCH=$(ARCH) $(MAKE) RESOURCE_PROVIDER="$(CDH_RESOURCE_PROVIDER)" LIBC="$(LIBC)"
-	mkdir -p "$(@D)"
-	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/confidential-data-hub" "$@"
-
-$(API_SERVER_REST): $(FORCE_TARGET) | $(GUEST_COMPONENTS_SRC)
-	cd "$(GUEST_COMPONENTS_SRC)/api-server-rest" && CC= ARCH=$(ARCH) $(MAKE) LIBC="$(LIBC)"
-	mkdir -p "$(@D)"
-	install --compare "$(GUEST_COMPONENTS_SRC)/target/$(RUST_TARGET)/release/api-server-rest" "$@"
+$(API_SERVER_REST): $(FORCE_TARGET)
+	$(call pull_gc_artifact,api-server-rest,$(ARCH))
+	tar xvJpf api-server-rest.tar.xz
+	install -D --compare api-server-rest "$@"
 
 clean_sources:
-	[ -d "$(GUEST_COMPONENTS_SRC)" ] && cd "$(GUEST_COMPONENTS_SRC)" && git clean -xfd
 	[ -d "$(ROOT_DIR)" ] && cd "$(ROOT_DIR)" && git clean -xfd -e podvm
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci

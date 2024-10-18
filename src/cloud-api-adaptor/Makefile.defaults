@@ -7,7 +7,9 @@ PAUSE_BIN ?= pause
 # stored in versions.yaml
 YQ_VERSION := v4.35.1
 YQ_CHECKSUM := "sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
-YQ_CHECKSUM_s390x:= "sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
+YQ_CHECKSUM_s390x := "sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
+# none,az-cvm-vtpm,tdx,se,cca
+TEE_PLATFORM ?= none
 
 VERSIONS_HASH := $(firstword $(shell sha256sum $(VERSIONS_SRC)))
 
@@ -30,18 +32,17 @@ rhel_s390x_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.ch
 
 COCO_OPERATOR_REF := $(or $(COCO_OPERATOR_REF),$(call query,git.coco-operator.reference))
 COCO_OPERATOR_REPO := $(or $(COCO_OPERATOR_REPO),$(call query,git.coco-operator.url))
-KATA_SRC := $(or $(KATA_SRC),$(call query,git.kata-containers.url))
-KATA_SRC_REF := $(or $(KATA_SRC_REF),$(call query,git.kata-containers.reference))
+KATA_REGISTRY := $(or $(KATA_REGISTRY), $(call query,oci.kata-containers.registry))
+KATA_REF := $(or $(KATA_REF), $(call query,oci.kata-containers.reference))
 GO_VERSION := $(or $(GO_VERSION),$(call query,tools.golang))
 PROTOC_VERSION := $(or $(PROTOC_VERSION),$(call query,tools.protoc))
-RUST_VERSION := $(or $(RUST_VERSION),$(call query,tools.rust))
 ORAS_VERSION := $(or $(ORAS_VERSION),$(call query,tools.oras))
 SKOPEO_REPO := $(or $(SKOPEO_REPO),$(call query,git.skopeo.url))
 SKOPEO_VERSION := $(or $(SKOPEO_VERSION),$(call query,git.skopeo.reference))
 UMOCI_REPO := $(or $(UMOCI_REPO),$(call query,git.umoci.url))
 UMOCI_VERSION := $(or $(UMOCI_VERSION),$(call query,git.umoci.reference))
-GUEST_COMPONENTS_REPO := $(or $(GUEST_COMPONENTS_REPO),$(call query,git.guest-components.url))
-GUEST_COMPONENTS_VERSION := $(or $(GUEST_COMPONENTS_VERSION),$(call query,git.guest-components.reference))
+GUEST_COMPONENTS_REGISTRY := $(or $(GUEST_COMPONENTS_REGISTRY), $(call query,oci.guest-components.registry))
+GUEST_COMPONENTS_REF := $(or $(GUEST_COMPONENTS_REF),$(call query,oci.guest-components.reference))
 PAUSE_REPO :=  $(or $(PAUSE_REPO),$(call query,oci.pause.registry))
 PAUSE_VERSION := $(or $(PAUSE_VERSION),$(call query,oci.pause.tag))
 PACKER_VERSION := $(or $(PACKER_VERSION),$(call query,tools.packer))

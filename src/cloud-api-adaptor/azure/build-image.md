@@ -92,7 +92,6 @@ sudo apt install \
 
 - Install `yq` by following instructions [here](https://mikefarah.gitbook.io/yq/#install).
 - Install Golang by following instructions [here](https://go.dev/doc/install).
-- Install Rust (`cargo`) by following instructions [here](https://www.rust-lang.org/tools/install).
 - Install packer by following [these instructions](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
 
 **Build**
@@ -110,7 +109,7 @@ export PKR_VAR_az_gallery_image_version="0.0.1"
 export PKR_VAR_offer=0001-com-ubuntu-confidential-vm-jammy
 export PKR_VAR_sku=22_04-lts-cvm
 
-export ATTESTER="az-snp-vtpm-attester,az-tdx-vtpm-attester"
+export TEE_PLATFORM="az-cvm-vtpm"
 export LIBC=gnu
 export CLOUD_PROVIDER=azure
 PODVM_DISTRO=ubuntu make image
