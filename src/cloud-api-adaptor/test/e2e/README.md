@@ -62,6 +62,10 @@ To prepare trustee, execute the following helper script:
 ```sh
 ${cloud-api-adaptor-repo-dir}/src/cloud-api-adaptor/test/utils/checkout_kbs.sh
 ```
+> [!NOTE]
+> This script requires [oras](https://oras.land/docs/installation/) to be installed to pull down and verify
+the cached kbs-client.
+
 
 We need build and use the PodVM image:
 
