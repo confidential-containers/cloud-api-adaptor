@@ -15,7 +15,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/e2e-framework/klient"
@@ -330,6 +332,26 @@ func IsBufferEmpty(buffer bytes.Buffer) bool {
 	} else {
 		return false
 	}
+}
+
+func AssessPodRequestAndLimit(ctx context.Context, client klient.Client, pod *v1.Pod) error {
+	// Check if the pod has the "kata.peerpods.io/vm request and limit with value "1"
+
+	podVmExtResource := "kata.peerpods.io/vm"
+
+	request := pod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(podVmExtResource)]
+	limit := pod.Spec.Containers[0].Resources.Limits[corev1.ResourceName(podVmExtResource)]
+
+	// Check if the request and limit are set to "1"
+	if request.Cmp(resource.MustParse("1")) != 0 {
+		return fmt.Errorf("request for podvm extended resource is not set to 1")
+	}
+	if limit.Cmp(resource.MustParse("1")) != 0 {
+		return fmt.Errorf("limit for podvm extended resource is not set to 1")
+	}
+
+	return nil
+
 }
 
 func AssessPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Pod, testCommands []TestCommand) (string, error) {

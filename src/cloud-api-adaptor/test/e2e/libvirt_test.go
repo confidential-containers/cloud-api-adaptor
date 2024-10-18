@@ -175,3 +175,8 @@ func TestLibvirtCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testi
 		t.Skip("Registry Credentials, or authenticated image name not exported")
 	}
 }
+
+func TestLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "200Mi")
+}

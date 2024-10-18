@@ -789,3 +789,18 @@ func DoTestPodWithSpecificCommands(t *testing.T, e env.Environment, assert Cloud
 
 	NewTestCase(t, e, "PodWithSpecificCommands", assert, "Pod with specific commands").WithPod(pod).WithTestCommands(testCommands).Run()
 }
+
+// Test to run a pod with cpu and memory limits and requests
+func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, assert CloudAssert, cpuRequest, memRequest, cpuLimit, memLimit string) {
+
+	pod := NewPod(E2eNamespace, "pod-with-cpu-mem-limits-requests", "busybox", BUSYBOX_IMAGE,
+		WithCpuMemRequestAndLimit(cpuRequest, memRequest, cpuLimit, memLimit))
+
+	// Add testCommands to check that request/limit are removed from the spec and following annotations
+	// to pod spec is added
+	// io.katacontainers.config.hypervisor.default_cpus
+	// io.katacontainers.config.hypervisor.default_memory
+	// Custom resource added as req/limit - "kata.peerpods.io/vm
+
+	NewTestCase(t, e, "PodWithCpuMemLimitsAndRequests", assert, "Pod with cpu and memory limits and requests").WithPod(pod).Run()
+}
