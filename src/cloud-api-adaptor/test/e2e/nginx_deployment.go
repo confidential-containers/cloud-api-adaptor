@@ -99,6 +99,7 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 
 	nginxImageFeature := features.New("Nginx image deployment test").
 		WithSetup("Create nginx deployment", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			ctx = context.WithValue(ctx, "WithSetupFailed", false)
 			client, err := cfg.NewClient()
 			if err != nil {
 				t.Fatal(err)
@@ -108,17 +109,28 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 				t.Fatal(err)
 			}
 			waitForNginxDeploymentAvailable(ctx, t, client, deployment, replicas)
-			t.Log("nginx deployment is available now")
+			if !t.Failed() {
+				t.Log("nginx deployment is available now")
+			} else {
+				ctx = context.WithValue(ctx, "WithSetupFailed", true)
+			}
 			return ctx
 		}).
 		Assess("Access for nginx deployment test", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			if ctx.Value("WithSetupFailed").(bool) {
+				// Test setup failed, so skip this assess
+				t.Skip()
+				return ctx
+			}
 			client, err := cfg.NewClient()
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return ctx
 			}
 			var podlist v1.PodList
 			if err := client.Resources(deployment.ObjectMeta.Namespace).List(ctx, &podlist); err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return ctx
 			}
 			for _, pod := range podlist.Items {
 				if pod.ObjectMeta.Labels["app"] == "nginx" {
@@ -164,8 +176,10 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 		return deployObj.Status.AvailableReplicas == rc
 	}), wait.WithTimeout(WAIT_NGINX_DEPLOYMENT_TIMEOUT), wait.WithInterval(10*time.Second)); err != nil {
 		var podlist v1.PodList
+		t.Errorf("%v", err)
 		if err := client.Resources(deployment.ObjectMeta.Namespace).List(ctx, &podlist); err != nil {
-			t.Fatal(err)
+			t.Errorf("%v", err)
+			return
 		}
 		for _, pod := range podlist.Items {
 			if pod.ObjectMeta.Labels["app"] == "nginx" {
@@ -179,14 +193,17 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 					t.Logf("Current Pod State: %v", string(yamlData))
 				}
 				if pod.Status.Phase == v1.PodRunning {
-					t.Logf("Log of the pod %.v", pod.Name)
+					t.Logf("Log of the pod %v", pod.Name)
 					t.Logf("===================")
 					podLogString, _ := GetPodLog(ctx, client, pod)
-					t.Logf(podLogString)
+					if podLogString != "" {
+						t.Logf(podLogString)
+					} else {
+						t.Logf("No logs found")
+					}
 					t.Logf("===================")
 				}
 			}
 		}
-		t.Fatal(err)
 	}
 }
