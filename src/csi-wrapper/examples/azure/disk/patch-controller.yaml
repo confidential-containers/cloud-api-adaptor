@@ -1,0 +1,37 @@
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: csi-controller-wrapper
+          env:
+            - name: POD_NAME_SPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          args:
+            - -v=2
+            - --endpoint=/csi/csi-controller-wrapper.sock
+            - --target-endpoint=/csi/csi.sock
+            - --namespace=$(POD_NAME_SPACE)
+          image: quay.io/confidential-containers/csi-controller-wrapper:latest
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+
+        - name: csi-attacher
+          args:
+            - -v=2
+            - --csi-address=/csi/csi-controller-wrapper.sock
+            - --timeout=900s
+
+        - name: csi-provisioner
+          env:
+            - name: ADDRESS
+              value: /csi/csi-controller-wrapper.sock
+
+        - name: csi-resizer
+          env:
+            - name: ADDRESS
+              value: /csi/csi-controller-wrapper.sock

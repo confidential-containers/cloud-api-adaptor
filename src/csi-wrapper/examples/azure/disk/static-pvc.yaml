@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-azuredisk
+spec:
+  storageClassName: azure-disk-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  volumeName: pv-azuredisk
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-azuredisk
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: azure-disk-storage
+  csi:
+    driver: disk.csi.azure.com
+    volumeHandle: '@@AZURE_DISK_ID@@'
+    volumeAttributes:
+      fsType: ext4
+      peerpod: 'true' # Indicator for csi-wrapper that this is a volume should be used for a peerpod volume
+---

@@ -1,0 +1,11 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: azure-disk-storage
+provisioner: disk.csi.azure.com
+parameters:
+  skuName: StandardSSD_LRS # available values: StandardSSD_LRS, StandardSSD_ZRS, Premium_LRS, Premium_ZRS, etc.
+  peerpod: 'true'
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
