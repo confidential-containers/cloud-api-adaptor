@@ -1,0 +1,13 @@
+test_images:
+  nginx:
+    registry: "quay.io/confidential-containers/test/nginx"
+    tag: "latest"
+  unprivileged-nginx:
+    registry: "quay.io/nginx/nginx-unprivileged"
+    tag: "latest"
+  busybox:
+    registry: "quay.io/prometheus/busybox"
+    tag: "latest"
+  curl:
+    registry: "quay.io/curl/curl"
+    tag: "8.4.0"
