@@ -1,0 +1,16 @@
+name: Freeze window
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Blocking PRs
+      run: |
+        echo "We are in a freeze-window, this PR should not be merged."
+        echo "If you believe we are not, please contact the maintainers "
+        echo "and ask to disable this workflow."
+        exit 1
