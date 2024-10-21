@@ -318,6 +318,20 @@ func VerifyNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Cli
 	return nil
 }
 
+func VerifyImagePullTimer(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) error {
+	caaPod, err := getCaaPod(ctx, client, t)
+	if err != nil {
+		return fmt.Errorf("VerifyImagePullTimer: failed to getCaaPod: %v", err)
+	}
+
+	imagePullTime, err := WatchImagePullTime(ctx, client, caaPod, pod)
+	if err != nil {
+		return fmt.Errorf("VerifyImagePullTimer: WatchImagePullTime failed with %v", err)
+	}
+	t.Logf("Time Taken to pull 4GB Image: %s", imagePullTime)
+	return nil
+}
+
 func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod *v1.Pod) (string, error) {
 	var getNodeName = func(ctx context.Context, client klient.Client, pod *v1.Pod) (string, error) {
 		return pod.Spec.NodeName, nil

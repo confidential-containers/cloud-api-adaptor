@@ -334,18 +334,9 @@ func (tc *TestCase) Run() {
 
 			if tc.pod != nil {
 				if tc.imagePullTimer {
-					if err := client.Resources("confidential-containers-system").List(ctx, &podlist); err != nil {
-						t.Fatal(err)
-					}
-					for _, caaPod := range podlist.Items {
-						if caaPod.Labels["app"] == "cloud-api-adaptor" {
-							imagePullTime, err := WatchImagePullTime(ctx, client, &caaPod, tc.pod)
-							if err != nil {
-								t.Fatal(err)
-							}
-							t.Logf("Time Taken to pull 4GB Image: %s", imagePullTime)
-							break
-						}
+					err := VerifyImagePullTimer(ctx, t, client, tc.pod)
+					if err != nil {
+						t.Error(err)
 					}
 				}
 
