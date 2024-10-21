@@ -262,6 +262,26 @@ func CompareInstanceType(ctx context.Context, t *testing.T, client klient.Client
 	return fmt.Errorf("no pod matching %v, was found", pod)
 }
 
+func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Client, alternateImageName string) error {
+	var caaPod v1.Pod
+	caaPod.Namespace = "confidential-containers-system"
+	expectedSuccessMessage := "Choosing " + alternateImageName
+
+	pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.Namespace, "app", "cloud-api-adaptor")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	caaPod.Name = pods.Items[0].Name
+	LogString, err := ComparePodLogString(ctx, client, caaPod, expectedSuccessMessage)
+	if err != nil {
+		t.Logf("Output:%s", LogString)
+		t.Fatal(err)
+	}
+	t.Logf("PodVM was brought up using the alternate PodVM image %s", alternateImageName)
+	return nil
+}
+
 func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod v1.Pod) (string, error) {
 	var getNodeName = func(ctx context.Context, client klient.Client, pod v1.Pod) (string, error) {
 		return pod.Spec.NodeName, nil
