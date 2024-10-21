@@ -507,22 +507,10 @@ func (tc *TestCase) Run() {
 			}
 
 			if tc.alternateImageName != "" {
-				var caaPod v1.Pod
-				caaPod.Namespace = "confidential-containers-system"
-				expectedSuccessMessage := "Choosing " + tc.alternateImageName
-
-				pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.Namespace, "app", "cloud-api-adaptor")
+				err := VerifyAlternateImage(ctx, t, client, tc.alternateImageName)
 				if err != nil {
 					t.Fatal(err)
 				}
-
-				caaPod.Name = pods.Items[0].Name
-				LogString, err := ComparePodLogString(ctx, client, caaPod, expectedSuccessMessage)
-				if err != nil {
-					t.Logf("Output:%s", LogString)
-					t.Fatal(err)
-				}
-				t.Logf("PodVM was brought up using the alternate PodVM image %s", tc.alternateImageName)
 			}
 			return ctx
 		}).
