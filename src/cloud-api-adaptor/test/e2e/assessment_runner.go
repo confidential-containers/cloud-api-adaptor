@@ -273,7 +273,7 @@ func (tc *TestCase) Run() {
 						}
 						if pod.Status.Phase == v1.PodRunning {
 							t.Logf("Log of the pod %.v \n===================\n", pod.Name)
-							podLogString, _ := GetPodLog(ctx, client, *pod)
+							podLogString, _ := GetPodLog(ctx, client, pod)
 							t.Log(podLogString)
 							t.Logf("===================\n")
 						}
@@ -339,7 +339,7 @@ func (tc *TestCase) Run() {
 					}
 					for _, caaPod := range podlist.Items {
 						if caaPod.Labels["app"] == "cloud-api-adaptor" {
-							imagePullTime, err := WatchImagePullTime(ctx, client, caaPod, *tc.pod)
+							imagePullTime, err := WatchImagePullTime(ctx, client, &caaPod, tc.pod)
 							if err != nil {
 								t.Fatal(err)
 							}
@@ -350,64 +350,57 @@ func (tc *TestCase) Run() {
 				}
 
 				if tc.expectedPodLogString != "" {
-					LogString, err := ComparePodLogString(ctx, client, *tc.pod, tc.expectedPodLogString)
+					logString, err := ComparePodLogString(ctx, client, tc.pod, tc.expectedPodLogString)
 					if err != nil {
-						t.Logf("Output:%s", LogString)
-						t.Fatal(err)
+						t.Errorf("Looking for %s, in pod log: %s, failed with: %v", tc.expectedPodLogString, logString, err)
 					}
-					t.Logf("Log output of peer pod:%s", LogString)
 				}
 
 				if tc.expectedPodEventErrorString != "" {
-					err := ComparePodEventWarningDescriptions(ctx, t, client, *tc.pod, tc.expectedPodEventErrorString)
+					err := ComparePodEventWarningDescriptions(ctx, t, client, tc.pod, tc.expectedPodEventErrorString)
 					if err != nil {
-						t.Fatal(err)
+						t.Errorf("Looking for %s, in pod events log, failed with: %v", tc.expectedPodEventErrorString, err)
 					}
 				} else {
 					// There shouldn't have been any pod event warnings/errors
-					warnings, err := GetPodEventWarningDescriptions(ctx, client, *tc.pod)
+					warnings, err := GetPodEventWarningDescriptions(ctx, client, tc.pod)
 					if err != nil {
-						t.Fatal(err)
+						t.Errorf("We hit an error trying to get the event log of %s", tc.pod.Name)
 					}
 					if warnings != "" {
-						t.Fatal(fmt.Errorf("unexpected warning/error event(s): %s", warnings))
+						t.Errorf("unexpected warning/error event(s): %s", warnings)
 					}
 				}
 
 				if tc.expectedInstanceType != "" {
 					err := CompareInstanceType(ctx, t, client, *tc.pod, tc.expectedPodEventErrorString, tc.assert.GetInstanceType)
 					if err != nil {
-						t.Fatal(err)
+						t.Errorf("CompareInstanceType failed: %v", err)
 					}
 				}
 
 				if tc.podState == v1.PodRunning {
-					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
-						t.Fatal(err)
-					}
 					if len(tc.testCommands) > 0 {
 						if len(tc.testCommands) > 0 {
 							logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
-							t.Logf("Output when execute test commands: %s", logString)
 							if err != nil {
-								t.Fatal(err)
+								t.Errorf("AssessPodTestCommands failed, with output: %s and error: %v", logString, err)
 							}
 						}
 					}
 
 					err := AssessPodRequestAndLimit(ctx, client, tc.pod)
 					if err != nil {
-						t.Logf("request and limit for podvm extended resource are not set to 1")
-						t.Fatal(err)
+						t.Errorf("request and limit for podvm extended resource are not set to 1: %v", err)
 					}
 
 					tc.assert.HasPodVM(t, tc.pod.Name)
 				}
 
 				if tc.isNydusSnapshotter {
-					err := VerifyNydusSnapshotter(ctx, t, client, *tc.pod)
+					err := VerifyNydusSnapshotter(ctx, t, client, tc.pod)
 					if err != nil {
-						t.Error(err)
+						t.Errorf("VerifyNydusSnapshotter failed: %v", err)
 					}
 				}
 			}
@@ -419,7 +412,7 @@ func (tc *TestCase) Run() {
 						t.Fatal("Please implement assess logic for imagePullTimer")
 					}
 					if extraPod.expectedPodLogString != "" {
-						LogString, err := ComparePodLogString(ctx, client, *extraPod.pod, extraPod.expectedPodLogString)
+						LogString, err := ComparePodLogString(ctx, client, extraPod.pod, extraPod.expectedPodLogString)
 						if err != nil {
 							t.Logf("Output:%s", LogString)
 							t.Fatal(err)
@@ -441,15 +434,13 @@ func (tc *TestCase) Run() {
 						// TBD
 						t.Fatal("Error: isNydusSnapshotter hasn't been implemented in extraPods. Please implement assess function for isNydusSnapshotter.")
 					}
-
 				}
-
 			}
 
 			if tc.alternateImageName != "" {
 				err := VerifyAlternateImage(ctx, t, client, tc.alternateImageName)
 				if err != nil {
-					t.Fatal(err)
+					t.Errorf("VerifyAlternateImage failed: %v", err)
 				}
 			}
 			return ctx
