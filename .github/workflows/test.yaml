@@ -2,11 +2,21 @@ name: GitHub Actions Demo
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 on: [push]
 jobs:
-  Explore-GitHub-Actions:
+  define-securecomms-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      securecomms: ${{ steps.securecomms.outputs.securecomms }}
+    steps:
+      - name: Define Secure Comms
+        id: securecomms
+        run: |
+          echo 'securecomms=["none", "withoutKbs", "witrKbs", "withTrsuteeOperator"]' >> "$GITHUB_OUTPUT"
+  produce-securecomms-matrix:
+    runs-on: ubuntu-latest
+    needs: define-securecomms-matrix
     strategy:
       matrix:
-        secure_comms: [none, withoutKbs, witrKbs, withTrsuteeOperator]
-    runs-on: ubuntu-latest
+        secure_comms: ${{ fromJSON(needs.define-securecomms-matrix.outputs.securecomms) }}
     steps:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
