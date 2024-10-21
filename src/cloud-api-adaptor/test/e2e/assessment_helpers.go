@@ -124,33 +124,31 @@ func WatchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod
 // <date time> 11:47:42 [adaptor/proxy] CreateContainer: Ignoring PullImage before CreateContainer (cid: "<cid>")
 // was output
 func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, nodeName string, containerId string) (bool, error) {
-	var podlist v1.PodList
-
 	nydusSnapshotterPullRegex, err := regexp.Compile(`.*mount_point:/run/kata-containers.*` + containerId + `.*driver:image_guest_pull.*$`)
 	if err != nil {
 		return false, err
 	}
 
-	if err := client.Resources("confidential-containers-system").List(ctx, &podlist); err != nil {
+	var caaPod v1.Pod
+	caaPod.Namespace = "confidential-containers-system"
+	pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.Namespace, "app", "cloud-api-adaptor")
+	if err != nil {
 		t.Fatal(err)
 	}
-	for _, pod := range podlist.Items {
-		if pod.Labels["app"] == "cloud-api-adaptor" && pod.Spec.NodeName == nodeName {
-			podLogString, err := GetPodLog(ctx, client, pod)
-			if err != nil {
-				return false, err
-			}
+	caaPod.Name = pods.Items[0].Name
 
-			podLogSlice := reverseSlice(strings.Split(podLogString, "\n"))
-			for _, line := range podLogSlice {
-				if nydusSnapshotterPullRegex.MatchString(line) {
-					return true, nil
-				}
-			}
-			return false, fmt.Errorf("Didn't find pull image for snapshotter")
+	podLogString, err := GetPodLog(ctx, client, caaPod)
+
+	if err != nil {
+		return false, fmt.Errorf("IsPulledWithNydusSnapshotter: failed to list pods: %v", err)
+	}
+	podLogSlice := reverseSlice(strings.Split(podLogString, "\n"))
+	for _, line := range podLogSlice {
+		if nydusSnapshotterPullRegex.MatchString(line) {
+			return true, nil
 		}
 	}
-	return false, fmt.Errorf("No cloud-api-adaptor pod found in podList: %v", podlist.Items)
+	return false, fmt.Errorf("Didn't find pull image for snapshotter")
 }
 
 func GetPodLog(ctx context.Context, client klient.Client, pod v1.Pod) (string, error) {
@@ -279,6 +277,29 @@ func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Clien
 		t.Fatal(err)
 	}
 	t.Logf("PodVM was brought up using the alternate PodVM image %s", alternateImageName)
+	return nil
+}
+
+func VerifyNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, pod v1.Pod) error {
+	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
+	if err != nil {
+		return fmt.Errorf("GetNodeNameFromPod failed with %v", err)
+	}
+	log.Tracef("Test pod running on node %s", nodeName)
+
+	containerId := pod.Status.ContainerStatuses[0].ContainerID
+	containerId, found := strings.CutPrefix(containerId, "containerd://")
+	if !found {
+		return fmt.Errorf("VerifyNydusSnapshotter: unexpected container id format: %s", containerId)
+	}
+
+	usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client, nodeName, containerId)
+	if err != nil {
+		return fmt.Errorf("IsPulledWithNydusSnapshotter:  failed with %v", err)
+	}
+	if !usedNydusSnapshotter {
+		return fmt.Errorf("Expected to pull with nydus, but that didn't happen")
+	}
 	return nil
 }
 
