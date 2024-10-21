@@ -119,6 +119,17 @@ func WatchImagePullTime(ctx context.Context, client klient.Client, caaPod v1.Pod
 	return pullingtime, nil
 }
 
+func getCaaPod(ctx context.Context, client klient.Client, t *testing.T) (v1.Pod, error) {
+	var caaPod v1.Pod
+	caaPod.Namespace = "confidential-containers-system"
+	pods, err := GetPodNamesByLabel(ctx, client, t, "confidential-containers-system", "app", "cloud-api-adaptor")
+	if err != nil {
+		t.Fatal(err)
+	}
+	caaPod.Name = pods.Items[0].Name
+	return caaPod, nil
+}
+
 // Check cloud-api-adaptor daemonset pod logs to ensure that something like:
 // <date time> [adaptor/proxy]         mount_point:/run/kata-containers/<id>/rootfs source:<image> fstype:overlay driver:image_guest_pull
 // <date time> 11:47:42 [adaptor/proxy] CreateContainer: Ignoring PullImage before CreateContainer (cid: "<cid>")
@@ -129,13 +140,10 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 		return false, err
 	}
 
-	var caaPod v1.Pod
-	caaPod.Namespace = "confidential-containers-system"
-	pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.Namespace, "app", "cloud-api-adaptor")
+	caaPod, err := getCaaPod(ctx, client, t)
 	if err != nil {
 		t.Fatal(err)
 	}
-	caaPod.Name = pods.Items[0].Name
 
 	podLogString, err := GetPodLog(ctx, client, caaPod)
 
@@ -243,22 +251,27 @@ func CompareInstanceType(ctx context.Context, t *testing.T, client klient.Client
 }
 
 func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Client, alternateImageName string) error {
-	var caaPod v1.Pod
-	caaPod.Namespace = "confidential-containers-system"
 	expectedSuccessMessage := "Choosing " + alternateImageName
+	err := VerifyCaaPodLogContains(ctx, t, client, expectedSuccessMessage)
+	if err != nil {
+		return fmt.Errorf("VerifyAlternateImage: failed: %v", err)
+	}
+	t.Logf("PodVM was brought up using the alternate PodVM image %s", alternateImageName)
+	return nil
+}
 
-	pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.Namespace, "app", "cloud-api-adaptor")
+func VerifyCaaPodLogContains(ctx context.Context, t *testing.T, client klient.Client, expected string) error {
+	caaPod, err := getCaaPod(ctx, client, t)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	caaPod.Name = pods.Items[0].Name
-	LogString, err := ComparePodLogString(ctx, client, caaPod, expectedSuccessMessage)
+	LogString, err := ComparePodLogString(ctx, client, caaPod, expected)
 	if err != nil {
 		t.Logf("Output:%s", LogString)
 		t.Fatal(err)
 	}
-	t.Logf("PodVM was brought up using the alternate PodVM image %s", alternateImageName)
+	t.Logf("CAA pod log contained the expected string %s", expected)
 	return nil
 }
 
