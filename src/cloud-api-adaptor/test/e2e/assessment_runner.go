@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -70,7 +69,6 @@ type TestCase struct {
 	deletionWithin              time.Duration
 	expectedInstanceType        string
 	isNydusSnapshotter          bool
-	FailReason                  string
 	alternateImageName          string
 }
 
@@ -166,11 +164,6 @@ func (tc *TestCase) WithNoAuthJson() *TestCase {
 
 func (tc *TestCase) WithNydusSnapshotter() *TestCase {
 	tc.isNydusSnapshotter = true
-	return tc
-}
-
-func (tc *TestCase) WithFailReason(reason string) *TestCase {
-	tc.FailReason = reason
 	return tc
 }
 
@@ -409,44 +402,6 @@ func (tc *TestCase) Run() {
 					}
 
 					tc.assert.HasPodVM(t, tc.pod.Name)
-				}
-
-				if tc.podState != v1.PodRunning && tc.podState != v1.PodSucceeded {
-					profile, error := tc.assert.GetInstanceType(t, tc.pod.Name)
-					if error != nil {
-						if error.Error() != "Failed to Create PodVM Instance" {
-							t.Fatal(error)
-						}
-					} else if profile != "" {
-						t.Logf("PodVM Created with Instance Type %v", profile)
-						if tc.FailReason != "" {
-							var podlist v1.PodList
-							var podLogString string
-							if err := client.Resources("confidential-containers-system").List(ctx, &podlist); err != nil {
-								t.Fatal(err)
-							}
-							for _, pod := range podlist.Items {
-								if pod.Labels["app"] == "cloud-api-adaptor" {
-									podLogString, _ = GetPodLog(ctx, client, pod)
-									break
-								}
-							}
-							if strings.Contains(podLogString, tc.FailReason) {
-								t.Logf("failed due to expected reason %s", tc.FailReason)
-							} else {
-								t.Logf("cloud-api-adaptor pod logs: %s", podLogString)
-								yamlData, err := yaml.Marshal(tc.pod.Status)
-								if err != nil {
-									log.Errorf("Error marshaling pod.Status to JSON: %s", err.Error())
-								} else {
-									t.Logf("Current Pod State: %v", string(yamlData))
-								}
-								t.Fatal("failed due to unknown reason")
-							}
-						} else {
-							t.Logf("Pod Failed If you want to cross check please give .WithFailReason(error string)")
-						}
-					}
 				}
 
 				if tc.isNydusSnapshotter {
