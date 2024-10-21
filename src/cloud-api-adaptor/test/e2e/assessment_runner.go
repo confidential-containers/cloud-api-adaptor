@@ -450,24 +450,9 @@ func (tc *TestCase) Run() {
 				}
 
 				if tc.isNydusSnapshotter {
-					nodeName, err := GetNodeNameFromPod(ctx, client, *tc.pod)
+					err := VerifyNydusSnapshotter(ctx, t, client, *tc.pod)
 					if err != nil {
-						t.Fatal(err)
-					}
-					log.Tracef("Test pod running on node %s", nodeName)
-
-					containerId := tc.pod.Status.ContainerStatuses[0].ContainerID
-					containerId, found := strings.CutPrefix(containerId, "containerd://")
-					if !found {
-						t.Fatal("unexpected container id format")
-					}
-
-					usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client, nodeName, containerId)
-					if err != nil {
-						t.Fatal(err)
-					}
-					if !usedNydusSnapshotter {
-						t.Fatal("Expected to pull with nydus, but that didn't happen")
+						t.Error(err)
 					}
 				}
 			}
