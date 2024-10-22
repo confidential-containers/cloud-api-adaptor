@@ -10,6 +10,7 @@ jobs:
       - name: Define Test Matrix
         id: matrix
         run: |
+          echo "matrix=$(jq -c . < ./src/cloud-api-adaptor/libvirt/e2e_matrix_libvirt.json)"
           echo "matrix=$(jq -c . < ./src/cloud-api-adaptor/libvirt/e2e_matrix_libvirt.json)" >> "$GITHUB_OUTPUT"
   produce-securecomms-matrix:
     runs-on: ubuntu-latest
