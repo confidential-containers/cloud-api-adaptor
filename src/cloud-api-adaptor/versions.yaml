@@ -21,7 +21,6 @@ cloudimg:
 tools:
   bats: 1.10.0
   golang: 1.22.7
-  rust: 1.75.0
   protoc: 3.15.0
   packer: v1.9.4
   kcli: 99.0.202407031308
