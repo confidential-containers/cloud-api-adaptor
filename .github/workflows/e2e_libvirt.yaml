@@ -53,6 +53,7 @@ jobs:
           sudo snap install yq
           echo "KBS_REPO=$(yq -e '.git.kbs.url' versions.yaml)" >> "$GITHUB_ENV"
           echo "KBS_VERSION=$(yq -e '.git.kbs.reference' versions.yaml)" >> "$GITHUB_ENV"
+          echo "RUST_VERSION=$(yq -e '.tools.rust' versions.yaml)" >> "$GITHUB_ENV"
           go_version="$(yq '.tools.golang' versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
