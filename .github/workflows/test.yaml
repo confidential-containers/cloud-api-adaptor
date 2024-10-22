@@ -5,24 +5,25 @@ jobs:
   define-securecomms-matrix:
     runs-on: ubuntu-latest
     outputs:
-      securecomms: ${{ steps.securecomms.outputs.securecomms }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
-      - name: Define Secure Comms
-        id: securecomms
+      - name: Define Test Matrix
+        id: matrix
         run: |
-          echo 'securecomms=["none", "withoutKbs", "witrKbs", "withTrsuteeOperator"]' >> "$GITHUB_OUTPUT"
+          echo "matrix=$(jq -c . < ./src/cloud-api-adaptor/libvirt/e2e_matrix_libvirt.json)" >> "$GITHUB_OUTPUT"
   produce-securecomms-matrix:
     runs-on: ubuntu-latest
     needs: define-securecomms-matrix
     strategy:
-      matrix:
-        secure_comms: ${{ fromJSON(needs.define-securecomms-matrix.outputs.securecomms) }}
+      matrix: ${{ fromJSON(needs.prep_install.outputs.matrix) }}
     steps:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - run: echo ${{ matrix.secure_comms }}
-
+      - run: echo "matrix.provider ${{ matrix.provider }}"
+      - run: echo "matrix.os ${{ matrix.os }}"
+      - run: echo "matrix.arch ${{ matrix.arch }}"
+      - run: echo "matrix.secure_comms ${{ matrix.secure_comms }}"
       - name: Check out repository code
         uses: actions/checkout@v4
         
