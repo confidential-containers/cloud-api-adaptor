@@ -1,0 +1,6 @@
+{
+    "securecomms": ["none", "withoutKbs"],
+    "os": ["ubuntu"],
+    "provider": ["generic"],
+    "arch": ["amd64"]
+}
