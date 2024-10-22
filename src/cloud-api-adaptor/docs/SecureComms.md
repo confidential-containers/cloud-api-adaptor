@@ -165,6 +165,10 @@ Successful connection result in exit code of 0
 
 Alternatively, the client and server can be separately executed in independent terminals using `./test/securecomms/double/wnssh.go` and `./test/securecomms/ppssh/main.go` respectively.
 
+# E2E Testing
+
+To facilitate end-to-end testing, the libvirt github workflow `e2e_libvirt.yaml` adds an environment variable named `TEST_E2E_SECURE_COMMS` which indicates the secure comm configuration set to be used. The `config_libvirt.sh` uses this environment variable to set proper values in the `libvirt.properties` file.
+
 ## Future Plans
 
 - Add DeleteResource() support in KBS, KBC, api-server-rest, than cleanup resources added by Secure Comms to KBS whenever a Peer Pod fail to be created or when a Peer Pod is terminated.

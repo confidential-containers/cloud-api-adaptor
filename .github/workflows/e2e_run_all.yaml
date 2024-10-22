@@ -99,6 +99,8 @@ jobs:
   prep_install:
     needs: [image]
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
     env:
       PROVIDERS: "libvirt"
     steps:
@@ -148,6 +150,11 @@ jobs:
           path: src/cloud-api-adaptor/install/
           retention-days: 7
 
+      - name: Define Test Matrix
+        id: matrix
+        run: |
+          echo "matrix=$(jq -c . < ./libvirt/e2e_matrix_libvirt.json)" >> "$GITHUB_OUTPUT"
+
   # Run libvirt e2e tests if pull request labeled 'test_e2e_libvirt'
   libvirt:
     name: libvirt
@@ -158,17 +165,12 @@ jobs:
     needs: [podvm, image, prep_install]
     strategy:
       fail-fast: false
-      matrix:
-        os:
-          - ubuntu
-        provider:
-          - generic
-        arch:
-          - amd64
+      matrix: ${{ fromJSON(needs.prep_install.outputs.matrix) }}
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
+      secure_comms: ${{ matrix.secure_comms }}
     secrets: inherit
