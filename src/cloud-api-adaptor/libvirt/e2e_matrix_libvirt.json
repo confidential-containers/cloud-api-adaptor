@@ -1,0 +1,6 @@
+{
+    "secure_comms": ["none"],
+    "os": ["ubuntu"],
+    "provider": ["generic"],
+    "arch": ["amd64"]
+}
