@@ -32,7 +32,7 @@ func TestSshProxyReverseKBS(t *testing.T) {
 	////////// CAA StartVM
 	ipAddr, _ := netip.ParseAddr("127.0.0.1") // ipAddr of the VM
 	ipAddrs := []netip.Addr{ipAddr}
-	ci := sshClient.InitPP(context.Background(), "sid", ipAddrs)
+	ci, _ := sshClient.InitPP(context.Background(), "sid")
 	if ci == nil {
 		log.Fatalf("failed InitiatePeerPodTunnel")
 	}
@@ -46,12 +46,17 @@ func TestSshProxyReverseKBS(t *testing.T) {
 	// create a podvm
 	gkc := test.NewGetKeyClient("7030")
 	ctx2, cancel2 := context.WithCancel(context.Background())
-	sshServer := ppssh.NewSshServer([]string{"BOTH_PHASES:KBS:7030", "KUBERNETES_PHASE:KUBEAPI:16443", "KUBERNETES_PHASE:DNS:9053"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7121"}, ppssh.GetSecret(gkc.GetKey), sshport)
+
+	ppSecrets := ppssh.NewPpSecrets(ppssh.GetSecret(gkc.GetKey))
+	ppSecrets.AddKey(ppssh.WN_PUBLIC_KEY)
+	ppSecrets.AddKey(ppssh.PP_PRIVATE_KEY)
+
+	sshServer := ppssh.NewSshServer([]string{"BOTH_PHASES:KBS:7030", "KUBERNETES_PHASE:KUBEAPI:16443", "KUBERNETES_PHASE:DNS:9053"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7121"}, ppSecrets, sshport)
 	_ = sshServer.Start(ctx2)
 
 	// Forwarder Initialization
 
-	if err := ci.Start(); err != nil {
+	if err := ci.Start(ipAddrs); err != nil {
 		log.Fatalf("failed ci.Start: %s", err)
 	}
 

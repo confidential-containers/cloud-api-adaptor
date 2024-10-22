@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
@@ -27,6 +28,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/wnssh"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	putil "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
@@ -46,6 +48,24 @@ type InitData struct {
 	Algorithm string            `toml:"algorithm"`
 	Version   string            `toml:"version"`
 	Data      map[string]string `toml:"data,omitempty"`
+}
+
+type ServerConfig struct {
+	TLSConfig               *tlsutil.TLSConfig
+	SocketPath              string
+	PauseImage              string
+	PodsDir                 string
+	ForwarderPort           string
+	ProxyTimeout            time.Duration
+	Initdata                string
+	EnableCloudConfigVerify bool
+	SecureComms             bool
+	SecureCommsInbounds     string
+	SecureCommsOutbounds    string
+	SecureCommsPpInbounds   string
+	SecureCommsPpOutbounds  string
+	SecureCommsKbsAddress   string
+	PeerPodsLimitPerNode    int
 }
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -87,15 +107,20 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir,
-	daemonPort, initdata, sshport string) Service {
+	serverConfig *ServerConfig, sshport string) Service {
 	var err error
 	var sshClient *wnssh.SshClient
 
-	if secureComms {
-		inbounds := append([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, strings.Split(secureCommsInbounds, ",")...)
-		outbounds := append([]string{"BOTH_PHASES:KBS:" + kbsAddress}, strings.Split(secureCommsOutbounds, ",")...)
-		sshClient, err = wnssh.InitSshClient(inbounds, outbounds, kbsAddress, sshport)
+	if serverConfig.SecureComms {
+		inbounds := append([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, strings.Split(serverConfig.SecureCommsInbounds, ",")...)
+
+		var outbounds []string
+		outbounds = append(outbounds, strings.Split(serverConfig.SecureCommsOutbounds, ",")...)
+		if len(serverConfig.SecureCommsKbsAddress) > 0 {
+			outbounds = append(outbounds, "BOTH_PHASES:KBS:"+serverConfig.SecureCommsKbsAddress)
+		}
+
+		sshClient, err = wnssh.InitSshClient(inbounds, outbounds, serverConfig.SecureCommsKbsAddress, sshport)
 		if err != nil {
 			log.Fatalf("InitSshClient %v", err)
 		}
@@ -105,9 +130,7 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 		provider:     provider,
 		proxyFactory: proxyFactory,
 		sandboxes:    map[sandboxID]*sandbox{},
-		podsDir:      podsDir,
-		daemonPort:   daemonPort,
-		initdata:     initdata,
+		serverConfig: serverConfig,
 		workerNode:   workerNode,
 		sshClient:    sshClient,
 	}
@@ -224,7 +247,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
 	}
 
-	podDir := filepath.Join(s.podsDir, string(sid))
+	podDir := filepath.Join(s.serverConfig.PodsDir, string(sid))
 	if err := os.MkdirAll(podDir, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("creating a pod directory: %s, %w", podDir, err)
 	}
@@ -268,6 +291,22 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		daemonConfig.TLSServerKey = string(keyPEM)
 	}
 
+	var ci *wnssh.SshClientInstance
+
+	if s.sshClient != nil {
+		var ppPrivateKey []byte
+		ci, ppPrivateKey = s.sshClient.InitPP(context.Background(), string(sid))
+		if ci == nil {
+			return nil, fmt.Errorf("failed sshClient.InitPP")
+		}
+
+		daemonConfig.WnPublicKey = s.sshClient.GetWnPublicKey()
+		daemonConfig.PpPrivateKey = ppPrivateKey
+		daemonConfig.SecureCommsOutbounds = s.serverConfig.SecureCommsPpOutbounds
+		daemonConfig.SecureCommsInbounds = s.serverConfig.SecureCommsPpInbounds
+		daemonConfig.SecureComms = true
+	}
+
 	daemonJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
 	if err != nil {
 		return nil, fmt.Errorf("generating JSON data: %w", err)
@@ -308,19 +347,19 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	logger.Printf("initdata in Pod annotation: %s", initdataStr)
 
 	if initdataStr == "" {
-		logger.Printf("initdata in pod annotation is empty, use global initdata: %s", s.initdata)
-		initdataStr = s.initdata
+		logger.Printf("initdata in pod annotation is empty, use global initdata: %s", s.serverConfig.Initdata)
+		initdataStr = s.serverConfig.Initdata
 	}
 
 	if initdataStr != "" {
 		decodedBytes, err := base64.StdEncoding.DecodeString(initdataStr)
 		if err != nil {
-			return nil, fmt.Errorf("Error base64 decode initdata: %w", err)
+			return nil, fmt.Errorf("error base64 decode initdata: %w", err)
 		}
 		initdata := InitData{}
 		err = toml.Unmarshal(decodedBytes, &initdata)
 		if err != nil {
-			return nil, fmt.Errorf("Error unmarshalling initdata: %w", err)
+			return nil, fmt.Errorf("error unmarshalling initdata: %w", err)
 		}
 
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
@@ -330,14 +369,15 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	}
 
 	sandbox := &sandbox{
-		id:           sid,
-		podName:      pod,
-		podNamespace: namespace,
-		netNSPath:    netNSPath,
-		agentProxy:   agentProxy,
-		podNetwork:   podNetworkConfig,
-		cloudConfig:  cloudConfig,
-		spec:         vmSpec,
+		id:            sid,
+		podName:       pod,
+		podNamespace:  namespace,
+		netNSPath:     netNSPath,
+		agentProxy:    agentProxy,
+		podNetwork:    podNetworkConfig,
+		cloudConfig:   cloudConfig,
+		spec:          vmSpec,
+		sshClientInst: ci,
 	}
 
 	if err := s.addSandbox(sid, sandbox); err != nil {
@@ -381,24 +421,16 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	logger.Printf("created an instance %s for sandbox %s", instance.Name, sid)
 
 	instanceIP := instance.IPs[0].String()
-	forwarderPort := s.daemonPort
+	forwarderPort := s.serverConfig.ForwarderPort
 
 	if s.sshClient != nil {
-		ci := s.sshClient.InitPP(context.Background(), string(sid), instance.IPs)
-		if ci == nil {
-			return nil, fmt.Errorf("failed sshClient.InitPP")
-		}
-
-		if err := ci.Start(); err != nil {
+		if err := sandbox.sshClientInst.Start(instance.IPs); err != nil {
 			return nil, fmt.Errorf("failed SshClientInstance.Start: %w", err)
 		}
 
 		// Set agentProxy
 		instanceIP = "127.0.0.1"
-		forwarderPort = ci.GetPort("KATAAGENT")
-
-		// Set ci in sandbox
-		sandbox.sshClientInst = ci
+		forwarderPort = sandbox.sshClientInst.GetPort("KATAAGENT")
 	}
 
 	if err := s.workerNode.Setup(sandbox.netNSPath, instance.IPs, sandbox.podNetwork); err != nil {

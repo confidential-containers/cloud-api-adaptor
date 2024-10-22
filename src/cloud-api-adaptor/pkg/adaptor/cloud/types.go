@@ -31,12 +31,10 @@ type cloudService struct {
 	workerNode   podnetwork.WorkerNode
 	sandboxes    map[sandboxID]*sandbox
 	cond         *sync.Cond
-	podsDir      string
-	daemonPort   string
 	mutex        sync.Mutex
 	ppService    *k8sops.PeerPodService
-	initdata     string
 	sshClient    *wnssh.SshClient
+	serverConfig *ServerConfig
 }
 
 type sandboxID string

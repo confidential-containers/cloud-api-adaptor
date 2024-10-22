@@ -24,6 +24,8 @@ optionals+=""
 [[ "${SECURE_COMMS}" == "true" ]] && optionals+="-secure-comms "
 [[ "${SECURE_COMMS_INBOUNDS}" ]] && optionals+="-secure-comms-inbounds ${SECURE_COMMS_INBOUNDS} "
 [[ "${SECURE_COMMS_OUTBOUNDS}" ]] && optionals+="-secure-comms-outbounds ${SECURE_COMMS_OUTBOUNDS} "
+[[ "${SECURE_COMMS_PP_INBOUNDS}" ]] && optionals+="-secure-comms-pp-inbounds ${SECURE_COMMS_PP_INBOUNDS} "
+[[ "${SECURE_COMMS_PP_OUTBOUNDS}" ]] && optionals+="-secure-comms-pp-outbounds ${SECURE_COMMS_PP_OUTBOUNDS} "
 [[ "${SECURE_COMMS_KBS_ADDR}" ]] && optionals+="-secure-comms-kbs ${SECURE_COMMS_KBS_ADDR} "
 [[ "${PEERPODS_LIMIT_PER_NODE}" ]] && optionals+="-peerpods-limit-per-node ${PEERPODS_LIMIT_PER_NODE} "
 

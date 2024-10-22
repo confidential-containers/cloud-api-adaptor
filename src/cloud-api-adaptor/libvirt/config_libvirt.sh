@@ -92,6 +92,16 @@ installK8sclis() {
     fi
 }
 
+if [ $# -lt 1 ]
+then
+    echo 'securecomms=["none", "withoutKbs"]'
+    exit 0
+else
+    SECURE_COMMS=$1
+fi
+
+echo "SECURE_COMMS is ${SECURE_COMMS}"
+
 echo "Installing Go..."
 installGolang
 echo "Installing Libvirt..."
@@ -118,3 +128,21 @@ rm -f libvirt.properties
 echo "libvirt_uri=\"qemu+ssh://${USER}@${IP}/system?no_verify=1\"" >> libvirt.properties
 echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
 echo "CLUSTER_NAME=\"peer-pods\"" >> libvirt.properties
+KBS_IMAGE=$(./hack/yq-shim.sh '.oci.kbs.registry' ./versions.yaml)
+KBS_IMAGE_TAG=$(./hack/yq-shim.sh '.oci.kbs.tag' ./versions.yaml)
+[ -z ${KBS_IMAGE} ] || echo "KBS_IMAGE=\"${KBS_IMAGE}\"" >> libvirt.properties
+[ -z ${KBS_IMAGE_TAG} ] || echo "KBS_IMAGE_TAG=\"${KBS_IMAGE_TAG}\"" >> libvirt.properties
+
+case $SECURE_COMMS in
+
+  "withoutKbs")
+    echo "processing withoutKbs"
+    echo "SECURE_COMMS=\"true\"" >> libvirt.properties
+    echo "SECURE_COMMS_KBS_ADDR=\"false\"" >> libvirt.properties
+    echo "INITDATA=\"\"" >> libvirt.properties
+    ;;
+
+  *)
+    echo "processing none"
+    ;;
+esac
