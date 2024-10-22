@@ -1,5 +1,5 @@
 {
-    "securecomms": ["none", "withoutKbs"],
+    "secure_comms": ["none", "withoutKbs"],
     "os": ["ubuntu"],
     "provider": ["generic"],
     "arch": ["amd64"]
