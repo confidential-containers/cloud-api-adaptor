@@ -154,6 +154,7 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt')
     needs: [podvm, image, prep_install]
     strategy:
