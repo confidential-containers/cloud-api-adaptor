@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -42,7 +43,7 @@ func DoTestDeleteSimplePod(t *testing.T, e env.Environment, assert CloudAssert) 
 func DoTestCreatePodWithConfigMap(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "busybox-configmap-pod"
 	containerName := "busybox-configmap-container"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	configMapName := "busybox-configmap"
 	configMapFileName := "example.txt"
 	podKubeConfigmapDir := "/etc/config/"
@@ -75,7 +76,7 @@ func DoTestCreatePodWithSecret(t *testing.T, e env.Environment, assert CloudAsse
 	//DoTestCreatePod(t, assert, "Secret is created and contains data", pod)
 	podName := "busybox-secret-pod"
 	containerName := "busybox-secret-container"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	secretName := "busybox-secret"
 	podKubeSecretsDir := "/etc/secret/"
 	usernameFileName := "username"
@@ -194,7 +195,7 @@ func DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T, e env
 
 func DoTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "env-variable-in-config"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure), WithEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}), WithCommand([]string{"/bin/sh", "-c", "env"}))
 	expectedPodLogString := "ISPRODUCTION=true"
 	NewTestCase(t, e, "EnvVariablePeerPodWithDeploymentOnly", assert, "Peer pod with environmental variables has been created").WithPod(pod).WithExpectedPodLogString(expectedPodLogString).WithCustomPodState(v1.PodSucceeded).Run()
@@ -262,7 +263,7 @@ func DoTestPodVMwithNoAnnotations(t *testing.T, e env.Environment, assert CloudA
 
 	podName := "no-annotations"
 	containerName := "busybox"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 	testInstanceTypes := InstanceValidatorFunctions{
 		testSuccessfn: func(instance string) bool {
@@ -282,7 +283,7 @@ func DoTestPodVMwithNoAnnotations(t *testing.T, e env.Environment, assert CloudA
 func DoTestPodVMwithAnnotationsInstanceType(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
 	podName := "annotations-instance-type"
 	containerName := "busybox"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.machine_type": expectedType,
 	}
@@ -306,7 +307,7 @@ func DoTestPodVMwithAnnotationsInstanceType(t *testing.T, e env.Environment, ass
 func DoTestPodVMwithAnnotationsCPUMemory(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
 	podName := "annotations-cpu-mem"
 	containerName := "busybox"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.default_vcpus":  "2",
 		"io.katacontainers.config.hypervisor.default_memory": "12288",
@@ -331,7 +332,7 @@ func DoTestPodVMwithAnnotationsCPUMemory(t *testing.T, e env.Environment, assert
 func DoTestPodVMwithAnnotationsInvalidInstanceType(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
 	podName := "annotations-invalid-instance-type"
 	containerName := "busybox"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	expectedErrorMessage := `requested instance type ("` + expectedType + `") is not part of supported instance types list`
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.machine_type": expectedType,
@@ -355,7 +356,7 @@ func DoTestPodVMwithAnnotationsInvalidInstanceType(t *testing.T, e env.Environme
 func DoTestPodVMwithAnnotationsLargerMemory(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "annotations-too-big-mem"
 	containerName := "busybox"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	expectedErrorMessage := "failed to get instance type based on vCPU and memory annotations: no instance type found for the given vcpus (2) and memory (18432)"
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.default_vcpus":  "2",
@@ -380,7 +381,7 @@ func DoTestPodVMwithAnnotationsLargerMemory(t *testing.T, e env.Environment, ass
 func DoTestPodVMwithAnnotationsLargerCPU(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "annotations-too-big-cpu"
 	containerName := "busybox"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	expectedErrorMessage := []string{
 		"no instance type found for the given vcpus (3) and memory (12288)",
 		"Number of cpus 3 specified in annotation default_vcpus is greater than the number of CPUs 2 on the system",
@@ -447,10 +448,10 @@ func DoTestCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T, e env.E
 func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert CloudAssert) {
 	clientPodName := "test-client"
 	clientContainerName := "busybox"
-	clientImageName := BUSYBOX_IMAGE
+	clientImageName := getTestImage(t, "busybox")
 	serverPodName := "test-server"
 	serverContainerName := "nginx"
-	serverImageName := "nginx:latest"
+	serverImageName := getTestImage(t, "nginx")
 	serviceName := "nginx-server"
 	labels := map[string]string{
 		"app": "nginx-server",
@@ -488,10 +489,10 @@ func DoTestPodToServiceCommunication(t *testing.T, e env.Environment, assert Clo
 func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAssert) {
 	clientPodName := "mtls-client"
 	clientContainerName := "curl"
-	clientImageName := "docker.io/curlimages/curl:8.4.0"
+	clientImageName := getTestImage(t, "curl")
 	serverPodName := "mtls-server"
 	serverContainerName := "nginx"
-	serverImageName := "nginx:latest"
+	serverImageName := getTestImage(t, "nginx")
 	caService, _ := tlsutil.NewCAService("nginx")
 	serverCACertPEM := caService.RootCertificate()
 	serviceName := "nginx-mtls"
@@ -706,7 +707,7 @@ func DoTestPermissivePolicyAllowsExec(t *testing.T, e env.Environment, assert Cl
 func DoTestPodWithCrioDeviceAnnotation(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "pod-with-devices"
 	containerName := "busybox"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	devicesAnnotation := map[string]string{
 		"io.kubernetes.cri-o.Devices": "/dev/fuse",
 	}
@@ -736,7 +737,7 @@ func DoTestPodWithCrioDeviceAnnotation(t *testing.T, e env.Environment, assert C
 func DoTestPodWithIncorrectCrioDeviceAnnotation(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "pod-with-devices"
 	containerName := "busybox"
-	imageName := BUSYBOX_IMAGE
+	imageName := getTestImage(t, "busybox")
 	devicesAnnotation := map[string]string{
 		"io.kubernetes.cri.Dev": "/dev/fuse",
 	}
