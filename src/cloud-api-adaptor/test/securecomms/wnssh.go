@@ -30,7 +30,7 @@ func WN() bool {
 	ipAddr, _ := netip.ParseAddr("127.0.0.1") // ipAddr of the VM
 	ipAddrs := []netip.Addr{ipAddr}
 	ctx := context.Background()
-	ci := sshClient.InitPP(ctx, "sid", ipAddrs)
+	ci, _ := sshClient.InitPP(ctx, "sid")
 	if ci == nil {
 		log.Fatalf("failed InitiatePeerPodTunnel")
 	}
@@ -41,7 +41,7 @@ func WN() bool {
 		log.Fatalf("failed find port")
 	}
 
-	if err := ci.Start(); err != nil {
+	if err := ci.Start(ipAddrs); err != nil {
 		log.Fatalf("failed ci.Start: %s", err)
 	}
 
