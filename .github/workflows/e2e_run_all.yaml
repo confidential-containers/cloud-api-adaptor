@@ -6,9 +6,6 @@
 name: (Callable) Run all e2e tests - TEST ONLY
 
 on:
-  push:
-    branches:
-      - 'test-action'
   workflow_call:
     inputs:
       caa_image_tag:
