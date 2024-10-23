@@ -1,0 +1,21 @@
+# (C) Copyright Confidential Containers Contributors 2023.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Daily run the e2e tests for libvirt.
+---
+name: daily e2e tests for libvirt
+
+on:
+  push:
+    branches:
+      - 'test-action'
+
+jobs:
+  e2e:
+    uses: ./.github/workflows/e2e_run_all.yaml
+    with:
+      caa_image_tag: latest
+      git_ref: refs/heads/main
+      podvm_image_tag: latest
+      registry: ghcr.io/${{ github.repository_owner }}
+    secrets: inherit
