@@ -3,7 +3,7 @@
 #
 # Run end-to-end (e2e) tests.
 ---
-name: (Callable) Run all e2e tests
+name: (Callable) Run all e2e tests - TEST ONLY
 
 on:
   push:
