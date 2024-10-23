@@ -63,6 +63,7 @@ jobs:
           cache-dependency-path: "**/go.sum"
 
       - name: Setup docker
+        if: ${{ runner.environment == 'self-hosted' }}
         run: |
           sudo apt-get install -y docker.io
           sudo usermod -aG docker "$USER"
