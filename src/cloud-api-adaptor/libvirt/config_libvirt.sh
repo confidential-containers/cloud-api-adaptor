@@ -80,7 +80,15 @@ installKcli() {
     if ! command -v kcli >/dev/null; then
         echo "Installing kcli"
         kcli_version="$(./hack/yq-shim.sh '.tools.kcli' versions.yaml)"
-        sudo pip3 install kcli==${kcli_version}
+        if [ $OS_DISTRO == "ubuntu" ]; then
+            # Work around newer Ubuntu's python venv errors by using pipx to install kcli
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install pipx -y
+            # export PATH="$PATH:$HOME/.local/bin"
+            pipx install kcli==${kcli_version}
+            pipx ensurepath
+        else
+            sudo pip3 install kcli==${kcli_version}
+        fi
     fi
 }
 
@@ -118,3 +126,8 @@ rm -f libvirt.properties
 echo "libvirt_uri=\"qemu+ssh://${USER}@${IP}/system?no_verify=1\"" >> libvirt.properties
 echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
 echo "CLUSTER_NAME=\"peer-pods\"" >> libvirt.properties
+
+if [ $OS_DISTRO == "ubuntu" ]; then
+    # Reload shell so that pipx install PATH is available
+    exec $SHELL
+fi

@@ -87,6 +87,8 @@ jobs:
           echo "CAA_IMAGE=\"${{ inputs.caa_image }}\"" >> libvirt.properties
           # For debugging
           cat libvirt.properties
+          # Add the kcli install directory to PATH for later steps
+          echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
       - uses: oras-project/setup-oras@v1
         with:
