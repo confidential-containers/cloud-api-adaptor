@@ -7,6 +7,11 @@ name: (Callable) libvirt e2e tests
 on:
   workflow_call:
     inputs:
+      runner:
+        default: 'ubuntu-24.04'
+        description: The runner to execute the workflow on. Defaults to 'ubuntu-24.04'.
+        required: false
+        type: string
       podvm_image:
         required: true
         type: string
@@ -38,7 +43,7 @@ defaults:
 
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.runner }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
