@@ -92,6 +92,9 @@ installK8sclis() {
     fi
 }
 
+TEST_E2E_SECURE_COMMS=${TEST_E2E_SECURE_COMMS:-none}.
+echo "SECURE_COMMS is ${TEST_E2E_SECURE_COMMS}"
+
 echo "Installing Go..."
 installGolang
 echo "Installing Libvirt..."
@@ -118,3 +121,12 @@ rm -f libvirt.properties
 echo "libvirt_uri=\"qemu+ssh://${USER}@${IP}/system?no_verify=1\"" >> libvirt.properties
 echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
 echo "CLUSTER_NAME=\"peer-pods\"" >> libvirt.properties
+
+# switch to the appropriate e2e test and add configs to libvirt.properties as needed
+case $TEST_E2E_SECURE_COMMS in
+
+  *)
+    echo "processing none"
+    echo "SECURE_COMMS=\"false\"" >> libvirt.properties
+    ;;
+esac

@@ -23,7 +23,11 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
         required: false
         type: string
-
+      secure_comms:
+        default: 'none'
+        description: SecureComms configuration. Defaults to none.
+        required: false
+        type: string
 env:
   CLOUD_PROVIDER: libvirt
   DEBIAN_FRONTEND: noninteractive
@@ -83,6 +87,7 @@ jobs:
 
       - name: Config Libvirt
         run: |
+          export TEST_E2E_SECURE_COMMS="${{ inputs.secure_comms }}"
           ./libvirt/config_libvirt.sh
           echo "CAA_IMAGE=\"${{ inputs.caa_image }}\"" >> libvirt.properties
           # For debugging
@@ -121,6 +126,7 @@ jobs:
           export TEST_PROVISION_FILE="$PWD/libvirt.properties"
           export TEST_PODVM_IMAGE="${{ env.PODVM_QCOW2 }}"
           export TEST_E2E_TIMEOUT="75m"
+          export TEST_E2E_SECURE_COMMS="${{ inputs.secure_comms }}"
 
           make test-e2e
 
