@@ -6,14 +6,12 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -44,41 +42,34 @@ type ExtraPod struct {
 	pod                  *v1.Pod
 	imagePullTimer       bool
 	expectedPodLogString string
-	testInstanceTypes    InstanceValidatorFunctions
 	podState             v1.PodPhase
 	testCommands         []TestCommand
-}
-
-type InstanceValidatorFunctions struct {
-	testSuccessfn func(instance string) bool
-	testFailurefn func(error error) bool
 }
 
 type TestCase struct {
-	testing              *testing.T
-	testEnv              env.Environment
-	testName             string
-	assert               CloudAssert
-	assessMessage        string
-	pod                  *v1.Pod
-	extraPods            []*ExtraPod
-	configMap            *v1.ConfigMap
-	secret               *v1.Secret
-	extraSecrets         []*v1.Secret
-	pvc                  *v1.PersistentVolumeClaim
-	job                  *batchv1.Job
-	service              *v1.Service
-	testCommands         []TestCommand
-	expectedPodLogString string
-	expectedPodDescribe  string
-	podState             v1.PodPhase
-	imagePullTimer       bool
-	noAuthJson           bool
-	deletionWithin       time.Duration
-	testInstanceTypes    InstanceValidatorFunctions
-	isNydusSnapshotter   bool
-	FailReason           string
-	alternateImageName   string
+	testing                     *testing.T
+	testEnv                     env.Environment
+	testName                    string
+	assert                      CloudAssert
+	assessMessage               string
+	pod                         *v1.Pod
+	extraPods                   []*ExtraPod
+	configMap                   *v1.ConfigMap
+	secret                      *v1.Secret
+	extraSecrets                []*v1.Secret
+	pvc                         *v1.PersistentVolumeClaim
+	job                         *batchv1.Job
+	service                     *v1.Service
+	testCommands                []TestCommand
+	expectedPodLogString        string
+	expectedPodEventErrorString string
+	podState                    v1.PodPhase
+	imagePullTimer              bool
+	noAuthJson                  bool
+	deletionWithin              time.Duration
+	expectedInstanceType        string
+	isNydusSnapshotter          bool
+	alternateImageName          string
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -131,8 +122,8 @@ func (tc *TestCase) WithTestCommands(TestCommands []TestCommand) *TestCase {
 	return tc
 }
 
-func (tc *TestCase) WithInstanceTypes(testInstanceTypes InstanceValidatorFunctions) *TestCase {
-	tc.testInstanceTypes = testInstanceTypes
+func (tc *TestCase) WithExpectedInstanceType(expectedInstanceType string) *TestCase {
+	tc.expectedInstanceType = expectedInstanceType
 	return tc
 }
 
@@ -151,8 +142,8 @@ func (tc *TestCase) WithExpectedPodLogString(expectedPodLogString string) *TestC
 	return tc
 }
 
-func (tc *TestCase) WithExpectedPodDescribe(expectedPodDescribe string) *TestCase {
-	tc.expectedPodDescribe = expectedPodDescribe
+func (tc *TestCase) WithExpectedPodEventError(expectedPodEventMessage string) *TestCase {
+	tc.expectedPodEventErrorString = expectedPodEventMessage
 	return tc
 }
 
@@ -173,11 +164,6 @@ func (tc *TestCase) WithNoAuthJson() *TestCase {
 
 func (tc *TestCase) WithNydusSnapshotter() *TestCase {
 	tc.isNydusSnapshotter = true
-	return tc
-}
-
-func (tc *TestCase) WithFailReason(reason string) *TestCase {
-	tc.FailReason = reason
 	return tc
 }
 
@@ -287,7 +273,7 @@ func (tc *TestCase) Run() {
 						}
 						if pod.Status.Phase == v1.PodRunning {
 							t.Logf("Log of the pod %.v \n===================\n", pod.Name)
-							podLogString, _ := GetPodLog(ctx, client, *pod)
+							podLogString, _ := GetPodLog(ctx, client, pod)
 							t.Log(podLogString)
 							t.Logf("===================\n")
 						}
@@ -348,174 +334,69 @@ func (tc *TestCase) Run() {
 
 			if tc.pod != nil {
 				if tc.imagePullTimer {
-					if err := client.Resources("confidential-containers-system").List(ctx, &podlist); err != nil {
-						t.Fatal(err)
-					}
-					for _, caaPod := range podlist.Items {
-						if caaPod.Labels["app"] == "cloud-api-adaptor" {
-							imagePullTime, err := WatchImagePullTime(ctx, client, caaPod, *tc.pod)
-							if err != nil {
-								t.Fatal(err)
-							}
-							t.Logf("Time Taken to pull 4GB Image: %s", imagePullTime)
-							break
-						}
+					err := VerifyImagePullTimer(ctx, t, client, tc.pod)
+					if err != nil {
+						t.Error(err)
 					}
 				}
 
 				if tc.expectedPodLogString != "" {
-					LogString, err := ComparePodLogString(ctx, client, *tc.pod, tc.expectedPodLogString)
+					logString, err := ComparePodLogString(ctx, client, tc.pod, tc.expectedPodLogString)
 					if err != nil {
-						t.Logf("Output:%s", LogString)
-						t.Fatal(err)
-					}
-					t.Logf("Log output of peer pod:%s", LogString)
-				}
-
-				if tc.expectedPodDescribe != "" {
-					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
-						t.Fatal(err)
-					}
-					for _, podItem := range podlist.Items {
-						if podItem.ObjectMeta.Name == tc.pod.Name {
-							podEvent, err := PodEventExtractor(ctx, client, *tc.pod)
-							if err != nil {
-								t.Fatal(err)
-							}
-							t.Logf("podEvent: %+v\n", podEvent)
-							if strings.Contains(podEvent.EventDescription, tc.expectedPodDescribe) {
-								t.Logf("Output Log from Pod: %s", podEvent)
-							} else {
-								t.Errorf("Job Created pod with Invalid log")
-							}
-							break
-						} else {
-							t.Fatal("Pod Not Found...")
-						}
+						t.Errorf("Looking for %s, in pod log: %s, failed with: %v", tc.expectedPodLogString, logString, err)
 					}
 				}
 
-				if tc.testInstanceTypes.testSuccessfn != nil && tc.testInstanceTypes.testFailurefn != nil {
-					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
-						t.Fatal(err)
+				if tc.expectedPodEventErrorString != "" {
+					err := ComparePodEventWarningDescriptions(ctx, t, client, tc.pod, tc.expectedPodEventErrorString)
+					if err != nil {
+						t.Errorf("Looking for %s, in pod events log, failed with: %v", tc.expectedPodEventErrorString, err)
 					}
-
-					for _, podItem := range podlist.Items {
-						if podItem.ObjectMeta.Name == tc.pod.Name {
-							profile, error := tc.assert.GetInstanceType(t, tc.pod.Name)
-							if error != nil {
-								if error.Error() == "Failed to Create PodVM Instance" {
-									podEvent, err := PodEventExtractor(ctx, client, *tc.pod)
-									if err != nil {
-										t.Fatal(err)
-									}
-									if !tc.testInstanceTypes.testFailurefn(errors.New(podEvent.EventDescription)) {
-										t.Fatal(fmt.Errorf("Pod Failed to execute expected error message %v", error.Error()))
-									}
-								} else {
-									t.Fatal(error)
-								}
-
-							}
-							if profile != "" {
-								t.Logf("PodVM Created with Instance Type: %v", profile)
-								if !tc.testInstanceTypes.testSuccessfn(profile) {
-									t.Fatal(fmt.Errorf("PodVM Created with Different Instance Type %v", profile))
-								}
-							}
-							break
-						} else {
-							t.Fatal("Pod Not Found...")
-						}
+				} else {
+					// There shouldn't have been any pod event warnings/errors
+					warnings, err := GetPodEventWarningDescriptions(ctx, client, tc.pod)
+					if err != nil {
+						t.Errorf("We hit an error trying to get the event log of %s", tc.pod.Name)
 					}
+					if warnings != "" {
+						t.Errorf("unexpected warning/error event(s): %s", warnings)
+					}
+				}
 
+				if tc.expectedInstanceType != "" {
+					err := CompareInstanceType(ctx, t, client, *tc.pod, tc.expectedPodEventErrorString, tc.assert.GetInstanceType)
+					if err != nil {
+						t.Errorf("CompareInstanceType failed: %v", err)
+					}
 				}
 
 				if tc.podState == v1.PodRunning {
 					if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
-						t.Fatal(err)
-					}
-					if len(tc.testCommands) > 0 {
+						t.Errorf("Get PodList failed: %v", err)
+					} else {
 						if len(tc.testCommands) > 0 {
-							logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
-							t.Logf("Output when execute test commands: %s", logString)
-							if err != nil {
-								t.Fatal(err)
-							}
-						}
-					}
-
-					err := AssessPodRequestAndLimit(ctx, client, tc.pod)
-					if err != nil {
-						t.Logf("request and limit for podvm extended resource are not set to 1")
-						t.Fatal(err)
-					}
-
-					tc.assert.HasPodVM(t, tc.pod.Name)
-				}
-
-				if tc.podState != v1.PodRunning && tc.podState != v1.PodSucceeded {
-					profile, error := tc.assert.GetInstanceType(t, tc.pod.Name)
-					if error != nil {
-						if error.Error() == "Failed to Create PodVM Instance" {
-							_, err := PodEventExtractor(ctx, client, *tc.pod)
-							if err != nil {
-								t.Fatal(err)
-							}
-						} else {
-							t.Fatal(error)
-						}
-					} else if profile != "" {
-						t.Logf("PodVM Created with Instance Type %v", profile)
-						if tc.FailReason != "" {
-							var podlist v1.PodList
-							var podLogString string
-							if err := client.Resources("confidential-containers-system").List(ctx, &podlist); err != nil {
-								t.Fatal(err)
-							}
-							for _, pod := range podlist.Items {
-								if pod.Labels["app"] == "cloud-api-adaptor" {
-									podLogString, _ = GetPodLog(ctx, client, pod)
-									break
-								}
-							}
-							if strings.Contains(podLogString, tc.FailReason) {
-								t.Logf("failed due to expected reason %s", tc.FailReason)
-							} else {
-								t.Logf("cloud-api-adaptor pod logs: %s", podLogString)
-								yamlData, err := yaml.Marshal(tc.pod.Status)
+							if len(tc.testCommands) > 0 {
+								logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
 								if err != nil {
-									log.Errorf("Error marshaling pod.Status to JSON: %s", err.Error())
-								} else {
-									t.Logf("Current Pod State: %v", string(yamlData))
+									t.Errorf("AssessPodTestCommands failed, with output: %s and error: %v", logString, err)
 								}
-								t.Fatal("failed due to unknown reason")
 							}
-						} else {
-							t.Logf("Pod Failed If you want to cross check please give .WithFailReason(error string)")
 						}
+
+						err := AssessPodRequestAndLimit(ctx, client, tc.pod)
+						if err != nil {
+							t.Errorf("request and limit for podvm extended resource are not set to 1: %v", err)
+						}
+
+						tc.assert.HasPodVM(t, tc.pod.Name)
 					}
+
 				}
 
 				if tc.isNydusSnapshotter {
-					nodeName, err := GetNodeNameFromPod(ctx, client, *tc.pod)
+					err := VerifyNydusSnapshotter(ctx, t, client, tc.pod)
 					if err != nil {
-						t.Fatal(err)
-					}
-					log.Tracef("Test pod running on node %s", nodeName)
-
-					containerId := tc.pod.Status.ContainerStatuses[0].ContainerID
-					containerId, found := strings.CutPrefix(containerId, "containerd://")
-					if !found {
-						t.Fatal("unexpected container id format")
-					}
-
-					usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client, nodeName, containerId)
-					if err != nil {
-						t.Fatal(err)
-					}
-					if !usedNydusSnapshotter {
-						t.Fatal("Expected to pull with nydus, but that didn't happen")
+						t.Errorf("VerifyNydusSnapshotter failed: %v", err)
 					}
 				}
 			}
@@ -527,16 +408,12 @@ func (tc *TestCase) Run() {
 						t.Fatal("Please implement assess logic for imagePullTimer")
 					}
 					if extraPod.expectedPodLogString != "" {
-						LogString, err := ComparePodLogString(ctx, client, *extraPod.pod, extraPod.expectedPodLogString)
+						LogString, err := ComparePodLogString(ctx, client, extraPod.pod, extraPod.expectedPodLogString)
 						if err != nil {
 							t.Logf("Output:%s", LogString)
 							t.Fatal(err)
 						}
 						t.Logf("Log output of peer pod:%s", LogString)
-					}
-					if extraPod.testInstanceTypes.testSuccessfn != nil && extraPod.testInstanceTypes.testFailurefn != nil {
-						// TBD
-						t.Fatal("Error: testInstanceTypes hasn't been implemented in extraPods. Please implement assess for function testInstanceTypes.")
 					}
 					if extraPod.podState == v1.PodRunning {
 						if len(extraPod.testCommands) > 0 {
@@ -553,28 +430,14 @@ func (tc *TestCase) Run() {
 						// TBD
 						t.Fatal("Error: isNydusSnapshotter hasn't been implemented in extraPods. Please implement assess function for isNydusSnapshotter.")
 					}
-
 				}
-
 			}
 
 			if tc.alternateImageName != "" {
-				var caaPod v1.Pod
-				caaPod.Namespace = "confidential-containers-system"
-				expectedSuccessMessage := "Choosing " + tc.alternateImageName
-
-				pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.Namespace, "app", "cloud-api-adaptor")
+				err := VerifyAlternateImage(ctx, t, client, tc.alternateImageName)
 				if err != nil {
-					t.Fatal(err)
+					t.Errorf("VerifyAlternateImage failed: %v", err)
 				}
-
-				caaPod.Name = pods.Items[0].Name
-				LogString, err := ComparePodLogString(ctx, client, caaPod, expectedSuccessMessage)
-				if err != nil {
-					t.Logf("Output:%s", LogString)
-					t.Fatal(err)
-				}
-				t.Logf("PodVM was brought up using the alternate PodVM image %s", tc.alternateImageName)
 			}
 			return ctx
 		}).
