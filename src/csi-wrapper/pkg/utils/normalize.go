@@ -3,7 +3,10 @@
 
 package utils
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+)
 
 // TODO make these normalize functions generic
 
@@ -11,7 +14,7 @@ func NormalizeVolumeID(volumeID string) string {
 	normalizedVolumeID := strings.ReplaceAll(volumeID, "###", ".")
 	normalizedVolumeID = strings.ReplaceAll(normalizedVolumeID, "#", ".")
 
-	return normalizedVolumeID
+	return filepath.Base(normalizedVolumeID)
 }
 
 func NormalizeVMID(vmID string) string {
