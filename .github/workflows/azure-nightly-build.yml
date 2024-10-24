@@ -6,6 +6,10 @@ on:
   # will base on default branch `main`
   - cron: '0 3 * * *'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   generate-podvm-image-version:
     if: github.event.inputs.podvm-image-id == ''
