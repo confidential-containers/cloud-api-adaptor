@@ -169,8 +169,8 @@ jobs:
       fail-fast: false
       matrix:
         platforms: [
-          { os: ubuntu, provider: generic, arch: "amd64", runner: "az-ubuntu-2204", debug_flag: ""},
-          { os: fedora, provider: generic, arch: "amd64", runner: "az-ubuntu-2204", debug_flag: "-debug"},
+          { os: ubuntu, provider: generic, arch: "amd64", runner: "ubuntu-22.04", debug_flag: ""},
+          { os: fedora, provider: generic, arch: "amd64", runner: "ubuntu-22.04", debug_flag: "-debug"},
           { os: ubuntu, provider: generic, arch: "s390x", runner: "S390X", debug_flag: "" },
           { os: fedora, provider: generic,arch: "s390x", runner: "S390X", debug_flag: "-debug" },
         ]

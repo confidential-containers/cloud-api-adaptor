@@ -8,8 +8,8 @@ on:
   workflow_call:
     inputs:
       runner:
-        default: 'az-ubuntu-2204'
-        description: The runner to execute the workflow on. Defaults to 'az-ubuntu-2204'.
+        default: 'ubuntu-24.04'
+        description: The runner to execute the workflow on. Defaults to 'ubuntu-24.04'.
         required: false
         type: string
       podvm_image:
@@ -119,10 +119,6 @@ jobs:
           AUTHENTICATED_REGISTRY_IMAGE: ${{ vars.AUTHENTICATED_REGISTRY_IMAGE }}
           REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
         run: |
-          # # s390x on non-TEE need a dummy directory for the KBS
-          # if [[ "${{ inputs.runner }}" == "S390X" ]]; then
-          #   export IBM_SE_CREDS_DIR="$(mktemp -d -t ibmse.creds.XXXXXXXXXX)"
-          # fi
           export CLOUD_PROVIDER=libvirt
           export DEPLOY_KBS=true
           export TEST_PROVISION="yes"
