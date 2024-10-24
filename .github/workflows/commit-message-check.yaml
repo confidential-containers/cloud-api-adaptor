@@ -9,6 +9,10 @@ env:
 
     https://github.com/confidential-containers/confidential-containers/blob/main/CONTRIBUTING.md#patch-format
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   commit-message-check:
     runs-on: ubuntu-latest
