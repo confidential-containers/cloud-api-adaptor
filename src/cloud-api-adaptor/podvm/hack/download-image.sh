@@ -3,7 +3,7 @@
 # takes an image reference and a directory and
 # extracts the qcow image into that directory
 function usage() {
-    echo "Usage: $0 <image> <directory> [-o <name>]"
+    echo "Usage: $0 <image> <directory> [-o <name>] [--clean-up]"
 }
 
 function error() {
@@ -13,12 +13,14 @@ function error() {
 image=$1
 directory=$2
 output=
+clean_up_image=
 
 shift 2
 while (( "$#" )); do
     case "$1" in
         -o) output=$2 ;;
         --output) output=$2 ;;
+        --clean-up) clean_up_image="yes"; shift 1 ;;
         --help) usage; exit 0 ;;
         *)      usage 1>&2; exit 1;;
     esac
@@ -51,6 +53,9 @@ $container_binary create --pull=always --platform="$platform" --name "$container
 # Destory container after use
 rm-container(){
     $container_binary rm -f "$container_name" >/dev/null 2>&1;
+    if [ -n "${clean_up_image:-}" ]; then
+        $container_binary rmi ${image}
+    fi
 }
 trap rm-container 0
 
