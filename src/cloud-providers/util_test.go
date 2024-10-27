@@ -504,3 +504,83 @@ func TestVerifySSHKeyFile(t *testing.T) {
 		})
 	}
 }
+
+func TestGetBestFitInstanceTypeWithGPU(t *testing.T) {
+	tests := []struct {
+		name          string
+		specList      []InstanceTypeSpec
+		gpus          int64
+		vcpus         int64
+		memory        int64
+		expected      string
+		expectedError bool
+	}{
+		{
+			name: "exact match",
+			specList: []InstanceTypeSpec{
+				{InstanceType: "small-gpu", GPUs: 1, VCPUs: 2, Memory: 4096},
+				{InstanceType: "medium-gpu", GPUs: 2, VCPUs: 4, Memory: 8192},
+			},
+			gpus:          1,
+			vcpus:         2,
+			memory:        4096,
+			expected:      "small-gpu",
+			expectedError: false,
+		},
+		{
+			name: "next best fit",
+			specList: []InstanceTypeSpec{
+				{InstanceType: "small-gpu", GPUs: 1, VCPUs: 2, Memory: 4096},
+				{InstanceType: "medium-gpu", GPUs: 2, VCPUs: 4, Memory: 8192},
+			},
+			gpus:          1,
+			vcpus:         3,
+			memory:        6144,
+			expected:      "medium-gpu",
+			expectedError: false,
+		},
+		{
+			name: "no match found",
+			specList: []InstanceTypeSpec{
+				{InstanceType: "small-gpu", GPUs: 1, VCPUs: 2, Memory: 4096},
+				{InstanceType: "medium-gpu", GPUs: 2, VCPUs: 4, Memory: 8192},
+			},
+			gpus:          4,
+			vcpus:         8,
+			memory:        16384,
+			expected:      "",
+			expectedError: true,
+		},
+		{
+			name:          "empty spec list",
+			specList:      []InstanceTypeSpec{},
+			gpus:          1,
+			vcpus:         2,
+			memory:        4096,
+			expected:      "",
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Sort the spec list first as required by the function
+			sortedList := SortInstanceTypesOnResources(tt.specList)
+
+			result, err := GetBestFitInstanceTypeWithGPU(sortedList, tt.gpus, tt.vcpus, tt.memory)
+
+			if tt.expectedError {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				if result != tt.expected {
+					t.Errorf("expected %s but got %s", tt.expected, result)
+				}
+			}
+		})
+	}
+}
