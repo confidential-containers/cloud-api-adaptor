@@ -194,3 +194,41 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
       secure_comms: ${{ matrix.secure_comms }}
     secrets: inherit
+
+  # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
+  libvirt_amd64:
+    name: E2E tests on libvirt for the amd64 architecture
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
+    needs: [podvm_mkosi_amd64, image, prep_install]
+    uses: ./.github/workflows/e2e_libvirt.yaml
+    with:
+      runner: ubuntu-24.04
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
+      podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.qcow2_oras_image }}
+      install_directory_artifact: install_directory
+      git_ref: ${{ inputs.git_ref }}
+      oras: true
+    secrets: inherit
+
+  # Run libvirt s390x e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
+  libvirt_s390x:
+    name: E2E tests on libvirt for the s390x architecture
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
+    needs: [podvm_mkosi_s390x, image, prep_install]
+    uses: ./.github/workflows/e2e_libvirt.yaml
+    with:
+      runner: S390X
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
+      podvm_image: ${{ needs.podvm_mkosi_s390x.outputs.qcow2_oras_image }}
+      install_directory_artifact: install_directory
+      git_ref: ${{ inputs.git_ref }}
+      oras: true
+    secrets: inherit
