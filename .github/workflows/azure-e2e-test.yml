@@ -29,10 +29,6 @@ on:
         type: string
         description: prebuilt caa image
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build-caa-container-image:
     if: github.event.inputs.caa-image == ''
