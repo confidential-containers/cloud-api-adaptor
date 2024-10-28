@@ -176,3 +176,7 @@ jobs:
           echo "::endgroup::"
         # Avoid running with `set -e` as command fails should be allowed
         shell: bash {0}
+
+      - name: Clean-up cluster
+        if: ${{ runner.environment == 'self-hosted' }}
+        run: ./libvirt/kcli_cluster.sh delete
