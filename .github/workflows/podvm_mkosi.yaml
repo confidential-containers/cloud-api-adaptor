@@ -50,6 +50,10 @@ on:
         default: false
         required: false
         type: boolean
+    outputs:
+      qcow2_oras_image:
+        description: The location of the qcow2 oras container this workflow pushed
+        value: ${{ jobs.build-image.outputs.qcow2_oras_image }}
 
 defaults:
   run:
@@ -64,6 +68,8 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+    outputs:
+      qcow2_oras_image: ${{ steps.publish_oras_qcow2.outputs.image }}:${{ steps.publish_oras_qcow2.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -250,6 +256,7 @@ jobs:
           echo "image=${image}" >> "$GITHUB_OUTPUT"
           digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/attest-build-provenance@v1
         with:
