@@ -1,6 +1,6 @@
 ARG BUILD_TYPE=dev
 ARG BUILDER_BASE=quay.io/confidential-containers/golang-fedora:1.22.7-39
-ARG BASE=registry.fedoraproject.org/fedora:39
+ARG BASE=registry.fedoraproject.org/fedora:40
 
 # This dockerfile uses Go cross-compilation to build the binary,
 # we build on the host platform ($BUILDPLATFORM) and then copy the
