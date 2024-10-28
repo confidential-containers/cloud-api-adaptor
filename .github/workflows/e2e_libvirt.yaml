@@ -33,6 +33,12 @@ on:
         description: SecureComms configuration. Defaults to none.
         required: false
         type: string
+      oras:
+        description: Whether the podvm_image is oras published
+        default: false
+        required: false
+        type: boolean
+
 env:
   CLOUD_PROVIDER: libvirt
   DEBIAN_FRONTEND: noninteractive
@@ -77,13 +83,27 @@ jobs:
           sudo apt-get install -y docker.io
           sudo usermod -aG docker "$USER"
 
+      - uses: oras-project/setup-oras@v1
+        with:
+          version: ${{ env.ORAS_VERSION }}
+
       - name: Extract qcow2 from ${{ inputs.podvm_image }}
+        if: ${{ !inputs.oras }}
         run: |
            qcow2=$(echo ${{ inputs.podvm_image }} | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
            ./hack/download-image.sh ${{ inputs.podvm_image }} . -o "${qcow2}" --clean-up
            echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
            # Clean up docker images to make space
            docker system prune -a -f
+        working-directory: src/cloud-api-adaptor/podvm
+
+      - name: Use oras to get qcow2 from ${{ inputs.podvm_image }}
+        if: ${{ inputs.oras }}
+        run: |
+          oras pull ${{ inputs.podvm_image }}
+          tar xvJpf podvm.tar.xz
+          qcow2=$(find ./*.qcow2)
+          echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
         working-directory: src/cloud-api-adaptor/podvm
 
       - name: Get the install directory
@@ -100,10 +120,6 @@ jobs:
           echo "CAA_IMAGE=\"${{ inputs.caa_image }}\"" >> libvirt.properties
           # For debugging
           cat libvirt.properties
-
-      - uses: oras-project/setup-oras@v1
-        with:
-          version: ${{ env.ORAS_VERSION }}
 
       - name: Install gh cli
         run: |
