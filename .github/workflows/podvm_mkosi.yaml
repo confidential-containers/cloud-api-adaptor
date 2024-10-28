@@ -54,6 +54,9 @@ on:
       qcow2_oras_image:
         description: The location of the qcow2 oras container this workflow pushed
         value: ${{ jobs.build-image.outputs.qcow2_oras_image }}
+      docker_oci_image:
+        description: The location of the docker oci container image this workflow pushed
+        value: ${{ jobs.build-image.outputs.docker_oci_image }}
 
 defaults:
   run:
@@ -70,6 +73,7 @@ jobs:
       attestations: write
     outputs:
       qcow2_oras_image: ${{ steps.publish_oras_qcow2.outputs.image }}:${{ steps.publish_oras_qcow2.outputs.tag }}
+      docker_oci_image: ${{ steps.build_docker_oci.outputs.image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -232,7 +236,7 @@ jobs:
         run: make image
 
       - name: Upload the qcow2 with oras
-        id: publish
+        id: publish_oras_qcow2
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: |
           mkdir oras
@@ -260,8 +264,8 @@ jobs:
 
       - uses: actions/attest-build-provenance@v1
         with:
-          subject-name: ${{ steps.publish.outputs.image }}
-          subject-digest: ${{ steps.publish.outputs.digest }}
+          subject-name: ${{ steps.publish_oras_qcow2.outputs.image }}
+          subject-digest: ${{ steps.publish_oras_qcow2.outputs.digest }}
           push-to-registry: true
 
 
@@ -275,9 +279,14 @@ jobs:
           sudo rm -rf ./mkosi.cache
 
       - name: Build image for docker provider
+        id: build_docker_oci
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: |
-          PODVM_TAG=$(git rev-parse --short HEAD) make image-container
+          tag=$(git rev-parse --short HEAD)
+          PODVM_TAG=${tag} make image-container
+          arch=$(uname -m)
+          arch=${arch/x86_64/amd64}
+          echo "image=ghcr.io/${{ github.repository }}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
         env:
           PUSH: true
           REGISTRY: ghcr.io/${{ github.repository }}
