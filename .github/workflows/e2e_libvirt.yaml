@@ -34,7 +34,7 @@ defaults:
 
 jobs:
   test:
-    runs-on: az-ubuntu-2204
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
