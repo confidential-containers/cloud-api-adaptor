@@ -119,13 +119,13 @@ func WatchImagePullTime(ctx context.Context, client klient.Client, caaPod *v1.Po
 	return pullingtime, nil
 }
 
-func getCaaPod(ctx context.Context, client klient.Client, t *testing.T) (*v1.Pod, error) {
+func getCaaPod(ctx context.Context, client klient.Client, t *testing.T, nodeName string) (*v1.Pod, error) {
 	caaPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "confidential-containers-system",
 		},
 	}
-	pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.GetObjectMeta().GetNamespace(), "app", "cloud-api-adaptor")
+	pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.GetObjectMeta().GetNamespace(), "app", "cloud-api-adaptor", nodeName)
 	if err != nil {
 		return nil, fmt.Errorf("getCaaPod: GetPodNamesByLabel failed: %v", err)
 	}
@@ -144,13 +144,13 @@ func getCaaPod(ctx context.Context, client klient.Client, t *testing.T) (*v1.Pod
 // <date time> [adaptor/proxy]         mount_point:/run/kata-containers/<id>/rootfs source:<image> fstype:overlay driver:image_guest_pull
 // <date time> 11:47:42 [adaptor/proxy] CreateContainer: Ignoring PullImage before CreateContainer (cid: "<cid>")
 // was output
-func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, containerId string) (bool, error) {
+func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, nodeName string, containerId string) (bool, error) {
 	nydusSnapshotterPullRegex, err := regexp.Compile(`.*mount_point:/run/kata-containers.*` + containerId + `.*driver:image_guest_pull.*$`)
 	if err != nil {
 		return false, err
 	}
 
-	caaPod, err := getCaaPod(ctx, client, t)
+	caaPod, err := getCaaPod(ctx, client, t, nodeName)
 	if err != nil {
 		return false, fmt.Errorf("IsPulledWithNydusSnapshotter: failed to get CAA pod: %v", err)
 	}
@@ -277,9 +277,14 @@ func CompareInstanceType(ctx context.Context, t *testing.T, client klient.Client
 	return fmt.Errorf("no pod matching %v, was found", pod)
 }
 
-func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Client, alternateImageName string) error {
+func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod, alternateImageName string) error {
+	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
+	if err != nil {
+		return fmt.Errorf("VerifyAlternateImage: GetNodeNameFromPod failed with %v", err)
+	}
+
 	expectedSuccessMessage := "Choosing " + alternateImageName
-	err := VerifyCaaPodLogContains(ctx, t, client, expectedSuccessMessage)
+	err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedSuccessMessage)
 	if err != nil {
 		return fmt.Errorf("VerifyAlternateImage: failed: %v", err)
 	}
@@ -287,8 +292,8 @@ func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Clien
 	return nil
 }
 
-func VerifyCaaPodLogContains(ctx context.Context, t *testing.T, client klient.Client, expected string) error {
-	caaPod, err := getCaaPod(ctx, client, t)
+func VerifyCaaPodLogContains(ctx context.Context, t *testing.T, client klient.Client, nodeName, expected string) error {
+	caaPod, err := getCaaPod(ctx, client, t, nodeName)
 	if err != nil {
 		return fmt.Errorf("VerifyCaaPodLogContains: failed to getCaaPod: %v", err)
 	}
@@ -302,13 +307,19 @@ func VerifyCaaPodLogContains(ctx context.Context, t *testing.T, client klient.Cl
 }
 
 func VerifyNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) error {
+	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
+	if err != nil {
+		return fmt.Errorf("VerifyNydusSnapshotter: GetNodeNameFromPod failed with %v", err)
+	}
+	log.Tracef("Test pod running on node %s", nodeName)
+
 	containerId := pod.Status.ContainerStatuses[0].ContainerID
 	containerId, found := strings.CutPrefix(containerId, "containerd://")
 	if !found {
 		return fmt.Errorf("VerifyNydusSnapshotter: unexpected container id format: %s", containerId)
 	}
 
-	usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client, containerId)
+	usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client, nodeName, containerId)
 	if err != nil {
 		return fmt.Errorf("IsPulledWithNydusSnapshotter:  failed with %v", err)
 	}
@@ -319,7 +330,12 @@ func VerifyNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Cli
 }
 
 func VerifyImagePullTimer(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) error {
-	caaPod, err := getCaaPod(ctx, client, t)
+	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
+	if err != nil {
+		return fmt.Errorf("VerifyImagePullTimer: GetNodeNameFromPod failed with %v", err)
+	}
+
+	caaPod, err := getCaaPod(ctx, client, t, nodeName)
 	if err != nil {
 		return fmt.Errorf("VerifyImagePullTimer: failed to getCaaPod: %v", err)
 	}
@@ -644,14 +660,15 @@ func AddImagePullSecretToDefaultServiceAccount(ctx context.Context, client klien
 	return nil
 }
 
-func GetPodNamesByLabel(ctx context.Context, client klient.Client, t *testing.T, namespace string, labelName string, labelValue string) (*v1.PodList, error) {
+func GetPodNamesByLabel(ctx context.Context, client klient.Client, t *testing.T, namespace string, labelName string, labelValue string, nodeName string) (*v1.PodList, error) {
 
 	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 	if err != nil {
 		return nil, fmt.Errorf("GetPodNamesByLabel: get Kubernetes clientSef failed: %v", err)
 	}
 
-	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelName + "=" + labelValue})
+	nodeSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
+	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelName + "=" + labelValue, FieldSelector: nodeSelector})
 	if err != nil {
 		return nil, fmt.Errorf("GetPodNamesByLabel: get pod list failed: %v", err)
 	}
