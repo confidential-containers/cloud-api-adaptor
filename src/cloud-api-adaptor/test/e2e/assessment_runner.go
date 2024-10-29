@@ -394,6 +394,13 @@ func (tc *TestCase) Run() {
 						t.Errorf("VerifyNydusSnapshotter failed: %v", err)
 					}
 				}
+
+				if tc.alternateImageName != "" {
+					err := VerifyAlternateImage(ctx, t, client, tc.pod, tc.alternateImageName)
+					if err != nil {
+						t.Errorf("VerifyAlternateImage failed: %v", err)
+					}
+				}
 			}
 
 			if tc.extraPods != nil {
@@ -425,13 +432,6 @@ func (tc *TestCase) Run() {
 						// TBD
 						t.Fatal("Error: isNydusSnapshotter hasn't been implemented in extraPods. Please implement assess function for isNydusSnapshotter.")
 					}
-				}
-			}
-
-			if tc.alternateImageName != "" {
-				err := VerifyAlternateImage(ctx, t, client, tc.alternateImageName)
-				if err != nil {
-					t.Errorf("VerifyAlternateImage failed: %v", err)
 				}
 			}
 			return ctx
