@@ -211,5 +211,5 @@ jobs:
         shell: bash {0}
 
       - name: Clean-up cluster
-        if: ${{ runner.environment == 'self-hosted' }}
+        if: ${{ always() && runner.environment == 'self-hosted' }}
         run: ./libvirt/kcli_cluster.sh delete
