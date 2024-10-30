@@ -117,7 +117,6 @@ jobs:
   # then please update the PROVIDERS list (space-separated names, e.g.,
   # "aws libvirt").
   prep_install:
-    needs: [image]
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -195,6 +194,29 @@ jobs:
       secure_comms: ${{ matrix.secure_comms }}
     secrets: inherit
 
+  caa_image_amd64:
+    uses: ./.github/workflows/caa_build_and_push.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      dev_arches: 'linux/amd64'
+      release_arches: 'linux/amd64'
+      dev_tags: ${{ inputs.caa_image_tag }}-dev
+      release_tags: ${{ inputs.caa_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+    secrets: inherit
+
+  caa_image_s390x:
+    uses: ./.github/workflows/caa_build_and_push.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      dev_arches: 'linux/s390x'
+      release_arches: 'linux/s390x'
+      dev_tags: ${{ inputs.caa_image_tag }}-dev
+      release_tags: ${{ inputs.caa_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      runner: 's390x'
+    secrets: inherit
+
   # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_amd64:
     name: E2E tests on libvirt for the amd64 architecture
@@ -203,7 +225,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
-    needs: [podvm_mkosi_amd64, image, prep_install]
+    needs: [podvm_mkosi_amd64, caa_image_amd64, prep_install]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: ubuntu-24.04
@@ -222,7 +244,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
-    needs: [podvm_mkosi_s390x, image, prep_install]
+    needs: [podvm_mkosi_s390x, caa_image_s390x, prep_install]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: S390X
