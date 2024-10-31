@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -369,6 +370,89 @@ func TestGetBestFitInstanceType(t *testing.T) {
 			fmt.Printf("GetBestFitInstanceType() took %s\n", elapsed)
 			if got != tt.want {
 				t.Errorf("GetBestFitInstanceType() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVerifySSHKeyFile(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func() (string, error)
+		expectedErr bool
+	}{
+		{
+			name: "File does not exist",
+			setup: func() (string, error) {
+				return "/non/existent/file", nil
+			},
+			expectedErr: true,
+		},
+		{
+			name: "File with incorrect permissions",
+			setup: func() (string, error) {
+				file, err := os.CreateTemp("", "sshkey")
+				if err != nil {
+					return "", err
+				}
+				defer file.Close()
+				if err := os.Chmod(file.Name(), 0644); err != nil {
+					return "", err
+				}
+				return file.Name(), nil
+			},
+			expectedErr: true,
+		},
+		{
+			name: "File with invalid SSH key content",
+			setup: func() (string, error) {
+				file, err := os.CreateTemp("", "sshkey")
+				if err != nil {
+					return "", err
+				}
+				defer file.Close()
+				if _, err := file.WriteString("invalid-key-content"); err != nil {
+					return "", err
+				}
+				if err := os.Chmod(file.Name(), 0600); err != nil {
+					return "", err
+				}
+				return file.Name(), nil
+			},
+			expectedErr: true,
+		},
+		{
+			name: "File with valid SSH key content",
+			setup: func() (string, error) {
+				file, err := os.CreateTemp("", "sshkey")
+				if err != nil {
+					return "", err
+				}
+				defer file.Close()
+				if _, err := file.WriteString("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAYgc9x91raNF1kh/7+XA9EpN4IoQnWC5kv1g107wVmt"); err != nil {
+					return "", err
+				}
+				if err := os.Chmod(file.Name(), 0600); err != nil {
+					return "", err
+				}
+				return file.Name(), nil
+
+			},
+			expectedErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sshKeyFile, err := tt.setup()
+			if err != nil {
+				t.Errorf("Error setting up test: %v", err)
+				return
+			}
+			// Display the file content
+			fmt.Printf("File content: %s\n", sshKeyFile)
+			err = VerifySSHKeyFile(sshKeyFile)
+			if (err != nil) != tt.expectedErr {
+				t.Errorf("VerifySSHKeyFile() error = %v, expectedErr %v", err, tt.expectedErr)
 			}
 		})
 	}

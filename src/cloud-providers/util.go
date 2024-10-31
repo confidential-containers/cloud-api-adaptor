@@ -11,6 +11,7 @@ import (
 	"sort"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
+	"golang.org/x/crypto/ssh"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -141,4 +142,40 @@ func WriteUserData(instanceName string, userData string, dataDir string) (string
 	// Write userdata to a file in the temp directory
 	// Return the file path
 	return filePath, nil
+}
+
+// Verify SSH public key file
+// Check the permissions and the content of the file to ensure it is a valid SSH public key
+func VerifySSHKeyFile(sshKeyFile string) error {
+
+	// Check if the file exists
+	_, err := os.Stat(sshKeyFile)
+	if err != nil {
+		return fmt.Errorf("failed to verify SSH key file: %w", err)
+	}
+
+	// Check the permissions of the file
+	fileInfo, err := os.Stat(sshKeyFile)
+	if err != nil {
+		return fmt.Errorf("failed to verify SSH key file: %w", err)
+	}
+
+	// Check if the file permissions are exactly 600
+	if fileInfo.Mode().Perm() != 0600 {
+		return fmt.Errorf("SSH key file permissions are not 600: %s", sshKeyFile)
+	}
+
+	// Read the content of the file
+	content, err := os.ReadFile(sshKeyFile)
+	if err != nil {
+		return fmt.Errorf("failed to read SSH key file: %w", err)
+	}
+
+	// Check if the content is a valid SSH public key
+	_, _, _, _, err = ssh.ParseAuthorizedKey(content)
+	if err != nil {
+		return fmt.Errorf("invalid SSH public key: %w", err)
+	}
+
+	return nil
 }
