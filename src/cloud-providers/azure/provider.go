@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -39,6 +40,9 @@ type azureProvider struct {
 func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("azure config %+v", config.Redact())
+
+	// Clean the config.SSHKeyPath to avoid bad paths
+	config.SSHKeyPath = filepath.Clean(config.SSHKeyPath)
 
 	azureClient, err := NewAzureClient(*config)
 	if err != nil {
@@ -294,6 +298,11 @@ func (p *azureProvider) ConfigVerifier() error {
 	ImageId := p.serviceConfig.ImageId
 	if len(ImageId) == 0 {
 		return fmt.Errorf("ImageId is empty")
+	}
+
+	// Verify it's an SSH key file with the right permissions
+	if err := provider.VerifySSHKeyFile(p.serviceConfig.SSHKeyPath); err != nil {
+		return fmt.Errorf("SSH key is invalid: %s", err)
 	}
 	return nil
 }
