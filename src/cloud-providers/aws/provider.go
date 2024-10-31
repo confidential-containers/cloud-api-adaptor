@@ -27,6 +27,7 @@ var errNotReady = errors.New("address not ready")
 const (
 	maxInstanceNameLen = 63
 	maxWaitTime        = 120 * time.Second
+	maxInt32           = 1<<31 - 1
 )
 
 // Make ec2Client a mockable interface
@@ -101,6 +102,15 @@ func NewProvider(config *Config) (provider.Provider, error) {
 			logger.Printf("RootVolumeSize %d is less than deviceSize %d, hence updating RootVolumeSize to deviceSize",
 				config.RootVolumeSize, deviceSize)
 			config.RootVolumeSize = int(deviceSize)
+		}
+
+		// Ensure RootVolumeSize is not more than max int32
+		// The AWS apis accepts only int32, however the flags package has only IntVar.
+		// So we can't make RootVolumeSize as int32, hence checking for overflow here.
+
+		if config.RootVolumeSize > maxInt32 {
+			logger.Printf("RootVolumeSize %d exceeds max int32 value, setting to max int32", config.RootVolumeSize)
+			config.RootVolumeSize = maxInt32
 		}
 
 		// Update the serviceConfig with the device name
@@ -249,6 +259,8 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			{
 				DeviceName: aws.String(p.serviceConfig.RootDeviceName),
 				Ebs: &types.EbsBlockDevice{
+					// We have already ensured RootVolumeSize is not more than max int32 in NewProvider
+					// Hence we can safely convert it to int32
 					VolumeSize: aws.Int32(int32(p.serviceConfig.RootVolumeSize)),
 				},
 			},
