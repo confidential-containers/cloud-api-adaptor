@@ -1,9 +1,7 @@
 [Unit]
 Description=Agent Protocol Forwarder
 After=kata-agent.service
-Wants=kata-agent.service
 DefaultDependencies=no
-
 
 [Service]
 Type=notify
