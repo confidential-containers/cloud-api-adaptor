@@ -17,7 +17,7 @@ const (
 	PEERPODS_CPU_ANNOTATION          = "io.katacontainers.config.hypervisor.default_vcpus"
 	PEERPODS_MEMORY_ANNOTATION       = "io.katacontainers.config.hypervisor.default_memory"
 	GPU_RESOURCE_NAME                = "nvidia.com/gpu"
-	PEERPODS_GPU_ANNOTATION          = "kata.peerpods.io.gpus"
+	PEERPODS_GPU_ANNOTATION          = "io.katacontainers.config.hypervisor.default_gpus"
 )
 
 var logger = log.New(log.Writer(), "[pod-mutator] ", log.LstdFlags|log.Lmsgprefix)
