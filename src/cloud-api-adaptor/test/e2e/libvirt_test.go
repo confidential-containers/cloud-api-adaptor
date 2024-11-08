@@ -122,6 +122,18 @@ func TestLibvirtPodsMTLSCommunication(t *testing.T) {
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
 
+func TestLibvirtSealedSecret(t *testing.T) {
+	if !isTestWithKbs() {
+		t.Skip("Skipping kbs related test as kbs is not deployed")
+	}
+	_ = keyBrokerService.SetSampleSecretKey()
+	_ = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+	_ = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
+	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
+	assert := LibvirtAssert{}
+	DoTestSealedSecret(t, testEnv, assert, kbsEndpoint)
+}
+
 func TestLibvirtKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
