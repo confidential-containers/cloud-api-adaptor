@@ -61,7 +61,7 @@ jobs:
           export CI="true"
           sudo -E env PATH="$PATH" make test | tee tests_report.txt
           sudo chmod o+rw tests_report.txt
-          cat tests_report.txt | $(go env GOPATH)/bin/go-junit-report -set-exit-code > tests_report_junit.xml
+          < tests_report.txt $(go env GOPATH)/bin/go-junit-report -set-exit-code > tests_report_junit.xml
         shell: bash
       - name: Upload tests report
         uses: actions/upload-artifact@v4
