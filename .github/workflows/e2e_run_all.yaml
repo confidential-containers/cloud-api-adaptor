@@ -127,7 +127,7 @@ jobs:
           providers=(${{ env.PROVIDERS }})
           # If there aren't providers then something is wrong
           [[ ${#providers[@]} -gt 0 ]] || exit 1
-          for provider in ${providers[@]}; do
+          for provider in "${providers[@]}"; do
             img="${E2E_IMG_REGISTRY}/cloud-api-adaptor"
             tag="${E2E_IMG_RELEASE_TAG}"
             [[ "$provider" = "libvirt" ]] && tag="${E2E_IMG_DEV_TAG}"
