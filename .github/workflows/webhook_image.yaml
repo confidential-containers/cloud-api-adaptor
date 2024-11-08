@@ -70,7 +70,7 @@ jobs:
               latest=1
             else
               echo "::group::Build and push tag ${t}"
-              make docker-load docker-push IMG=${{ inputs.registry }}/peer-pods-webhook:${t}
+              make docker-load docker-push IMG="${{ inputs.registry }}/peer-pods-webhook:${t}"
               echo "::endgroup::"
             fi
           done

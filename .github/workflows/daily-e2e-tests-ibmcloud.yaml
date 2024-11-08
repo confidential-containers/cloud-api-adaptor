@@ -42,10 +42,10 @@ jobs:
           ibmcloud plugin install cloud-object-storage -f
       - name: Config IBM COS
         run: |
-          ibmcloud cos config crn --crn $crn --force | grep -v ^FAILED$ || exit 1
+          ibmcloud cos config crn --crn "$crn" --force | grep -v ^FAILED$ || exit 1
           ibmcloud cos config auth --method HMAC | grep -v ^FAILED$ || exit 1
-          echo -e $access_key_id "\n" $secret_access_key | ibmcloud cos config hmac
-          ibmcloud cos config endpoint-url --url $endpoint | grep -v ^FAILED$ || exit 1
+          echo -e "$access_key_id" "\n" "$secret_access_key" | ibmcloud cos config hmac
+          ibmcloud cos config endpoint-url --url "$endpoint" | grep -v ^FAILED$ || exit 1
           ibmcloud cos config list
         env:
           crn: ${{ secrets.IBM_E2E_COS_CRN }}
@@ -55,21 +55,21 @@ jobs:
       - name: Check e2e test result
         run: |
           date_name=$(date +"%y%m%d")
-          echo $date_name
-          log_name=$(ibmcloud cos objects --bucket $bucket_name |grep $date_name |grep ${{matrix.type}} | awk 'END { print $1 }')
-          echo $log_name
-          ibmcloud cos object-get --bucket daily-e2e-test-bucket --key=$log_name $log_name
-          cat $log_name
-          last_line=$(awk 'END {print}' $log_name)
+          echo "$date_name"
+          log_name=$(ibmcloud cos objects --bucket "$bucket_name" |grep "$date_name" |grep ${{matrix.type}} | awk 'END { print $1 }')
+          echo "$log_name"
+          ibmcloud cos object-get --bucket daily-e2e-test-bucket --key="$log_name" "$log_name"
+          cat "$log_name"
+          last_line=$(awk 'END {print}' "$log_name")
           if [[ $last_line = "Finished: SUCCESS" ]]; then
             echo "ibmcloud e2e test (${{matrix.type}}) is passed."
           else
             echo "ibmcloud e2e test (${{matrix.type}}) is failed."
             exit 2
           fi
-          caa_commitid=$(< $log_name grep -oP 'CAA commit_id: \K\S+')
+          caa_commitid=$(< "$log_name" grep -oP 'CAA commit_id: \K\S+')
           echo "The CAA commit_id: ${caa_commitid}"
-          echo ${caa_commitid} > caa_commitid
+          echo "${caa_commitid}" > caa_commitid
         env:
           bucket_name : "daily-e2e-test-bucket"
       - name: Login to Quay container Registry
@@ -102,9 +102,9 @@ jobs:
               echo "${podvm_docker_name} exists."
             else
               echo "downloading ${podvm_image_tar_name}"
-              ibmcloud cos object-get --bucket daily-e2e-test-bucket --key=$podvm_image_tar_name $podvm_image_tar_name
-              docker load -i $podvm_image_tar_name
-              docker push ${podvm_docker_name}
+              ibmcloud cos object-get --bucket daily-e2e-test-bucket --key="$podvm_image_tar_name" "$podvm_image_tar_name"
+              docker load -i "$podvm_image_tar_name"
+              docker push "${podvm_docker_name}"
               echo "${podvm_docker_name} is pushed"
             fi
           fi
@@ -112,7 +112,7 @@ jobs:
             echo "Checking built out generic fedora s390x se enabled docker image"
             podvm_image_tar_name="podvm-generic-fedora-s390x-se-${caa_commit_id}.tar"
             echo "Checkouting commit: ${caa_commit_id}"
-            git checkout ${caa_commit_id}
+            git checkout "${caa_commit_id}"
             image_tag=`sha256sum src/cloud-api-adaptor/versions.yaml | awk -F " " '{ print $1 }'`
             echo "fedora s390x se image tag: $image_tag"
             podvm_docker_name="quay.io/confidential-containers/podvm-generic-fedora-s390x-se:${image_tag}"
@@ -122,11 +122,11 @@ jobs:
               echo "${podvm_docker_name} exists."
             else
               echo "downloading ${podvm_image_tar_name}"
-              ibmcloud cos object-get --bucket daily-e2e-test-bucket --key=$podvm_image_tar_name $podvm_image_tar_name
-              docker load -i $podvm_image_tar_name
+              ibmcloud cos object-get --bucket daily-e2e-test-bucket --key="$podvm_image_tar_name" "$podvm_image_tar_name"
+              docker load -i "$podvm_image_tar_name"
               echo "show docker images"
               docker images
-              echo docker push ${podvm_docker_name}
+              echo docker push "${podvm_docker_name}"
               echo "${podvm_docker_name} is pushed"
             fi
           fi
