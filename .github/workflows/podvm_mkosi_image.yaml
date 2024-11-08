@@ -40,7 +40,7 @@ jobs:
         run: |
           git clone -b v22 https://github.com/systemd/mkosi
           sudo rm /usr/local/bin/mkosi | true
-          sudo ln -s $PWD/mkosi/bin/mkosi /usr/local/bin/mkosi
+          sudo ln -s "$PWD/mkosi/bin/mkosi" /usr/local/bin/mkosi
           mkosi --version
 
       - name: Build builder

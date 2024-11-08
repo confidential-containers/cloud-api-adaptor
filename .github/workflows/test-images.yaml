@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: set-matrix
-        run: echo "MATRIX=$(ls test/e2e/fixtures/Dockerfile.* | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_ENV
+        run: echo "MATRIX=$(ls test/e2e/fixtures/Dockerfile.* | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_ENV"
   build:
     name: Create Test Images
     needs: list-dockerfiles
@@ -61,7 +61,7 @@ jobs:
             name="${file_name##*.}"
             output_paths+=("${name,,}")
           done
-          echo "DOCKER_TAG=${output_paths[*]}" >> $GITHUB_ENV
+          echo "DOCKER_TAG=${output_paths[*]}" >> "$GITHUB_ENV"
     - name: Build and push
       uses: docker/build-push-action@v6
       with:
