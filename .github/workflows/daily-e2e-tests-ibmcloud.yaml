@@ -113,7 +113,7 @@ jobs:
             podvm_image_tar_name="podvm-generic-fedora-s390x-se-${caa_commit_id}.tar"
             echo "Checkouting commit: ${caa_commit_id}"
             git checkout "${caa_commit_id}"
-            image_tag=`sha256sum src/cloud-api-adaptor/versions.yaml | awk -F " " '{ print $1 }'`
+            image_tag=$(sha256sum src/cloud-api-adaptor/versions.yaml | awk -F " " '{ print $1 }')
             echo "fedora s390x se image tag: $image_tag"
             podvm_docker_name="quay.io/confidential-containers/podvm-generic-fedora-s390x-se:${image_tag}"
             manifest_url="https://quay.io/v2/confidential-containers/podvm-generic-fedora-s390x-se/manifests/${image_tag}"
