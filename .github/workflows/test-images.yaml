@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: set-matrix
-        run: echo "MATRIX=$(ls test/e2e/fixtures/Dockerfile.* | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_ENV"
+        run: echo "MATRIX=$(find test/e2e/fixtures/Dockerfile.* | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_ENV"
   build:
     name: Create Test Images
     needs: list-dockerfiles
