@@ -13,7 +13,6 @@ on:
         required: false
         type: string
       image_tags:
-        default: ''
         description: 'Comma-separated list of tags for the dev built image (e.g. latest,ci-dev). By default uses the values from hack/build.sh'
         required: true
         type: string
