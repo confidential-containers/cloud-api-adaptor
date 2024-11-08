@@ -195,7 +195,7 @@ func DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T, e env
 func DoTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "env-variable-in-config"
 	imageName := getBusyboxTestImage(t)
-	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure), WithEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}), WithCommand([]string{"/bin/sh", "-c", "env"}))
+	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure), WithEnvironmentVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}), WithCommand([]string{"/bin/sh", "-c", "env"}))
 	expectedPodLogString := "ISPRODUCTION=true"
 	NewTestCase(t, e, "EnvVariablePeerPodWithDeploymentOnly", assert, "Peer pod with environmental variables has been created").WithPod(pod).WithExpectedPodLogString(expectedPodLogString).WithCustomPodState(v1.PodSucceeded).Run()
 }
@@ -203,7 +203,7 @@ func DoTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T, 
 func DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T, e env.Environment, assert CloudAssert) {
 	podName := "env-variable-in-both"
 	imageName := "quay.io/confidential-containers/test-images:testenv"
-	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure), WithEnvironmentalVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}))
+	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure), WithEnvironmentVariables([]v1.EnvVar{{Name: "ISPRODUCTION", Value: "true"}}))
 	expectedPodLogString := "ISPRODUCTION=true"
 	NewTestCase(t, e, "EnvVariablePeerPodWithBoth", assert, "Peer pod with environmental variables has been created").WithPod(pod).WithExpectedPodLogString(expectedPodLogString).WithCustomPodState(v1.PodSucceeded).Run()
 }
@@ -499,6 +499,20 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 
 }
 
+func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
+	key := "MY_SECRET"
+	value := CreateSealedSecretValue("kbs:///" + KBS_SECRET)
+	podName := "sealed-secret"
+	imageName := getBusyboxTestImage(t)
+	env := []v1.EnvVar{{Name: key, Value: value}}
+	cmd := []string{"watch", "-n", "120", "-t", "--", "printenv MY_SECRET"}
+
+	pod := NewPod(E2eNamespace, podName, podName, imageName, WithEnvironmentVariables(env), WithInitdata(kbsEndpoint), WithCommand(cmd))
+
+	expectedPodLogString := "This is my"
+	NewTestCase(t, e, "TestSealedSecret", assert, "Unsealed secret has been set to ENV").WithPod(pod).WithExpectedPodLogString(expectedPodLogString).Run()
+}
+
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaining opa in kbs
 // as test cases might be run in parallel
 func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
@@ -506,7 +520,7 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kb
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-key-release", kbsEndpoint).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
-			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
+			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + KBS_SECRET},
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), "This is my cluster name") {
@@ -530,7 +544,7 @@ func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert Cloud
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-failure", kbsEndpoint).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
-			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/reponame/workload_key/key.bin"},
+			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + KBS_SECRET},
 			ContainerName: pod.Spec.Containers[0].Name,
 			TestErrorFn: func(err error) bool {
 				if strings.Contains(err.Error(), "command terminated with exit code 1") {

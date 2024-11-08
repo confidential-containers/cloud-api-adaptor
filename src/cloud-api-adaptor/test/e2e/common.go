@@ -5,6 +5,7 @@ package e2e
 
 import (
 	b64 "encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -28,6 +29,7 @@ import (
 
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
+const KBS_SECRET = "reponame/workload_key/key.bin"
 
 var testInitdata string = `algorithm = "sha384"
 version = "0.1.0"
@@ -44,7 +46,6 @@ url = '%s'
 
 "cdh.toml"  = '''
 socket = 'unix:///run/confidential-containers/cdh.sock'
-credentials = []
 
 [kbc]
 name = 'cc_kbc'
@@ -197,7 +198,7 @@ func WithJobAnnotations(data map[string]string) JobOption {
 	}
 }
 
-func WithEnvironmentalVariables(envVar []corev1.EnvVar) PodOption {
+func WithEnvironmentVariables(envVar []corev1.EnvVar) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].Env = envVar
 	}
@@ -232,6 +233,18 @@ func WithPVCBinding(mountPath string, pvcName string) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[2].VolumeMounts = append(p.Spec.Containers[2].VolumeMounts, corev1.VolumeMount{Name: "pvc-volume", MountPath: mountPath, MountPropagation: &propagationHostToContainer})
 		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "pvc-volume", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: pvcName}}})
+	}
+}
+
+func WithInitdata(kbsEndpoint string) PodOption {
+	return func(p *corev1.Pod) {
+		if p.ObjectMeta.Annotations == nil {
+			p.ObjectMeta.Annotations = make(map[string]string)
+		}
+		key := "io.katacontainers.config.runtime.cc_init_data"
+		initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+		value := b64.StdEncoding.EncodeToString([]byte(initdata))
+		p.ObjectMeta.Annotations[key] = value
 	}
 }
 
@@ -484,6 +497,25 @@ func WaitForClusterIP(t *testing.T, client klient.Client, svc *v1.Service) strin
 	}
 
 	return clusterIP
+}
+
+func CreateSealedSecretValue(resourceURI string) string {
+	metadata := map[string]interface{}{
+		"version":           "0.1.0",
+		"type":              "vault",
+		"name":              resourceURI,
+		"provider":          "kbs",
+		"provider_settings": map[string]interface{}{},
+		"annotations":       map[string]interface{}{},
+	}
+	metadataStr, err := json.Marshal(metadata)
+	if err != nil {
+		panic(err)
+	}
+	payload := b64.URLEncoding.EncodeToString([]byte(metadataStr))
+	header := "fakejwsheader"
+	signature := "fakesignature"
+	return fmt.Sprintf("sealed.%s.%s.%s", header, payload, signature)
 }
 
 // CloudAssert defines assertions to perform on the cloud provider.
