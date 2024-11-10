@@ -13,171 +13,95 @@ This documentation will walk you through setting up CAA (a.k.a. Peer Pods) on Am
 - Install `aws` CLI [tool](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 - Install `eksctl` CLI [tool](https://eksctl.io/installation/)
 - Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (or `AWS_PROFILE`) and `AWS_REGION` for AWS cli access
-- Install packer by following the instructions in the following [link](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli)
-- Install packer's Amazon plugin `packer plugins install github.com/hashicorp/amazon`
 
-## Build CAA pod-VM image
+## Create pod VM AMI
 
-- Set environment variables
+Building a pod VM AMI is a two step process. First you will need to create a raw image and then
+use the raw image to create the AMI
 
-```sh
-export CLOUD_PROVIDER=aws # mandatory
-export AWS_REGION="us-east-1" # mandatory
-export PODVM_DISTRO=ubuntu # mandatory
-export INSTANCE_TYPE=c4.xlarge # optional, default is c4.xlarge
-export IMAGE_NAME=peer-pod-ami # optional
-export VPC_ID=REPLACE_ME # optional, otherwise, it creates and uses the default vpc in the specific region
-export SUBNET_ID=REPLACE_ME # must be set if VPC_ID is set
-```
+1. Create pod VM raw image.
 
+    The pod VM raw image is created using `mkosi`. Refer to the [README](../podvm-mkosi/README.md) to
+    build the raw image.
 
-[Optional] If you want to change the volume size of the generated AMI, then set the `VOLUME_SIZE` environment variable.
-For example if you want to set the volume size to 40 GiB, then do the following:
+    An example invocation to build the raw image with support for `snp` TEE:
 
-```sh
-export VOLUME_SIZE=40
-```
+    ```sh
+    cd podvm-mkosi
+    export CLOUD_PROVIDER=aws
+    export TEE_PLATFORM=snp
+    make image
+    ```
 
-[Optional] If you want to use a specific port or address for `agent-protocol-forwarder`, set `FORWARDER_PORT` environment variable.
+    The built image will be available in the following path:  `build/system.raw`
 
-```sh
-export FORWARDER_PORT=<port-number>
-```
+1. Create the AMI.
 
-- Create a custom AWS VM image based on Ubuntu 22.04 having kata-agent and other dependencies
+    You can use `uplosi` as described in the [README](../podvm-mkosi/README.md) or
+    you can use the `raw-to-ami.sh` script to upload the raw image to AWS S3 bucket and create the AMI.
 
-> **NOTE**: For setting up authenticated registry support read this [documentation](../docs/registries-authentication.md).
+    Set the `PODVM_AMI_ID` env variable with the AMI id.
 
-```sh
-cd aws/image
-make image
-```
+    ```sh
+    export PODVM_AMI_ID=<AMI_ID_CREATED>
+    ```
 
-You can also build the custom AMI by running the packer build inside a container:
-
-```sh
-docker build -t aws \
---secret id=AWS_ACCESS_KEY_ID \
---secret id=AWS_SECRET_ACCESS_KEY \
---build-arg AWS_REGION=${AWS_REGION} \
--f Dockerfile .
-```
-
-If you want to use an existing `VPC_ID` with public `SUBNET_ID` then use the following command:
-
-```sh
-docker build -t aws \
---secret id=AWS_ACCESS_KEY_ID \
---secret id=AWS_SECRET_ACCESS_KEY \
---build-arg AWS_REGION=${AWS_REGION} \
---build-arg VPC_ID=${VPC_ID} \
---build-arg SUBNET_ID=${SUBNET_ID} \
--f Dockerfile .
-```
-
-- Note down your newly created AMI_ID and export it via `PODVM_AMI_ID` env variable
-
-Once the image creation is complete, you can use the following CLI command as well to
-get the AMI_ID. The command assumes that you are using the default AMI name: `peer-pod-ami`
-
-```sh
-export PODVM_AMI_ID=$(aws ec2 describe-images --query "Images[*].[ImageId]" --filters "Name=name,Values=peer-pod-ami" --region ${AWS_REGION} --output text)
-echo ${PODVM_AMI_ID}
-```
-
-## Build CAA container image
-
-> **Note**: If you have made changes to the CAA code and you want to deploy those changes then follow [these instructions](../install/README.md#building-custom-cloud-api-adaptor-image) to build the container image from the root of this repository.
-
-If you would like to deploy the latest code from the default branch (`main`) of this repository then expose the following environment variable:
-
-```sh
-export registry="quay.io/confidential-containers"
-```
+    > **Note:**
+    > There is a pre-built AMI ID `ami-0c2afc4cc79cb9083` in `us-east-2` that you can use for testing.
 
 ## Deploy Kubernetes using EKS
 
-> **Note:**
->
-> - Default EKS CNI doesn't work with cloud-api-adaptor (CAA). Ensure you use Calico or Flannel.
-> The example given here uses Calico.
-> 
-> - The commands assumes that the required AWS env variables are set `AWS_REGION`, `AWS_PROFILE` or `AWS_SECRET_ACCESS_KEY` and `AWS_ACCESS_KEY_ID`
->
-> - The instructions here have been tested with eksctl version 0.187.0 and Kubernetes 1.30
+1. Create EKS cluster.
 
-- Create EKS cluster
+    Example EKS cluster creation using the default AWS VPC-CNI
 
-Create the cluster without nodegroup.
+    ```sh
+    export EKS_CLUSTER_NAME=<set_cluster_name>
+    eksctl create cluster --name "$EKS_CLUSTER_NAME" \
+        --node-type m5.xlarge \
+        --node-ami-family Ubuntu2204 \
+        --nodes 1 \
+        --nodes-min 0 \
+        --nodes-max 2 \
+        --node-private-networking
+    ```
 
-```sh
-EKS_CLUSTER_NAME=my-calico-cluster
+    Wait for the cluster to be created.
 
-eksctl create cluster --name "$EKS_CLUSTER_NAME" --without-nodegroup
-```
+    > **Note:**
+    > If you are using Calico CNI, then you'll need to run the webhook using `hostNetwork: true`. See
+    > the following [issue](https://github.com/confidential-containers/cloud-api-adaptor/issues/2138) for more details.
 
-- Configure Calico networking
+1. Allow required network ports.
 
-```sh
-kubectl delete daemonset -n kube-system aws-node
+    ```sh
+    EKS_VPC_ID=$(aws eks describe-cluster --name "$EKS_CLUSTER_NAME" \
+    --query "cluster.resourcesVpcConfig.vpcId" \
+    --output text)
+    echo $EKS_VPC_ID
 
-kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml
+    EKS_CLUSTER_SG=$(aws eks describe-cluster --name "$EKS_CLUSTER_NAME" \
+      --query "cluster.resourcesVpcConfig.clusterSecurityGroupId" \
+      --output text)
+    echo $EKS_CLUSTER_SG
 
-kubectl create -f - <<EOF
-kind: Installation
-apiVersion: operator.tigera.io/v1
-metadata:
-  name: default
-spec:
-  kubernetesProvider: EKS
-  cni:
-    type: Calico
-  calicoNetwork:
-    bgp: Disabled
-EOF
-```
+    EKS_VPC_CIDR=$(aws ec2 describe-vpcs --vpc-ids "$EKS_VPC_ID" \
+    --query 'Vpcs[0].CidrBlock' --output text)
+    echo $EKS_VPC_CIDR
 
-- Create nodegroup
+    # agent-protocol-forwarder port
+    aws ec2 authorize-security-group-ingress --group-id "$EKS_CLUSTER_SG" --protocol tcp --port 15150 --cidr "$EKS_VPC_CIDR"
 
-The following command will create a nodegroup consisting of 2 (default) number of worker nodes.
+    #vxlan port
+    aws ec2 authorize-security-group-ingress --group-id "$EKS_CLUSTER_SG" --protocol tcp --port 9000 --cidr "$EKS_VPC_CIDR"
+    aws ec2 authorize-security-group-ingress --group-id "$EKS_CLUSTER_SG" --protocol udp --port 9000 --cidr "$EKS_VPC_CIDR"
+    ```
 
-```sh
-eksctl create nodegroup --cluster $EKS_CLUSTER_NAME --node-type m5.xlarge --max-pods-per-node 100 --node-ami-family 'Ubuntu2204'
-```
-
-Wait for the cluster to be created.
-
-- Allow required network ports
-
-```sh
-EKS_VPC_ID=$(aws eks describe-cluster --name "$EKS_CLUSTER_NAME" \
---query "cluster.resourcesVpcConfig.vpcId" \
---output text)
-echo $EKS_VPC_ID
-
-EKS_CLUSTER_SG=$(aws eks describe-cluster --name "$EKS_CLUSTER_NAME" \
-   --query "cluster.resourcesVpcConfig.clusterSecurityGroupId" \
-   --output text)
-echo $EKS_CLUSTER_SG
-
-EKS_VPC_CIDR=$(aws ec2 describe-vpcs --vpc-ids "$EKS_VPC_ID" \
- --query 'Vpcs[0].CidrBlock' --output text)
-echo $EKS_VPC_CIDR
-
-# agent-protocol-forwarder port
-aws ec2 authorize-security-group-ingress --group-id "$EKS_CLUSTER_SG" --protocol tcp --port 15150 --cidr "$EKS_VPC_CIDR"
-
-#vxlan port
-aws ec2 authorize-security-group-ingress --group-id "$EKS_CLUSTER_SG" --protocol tcp --port 9000 --cidr "$EKS_VPC_CIDR"
-aws ec2 authorize-security-group-ingress --group-id "$EKS_CLUSTER_SG" --protocol udp --port 9000 --cidr "$EKS_VPC_CIDR"
-```
-
-> **Note:**
->
-> - Port `15150` is the default port for `cloud-api-adaptor` to connect to the `agent-protocol-forwarder`
-> running inside the pod VM.>
-> - Port `9000` is the VXLAN port used by `cloud-api-adaptor`. Ensure it doesn't conflict with the VXLAN port
-> used by the Kubernetes CNI.
+    > **Note:**  
+    > - Port `15150` is the default port for `cloud-api-adaptor` to connect to the `agent-protocol-forwarder`
+    > running inside the pod VM.>
+    > - Port `9000` is the VXLAN port used by `cloud-api-adaptor`. Ensure it doesn't conflict with the VXLAN port
+    > used by the Kubernetes CNI.
 
 ## Deploy CAA
 
@@ -192,11 +116,15 @@ EOF
 
 ### Update the `kustomization.yaml` file
 
-Run the following command to update the [`kustomization.yaml`](../install/overlays/aws/kustomization.yaml) file with the `PODVM_AMI_ID` value:
+At a minimum you need to update `PODVM_AMI_ID` and `VXLAN_PORT` values
+in [`kustomization.yaml`](../install/overlays/aws/kustomization.yaml).
 
-```bash
+```sh
 sed -i -E "s/(PODVM_AMI_ID=).*/\1 \"${PODVM_AMI_ID}\"/" install/overlays/aws/kustomization.yaml
+sed -i 's/^\([[:space:]]*\)#- VXLAN_PORT=.*/\1- VXLAN_PORT=9000/'  install/overlays/aws/kustomization.yaml
 ```
+
+Have a look at other parameters and update it if required.
 
 ### Deploy CAA on the Kubernetes cluster
 
@@ -276,7 +204,8 @@ aws ec2 describe-instances --filters "Name=tag:Name,Values=podvm*" \
    --query 'Reservations[*].Instances[*].[InstanceId, Tags[?Key==`Name`].Value | [0]]' --output table
 ```
 
-Here you should see the VM associated with the pod `nginx`. If you run into problems then check the troubleshooting guide [here](../docs/troubleshooting/README.md).
+Here you should see the VM associated with the pod `nginx`. 
+If you run into problems then check the troubleshooting guide [here](../docs/troubleshooting/README.md).
 
 ## Cleanup
 
@@ -297,10 +226,5 @@ aws ec2 describe-instances --filters "Name=tag:Name,Values=podvm*" \
 Delete the EKS cluster by running the following command:
 
 ```sh
-EKS_NODEGROUP=$(eksctl get nodegroup --cluster "$EKS_CLUSTER_NAME" -o json | jq -r ".[].Name")
-echo $EKS_NODEGROUP
-
-eksctl delete nodegroup --cluster=$EKS_CLUSTER_NAME --name=$EKS_NODEGROUP --disable-eviction --drain=false --timeout=10m 
-
-eksctl delete cluster --name=$EKS_CLUSTER_NAME
+eksctl delete cluster --name=$EKS_CLUSTER_NAME 
 ```
