@@ -15,7 +15,6 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/e2e-framework/pkg/env"
@@ -486,13 +485,13 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 		},
 	}
 	clientPod.WithTestCommands(testCommands)
-	httpsPort := corev1.ServicePort{
+	httpsPort := v1.ServicePort{
 		Name:       "https",
 		Port:       443,
 		TargetPort: intstr.FromInt(int(443)),
-		Protocol:   corev1.ProtocolTCP,
+		Protocol:   v1.ProtocolTCP,
 	}
-	servicePorts := []corev1.ServicePort{httpsPort}
+	servicePorts := []v1.ServicePort{httpsPort}
 	nginxSvc := NewService(E2eNamespace, serviceName, servicePorts, labels)
 	extraPods := []*ExtraPod{clientPod}
 	extraSecrets := []*v1.Secret{clientSecret}
