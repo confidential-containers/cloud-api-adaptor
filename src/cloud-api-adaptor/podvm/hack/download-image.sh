@@ -3,7 +3,7 @@
 # takes an image reference and a directory and
 # extracts the qcow image into that directory
 function usage() {
-    echo "Usage: $0 <image> <directory> [-o <name>] [--clean-up]"
+    echo "Usage: $0 <image> <directory> [-o <name>] [-p <platform>] [--clean-up]"
 }
 
 function error() {
@@ -13,6 +13,7 @@ function error() {
 image=$1
 directory=$2
 output=
+platform=
 clean_up_image=
 
 shift 2
@@ -20,6 +21,8 @@ while (( "$#" )); do
     case "$1" in
         -o) output=$2 ;;
         --output) output=$2 ;;
+        -p) platform=$2 ;;
+        --platform) platform=$2 ;;
         --clean-up) clean_up_image="yes"; shift 1 ;;
         --help) usage; exit 0 ;;
         *)      usage 1>&2; exit 1;;
@@ -40,12 +43,14 @@ fi
 
 [ -z "$container_binary" ] && error "please install docker or podman"
 
-# Check if the image name includes "podvm-generic-fedora-s390x-se"
-# The "podvm-generic-fedora-s390x-se" docker image is built on s390x host, so here must use s390x platform
-if [[ "$image" == *"podvm-generic-fedora-s390x-se"* ]]; then
-    platform="s390x"
-else
-    platform="amd64"
+if [[ -z "$platform" ]]; then
+    # Check if the image name includes "podvm-generic-fedora-s390x-se"
+    # The "podvm-generic-fedora-s390x-se" docker image is built on s390x host, so here must use s390x platform
+    if [[ "$image" == *"podvm-generic-fedora-s390x-se"* ]]; then
+        platform="s390x"
+    else
+        platform="amd64"
+    fi
 fi
 
 # Create a non-running container to extract image
