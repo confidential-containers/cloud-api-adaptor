@@ -217,6 +217,28 @@ jobs:
       runner: 's390x'
     secrets: inherit
 
+  libvirt_e2e_arch_prep:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.git_ref }}
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+
+      - name: Define Test Matrix
+        id: matrix
+        run: |
+          echo "matrix=$(jq -c . < ./libvirt/libvirt_e2e_arch_matrix.json)" >> "$GITHUB_OUTPUT"
+
   # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_amd64:
     name: E2E tests on libvirt for the amd64 architecture
@@ -225,7 +247,10 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
-    needs: [podvm_mkosi_amd64, caa_image_amd64]
+    needs: [podvm_mkosi_amd64, libvirt_e2e_arch_prep, caa_image_amd64]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.libvirt_e2e_arch_prep.outputs.matrix) }}
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: ubuntu-24.04
@@ -244,7 +269,10 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
-    needs: [podvm_mkosi_s390x, caa_image_s390x]
+    needs: [podvm_mkosi_s390x, libvirt_e2e_arch_prep, caa_image_s390x]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.libvirt_e2e_arch_prep.outputs.matrix) }}
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: S390X
