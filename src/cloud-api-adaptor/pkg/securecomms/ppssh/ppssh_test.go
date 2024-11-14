@@ -208,6 +208,9 @@ func TestPpssh(t *testing.T) {
 	}
 
 	s := test.HttpServer("7105")
+	if s == nil {
+		t.Error("Failed - could not create server")
+	}
 
 	clientSshPeer.Ready()
 	clientSshPeer.Wait()

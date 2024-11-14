@@ -50,7 +50,7 @@ func TestWorkerNode(t *testing.T) {
 	mockTunnelType := "mock"
 	tunneler.Register(mockTunnelType, newMockWorkerNodeTunneler, newMockPodNodeTunneler)
 
-	workerNodeNS := tuntest.NewNamedNS(t, "test-workernode")
+	workerNodeNS, _ := tuntest.NewNamedNS(t, "test-workernode")
 	defer tuntest.DeleteNamedNS(t, workerNodeNS)
 
 	tuntest.BridgeAdd(t, workerNodeNS, "ens0")
@@ -59,7 +59,7 @@ func TestWorkerNode(t *testing.T) {
 	tuntest.AddrAdd(t, workerNodeNS, "ens1", "192.168.1.2/24")
 	tuntest.RouteAdd(t, workerNodeNS, "", "192.168.0.1", "ens0")
 
-	workerPodNS := tuntest.NewNamedNS(t, "test-workerpod")
+	workerPodNS, _ := tuntest.NewNamedNS(t, "test-workerpod")
 	defer tuntest.DeleteNamedNS(t, workerPodNS)
 
 	tuntest.BridgeAdd(t, workerPodNS, "eth0")
@@ -122,7 +122,7 @@ func TestPodNode(t *testing.T) {
 	mockTunnelType := "mock"
 	tunneler.Register(mockTunnelType, newMockWorkerNodeTunneler, newMockPodNodeTunneler)
 
-	podNodeNS := tuntest.NewNamedNS(t, "test-podnode")
+	podNodeNS, _ := tuntest.NewNamedNS(t, "test-podnode")
 	defer tuntest.DeleteNamedNS(t, podNodeNS)
 
 	tuntest.BridgeAdd(t, podNodeNS, "ens0")
@@ -149,7 +149,7 @@ func TestPodNode(t *testing.T) {
 		},
 	} {
 
-		podNS := tuntest.NewNamedNS(t, "test-pod")
+		podNS, _ := tuntest.NewNamedNS(t, "test-pod")
 		func() {
 			defer tuntest.DeleteNamedNS(t, podNS)
 
@@ -197,7 +197,7 @@ func TestPodNode(t *testing.T) {
 func TestPluginDetectHostInterface(t *testing.T) {
 	testutils.SkipTestIfNotRoot(t)
 
-	hostNS := tuntest.NewNamedNS(t, "test-host")
+	hostNS, _ := tuntest.NewNamedNS(t, "test-host")
 	defer tuntest.DeleteNamedNS(t, hostNS)
 
 	tuntest.BridgeAdd(t, hostNS, "eth0")

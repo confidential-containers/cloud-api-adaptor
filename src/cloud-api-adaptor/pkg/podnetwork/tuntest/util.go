@@ -21,7 +21,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/netops"
 )
 
-func NewNamedNS(t *testing.T, prefix string) netops.Namespace {
+func NewNamedNS(t *testing.T, prefix string) (netops.Namespace, string) {
 	t.Helper()
 
 	var nsPath string
@@ -54,7 +54,7 @@ func NewNamedNS(t *testing.T, prefix string) netops.Namespace {
 		t.Fatalf("failed to set the link up: lo")
 	}
 
-	return ns
+	return ns, name
 }
 
 func DeleteNamedNS(t *testing.T, ns netops.Namespace) {

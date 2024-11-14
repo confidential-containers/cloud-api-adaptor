@@ -53,10 +53,11 @@ func NamespacedHttpServer(port uint16, nsPath string) *http.Server {
 		Addr:    fmt.Sprintf("127.0.0.1:%s", retPort),
 		Handler: mux,
 	}
+
 	go func() {
 		err := http.Serve(tcpListener, mux)
 		if err != http.ErrServerClosed { // graceful shutdown
-			fmt.Printf("ListenAndServe Error %v\n", err)
+			fmt.Printf("Serve Error %v\n", err)
 		}
 	}()
 	return s

@@ -155,7 +155,10 @@ func TestCloudServiceWithSecureComms(t *testing.T) {
 	kubemgr.InitKubeMgrMock()
 	test.CreatePKCS8Secret(t)
 	test.KBSServer("9009")
-	test.HttpServer(forwarder.DefaultListenPort)
+	s9009 := test.HttpServer(forwarder.DefaultListenPort)
+	if s9009 == nil {
+		t.Error("Failed - could not create server")
+	}
 
 	// create a podvm
 	gkc := test.NewGetKeyClient("9019")

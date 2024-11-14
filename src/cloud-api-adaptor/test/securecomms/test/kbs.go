@@ -39,7 +39,7 @@ func (p kbsport) getRoot(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Not Found", http.StatusNotFound)
 }
 
-func KBSServer(port string) {
+func KBSServer(port string) *http.Server {
 	keys = map[string][]byte{}
 
 	p := kbsport(port)
@@ -50,10 +50,20 @@ func KBSServer(port string) {
 		Handler: mux,
 	}
 
+	ln, err := net.Listen("tcp", s.Addr)
+	if err != nil {
+		fmt.Printf("Listen Error %v\n", err)
+		return nil
+	}
+
 	go func() {
-		err := s.ListenAndServe()
-		fmt.Printf("ListenAndServe Error %v\n", err)
+		err = s.Serve(ln)
+		if err != http.ErrServerClosed { // graceful shutdown
+			fmt.Printf("Serve Error %v\n", err)
+		}
 	}()
+
+	return s
 }
 
 type GetKeyClient struct {

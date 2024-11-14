@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 )
 
@@ -24,10 +25,16 @@ func HttpServer(port string) *http.Server {
 		Addr:    "127.0.0.1:" + port,
 		Handler: mux,
 	}
+	ln, err := net.Listen("tcp", s.Addr)
+	if err != nil {
+		fmt.Printf("Listen Error %v\n", err)
+		return nil
+	}
+
 	go func() {
-		err := s.ListenAndServe()
+		err = s.Serve(ln)
 		if err != http.ErrServerClosed { // graceful shutdown
-			fmt.Printf("ListenAndServe Error %v\n", err)
+			fmt.Printf("Serve Error %v\n", err)
 		}
 	}()
 	return s
