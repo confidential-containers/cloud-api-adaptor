@@ -14,7 +14,7 @@ import (
 func TestIPTables(t *testing.T) {
 	testutils.SkipTestIfNotRoot(t)
 
-	workerNS := tuntest.NewNamedNS(t, "test-host")
+	workerNS, _ := tuntest.NewNamedNS(t, "test-host")
 	defer tuntest.DeleteNamedNS(t, workerNS)
 
 	ipt, err := iptables.New(iptables.IPFamily(iptables.ProtocolIPv4))

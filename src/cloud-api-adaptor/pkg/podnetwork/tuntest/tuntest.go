@@ -56,10 +56,10 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 		{podAddr: "10.128.0.3/24", podHwAddr: "0a:58:0a:84:03:cf", podNodePrimaryAddr: "10.10.1.3/16", podNodeSecondaryAddr: "192.168.0.3/24"},
 	}
 
-	bridgeNS := NewNamedNS(t, "test-bridge")
+	bridgeNS, _ := NewNamedNS(t, "test-bridge")
 	defer DeleteNamedNS(t, bridgeNS)
 
-	workerNS := NewNamedNS(t, "test-worker")
+	workerNS, _ := NewNamedNS(t, "test-worker")
 	defer DeleteNamedNS(t, workerNS)
 
 	if err := workerNS.Run(func() error {
@@ -98,7 +98,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 		pod.workerNodeTunneler = newWorkerNodeTunneler()
 		pod.podNodeTunneler = newPodNodeTunneler()
 
-		pod.workerPodNS = NewNamedNS(t, fmt.Sprintf("test-workerpod%d", i))
+		pod.workerPodNS, _ = NewNamedNS(t, fmt.Sprintf("test-workerpod%d", i))
 		defer DeleteNamedNS(t, pod.workerPodNS)
 
 		veth := fmt.Sprintf("veth%d", i)
@@ -109,7 +109,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 		HwAddrAdd(t, pod.workerPodNS, "eth0", pod.podHwAddr)
 		RouteAdd(t, pod.workerPodNS, "", gatewayIP, "eth0")
 
-		pod.podNodeNS = NewNamedNS(t, fmt.Sprintf("test-podvm%d", i))
+		pod.podNodeNS, _ = NewNamedNS(t, fmt.Sprintf("test-podvm%d", i))
 		defer DeleteNamedNS(t, pod.podNodeNS)
 
 		vmEth0 := fmt.Sprintf("podvm%d-eth0", i)
@@ -122,7 +122,7 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 		LinkSetMaster(t, bridgeNS, vmEth0, "br0")
 		LinkSetMaster(t, bridgeNS, vmEth1, "br1")
 
-		pod.podNS = NewNamedNS(t, fmt.Sprintf("test-pod%d", i))
+		pod.podNS, _ = NewNamedNS(t, fmt.Sprintf("test-pod%d", i))
 		defer DeleteNamedNS(t, pod.podNS)
 	}
 

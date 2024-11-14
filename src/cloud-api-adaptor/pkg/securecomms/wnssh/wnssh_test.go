@@ -16,11 +16,13 @@ func TestSshProxyReverseKBS(t *testing.T) {
 	sshport := "6003"
 	kubemgr.InitKubeMgrMock()
 
-	test.KBSServer("9001")
-	test.HttpServer("8053")
-	test.HttpServer("26443")
-	test.HttpServer("7121")
-
+	s9001 := test.KBSServer("9001")
+	s8053 := test.HttpServer("8053")
+	s26443 := test.HttpServer("26443")
+	s7121 := test.HttpServer("7121")
+	if s9001 == nil || s8053 == nil || s26443 == nil || s7121 == nil {
+		t.Error("Failed - could not create server")
+	}
 	test.CreatePKCS8Secret(t)
 
 	// CAA Initialization

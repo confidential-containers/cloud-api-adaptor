@@ -4,18 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"errors"
-	"io/fs"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tuntest"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/sshutil"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/securecomms/test"
-	"github.com/google/uuid"
-	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -113,6 +109,9 @@ func TestSshProxy(t *testing.T) {
 	serverSshPeer.Ready()
 
 	s := test.HttpServer("7020")
+	if s == nil {
+		t.Error("Failed - could not create server")
+	}
 	success := test.HttpClient("http://127.0.0.1:7010")
 	if !success {
 		t.Error("Failed - not successful")
@@ -136,32 +135,8 @@ func TestSshProxyWithNamespace(t *testing.T) {
 
 	clientSshPeer, serverSshPeer := getPeers(t)
 
-	namespace := uuid.NewString()
-	nsPath := "/run/netns/" + namespace
-	// Create a new network namespace
-	newns, err := netns.NewNamed(namespace)
-	if err != nil && !errors.Is(err, fs.ErrExist) {
-		if errors.Is(err, fs.ErrPermission) {
-			t.Skip("Skip due to missing permissions - run privileged!")
-		}
-		t.Errorf("netns.NewNamed(%s) returned err %s", namespace, err.Error())
-	}
-	defer func() {
-		newns.Close()
-		if err := netns.DeleteNamed(namespace); err != nil {
-			t.Errorf("failed to delete a named network namespace %s: %v", namespace, err)
-		}
-	}()
-
-	link, err := netlink.LinkByName("lo")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// bring the interface up
-	if err := netlink.LinkSetUp(link); err != nil {
-		t.Fatal(err)
-	}
+	testNs, testNsStr := tuntest.NewNamedNS(t, "test-TestSshProxyWithNamespace")
+	defer tuntest.DeleteNamedNS(t, testNs)
 
 	outbounds := Outbounds{}
 	if err := outbounds.AddTags([]string{"ATTESTATION_PHASE:ABC:127.0.0.1:7020", "  	"}); err != nil {
@@ -170,7 +145,7 @@ func TestSshProxyWithNamespace(t *testing.T) {
 	}
 	inboundPorts := map[string]string{}
 	inbounds := Inbounds{}
-	if err := inbounds.AddTags([]string{"ATTESTATION_PHASE:ABC:" + namespace + ":7010", "  	"}, inboundPorts, &wg); err != nil {
+	if err := inbounds.AddTags([]string{"ATTESTATION_PHASE:ABC:" + testNsStr + ":7010", "  	"}, inboundPorts, &wg); err != nil {
 		t.Error(err)
 		return
 	}
@@ -182,7 +157,11 @@ func TestSshProxyWithNamespace(t *testing.T) {
 	serverSshPeer.Ready()
 
 	s := test.HttpServer("7020")
-	success := test.HttpClientInNamespace("http://127.0.0.1:7010", nsPath)
+	if s == nil {
+		t.Error("Failed - could not create server")
+		return
+	}
+	success := test.HttpClientInNamespace("http://127.0.0.1:7010", testNs.Path())
 	if !success {
 		t.Error("Failed - not successful")
 		return
@@ -225,6 +204,9 @@ func TestSshProxyReverse(t *testing.T) {
 	serverSshPeer.Ready()
 
 	s := test.HttpServer("7001")
+	if s == nil {
+		t.Error("Failed - could not create server")
+	}
 	success := test.HttpClient("http://127.0.0.1:7011")
 	if !success {
 		t.Error("Failed - not successful")
@@ -264,6 +246,9 @@ func TestSshProxyReverseKBS(t *testing.T) {
 	serverSshPeer.Ready()
 
 	s := test.HttpServer("7002")
+	if s == nil {
+		t.Error("Failed - could not create server")
+	}
 	success := test.HttpClient("http://127.0.0.1:7012")
 	if !success {
 		t.Error("Failed - not successful")
