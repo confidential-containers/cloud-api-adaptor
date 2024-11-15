@@ -201,7 +201,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	instanceType := util.GetInstanceTypeFromAnnotation(req.Annotations)
 
 	// Get Pod VM cpu and memory from annotations
-	vcpus, memory := util.GetCPUAndMemoryFromAnnotation(req.Annotations)
+	vcpus, memory, gpus := util.GetPodvmResourcesFromAnnotation(req.Annotations)
 
 	// Get Pod VM image from annotations
 	image := util.GetImageFromAnnotation(req.Annotations)
@@ -211,6 +211,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		InstanceType: instanceType,
 		VCPUs:        vcpus,
 		Memory:       memory,
+		GPUs:         gpus,
 		Image:        image,
 	}
 
