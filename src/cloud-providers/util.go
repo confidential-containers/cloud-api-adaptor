@@ -98,6 +98,9 @@ func SelectInstanceTypeToUse(spec InstanceTypeSpec, specList []InstanceTypeSpec,
 // The sortedInstanceTypeSpecList slice is a sorted list of instance types based on ascending order of supported memory
 func GetBestFitInstanceType(sortedInstanceTypeSpecList []InstanceTypeSpec, vcpus int64, memory int64) (string, error) {
 
+	// Filter the out GPU instances from the list
+	sortedInstanceTypeSpecList = FilterOutGPUInstances(sortedInstanceTypeSpecList)
+
 	// Use sort.Search to find the index of the first element in the sortedMachineTypeList slice
 	// that is greater than or equal to the given memory and vcpus
 	index := sort.Search(len(sortedInstanceTypeSpecList), func(i int) bool {
@@ -114,7 +117,19 @@ func GetBestFitInstanceType(sortedInstanceTypeSpecList []InstanceTypeSpec, vcpus
 
 }
 
+// Filter out GPU instances from the instance type spec list
+func FilterOutGPUInstances(instanceTypeSpecList []InstanceTypeSpec) []InstanceTypeSpec {
+	var filteredList []InstanceTypeSpec
+	for _, spec := range instanceTypeSpecList {
+		if spec.GPUs == 0 {
+			filteredList = append(filteredList, spec)
+		}
+	}
+	return filteredList
+}
+
 // Implement the GetBestFitInstanceTypeWithGPU function
+// TBD: Incorporate GPU model based selection as well
 func GetBestFitInstanceTypeWithGPU(sortedInstanceTypeSpecList []InstanceTypeSpec, gpus, vcpus, memory int64) (string, error) {
 	index := sort.Search(len(sortedInstanceTypeSpecList), func(i int) bool {
 		return sortedInstanceTypeSpecList[i].GPUs >= gpus &&
