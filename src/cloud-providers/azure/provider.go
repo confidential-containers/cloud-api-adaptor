@@ -234,6 +234,11 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
+	if spec.Image != "" {
+		logger.Printf("Choosing %s from annotation as the Azure Image for the PodVM image", spec.Image)
+		p.serviceConfig.ImageId = spec.Image
+	}
+
 	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, nicName)
 	if err != nil {
 		return nil, err
