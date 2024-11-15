@@ -376,6 +376,35 @@ func TestGetBestFitInstanceType(t *testing.T) {
 			want:    "t2.large",
 			wantErr: false,
 		},
+		// Add test case with sortedInstanceTypeSpecList=[{t2.small, 2, 6}, {p2.medium, 4, 8, 2}, {t2.large, 8, 16}], vcpus=4, memory=8
+		{
+			name: "sortedInstanceTypeSpecList=[{t2.small, 2, 6}, {p2.medium, 4, 8, 2}, {t2.large, 8, 16}], vcpus=4, memory=8",
+			args: args{
+				sortedInstanceTypeSpecList: []InstanceTypeSpec{
+					{
+						InstanceType: "t2.small",
+						VCPUs:        2,
+						Memory:       6,
+					},
+					{
+						InstanceType: "p2.medium",
+						VCPUs:        4,
+						Memory:       8,
+						GPUs:         2,
+					},
+					{
+						InstanceType: "t2.large",
+						VCPUs:        8,
+						Memory:       16,
+					},
+				},
+				vcpus:  4,
+				memory: 8,
+			},
+			want:    "t2.large",
+			wantErr: false,
+		},
+
 		// Add test case with sortedInstanceTypeSpecList=[{t2.small, 2, 6}, {t2.medium, 4, 8}, {t2.large, 8, 16}], vcpus=4, memory=32
 		{
 			name: "sortedInstanceTypeSpecList=[{t2.small, 2, 6}, {t2.medium, 4, 8}, {t2.large, 8, 16}], vcpus=4, memory=32",
