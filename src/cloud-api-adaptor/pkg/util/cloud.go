@@ -43,10 +43,10 @@ func GetImageFromAnnotation(annotations map[string]string) string {
 	return annotations[hypannotations.ImagePath]
 }
 
-// Method to get vCPU and memory from annotations
-func GetCPUAndMemoryFromAnnotation(annotations map[string]string) (int64, int64) {
+// Method to get vCPU, memory and gpus from annotations
+func GetPodvmResourcesFromAnnotation(annotations map[string]string) (int64, int64, int64) {
 
-	var vcpuInt, memoryInt int64
+	var vcpuInt, memoryInt, gpuInt int64
 	var err error
 
 	vcpu, ok := annotations[hypannotations.DefaultVCPUs]
@@ -73,8 +73,19 @@ func GetCPUAndMemoryFromAnnotation(annotations map[string]string) (int64, int64)
 		memoryInt = 0
 	}
 
-	// Return vCPU and memory
-	return vcpuInt, memoryInt
+	gpu, ok := annotations[hypannotations.DefaultGPUs]
+	if ok {
+		gpuInt, err = strconv.ParseInt(gpu, 10, 64)
+		if err != nil {
+			fmt.Printf("Error converting gpu to int64. Defaulting to 0: %v\n", err)
+			gpuInt = 0
+		}
+	} else {
+		gpuInt = 0
+	}
+
+	// Return vCPU, memory and GPU
+	return vcpuInt, memoryInt, gpuInt
 }
 
 // Method to get initdata from annotation

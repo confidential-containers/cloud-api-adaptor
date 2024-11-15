@@ -6,7 +6,7 @@ import (
 	hypannotations "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/annotations"
 )
 
-func TestGetCPUAndMemoryFromAnnotation(t *testing.T) {
+func TestGetPodvmResourcesFromAnnotation(t *testing.T) {
 	type args struct {
 		annotations map[string]string
 	}
@@ -15,6 +15,7 @@ func TestGetCPUAndMemoryFromAnnotation(t *testing.T) {
 		args  args
 		want  int64
 		want1 int64
+		want2 int64
 	}{
 		// Add test cases with annotations for only vCPUs
 		{
@@ -26,6 +27,7 @@ func TestGetCPUAndMemoryFromAnnotation(t *testing.T) {
 			},
 			want:  2,
 			want1: 0,
+			want2: 0,
 		},
 		// Add test cases with annotations for only memory
 		{
@@ -37,6 +39,7 @@ func TestGetCPUAndMemoryFromAnnotation(t *testing.T) {
 			},
 			want:  0,
 			want1: 2048,
+			want2: 0,
 		},
 		// Add test cases with annotations for both vCPUs and memory
 		{
@@ -49,28 +52,61 @@ func TestGetCPUAndMemoryFromAnnotation(t *testing.T) {
 			},
 			want:  2,
 			want1: 2048,
+			want2: 0,
 		},
-		// Add test cases with annotations for vCPUs and memory with invalid values
+		// Add test cases with annotations for only GPU
+		{
+			name: "GPU only",
+			args: args{
+				annotations: map[string]string{
+					hypannotations.DefaultGPUs: "1",
+				},
+			},
+			want:  0,
+			want1: 0,
+			want2: 1,
+		},
+		// Add test cases with annotations for vCPUs, memory and GPU
+		{
+			name: "vCPUs, memory and GPU",
+			args: args{
+				annotations: map[string]string{
+					hypannotations.DefaultVCPUs:  "2",
+					hypannotations.DefaultMemory: "2048",
+					hypannotations.DefaultGPUs:   "1",
+				},
+			},
+			want:  2,
+			want1: 2048,
+			want2: 1,
+		},
+
+		// Add test cases with annotations with invalid values
 		{
 			name: "vCPUs and memory with invalid values",
 			args: args{
 				annotations: map[string]string{
 					hypannotations.DefaultVCPUs:  "invalid",
 					hypannotations.DefaultMemory: "invalid",
+					hypannotations.DefaultGPUs:   "invalid",
 				},
 			},
 			want:  0,
 			want1: 0,
+			want2: 0,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := GetCPUAndMemoryFromAnnotation(tt.args.annotations)
+			got, got1, got2 := GetPodvmResourcesFromAnnotation(tt.args.annotations)
 			if got != tt.want {
-				t.Errorf("GetCPUAndMemoryFromAnnotation() got = %v, want %v", got, tt.want)
+				t.Errorf("GetPodvmResourcesFromAnnotation() got = %v, want %v", got, tt.want)
 			}
 			if got1 != tt.want1 {
-				t.Errorf("GetCPUAndMemoryFromAnnotation() got1 = %v, want %v", got1, tt.want1)
+				t.Errorf("GetPodvmResourcesFromAnnotation() got1 = %v, want %v", got1, tt.want1)
+			}
+			if got2 != tt.want2 {
+				t.Errorf("GetPodvmResourcesFromAnnotation() got2 = %v, want %v", got2, tt.want2)
 			}
 		})
 	}
