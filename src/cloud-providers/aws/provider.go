@@ -204,6 +204,12 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			TagSpecifications: tagSpecifications,
 		}
 	} else {
+
+		if spec.Image != "" {
+			logger.Printf("Choosing %s from annotation as the AWS AMI for the PodVM image", spec.Image)
+			p.serviceConfig.ImageId = spec.Image
+		}
+
 		input = &ec2.RunInstancesInput{
 			MinCount:          aws.Int32(1),
 			MaxCount:          aws.Int32(1),
