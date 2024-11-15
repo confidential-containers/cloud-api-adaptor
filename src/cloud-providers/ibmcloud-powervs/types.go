@@ -10,7 +10,7 @@ type Config struct {
 	Zone              string
 	ServiceInstanceID string
 	NetworkID         string
-	ImageID           string
+	ImageId           string
 	SSHKey            string
 	Memory            float64
 	Processors        float64

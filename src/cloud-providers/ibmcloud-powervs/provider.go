@@ -54,7 +54,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 
 	body := &models.PVMInstanceCreate{
 		ServerName:  &instanceName,
-		ImageID:     &p.serviceConfig.ImageID,
+		ImageID:     &p.serviceConfig.ImageId,
 		KeyPairName: p.serviceConfig.SSHKey,
 		Networks: []*models.PVMInstanceAddNetwork{
 			{
@@ -143,7 +143,7 @@ func (p *ibmcloudPowerVSProvider) Teardown() error {
 }
 
 func (p *ibmcloudPowerVSProvider) ConfigVerifier() error {
-	ImageId := p.serviceConfig.ImageID
+	ImageId := p.serviceConfig.ImageId
 	if len(ImageId) == 0 {
 		return fmt.Errorf("ImageId is empty")
 	}
