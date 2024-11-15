@@ -89,6 +89,14 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 	logger.Printf("userDataEnc:  %s", userDataEnc)
 
+	// It's expected that the image from the annotation will follow the format "projects/<project>/global/images/<image>"
+	srcImage := proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectId, p.serviceConfig.ImageName))
+
+	if spec.Image != "" {
+		logger.Printf("Choosing %s from annotation as the GCP image for the PodVM image", spec.Image)
+		srcImage = proto.String(spec.Image)
+	}
+
 	insertReq := &computepb.InsertInstanceRequest{
 		Project: p.serviceConfig.ProjectId,
 		Zone:    p.serviceConfig.Zone,
@@ -98,7 +106,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 				{
 					InitializeParams: &computepb.AttachedDiskInitializeParams{
 						DiskSizeGb:  proto.Int64(20),
-						SourceImage: proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectId, p.serviceConfig.ImageName)),
+						SourceImage: srcImage,
 						DiskType:    proto.String(fmt.Sprintf("zones/%s/diskTypes/pd-standard", p.serviceConfig.Zone)),
 					},
 					AutoDelete: proto.Bool(true),
