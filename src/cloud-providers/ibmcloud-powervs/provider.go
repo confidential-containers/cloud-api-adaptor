@@ -52,6 +52,11 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		return nil, err
 	}
 
+	if spec.Image != "" {
+		logger.Printf("Choosing %s from annotation as the Power VS image for the PodVM image", spec.Image)
+		p.serviceConfig.ImageId = spec.Image
+	}
+
 	body := &models.PVMInstanceCreate{
 		ServerName:  &instanceName,
 		ImageID:     &p.serviceConfig.ImageId,
