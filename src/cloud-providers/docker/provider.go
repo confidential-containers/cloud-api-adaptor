@@ -85,6 +85,11 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s",
 		filepath.Join(p.DataDir, "kata-containers"), "/run/kata-containers"))
 
+	if spec.Image != "" {
+		logger.Printf("Choosing %s from annotation as the docker image for the PodVM image", spec.Image)
+		p.PodVMDockerImage = spec.Image
+	}
+
 	// (host)image dir -> (container) /image
 	// There is a podvm systemd service in pod which bind mounts /run/image to /image
 	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s",
