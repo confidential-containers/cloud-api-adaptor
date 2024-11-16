@@ -340,12 +340,12 @@ func DoTestCreatePeerPodContainerWithValidAlternateImage(t *testing.T, e env.Env
 	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithAlternateImage(alternateImageName).Run()
 }
 
-func DoTestCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert) {
+func DoTestCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert,
+	nonExistingImageName, expectedErrorMessage string) {
+
 	podName := "annotations-invalid-alternate-image"
 	containerName := "busybox"
 	imageName := getBusyboxTestImage(t)
-	nonExistingImageName := "non-existing-image"
-	expectedErrorMessage := "Error in creating volume: Can't retrieve volume " + nonExistingImageName
 	annotationData := map[string]string{
 		"io.katacontainers.config.hypervisor.image": nonExistingImageName,
 	}

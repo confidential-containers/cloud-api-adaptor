@@ -42,7 +42,9 @@ func TestLibvirtCreatePeerPodContainerWithValidAlternateImage(t *testing.T) {
 
 func TestLibvirtCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
 	assert := LibvirtAssert{}
-	DoTestCreatePeerPodContainerWithInvalidAlternateImage(t, testEnv, assert)
+	nonExistingImageName := "non-existing-image"
+	expectedErrorMessage := "Error in creating volume: Can't retrieve volume " + nonExistingImageName
+	DoTestCreatePeerPodContainerWithInvalidAlternateImage(t, testEnv, assert, nonExistingImageName, expectedErrorMessage)
 }
 
 func TestLibvirtCreatePeerPodWithJob(t *testing.T) {
