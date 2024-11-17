@@ -26,3 +26,11 @@ The webhook also removes every resource specification (cpu/mem/gpu) from the res
 
 The following diagram describes the high level flow.
 ![alt text](res-mgmt.png)
+
+
+## Resource cleanups
+
+A custom resource (`PeerPod`) is created for every (peer) pod.
+This is used to track the cloud VM resources to ensure that any
+dangling VM resources are deleted.
+For more details refer to the `peerpod-ctrl` [directory](https://github.com/confidential-containers/cloud-api-adaptor/tree/main/src/peerpod-ctrl).
