@@ -170,8 +170,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Extract go version number
-      run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
+    - name: Extract version numbers
+      run: |
+        echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
+        echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
+
+    - uses: oras-project/setup-oras@v1
+      with:
+        version: ${{ env.ORAS_VERSION }}
 
     - name: Set up Go environment
       uses: actions/setup-go@v5
