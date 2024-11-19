@@ -24,6 +24,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/agent"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
+	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/wnssh"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
@@ -35,10 +36,6 @@ import (
 
 const (
 	SrcAuthfilePath = "/root/containers/auth.json"
-	AAConfigPath    = "/run/peerpod/aa.toml"
-	AuthFilePath    = "/run/peerpod/auth.json"
-	CDHConfigPath   = "/run/peerpod/cdh.toml"
-	InitdataPath    = "/run/peerpod/initdata"
 	Version         = "0.0.0"
 )
 
@@ -325,7 +322,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		}
 
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    InitdataPath,
+			Path:    InitDataPath,
 			Content: initdataStr,
 		})
 	}

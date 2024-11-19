@@ -12,8 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/azure"
 )
 
 var testAgentConfig string = `server_addr = 'unix:///run/kata-containers/agent.sock'
@@ -226,7 +224,7 @@ func startTestServerPlainText() *httptest.Server {
 }
 
 // TestGetUserData tests the getUserData function
-func TestGetUserData(t *testing.T) {
+func TestIMDSGet(t *testing.T) {
 	// Start a temporary HTTP server for the test simulating
 	// the Azure metadata service
 	srv := startTestServer()
@@ -238,8 +236,7 @@ func TestGetUserData(t *testing.T) {
 	// Send request to srv.URL at path /metadata/instance/compute/userData
 
 	reqPath := srv.URL + "/metadata/instance/compute/userData"
-	// Call the getUserData function
-	userData, _ := azure.GetUserData(ctx, reqPath)
+	userData, _ := imdsGet(ctx, reqPath, true, nil)
 
 	// Check that the userData is not empty
 	if userData == nil {
@@ -248,15 +245,14 @@ func TestGetUserData(t *testing.T) {
 }
 
 // TestInvalidGetUserDataInvalidUrl tests the getUserData function with an invalid URL
-func TestInvalidGetUserDataInvalidUrl(t *testing.T) {
+func TestInvalidIMDSGetInvalidUrl(t *testing.T) {
 
 	// Create a context
 	ctx := context.Background()
 
 	// Send request to invalid URL
 	reqPath := "invalidURL"
-	// Call the getUserData function
-	userData, _ := azure.GetUserData(ctx, reqPath)
+	userData, _ := imdsGet(ctx, reqPath, true, nil)
 
 	// Check that the userData is empty
 	if userData != nil {
@@ -272,8 +268,7 @@ func TestInvalidGetUserDataEmptyUrl(t *testing.T) {
 
 	// Send request to empty URL
 	reqPath := ""
-	// Call the getUserData function
-	userData, _ := azure.GetUserData(ctx, reqPath)
+	userData, _ := imdsGet(ctx, reqPath, true, nil)
 
 	// Check that the userData is empty
 	if userData != nil {
@@ -553,8 +548,7 @@ func TestFailPlainTextUserData(t *testing.T) {
 	// Send request to srv.URL at path /metadata/instance/compute/userData
 
 	reqPath := srv.URL + "/metadata/instance/compute/userData"
-	// Call the getUserData function
-	userData, _ := azure.GetUserData(ctx, reqPath)
+	userData, _ := imdsGet(ctx, reqPath, true, nil)
 
 	// Check that the userData is empty. Since plain text userData is not supported
 	if userData != nil {

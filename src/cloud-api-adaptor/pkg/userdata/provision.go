@@ -14,26 +14,31 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/cloud"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/agent"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/aws"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/azure"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/docker"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/gcp"
 	toml "github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v2"
+
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
+	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 )
 
 const (
 	ConfigParent = "/run/peerpod"
 	DigestPath   = "/run/peerpod/initdata.digest"
 	PolicyPath   = "/run/peerpod/policy.rego"
+	// Ref: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
+	AWSImdsUrl         = "http://169.254.169.254/latest/dynamic/instance-identity/document"
+	AWSUserDataImdsUrl = "http://169.254.169.254/latest/user-data"
+	// Ref: https://docs.microsoft.com/en-us/azure/virtual-machines/linux/instance-metadata-service
+	AzureImdsUrl         = "http://169.254.169.254/metadata/instance/compute?api-version=2021-01-01"
+	AzureUserDataImdsUrl = "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text"
+	// Ref: https://cloud.google.com/compute/docs/storing-retrieving-metadata
+	GcpImdsUrl         = "http://metadata.google.internal/computeMetadata/v1/instance"
+	GcpUserDataImdsUrl = "http://metadata.google.internal/computeMetadata/v1/instance/attributes/user-data"
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
-var WriteFilesList = []string{cloud.AAConfigPath, cloud.CDHConfigPath, agent.ConfigFilePath, forwarder.DefaultConfigPath, cloud.AuthFilePath, cloud.InitdataPath}
-var InitdDataFilesList = []string{cloud.AAConfigPath, cloud.CDHConfigPath, PolicyPath}
+var WriteFilesList = []string{AACfgPath, CDHCfgPath, AgentCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath}
+var InitdDataFilesList = []string{AACfgPath, CDHCfgPath, PolicyPath}
 
 type Config struct {
 	fetchTimeout  int
@@ -48,7 +53,7 @@ func NewConfig(fetchTimeout int) *Config {
 	return &Config{
 		fetchTimeout:  fetchTimeout,
 		parentPath:    ConfigParent,
-		initdataPath:  cloud.InitdataPath,
+		initdataPath:  InitDataPath,
 		digestPath:    DigestPath,
 		writeFiles:    WriteFilesList,
 		initdataFiles: InitdDataFilesList,
@@ -78,51 +83,58 @@ func (d DefaultRetry) GetRetryDelay() time.Duration {
 type AzureUserDataProvider struct{ DefaultRetry }
 
 func (a AzureUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := azure.AzureUserDataImdsUrl
+	url := AzureUserDataImdsUrl
 	logger.Printf("provider: Azure, userDataUrl: %s\n", url)
-	return azure.GetUserData(ctx, url)
+	return imdsGet(ctx, url, true, []kvPair{{"Metadata", "true"}})
 }
 
 type AWSUserDataProvider struct{ DefaultRetry }
 
 func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := aws.AWSUserDataImdsUrl
+	url := AWSUserDataImdsUrl
 	logger.Printf("provider: AWS, userDataUrl: %s\n", url)
-	return aws.GetUserData(ctx, url)
+	// aws user data is not base64 encoded
+	return imdsGet(ctx, url, false, nil)
 }
 
 type GCPUserDataProvider struct{ DefaultRetry }
 
 func (g GCPUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := gcp.GcpUserDataImdsUrl
+	url := GcpUserDataImdsUrl
 	logger.Printf("provider: GCP, userDataUrl: %s\n", url)
-	return gcp.GetUserData(ctx, url)
+	return imdsGet(ctx, url, true, []kvPair{{"Metadata-Flavor", "Google"}})
 }
 
 type DockerUserDataProvider struct{ DefaultRetry }
 
 func (a DockerUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := docker.DockerUserDataUrl
-	logger.Printf("provider: Docker, userDataUrl: %s\n", url)
-	return docker.GetUserData(ctx, url)
+	path := DockerUserDataPath
+	logger.Printf("provider: Docker, userDataPath: %s\n", path)
+	userData, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %s", err)
+	}
+
+	return userData, nil
 }
 
 func newProvider(ctx context.Context) (UserDataProvider, error) {
 
 	// This checks for the presence of a file and doesn't rely on http req like the
 	// azure, aws ones, thereby making it faster and hence checking this first
-	if docker.IsDocker(ctx) {
+	if isDockerContainer() {
 		return DockerUserDataProvider{}, nil
 	}
-	if azure.IsAzure(ctx) {
+
+	if isAzureVM() {
 		return AzureUserDataProvider{}, nil
 	}
 
-	if aws.IsAWS(ctx) {
+	if isAWSVM(ctx) {
 		return AWSUserDataProvider{}, nil
 	}
 
-	if gcp.IsGCP(ctx) {
+	if isGCPVM(ctx) {
 		return GCPUserDataProvider{}, nil
 	}
 
@@ -232,7 +244,7 @@ func extractInitdataAndHash(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("Error base64 decode initdata: %w", err)
 	}
-	initdata := cloud.InitData{}
+	initdata := initdata.InitData{}
 	err = toml.Unmarshal(decodedBytes, &initdata)
 	if err != nil {
 		return fmt.Errorf("Error unmarshalling initdata: %w", err)
