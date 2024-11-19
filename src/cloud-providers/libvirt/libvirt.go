@@ -21,6 +21,8 @@ import (
 const (
 	// architecture value for the s390x architecture
 	archS390x = "s390x"
+	// architecutre value for aarch64/arm64
+	archAArch64 = "aarch64"
 	// hvm indicates that the OS is one designed to run on bare metal, so requires full virtualization.
 	typeHardwareVirtualMachine = "hvm"
 	// The amount of retries to get the domain IP addresses
@@ -508,11 +510,122 @@ func enableSEV(client *libvirtClient, cfg *domainConfig, vm *vmConfig, domain *l
 	return domain, nil
 }
 
+func createDomainXMLaarch64(client *libvirtClient, cfg *domainConfig, vm *vmConfig) (*libvirtxml.Domain, error) {
+
+	guest, err := getGuestForArchType(client.caps, archAArch64, typeHardwareVirtualMachine)
+	if err != nil {
+		return nil, err
+	}
+	canonicalmachine, err := getCanonicalMachineName(client.caps, archAArch64, typeHardwareVirtualMachine, "virt")
+	if err != nil {
+		return nil, err
+	}
+
+	bootDisk := libvirtxml.DomainDisk{
+		Device: "disk",
+		Target: &libvirtxml.DomainDiskTarget{
+			Dev: "vda",
+			Bus: "virtio",
+		},
+		Driver: &libvirtxml.DomainDiskDriver{
+			Name: "qemu",
+			Type: "qcow2",
+			// only for virtio device
+			IOMMU: "on",
+		},
+		Source: &libvirtxml.DomainDiskSource{
+			File: &libvirtxml.DomainDiskSourceFile{
+				File: cfg.bootDisk,
+			},
+		},
+		Boot: &libvirtxml.DomainDeviceBoot{
+			Order: 1,
+		},
+	}
+	cloudInitDisk := libvirtxml.DomainDisk{
+		Device: "cdrom",
+		Target: &libvirtxml.DomainDiskTarget{
+			// logical dev name, just a hint
+			Dev: "sda",
+			Bus: "scsi",
+		},
+		Driver: &libvirtxml.DomainDiskDriver{
+			Name: "qemu",
+			Type: "raw",
+		},
+		Source: &libvirtxml.DomainDiskSource{
+			File: &libvirtxml.DomainDiskSourceFile{
+				File: cfg.cidataDisk,
+			},
+		},
+		ReadOnly: &libvirtxml.DomainDiskReadOnly{},
+	}
+
+	domain := &libvirtxml.Domain{
+		Type:        "kvm",
+		Name:        cfg.name,
+		Description: "This Virtual Machine is the peer-pod VM",
+		OS: &libvirtxml.DomainOS{
+			Type: &libvirtxml.DomainOSType{
+				Type:    typeHardwareVirtualMachine,
+				Arch:    archAArch64,
+				Machine: canonicalmachine,
+			},
+			// firmware autoselection since libvirt v5.2.0
+			// https://libvirt.org/formatdomain.html#bios-bootloader
+			Firmware: "efi",
+		},
+		Memory: &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "GiB"},
+		VCPU:   &libvirtxml.DomainVCPU{Value: cfg.cpu},
+		CPU:    &libvirtxml.DomainCPU{Mode: "host-passthrough"},
+		Devices: &libvirtxml.DomainDeviceList{
+			Disks: []libvirtxml.DomainDisk{
+				bootDisk,
+				cloudInitDisk,
+			},
+			// scsi target device for readonly ROM device
+			// virtio-scsi controller for better compatibility
+			Controllers: []libvirtxml.DomainController{
+				{
+					Type:  "scsi",
+					Model: "virtio-scsi",
+				},
+			},
+			Emulator:   guest.Arch.Emulator,
+			MemBalloon: &libvirtxml.DomainMemBalloon{Model: "virtio", Driver: &libvirtxml.DomainMemBalloonDriver{IOMMU: "on"}},
+			Interfaces: []libvirtxml.DomainInterface{
+				{
+					Model: &libvirtxml.DomainInterfaceModel{
+						Type: "virtio",
+					},
+					Source: &libvirtxml.DomainInterfaceSource{
+						Network: &libvirtxml.DomainInterfaceSourceNetwork{
+							Network: cfg.networkName,
+						},
+					},
+					Driver: &libvirtxml.DomainInterfaceDriver{
+						IOMMU: "on",
+					},
+				},
+			},
+			Consoles: []libvirtxml.DomainConsole{
+				{
+					Target: &libvirtxml.DomainConsoleTarget{Type: "serial"},
+				},
+			},
+		},
+	}
+
+	return domain, nil
+}
+
 // createDomainXML detects the machine type of the libvirt host and will return a libvirt XML for that machine type
 func createDomainXML(client *libvirtClient, cfg *domainConfig, vm *vmConfig) (*libvirtxml.Domain, error) {
 	switch client.nodeInfo.Model {
 	case archS390x:
 		return createDomainXMLs390x(client, cfg, vm)
+	case archAArch64:
+		return createDomainXMLaarch64(client, cfg, vm)
 	default:
 		return createDomainXMLx86_64(client, cfg, vm)
 	}
