@@ -72,11 +72,12 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 
 	// Create volume binding for the container
 
-	// mount userdata to DockerUserDataUrl=/peerpods/userdata.json
+	// mount userdata to /peerpods/userdata.json
 	// This file will be read by process-user-data and daemon.json will be written to
 	// /run/peerpods/daemon.json at runtime
 	volumeBinding := []string{
-		fmt.Sprintf("%s:%s", instanceUserdataFile, DockerUserDataUrl),
+		// note: we are not importing that path from the CAA package to avoid circular dependencies
+		fmt.Sprintf("%s:%s", instanceUserdataFile, "/peerpods/userdata.json"),
 	}
 
 	// Add host bind mount for /run/kata-containers and /run/image to avoid

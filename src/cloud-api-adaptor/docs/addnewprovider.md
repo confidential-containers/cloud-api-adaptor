@@ -53,6 +53,10 @@ To include your provider you need reference it from the main package. Go build t
 ```
 Note the comment at the top of the file, when building ensure `-tags=` is set to include your new provider. See the [Makefile](../../cloud-api-adaptor/Makefile#L26) for more context and usage.
 
+### Step 2.4 Add code to receive user-data on the Pod VM image
+
+A Pod VM image is configured via user-data that is provided to the guest. How the guest retrieves the user-data body is specific to the provider. Add support for the provider to the [userdata module](../pkg/userdata/provision.go)
+
 ### Step 3: Add documentation on how to build a Pod VM image
 
 For using the provider, a pod VM image needs to be created in order to create the peer pod instances. Add the instructions for building the peer pod VM image at the root directory similar to the other providers.
