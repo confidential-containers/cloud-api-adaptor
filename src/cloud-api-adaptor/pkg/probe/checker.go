@@ -45,23 +45,24 @@ func (c *Checker) GetAllPeerPods(startTime time.Time) (ready bool, err error) {
 	logger.Printf("Selected pods count: %d", len(pods.Items))
 
 	for _, pod := range pods.Items {
-		if pod.Spec.RuntimeClassName != nil && *pod.Spec.RuntimeClassName == c.RuntimeclassName {
-			// peer-pods
-			for _, condition := range pod.Status.Conditions {
-				if condition.Type == corev1.PodReady {
-					logger.Printf("Dealing with PeerPod: %s, with Ready condition: %v", pod.ObjectMeta.Name, condition)
-					if condition.Status != corev1.ConditionTrue {
-						return false, fmt.Errorf("PeerPod %s is not Ready.", pod.ObjectMeta.Name)
-					}
-
-					if condition.LastTransitionTime.Time.Before(startTime) {
-						return false, fmt.Errorf("PeerPod %s has not been restarted.", pod.ObjectMeta.Name)
-					}
-				}
+		if pod.Spec.RuntimeClassName == nil {
+			continue
+		}
+		if *pod.Spec.RuntimeClassName != c.RuntimeclassName {
+			continue
+		}
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type != corev1.PodReady {
+				continue
 			}
-		} else {
-			// standard pods
-			logger.Printf("Ignored standard pod: %s", pod.ObjectMeta.Name)
+			logger.Printf("Dealing with PeerPod: %s, with Ready condition: %v", pod.ObjectMeta.Name, condition)
+			if condition.Status != corev1.ConditionTrue {
+				return false, fmt.Errorf("PeerPod %s is not Ready.", pod.ObjectMeta.Name)
+			}
+
+			if condition.LastTransitionTime.Time.Before(startTime) {
+				return false, fmt.Errorf("PeerPod %s has not been restarted.", pod.ObjectMeta.Name)
+			}
 		}
 	}
 

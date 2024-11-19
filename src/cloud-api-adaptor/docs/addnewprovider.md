@@ -402,15 +402,6 @@ cloud-api-adaptor: starting Cloud API Adaptor daemon for "libvirt"
 2024/04/17 04:34:56 [adaptor] server started
 2024/04/17 04:35:35 [probe/probe] nodeName: peer-pods-worker-0
 2024/04/17 04:35:35 [probe/probe] Selected pods count: 10
-2024/04/17 04:35:35 [probe/probe] Ignored standard pod: cc-operator-controller-manager-857f844f7d-7xmjr
-2024/04/17 04:35:35 [probe/probe] Ignored standard pod: cc-operator-daemon-install-ms96p
-2024/04/17 04:35:35 [probe/probe] Ignored standard pod: cc-operator-pre-install-daemon-wfnfl
-2024/04/17 04:35:35 [probe/probe] Ignored standard pod: cloud-api-adaptor-daemonset-66srd
-2024/04/17 04:35:35 [probe/probe] Ignored standard pod: peerpod-ctrl-controller-manager-865cb874d-mknth
-2024/04/17 04:35:35 [probe/probe] Ignored standard pod: ingress-nginx-admission-create-lxlx4
-2024/04/17 04:35:35 [probe/probe] Ignored standard pod: ingress-nginx-admission-patch-j2xqb
-2024/04/17 04:35:35 [probe/probe] Ignored standard pod: ingress-nginx-controller-7bf7bc78dc-c4tzl
-2024/04/17 04:35:35 [probe/probe] Ignored standard pod: kube-flannel-ds-rk56t
 2024/04/17 04:35:35 [probe/probe] Ignored standard pod: kube-proxy-464dj
 2024/04/17 04:35:35 [probe/probe] All PeerPods standup. we do not check the PeerPods status any more.
 ...
