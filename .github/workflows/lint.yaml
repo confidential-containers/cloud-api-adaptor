@@ -77,6 +77,15 @@ jobs:
       - name: check
         run: make golangci-lint
 
+  codeql:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    needs:
+      - vet-and-fmt
+    uses: "./.github/workflows/lib-codeql.yaml"
+
   shellcheck:
     name: shellcheck
     runs-on: ubuntu-24.04
