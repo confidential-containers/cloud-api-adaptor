@@ -115,9 +115,6 @@ export CLOUD_PROVIDER=azure
 PODVM_DISTRO=ubuntu make image
 ```
 
-> [!NOTE]
-> If you want to disable cloud-init then `export DISABLE_CLOUD_CONFIG=true` before building the image.
-
 Use the `ManagedImageSharedImageGalleryId` field from output of the above command to populate the following environment variable. It's used while deploying cloud-api-adaptor:
 
 ```bash
