@@ -98,11 +98,6 @@ variable "boot_wait" {
   default = "10s"
 }
 
-variable "disable_cloud_config" {
-  type    = string
-  default = env("DISABLE_CLOUD_CONFIG")
-}
-
 variable "se_boot" {
   type    = string
   default = env("SE_BOOT")
