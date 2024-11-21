@@ -124,6 +124,15 @@ func TestLibvirtPodsMTLSCommunication(t *testing.T) {
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
 
+func TestLibvirtImageDecryption(t *testing.T) {
+	if !isTestWithKbs() {
+		t.Skip("Skipping kbs related test as kbs is not deployed")
+	}
+
+	assert := LibvirtAssert{}
+	DoTestImageDecryption(t, testEnv, assert, keyBrokerService)
+}
+
 func TestLibvirtSealedSecret(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")

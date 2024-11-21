@@ -180,7 +180,7 @@ AZURE_IMAGE_ID="unused"
 EOF
 ```
 
-Run the test suite with the respective flags:
+Run the test suite with the respective flags. Enable `TEST_KBS` and provide a `KBS_ENDPOINT` to run KBS-related test.
 
 ```bash
 make test-e2e \
@@ -189,6 +189,9 @@ TEST_TEARDOWN=no \
 TEST_PROVISION=no \
 TEST_INSTALL_CAA=no \
 TEST_PROVISION_FILE="${PWD}/skip-provisioning.properties" \
+TEST_KBS=yes \
+KBS_ENDPOINT=http://10.224.0.5:30362 \
+RUN_TESTS=TestAzureImageDecryption
 ```
 
 ### IBM Cloud
