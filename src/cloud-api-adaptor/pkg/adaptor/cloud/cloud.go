@@ -288,7 +288,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 				Content: agentConfig,
 			},
 			{
-				Path:    forwarder.DefaultConfigPath,
+				Path:    forwarder.DefaultDaemonConfigPath,
 				Content: string(daemonJSON),
 			},
 		},
