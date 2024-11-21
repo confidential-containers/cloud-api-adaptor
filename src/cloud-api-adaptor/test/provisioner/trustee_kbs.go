@@ -495,15 +495,10 @@ func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFil
 	return nil
 }
 
-func (p *KeyBrokerService) SetSampleSecretKey() error {
+func (p *KeyBrokerService) setSecretKey(resource string, path string) error {
 	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
-	overlaysPath, err := getOverlaysPath()
-	if err != nil {
-		return err
-	}
-	keyFilePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
-	log.Info("set key resource: ", keyFilePath)
-	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource", "--path", "reponame/workload_key/key.bin", "--resource-file", keyFilePath)
+	log.Info("set key resource: ", resource)
+	cmd := exec.Command("./kbs-client", "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource", "--path", resource, "--resource-file", path)
 	cmd.Dir = trusteeRepoPath
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
@@ -512,6 +507,31 @@ func (p *KeyBrokerService) SetSampleSecretKey() error {
 		return err
 	}
 	return nil
+}
+
+func (p *KeyBrokerService) SetImageDecryptionKey(keyID string, key []byte) error {
+	if len(key) != 32 {
+		return fmt.Errorf("image decryption key must be 32 bytes")
+	}
+	path, err := os.CreateTemp("", "image-decryption-*.key")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(path.Name())
+
+	if _, err := path.Write(key); err != nil {
+		return err
+	}
+	return p.setSecretKey(keyID, path.Name())
+}
+
+func (p *KeyBrokerService) SetSampleSecretKey() error {
+	overlaysPath, err := getOverlaysPath()
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
+	return p.setSecretKey("reponame/workload_key/key.bin", path)
 }
 
 func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {

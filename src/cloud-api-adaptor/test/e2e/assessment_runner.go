@@ -14,9 +14,11 @@ import (
 
 	"gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/e2e-framework/klient"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/env"
@@ -167,6 +169,35 @@ func (tc *TestCase) WithNydusSnapshotter() *TestCase {
 	return tc
 }
 
+func writeAuthSecret(client klient.Client, ctx context.Context) error {
+	secret := &corev1.Secret{}
+	secretExists := false
+	err := client.Resources().Get(ctx, DEFAULT_AUTH_SECRET, E2eNamespace, secret)
+	if err == nil {
+		secretExists = true
+	}
+	if secretExists {
+		return nil
+	}
+
+	providerName := os.Getenv("CLOUD_PROVIDER")
+	// this path is relative to ./test/e2e
+	authFilePath := "../../install/overlays/" + providerName + "/auth.json"
+	authfile, err := os.ReadFile(authFilePath)
+	if err != nil {
+		return err
+	}
+
+	secretData := map[string][]byte{v1.DockerConfigJsonKey: authfile}
+	secret = NewSecret(E2eNamespace, DEFAULT_AUTH_SECRET, secretData, v1.SecretTypeDockerConfigJson)
+	err = client.Resources().Create(ctx, secret)
+	if err != nil {
+		return err
+	}
+
+	return AddImagePullSecretToDefaultServiceAccount(ctx, client, DEFAULT_AUTH_SECRET)
+}
+
 func (tc *TestCase) Run() {
 	testCaseFeature := features.New(fmt.Sprintf("%s test", tc.testName)).
 		WithSetup("Create testworkload", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -182,17 +213,7 @@ func (tc *TestCase) Run() {
 			}
 
 			if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
-				providerName := os.Getenv("CLOUD_PROVIDER")
-				authfile, err := os.ReadFile("../../install/overlays/" + providerName + "/auth.json")
-				if err != nil {
-					t.Fatal(err)
-				}
-				secretData := map[string][]byte{v1.DockerConfigJsonKey: authfile}
-				secret := NewSecret(E2eNamespace, DEFAULT_AUTH_SECRET, secretData, v1.SecretTypeDockerConfigJson)
-				if err = client.Resources().Create(ctx, secret); err != nil {
-					t.Fatal(err)
-				}
-				if err = AddImagePullSecretToDefaultServiceAccount(ctx, client, DEFAULT_AUTH_SECRET); err != nil {
+				if err = writeAuthSecret(client, ctx); err != nil {
 					t.Fatal(err)
 				}
 			}

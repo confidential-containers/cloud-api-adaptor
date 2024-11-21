@@ -155,3 +155,12 @@ func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
 	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
 	DoTestTrusteeOperatorKeyReleaseForSpecificKey(t, testEnv, assert, kbsEndpoint)
 }
+
+func TestAzureImageDecryption(t *testing.T) {
+	if !isTestWithKbs() {
+		t.Skip("Skipping kbs related test as kbs is not deployed")
+	}
+	t.Parallel()
+
+	DoTestImageDecryption(t, testEnv, assert, keyBrokerService)
+}

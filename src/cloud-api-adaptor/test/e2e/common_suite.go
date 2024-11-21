@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
+	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -497,6 +498,53 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 	extraSecrets := []*v1.Secret{clientSecret}
 	NewTestCase(t, e, "TestPodsMTLSCommunication", assert, "Pods communication with mTLS").WithPod(serverPod).WithExtraPods(extraPods).WithConfigMap(configMap).WithService(nginxSvc).WithSecret(serverSecret).WithExtraSecrets(extraSecrets).Run()
 
+}
+
+func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+	image := "ghcr.io/confidential-containers/cloud-api-adaptor/nginx-encrypted:20240123"
+	var kbsEndpoint string
+	if ep := os.Getenv("KBS_ENDPOINT"); ep != "" {
+		kbsEndpoint = ep
+	} else if kbs == nil {
+		t.Skip("Skipping because KBS config is missing")
+	} else {
+		// skopeo inspect \
+		//   docker://ghcr.io/confidential-containers/cloud-api-adaptor/nginx-encrypted:20240123 \
+		//   | jq .Labels
+		// {
+		//   "coco-key-b64": "pHSE5N+T/3GGfb/umaWgB8bfHc/dQWvmxdsjoWam0Vs=",
+		//   "coco-key-id": "default/key/nginx-encrypted",
+		// }
+		keyID := "default/key/nginx-encrypted"
+		key := []byte{
+			164, 116, 132, 228, 223, 147, 255, 113, 134, 125,
+			191, 238, 153, 165, 160, 7, 198, 223, 29, 207,
+			221, 65, 107, 230, 197, 219, 35, 161, 102, 166,
+			209, 91}
+
+		err := kbs.SetImageDecryptionKey(keyID, key)
+		if err != nil {
+			t.Fatalf("Failed to set image decryption key: %v", err)
+		}
+		err = kbs.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+		if err != nil {
+			t.Fatalf("Failed to enable KBS customized resource policy: %v", err)
+		}
+		err = kbs.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
+		if err != nil {
+			t.Fatalf("Failed to enable KBS customized attestation policy: %v", err)
+		}
+		kbsEndpoint, err = kbs.GetCachedKbsEndpoint()
+		if err != nil {
+			t.Fatalf("Failed to get KBS endpoint: %v", err)
+		}
+	}
+	podName := "nginx-encrypted"
+	// encrypted images need this for the time being
+	annotations := map[string]string{"io.containerd.cri.runtime-handler": "kata-remote"}
+	pod := NewPod(E2eNamespace, podName, podName, image, WithAnnotations(annotations), WithInitdata(kbsEndpoint))
+	duration := 3 * time.Minute
+	NewTestCase(t, e, "TestImageDecryption", assert, "Encrypted image layers have been decrypted").WithPod(pod).WithDeleteAssertion(&duration).Run()
 }
 
 func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
