@@ -49,7 +49,7 @@ oci:
     tag: 3.9
   kata-containers:
     registry: ghcr.io/kata-containers/cached-artefacts
-    reference: a2b9527be36ce5adb76491a27c7e02780feade6b
+    reference: 3.11.0
   guest-components:
     registry: ghcr.io/confidential-containers/guest-components
     reference: d8da69072424e496486dfb5421a26f16ff2a7abf
