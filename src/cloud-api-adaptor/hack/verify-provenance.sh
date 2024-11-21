@@ -100,21 +100,43 @@ claims=$(
 		--format json \
 		-q '.[].verificationResult.signature.certificate
 		| {
-			digest:         .sourceRepositoryDigest,
-			workflowDigest: .githubWorkflowSHA,
-			trigger:        ([.githubWorkflowTrigger, .githubWorkflowRef] | join(":")),
+			digest:          .sourceRepositoryDigest,
+			workflowDigest:  .githubWorkflowSHA,
+			workflowTrigger: .githubWorkflowTrigger,
+			workflowRef:     .githubWorkflowRef,
 		}'
 )
 
-expected_claims="$(jq -n --arg digest "$expected_digest" '{
-	digest:         $digest,
-	workflowDigest: $digest,
-	trigger:        "push:refs/heads/main",
-}')"
+digest=$(echo "$claims" | jq -r '.digest')
+workflow_digest=$(echo "$claims" | jq -r '.workflowDigest')
+workflow_trigger=$(echo "$claims" | jq -r '.workflowTrigger')
+workflow_ref=$(echo "$claims" | jq -r '.workflowRef')
 
-diff <(jq -S . <<<"$claims") <(jq -S . <<<"$expected_claims") || {
+verification_failed=""
+
+if [ "$digest" != "$expected_digest" ]; then
+	echo "Source code digest mismatch: expected $expected_digest, got $digest"
+	verification_failed="1"
+fi
+
+if [ "$workflow_digest" != "$digest" ]; then
+	echo "Workflow digest mismatch: expected $expected_digest, got $workflow_digest"
+	verification_failed="1"
+fi
+
+if [ "$workflow_trigger" != "push" ] && [ "$workflow_trigger" != "workflow_dispatch" ]; then
+	echo "Workflow trigger mismatch: expected push or workflow_dispatch, got $workflow_trigger"
+	verification_failed="1"
+fi
+
+if [ "$workflow_ref" != "refs/heads/main" ]; then
+	echo "Workflow ref mismatch: expected refs/heads/main, got $workflow_ref"
+	verification_failed="1"
+fi
+
+if [ "$verification_failed" != "" ]; then
 	echo "Verification failed"
 	exit 1
-}
+fi
 
 echo "Verification passed"

@@ -57,7 +57,7 @@ ifeq ($(shell echo $(KATA_REF) | grep -E "[0-9a-f]{40}"),)
 	KATA_COMMIT := $(shell curl \
 		--silent \
 		--retry 3 \
-		https://api.github.com/repos/$(KATA_REPO)/commits/v$(KATA_REF) \
+		https://api.github.com/repos/$(KATA_REPO)/commits/$(KATA_REF) \
 		| jq -e -r .sha)
 else
 	KATA_COMMIT := $(KATA_REF)
