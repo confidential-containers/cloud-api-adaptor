@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 	"github.com/klauspost/cpuid/v2"
 )
 
@@ -27,7 +28,10 @@ func isGCPVM(ctx context.Context) bool {
 	return err == nil
 }
 
-func isDockerContainer() bool {
-	_, err := os.ReadFile("/.dockerenv")
-	return err == nil
+func hasUserDataFile() bool {
+	_, err := os.Stat(UserDataPath)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return true
 }

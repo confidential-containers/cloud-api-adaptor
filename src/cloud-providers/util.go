@@ -162,7 +162,7 @@ func DefaultToEnv(field *string, env, fallback string) {
 
 func WriteUserData(instanceName string, userData string, dataDir string) (string, error) {
 	// Write userdata to a file named after the instance name in the dataDir directory
-	// File name: $dataDir/${instanceName}-userdata.json
+	// File name: $dataDir/${instanceName}-userdata
 	// File content: userdata
 
 	// Check if the dataDir directory exists
@@ -173,7 +173,7 @@ func WriteUserData(instanceName string, userData string, dataDir string) (string
 	}
 
 	// Create file path
-	filePath := filepath.Join(dataDir, instanceName+"-userdata.json")
+	filePath := filepath.Join(dataDir, instanceName+"-userdata")
 
 	// Write userdata to a file in the temp directory
 	err = os.WriteFile(filePath, []byte(userData), 0644)
