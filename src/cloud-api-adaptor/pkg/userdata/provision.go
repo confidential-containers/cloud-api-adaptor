@@ -105,11 +105,11 @@ func (g GCPUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 	return imdsGet(ctx, url, true, []kvPair{{"Metadata-Flavor", "Google"}})
 }
 
-type DockerUserDataProvider struct{ DefaultRetry }
+type FileUserDataProvider struct{ DefaultRetry }
 
-func (a DockerUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	path := DockerUserDataPath
-	logger.Printf("provider: Docker, userDataPath: %s\n", path)
+func (a FileUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
+	path := UserDataPath
+	logger.Printf("provider: File, userDataPath: %s\n", path)
 	userData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %s", err)
@@ -119,11 +119,10 @@ func (a DockerUserDataProvider) GetUserData(ctx context.Context) ([]byte, error)
 }
 
 func newProvider(ctx context.Context) (UserDataProvider, error) {
-
 	// This checks for the presence of a file and doesn't rely on http req like the
 	// azure, aws ones, thereby making it faster and hence checking this first
-	if isDockerContainer() {
-		return DockerUserDataProvider{}, nil
+	if hasUserDataFile() {
+		return FileUserDataProvider{}, nil
 	}
 
 	if isAzureVM() {
