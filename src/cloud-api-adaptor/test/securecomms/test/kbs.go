@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net"
@@ -29,7 +30,7 @@ func (p kbsport) getRoot(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-		_, err := w.Write(keyMaterial)
+		_, err := w.Write([]byte(html.EscapeString(string(keyMaterial))))
 		if err != nil {
 			http.Error(w, "cant write response", http.StatusInternalServerError)
 			return
