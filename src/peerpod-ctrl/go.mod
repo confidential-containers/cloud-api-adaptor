@@ -1,6 +1,6 @@
 module github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl
 
-go 1.22.0
+go 1.22.7
 
 require (
 	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.10.0
