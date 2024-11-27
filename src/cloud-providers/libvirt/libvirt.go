@@ -647,7 +647,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, id string) (err error) {
 
 	logger.Printf("Deleting instance (%s)", id)
-	idUint, _ := strconv.ParseUint(id, 10, 64)
+	idUint, _ := strconv.ParseUint(id, 10, 32)
 	// libvirt API takes uint32
 	exists, err := checkDomainExistsById(uint32(idUint), libvirtClient)
 	if err != nil {
