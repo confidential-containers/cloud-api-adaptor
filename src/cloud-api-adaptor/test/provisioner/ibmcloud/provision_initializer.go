@@ -132,8 +132,6 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		IBMCloudProps.IsSelfManaged = true
 	}
 
-	log.Debugf("%+v", IBMCloudProps)
-
 	if len(IBMCloudProps.ResourceGroupID) <= 0 {
 		log.Info("[warning] RESOURCE_GROUP_ID was not set.")
 	}
