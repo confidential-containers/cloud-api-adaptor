@@ -133,7 +133,6 @@ func (lio *IBMCloudInstallOverlay) Delete(ctx context.Context, cfg *envconf.Conf
 
 // Update install/overlays/ibmcloud/kustomization.yaml
 func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
-	log.Debugf("%+v", properties)
 	var err error
 
 	// image
