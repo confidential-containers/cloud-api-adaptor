@@ -22,6 +22,7 @@ bucket_region=$region
 instance=
 endpoint=
 api=${IBMCLOUD_API_ENDPOINT-https://cloud.ibm.com}
+platform=
 operating_system=
 
 shift 2
@@ -33,6 +34,7 @@ while (( "$#" )); do
         --region) bucket_region=$2 ;;
         --os) operating_system=$2 ;;
         --api) api=$2 ;;
+        --platform) platform=$2 ;;
         --help) usage; exit 0 ;;
         *)      usage 1>&2; exit 1;;
     esac
@@ -77,7 +79,7 @@ if [ -f ${image_file} ]; then
 else
     # Download image
     echo "Downloading file from image ${image_file}"
-    file=$($script_dir/../../podvm/hack/download-image.sh ${image_file} $script_dir) || error "Unable to download ${image_file}"
+    file=$($script_dir/../../podvm/hack/download-image.sh ${image_file} . --platform "${platform}") || error "Unable to download ${image_file}"
 fi
 
 echo "Uploading file ${file}"
@@ -101,7 +103,7 @@ if [ -z "$operating_system" ]; then
     image_arch="${image_name##*-}"
     operating_system="ubuntu-20-04-${image_arch/x86_64/amd64}"
 fi
-image_name="$(echo ${image_name,,} | sed 's/\./-/g' | sed 's/_/-/g')"
+image_name="$(echo ${image_name} | tr '[:upper:]' '[:lower:]' | sed 's/\./-/g' | sed 's/_/-/g')"
 image_json=$(ibmcloud is image-create "$image_name" --os-name "$operating_system" --file "$image_ref" --output JSON) || error "Unable to create vpc image $image_name"
 image_id=$(echo "$image_json" | jq -r '.id')
 

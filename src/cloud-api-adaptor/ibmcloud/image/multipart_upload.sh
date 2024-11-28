@@ -37,7 +37,7 @@ if [[ -z "${original_file-}" || -z "${bucket-}"  ]]; then
 fi
 
 # Divide the original file up into smaller sections
-split "$original_file" -b $split_size "$original_file."
+split -b $split_size "$original_file" "$original_file."
 # Create a multipart-upload, need the upload-id for part uploads
 upload_id=$(ibmcloud cos multipart-upload-create --bucket "$bucket" --key "$original_file" --output JSON | jq -r '.UploadId')
 if [[ -z "$upload_id" ]]; then
