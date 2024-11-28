@@ -25,8 +25,8 @@ configMapGenerator:
   - DISABLECVM="true" # set as false to enable confidential VM
   - SECURE_COMMS="false" # set as true to enable Secure Comms
   - INITDATA="" # set default initdata for podvm
+  - LIBVIRT_EFI_FIRMWARE="/usr/share/OVMF/OVMF_CODE_4M.fd" # Edit to change the EFI firmware path, or comment to unset, if not using EFI.
   #- LIBVIRT_LAUNCH_SECURITY="" #sev or s390-pv
-  #- LIBVIRT_FIRMWARE="" # Uncomment and set if you want to change the firmware path. Defaults to /usr/share/edk2/ovmf/OVMF_CODE.fd
   #- LIBVIRT_VOL_NAME="" # Uncomment and set if you want to use a specific volume name. Defaults to podvm-base.qcow2
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
