@@ -92,7 +92,6 @@ jobs:
         run: |
           export TEST_E2E_SECURE_COMMS="${{ inputs.secure_comms }}"
           ./libvirt/config_libvirt.sh
-          echo "CAA_IMAGE=\"${{ inputs.caa_image }}\"" >> libvirt.properties
           # For debugging
           cat libvirt.properties
 
@@ -115,6 +114,15 @@ jobs:
           test/utils/checkout_kbs.sh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Kustomize CAA image
+        working-directory: src/cloud-api-adaptor/install/overlays/libvirt
+        run: |
+          kustomize edit set image cloud-api-adaptor="${{ inputs.caa_image }}"
+          # Print for debugging
+          echo "::group::libvirt kustomization"
+          cat kustomization.yaml
+          echo "::endgroup::"
 
       - name: run tests
         id: runTests
