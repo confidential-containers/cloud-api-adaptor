@@ -388,6 +388,24 @@ func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfi
 		},
 	}
 
+	if vm.firmware != "" {
+		domain.OS.Loader = &libvirtxml.DomainLoader{
+			Path:     vm.firmware,
+			Readonly: "yes",
+			Type:     "pflash",
+		}
+
+		domain.OS.Firmware = "efi"
+
+		// TODO - IDE seems to only work with packer builds and sata only with mkosi,
+		// so we temporarily use the firmware being non-blank to assume this is mkosi
+		cidataDiskIndex := 1
+		var cidataDiskAddr uint = 1
+		domain.Devices.Disks[cidataDiskIndex].Target.Bus = "sata"
+		domain.Devices.Disks[cidataDiskIndex].Target.Dev = "sdb"
+		domain.Devices.Disks[cidataDiskIndex].Address.Drive.Unit = &cidataDiskAddr
+	}
+
 	switch l := vm.launchSecurityType; l {
 	case NoLaunchSecurity:
 		return domain, nil

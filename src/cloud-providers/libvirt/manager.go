@@ -22,7 +22,7 @@ const (
 	defaultDataDir        = "/var/lib/libvirt/images"
 	defaultVolName        = "podvm-base.qcow2"
 	defaultLaunchSecurity = ""
-	defaultFirmware       = "/usr/share/edk2/ovmf/OVMF_CODE.fd"
+	defaultFirmware       = ""
 )
 
 func init() {
@@ -47,7 +47,7 @@ func (_ *Manager) LoadEnv() {
 	provider.DefaultToEnv(&libvirtcfg.NetworkName, "LIBVIRT_NET", defaultNetworkName)
 	provider.DefaultToEnv(&libvirtcfg.VolName, "LIBVIRT_VOL_NAME", defaultVolName)
 	provider.DefaultToEnv(&libvirtcfg.LaunchSecurity, "LIBVIRT_LAUNCH_SECURITY", defaultLaunchSecurity)
-	provider.DefaultToEnv(&libvirtcfg.Firmware, "LIBVIRT_FIRMWARE", defaultFirmware)
+	provider.DefaultToEnv(&libvirtcfg.Firmware, "LIBVIRT_EFI_FIRMWARE", defaultFirmware)
 }
 
 func (_ *Manager) NewProvider() (provider.Provider, error) {

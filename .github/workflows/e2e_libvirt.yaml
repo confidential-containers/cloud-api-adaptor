@@ -80,6 +80,7 @@ jobs:
       - name: Setup docker
         if: ${{ runner.environment == 'self-hosted' }}
         run: |
+          sudo apt-get update -y
           sudo apt-get install -y docker.io
           sudo usermod -aG docker "$USER"
 
@@ -115,13 +116,30 @@ jobs:
 
       - name: Install gh cli
         run: |
+          sudo apt update -y
           sudo apt install -y gh
+
+      - name: Double check that OVMF is installed
+        run: |
+          sudo apt update -y
+          sudo apt install -y ovmf
 
       - name: Install kustomize
         run: |
           command -v kustomize >/dev/null || \
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
             sudo bash -s /usr/local/bin
+
+# For the legacy packer approach we don't want to use the default firmware, so comment it out
+      - name: Set blank firmware for packer libvirt tests
+        if: ${{ !inputs.oras }}
+        run: |
+          cd "install/overlays/libvirt"
+          sed -i 's/\(- LIBVIRT_EFI_FIRMWARE=.*\)/#\1/g' kustomization.yaml
+          # Print for debugging
+          echo "::group::Kustomization.yaml"
+          cat kustomization.yaml
+          echo "::endgroup::"
 
       - name: Update kustomization configuration
         run: |
