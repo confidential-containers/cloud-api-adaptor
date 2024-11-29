@@ -30,7 +30,7 @@ tools:
 git:
   coco-operator:
     url: https://github.com/confidential-containers/operator
-    reference: v0.11.0
+    reference: main
   umoci:
     url: https://github.com/opencontainers/umoci
     reference: v0.4.7

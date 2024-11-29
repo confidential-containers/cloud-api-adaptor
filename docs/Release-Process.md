@@ -64,7 +64,7 @@ the correct order.
 > If you mess up, you need to restart the tagging with the next patch version.
 
 The process should go something like:
-- Get the pre-release version: `v<version>-alpha.1` (e.g. `v0.8.0-alpha.1` for the confidential containers `0.8.0` release release candidate).
+- Determine the pre-release version: `v<version>-alpha.1` (e.g. `v0.8.0-alpha.1` for the confidential containers `0.8.0` release candidate).
 - Update the [peerpod-ctrl go module](../src/peerpod-ctrl/go.mod) to use the release candidate version version of `cloud-providers`
 - Update the [cloud-api-adaptor go module](../src/cloud-api-adaptor/go.mod) to use the release candidate version version of `cloud-providers` and `peerpod-ctrl`
 - Update the [csi-wrapper go module](../src/csi-wrapper/go.mod) to use the the release candidate version version of `cloud-api-adaptor`
@@ -149,10 +149,10 @@ RELEASE_TAG="6d7d2a3fe8243809b3c3a710792c8498292e2fc3"
 
 Include those changes within a commit and add the following changes as a second commit:
 
-We then can repeat the steps done during the release candidate phase, but this time use the
-release tags of the project dependencies e.g. `v0.8.0` and creating the tags without the `-alpha.x` suffix.
+We then repeat the steps performed during the release candidate phase, but this time use the
+release tags of the project dependencies e.g. `v0.8.0` without an `-alpha.x` suffix.
 
-- Get the release version: `v0.8.0`
+- Determine the release version: `v0.8.0`
 - Update the [peerpod-ctrl go module](../src/peerpod-ctrl/go.mod) to use the release version version of `cloud-providers`
 - Update the [cloud-api-adaptor go module](../src/cloud-api-adaptor/go.mod) to use the release version version of `cloud-providers` and `peerpod-ctrl`
 - Update the [csi-wrapper go module](../src/csi-wrapper/go.mod) to use the the release version version of `cloud-api-adaptor`
@@ -160,7 +160,10 @@ release tags of the project dependencies e.g. `v0.8.0` and creating the tags wit
 - Merge the 2 commits PR with this update to update the `main` branch
     > **Note:** as the `main` branch is locked, this might require an admin to unlock, or bypass the merge restriction.
 
-- Create git tags for the release, for all go modules e.g. To create the tags for the upstream branch with the `v0.8.0` release, run:
+- Make sure to update the local `main` branch after the PR is merged.
+
+- From the main branch, create git tags for the release, for all go modules e.g. To push the tags on the `upstream` remote (this remote should point to the `confidential-containers/cloud-api-adaptor` repo) for the `v0.8.0` release, run:
+
 ```bash
 ./hack/release-helper.sh go-tag v0.8.0 upstream
 The intput release tag: v0.8.0
@@ -200,7 +203,8 @@ To github.com:confidential-containers/cloud-api-adaptor.git
  * [new tag]         src/webhook/v0.8.0 -> src/webhook/v0.8.0
 ```
 
-We can run the latest release of the cloud-api-adaptor including the auto generated release notes.
+We then create a cloud-api-adaptor [release](https://github.com/confidential-containers/cloud-api-adaptor/releases/new)
+named `v<version>`. Choose the "Create new tag" option when drafting a release.
 
 This will trigger the podvm builds to happen again and we should re-test the release code before updating the
 confidential-containers release team to let them know it has completed successfully
@@ -213,4 +217,4 @@ The CoCo operator reference commit in the [versions.yaml](../src/cloud-api-adapt
 
 The commit that pinned the overlay kustomization files should be reverted to start using the latest cloud-api-adaptor images again.
 
-The `CITATION.cff` needs to be updated with the dates from the release.
+Update strings in documentation (e.g. `0.7.0` => `0.8.0`) and the `CITATION.cff` file with the release date, git sha and version.

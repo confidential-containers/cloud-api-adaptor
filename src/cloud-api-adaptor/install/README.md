@@ -46,10 +46,10 @@
 Take a look at the [tags](https://github.com/confidential-containers/operator/tags) for available releases
 and use the specific tag for deployment.
 
-For example if you want to install `v0.10.0` then run the following commands:
+For example if you want to install `v0.11.0` then run the following commands:
 
   ```sh
-  export RELEASE_VERSION=v0.10.0
+  export RELEASE_VERSION=v0.11.0
   kubectl apply -k github.com/confidential-containers/operator/config/default?ref=${RELEASE_VERSION}
   kubectl apply -k github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods?ref=${RELEASE_VERSION}
   ```
