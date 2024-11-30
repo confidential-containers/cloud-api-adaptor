@@ -21,10 +21,8 @@ type WorkerNode interface {
 }
 
 type workerNode struct {
-	tunnelType    string
-	hostInterface string
-	vxlanPort     int
-	vxlanMinID    int
+	*tunneler.NetworkConfig
+	tunneler tunneler.TunnelerConfigurator
 }
 
 // TODO: Pod index is reset when this process restarts.
@@ -45,20 +43,30 @@ func (p *podIndex) Get() int {
 	return index
 }
 
-func NewWorkerNode(tunnelType, hostInterface string, vxlanPort, vxlanMinID int) WorkerNode {
+func NewWorkerNode(networkConfig *tunneler.NetworkConfig) (WorkerNode, error) {
 
-	return &workerNode{
-		tunnelType:    tunnelType,
-		hostInterface: hostInterface,
-		vxlanPort:     vxlanPort,
-		vxlanMinID:    vxlanMinID,
+	t, err := tunneler.WorkerNodeTunneler(networkConfig.TunnelType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tunneler: %w", err)
 	}
+
+	tun, ok := t.(tunneler.TunnelerConfigurator)
+	if !ok {
+		return nil, fmt.Errorf("internal error: Configure is not defined: %T", t)
+	}
+
+	wn := &workerNode{
+		NetworkConfig: networkConfig,
+		tunneler:      tun,
+	}
+
+	return wn, nil
 }
 
 func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	config := &tunneler.Config{
-		TunnelType: n.tunnelType,
+		TunnelType: n.TunnelType,
 		Index:      podIndexManager.Get(),
 	}
 
@@ -77,7 +85,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		return nil, fmt.Errorf("failed to identify the host primary interface: %w", err)
 	}
 
-	hostInterface := n.hostInterface
+	hostInterface := n.HostInterface
 	if hostInterface == "" {
 		hostInterface = hostPrimaryInterface
 	} else if hostInterface != hostPrimaryInterface {
@@ -188,9 +196,8 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		config.Neighbors = append(config.Neighbors, n)
 	}
 
-	if n.tunnelType == "vxlan" {
-		config.VXLANPort = n.vxlanPort
-		config.VXLANID = n.vxlanMinID + config.Index
+	if err := n.tunneler.Configure(n.NetworkConfig, config); err != nil {
+		return nil, err
 	}
 
 	return config, nil
@@ -198,12 +205,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 func (n *workerNode) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
 
-	tun, err := tunneler.WorkerNodeTunneler(n.tunnelType)
-	if err != nil {
-		return fmt.Errorf("failed to get tunneler: %w", err)
-	}
-
-	if err := tun.Setup(nsPath, podNodeIPs, config); err != nil {
+	if err := n.tunneler.Setup(nsPath, podNodeIPs, config); err != nil {
 		return fmt.Errorf("failed to set up tunnel %q: %w", config.TunnelType, err)
 	}
 
@@ -211,11 +213,6 @@ func (n *workerNode) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunne
 }
 
 func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
-
-	tun, err := tunneler.WorkerNodeTunneler(n.tunnelType)
-	if err != nil {
-		return fmt.Errorf("failed to get tunneler: %w", err)
-	}
 
 	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
@@ -227,7 +224,7 @@ func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
 		}
 	}()
 
-	hostInterface := n.hostInterface
+	hostInterface := n.HostInterface
 	if hostInterface == "" {
 		hostPrimaryInterface, err := findPrimaryInterface(hostNS)
 		if err != nil {
@@ -236,7 +233,7 @@ func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
 		hostInterface = hostPrimaryInterface
 	}
 
-	if err := tun.Teardown(nsPath, hostInterface, config); err != nil {
+	if err := n.tunneler.Teardown(nsPath, hostInterface, config); err != nil {
 		return fmt.Errorf("failed to tear down tunnel %q: %w", config.TunnelType, err)
 	}
 

@@ -18,8 +18,12 @@ import (
 
 type mockWorkerNodeTunneler struct{}
 
-func newMockWorkerNodeTunneler() tunneler.Tunneler {
-	return &mockWorkerNodeTunneler{}
+func newMockWorkerNodeTunneler() (tunneler.Tunneler, error) {
+	return &mockWorkerNodeTunneler{}, nil
+}
+
+func (t *mockWorkerNodeTunneler) Configure(n *tunneler.NetworkConfig, config *tunneler.Config) error {
+	return nil
 }
 
 func (t *mockWorkerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
@@ -32,8 +36,8 @@ func (t *mockWorkerNodeTunneler) Teardown(nsPath, hostInterface string, config *
 
 type mockPodNodeTunneler struct{}
 
-func newMockPodNodeTunneler() tunneler.Tunneler {
-	return &mockPodNodeTunneler{}
+func newMockPodNodeTunneler() (tunneler.Tunneler, error) {
+	return &mockPodNodeTunneler{}, nil
 }
 
 func (t *mockPodNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
@@ -83,8 +87,9 @@ func TestWorkerNode(t *testing.T) {
 
 		err := workerNodeNS.Run(func() error {
 
-			workerNode := NewWorkerNode(mockTunnelType, hostInterface, 0, 0)
+			workerNode, err := NewWorkerNode(&tunneler.NetworkConfig{TunnelType: mockTunnelType, HostInterface: hostInterface})
 			require.NotNil(t, workerNode, "hostInterface=%q", hostInterface)
+			require.Nil(t, err, "hostInterface=%q", hostInterface)
 
 			config, err := workerNode.Inspect(workerPodNS.Path())
 			require.Nil(t, err, "hostInterface=%q", hostInterface)

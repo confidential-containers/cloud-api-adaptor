@@ -20,8 +20,8 @@ const (
 type podNodeTunneler struct {
 }
 
-func NewPodNodeTunneler() tunneler.Tunneler {
-	return &podNodeTunneler{}
+func NewPodNodeTunneler() (tunneler.Tunneler, error) {
+	return &podNodeTunneler{}, nil
 }
 
 func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {

@@ -21,6 +21,7 @@ import (
 	daemon "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
@@ -78,11 +79,14 @@ func TestShim(t *testing.T) {
 
 	var workerNode podnetwork.WorkerNode
 
-	switch t := os.Getenv("SHIMTEST_TUNNEL_TYPE"); t {
+	switch tun := os.Getenv("SHIMTEST_TUNNEL_TYPE"); tun {
 	case "", "mock":
 		workerNode = &mockWorkerNode{}
 	default:
-		workerNode = podnetwork.NewWorkerNode(t, "", 0, 0)
+		workerNode, err = podnetwork.NewWorkerNode(&tunneler.NetworkConfig{TunnelType: tun})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	serverConfig := &cloud.ServerConfig{
