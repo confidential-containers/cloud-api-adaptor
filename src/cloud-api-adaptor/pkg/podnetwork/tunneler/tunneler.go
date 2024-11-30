@@ -46,13 +46,13 @@ type Neighbor struct {
 }
 
 type driver struct {
-	newWorkerNodeTunneler func() Tunneler
-	newPodNodeTunneler    func() Tunneler
+	newWorkerNodeTunneler func() (Tunneler, error)
+	newPodNodeTunneler    func() (Tunneler, error)
 }
 
 var drivers = make(map[string]*driver)
 
-func Register(tunnelType string, newWorkerNodeTunneler, newPodNodeTunneler func() Tunneler) {
+func Register(tunnelType string, newWorkerNodeTunneler, newPodNodeTunneler func() (Tunneler, error)) {
 	drivers[tunnelType] = &driver{
 		newWorkerNodeTunneler: newWorkerNodeTunneler,
 		newPodNodeTunneler:    newPodNodeTunneler,
@@ -74,7 +74,7 @@ func WorkerNodeTunneler(tunnelType string) (Tunneler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return driver.newWorkerNodeTunneler(), nil
+	return driver.newWorkerNodeTunneler()
 }
 
 func PodNodeTunneler(tunnelType string) (Tunneler, error) {
@@ -83,5 +83,5 @@ func PodNodeTunneler(tunnelType string) (Tunneler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return driver.newPodNodeTunneler(), nil
+	return driver.newPodNodeTunneler()
 }

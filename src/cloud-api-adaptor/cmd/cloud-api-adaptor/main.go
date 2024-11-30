@@ -15,6 +15,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/kubemgr"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
@@ -29,15 +30,8 @@ const (
 )
 
 type daemonConfig struct {
-	serverConfig cloud.ServerConfig
-	networkConfig
-}
-
-type networkConfig struct {
-	TunnelType    string
-	HostInterface string
-	VXLANPort     int
-	VXLANMinID    int
+	serverConfig  cloud.ServerConfig
+	networkConfig tunneler.NetworkConfig
 }
 
 func printHelp(out io.Writer) {
@@ -126,8 +120,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 		flags.StringVar(&cfg.networkConfig.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "Tunnel provider")
 		flags.StringVar(&cfg.networkConfig.HostInterface, "host-interface", "", "Host Interface")
-		flags.IntVar(&cfg.networkConfig.VXLANPort, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
-		flags.IntVar(&cfg.networkConfig.VXLANMinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
+		flags.IntVar(&cfg.networkConfig.VXLAN.Port, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
+		flags.IntVar(&cfg.networkConfig.VXLAN.MinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
 		flags.StringVar(&cfg.serverConfig.Initdata, "initdata", "", "Default initdata for all Pods")
 		flags.BoolVar(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "Enable cloud config verify - should use it for production")
 		flags.IntVar(&cfg.serverConfig.PeerPodsLimitPerNode, "peerpods-limit-per-node", 10, "peer pods limit per node (default=10)")
@@ -160,7 +154,10 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 	cloud.LoadEnv()
 
-	workerNode := podnetwork.NewWorkerNode(cfg.TunnelType, cfg.HostInterface, cfg.VXLANPort, cfg.VXLANMinID)
+	workerNode, err := podnetwork.NewWorkerNode(&cfg.networkConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	provider, err := cloud.NewProvider()
 	if err != nil {

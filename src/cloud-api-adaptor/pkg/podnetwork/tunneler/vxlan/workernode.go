@@ -26,8 +26,16 @@ const (
 type workerNodeTunneler struct {
 }
 
-func NewWorkerNodeTunneler() tunneler.Tunneler {
-	return &workerNodeTunneler{}
+func NewWorkerNodeTunneler() (tunneler.Tunneler, error) {
+	return &workerNodeTunneler{}, nil
+}
+
+func (t *workerNodeTunneler) Configure(n *tunneler.NetworkConfig, config *tunneler.Config) error {
+
+	config.VXLANPort = n.VXLAN.Port
+	config.VXLANID = n.VXLAN.MinID + config.Index
+
+	return nil
 }
 
 func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {

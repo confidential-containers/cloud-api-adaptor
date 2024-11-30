@@ -41,7 +41,7 @@ func getIP(t *testing.T, addr string) netip.Addr {
 	return prefix.Addr()
 }
 
-func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPodNodeTunneler func() tunneler.Tunneler, dedicated bool) {
+func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPodNodeTunneler func() (tunneler.Tunneler, error), dedicated bool) {
 	testutils.SkipTestIfNotRoot(t)
 
 	const (
@@ -95,8 +95,8 @@ func RunTunnelTest(t *testing.T, tunnelType string, newWorkerNodeTunneler, newPo
 
 	for i, pod := range pods {
 
-		pod.workerNodeTunneler = newWorkerNodeTunneler()
-		pod.podNodeTunneler = newPodNodeTunneler()
+		pod.workerNodeTunneler, _ = newWorkerNodeTunneler()
+		pod.podNodeTunneler, _ = newPodNodeTunneler()
 
 		pod.workerPodNS, _ = NewNamedNS(t, fmt.Sprintf("test-workerpod%d", i))
 		defer DeleteNamedNS(t, pod.workerPodNS)
