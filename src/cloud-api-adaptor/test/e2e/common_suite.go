@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -501,6 +502,11 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 }
 
 func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+	// TODO create a multi-arch encrypted image. Note the Kata CI version doesn't work as the key length is 44, not 32 which is wanted
+	if runtime.GOARCH == "s390x" {
+		t.Skip("Encrypted image test not currently support on s390x")
+	}
+
 	image := "ghcr.io/confidential-containers/cloud-api-adaptor/nginx-encrypted:20240123"
 	var kbsEndpoint string
 	if ep := os.Getenv("KBS_ENDPOINT"); ep != "" {
