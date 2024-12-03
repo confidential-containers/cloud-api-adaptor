@@ -10,6 +10,9 @@ The high level flow involved is:
 - Deploy and validate that the nginx demo works
 - Clean-up and deprovision
 
+For streamlined instructions to set up a simple demo for a Red Hat OpenShift Kubernetes cluster, refer to
+[PeerPod setup using Red Hat OpenShift on IBM Cloud](./ROKS_SETUP.md).
+
 ## Pre-reqs
 
 When building the peer pod VM image, it is simplest to use the container based approach, which only requires either
@@ -76,8 +79,10 @@ needed in later steps.
 
 ## Create a 'self-managed' Kubernetes cluster on IBM Cloud provided infrastructure
 If you don't have a Kubernetes cluster for testing, you can follow the open-source 
-[instructions](./cluster)
- to set up a basic cluster where the Kubernetes nodes run on IBM Cloud provided infrastructure.
+[instructions](./cluster) to set up a basic cluster where the Kubernetes nodes run on IBM Cloud provided infrastructure.
+
+If you want to create, or use an existing, Red Hat OpenShift Kubernetes cluster, follow the instructions in
+[Set up an OpenShift Kubernetes cluster for PeerPod VMs](./ROKS_SETUP.md#set-up-an-openshift-kubernetes-cluster-for-peerpod-vms).
 
 ## Deploy PeerPod Webhook
 
@@ -94,7 +99,7 @@ If you don't have a Kubernetes cluster for testing, you can follow the open-sour
 #### Deploy the peer-pods webhook
 - From within the root directory of the `cloud-api-adaptor` repository, deploy the [webhook](../../webhook/) with:
   ```
-  kubectl apply -f ./webhook/hack/webhook-deploy.yaml
+  kubectl apply -f ./src/webhook/hack/webhook-deploy.yaml
   ```
 - Wait for the pods to all be in running state with:
   ```
@@ -103,7 +108,7 @@ If you don't have a Kubernetes cluster for testing, you can follow the open-sour
 
 - Advertise the extended resource `kata.peerpods.io/vm.` by running the following commands:
   ```
-  pushd webhook/hack/extended-resources
+  pushd src/webhook/hack/extended-resources
   ./setup.sh
   popd
   ```
@@ -112,7 +117,7 @@ If you don't have a Kubernetes cluster for testing, you can follow the open-sour
 The `caa-provisioner-cli` simplifies deploying the operator and the cloud-api-adaptor resources on to any cluster. See the [test/tools/README.md](../test/tools/README.md) for full instructions. To create an ibmcloud ready version follow these steps
 
 ```bash
-# Starting from the cloud-api-adaptor root directory
+# Starting from directory src/cloud-api-adaptor of the cloud-api-adapter repository
 pushd test/tools
 make BUILTIN_CLOUD_PROVIDERS="ibmcloud" all
 popd
