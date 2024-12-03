@@ -4,3 +4,5 @@ metadata:
   name: ebs-sc
 provisioner: ebs.csi.aws.com
 volumeBindingMode: WaitForFirstConsumer
+parameters:
+  peerpod: 'true'

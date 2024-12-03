@@ -15,6 +15,10 @@ spec:
       type: Directory
   - emptyDir: {}
     name: plugin-dir
+  - hostPath:
+      path: /dev
+      type: Directory
+    name: device-dir
 
   containers:
   - name: app
@@ -24,6 +28,7 @@ spec:
     volumeMounts:
     - name: persistent-storage
       mountPath: /data
+      mountPropagation: HostToContainer
 
   - name: csi-podvm-node-driver
     env:
@@ -39,7 +44,7 @@ spec:
      # - name: AWS_REGION
      #   value: "us-east-1"
 
-    image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.21.0
+    image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.37.0
     imagePullPolicy: Always
     securityContext:
       privileged: true
@@ -55,6 +60,8 @@ spec:
         mountPropagation: Bidirectional
       - mountPath: /tmp
         name: plugin-dir
+      - mountPath: /dev
+        name: device-dir
 
   - name: csi-podvm-wrapper
     env:
