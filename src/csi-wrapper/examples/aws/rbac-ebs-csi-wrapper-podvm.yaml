@@ -18,6 +18,9 @@ rules:
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

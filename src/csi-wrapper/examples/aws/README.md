@@ -25,7 +25,7 @@ kubectl create secret generic aws-secret \
 ```
 3. Deploy the driver:
 ```
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.21"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.37"
 ```
 4. Verify the pods are running:
 ```
