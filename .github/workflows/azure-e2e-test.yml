@@ -241,7 +241,7 @@ jobs:
         az aks get-credentials \
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
           --name "${CLUSTER_NAME}"
-        make test-e2e RUN_TESTS="^Test\(CreateSimplePodAzure\|RemoteAttestation\)$"
+        make test-e2e RUN_TESTS="^Test\(CreateSimplePodAzure\|RemoteAttestation\|InitDataMeasurement\)$"
 
   cleanup:
     runs-on: ubuntu-24.04
