@@ -125,6 +125,13 @@ echo "CLUSTER_NAME=\"peer-pods\"" >> libvirt.properties
 # switch to the appropriate e2e test and add configs to libvirt.properties as needed
 case $TEST_E2E_SECURE_COMMS in
 
+  "withoutKbs")
+    echo "processing withoutKbs"
+    echo "SECURE_COMMS=\"true\"" >> libvirt.properties
+    echo "SECURE_COMMS_NO_TRUSTEE=\"true\"" >> libvirt.properties
+    echo "INITDATA=\"\"" >> libvirt.properties
+    ;;
+
   *)
     echo "processing none"
     echo "SECURE_COMMS=\"false\"" >> libvirt.properties

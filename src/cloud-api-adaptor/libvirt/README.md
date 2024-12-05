@@ -217,6 +217,7 @@ make TEST_PROVISION=no TEST_TEARDOWN=no TEST_PODVM_IMAGE=$PWD/podvm/podvm.qcow2 
 * ``TEST_E2E_TIMEOUT`` - test timeout
 * ``DEPLOY_KBS`` - whether to deploy the key-broker-service, which is used to test the attestation flow
 * ``TEST_PROVISION_FILE`` - file specifying the libvirt connection and the ssh key file (created earlier by [config_libvirt.sh](config_libvirt.sh))
+* ``TEST_CAA_LOG`` - whether to log the CAA at the end of the tests run
 
 # Delete Confidential Containers and cloud-api-adaptor from the cluster
 
