@@ -30,6 +30,7 @@ on:
 
 env:
   CLOUD_PROVIDER: docker
+  CLUSTER_NAME: peer-pods
   DEBIAN_FRONTEND: noninteractive
 
 defaults:
@@ -94,7 +95,6 @@ jobs:
           cat <<- EOF > docker.properties
           CAA_IMAGE="${{ inputs.caa_image }}"
           CAA_IMAGE_TAG="${{ inputs.caa_image_tag }}"
-          CLUSTER_NAME="peer-pods"
           DOCKER_PODVM_IMAGE="${{ inputs.podvm_image }}"
           DOCKER_HOST="unix:///var/run/docker.sock"
           DOCKER_NETWORK_NAME="kind"
@@ -114,3 +114,13 @@ jobs:
           export TEST_E2E_TIMEOUT="50m"
 
           make test-e2e
+
+      - name: Debug tests failure
+        if: failure() && steps.runTests.outcome == 'failure'
+        working-directory: ./
+        run: |
+          export KUBECONFIG="${HOME}/kube_${CLUSTER_NAME}"
+          kind get kubeconfig -n "$CLUSTER_NAME" > "$KUBECONFIG"
+          ./hack/ci-e2e-debug-fail.sh
+        # Avoid running with `set -e` as command fails should be allowed
+        shell: bash {0}
