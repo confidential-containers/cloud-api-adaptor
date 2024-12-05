@@ -281,6 +281,7 @@ optionals+=""
 # following is the incorrect method: optionals+="-option val"
 
 [[ "${PAUSE_IMAGE}" ]] && optionals+="-pause-image ${PAUSE_IMAGE} "
+[[ "${TUNNEL_TYPE}" ]] && optionals+="-tunnel-type ${TUNNEL_TYPE} "
 [[ "${VXLAN_PORT}" ]] && optionals+="-vxlan-port ${VXLAN_PORT} "
 [[ "${CACERT_FILE}" ]] && optionals+="-ca-cert-file ${CACERT_FILE} "
 [[ "${CERT_FILE}" ]] && [[ "${CERT_KEY}" ]] && optionals+="-cert-file ${CERT_FILE} -cert-key ${CERT_KEY} "

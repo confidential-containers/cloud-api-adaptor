@@ -18,6 +18,7 @@ configMapGenerator:
   literals:
   - CLOUD_PROVIDER="gcp"
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
   - PODVM_IMAGE_NAME="" # set from step "Build Pod VM Image" in gcp/README.md
   - GCP_PROJECT_ID="" # set

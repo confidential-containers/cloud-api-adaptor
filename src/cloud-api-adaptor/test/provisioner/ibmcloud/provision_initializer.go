@@ -50,6 +50,7 @@ type IBMCloudProperties struct {
 	WorkerFlavor      string
 	WorkerOS          string
 	Zone              string
+	TunnelType        string
 	VxlanPort         string
 
 	WorkerCount   int
@@ -93,6 +94,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		SubnetID:          properties["VPC_SUBNET_ID"],
 		SecurityGroupID:   properties["VPC_SECURITY_GROUP_ID"],
 		VpcID:             properties["VPC_ID"],
+		TunnelType:        properties["TUNNEL_TYPE"],
 		VxlanPort:         properties["VXLAN_PORT"],
 	}
 

@@ -110,6 +110,7 @@ type AWSProvisioner struct {
 	Image      *AMIImage
 	Vpc        *Vpc
 	PublicIP   string
+	TunnelType string
 	VxlanPort  string
 	SshKpName  string
 }
@@ -166,6 +167,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		PauseImage: properties["pause_image"],
 		Vpc:        vpc,
 		PublicIP:   properties["use_public_ip"],
+		TunnelType: properties["tunnel_type"],
 		VxlanPort:  properties["vxlan_port"],
 		SshKpName:  properties["ssh_kp_name"],
 	}
@@ -270,6 +272,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"access_key_id":        credentials.AccessKeyID,
 		"secret_access_key":    credentials.SecretAccessKey,
 		"use_public_ip":        a.PublicIP,
+		"tunnel_type":          a.TunnelType,
 		"vxlan_port":           a.VxlanPort,
 	}
 }
@@ -1017,6 +1020,7 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 		"subnet_id":            "AWS_SUBNET_ID",
 		"ssh_kp_name":          "SSH_KP_NAME",
 		"region":               "AWS_REGION",
+		"tunnel_type":          "TUNNEL_TYPE",
 		"vxlan_port":           "VXLAN_PORT",
 		"use_public_ip":        "USE_PUBLIC_IP",
 	}
