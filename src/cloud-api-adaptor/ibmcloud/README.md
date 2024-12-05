@@ -106,13 +106,6 @@ If you want to create, or use an existing, Red Hat OpenShift Kubernetes cluster,
   kubectl get pods -n peer-pods-webhook-system --watch
   ```
 
-- Advertise the extended resource `kata.peerpods.io/vm.` by running the following commands:
-  ```
-  pushd src/webhook/hack/extended-resources
-  ./setup.sh
-  popd
-  ```
-
 ## Deploy the Confidential-containers operator
 The `caa-provisioner-cli` simplifies deploying the operator and the cloud-api-adaptor resources on to any cluster. See the [test/tools/README.md](../test/tools/README.md) for full instructions. To create an ibmcloud ready version follow these steps
 
