@@ -361,6 +361,7 @@ func getPropertiesImpl() map[string]string {
 		"AZURE_INSTANCE_SIZE":   AzureProps.InstanceSize,
 		"TAGS":                  AzureProps.Tags,
 		"CONTAINER_RUNTIME":     AzureProps.ContainerRuntime,
+		"VXLAN_PORT":            AzureProps.VxlanPort,
 	}
 
 	return props
@@ -379,7 +380,7 @@ func (p *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Contex
 
 func isAzureKustomizeConfigMapKey(key string) bool {
 	switch key {
-	case "CLOUD_PROVIDER", "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID", "SSH_USERNAME", "INITDATA", "TAGS":
+	case "CLOUD_PROVIDER", "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID", "SSH_USERNAME", "INITDATA", "TAGS", "VXLAN_PORT":
 		return true
 	default:
 		return false

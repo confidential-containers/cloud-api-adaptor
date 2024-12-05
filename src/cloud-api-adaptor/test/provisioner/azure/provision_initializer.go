@@ -34,6 +34,7 @@ type AzureProperties struct {
 	CaaImage            string
 	IsSelfManaged       bool
 	Tags                string
+	VxlanPort           string
 
 	InstanceSize string
 	NodeName     string
@@ -70,6 +71,7 @@ func initAzureProperties(properties map[string]string) error {
 		Tags:                    properties["TAGS"],
 		FederatedCredentialName: properties["FEDERATED_CREDENTIAL_NAME"],
 		ContainerRuntime:        properties["CONTAINER_RUNTIME"],
+		VxlanPort:               properties["VXLAN_PORT"],
 	}
 
 	CIManagedStr := properties["IS_CI_MANAGED_CLUSTER"]
