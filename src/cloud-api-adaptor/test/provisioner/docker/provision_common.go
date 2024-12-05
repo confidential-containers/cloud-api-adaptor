@@ -39,6 +39,7 @@ type DockerProperties struct {
 	CaaImage         string
 	CaaImageTag      string
 	ContainerRuntime string
+	VxlanPort        string
 }
 
 var DockerProps = &DockerProperties{}
@@ -54,6 +55,7 @@ func initDockerProperties(properties map[string]string) error {
 		CaaImage:         properties["CAA_IMAGE"],
 		CaaImageTag:      properties["CAA_IMAGE_TAG"],
 		ContainerRuntime: properties["CONTAINER_RUNTIME"],
+		VxlanPort:        properties["VXLAN_PORT"],
 	}
 	return nil
 }
@@ -135,6 +137,7 @@ func (l *DockerProvisioner) GetProperties(ctx context.Context, cfg *envconf.Conf
 		"CAA_IMAGE":           DockerProps.CaaImage,
 		"CAA_IMAGE_TAG":       DockerProps.CaaImageTag,
 		"CONTAINER_RUNTIME":   DockerProps.ContainerRuntime,
+		"VXLAN_PORT":          DockerProps.VxlanPort,
 	}
 }
 
@@ -200,7 +203,7 @@ func NewDockerInstallOverlay(installDir, provider string) (pv.InstallOverlay, er
 
 func isDockerKustomizeConfigMapKey(key string) bool {
 	switch key {
-	case "CLOUD_PROVIDER", "DOCKER_HOST", "DOCKER_API_VERSION", "DOCKER_PODVM_IMAGE", "DOCKER_NETWORK_NAME", "INITDATA":
+	case "CLOUD_PROVIDER", "DOCKER_HOST", "DOCKER_API_VERSION", "DOCKER_PODVM_IMAGE", "DOCKER_NETWORK_NAME", "VXLAN_PORT", "INITDATA":
 		return true
 	default:
 		return false

@@ -973,6 +973,7 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"IBMCLOUD_IAM_PROFILE_ID":              IBMCloudProps.IamProfileID,
 		"IBMCLOUD_IAM_ENDPOINT":                IBMCloudProps.IamServiceURL,
 		"IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST": getProfileList(),
+		"VXLAN_PORT":                           IBMCloudProps.VxlanPort,
 	}
 }
 

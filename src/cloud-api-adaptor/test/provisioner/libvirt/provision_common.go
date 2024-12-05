@@ -32,6 +32,7 @@ type LibvirtProvisioner struct {
 	wd               string           // libvirt's directory path on this repository
 	volumeName       string           // Podvm volume name
 	clusterName      string           // Cluster name
+	vxlanPort        string           // VXLAN port number
 }
 
 // LibvirtInstallOverlay implements the InstallOverlay interface
@@ -83,6 +84,11 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		clusterName = properties["cluster_name"]
 	}
 
+	vxlanPort := ""
+	if properties["vxlan_port"] != "" {
+		vxlanPort = properties["vxlan_port"]
+	}
+
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
 		conn:             conn,
@@ -94,6 +100,7 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		wd:               wd,
 		volumeName:       vol_name,
 		clusterName:      clusterName,
+		vxlanPort:        vxlanPort,
 	}, nil
 }
 
@@ -204,6 +211,7 @@ func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Con
 		"ssh_key_file":      l.ssh_key_file,
 		"storage":           l.storage,
 		"uri":               l.uri,
+		"vxlan_port":        l.vxlanPort,
 	}
 }
 
