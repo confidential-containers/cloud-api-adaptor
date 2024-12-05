@@ -55,6 +55,8 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "CRI_RUNTIME_ENDPOINT":
 		return true
+	case "TUNNEL_TYPE":
+		return true
 	case "VXLAN_PORT":
 		return true
 	default:

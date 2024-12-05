@@ -34,6 +34,7 @@ type AzureProperties struct {
 	CaaImage            string
 	IsSelfManaged       bool
 	Tags                string
+	TunnelType          string
 	VxlanPort           string
 
 	InstanceSize string
@@ -71,6 +72,7 @@ func initAzureProperties(properties map[string]string) error {
 		Tags:                    properties["TAGS"],
 		FederatedCredentialName: properties["FEDERATED_CREDENTIAL_NAME"],
 		ContainerRuntime:        properties["CONTAINER_RUNTIME"],
+		TunnelType:              properties["TUNNEL_TYPE"],
 		VxlanPort:               properties["VXLAN_PORT"],
 	}
 

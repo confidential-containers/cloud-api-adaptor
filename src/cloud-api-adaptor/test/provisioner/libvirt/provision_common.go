@@ -32,6 +32,7 @@ type LibvirtProvisioner struct {
 	wd               string           // libvirt's directory path on this repository
 	volumeName       string           // Podvm volume name
 	clusterName      string           // Cluster name
+	tunnelType       string           // Tunnel Type
 	vxlanPort        string           // VXLAN port number
 }
 
@@ -84,6 +85,11 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		clusterName = properties["cluster_name"]
 	}
 
+	tunnelType := ""
+	if properties["tunnel_type"] != "" {
+		tunnelType = properties["tunnel_type"]
+	}
+
 	vxlanPort := ""
 	if properties["vxlan_port"] != "" {
 		vxlanPort = properties["vxlan_port"]
@@ -100,6 +106,7 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		wd:               wd,
 		volumeName:       vol_name,
 		clusterName:      clusterName,
+		tunnelType:       tunnelType,
 		vxlanPort:        vxlanPort,
 	}, nil
 }
@@ -211,6 +218,7 @@ func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Con
 		"ssh_key_file":      l.ssh_key_file,
 		"storage":           l.storage,
 		"uri":               l.uri,
+		"tunnel_type":       l.tunnelType,
 		"vxlan_port":        l.vxlanPort,
 	}
 }
@@ -323,6 +331,7 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 		"pause_image":  {"", "PAUSE_IMAGE"},
 		"podvm_volume": {"", "LIBVIRT_VOL_NAME"},
 		"uri":          {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
+		"tunnel_type":  {"", "TUNNEL_TYPE"},
 		"vxlan_port":   {"", "VXLAN_PORT"},
 		"INITDATA":     {"", "INITDATA"},
 	}

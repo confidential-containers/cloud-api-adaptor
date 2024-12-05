@@ -31,6 +31,7 @@ configMapGenerator:
   - IBMCLOUD_VPC_ID="" #set
   - CRI_RUNTIME_ENDPOINT="/run/cri-runtime/containerd.sock"
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
   #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
 ##TLS_SETTINGS
