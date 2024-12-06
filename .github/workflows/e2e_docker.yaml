@@ -11,11 +11,7 @@ on:
         required: true
         type: string
       caa_image:
-        required: true
-        type: string
-      caa_image_tag:
-        required: false
-        default: "latest"
+        description: The cloud-api-adaptor OCI image (including tag) to test
         type: string
       install_directory_artifact:
         description: The archive name of the install directory
@@ -83,18 +79,24 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Get the install directory
-        if: ${{ inputs.install_directory_artifact != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.install_directory_artifact }}
-          path: src/cloud-api-adaptor/install
+      - name: Install kustomize
+        run: |
+          command -v kustomize >/dev/null || \
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
+            sudo bash -s /usr/local/bin
+
+      - name: Update kustomization configuration
+        run: |
+          cd "install/overlays/docker"
+          kustomize edit set image "cloud-api-adaptor=${{ inputs.caa_image }}"
+          # Print for debugging
+          echo "::group::docker kustomization"
+          cat kustomization.yaml
+          echo "::endgroup::"
 
       - name: Config docker
         run: |
           cat <<- EOF > docker.properties
-          CAA_IMAGE="${{ inputs.caa_image }}"
-          CAA_IMAGE_TAG="${{ inputs.caa_image_tag }}"
           DOCKER_PODVM_IMAGE="${{ inputs.podvm_image }}"
           DOCKER_HOST="unix:///var/run/docker.sock"
           DOCKER_NETWORK_NAME="kind"
