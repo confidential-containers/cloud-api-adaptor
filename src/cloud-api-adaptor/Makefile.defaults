@@ -8,6 +8,7 @@ PAUSE_BIN ?= pause
 YQ_VERSION := v4.35.1
 YQ_CHECKSUM := "sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 YQ_CHECKSUM_s390x := "sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
+YQ_CHECKSUM_arm64 := "sha256:1d830254fe5cc2fb046479e6c781032976f5cf88f9d01a6385898c29182f9bed"
 # none,az-cvm-vtpm,tdx,se,cca
 TEE_PLATFORM ?= none
 
@@ -25,6 +26,8 @@ ubuntu_amd64_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.u
 ubuntu_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.checksum)
 ubuntu_s390x_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).s390x.url)
 ubuntu_s390x_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).s390x.checksum)
+ubuntu_arm64_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).arm64.url)
+ubuntu_arm64_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).arm64.checksum)
 rhel_amd64_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.url)
 rhel_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.checksum)
 rhel_s390x_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.url)

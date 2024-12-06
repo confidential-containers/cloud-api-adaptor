@@ -7,12 +7,22 @@ include Makefile.defaults
 
 SHELL = bash -o pipefail
 
-ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
+ARCH ?= $(shell uname -m)
+TARGET_ARCH ?= amd64
+PROTOC_ARCH ?= x86_64
+ifeq ($(ARCH),aarch64)
+	TARGET_ARCH := arm64
+	PROTOC_ARCH := aarch_64
+else ifeq ($(ARCH),s390x)
+	TARGET_ARCH := s390x
+	PROTOC_ARCH := s390_64
+endif
+
 # Default is dev build. To create release build set RELEASE_BUILD=true
 RELEASE_BUILD ?= false
 # CLOUD_PROVIDER is used for runtime -- which provider should be run against the binary/code.
 CLOUD_PROVIDER ?=
-GOOPTIONS   ?= GOOS=linux GOARCH=$(ARCH) CGO_ENABLED=0
+GOOPTIONS   ?= GOOS=linux GOARCH=$(TARGET_ARCH) CGO_ENABLED=0
 GOFLAGS     ?=
 BINARIES    := cloud-api-adaptor agent-protocol-forwarder process-user-data
 SOURCEDIRS  := ./cmd ./pkg
@@ -24,7 +34,7 @@ TEST_E2E_TIMEOUT ?= 60m
 RUN_TESTS ?= ''
 
 RESOURCE_CTRL ?= true
-YQ_CHECKSUM_${ARCH} ?= $(YQ_CHECKSUM)
+YQ_CHECKSUM_$(TARGET_ARCH) ?= $(YQ_CHECKSUM)
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
 	BUILTIN_CLOUD_PROVIDERS ?= aws azure gcp ibmcloud vsphere
@@ -112,11 +122,11 @@ clean: ## Remove binaries.
 
 .PHONY: image
 image: .git-commit ## Build and push docker image to $registry
-	COMMIT=$(COMMIT) VERSION=$(VERSION) YQ_VERSION=$(YQ_VERSION) YQ_CHECKSUM=$(YQ_CHECKSUM) hack/build.sh -i
+	COMMIT=$(COMMIT) VERSION=$(VERSION) YQ_VERSION=$(YQ_VERSION) hack/build.sh -i
 
 .PHONY: image-with-arch
 image-with-arch: .git-commit ## Build the per arch image
-	COMMIT=$(COMMIT) VERSION=$(VERSION) YQ_VERSION=$(YQ_VERSION) YQ_CHECKSUM=$(YQ_CHECKSUM) hack/build.sh -a
+	COMMIT=$(COMMIT) VERSION=$(VERSION) YQ_VERSION=$(YQ_VERSION) hack/build.sh -a
 
 ##@ Deployment
 
@@ -162,8 +172,8 @@ PODVM_DISTRO ?= ubuntu
 PODVM_TAG ?= $(VERSIONS_HASH)
 
 PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(PODVM_TAG)
-PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(PODVM_TAG)
-PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(ARCH):$(PODVM_TAG)
+PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(TARGET_ARCH):$(PODVM_TAG)
+PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(TARGET_ARCH):$(PODVM_TAG)
 
 PUSH ?= false
 # If not pushing `--load` into the local docker cache
@@ -179,12 +189,12 @@ podvm-builder:
 	--build-arg GO_VERSION=$(GO_VERSION) \
 	--build-arg ORG_ID=$(ORG_ID) \
 	--build-arg ACTIVATION_KEY=$(ACTIVATION_KEY) \
-	--build-arg ARCH=$(ARCH) \
+	--build-arg ARCH=$(TARGET_ARCH) \
 	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
 	--build-arg YQ_VERSION=$(YQ_VERSION) \
-	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(ARCH)} \
-	--build-arg YQ_ARCH=$(ARCH) \
-	--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390_64) \
+	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(TARGET_ARCH)} \
+	--build-arg YQ_ARCH=$(TARGET_ARCH) \
+	--build-arg PROTOC_ARCH=$(PROTOC_ARCH) \
 	--build-arg ORAS_VERSION=$(ORAS_VERSION) \
 	--build-arg PACKER_VERSION=$(PACKER_VERSION) \
 	$(DOCKER_OPTS) .
@@ -194,7 +204,7 @@ podvm-binaries:
 	cd ../ && docker buildx build -t $(PODVM_BINARIES_IMAGE) -f cloud-api-adaptor/podvm/$(BINARIES_DOCKERFILE) \
 	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
 	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
-	--build-arg ARCH=$(ARCH) \
+	--build-arg ARCH=$(TARGET_ARCH) \
 	--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
 	--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 	--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
@@ -217,7 +227,7 @@ endif
 	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
 	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
 	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
-	--build-arg ARCH=$(ARCH) \
+	--build-arg ARCH=$(TARGET_ARCH) \
 	--build-arg CLOUD_PROVIDER=$(or $(CLOUD_PROVIDER),generic) \
 	--build-arg IMAGE_URL=$(IMAGE_URL) \
 	--build-arg IMAGE_CHECKSUM=$(IMAGE_CHECKSUM) \

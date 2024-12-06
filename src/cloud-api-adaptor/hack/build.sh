@@ -57,7 +57,6 @@ function build_caa_payload_image() {
 		--build-arg VERSION="${version}" \
 		--build-arg COMMIT="${commit}" \
 		--build-arg YQ_VERSION="${YQ_VERSION}" \
-		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
 		-f cloud-api-adaptor/Dockerfile \
 		${tag_string} \
 		--push \
@@ -100,7 +99,6 @@ function build_caa_payload_arch_specific() {
 		--build-arg VERSION="${version}" \
 		--build-arg COMMIT="${commit}" \
 		--build-arg YQ_VERSION="${YQ_VERSION}" \
-		--build-arg YQ_CHECKSUM="${YQ_CHECKSUM}" \
 		-f cloud-api-adaptor/Dockerfile \
 		${tag_string} \
 		--push \

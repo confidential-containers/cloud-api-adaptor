@@ -9,6 +9,9 @@ cloudimg:
       s390x:
         url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-s390x.img
         checksum: "sha256:24673aa86785573d3a92e15166ff81beff88cbb0abc01938f156eb1332e87cd3"
+      arm64:
+        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-arm64.img
+        checksum: "sha256:5bb6152947fa566d6ab40dc2e5b849aea3e07ab7e1c113d00372a7f99b950cae"
   rhel:
     9: # dummy links, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
       amd64:
