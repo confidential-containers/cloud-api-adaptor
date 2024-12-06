@@ -1,71 +1,78 @@
-name: Create a Pod VM image with mkosi
+# name: Create a Pod VM image with mkosi
+name: mgns mkosi
 
 on:
-  workflow_dispatch:
-    inputs:
-      registry:
-        default: 'quay.io/confidential-containers'
-        required: false
-        type: string
-      image_tag:
-        default: ''
-        required: false
-        type: string
-      git_ref:
-        description: Git ref to checkout the cloud-api-adaptor repository.
-        required: true
-        type: string
-      arch:
-        description: Which arch we are building the mkosi image for
-        default: 'amd64'
-        required: false
-        type: string
-      debug:
-        description: Whether to build the image in debug mode
-        default: false
-        required: false
-        type: boolean
+  # workflow_dispatch:
+  #   inputs:
+  #     registry:
+  #       default: 'quay.io/confidential-containers'
+  #       required: false
+  #       type: string
+  #     image_tag:
+  #       default: ''
+  #       required: false
+  #       type: string
+  #     git_ref:
+  #       description: Git ref to checkout the cloud-api-adaptor repository.
+  #       required: true
+  #       type: string
+  #     arch:
+  #       description: Which arch we are building the mkosi image for
+  #       default: 'amd64'
+  #       required: false
+  #       type: string
+  #     debug:
+  #       description: Whether to build the image in debug mode
+  #       default: false
+  #       required: false
+  #       type: boolean
 
-  workflow_call:
-    inputs:
-      registry:
-        default: 'quay.io/confidential-containers'
-        required: false
-        type: string
-      image_tag:
-        default: ''
-        required: false
-        type: string
-      git_ref:
-        description: Git ref to checkout the cloud-api-adaptor repository.
-        required: true
-        type: string
-      arch:
-        description: Which arch we are building the mkosi image for
-        default: 'amd64'
-        required: false
-        type: string
-      debug:
-        description: Whether to build the image in debug mode
-        default: false
-        required: false
-        type: boolean
-    outputs:
-      qcow2_oras_image:
-        description: The location of the qcow2 oras container this workflow pushed
-        value: ${{ jobs.build-image.outputs.qcow2_oras_image }}
-      docker_oci_image:
-        description: The location of the docker oci container image this workflow pushed
-        value: ${{ jobs.build-image.outputs.docker_oci_image }}
+  # workflow_call:
+  #   inputs:
+  #     registry:
+  #       default: 'quay.io/confidential-containers'
+  #       required: false
+  #       type: string
+  #     image_tag:
+  #       default: ''
+  #       required: false
+  #       type: string
+  #     git_ref:
+  #       description: Git ref to checkout the cloud-api-adaptor repository.
+  #       required: true
+  #       type: string
+  #     arch:
+  #       description: Which arch we are building the mkosi image for
+  #       default: 'amd64'
+  #       required: false
+  #       type: string
+  #     debug:
+  #       description: Whether to build the image in debug mode
+  #       default: false
+  #       required: false
+  #       type: boolean
+  #   outputs:
+  #     qcow2_oras_image:
+  #       description: The location of the qcow2 oras container this workflow pushed
+  #       value: ${{ jobs.build-image.outputs.qcow2_oras_image }}
+  #     docker_oci_image:
+  #       description: The location of the docker oci container image this workflow pushed
+  #       value: ${{ jobs.build-image.outputs.docker_oci_image }}
+  push:
+    branches:
+    - mkulke/remove-sudo-from-mkosi
 
 defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+env:
+  ARCH: ${{ inputs.arch == 's390x' && 's390x' || 'amd64' }}
+
 jobs:
   build-image:
     name: Build mkosi image
-    runs-on: ${{ inputs.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.arch == 's390x' && 's390x' || 'ubuntu-22.04' }}
     permissions:
       contents: read
       packages: write
@@ -77,34 +84,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: "${{ inputs.git_ref }}"
+        # with:
+        #   fetch-depth: 0
+        #   ref: "${{ inputs.git_ref }}"
 
-      - name: Rebase the code
-        if: github.event_name == 'pull_request_target'
-        working-directory: ./
-        run: |
-          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+      # - name: Rebase the code
+      #   if: github.event_name == 'pull_request_target'
+      #   working-directory: ./
+      #   run: |
+      #     ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to quay Container Registry
-        if: ${{ startsWith(inputs.registry, 'quay.io') }}
-        uses: docker/login-action@v3
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
+      # - name: Login to quay Container Registry
+      #   if: ${{ startsWith(inputs.registry, 'quay.io') }}
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: quay.io
+      #     username: ${{ secrets.QUAY_USERNAME }}
+      #     password: ${{ secrets.QUAY_PASSWORD }}
 
-      - name: Login to the ghcr Container registry
-        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Login to the ghcr Container registry
+      #   if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install build dependencies
         run: |
@@ -115,69 +122,29 @@ jobs:
       - name: Read properties from versions.yaml
         run: |
           go_version="$(yq '.tools.golang' versions.yaml)"
-          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+          # echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
           echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
 
-      - name: Setup Golang version ${{ env.GO_VERSION }}
-        if: ${{ inputs.arch == 's390x' }}
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
+      # - name: Setup Golang version ${{ env.GO_VERSION }}
+      #   if: ${{ inputs.arch == 's390x' }}
+      #   uses: actions/setup-go@v5
+      #   with:
+      #     go-version: ${{ env.GO_VERSION }}
 
       - uses: oras-project/setup-oras@v1
         with:
           version: ${{ env.ORAS_VERSION }}
 
       - name: Build builder
-        id: build_builder
         working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: |
-          # If the builder image matching our git sha exists, then skip this build
-          builder_image=${{ inputs.registry }}/podvm-builder-fedora-${{ inputs.arch }}
-          tag=$(git rev-parse --short HEAD)
-
-          if ! docker manifest inspect "${builder_image}:${tag}"; then
-            PODVM_BUILDER_IMAGE="${builder_image}:${tag}" make fedora-binaries-builder
-          fi
-          echo "image=${builder_image}:${tag}" | tee -a "$GITHUB_OUTPUT"
-
-          # If the input has a different image-tag then also push it with that tag
-          if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
-            docker pull "${builder_image}:${tag}"
-            docker tag "${builder_image}:${tag}" ${builder_image}:${{ inputs.image_tag }}
-            docker push "${builder_image}:${{ inputs.image_tag }}"
-          fi
-        env:
-          PUSH: true
-          ARCH: ${{ inputs.arch }}
+        run: make fedora-binaries-builder
 
       - name: Build binaries
-        id: build_binaries
         working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: |
-          # If the binaries which matching git sha exists, then skip this build
-          binaries_image=${{ inputs.registry }}/podvm-binaries-fedora-${{ inputs.arch }}
-          tag="$(git rev-parse --short HEAD)"
-          echo "image_tag=${image_tag}" | tee -a "$GITHUB_OUTPUT"
-
-          if ! docker manifest inspect "${binaries_image}:${tag}"; then
-            PODVM_BINARIES_IMAGE="${binaries_image}:${tag}" make binaries
-          fi
-          echo "image=${binaries_image}:${tag}" | tee -a "$GITHUB_OUTPUT"
-
-          # If the input has a different image-tag then also push it with that tag
-          if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
-            docker pull "${binaries_image}:${tag}"
-            docker tag "${binaries_image}:${tag}" ${binaries_image}:${{ inputs.image_tag }}
-            docker push "${binaries_image}:${{ inputs.image_tag }}"
-          fi
-        env:
-          PUSH: true
-          ARCH: ${{ inputs.arch }}
-          PODVM_BUILDER_IMAGE: ${{ steps.build_builder.outputs.image }}
+        run: make binaries
 
       - name: Install mkosi
-        if: ${{ inputs.arch == 's390x' }}
+        if: inputs.arch == 's390x'
         run: |
           git clone -b v22 https://github.com/systemd/mkosi
           sudo rm -f /usr/local/bin/mkosi
@@ -185,108 +152,76 @@ jobs:
           mkosi --version
 
       - name: Install Nix
-        if: ${{ inputs.arch == 'amd64' }}
+        if: env.ARCH == 'amd64'
         uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Build nix shell to cache dependencies
-        if: ${{ inputs.arch == 'amd64' }}
+        if: env.ARCH == 'amd64'
         run: nix build .#devShells.x86_64-linux.podvm-mkosi
 
-      - name: Install crane with nix
-        if: ${{ inputs.arch == 'amd64' }}
-        run: nix profile install nixpkgs#crane
-
-      - name: Install crane with go
-        if: ${{ inputs.arch == 's390x' }}
-        run: |
-          go install github.com/google/go-containerregistry/cmd/crane@latest
-          echo "PATH=${PATH}:$(go env GOPATH)/bin" >> "$GITHUB_ENV"
-
-      - name: Second checkout
-        if: ${{ inputs.arch == 'amd64' }}
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: "${{ inputs.git_ref }}"
-
-
-      - name: Rebase the code
-        if: github.event_name == 'pull_request_target'
-        working-directory: ./
-        run: |
-          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
-
-      - name: Download binaries and unpack into binaries-tree
-        run: |
-          crane export \
-            ${{ steps.build_binaries.outputs.image }} \
-            podvm-binaries.tar
-          mkdir -p podvm-mkosi/resources/binaries-tree
-          tar xf podvm-binaries.tar -C podvm-mkosi/resources/binaries-tree
-          rm podvm-binaries.tar
-
       - name: Build mkosi debug image
-        if: ${{ inputs.debug == 'true' }}
+        if: inputs.debug == true
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: make image-debug
 
       - name: Build mkosi image
-        if: ${{ inputs.debug != 'true' }}
+        if: inputs.debug != true
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: make image
 
-      - name: Upload the qcow2 with oras
-        id: publish_oras_qcow2
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: |
-          mkdir oras
-          cd oras
-          cp ../build/podvm-*.qcow2 .
-          tar cJf podvm.tar.xz podvm-*.qcow2
-          image=${{ inputs.registry }}/podvm-generic-fedora
-          if [ "${{inputs.debug}}" = "true" ]; then
-            image=${image}-debug
-          fi
-          image=${image}-${{ inputs.arch }}
-          tag=$(git rev-parse --short HEAD)
-          oras push "${image}:${tag}" podvm.tar.xz
+      # - name: Upload the qcow2 with oras
+      #   id: publish_oras_qcow2
+      #   working-directory: src/cloud-api-adaptor/podvm-mkosi
+      #   run: |
+      #     mkdir oras
+      #     cd oras
+      #     cp ../build/podvm-*.qcow2 .
+      #     tar cJf podvm.tar.xz podvm-*.qcow2
+      #     image=${{ inputs.registry }}/podvm-generic-fedora
+      #     if [ "${{inputs.debug}}" = "true" ]; then
+      #       image=${image}-debug
+      #     fi
+      #     image=${image}-${{ inputs.arch }}
+      #     tag=$(git rev-parse --short HEAD)
+      #     oras push "${image}:${tag}" podvm.tar.xz
 
-          # If the input has a different image-tag then also push it with that tag
-          if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
-            oras push "${image}:${{ inputs.image_tag }}" podvm.tar.xz
-          fi
+      #     # If the input has a different image-tag then also push it with that tag
+      #     if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
+      #       oras push "${image}:${{ inputs.image_tag }}" podvm.tar.xz
+      #     fi
 
-          # add image and digest to output for attestation
-          echo "image=${image}" >> "$GITHUB_OUTPUT"
-          digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
-          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+      #     # add image and digest to output for attestation
+      #     echo "image=${image}" >> "$GITHUB_OUTPUT"
+      #     digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
+      #     echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+      #     echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/attest-build-provenance@v1
-        with:
-          subject-name: ${{ steps.publish_oras_qcow2.outputs.image }}
-          subject-digest: ${{ steps.publish_oras_qcow2.outputs.digest }}
-          push-to-registry: true
+      # - uses: actions/attest-build-provenance@v1
+      #   with:
+      #     subject-name: ${{ steps.publish_oras_qcow2.outputs.image }}
+      #     subject-digest: ${{ steps.publish_oras_qcow2.outputs.digest }}
+      #     push-to-registry: true
 
+      # - name: Clean up some space for the docker provider build
+      #   working-directory: src/cloud-api-adaptor/podvm-mkosi
+      #   run: |
+      #     sudo du --max-depth=2 /home/runner || true
+      #     sudo du --max-depth=2 /var/lib || true
+      #     sudo rm -rf /nix
+      #     sudo rm -rf ./build
+      #     sudo rm -rf ./mkosi.cache
 
-      - name: Clean up some space for the docker provider build
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: |
-          sudo du --max-depth=2 /home/runner || true
-          sudo du --max-depth=2 /var/lib || true
-          sudo rm -rf /nix
-          sudo rm -rf ./build
-          sudo rm -rf ./mkosi.cache
-
-      - name: Build image for docker provider
-        id: build_docker_oci
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: |
-          tag=$(git rev-parse --short HEAD)
-          PODVM_TAG=${tag} make image-container
-          arch=$(uname -m)
-          arch=${arch/x86_64/amd64}
-          echo "image=ghcr.io/${{ github.repository }}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
-        env:
-          PUSH: true
-          REGISTRY: ghcr.io/${{ github.repository }}
+      # - name: Build image for docker provider
+      #   id: build_docker_oci
+      #   working-directory: src/cloud-api-adaptor/podvm-mkosi
+      #   run: |
+      #     tag=$(git rev-parse --short HEAD)
+      #     PODVM_TAG=${tag} make image-container
+      #     PODVM_TAG=${tag} make push-image-container
+      #     arch=$(uname -m)
+      #     arch=${arch/x86_64/amd64}
+      #     echo "image=ghcr.io/${{ github.repository }}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
+      #   env:
+      #     REGISTRY: ghcr.io/${{ github.repository }}
