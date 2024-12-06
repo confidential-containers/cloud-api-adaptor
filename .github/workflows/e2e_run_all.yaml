@@ -116,6 +116,7 @@ jobs:
   # IMPORTANT: If you are enabling e2e tests for a given provider,
   # then please update the PROVIDERS list (space-separated names, e.g.,
   # "aws libvirt").
+  # TODO - when the packer approach is removed this can go as well
   prep_install:
     runs-on: ubuntu-24.04
     outputs:
@@ -303,8 +304,7 @@ jobs:
           - amd64
     uses: ./.github/workflows/e2e_docker.yaml
     with:
-      caa_image: ${{ inputs.registry }}/cloud-api-adaptor
-      caa_image_tag: ${{ inputs.caa_image_tag }}
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
       podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.docker_oci_image }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
