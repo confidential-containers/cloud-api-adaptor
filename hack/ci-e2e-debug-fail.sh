@@ -27,7 +27,7 @@ debug_common() {
     echo "::endgroup::"
 
     echo "::group::cloud-api-adaptor logs"
-    kubectl logs -l app=cloud-api-adaptor -n confidential-containers-system
+    kubectl logs -l app=cloud-api-adaptor --tail=-1 -n confidential-containers-system
     echo "::endgroup::"
 
     for ns in $(kubectl get ns -o name 2>/dev/null | sed 's#namespace/##' | grep "^coco-pp-"); do
