@@ -257,6 +257,9 @@ func DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T, e
 	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever))
 	expectedErrorString := "401 UNAUTHORIZED"
+	if isTestOnCrio() {
+		expectedErrorString = "access to the requested resource is not authorized"
+	}
 	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image without Credentials has been created").WithPod(pod).WithNoAuthJson().WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
 }
 
