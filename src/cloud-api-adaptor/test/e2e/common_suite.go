@@ -768,3 +768,26 @@ func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 
 	NewTestCase(t, e, "PodWithCpuMemLimitsAndRequests", assert, "Pod with cpu and memory limits and requests").WithPod(pod).Run()
 }
+
+func DoTestPodVMwithInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, initdataString string) {
+	podName := "initdata-annotations-podvm"
+	containerName := "busybox"
+	imageName := getBusyboxTestImage(t)
+	annotationData := map[string]string{
+		"io.katacontainers.config.runtime.cc_init_data": initdataString,
+	}
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+	NewTestCase(t, e, "PodVMwithInitdataAnnotations", assert, "PodVM with Initdata Annotation is created").WithPod(pod).WithExpectedInitdataAnnotation(initdataString).Run()
+}
+
+// func DoTestCreatePeerPodContainerWithValidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert, alternateImageName string) {
+// 	podName := "annotations-valid-alternate-image"
+// 	containerName := "busybox"
+// 	imageName := getBusyboxTestImage(t)
+// 	annotationData := map[string]string{
+// 		"io.katacontainers.config.hypervisor.image": alternateImageName,
+// 	}
+// 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+
+// 	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithAlternateImage(alternateImageName).Run()
+// }
