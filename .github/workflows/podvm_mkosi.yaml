@@ -75,6 +75,11 @@ jobs:
       qcow2_oras_image: ${{ steps.publish_oras_qcow2.outputs.image }}:${{ steps.publish_oras_qcow2.outputs.tag }}
       docker_oci_image: ${{ steps.build_docker_oci.outputs.image }}
     steps:
+      # Required by rootless mkosi
+      - name: Un-restrict user namespaces
+        if: inputs.arch == 'amd64'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
