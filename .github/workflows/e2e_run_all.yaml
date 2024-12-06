@@ -290,7 +290,8 @@ jobs:
     name: docker
     if: |
       github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch'
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_docker')
     needs: [podvm_mkosi_amd64, caa_image_amd64]
     strategy:
       fail-fast: false
