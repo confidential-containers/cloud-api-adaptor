@@ -262,7 +262,7 @@ jobs:
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/attest-build-provenance@v1
+      - uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ steps.publish_oras_qcow2.outputs.image }}
           subject-digest: ${{ steps.publish_oras_qcow2.outputs.digest }}
