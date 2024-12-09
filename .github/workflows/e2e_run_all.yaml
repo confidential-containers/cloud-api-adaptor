@@ -265,9 +265,7 @@ jobs:
   # Run libvirt s390x e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_s390x:
     name: E2E tests on libvirt for the s390x architecture
-    # Skip s390x e2e tests until Choi is available to set-up the s390x runner's pre-action properly. Then revert this.
     if: |
-      false ||
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
