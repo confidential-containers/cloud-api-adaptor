@@ -3,6 +3,7 @@
 # the correct location on the podvm image
 
 sudo mkdir -p /etc/containers
+sudo cp /tmp/files/etc/agent-config.toml /etc/agent-config.toml
 sudo cp /tmp/files/etc/aa-offline_fs_kbc-keys.json /etc/aa-offline_fs_kbc-keys.json
 sudo cp -a /tmp/files/etc/containers/* /etc/containers/
 sudo cp -a /tmp/files/etc/systemd/* /etc/systemd/
@@ -30,3 +31,8 @@ sudo cp -a /tmp/files/pause_bundle /
 sudo mkdir -p /etc/kata-opa
 sudo cp -a /tmp/files/etc/kata-opa/* /etc/kata-opa/
 sudo cp -a /tmp/files/etc/tmpfiles.d/policy.conf /etc/tmpfiles.d/
+
+# Copy an empty auth.json for image pulling
+sudo mkdir -p /etc/kata-oci
+sudo cp -a /tmp/files/etc/kata-oci/* /etc/kata-oci/
+sudo cp -a /tmp/files/etc/tmpfiles.d/auth.conf /etc/tmpfiles.d/
