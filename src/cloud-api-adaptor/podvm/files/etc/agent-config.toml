@@ -1,0 +1,3 @@
+server_addr = "unix:///run/kata-containers/agent.sock"
+guest_components_procs = "none"
+image_registry_auth = "file:///run/peerpod/auth.json"
