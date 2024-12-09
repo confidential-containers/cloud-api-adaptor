@@ -30,3 +30,8 @@ sudo cp -a /tmp/files/pause_bundle /
 sudo mkdir -p /etc/kata-opa
 sudo cp -a /tmp/files/etc/kata-opa/* /etc/kata-opa/
 sudo cp -a /tmp/files/etc/tmpfiles.d/policy.conf /etc/tmpfiles.d/
+
+# Copy an empty auth.json for image pulling
+sudo mkdir -p /etc/kata-oci
+sudo cp -a /tmp/files/etc/kata-oci/* /etc/kata-oci/
+sudo cp -a /tmp/files/etc/tmpfiles.d/auth.conf /etc/tmpfiles.d/
