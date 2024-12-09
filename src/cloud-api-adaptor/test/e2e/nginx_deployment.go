@@ -23,8 +23,12 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
 
-const WAIT_NGINX_DEPLOYMENT_TIMEOUT = time.Second * 900
+const (
+	FEATURE_SETUP_FAILED          contextValueString = "WithSetupFailed"
+	WAIT_NGINX_DEPLOYMENT_TIMEOUT                    = time.Second * 900
+)
 
+type contextValueString string
 type deploymentOption func(*appsv1.Deployment)
 
 func WithReplicaCount(replicas int32) deploymentOption {
@@ -103,7 +107,7 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 
 	nginxImageFeature := features.New("Nginx image deployment test").
 		WithSetup("Create nginx deployment", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			ctx = context.WithValue(ctx, "WithSetupFailed", false)
+			ctx = context.WithValue(ctx, FEATURE_SETUP_FAILED, false)
 			client, err := cfg.NewClient()
 			if err != nil {
 				t.Fatal(err)
@@ -116,12 +120,12 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 			if !t.Failed() {
 				t.Log("nginx deployment is available now")
 			} else {
-				ctx = context.WithValue(ctx, "WithSetupFailed", true)
+				ctx = context.WithValue(ctx, FEATURE_SETUP_FAILED, true)
 			}
 			return ctx
 		}).
 		Assess("Access for nginx deployment test", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			if ctx.Value("WithSetupFailed").(bool) {
+			if ctx.Value(FEATURE_SETUP_FAILED).(bool) {
 				// Test setup failed, so skip this assess
 				t.Skip()
 				return ctx
