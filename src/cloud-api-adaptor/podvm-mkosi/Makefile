@@ -15,10 +15,6 @@ PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT)
 PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(ARCH)
 VERIFY_PROVENANCE ?= no
 
-PUSH ?= false
-# If not pushing `--load` into the local docker cache
-DOCKER_OPTS := $(if $(filter $(PUSH),true),--push,--load) $(EXTRA_DOCKER_OPTS)
-
 .DEFAULT_GOAL := all
 .PHONY: all
 all: fedora-binaries-builder binaries image
@@ -46,7 +42,7 @@ fedora-binaries-builder:
 		--build-arg YQ_ARCH=$(ARCH) \
 		--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390x) \
 		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
-		$(DOCKER_OPTS) \
+		--load \
 		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
 
 PHONY: binaries
@@ -68,8 +64,7 @@ endif
 		--build-arg VERIFY_PROVENANCE=$(VERIFY_PROVENANCE) \
 		$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
-		$(if $(filter $(PUSH),true),,-o type=local,dest="./resources/binaries-tree") \
-		$(DOCKER_OPTS) \
+		-o type=local,dest="./resources/binaries-tree" \
 		-f ../podvm/Dockerfile.podvm_binaries.fedora ../../
 
 PHONY: image
@@ -88,7 +83,7 @@ else ifeq ($(ARCH),s390x)
 	sudo -E ../hack/build-s390x-image.sh
 else
 	touch resources/buildBootableImage
-	sudo -E env PATH=$(PATH) nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
+	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
 
@@ -109,10 +104,9 @@ else ifeq ($(ARCH),s390x)
 	sudo -E ../hack/build-s390x-image.sh
 else
 	touch resources/buildBootableImage
-	sudo -E env PATH=$(PATH) nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
+	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
-	sudo chown -R $(USER): build
 
 PHONY: image-container
 image-container:
@@ -120,7 +114,6 @@ image-container:
 	docker buildx build \
 		-t $(PODVM_CONTAINER_NAME):$(PODVM_TAG) \
 		-t $(PODVM_CONTAINER_NAME):latest \
-		$(DOCKER_OPTS) \
 		-f Dockerfile.podvm_docker_provider .
 
 PHONY: push-image

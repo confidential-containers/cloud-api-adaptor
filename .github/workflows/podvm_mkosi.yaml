@@ -131,50 +131,17 @@ jobs:
       - name: Build builder
         id: build_builder
         working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: |
-          # If the builder image matching our git sha exists, then skip this build
-          builder_image=${{ inputs.registry }}/podvm-builder-fedora-${{ inputs.arch }}
-          tag=$(git rev-parse --short HEAD)
+        run: make fedora-binaries-builder
 
-          if ! docker manifest inspect "${builder_image}:${tag}"; then
-            PODVM_BUILDER_IMAGE="${builder_image}:${tag}" make fedora-binaries-builder
-          fi
-          echo "image=${builder_image}:${tag}" | tee -a "$GITHUB_OUTPUT"
-
-          # If the input has a different image-tag then also push it with that tag
-          if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
-            docker pull "${builder_image}:${tag}"
-            docker tag "${builder_image}:${tag}" ${builder_image}:${{ inputs.image_tag }}
-            docker push "${builder_image}:${{ inputs.image_tag }}"
-          fi
         env:
-          PUSH: true
           ARCH: ${{ inputs.arch }}
 
       - name: Build binaries
         id: build_binaries
         working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: |
-          # If the binaries which matching git sha exists, then skip this build
-          binaries_image=${{ inputs.registry }}/podvm-binaries-fedora-${{ inputs.arch }}
-          tag="$(git rev-parse --short HEAD)"
-          echo "image_tag=${image_tag}" | tee -a "$GITHUB_OUTPUT"
-
-          if ! docker manifest inspect "${binaries_image}:${tag}"; then
-            PODVM_BINARIES_IMAGE="${binaries_image}:${tag}" make binaries
-          fi
-          echo "image=${binaries_image}:${tag}" | tee -a "$GITHUB_OUTPUT"
-
-          # If the input has a different image-tag then also push it with that tag
-          if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
-            docker pull "${binaries_image}:${tag}"
-            docker tag "${binaries_image}:${tag}" ${binaries_image}:${{ inputs.image_tag }}
-            docker push "${binaries_image}:${{ inputs.image_tag }}"
-          fi
+        run: make binaries
         env:
-          PUSH: true
           ARCH: ${{ inputs.arch }}
-          PODVM_BUILDER_IMAGE: ${{ steps.build_builder.outputs.image }}
 
       - name: Install mkosi
         if: ${{ inputs.arch == 's390x' }}
@@ -191,39 +158,6 @@ jobs:
       - name: Build nix shell to cache dependencies
         if: ${{ inputs.arch == 'amd64' }}
         run: nix build .#devShells.x86_64-linux.podvm-mkosi
-
-      - name: Install crane with nix
-        if: ${{ inputs.arch == 'amd64' }}
-        run: nix profile install nixpkgs#crane
-
-      - name: Install crane with go
-        if: ${{ inputs.arch == 's390x' }}
-        run: |
-          go install github.com/google/go-containerregistry/cmd/crane@latest
-          echo "PATH=${PATH}:$(go env GOPATH)/bin" >> "$GITHUB_ENV"
-
-      - name: Second checkout
-        if: ${{ inputs.arch == 'amd64' }}
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: "${{ inputs.git_ref }}"
-
-
-      - name: Rebase the code
-        if: github.event_name == 'pull_request_target'
-        working-directory: ./
-        run: |
-          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
-
-      - name: Download binaries and unpack into binaries-tree
-        run: |
-          crane export \
-            ${{ steps.build_binaries.outputs.image }} \
-            podvm-binaries.tar
-          mkdir -p podvm-mkosi/resources/binaries-tree
-          tar xf podvm-binaries.tar -C podvm-mkosi/resources/binaries-tree
-          rm podvm-binaries.tar
 
       - name: Build mkosi debug image
         if: ${{ inputs.debug == 'true' }}
@@ -284,9 +218,9 @@ jobs:
         run: |
           tag=$(git rev-parse --short HEAD)
           PODVM_TAG=${tag} make image-container
+          PODVM_TAG=${tag} make push-image-container
           arch=$(uname -m)
           arch=${arch/x86_64/amd64}
           echo "image=ghcr.io/${{ github.repository }}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
         env:
-          PUSH: true
           REGISTRY: ghcr.io/${{ github.repository }}
