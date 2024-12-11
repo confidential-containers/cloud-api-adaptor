@@ -19,7 +19,6 @@ func TestLibvirtCreateSimplePod(t *testing.T) {
 }
 
 func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
-	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
@@ -62,25 +61,16 @@ func TestLibvirtCreatePeerPodAndCheckUserLogs(t *testing.T) {
 }
 
 func TestLibvirtCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
-	// This test is causing issues on CI with instability, so skip until we can resolve this.
-	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/1831
-	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodAndCheckWorkDirLogs(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
-	// This test is causing issues on CI with instability, so skip until we can resolve this.
-	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/1831
-	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t, testEnv, assert)
 }
 
 func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T) {
-	// This test is causing issues on CI with instability, so skip until we can resolve this.
-	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/1831
-	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t, testEnv, assert)
 }
@@ -94,20 +84,15 @@ func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *te
 }
 
 func TestLibvirtCreateNginxDeployment(t *testing.T) {
-	// This test is causing issues on CI with instability, so skip until we can resolve this.
-	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/2046
-	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestNginxDeployment(t, testEnv, assert)
 }
 
-/*
-Failing due to issues will pulling image (ErrImagePull)
 func TestLibvirtCreatePeerPodWithLargeImage(t *testing.T) {
+	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodWithLargeImage(t, testEnv, assert)
 }
-*/
 
 func TestLibvirtDeletePod(t *testing.T) {
 	assert := LibvirtAssert{}
@@ -116,7 +101,6 @@ func TestLibvirtDeletePod(t *testing.T) {
 
 func TestLibvirtPodToServiceCommunication(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
-	SkipTestOnCI(t)
 	if isTestOnCrio() {
 		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
 	}
@@ -126,7 +110,6 @@ func TestLibvirtPodToServiceCommunication(t *testing.T) {
 
 func TestLibvirtPodsMTLSCommunication(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
-	SkipTestOnCI(t)
 	if isTestOnCrio() {
 		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
 	}
