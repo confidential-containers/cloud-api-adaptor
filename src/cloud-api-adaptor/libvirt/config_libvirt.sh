@@ -80,7 +80,17 @@ installKcli() {
     if ! command -v kcli >/dev/null; then
         echo "Installing kcli"
         kcli_version="$(./hack/yq-shim.sh '.tools.kcli' versions.yaml)"
-        sudo pip3 install kcli==${kcli_version}
+        if [ $OS_DISTRO == "ubuntu" ]; then
+            # Work around newer Ubuntu's python venv errors by using pipx to install kcli
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install pipx -y
+            # export PATH="$PATH:$HOME/.local/bin"
+            pipx install kcli==${kcli_version}
+            pipx ensurepath
+            # Reload shell so that pipx install PATH is available
+            exec $SHELL
+        else
+            sudo pip3 install kcli==${kcli_version}
+        fi
     fi
 }
 
