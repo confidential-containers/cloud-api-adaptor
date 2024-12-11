@@ -125,12 +125,6 @@ jobs:
         with:
           version: ${{ env.ORAS_VERSION }}
 
-      - name: Build builder
-        id: build_builder
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: make fedora-binaries-builder
-        env:
-          ARCH: ${{ inputs.arch }}
 
       - name: Build binaries
         id: build_binaries

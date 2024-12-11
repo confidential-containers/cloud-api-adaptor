@@ -29,23 +29,6 @@ ifeq ($(ARCH),s390x)
 YQ_CHECKSUM = $(YQ_CHECKSUM_s390x)
 endif
 
-PHONY: fedora-binaries-builder
-fedora-binaries-builder:
-	@echo "Building $(BUILDER) image..."
-	docker buildx build \
-		-t $(PODVM_BUILDER_IMAGE) \
-		--build-arg GO_VERSION=$(GO_VERSION) \
-		--build-arg ARCH=$(ARCH) \
-		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
-		--build-arg YQ_VERSION=$(YQ_VERSION) \
-		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
-		--build-arg YQ_ARCH=$(ARCH) \
-		--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390x) \
-		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
-		--load \
-		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
-
-PHONY: binaries
 binaries:
 	@echo "Building binaries..."
 	rm -rf ./resources/binaries-tree
@@ -55,7 +38,14 @@ endif
 	docker buildx build \
 		-t $(PODVM_BINARIES_IMAGE) \
 		--progress=plain \
-		--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
+		--build-arg GO_VERSION=$(GO_VERSION) \
+		--build-arg ARCH=$(ARCH) \
+		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
+		--build-arg YQ_VERSION=$(YQ_VERSION) \
+		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
+		--build-arg YQ_ARCH=$(ARCH) \
+		--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390x) \
+		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
 		--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
 		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 		--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
@@ -64,8 +54,9 @@ endif
 		--build-arg VERIFY_PROVENANCE=$(VERIFY_PROVENANCE) \
 		$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
-		-o type=local,dest="./resources/binaries-tree" \
-		-f ../podvm/Dockerfile.podvm_binaries.fedora ../../
+		$(if $(filter $(PUSH),true),,-o type=local,dest="./resources/binaries-tree") \
+		$(DOCKER_OPTS) \
+		-f ../podvm/Dockerfile.podvm.fedora ../../
 
 PHONY: image
 image:
