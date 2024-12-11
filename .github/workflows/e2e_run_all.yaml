@@ -276,7 +276,7 @@ jobs:
       matrix: ${{ fromJSON(needs.libvirt_e2e_arch_prep.outputs.matrix) }}
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
-      runner: S390X
+      runner: s390x-large
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-s390x-dev
       podvm_image: ${{ needs.podvm_mkosi_s390x.outputs.qcow2_oras_image }}
       install_directory_artifact: install_directory
