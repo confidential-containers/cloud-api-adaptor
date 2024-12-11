@@ -65,13 +65,13 @@ func (s *sevGuestPolicy) getGuestPolicy() uint {
 }
 
 // createCloudInitISO creates an ISO file with a userdata and a metadata file. The ISO image will be created in-memory since it is small
-func createCloudInitISO(v *vmConfig) ([]byte, error) {
+func createCloudInitISO(v *vmConfig, arch string) ([]byte, error) {
 	logger.Println("Create cloudInit iso")
 
 	userData := v.userData
 	metaData := fmt.Sprintf("local-hostname: %s", v.name)
 
-	return createCloudInit([]byte(userData), []byte(metaData))
+	return createCloudInit([]byte(userData), []byte(metaData), arch)
 }
 
 func checkDomainExistsByName(name string, libvirtClient *libvirtClient) (exist bool, err error) {
@@ -680,8 +680,8 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	if err != nil {
 		return nil, fmt.Errorf("Error in creating volume: %s", err)
 	}
-
-	cloudInitIso, err := createCloudInitISO(v)
+	// Pass the architecture to createCloudInitISO(), Use this value to take action for specific architecture.
+	cloudInitIso, err := createCloudInitISO(v, libvirtClient.nodeInfo.Model)
 	if err != nil {
 		return nil, fmt.Errorf("error in creating cloud init ISO file, cause: %w", err)
 	}

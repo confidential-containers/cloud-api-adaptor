@@ -10,14 +10,16 @@ import (
 )
 
 const (
-	userDataFilename   = "user-data"
-	metaDataFilename   = "meta-data"
-	vendorDataFilename = "vendor-data"
-	ciDataVolumeName   = "cidata"
+	userDataFilename      = "user-data"
+	metaDataFilename      = "meta-data"
+	vendorDataFilename    = "vendor-data"
+	ciDataVolumeName      = "cidata"
+	ciDatas390xVolumeName = "cc_cidata"
+	ARCHS390x             = "s390x"
 )
 
 // createCloudInit produces a cloud init ISO file as a data blob with a userdata and a metadata section
-func createCloudInit(userData, metaData []byte) ([]byte, error) {
+func createCloudInit(userData, metaData []byte, arch string) ([]byte, error) {
 	writer, err := iso9660.NewWriter()
 	if err != nil {
 		return nil, err
@@ -40,8 +42,12 @@ func createCloudInit(userData, metaData []byte) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-
-	err = writer.WriteTo(&buf, ciDataVolumeName)
+	// Assign different volumeName for s390x architecture
+	if arch == ARCHS390x {
+		err = writer.WriteTo(&buf, ciDatas390xVolumeName)
+	} else {
+		err = writer.WriteTo(&buf, ciDataVolumeName)
+	}
 	if err != nil {
 		return nil, err
 	}
