@@ -28,8 +28,9 @@ func TestCloudInit(t *testing.T) {
 
 	userDataContent := []byte("userdata")
 	metaDataContent := []byte("metadata")
+	arch := "s390x"
 
-	isoData, err := createCloudInit(userDataContent, metaDataContent)
+	isoData, err := createCloudInit(userDataContent, metaDataContent, arch)
 	require.NoError(t, err)
 
 	err = os.WriteFile(file.Name(), isoData, os.ModePerm)
