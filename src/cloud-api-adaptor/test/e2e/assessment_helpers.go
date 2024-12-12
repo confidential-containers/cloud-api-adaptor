@@ -292,6 +292,21 @@ func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Clien
 	return nil
 }
 
+func VerifySecureCommsActivated(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) error {
+	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
+	if err != nil {
+		return fmt.Errorf("VerifySecureCommsConnected: GetNodeNameFromPod failed with %v", err)
+	}
+
+	expectedSuccessMessage := "Using PP SecureComms"
+	err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedSuccessMessage)
+	if err != nil {
+		return fmt.Errorf("VerifySecureCommsConnected: failed: %v", err)
+	}
+	t.Logf("PodVM was brought up using SecureComms")
+	return nil
+}
+
 func VerifyCaaPodLogContains(ctx context.Context, t *testing.T, client klient.Client, nodeName, expected string) error {
 	caaPod, err := getCaaPod(ctx, client, t, nodeName)
 	if err != nil {

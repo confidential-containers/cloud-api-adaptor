@@ -48,6 +48,8 @@ type ExtraPod struct {
 	testCommands         []TestCommand
 }
 
+var testCase_secureComms_isActive bool
+
 type TestCase struct {
 	testing                     *testing.T
 	testEnv                     env.Environment
@@ -418,6 +420,13 @@ func (tc *TestCase) Run() {
 					err := VerifyAlternateImage(ctx, t, client, tc.pod, tc.alternateImageName)
 					if err != nil {
 						t.Errorf("VerifyAlternateImage failed: %v", err)
+					}
+				}
+
+				if testCase_secureComms_isActive {
+					err := VerifySecureCommsActivated(ctx, t, client, tc.pod)
+					if err != nil {
+						t.Errorf("VerifySecureCommsActivated failed: %v", err)
 					}
 				}
 			}
