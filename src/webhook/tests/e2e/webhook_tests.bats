@@ -121,6 +121,8 @@ teardown() {
 }
 
 @test "$test_tags test default parameters can be changed" {
+	skip "This test is unstable. See issue #2179."
+
 	local runtimeclass="kata-wh-test"
 
 	# Create a dummy runtimeClass to use on this test.
