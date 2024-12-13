@@ -16,6 +16,3 @@ CI workflow.
 2. Make changes specific to only CI workflow in second PR. 
 3. Test this second PR CI changes on personal public forked repo and reference test results from CI run in personal repo in this PR.
 4. Get this PR merged on upstream main branch.
-
-> **NOTE**: As this needs to access repository secrets so we cant run changes in CI without merging it refer to [this](https://iterative.ai/blog/testing-external-contributions-using-github-actions-secrets) for more info.
-
