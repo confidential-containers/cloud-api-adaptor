@@ -109,36 +109,48 @@ func TestSortInstanceTypesOnResources(t *testing.T) {
 				instanceTypeSpecList: []InstanceTypeSpec{
 					{
 						InstanceType: "t2.small",
-						VCPUs:        2,
-						Memory:       6,
+						Resources: PodVMResources{
+							VCPUs:  2,
+							Memory: 6,
+						},
 					},
 					{
 						InstanceType: "t2.medium",
-						VCPUs:        4,
-						Memory:       8,
+						Resources: PodVMResources{
+							VCPUs:  4,
+							Memory: 8,
+						},
 					},
 					{
 						InstanceType: "t2.large",
-						VCPUs:        8,
-						Memory:       16,
+						Resources: PodVMResources{
+							VCPUs:  8,
+							Memory: 16,
+						},
 					},
 				},
 			},
 			want: []InstanceTypeSpec{
 				{
 					InstanceType: "t2.small",
-					VCPUs:        2,
-					Memory:       6,
+					Resources: PodVMResources{
+						VCPUs:  2,
+						Memory: 6,
+					},
 				},
 				{
 					InstanceType: "t2.medium",
-					VCPUs:        4,
-					Memory:       8,
+					Resources: PodVMResources{
+						VCPUs:  4,
+						Memory: 8,
+					},
 				},
 				{
 					InstanceType: "t2.large",
-					VCPUs:        8,
-					Memory:       16,
+					Resources: PodVMResources{
+						VCPUs:  8,
+						Memory: 16,
+					},
 				},
 			},
 		},
@@ -149,36 +161,48 @@ func TestSortInstanceTypesOnResources(t *testing.T) {
 				instanceTypeSpecList: []InstanceTypeSpec{
 					{
 						InstanceType: "t2.small",
-						VCPUs:        2,
-						Memory:       6,
+						Resources: PodVMResources{
+							VCPUs:  2,
+							Memory: 6,
+						},
 					},
 					{
 						InstanceType: "t2.large",
-						VCPUs:        8,
-						Memory:       16,
+						Resources: PodVMResources{
+							VCPUs:  8,
+							Memory: 16,
+						},
 					},
 					{
 						InstanceType: "t2.medium",
-						VCPUs:        4,
-						Memory:       8,
+						Resources: PodVMResources{
+							VCPUs:  4,
+							Memory: 8,
+						},
 					},
 				},
 			},
 			want: []InstanceTypeSpec{
 				{
 					InstanceType: "t2.small",
-					VCPUs:        2,
-					Memory:       6,
+					Resources: PodVMResources{
+						VCPUs:  2,
+						Memory: 6,
+					},
 				},
 				{
 					InstanceType: "t2.medium",
-					VCPUs:        4,
-					Memory:       8,
+					Resources: PodVMResources{
+						VCPUs:  4,
+						Memory: 8,
+					},
 				},
 				{
 					InstanceType: "t2.large",
-					VCPUs:        8,
-					Memory:       16,
+					Resources: PodVMResources{
+						VCPUs:  8,
+						Memory: 16,
+					},
 				},
 			},
 		},
@@ -189,36 +213,48 @@ func TestSortInstanceTypesOnResources(t *testing.T) {
 				instanceTypeSpecList: []InstanceTypeSpec{
 					{
 						InstanceType: "t2.medium",
-						VCPUs:        4,
-						Memory:       8,
+						Resources: PodVMResources{
+							VCPUs:  4,
+							Memory: 8,
+						},
 					},
 					{
 						InstanceType: "t2.small",
-						VCPUs:        2,
-						Memory:       6,
+						Resources: PodVMResources{
+							VCPUs:  2,
+							Memory: 6,
+						},
 					},
 					{
 						InstanceType: "t2.large",
-						VCPUs:        8,
-						Memory:       16,
+						Resources: PodVMResources{
+							VCPUs:  8,
+							Memory: 16,
+						},
 					},
 				},
 			},
 			want: []InstanceTypeSpec{
 				{
 					InstanceType: "t2.small",
-					VCPUs:        2,
-					Memory:       6,
+					Resources: PodVMResources{
+						VCPUs:  2,
+						Memory: 6,
+					},
 				},
 				{
 					InstanceType: "t2.medium",
-					VCPUs:        4,
-					Memory:       8,
+					Resources: PodVMResources{
+						VCPUs:  4,
+						Memory: 8,
+					},
 				},
 				{
 					InstanceType: "t2.large",
-					VCPUs:        8,
-					Memory:       16,
+					Resources: PodVMResources{
+						VCPUs:  8,
+						Memory: 16,
+					},
 				},
 			},
 		},
@@ -230,42 +266,54 @@ func TestSortInstanceTypesOnResources(t *testing.T) {
 				instanceTypeSpecList: []InstanceTypeSpec{
 					{
 						InstanceType: "p2.medium",
-						VCPUs:        4,
-						Memory:       8,
-						GPUs:         2,
+						Resources: PodVMResources{
+							VCPUs:  4,
+							Memory: 8,
+							GPUs:   2,
+						},
 					},
 					{
 						InstanceType: "p2.small",
-						VCPUs:        2,
-						Memory:       6,
-						GPUs:         1,
+						Resources: PodVMResources{
+							VCPUs:  2,
+							Memory: 6,
+							GPUs:   1,
+						},
 					},
 					{
 						InstanceType: "p2.large",
-						VCPUs:        8,
-						Memory:       16,
-						GPUs:         4,
+						Resources: PodVMResources{
+							VCPUs:  8,
+							Memory: 16,
+							GPUs:   4,
+						},
 					},
 				},
 			},
 			want: []InstanceTypeSpec{
 				{
 					InstanceType: "p2.small",
-					VCPUs:        2,
-					Memory:       6,
-					GPUs:         1,
+					Resources: PodVMResources{
+						VCPUs:  2,
+						Memory: 6,
+						GPUs:   1,
+					},
 				},
 				{
 					InstanceType: "p2.medium",
-					VCPUs:        4,
-					Memory:       8,
-					GPUs:         2,
+					Resources: PodVMResources{
+						VCPUs:  4,
+						Memory: 8,
+						GPUs:   2,
+					},
 				},
 				{
 					InstanceType: "p2.large",
-					VCPUs:        8,
-					Memory:       16,
-					GPUs:         4,
+					Resources: PodVMResources{
+						VCPUs:  8,
+						Memory: 16,
+						GPUs:   4,
+					},
 				},
 			},
 		},
@@ -302,18 +350,24 @@ func TestGetBestFitInstanceType(t *testing.T) {
 				sortedInstanceTypeSpecList: []InstanceTypeSpec{
 					{
 						InstanceType: "t2.small",
-						VCPUs:        2,
-						Memory:       6,
+						Resources: PodVMResources{
+							VCPUs:  2,
+							Memory: 6,
+						},
 					},
 					{
 						InstanceType: "t2.medium",
-						VCPUs:        4,
-						Memory:       8,
+						Resources: PodVMResources{
+							VCPUs:  4,
+							Memory: 8,
+						},
 					},
 					{
 						InstanceType: "t2.large",
-						VCPUs:        8,
-						Memory:       16,
+						Resources: PodVMResources{
+							VCPUs:  8,
+							Memory: 16,
+						},
 					},
 				},
 				vcpus:  2,
@@ -329,18 +383,24 @@ func TestGetBestFitInstanceType(t *testing.T) {
 				sortedInstanceTypeSpecList: []InstanceTypeSpec{
 					{
 						InstanceType: "t2.small",
-						VCPUs:        2,
-						Memory:       6,
+						Resources: PodVMResources{
+							VCPUs:  2,
+							Memory: 6,
+						},
 					},
 					{
 						InstanceType: "t2.medium",
-						VCPUs:        4,
-						Memory:       8,
+						Resources: PodVMResources{
+							VCPUs:  4,
+							Memory: 8,
+						},
 					},
 					{
 						InstanceType: "t2.large",
-						VCPUs:        8,
-						Memory:       16,
+						Resources: PodVMResources{
+							VCPUs:  8,
+							Memory: 16,
+						},
 					},
 				},
 				vcpus:  4,
@@ -356,18 +416,24 @@ func TestGetBestFitInstanceType(t *testing.T) {
 				sortedInstanceTypeSpecList: []InstanceTypeSpec{
 					{
 						InstanceType: "t2.small",
-						VCPUs:        2,
-						Memory:       6,
+						Resources: PodVMResources{
+							VCPUs:  2,
+							Memory: 6,
+						},
 					},
 					{
 						InstanceType: "t2.medium",
-						VCPUs:        4,
-						Memory:       8,
+						Resources: PodVMResources{
+							VCPUs:  4,
+							Memory: 8,
+						},
 					},
 					{
 						InstanceType: "t2.large",
-						VCPUs:        8,
-						Memory:       16,
+						Resources: PodVMResources{
+							VCPUs:  8,
+							Memory: 16,
+						},
 					},
 				},
 				vcpus:  4,
@@ -383,19 +449,25 @@ func TestGetBestFitInstanceType(t *testing.T) {
 				sortedInstanceTypeSpecList: []InstanceTypeSpec{
 					{
 						InstanceType: "t2.small",
-						VCPUs:        2,
-						Memory:       6,
+						Resources: PodVMResources{
+							VCPUs:  2,
+							Memory: 6,
+						},
 					},
 					{
 						InstanceType: "p2.medium",
-						VCPUs:        4,
-						Memory:       8,
-						GPUs:         2,
+						Resources: PodVMResources{
+							VCPUs:  4,
+							Memory: 8,
+							GPUs:   2,
+						},
 					},
 					{
 						InstanceType: "t2.large",
-						VCPUs:        8,
-						Memory:       16,
+						Resources: PodVMResources{
+							VCPUs:  8,
+							Memory: 16,
+						},
 					},
 				},
 				vcpus:  4,
@@ -412,18 +484,24 @@ func TestGetBestFitInstanceType(t *testing.T) {
 				sortedInstanceTypeSpecList: []InstanceTypeSpec{
 					{
 						InstanceType: "t2.small",
-						VCPUs:        2,
-						Memory:       6,
+						Resources: PodVMResources{
+							VCPUs:  2,
+							Memory: 6,
+						},
 					},
 					{
 						InstanceType: "t2.medium",
-						VCPUs:        4,
-						Memory:       8,
+						Resources: PodVMResources{
+							VCPUs:  4,
+							Memory: 8,
+						},
 					},
 					{
 						InstanceType: "t2.large",
-						VCPUs:        8,
-						Memory:       16,
+						Resources: PodVMResources{
+							VCPUs:  8,
+							Memory: 16,
+						},
 					},
 				},
 				vcpus:  4,
@@ -547,8 +625,8 @@ func TestGetBestFitInstanceTypeWithGPU(t *testing.T) {
 		{
 			name: "exact match",
 			specList: []InstanceTypeSpec{
-				{InstanceType: "small-gpu", GPUs: 1, VCPUs: 2, Memory: 4096},
-				{InstanceType: "medium-gpu", GPUs: 2, VCPUs: 4, Memory: 8192},
+				{InstanceType: "small-gpu", Resources: PodVMResources{GPUs: 1, VCPUs: 2, Memory: 4096}},
+				{InstanceType: "medium-gpu", Resources: PodVMResources{GPUs: 2, VCPUs: 4, Memory: 8192}},
 			},
 			gpus:          1,
 			vcpus:         2,
@@ -559,8 +637,8 @@ func TestGetBestFitInstanceTypeWithGPU(t *testing.T) {
 		{
 			name: "next best fit",
 			specList: []InstanceTypeSpec{
-				{InstanceType: "small-gpu", GPUs: 1, VCPUs: 2, Memory: 4096},
-				{InstanceType: "medium-gpu", GPUs: 2, VCPUs: 4, Memory: 8192},
+				{InstanceType: "small-gpu", Resources: PodVMResources{GPUs: 1, VCPUs: 2, Memory: 4096}},
+				{InstanceType: "medium-gpu", Resources: PodVMResources{GPUs: 2, VCPUs: 4, Memory: 8192}},
 			},
 			gpus:          1,
 			vcpus:         3,
@@ -571,8 +649,8 @@ func TestGetBestFitInstanceTypeWithGPU(t *testing.T) {
 		{
 			name: "no match found",
 			specList: []InstanceTypeSpec{
-				{InstanceType: "small-gpu", GPUs: 1, VCPUs: 2, Memory: 4096},
-				{InstanceType: "medium-gpu", GPUs: 2, VCPUs: 4, Memory: 8192},
+				{InstanceType: "small-gpu", Resources: PodVMResources{GPUs: 1, VCPUs: 2, Memory: 4096}},
+				{InstanceType: "medium-gpu", Resources: PodVMResources{GPUs: 2, VCPUs: 4, Memory: 8192}},
 			},
 			gpus:          4,
 			vcpus:         8,

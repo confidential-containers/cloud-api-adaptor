@@ -332,7 +332,8 @@ func (p *ibmcloudVPCProvider) updateInstanceProfileSpecList() error {
 		if err != nil {
 			return err
 		}
-		instanceProfileSpecList = append(instanceProfileSpecList, provider.InstanceTypeSpec{InstanceType: profileType, VCPUs: vcpus, Memory: memory, Arch: arch})
+		resources := provider.NewPodVMResources(vcpus, memory)
+		instanceProfileSpecList = append(instanceProfileSpecList, provider.InstanceTypeSpec{InstanceType: profileType, Resources: resources, Arch: arch})
 	}
 
 	// Sort the instanceProfileSpecList and update the serviceConfig

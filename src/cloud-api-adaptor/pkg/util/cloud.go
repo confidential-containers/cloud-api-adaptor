@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	cri "github.com/containerd/containerd/pkg/cri/annotations"
 	hypannotations "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/annotations"
 )
@@ -44,48 +45,48 @@ func GetImageFromAnnotation(annotations map[string]string) string {
 }
 
 // Method to get vCPU, memory and gpus from annotations
-func GetPodvmResourcesFromAnnotation(annotations map[string]string) (int64, int64, int64) {
-
-	var vcpuInt, memoryInt, gpuInt int64
+func GetPodVMResourcesFromAnnotation(annotations map[string]string) provider.PodVMResources {
+	var vcpus, gpus, memory int64
 	var err error
 
 	vcpu, ok := annotations[hypannotations.DefaultVCPUs]
 	if ok {
-		vcpuInt, err = strconv.ParseInt(vcpu, 10, 64)
+		vcpus, err = strconv.ParseInt(vcpu, 10, 64)
 		if err != nil {
 			fmt.Printf("Error converting vcpu to int64. Defaulting to 0: %v\n", err)
-			vcpuInt = 0
+			vcpus = 0
 		}
 	} else {
-		vcpuInt = 0
+		vcpus = 0
 	}
 
-	memory, ok := annotations[hypannotations.DefaultMemory]
+	mem, ok := annotations[hypannotations.DefaultMemory]
 	if ok {
 		// Use strconv.ParseInt to convert string to int64
-		memoryInt, err = strconv.ParseInt(memory, 10, 64)
+		memory, err = strconv.ParseInt(mem, 10, 64)
 		if err != nil {
 			fmt.Printf("Error converting memory to int64. Defaulting to 0: %v\n", err)
-			memoryInt = 0
+			memory = 0
 		}
 
 	} else {
-		memoryInt = 0
+		memory = 0
 	}
 
 	gpu, ok := annotations[hypannotations.DefaultGPUs]
 	if ok {
-		gpuInt, err = strconv.ParseInt(gpu, 10, 64)
+		gpus, err = strconv.ParseInt(gpu, 10, 64)
 		if err != nil {
 			fmt.Printf("Error converting gpu to int64. Defaulting to 0: %v\n", err)
-			gpuInt = 0
+			gpus = 0
 		}
 	} else {
-		gpuInt = 0
+		gpus = 0
 	}
 
-	// Return vCPU, memory and GPU
-	return vcpuInt, memoryInt, gpuInt
+	storage := int64(0)
+
+	return provider.PodVMResources{VCPUs: vcpus, Memory: memory, GPUs: gpus, Storage: storage}
 }
 
 // Method to get initdata from annotation

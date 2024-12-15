@@ -44,16 +44,17 @@ func VerifyCloudInstanceType(instanceType string, validInstanceTypes []string, d
 // Method to sort InstanceTypeSpec into ascending order based on gpu, then memory, followed by cpu
 func SortInstanceTypesOnResources(instanceTypeSpecList []InstanceTypeSpec) []InstanceTypeSpec {
 	sort.Slice(instanceTypeSpecList, func(i, j int) bool {
+		resI, resJ := instanceTypeSpecList[i].Resources, instanceTypeSpecList[j].Resources
 		// First, sort by GPU count
-		if instanceTypeSpecList[i].GPUs != instanceTypeSpecList[j].GPUs {
-			return instanceTypeSpecList[i].GPUs < instanceTypeSpecList[j].GPUs
+		if resI.GPUs != resJ.GPUs {
+			return resI.GPUs < resJ.GPUs
 		}
 		// If GPU count is the same, sort by memory
-		if instanceTypeSpecList[i].Memory != instanceTypeSpecList[j].Memory {
-			return instanceTypeSpecList[i].Memory < instanceTypeSpecList[j].Memory
+		if resI.Memory != resJ.Memory {
+			return resI.Memory < resJ.Memory
 		}
 		// If memory is the same, sort by vCPUs
-		return instanceTypeSpecList[i].VCPUs < instanceTypeSpecList[j].VCPUs
+		return resI.VCPUs < resJ.VCPUs
 	})
 
 	return instanceTypeSpecList
@@ -64,16 +65,17 @@ func SelectInstanceTypeToUse(spec InstanceTypeSpec, specList []InstanceTypeSpec,
 	var instanceType string
 	var err error
 
+	gpus, vcpus, memory := spec.Resources.GPUs, spec.Resources.VCPUs, spec.Resources.Memory
 	// GPU gets the highest priority
-	if spec.GPUs > 0 {
-		instanceType, err = GetBestFitInstanceTypeWithGPU(specList, spec.GPUs, spec.VCPUs, spec.Memory)
+	if gpus > 0 {
+		instanceType, err = GetBestFitInstanceTypeWithGPU(specList, gpus, vcpus, memory)
 		if err != nil {
 			return "", fmt.Errorf("failed to get instance type based on GPU, vCPU, and memory annotations: %w", err)
 		}
 		logger.Printf("Instance type selected by the cloud provider based on GPU annotation: %s", instanceType)
-	} else if spec.VCPUs != 0 && spec.Memory != 0 {
+	} else if vcpus != 0 && memory != 0 {
 		// If no GPU is required, fall back to vCPU and memory selection
-		instanceType, err = GetBestFitInstanceType(specList, spec.VCPUs, spec.Memory)
+		instanceType, err = GetBestFitInstanceType(specList, vcpus, memory)
 		if err != nil {
 			return "", fmt.Errorf("failed to get instance type based on vCPU and memory annotations: %w", err)
 		}
@@ -104,7 +106,8 @@ func GetBestFitInstanceType(sortedInstanceTypeSpecList []InstanceTypeSpec, vcpus
 	// Use sort.Search to find the index of the first element in the sortedMachineTypeList slice
 	// that is greater than or equal to the given memory and vcpus
 	index := sort.Search(len(sortedInstanceTypeSpecList), func(i int) bool {
-		return sortedInstanceTypeSpecList[i].Memory >= memory && sortedInstanceTypeSpecList[i].VCPUs >= vcpus
+		res := sortedInstanceTypeSpecList[i].Resources
+		return res.Memory >= memory && res.VCPUs >= vcpus
 	})
 
 	// If binary search fails to find a match, return error
@@ -121,7 +124,7 @@ func GetBestFitInstanceType(sortedInstanceTypeSpecList []InstanceTypeSpec, vcpus
 func FilterOutGPUInstances(instanceTypeSpecList []InstanceTypeSpec) []InstanceTypeSpec {
 	var filteredList []InstanceTypeSpec
 	for _, spec := range instanceTypeSpecList {
-		if spec.GPUs == 0 {
+		if spec.Resources.GPUs == 0 {
 			filteredList = append(filteredList, spec)
 		}
 	}
@@ -132,9 +135,8 @@ func FilterOutGPUInstances(instanceTypeSpecList []InstanceTypeSpec) []InstanceTy
 // TBD: Incorporate GPU model based selection as well
 func GetBestFitInstanceTypeWithGPU(sortedInstanceTypeSpecList []InstanceTypeSpec, gpus, vcpus, memory int64) (string, error) {
 	index := sort.Search(len(sortedInstanceTypeSpecList), func(i int) bool {
-		return sortedInstanceTypeSpecList[i].GPUs >= gpus &&
-			sortedInstanceTypeSpecList[i].VCPUs >= vcpus &&
-			sortedInstanceTypeSpecList[i].Memory >= memory
+		res := sortedInstanceTypeSpecList[i].Resources
+		return res.GPUs >= gpus && res.VCPUs >= vcpus && res.Memory >= memory
 	})
 
 	if index == len(sortedInstanceTypeSpecList) {
