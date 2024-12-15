@@ -73,6 +73,7 @@ else ifeq ($(ARCH),s390x)
 else
 	mkosi --profile production.conf
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
+	qemu-img resize build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2 +50M
 endif
 
 PHONY: image-debug
@@ -90,6 +91,7 @@ else ifeq ($(ARCH),s390x)
 else
 	mkosi --profile debug.conf
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
+	qemu-img resize build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2 +50M
 endif
 
 PHONY: image-container
