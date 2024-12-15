@@ -98,7 +98,8 @@ func TestGetPodvmResourcesFromAnnotation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, got2 := GetPodvmResourcesFromAnnotation(tt.args.annotations)
+			r := GetPodVMResourcesFromAnnotation(tt.args.annotations)
+			got, got1, got2 := r.VCPUs, r.Memory, r.GPUs
 			if got != tt.want {
 				t.Errorf("GetPodvmResourcesFromAnnotation() got = %v, want %v", got, tt.want)
 			}
