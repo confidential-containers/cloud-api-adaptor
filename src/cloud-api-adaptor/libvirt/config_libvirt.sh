@@ -86,8 +86,6 @@ installKcli() {
             # export PATH="$PATH:$HOME/.local/bin"
             pipx install kcli==${kcli_version}
             pipx ensurepath
-            # Reload shell so that pipx install PATH is available
-            exec $SHELL
         else
             sudo pip3 install kcli==${kcli_version}
         fi
@@ -140,3 +138,8 @@ case $TEST_E2E_SECURE_COMMS in
     echo "SECURE_COMMS=\"false\"" >> libvirt.properties
     ;;
 esac
+
+if [[ "${OS_DISTRO}" == "ubuntu" ]] && [[ "${CI:-}" != "true" ]]; then
+    # Reload shell so that pipx install PATH is available
+    exec $SHELL
+fi
