@@ -1,6 +1,8 @@
 #!/bin/bash
 
 set -euo pipefail
+DEBUG="true"
+[ -n "${DEBUG:-}" ] && set -o xtrace
 
 pushd ../podvm-mkosi/build
 
