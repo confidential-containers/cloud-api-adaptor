@@ -6,11 +6,13 @@ DEBUG="true"
 
 pushd ../podvm-mkosi/build
 
-workdir=.
+workdir=$PWD
 tmp_img_path="${workdir}/tmp.qcow2"
 tmp_nbd=/dev/nbd1
 dst_mnt=./dst_mnt
 disksize=100G
+
+echo "tmp_img_path: ${tmp_img_path}"
 
 qemu-img create -f qcow2 "${tmp_img_path}" "${disksize}"
 
