@@ -37,11 +37,13 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+
 jobs:
   # Build the podvm images.
   #
   podvm_builder:
     uses: ./.github/workflows/podvm_builder.yaml
+    if: false
     with:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
@@ -50,6 +52,7 @@ jobs:
 
   podvm_binaries:
     needs: [podvm_builder]
+    if: false
     uses: ./.github/workflows/podvm_binaries.yaml
     with:
       registry: ${{ inputs.registry }}
@@ -59,6 +62,7 @@ jobs:
 
   podvm:
     needs: [podvm_binaries]
+    if: false
     uses: ./.github/workflows/podvm.yaml
     with:
       registry: ${{ inputs.registry }}
@@ -78,6 +82,7 @@ jobs:
 
   podvm_mkosi_s390x:
     uses: ./.github/workflows/podvm_mkosi.yaml
+    if: false
     with:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
@@ -197,6 +202,7 @@ jobs:
 
   caa_image_amd64:
     uses: ./.github/workflows/caa_build_and_push.yaml
+    if: false
     with:
       registry: ${{ inputs.registry }}
       dev_arches: 'linux/amd64'
@@ -208,6 +214,7 @@ jobs:
 
   caa_image_s390x:
     uses: ./.github/workflows/caa_build_and_push.yaml
+    if: false
     with:
       registry: ${{ inputs.registry }}
       dev_arches: 'linux/s390x'

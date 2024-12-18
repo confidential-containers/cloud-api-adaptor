@@ -125,6 +125,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.StringVar(&cfg.serverConfig.Initdata, "initdata", "", "Default initdata for all Pods")
 		flags.BoolVar(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "Enable cloud config verify - should use it for production")
 		flags.IntVar(&cfg.serverConfig.PeerPodsLimitPerNode, "peerpods-limit-per-node", 10, "peer pods limit per node (default=10)")
+		flags.Uint64Var(&cfg.serverConfig.DiskSize, "disk-size", 0, "Disk size in GB. Default is 0, which implies the default image disk size")
 
 		cloud.ParseCmd(flags)
 	})

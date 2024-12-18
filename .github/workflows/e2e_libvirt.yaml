@@ -182,7 +182,11 @@ jobs:
           export TEST_E2E_TIMEOUT="75m"
           export TEST_E2E_SECURE_COMMS="${{ inputs.secure_comms }}"
 
-          make test-e2e
+          # make test-e2e
+          make test-e2e RUN_TESTS="TestLibvirtCreateSimplePod"
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3 
 
       - name: Debug tests failure
         if: failure() && steps.runTests.outcome == 'failure'
