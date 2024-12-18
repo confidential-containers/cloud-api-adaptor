@@ -92,7 +92,6 @@ Another issue is s390x does not support UEFI. Instead, we can first use **mkosi*
 
 It requires a **s390x host** to build s390x image with make commands:
 ```
-make fedora-binaries-builder
 TEE_PLATFORM=se-attester make binaries
 make image
 # SE_BOOT=true make image

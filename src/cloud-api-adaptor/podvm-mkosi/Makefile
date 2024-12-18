@@ -17,13 +17,13 @@ VERIFY_PROVENANCE ?= no
 
 .DEFAULT_GOAL := all
 .PHONY: all
-all: fedora-binaries-builder binaries image
+all: binaries image
 
 .PHONY: debug
-debug: fedora-binaries-builder binaries image-debug
+debug:binaries image-debug
 
 .PHONY: container
-container: fedora-binaries-builder binaries image-container
+container: binaries image-container
 
 ifeq ($(ARCH),s390x)
 YQ_CHECKSUM = $(YQ_CHECKSUM_s390x)
