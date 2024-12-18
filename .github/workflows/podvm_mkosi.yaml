@@ -125,7 +125,6 @@ jobs:
         with:
           version: ${{ env.ORAS_VERSION }}
 
-
       - name: Build binaries
         id: build_binaries
         working-directory: src/cloud-api-adaptor/podvm-mkosi
@@ -150,12 +149,12 @@ jobs:
         run: nix build .#devShells.x86_64-linux.podvm-mkosi
 
       - name: Build mkosi debug image
-        if: ${{ inputs.debug == 'true' }}
+        if: ${{ inputs.debug == true }}
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: make image-debug
 
       - name: Build mkosi image
-        if: ${{ inputs.debug != 'true' }}
+        if: ${{ inputs.debug != true }}
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: make image
 
