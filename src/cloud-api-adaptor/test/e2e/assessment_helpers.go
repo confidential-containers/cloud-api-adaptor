@@ -355,25 +355,36 @@ func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod *v1
 	return getStringFromPod(ctx, client, customPod, getNodeName)
 }
 
+func GetPodsFromJob(ctx context.Context, t *testing.T, client klient.Client, job *batchv1.Job) (*v1.PodList, error) {
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		return nil, fmt.Errorf("GetPodFromJob: get Kubernetes clientSet failed: %v", err)
+	}
+
+	pods, err := clientset.CoreV1().Pods(job.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + job.Name})
+	if err != nil {
+		return nil, fmt.Errorf("GetPodFromJob: get pod list failed: %v", err)
+	}
+
+	return pods, nil
+}
+
 func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klient.Client, job batchv1.Job) (int, int, string, error) {
 	podLogString := ""
 	errorPod := 0
 	successPod := 0
-	var podlist v1.PodList
 	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 	if err != nil {
 		return 0, 0, "", err
 	}
-	if err := client.Resources(job.Namespace).List(ctx, &podlist); err != nil {
+	podList, err := GetPodsFromJob(ctx, t, client, &job)
+	if err != nil {
 		return 0, 0, "", err
 	}
-	for _, pod := range podlist.Items {
-		if pod.ObjectMeta.Labels["job-name"] != job.Name {
-			continue
-		}
+	for _, pod := range podList.Items {
 		if pod.Status.Phase == v1.PodPending {
 			if pod.Status.ContainerStatuses[0].State.Waiting.Reason == "ContainerCreating" {
-				return 0, 0, "", errors.New("Failed to Create PodVM")
+				return 0, 0, "", errors.New("failed to Create PodVM")
 			}
 		}
 		if pod.Status.ContainerStatuses[0].State.Terminated.Reason == "StartError" {
@@ -411,6 +422,22 @@ func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 	}
 
 	return successPod, errorPod, podLogString, nil
+}
+
+func GetCaaPodLog(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) (string, error) {
+	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
+	if err != nil {
+		return "", fmt.Errorf("GetCaaPodLog: GetNodeNameFromPod failed with %v", err)
+	}
+	caaPod, err := getCaaPod(ctx, client, t, nodeName)
+	if err != nil {
+		return "", fmt.Errorf("GetCaaPodLog: failed to getCaaPod: %v", err)
+	}
+	podLogString, err := getStringFromPod(ctx, client, caaPod, GetPodLog)
+	if err != nil {
+		return "", fmt.Errorf("GetCaaPodLog: failed to getStringFromPod: %v", err)
+	}
+	return podLogString, nil
 }
 
 // SkipTestOnCI skips the test if running on CI
@@ -665,7 +692,7 @@ func GetPodNamesByLabel(ctx context.Context, client klient.Client, t *testing.T,
 
 	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 	if err != nil {
-		return nil, fmt.Errorf("GetPodNamesByLabel: get Kubernetes clientSef failed: %v", err)
+		return nil, fmt.Errorf("GetPodNamesByLabel: get Kubernetes clientSet failed: %v", err)
 	}
 
 	nodeSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
