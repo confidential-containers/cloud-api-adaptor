@@ -473,6 +473,7 @@ func (tc *TestCase) Run() {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if tc.configMap != nil {
 				if err = client.Resources().Delete(ctx, tc.configMap); err != nil {
 					t.Fatal(err)
@@ -511,27 +512,37 @@ func (tc *TestCase) Run() {
 			}
 
 			if tc.job != nil {
-				var podlist v1.PodList
-				if err := client.Resources(tc.job.Namespace).List(ctx, &podlist); err != nil {
-					t.Fatal(err)
+				podList, err := GetPodsFromJob(ctx, t, client, tc.job)
+				if err != nil {
+					t.Error(err)
 				}
+
+				if t.Failed() {
+					if len(podList.Items) > 0 {
+						jobPod := podList.Items[0]
+						LogPodDebugInfo(ctx, t, client, &jobPod)
+					}
+				}
+
 				if err = client.Resources().Delete(ctx, tc.job); err != nil {
 					t.Fatal(err)
 				} else {
 					t.Logf("Deleting Job... %s", tc.job.Name)
 				}
-				for _, pod := range podlist.Items {
-					if pod.ObjectMeta.Labels["job-name"] == tc.job.Name {
-						if err = client.Resources().Delete(ctx, &pod); err != nil {
-							t.Fatal(err)
-						}
-						t.Logf("Deleting pods created by job... %s", pod.ObjectMeta.Name)
-
+				for _, pod := range podList.Items {
+					if err = client.Resources().Delete(ctx, &pod); err != nil {
+						t.Fatal(err)
 					}
+					t.Logf("Deleting pods created by job... %s", pod.ObjectMeta.Name)
 				}
 			}
 
 			if tc.pod != nil {
+
+				if t.Failed() {
+					LogPodDebugInfo(ctx, t, client, tc.pod)
+				}
+
 				if err = client.Resources().Delete(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
