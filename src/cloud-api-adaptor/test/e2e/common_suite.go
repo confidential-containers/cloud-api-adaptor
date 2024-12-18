@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -505,31 +504,15 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 }
 
 func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
-	// TODO create a multi-arch encrypted image. Note the Kata CI version doesn't work as the key length is 44, not 32 which is wanted
-	if runtime.GOARCH == "s390x" {
-		t.Skip("Encrypted image test not currently support on s390x")
-	}
-
-	image := "ghcr.io/confidential-containers/cloud-api-adaptor/nginx-encrypted:20240123"
+	image := "ghcr.io/confidential-containers/test-container:multi-arch-encrypted"
 	var kbsEndpoint string
 	if ep := os.Getenv("KBS_ENDPOINT"); ep != "" {
 		kbsEndpoint = ep
 	} else if kbs == nil {
 		t.Skip("Skipping because KBS config is missing")
 	} else {
-		// skopeo inspect \
-		//   docker://ghcr.io/confidential-containers/cloud-api-adaptor/nginx-encrypted:20240123 \
-		//   | jq .Labels
-		// {
-		//   "coco-key-b64": "pHSE5N+T/3GGfb/umaWgB8bfHc/dQWvmxdsjoWam0Vs=",
-		//   "coco-key-id": "default/key/nginx-encrypted",
-		// }
-		keyID := "default/key/nginx-encrypted"
-		key := []byte{
-			164, 116, 132, 228, 223, 147, 255, 113, 134, 125,
-			191, 238, 153, 165, 160, 7, 198, 223, 29, 207,
-			221, 65, 107, 230, 197, 219, 35, 161, 102, 166,
-			209, 91}
+		keyID := "ssh-demo"
+		key := []byte("HUlOu8NWz8si11OZUzUJMnjiq/iZyHBJ")
 
 		err := kbs.SetImageDecryptionKey(keyID, key)
 		if err != nil {
@@ -548,7 +531,7 @@ func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, 
 			t.Fatalf("Failed to get KBS endpoint: %v", err)
 		}
 	}
-	podName := "nginx-encrypted"
+	podName := "ssh-demo-encrypted"
 	// encrypted images need this for the time being
 	annotations := map[string]string{"io.containerd.cri.runtime-handler": "kata-remote"}
 	pod := NewPod(E2eNamespace, podName, podName, image, WithAnnotations(annotations), WithInitdata(kbsEndpoint))
