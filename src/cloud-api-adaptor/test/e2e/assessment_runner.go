@@ -538,6 +538,7 @@ func (tc *TestCase) Run() {
 
 			if tc.pod != nil {
 
+				t.Logf("Pod Test failed? %+v", t.Failed())
 				if t.Failed() {
 					podLogString, err := GetPodLog(ctx, client, tc.pod)
 					if err != nil {
