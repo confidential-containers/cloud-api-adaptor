@@ -167,13 +167,12 @@ func DoTestCreatePeerPodWithJob(t *testing.T, e env.Environment, assert CloudAss
 }
 
 func DoTestCreatePeerPodAndCheckUserLogs(t *testing.T, e env.Environment, assert CloudAssert) {
-	// podName := "user-pod"
-	// imageName := "quay.io/confidential-containers/test-images:testuser"
-	// pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure))
-	// expectedPodLogString := "otheruser"
-	// NewTestCase(t, e, "UserPeerPod", assert, "Peer pod with user has been created").WithPod(pod).WithExpectedPodLogString(expectedPodLogString).WithCustomPodState(v1.PodSucceeded).Run()
-	t.Skip("Skipping Test until issue kata-containers/kata-containers#5732 is Fixed")
-	//Reference - https://github.com/kata-containers/kata-containers/issues/5732
+	// t.Skip("Skipping Test until issue kata-containers/kata-containers#5732 is Fixed")
+	podName := "user-pod"
+	imageName := "quay.io/confidential-containers/test-images:testuser"
+	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure))
+	expectedPodLogString := "otheruser"
+	NewTestCase(t, e, "UserPeerPod", assert, "Peer pod with user has been created").WithPod(pod).WithExpectedPodLogString(expectedPodLogString).WithCustomPodState(v1.PodSucceeded).Run()
 }
 
 // DoTestCreateConfidentialPod verify a confidential peer-pod can be created.
@@ -190,7 +189,7 @@ func DoTestCreatePeerPodAndCheckWorkDirLogs(t *testing.T, e env.Environment, ass
 	podName := "workdirpod"
 	imageName := "quay.io/confidential-containers/test-images:testworkdir"
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure))
-	expectedPodLogString := "/other"
+	expectedPodLogString := "junk"
 	NewTestCase(t, e, "WorkDirPeerPod", assert, "Peer pod with work directory has been created").WithPod(pod).WithExpectedPodLogString(expectedPodLogString).WithCustomPodState(v1.PodSucceeded).Run()
 }
 
