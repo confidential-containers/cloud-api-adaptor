@@ -504,6 +504,7 @@ func (tc *TestCase) Run() {
 					t.Error(err)
 				}
 
+				t.Logf("Test failed? %+v", t.Failed())
 				if t.Failed() {
 					if len(podList.Items) > 0 {
 						jobPod := podList.Items[0]
