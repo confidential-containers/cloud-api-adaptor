@@ -162,7 +162,7 @@ func DoTestCreatePeerPodWithJob(t *testing.T, e env.Environment, assert CloudAss
 	jobName := "job-pi"
 	image := "quay.io/prometheus/busybox:latest"
 	job := NewJob(E2eNamespace, jobName, 8, image)
-	expectedPodLogString := "3.14"
+	expectedPodLogString := "34"
 	NewTestCase(t, e, "JobPeerPod", assert, "Job has been created").WithJob(job).WithExpectedPodLogString(expectedPodLogString).Run()
 }
 
@@ -190,7 +190,7 @@ func DoTestCreatePeerPodAndCheckWorkDirLogs(t *testing.T, e env.Environment, ass
 	podName := "workdirpod"
 	imageName := "quay.io/confidential-containers/test-images:testworkdir"
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyOnFailure))
-	expectedPodLogString := "/other"
+	expectedPodLogString := "junk"
 	NewTestCase(t, e, "WorkDirPeerPod", assert, "Peer pod with work directory has been created").WithPod(pod).WithExpectedPodLogString(expectedPodLogString).WithCustomPodState(v1.PodSucceeded).Run()
 }
 
