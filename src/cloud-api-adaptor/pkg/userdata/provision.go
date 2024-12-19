@@ -37,7 +37,7 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
-var WriteFilesList = []string{AACfgPath, CDHCfgPath, AgentCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath}
+var WriteFilesList = []string{AACfgPath, CDHCfgPath, AgentCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath, UseScratchPath}
 var InitdDataFilesList = []string{AACfgPath, CDHCfgPath, PolicyPath}
 
 type Config struct {
