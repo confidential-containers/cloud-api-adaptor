@@ -8,4 +8,5 @@ const (
 	AgentCfgPath     = "/run/peerpod/agent-config.toml"
 	ForwarderCfgPath = "/run/peerpod/daemon.json"
 	UserDataPath     = "/run/media/cidata/user-data"
+	UseScratchPath   = "/run/peerpod/mount-scratch"
 )

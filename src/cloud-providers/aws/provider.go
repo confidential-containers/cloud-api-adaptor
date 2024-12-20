@@ -370,8 +370,10 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 		if err != nil {
 			return err
 		}
+		resources := provider.NewPodVMResources(vcpus, memory)
+		resources.GPUs = gpuCount
 		instanceTypeSpecList = append(instanceTypeSpecList,
-			provider.InstanceTypeSpec{InstanceType: instanceType, VCPUs: vcpus, Memory: memory, GPUs: gpuCount})
+			provider.InstanceTypeSpec{InstanceType: instanceType, Resources: resources})
 	}
 
 	// Sort the instanceTypeSpecList and update the serviceConfig
