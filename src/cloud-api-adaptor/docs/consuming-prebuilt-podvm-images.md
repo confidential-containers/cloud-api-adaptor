@@ -18,5 +18,6 @@ The easiest way to extract the qcow2 file from the podvm container image is usin
 $ cd podvm
 $ ./hack/download-image.sh quay.io/confidential-containers/podvm-generic-ubuntu-amd64 . -o podvm.qcow2
 ```
+>Note: images can be checked from https://quay.io/repository/confidential-containers/podvm-generic-ubuntu-amd64?tab=tags, to get available tag e.g. `v0.11.0` if the default tag `latest` is missed.
 
 In case your workload images are pulled from a private registry then you need to provide the authentication file by either [installing along with the cloud-api-adaptor deployment](registries-authentication.md#deploy-authentication-file-along-with-cloud-api-adaptor-deployment) or [statically embedding in the podvm image](registries-authentication.md#statically-embed-authentication-file-in-podvm-image). With the later you will need to build the image from sources, so find detailed instructions in [podvm/README.md](../podvm/README.md).
