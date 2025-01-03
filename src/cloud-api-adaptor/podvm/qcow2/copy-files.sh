@@ -11,7 +11,7 @@ if [ -e /tmp/files/etc/aa-offline_fs_kbc-resources.json ]; then
 fi
 
 if [ -e /tmp/files/etc/certificates/tls.crt ] && [ -e /tmp/files/etc/certificates/tls.key ]; then
-        sudo mkdir -p /etc/certificates
+	sudo mkdir -p /etc/certificates
 	sudo cp -a /tmp/files/etc/certificates/tls.crt /etc/certificates/
 	sudo cp -a /tmp/files/etc/certificates/tls.key /etc/certificates/
 fi
