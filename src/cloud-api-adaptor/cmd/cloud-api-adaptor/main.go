@@ -131,6 +131,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.BoolVar(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "Enable cloud config verify - should use it for production")
 		flags.IntVar(&cfg.serverConfig.PeerPodsLimitPerNode, "peerpods-limit-per-node", 10, "peer pods limit per node (default=10)")
 		flags.BoolVar(&cfg.serverConfig.EnableScratchSpace, "enable-scratch-space", false, "Enable encrypted scratch space for pod VMs")
+		flags.BoolVar(&cfg.serverConfig.DeveloperMode, "developer-mode", false, "Enable developer mode for disabling Peer Pod VM auto delete")
 
 		cloud.ParseCmd(flags)
 	})

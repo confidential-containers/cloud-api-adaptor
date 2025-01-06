@@ -35,6 +35,7 @@ optionals+=""
 [[ "${PEERPODS_LIMIT_PER_NODE}" ]] && optionals+="-peerpods-limit-per-node ${PEERPODS_LIMIT_PER_NODE} "
 [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
 [[ "${ENABLE_SCRATCH_DISK}" == "true" ]] && optionals+="-enable-scratch-disk "
+[[ "${PEERPODS_DEVELOPER_MODE}" == "true" ]] && optionals+="-developer-mode "
 
 test_vars() {
     for i in "$@"; do
@@ -194,7 +195,7 @@ libvirt() {
 
     [[ "${LIBVIRT_CPU}" ]] && optionals+="-cpu ${LIBVIRT_CPU} "
     [[ "${LIBVIRT_MEMORY}" ]] && optionals+="-memory ${LIBVIRT_MEMORY} "
-    
+
     set -x
     exec cloud-api-adaptor libvirt \
         -pods-dir "${PEER_PODS_DIR}" \
