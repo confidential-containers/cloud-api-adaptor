@@ -47,6 +47,7 @@ type ServerConfig struct {
 	PeerPodsLimitPerNode    int
 	RootVolumeSize          int
 	EnableScratchSpace      bool
+	DeveloperMode           bool
 }
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -88,7 +89,8 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	serverConfig *ServerConfig) Service {
+	serverConfig *ServerConfig,
+) Service {
 	var err error
 
 	s := &cloudService{
@@ -448,9 +450,16 @@ func (s *cloudService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.S
 		logger.Printf("stopping agent proxy: %v", err)
 	}
 
-	if err := s.provider.DeleteInstance(ctx, sandbox.instanceID); err != nil {
-		logger.Printf("Error deleting an instance %s: %v", sandbox.instanceID, err)
-	} else if s.ppService != nil {
+	var deleteErr error
+	if s.serverConfig.DeveloperMode {
+		logger.Printf("Running in developer mode, so leaving instance %s running", sandbox.instanceID)
+	} else {
+		if deleteErr = s.provider.DeleteInstance(ctx, sandbox.instanceID); deleteErr != nil {
+			logger.Printf("Error deleting an instance %s: %v", sandbox.instanceID, deleteErr)
+		}
+	}
+
+	if (s.serverConfig.DeveloperMode || deleteErr == nil) && s.ppService != nil {
 		if err := s.ppService.ReleasePeerPod(sandbox.podName, sandbox.podNamespace, sandbox.instanceID); err != nil {
 			logger.Printf("failed to release PeerPod %v", err)
 		}
