@@ -8,11 +8,11 @@ packer {
 }
 
 source "amazon-ebs" "rhel" {
-  ami_name      = "${var.ami_name}"
-  instance_type = "${var.instance_type}"
-  region        = "${var.region}"
-  vpc_id        = "${var.vpc_id}"
-  subnet_id     = "${var.subnet_id}"
+  ami_name          = "${var.ami_name}"
+  instance_type     = "${var.instance_type}"
+  region            = "${var.region}"
+  vpc_id            = "${var.vpc_id}"
+  subnet_id         = "${var.subnet_id}"
   source_ami_filter {
     filters = {
       name                = "RHEL-9.4.0_HVM-*"
@@ -30,7 +30,8 @@ source "amazon-ebs" "rhel" {
     volume_size           = "${var.volume_size}"
   }
 
-  ssh_username = "ec2-user"
+  ssh_username      = "ec2-user"
+  shutdown_behavior = "terminate"
 }
 
 build {
