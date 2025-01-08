@@ -74,7 +74,7 @@ else ifeq ($(ARCH),s390x)
 	sudo -E ../hack/build-s390x-image.sh
 else
 	touch resources/buildBootableImage
-	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
+	nix --extra-experimental-features 'nix-command flakes' develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
 
@@ -95,7 +95,7 @@ else ifeq ($(ARCH),s390x)
 	sudo -E ../hack/build-s390x-image.sh
 else
 	touch resources/buildBootableImage
-	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
+	nix --extra-experimental-features 'nix-command flakes' develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
 
