@@ -10,7 +10,7 @@ require (
 	github.com/golang/glog v1.1.2
 	github.com/golang/protobuf v1.5.4
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20241120084537-30bad4ee438b
-	golang.org/x/net v0.26.0
+	golang.org/x/net v0.33.0
 	google.golang.org/grpc v1.61.2
 	k8s.io/apimachinery v0.26.2
 	k8s.io/client-go v0.26.2
@@ -47,9 +47,9 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/term v0.21.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	google.golang.org/appengine v1.6.8 // indirect

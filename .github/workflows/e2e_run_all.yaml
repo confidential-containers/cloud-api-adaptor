@@ -265,15 +265,18 @@ jobs:
   # Run libvirt s390x e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_s390x:
     name: E2E tests on libvirt for the s390x architecture
-    # Skip s390x e2e tests until Choi is available to set-up the s390x runner's pre-action properly. Then revert this.
-    if: false
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
     needs: [podvm_mkosi_s390x, libvirt_e2e_arch_prep, caa_image_s390x]
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.libvirt_e2e_arch_prep.outputs.matrix) }}
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
-      runner: S390X
+      runner: s390x-large
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-s390x-dev
       podvm_image: ${{ needs.podvm_mkosi_s390x.outputs.qcow2_oras_image }}
       install_directory_artifact: install_directory

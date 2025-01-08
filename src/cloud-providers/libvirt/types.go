@@ -21,6 +21,8 @@ type Config struct {
 	VolName        string
 	LaunchSecurity string
 	Firmware       string
+	CPU            uint
+	Memory         uint
 }
 
 type vmConfig struct {

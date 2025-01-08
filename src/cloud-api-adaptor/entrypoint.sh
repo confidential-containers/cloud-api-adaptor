@@ -152,6 +152,9 @@ libvirt() {
     test_vars LIBVIRT_URI
 
     [[ "${DISABLECVM}" = "true" ]] && optionals+="-disable-cvm "
+    [[ "${LIBVIRT_CPU}" ]] && optionals+="-CPU ${LIBVIRT_CPU} "
+    [[ "${LIBVIRT_MEMORY}" ]] && optionals+="-Memory ${LIBVIRT_MEMORY} "
+ 
     set -x
     exec cloud-api-adaptor libvirt \
         -uri "${LIBVIRT_URI}" \
@@ -159,6 +162,7 @@ libvirt() {
         -pods-dir /run/peerpod/pods \
         -network-name "${LIBVIRT_NET:-default}" \
         -pool-name "${LIBVIRT_POOL:-default}" \
+        
         ${optionals} \
         -socket /run/peerpod/hypervisor.sock
 }

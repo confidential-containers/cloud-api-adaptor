@@ -65,7 +65,6 @@ jobs:
         TEE_PLATFORM: az-cvm-vtpm
         VERIFY_PROVENANCE: yes
       run: |
-        make fedora-binaries-builder
         make binaries
 
     - name: Install build dependencies
