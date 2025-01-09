@@ -30,7 +30,8 @@ source "amazon-ebs" "rhel" {
     volume_size           = "${var.volume_size}"
   }
 
-  ssh_username = "ec2-user"
+  ssh_username      = "ec2-user"
+  shutdown_behavior = "terminate"
 }
 
 build {
