@@ -194,7 +194,6 @@ jobs:
         run: |
           sudo du --max-depth=2 /home/runner || true
           sudo du --max-depth=2 /var/lib || true
-          sudo rm -rf /nix
           sudo rm -rf ./build
           sudo rm -rf ./mkosi.cache
 
