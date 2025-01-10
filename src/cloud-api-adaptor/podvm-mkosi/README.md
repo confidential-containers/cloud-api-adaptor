@@ -4,7 +4,9 @@
 
 ## Prerequisites
 
-Currently, mksoi and other related tools are provided through a [Nix](https://nixos.org/) flake. Nix ensures all tools used in the build of the image are itself reproducible and pinned. mkosi requires a very recent systemd version, so using tools installed on the host is usually not possible. Nix needs to be configured to enable `flakes` and `nix command`. It is recommended to install Nix with the `DeterminateSystems nix-installer`, which comes with a configuration that is ready to use.
+There are various ways to install mkosi documented on the [project page](https://github.com/systemd/mkosi). Different distributions also package mkosi in their repositories, alongside the dependencies.
+
+Refer to the [CI workflow](../../../.github/workflows/podvm_mkosi.yaml) to see which additional tools are required to build an image.
 
 ### Building the image
 
@@ -77,7 +79,7 @@ reduce complexity of configuration and CI and shall not be seen as open to-dos.
   from IMDS via the project's `process-user-data` tool.
 
 ## Build s390x image
-Since the [nix OS](https://nixos.org/download/#download-nix) does not support s390x, we can use the mkosi **ToolsTree** feature defined in `mkosi.conf` to download latest tools automatically:
+We can use the mkosi **ToolsTree** feature defined in `mkosi.conf` to download latest tools automatically:
 ```
 [Host]
 ToolsTree=default

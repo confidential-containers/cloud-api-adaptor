@@ -114,17 +114,30 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y bubblewrap alien dnf qemu-utils uidmap
+          sudo apt-get install -y \
+            alien \
+            bubblewrap \
+            dnf \
+            mtools \
+            qemu-utils \
+            systemd-ukify \
+            uidmap
           sudo snap install yq
 
       - name: Read properties from versions.yaml
         run: |
+          echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)" >> "$GITHUB_ENV"
           echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
-
       - uses: oras-project/setup-oras@v1
         with:
           version: ${{ env.ORAS_VERSION }}
 
+      - name: Setup mkosi
+        run: |
+          git clone -b "$MKOSI_VERSION" https://github.com/systemd/mkosi
+          PATH="$PWD/mkosi/bin:$PATH"
+          mkosi --version
+          echo "PATH=$PWD/mkosi/bin:$PATH" >> "$GITHUB_ENV"
 
       - name: Build binaries
         id: build_binaries
@@ -132,22 +145,6 @@ jobs:
         run: make binaries
         env:
           ARCH: ${{ inputs.arch }}
-
-      - name: Install mkosi
-        if: ${{ inputs.arch == 's390x' }}
-        run: |
-          git clone -b v22 https://github.com/systemd/mkosi
-          sudo rm -f /usr/local/bin/mkosi
-          sudo ln -s "$PWD/mkosi/bin/mkosi" /usr/local/bin/mkosi
-          mkosi --version
-
-      - name: Install Nix
-        if: ${{ inputs.arch == 'amd64' }}
-        uses: cachix/install-nix-action@v30
-
-      - name: Build nix shell to cache dependencies
-        if: ${{ inputs.arch == 'amd64' }}
-        run: nix build .#devShells.x86_64-linux.podvm-mkosi
 
       - name: Build mkosi debug image
         if: ${{ inputs.debug == 'true' }}
@@ -191,7 +188,6 @@ jobs:
           subject-name: ${{ steps.publish_oras_qcow2.outputs.image }}
           subject-digest: ${{ steps.publish_oras_qcow2.outputs.digest }}
           push-to-registry: true
-
 
       - name: Clean up some space for the docker provider build
         working-directory: src/cloud-api-adaptor/podvm-mkosi
