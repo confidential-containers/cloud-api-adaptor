@@ -186,13 +186,16 @@ func writeAuthSecret(client klient.Client, ctx context.Context) error {
 		return nil
 	}
 
-	providerName := os.Getenv("CLOUD_PROVIDER")
-	// this path is relative to ./test/e2e
-	authFilePath := "../../install/overlays/" + providerName + "/auth.json"
-	authfile, err := os.ReadFile(authFilePath)
-	if err != nil {
-		return err
-	}
+	template := `{
+		"auths": {
+			"%s": {
+				"auth": "%s"
+			}
+		}
+	}`
+	cred := os.Getenv("REGISTRY_CREDENTIAL_ENCODED")
+	registryName := strings.Split(os.Getenv("AUTHENTICATED_REGISTRY_IMAGE"), "/")[0]
+	authfile := []byte(fmt.Sprintf(template, registryName, cred))
 
 	secretData := map[string][]byte{v1.DockerConfigJsonKey: authfile}
 	secret = NewSecret(E2eNamespace, DEFAULT_AUTH_SECRET, secretData, v1.SecretTypeDockerConfigJson)
