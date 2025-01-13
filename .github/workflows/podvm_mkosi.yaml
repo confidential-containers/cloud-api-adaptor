@@ -118,11 +118,16 @@ jobs:
             alien \
             bubblewrap \
             dnf \
-            mtools \
             qemu-utils \
-            systemd-ukify \
             uidmap
           sudo snap install yq
+
+      - name: Install UEFI build dependencies
+        if: inputs.arch == 'amd64'
+        run: |
+          sudo apt-get update -y
+            mtools \
+            systemd-ukify
 
       - name: Read properties from versions.yaml
         run: |
