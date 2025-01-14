@@ -112,8 +112,7 @@ peer-pods-worker-0   Ready    worker                 2m47s   v1.25.3
 ```
 
 > [!NOTE]
-> When using GKE, ensure the worker nodes have the appropriate labels configured:
-> * node-role.kubernetes.io/worker=""
+> When using GKE, ensure the worker nodes have the following label configured:
 > * node.kubernetes.io/worker=""
 
 ### Deploy the CoCo operator
@@ -135,6 +134,7 @@ kubectl apply -k "github.com/confidential-containers/operator/config/samples/ccr
 Build and push docker image to a registry:
 
 ```bash
+cd ../ # make sure you are outside the podvm-mkosi directory
 export registry=quay.io/${QUAY_USER} # If you are using local registry: LOCAL_IP:PORT.
 export RELEASE_BUILD=true
 make image
