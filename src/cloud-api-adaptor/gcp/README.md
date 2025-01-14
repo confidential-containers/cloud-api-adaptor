@@ -83,14 +83,23 @@ gcloud compute images create podvm-image \
 
 ### Setup a cluster
 
-You will need a k8s cluster up and running. Since GKE support is blocked by the
-issue #1909, you will need to bootstrap a cluster, either local (with libvirt)
-or using Google Compute Engine.
+You will need a Kubernetes cluster up and running. You can either deploy your
+own cluster manually or use GKE.
 
 For local development, you could use a local libvirt setup with a local Docker
 registry (optional). Follow instructions in
 [libvirt/README.md](../libvirt/README.md) and deploy a Kubernetes cluster in a
 Kubeadm setup.
+
+When using GKE, ensure that the `UBUNTU_CONTAINERD` image is used. For instance:
+
+````bash
+gcloud container clusters create my-cluster \
+  --zone ${GCP_LOCATION}-a \
+  --machine-type e2-standard-4 \
+  --image-type UBUNTU_CONTAINERD \
+  --num-nodes 3
+```
 
 Regardless of the method used, at the end you should have a KUBECONFIG pointing
 to the auth file and a cluster up and running:
@@ -101,6 +110,11 @@ NAME                 STATUS   ROLES                  AGE     VERSION
 peer-pods-ctlplane-0 Ready    control-plane,master   6m8s    v1.25.3
 peer-pods-worker-0   Ready    worker                 2m47s   v1.25.3
 ```
+
+> [!NOTE]
+> When using GKE, ensure the worker nodes have the appropriate labels configured:
+> * node-role.kubernetes.io/worker=""
+> * node.kubernetes.io/worker=""
 
 ### Deploy the CoCo operator
 
