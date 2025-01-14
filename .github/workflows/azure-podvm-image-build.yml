@@ -35,7 +35,7 @@ env:
 
 jobs:
   build-podvm-image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: cloud-api-adaptor/src/cloud-api-adaptor/podvm-mkosi
