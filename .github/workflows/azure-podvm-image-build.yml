@@ -49,29 +49,10 @@ jobs:
         path: cloud-api-adaptor
         ref: "${{ inputs.git-ref || 'main' }}"
 
-    - name: Install build dependencies
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install -y \
-          alien \
-          bubblewrap \
-          dnf \
-          mtools \
-          qemu-utils \
-          systemd-ukify \
-          uidmap
-        sudo snap install yq
-
     - name: Read properties from versions.yaml
       run: |
+        sudo snap install yq
         echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)" >> "$GITHUB_ENV"
-
-    - name: Setup mkosi
-      run: |
-        git clone -b "$MKOSI_VERSION" https://github.com/systemd/mkosi
-        PATH="$PWD/mkosi/bin:$PATH"
-        mkosi --version
-        echo "PATH=$PWD/mkosi/bin:$PATH" >> "$GITHUB_ENV"
 
     - name: Install uplosi
       run: |
