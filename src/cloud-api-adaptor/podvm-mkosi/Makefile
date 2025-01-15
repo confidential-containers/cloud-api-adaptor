@@ -65,13 +65,16 @@ image:
 	rm -rf ./build
 	@echo "Building image..."
 ifeq ($(SE_BOOT),true)
+	touch resources/buildS390xImage
 	sudo mkosi --profile production.conf --image system
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
+	touch resources/buildS390xImage
 	sudo mkosi --profile production.conf --image system
 	sudo -E ../hack/build-s390x-image.sh
 else
-	mkosi --profile production.conf
+	touch resources/buildBootableImage
+	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
 
@@ -79,16 +82,20 @@ PHONY: image-debug
 image-debug:
 	@echo "Enabling debug preset..."
 	rm -rf resources/build*Image
+	touch resources/buildDebugImage
 	rm -rf ./build
 	@echo "Building debug image..."
 ifeq ($(SE_BOOT),true)
+	touch resources/buildS390xImage
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
+	touch resources/buildS390xImage
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-image.sh
 else
-	mkosi --profile debug.conf
+	touch resources/buildBootableImage
+	nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
 
