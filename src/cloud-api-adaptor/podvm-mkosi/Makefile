@@ -14,6 +14,7 @@ PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(POD
 PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT),true),-se,)-$(ARCH):$(PODVM_TAG)
 PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(ARCH)
 VERIFY_PROVENANCE ?= no
+MKOSI_VERSION ?= v22
 
 .DEFAULT_GOAL := all
 .PHONY: all
@@ -58,10 +59,15 @@ endif
 		$(DOCKER_OPTS) \
 		-f ../podvm/Dockerfile.podvm_binaries.fedora ../../
 
+PHONY: insecure-builder
+insecure-builder:
+	docker buildx ls | grep "^insecure-builder" || docker buildx create \
+		--driver-opt image=moby/buildkit:master \
+		--name insecure-builder \
+		--buildkitd-flags '--allow-insecure-entitlement security.insecure'
+
 PHONY: image
-image:
-	@echo "Enabling production preset..."
-	rm -rf resources/build*Image
+image: insecure-builder
 	rm -rf ./build
 	@echo "Building image..."
 ifeq ($(SE_BOOT),true)
@@ -71,14 +77,21 @@ else ifeq ($(ARCH),s390x)
 	sudo mkosi --profile production.conf --image system
 	sudo -E ../hack/build-s390x-image.sh
 else
-	mkosi --profile production.conf
+	mkdir -p build
+	docker buildx build \
+		-f Dockerfile.mkosi \
+		-t $(PODVM_IMAGE) \
+		--build-arg PROFILE=production --build-arg MKOSI_VERSION \
+		--progress=plain \
+		-o type=local,dest=./build \
+		--builder insecure-builder \
+		--allow security.insecure \
+		.
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
 
 PHONY: image-debug
-image-debug:
-	@echo "Enabling debug preset..."
-	rm -rf resources/build*Image
+image-debug: insecure-builder
 	rm -rf ./build
 	@echo "Building debug image..."
 ifeq ($(SE_BOOT),true)
@@ -88,7 +101,16 @@ else ifeq ($(ARCH),s390x)
 	sudo mkosi --profile debug.conf
 	sudo -E ../hack/build-s390x-image.sh
 else
-	mkosi --profile debug.conf
+	mkdir -p build
+	docker buildx build \
+		-f Dockerfile.mkosi \
+		-t $(PODVM_IMAGE) \
+		--build-arg PROFILE=debug --build-arg MKOSI_VERSION \
+		--progress=plain \
+		-o type=local,dest=./build \
+		--builder insecure-builder \
+		--allow security.insecure \
+		.
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
 
@@ -119,6 +141,5 @@ push-image-container:
 
 PHONY: clean
 clean:
-	rm -rf resources/buildDebugImage
 	rm -rf ./build
 	rm -rf ./resources/binaries-tree
