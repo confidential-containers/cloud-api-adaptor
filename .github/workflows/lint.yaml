@@ -17,33 +17,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  vet-and-fmt:
-    name: vet and fmt
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout the pull request code
-        uses: actions/checkout@v4
-      - name: Read properties from versions.yaml
-        run: |
-          go_version="$(yq '.tools.golang' src/cloud-api-adaptor/versions.yaml)"
-          [ -n "$go_version" ]
-          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
-      - name: Setup Golang version ${{ env.GO_VERSION }}
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: "**/go.sum"
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y libvirt-dev
-      - name: check
-        run: |
-          make fmt
-          cd src/cloud-api-adaptor/ && make vet
-
   golangci-lint:
     name: golangci-lint
     runs-on: ubuntu-24.04
@@ -83,7 +56,7 @@ jobs:
       contents: read
       security-events: write
     needs:
-      - vet-and-fmt
+      - golangci-lint
     uses: "./.github/workflows/lib-codeql.yaml"
 
   shellcheck:

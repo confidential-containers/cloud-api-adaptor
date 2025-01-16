@@ -3,7 +3,7 @@
 
 include Makefile.defaults
 
-.PHONY: all build vet clean image deploy delete
+.PHONY: all build clean image deploy delete
 
 SHELL = bash -o pipefail
 
@@ -108,10 +108,6 @@ ifneq ($(CLOUD_PROVIDER),)
 else
 	$(error CLOUD_PROVIDER is not set)
 endif
-
-.PHONY: vet
-vet: .git-commit ## Run go vet against code.
-	go vet $(GOFLAGS) $(PACKAGES)
 
 .PHONY: clean
 clean: ## Remove binaries.
