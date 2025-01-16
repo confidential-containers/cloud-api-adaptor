@@ -296,6 +296,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        container_runtime:
+          - crio
         os:
           - fedora
         provider:
@@ -305,6 +307,7 @@ jobs:
     uses: ./.github/workflows/e2e_docker.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
+      container_runtime: ${{ matrix.container_runtime }}
       podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.docker_oci_image }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}

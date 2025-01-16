@@ -23,6 +23,11 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
         required: false
         type: string
+      container_runtime:
+        default: 'containerd'
+        description: Name of the container runtime. Either containerd or crio.
+        required: false
+        type: string
 
 env:
   CLOUD_PROVIDER: docker
@@ -100,6 +105,7 @@ jobs:
           DOCKER_PODVM_IMAGE="${{ inputs.podvm_image }}"
           DOCKER_HOST="unix:///var/run/docker.sock"
           DOCKER_NETWORK_NAME="kind"
+          CONTAINER_RUNTIME="${{ inputs.container_runtime }}"
           EOF
           # For debugging
           cat docker.properties
@@ -108,6 +114,7 @@ jobs:
         id: runTests
         run: |
           export CLOUD_PROVIDER=docker
+          export CONTAINER_RUNTIME="${{ inputs.container_runtime }}"
           export DEPLOY_KBS=false
           export TEST_PROVISION=yes
           export TEST_TEARDOWN=no
