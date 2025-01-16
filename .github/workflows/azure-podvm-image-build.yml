@@ -49,10 +49,15 @@ jobs:
         path: cloud-api-adaptor
         ref: "${{ inputs.git-ref || 'main' }}"
 
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-utils
+        sudo snap install yq
+
     - name: Read properties from versions.yaml
       run: |
-        sudo snap install yq
-        echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)" >> "$GITHUB_ENV"
+        echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' ../versions.yaml)" >> "$GITHUB_ENV"
 
     - name: Install uplosi
       run: |
