@@ -17,9 +17,9 @@ version is picked) and [trustee releases](https://github.com/confidential-contai
     `externals.coco-guest-components.version`, `externals.coco-trustee` and the `image-rs` crate in the agent's
     [`Cargo.toml`](https://github.com/kata-containers/kata-containers/blob/main/src/agent/Cargo.toml).
     - At this point it makes sense for us to stay in sync, by updating the guest-components and kbs that we use in peer pods,
-    by changing the `oci.guest-components.reference`, `oci.kbs.tag` and `oci.kbs-client.reference` values in [versions.yaml](../src/cloud-api-adaptor/versions.yaml).
-    We should also bump the kata agent to the latest commit
-    hash in our [version.yaml](../src/cloud-api-adaptor/versions.yaml) for testing.
+    by changing the `oci.guest-components.reference` and `git.kbs.tag`values in [versions.yaml](../src/cloud-api-adaptor/versions.yaml).
+    We should also bump the kata agent to the latest commit hash by updating `oci.kata-containers.reference` in
+    [version.yaml](../src/cloud-api-adaptor/versions.yaml) for testing.
 1. Kata Containers [releases](https://github.com/kata-containers/kata-containers/releases)
     - We should already be in sync with the guest-components and trustee, from the previous step, but now we should update:
       - The kata-containers source branch that we use in [versions.yaml](../src/cloud-api-adaptor/versions.yaml) to
@@ -198,7 +198,7 @@ To github.com:confidential-containers/cloud-api-adaptor.git
 Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
 To github.com:confidential-containers/cloud-api-adaptor.git
  * [new tag]         src/peerpod-ctrl/v0.8.0 -> src/peerpod-ctrl/v0.8.0
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0) 
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
 To github.com:confidential-containers/cloud-api-adaptor.git
  * [new tag]         src/webhook/v0.8.0 -> src/webhook/v0.8.0
 ```
