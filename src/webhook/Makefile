@@ -1,4 +1,5 @@
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
+OS          ?= $(shell uname | tr '[:upper:]' '[:lower:]')
 
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/confidential-containers/peer-pods-webhook:latest
@@ -124,7 +125,7 @@ kind-deploy: docker-build kind-load deploy ## deploy the webhook in the local ki
 
 .PHONY: deploy-cert-manager
 deploy-cert-manager: ## Deploy cert-manager for webhook.
-	curl -fsSL -o cmctl https://github.com/cert-manager/cmctl/releases/latest/download/cmctl_linux_${ARCH}
+	curl -fsSL -o cmctl https://github.com/cert-manager/cmctl/releases/latest/download/cmctl_${OS}_${ARCH}
 	chmod +x cmctl
 	# Deploy cert-manager
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.15.3/cert-manager.yaml
