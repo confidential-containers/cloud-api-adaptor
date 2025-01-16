@@ -21,7 +21,7 @@ func VerifyCloudInstanceType(instanceType string, validInstanceTypes []string, d
 	// If instanceType is empty, set instanceType to default.
 	if instanceType == "" {
 		instanceType = defaultInstanceType
-		fmt.Printf("Using default instance type (%q)\n", defaultInstanceType)
+		logger.Printf("Using default instance type (%q)", defaultInstanceType)
 		return instanceType, nil
 	}
 
