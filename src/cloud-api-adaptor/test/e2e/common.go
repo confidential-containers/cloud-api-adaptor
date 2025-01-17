@@ -511,7 +511,7 @@ func CreateSealedSecretValue(resourceURI string) string {
 	if err != nil {
 		panic(err)
 	}
-	payload := b64.URLEncoding.EncodeToString([]byte(metadataStr))
+	payload := b64.RawURLEncoding.EncodeToString([]byte(metadataStr))
 	header := "fakejwsheader"
 	signature := "fakesignature"
 	return fmt.Sprintf("sealed.%s.%s.%s", header, payload, signature)
