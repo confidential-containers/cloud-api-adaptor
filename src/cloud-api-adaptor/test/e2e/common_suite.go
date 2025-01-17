@@ -547,10 +547,6 @@ func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, 
 		if err != nil {
 			t.Fatalf("Failed to enable KBS customized resource policy: %v", err)
 		}
-		err = kbs.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
-		if err != nil {
-			t.Fatalf("Failed to enable KBS customized attestation policy: %v", err)
-		}
 		kbsEndpoint, err = kbs.GetCachedKbsEndpoint()
 		if err != nil {
 			t.Fatalf("Failed to get KBS endpoint: %v", err)
