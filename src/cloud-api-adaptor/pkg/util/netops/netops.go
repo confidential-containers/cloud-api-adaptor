@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net"
 	"net/netip"
 	"os"
@@ -31,6 +32,7 @@ type Namespace interface {
 	RedirectDel(src string) error
 	RouteAdd(route *Route) error
 	RouteDel(route *Route) error
+	GetDefaultRoutes() ([]*Route, error)
 	RouteList(filters ...*Route) ([]*Route, error)
 	RuleAdd(rule *Rule) error
 	RuleDel(rule *Rule) error
@@ -584,6 +586,24 @@ func (ns *namespace) RouteList(filters ...*Route) ([]*Route, error) {
 	})
 
 	return routes, nil
+}
+
+// Return default routes if present
+func (ns *namespace) GetDefaultRoutes() ([]*Route, error) {
+
+	routes, err := ns.RouteList(&Route{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get a list of routes: %w", err)
+	}
+
+	var defRoutes []*Route
+	for _, r := range routes {
+		if r.Destination.Bits() == 0 && r.Priority < math.MaxInt {
+			defRoutes = append(defRoutes, r)
+		}
+	}
+
+	return defRoutes, nil
 }
 
 // RouteAdd adds a new route
