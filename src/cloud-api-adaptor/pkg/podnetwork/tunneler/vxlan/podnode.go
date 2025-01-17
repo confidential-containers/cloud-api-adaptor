@@ -63,6 +63,8 @@ func (t *podNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, config *
 		ID:    config.VXLANID,
 		Port:  config.VXLANPort,
 	}
+	logger.Printf("Creating VXLAN interface %s on %s with group %s, id %d, port %d", hostVxlanInterface, hostNS.Path(), vxlanDevice.Group, vxlanDevice.ID, vxlanDevice.Port)
+
 	vxlan, err := hostNS.LinkAdd(hostVxlanInterface, vxlanDevice)
 	if err != nil {
 		return fmt.Errorf("failed to add vxlan interface %s: %w", hostVxlanInterface, err)
