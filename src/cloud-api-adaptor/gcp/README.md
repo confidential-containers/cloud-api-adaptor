@@ -93,7 +93,7 @@ Kubeadm setup.
 
 When using GKE, ensure that the `UBUNTU_CONTAINERD` image is used. For instance:
 
-````bash
+```bash
 gcloud container clusters create my-cluster \
   --zone ${GCP_LOCATION}-a \
   --machine-type e2-standard-4 \
@@ -104,8 +104,8 @@ gcloud container clusters create my-cluster \
 Regardless of the method used, at the end you should have a KUBECONFIG pointing
 to the auth file and a cluster up and running:
 
-```
-$ kubectl get nodes
+```bash
+kubectl get nodes
 NAME                 STATUS   ROLES                  AGE     VERSION
 peer-pods-ctlplane-0 Ready    control-plane,master   6m8s    v1.25.3
 peer-pods-worker-0   Ready    worker                 2m47s   v1.25.3
@@ -147,7 +147,7 @@ later.
 
 We need to make sure port 15150 is open under the `default` VPC network:
 
-```
+```bash
 gcloud compute firewall-rules create allow-port-15150 \
     --project=${GCP_PROJECT_ID} \
     --network=default \
@@ -171,7 +171,7 @@ gcloud compute firewall-rules create allow-port-15150 \
 
 Update [install/overlays/gcp/kustomization.yaml](../install/overlays/gcp/kustomization.yaml) with the required fields:
 
-```
+```yaml
 images:
 - name: cloud-api-adaptor
   newName: 192.168.122.1:5000/cloud-api-adaptor # change image if needed
@@ -197,8 +197,8 @@ secretGenerator:
 ```
 
 ```bash
-$ kubectl apply -k install/overlays/gcp/
-$ kubectl get pods -n confidential-containers-system
+kubectl apply -k install/overlays/gcp/
+kubectl get pods -n confidential-containers-system
 NAME                                              READY   STATUS    RESTARTS   AGE
 cc-operator-controller-manager-546574cf87-b69pb   2/2     Running   0          7d10h
 cc-operator-daemon-install-mfjbj                  1/1     Running   0          7d10h
@@ -210,8 +210,8 @@ cloud-api-adaptor-daemonset-5w8nw                 1/1     Running   0          7
 
 Deploy the `sample_busybox.yaml` (see [libvirt/README.md](../libvirt/README.md)):
 
-```
-$ kubectl apply -f sample_busybox.yaml
+```bash
+kubectl apply -f sample_busybox.yaml
 pod/busybox created
 ```
 
