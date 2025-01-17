@@ -66,8 +66,9 @@ func NewWorkerNode(networkConfig *tunneler.NetworkConfig) (WorkerNode, error) {
 func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	config := &tunneler.Config{
-		TunnelType: n.TunnelType,
-		Index:      podIndexManager.Get(),
+		TunnelType:          n.TunnelType,
+		Index:               podIndexManager.Get(),
+		ExternalNetViaPodVM: n.ExternalNetViaPodVM,
 	}
 
 	hostNS, err := netops.OpenCurrentNamespace()

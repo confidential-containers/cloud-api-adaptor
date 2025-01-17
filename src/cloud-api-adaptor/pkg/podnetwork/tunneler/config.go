@@ -9,9 +9,10 @@ type TunnelerConfigurator interface {
 }
 
 type NetworkConfig struct {
-	TunnelType    string
-	HostInterface string
-	VXLAN         VXLANConfig
+	TunnelType          string
+	HostInterface       string
+	VXLAN               VXLANConfig
+	ExternalNetViaPodVM bool
 }
 
 type VXLANConfig struct {
