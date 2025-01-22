@@ -135,7 +135,6 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 
 // GetInstallOverlay returns the InstallOverlay implementation for the provider
 func GetInstallOverlay(provider string, installDir string) (InstallOverlay, error) {
-
 	overlayFunc, ok := NewInstallOverlayFunctions[provider]
 	if !ok {
 		return nil, fmt.Errorf("Not implemented install overlay for %s\n", provider)
@@ -168,7 +167,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 
 	log.Info("Uninstall CCRuntime CRD")
 	cmd := exec.Command("kubectl", "delete", "-k", p.ccOpGitRepo+"/config/samples/ccruntime/peer-pods?ref="+p.ccOpGitRef)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
@@ -188,7 +187,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 
 	log.Info("Uninstall the controller manager")
 	cmd = exec.Command("kubectl", "delete", "-k", p.ccOpGitRepo+"/operator/config/default?ref="+p.ccOpGitRef)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
@@ -206,7 +205,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	// Run the command from the root src dir
 	cmd.Dir = p.rootSrcDir
 	// Set the KUBECONFIG env var
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
@@ -216,7 +215,8 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	log.Info("Wait for the peerpod-ctrl deployment to be deleted")
 	if err = wait.For(conditions.New(resources).ResourcesDeleted(
 		&appsv1.DeploymentList{Items: []appsv1.Deployment{
-			{ObjectMeta: metav1.ObjectMeta{Name: "peerpod-ctrl-controller-manager", Namespace: p.namespace}}}}),
+			{ObjectMeta: metav1.ObjectMeta{Name: "peerpod-ctrl-controller-manager", Namespace: p.namespace}},
+		}}),
 		wait.WithTimeout(time.Minute*1)); err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	log.Info("Install the controller manager")
 	// TODO - find go idiomatic way to apply/delete remote kustomize and apply to this file
 	cmd := exec.Command("kubectl", "apply", "-k", p.ccOpGitRepo+"/config/default?ref="+p.ccOpGitRef)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
@@ -254,7 +254,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	}
 
 	cmd = exec.Command("kubectl", "apply", "-k", p.ccOpGitRepo+"/config/samples/ccruntime/peer-pods?ref="+p.ccOpGitRef)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
@@ -296,7 +296,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	}
 
 	cmd = exec.Command("kubectl", "get", "cm", "peer-pods-cm", "-n", "confidential-containers-system", "-o", "yaml")
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
@@ -314,7 +314,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	// Run the deployment from the root src dir
 	cmd.Dir = p.rootSrcDir
 	// Set the KUBECONFIG env var
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
@@ -334,7 +334,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	cmd = exec.Command("make", "-C", "../webhook", "deploy-cert-manager")
 	// Run the deployment from the root src dir
 	cmd.Dir = p.rootSrcDir
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
@@ -348,7 +348,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	// Run the deployment from the root src dir
 	cmd.Dir = p.rootSrcDir
 	// Set the KUBECONFIG env var
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
