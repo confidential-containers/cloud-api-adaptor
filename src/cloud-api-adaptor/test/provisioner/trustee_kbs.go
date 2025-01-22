@@ -70,7 +70,7 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 
 	filePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
 
-	err = os.WriteFile(filePath, content, 0644)
+	err = os.WriteFile(filePath, content, 0o644)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 
 func saveToFile(filename string, content []byte) error {
 	// Save contents to file
-	err := os.WriteFile(filename, content, 0644)
+	err := os.WriteFile(filename, content, 0o644)
 	if err != nil {
 		return fmt.Errorf("writing contents to file: %w", err)
 	}
@@ -204,7 +204,7 @@ func skipSeCertsVerification(patchFile string) error {
 	}
 	content := string(data)
 	content = strings.Replace(content, "false", "true", -1)
-	err = os.WriteFile(patchFile, []byte(content), 0644)
+	err = os.WriteFile(patchFile, []byte(content), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
 	}
@@ -219,13 +219,13 @@ func createPVonTargetWorkerNode(pvFilePath, nodeName string, cfg *envconf.Config
 	content := string(data)
 	content = strings.Replace(content, "${IBM_SE_CREDS_DIR}", "/root/ibmse", -1)
 	content = strings.Replace(content, "${NODE_NAME}", nodeName, -1)
-	err = os.WriteFile(pvFilePath, []byte(content), 0644)
+	err = os.WriteFile(pvFilePath, []byte(content), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
 	}
 
 	cmd := exec.Command("kubectl", "apply", "-f", pvFilePath)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG="+cfg.KubeconfigFile()))
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
@@ -504,8 +504,8 @@ func (p *KeyBrokerService) SetSecret(resourcePath string, secret []byte) error {
 
 	defer os.RemoveAll(tempDir)
 
-	var secretFilePath = filepath.Join(tempDir, path.Base(resourcePath))
-	err := os.WriteFile(secretFilePath, secret, 0644)
+	secretFilePath := filepath.Join(tempDir, path.Base(resourcePath))
+	err := os.WriteFile(secretFilePath, secret, 0o644)
 	if err != nil {
 		return err
 	}
