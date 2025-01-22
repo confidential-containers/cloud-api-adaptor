@@ -101,6 +101,14 @@ gcloud container clusters create my-cluster \
   --num-nodes 3
 ```
 
+> [!NOTE]
+> Starting with GKE version 1.27, GCP configures containerd with the
+> `discard_unpacked_layers=true` flag to optimize disk usage by removing
+> compressed image layers after they are unpacked. However, this can cause
+> issues with PeerPods, as the workload may fail to locate required layers. To
+> avoid this, disable the `discard_unpacked_layers` setting in the containerd
+> configuration.
+
 Regardless of the method used, at the end you should have a KUBECONFIG pointing
 to the auth file and a cluster up and running:
 
