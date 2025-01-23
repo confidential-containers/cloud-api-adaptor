@@ -27,6 +27,9 @@ const (
 	volumeTargetPathKey          = "io.confidentialcontainers.org.peerpodvolumes.target_path"
 	csiPluginEscapeQualifiedName = "kubernetes.io~csi"
 	imageGuestPull               = "image_guest_pull"
+	cdiAnnotationKey             = "cdi.k8s.io/peer-pods"
+	defaultCDIType               = "nvidia.com/gpu=all"
+	defaultGPUsAnnotation        = "io.katacontainers.config.hypervisor.default_gpus"
 )
 
 func newProxyService(dialer func(context.Context) (net.Conn, error), pauseImage string) *proxyService {
@@ -63,6 +66,7 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 			logger.Printf("        %s: %s", k, v)
 		}
 	}
+
 	if len(req.Storages) > 0 {
 		logger.Print("    storages:")
 		for _, s := range req.Storages {
@@ -79,6 +83,11 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 		for _, d := range req.Devices {
 			logger.Printf("        container_path:%s vm_path:%s type:%s", d.ContainerPath, d.VmPath, d.Type)
 		}
+	}
+
+	if req.OCI.Annotations != nil && req.OCI.Annotations[defaultGPUsAnnotation] != "" {
+		req.OCI.Annotations[cdiAnnotationKey] = defaultCDIType
+		logger.Printf("adding CDI annotation %s: %s", cdiAnnotationKey, defaultCDIType)
 	}
 
 	if !pullImageInGuest {
