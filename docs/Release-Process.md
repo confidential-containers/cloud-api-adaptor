@@ -48,7 +48,7 @@ payload to the Kata Containers' release version, during it's release.
 Therefore in order to have the correct version of the kata-containers payload in our peer pods releases, we need to
 wait for this CoCo operator release before we can start the peer pods release process. After this operator payload
 pinning is done, we should pick the matching operator release/commit containing this and update the
-`git.coco-operator.reference` value in [versions.yaml](../src/cloud-api-adaptor/versions.yaml)
+`git.coco-operator.reference` and `git.coco-operator.config` values in [versions.yaml](../src/cloud-api-adaptor/versions.yaml)
 and create a commit for this. In order to save review cycles, this change can go in with the go module updates in
 the next section in the same PR.
 
