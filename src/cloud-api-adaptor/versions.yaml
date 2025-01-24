@@ -34,6 +34,7 @@ tools:
 git:
   coco-operator:
     url: https://github.com/confidential-containers/operator
+    config: default
     reference: main
   umoci:
     url: https://github.com/opencontainers/umoci

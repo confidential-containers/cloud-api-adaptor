@@ -49,6 +49,7 @@ type CloudAPIAdaptor struct {
 	caaDaemonSet         *appsv1.DaemonSet    // Represents the cloud-api-adaptor daemonset
 	ccDaemonSet          *appsv1.DaemonSet    // Represents the CoCo installer daemonset
 	ccOpGitRepo          string               // CoCo operator's repository URL
+	ccOpConfig           string               // CoCo operator's config to use: default or release
 	ccOpGitRef           string               // CoCo operator's repository reference
 	cloudProvider        string               // Cloud provider
 	controllerDeployment *appsv1.Deployment   // Represents the controller manager deployment
@@ -98,6 +99,7 @@ func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, e
 		caaDaemonSet:         &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset", Namespace: namespace}},
 		ccDaemonSet:          &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-daemon-install", Namespace: namespace}},
 		ccOpGitRepo:          ccOperator.Url,
+		ccOpConfig:           ccOperator.Config,
 		ccOpGitRef:           ccOperator.Ref,
 		cloudProvider:        provider,
 		controllerDeployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-controller-manager", Namespace: namespace}},
@@ -186,7 +188,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	deployments := &appsv1.DeploymentList{Items: []appsv1.Deployment{*p.controllerDeployment}}
 
 	log.Info("Uninstall the controller manager")
-	cmd = exec.Command("kubectl", "delete", "-k", p.ccOpGitRepo+"/operator/config/default?ref="+p.ccOpGitRef)
+	cmd = exec.Command("kubectl", "delete", "-k", p.ccOpGitRepo+"/operator/config/"+p.ccOpConfig+"?ref="+p.ccOpGitRef)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
@@ -234,7 +236,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 
 	log.Info("Install the controller manager")
 	// TODO - find go idiomatic way to apply/delete remote kustomize and apply to this file
-	cmd := exec.Command("kubectl", "apply", "-k", p.ccOpGitRepo+"/config/default?ref="+p.ccOpGitRef)
+	cmd := exec.Command("kubectl", "apply", "-k", p.ccOpGitRepo+"/config/"+p.ccOpConfig+"?ref="+p.ccOpGitRef)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
