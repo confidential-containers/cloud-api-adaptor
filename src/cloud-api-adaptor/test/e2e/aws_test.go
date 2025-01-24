@@ -18,7 +18,6 @@ func TestAwsCreateSimplePod(t *testing.T) {
 }
 
 func TestAwsCreatePodWithConfigMap(t *testing.T) {
-	t.Skip("Test not passing")
 	assert := NewAWSAssert()
 
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
