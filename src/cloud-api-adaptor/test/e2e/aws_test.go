@@ -112,3 +112,8 @@ func TestAwsCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
 	expectedErrorMessage := fmt.Sprintf("InvalidAMIID.NotFound: The image id '[%s]' does not exist: not found", nonExistingImageName)
 	DoTestCreatePeerPodContainerWithInvalidAlternateImage(t, testEnv, assert, nonExistingImageName, expectedErrorMessage)
 }
+
+func TestAwsPodWithInitContainer(t *testing.T) {
+	assert := NewAWSAssert()
+	DoTestPodWithInitContainer(t, testEnv, assert)
+}
