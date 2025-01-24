@@ -6,6 +6,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/aws"
@@ -108,6 +109,6 @@ func TestAwsCreateNginxDeployment(t *testing.T) {
 func TestAwsCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
 	assert := NewAWSAssert()
 	nonExistingImageName := "ami-123456"
-	expectedErrorMessage := "InvalidAMIID.NotFound: The image id '[ami-1234567]' does not exist: not found"
+	expectedErrorMessage := fmt.Sprintf("InvalidAMIID.NotFound: The image id '[%s]' does not exist: not found", nonExistingImageName)
 	DoTestCreatePeerPodContainerWithInvalidAlternateImage(t, testEnv, assert, nonExistingImageName, expectedErrorMessage)
 }
