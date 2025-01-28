@@ -186,61 +186,10 @@ jobs:
 
       - name: Debug tests failure
         if: failure() && steps.runTests.outcome == 'failure'
+        working-directory: ./
         run: |
           export KUBECONFIG="${HOME}/.kcli/clusters/peer-pods/auth/kubeconfig"
-
-          echo "::group::KBS installation"
-          kubectl get pods -n coco-tenant
-          kubectl describe pods -n coco-tenant
-          echo "::endgroup::"
-
-          echo "::group::CoCo and Peer Pods installation"
-          kubectl get pods -n confidential-containers-system
-          kubectl describe pods -n confidential-containers-system
-          echo "::endgroup::"
-
-          echo "::group::cloud-api-adaptor logs"
-          kubectl logs -l app=cloud-api-adaptor -n confidential-containers-system
-          echo "::endgroup::"
-
-          echo "::group::kbs logs"
-          kubectl logs deployment/kbs -n coco-tenant
-          echo "::endgroup::"
-
-          for ns in $(kubectl get ns -o name 2>/dev/null | sed 's#namespace/##' | grep "^coco-pp-"); do
-            for pod in $(kubectl get pods -o name -n "$ns" 2>/dev/null); do
-              echo "::group::Describe $pod (namespace/$ns)"
-              kubectl describe "$pod" -n "$ns"
-              echo "::endgroup::"
-            done
-          done
-
-          for worker in $(kubectl get node -o name -l node.kubernetes.io/worker 2>/dev/null); do
-            echo "::group::journalctl -t kata ($worker)"
-            kubectl debug --image quay.io/prometheus/busybox -q -i \
-              "$worker" -- chroot /host journalctl -x -t kata --no-pager
-            echo "::endgroup::"
-          done
-
-          echo "::group::Libvirt domains"
-          sudo virsh list
-          echo "::endgroup::"
-
-          for podvm in $(sudo virsh list --name | grep "podvm-"); do
-            echo "::group::podvm $podvm"
-            sudo virsh dominfo "$podvm"
-            sudo virsh domifaddr "$podvm"
-            echo "::endgroup::"
-          done
-
-          echo "::group::podvm base volume"
-          sudo virsh vol-info --pool default podvm-base.qcow2
-          ls -lh /var/lib/libvirt/images/podvm-base.qcow2
-          echo "::endgroup::"
-
-          echo "::group::Check podvm base volume integrity"
-          sudo qemu-img check /var/lib/libvirt/images/podvm-base.qcow2
-          echo "::endgroup::"
+          ./hack/ci-e2e-debug-fail.sh
         # Avoid running with `set -e` as command fails should be allowed
         shell: bash {0}
 
