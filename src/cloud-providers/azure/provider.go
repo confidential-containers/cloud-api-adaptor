@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/netip"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -35,14 +34,12 @@ const (
 type azureProvider struct {
 	azureClient   azcore.TokenCredential
 	serviceConfig *Config
+	sshKey        armcompute.SSHPublicKey
 }
 
 func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("azure config %+v", config.Redact())
-
-	// Clean the config.SSHKeyPath to avoid bad paths
-	config.SSHKeyPath = filepath.Clean(config.SSHKeyPath)
 
 	azureClient, err := NewAzureClient(*config)
 	if err != nil {
@@ -50,9 +47,31 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		return nil, err
 	}
 
+	// The podvm disk doesn't support sshd logins. keys can be baked
+	// into a debug-image. The ARM api mandates a pubkey, though.
+	sshPublicKeyPath := os.ExpandEnv(config.SSHKeyPath)
+	var pubkeyBytes []byte
+	if _, err := os.Stat(sshPublicKeyPath); err == nil {
+		pubkeyBytes, err = os.ReadFile(sshPublicKeyPath)
+		if err != nil {
+			err = fmt.Errorf("reading ssh public key file: %w", err)
+			logger.Printf("%v", err)
+			return nil, err
+		}
+	} else {
+		err = fmt.Errorf("ssh public key: %w", err)
+		logger.Printf("%v", err)
+		return nil, err
+	}
+	dummySSHKey := armcompute.SSHPublicKey{
+		Path:    to.Ptr(fmt.Sprintf("/home/%s/.ssh/authorized_keys", config.SSHUserName)),
+		KeyData: to.Ptr(string(pubkeyBytes)),
+	}
+
 	provider := &azureProvider{
 		azureClient:   azureClient,
 		serviceConfig: config,
+		sshKey:        dummySSHKey,
 	}
 
 	if err = provider.updateInstanceSizeSpecList(); err != nil {
@@ -218,28 +237,12 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	diskName := fmt.Sprintf("%s-disk", instanceName)
 	nicName := fmt.Sprintf("%s-net", instanceName)
 
-	// require ssh key for authentication on linux
-	sshPublicKeyPath := os.ExpandEnv(p.serviceConfig.SSHKeyPath)
-	var sshBytes []byte
-	if _, err := os.Stat(sshPublicKeyPath); err == nil {
-		sshBytes, err = os.ReadFile(sshPublicKeyPath)
-		if err != nil {
-			err = fmt.Errorf("reading ssh public key file: %w", err)
-			logger.Printf("%v", err)
-			return nil, err
-		}
-	} else {
-		err = fmt.Errorf("ssh public key: %w", err)
-		logger.Printf("%v", err)
-		return nil, err
-	}
-
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the Azure Image for the PodVM image", spec.Image)
 		p.serviceConfig.ImageId = spec.Image
 	}
 
-	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, nicName)
+	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, instanceName, nicName, spec.Resources.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +353,10 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 		}
 		for _, vmSize := range nextResult.VirtualMachineSizeListResult.Value {
 			if util.Contains(instanceSizes, *vmSize.Name) {
-				instanceSizeSpecList = append(instanceSizeSpecList, provider.InstanceTypeSpec{InstanceType: *vmSize.Name, VCPUs: int64(*vmSize.NumberOfCores), Memory: int64(*vmSize.MemoryInMB)})
+				vcpus, memory := int64(*vmSize.NumberOfCores), int64(*vmSize.MemoryInMB)
+				resources := provider.NewPodVMResources(vcpus, memory)
+				instanceSizeSpec := provider.InstanceTypeSpec{InstanceType: *vmSize.Name, Resources: resources}
+				instanceSizeSpecList = append(instanceSizeSpecList, instanceSizeSpec)
 			}
 		}
 	}
@@ -371,7 +377,7 @@ func (p *azureProvider) getResourceTags() map[string]*string {
 	return tags
 }
 
-func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string) (*armcompute.VirtualMachine, error) {
+func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig, instanceName, nicName string, diskSize int64) (*armcompute.VirtualMachine, error) {
 	userDataB64 := base64.StdEncoding.EncodeToString([]byte(cloudConfig))
 
 	// Azure limits the base64 encrypted userData to 64KB.
@@ -416,6 +422,18 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 
 	networkConfig := p.buildNetworkConfig(nicName)
 
+	osDisk := armcompute.OSDisk{
+		Name:         to.Ptr(diskName),
+		CreateOption: to.Ptr(armcompute.DiskCreateOptionTypesFromImage),
+		Caching:      to.Ptr(armcompute.CachingTypesReadWrite),
+		DeleteOption: to.Ptr(armcompute.DiskDeleteOptionTypesDelete),
+		ManagedDisk:  managedDiskParams,
+	}
+
+	if diskSize > 0 {
+		osDisk.DiskSizeGB = to.Ptr(int32(diskSize))
+	}
+
 	vmParameters := armcompute.VirtualMachine{
 		Location: to.Ptr(p.serviceConfig.Region),
 		Properties: &armcompute.VirtualMachineProperties{
@@ -424,25 +442,15 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 			},
 			StorageProfile: &armcompute.StorageProfile{
 				ImageReference: imgRef,
-				OSDisk: &armcompute.OSDisk{
-					Name:         to.Ptr(diskName),
-					CreateOption: to.Ptr(armcompute.DiskCreateOptionTypesFromImage),
-					Caching:      to.Ptr(armcompute.CachingTypesReadWrite),
-					DeleteOption: to.Ptr(armcompute.DiskDeleteOptionTypesDelete),
-					ManagedDisk:  managedDiskParams,
-				},
+				OSDisk:         &osDisk,
 			},
 			OSProfile: &armcompute.OSProfile{
 				AdminUsername: to.Ptr(p.serviceConfig.SSHUserName),
 				ComputerName:  to.Ptr(instanceName),
 				LinuxConfiguration: &armcompute.LinuxConfiguration{
 					DisablePasswordAuthentication: to.Ptr(true),
-					//TBD: replace with a suitable mechanism to use precreated SSH key
 					SSH: &armcompute.SSHConfiguration{
-						PublicKeys: []*armcompute.SSHPublicKey{{
-							Path:    to.Ptr(fmt.Sprintf("/home/%s/.ssh/authorized_keys", p.serviceConfig.SSHUserName)),
-							KeyData: to.Ptr(string(sshBytes)),
-						}},
+						PublicKeys: []*armcompute.SSHPublicKey{&p.sshKey},
 					},
 				},
 			},
