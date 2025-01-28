@@ -92,12 +92,12 @@ azure() {
 }
 
 gcp() {
-    test_vars GCP_CREDENTIALS GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
+    test_vars GCP_CREDENTIALS GCP_PROJECT_ID GCP_ZONE GCP_IMAGE_NAME
 
-    [[ "${PODVM_IMAGE_NAME}" ]] && optionals+="-gcp-image-name ${PODVM_IMAGE_NAME} "
+    [[ "${GCP_IMAGE_NAME}" ]] && optionals+="-imageid ${GCP_IMAGE_NAME} "
     [[ "${GCP_PROJECT_ID}" ]] && optionals+="-gcp-project-id ${GCP_PROJECT_ID} "
     [[ "${GCP_ZONE}" ]] && optionals+="-gcp-zone ${GCP_ZONE} "                         # if not set retrieved from IMDS
-    [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-gcp-machine-type ${GCP_MACHINE_TYPE} " # default e2-medium
+    [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-machine-type ${GCP_MACHINE_TYPE} "     # default e2-medium
     [[ "${GCP_NETWORK}" ]] && optionals+="-gcp-network ${GCP_NETWORK} "                # defaults to 'default'
 
     set -x

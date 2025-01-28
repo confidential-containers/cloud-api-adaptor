@@ -18,13 +18,12 @@ func init() {
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
-
 	flags.StringVar(&gcpcfg.GcpCredentials, "gcp-credentials", "", "Google Application Credentials, defaults to `GCP_CREDENTIALS`")
-	flags.StringVar(&gcpcfg.ProjectId, "gcp-project-id", "", "GCP Project ID")
-	flags.StringVar(&gcpcfg.Zone, "gcp-zone", "", "Zone")
-	flags.StringVar(&gcpcfg.ImageName, "gcp-image-name", "", "Pod VM image name")
-	flags.StringVar(&gcpcfg.MachineType, "gcp-machine-type", "e2-medium", "Pod VM instance type")
-	flags.StringVar(&gcpcfg.Network, "gcp-network", "", "Network ID to be used for the Pod VMs")
+	flags.StringVar(&gcpcfg.GcpProjectId, "gcp-project-id", "", "GCP Project ID")
+	flags.StringVar(&gcpcfg.GcpZone, "gcp-zone", "", "GCP Zone")
+	flags.StringVar(&gcpcfg.ImageId, "imageid", "", "Pod VM image id that is available at GCP Images. Usually a name like 'podvm-image'")
+	flags.StringVar(&gcpcfg.MachineType, "machine-type", "e2-medium", "Pod VM Machine type")
+	flags.StringVar(&gcpcfg.GcpNetworkId, "gcp-network", "default", "GCP Network ID for the VMs")
 }
 
 func (_ *Manager) LoadEnv() {

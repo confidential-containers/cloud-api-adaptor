@@ -182,11 +182,11 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="gcp" # leave as is.
-  - PODVM_IMAGE_NAME="" # set from step 1 above.
+  - GCP_IMAGE_NAME="" # set from step 1 above.
   - GCP_PROJECT_ID="" # set
   - GCP_ZONE="" # set
   - GCP_MACHINE_TYPE="e2-medium" # defaults to e2-medium
-  - GCP_NETWORK="global/networks/default" # leave as is.
+  - GCP_SUBNET_ID="global/networks/default" # leave as is.
   ...
 secretGenerator:
   ...
