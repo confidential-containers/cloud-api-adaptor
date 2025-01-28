@@ -7,7 +7,7 @@ require (
 	github.com/container-storage-interface/spec v1.8.0
 	github.com/containerd/ttrpc v1.2.3
 	github.com/gofrs/uuid v4.4.0+incompatible
-	github.com/golang/glog v1.1.2
+	github.com/golang/glog v1.2.4
 	github.com/golang/protobuf v1.5.4
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250116150548-2777b13db748
 	golang.org/x/net v0.33.0
