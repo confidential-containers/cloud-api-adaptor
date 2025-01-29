@@ -24,6 +24,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&gcpcfg.ImageId, "imageid", "", "Pod VM image id that is available at GCP Images. Usually a name like 'podvm-image'")
 	flags.StringVar(&gcpcfg.MachineType, "machine-type", "e2-medium", "Pod VM Machine type")
 	flags.StringVar(&gcpcfg.GcpNetworkId, "gcp-network", "default", "GCP Network ID for the VMs")
+	flags.StringVar(&gcpcfg.DiskType, "disk-type", "pd-standard", "Any GCP disk type (pd-standard, pd-ssd, pd-balanced or pd-extreme)")
 }
 
 func (_ *Manager) LoadEnv() {
