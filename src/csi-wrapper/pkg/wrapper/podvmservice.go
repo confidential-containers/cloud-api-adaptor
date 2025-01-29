@@ -35,7 +35,7 @@ func NewPodVMNodeService(targetEndpoint, namespace string, peerpodvolumeClientSe
 }
 
 func (s *PodVMNodeService) redirect(ctx context.Context, req interface{}, fn func(context.Context, csi.NodeClient)) error {
-	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(s.TargetEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		glog.Errorf("failed to connect s.TargetEndpoint: %v, err:%v", s.TargetEndpoint, err)
 		return err
