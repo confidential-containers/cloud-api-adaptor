@@ -23,7 +23,7 @@ func NewIdentityService(targetEndpoint string) *IdentityService {
 }
 
 func (s *IdentityService) redirect(ctx context.Context, req interface{}, fn func(context.Context, csi.IdentityClient)) error {
-	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(s.TargetEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
