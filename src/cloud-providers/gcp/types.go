@@ -17,6 +17,7 @@ type Config struct {
 	// CAA configuration
 	ImageId        string
 	InstanceType   string
+	DiskType       string
 }
 
 func (c Config) Redact() Config {
