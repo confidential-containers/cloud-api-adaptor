@@ -17,6 +17,7 @@ type Config struct {
 	// CAA configuration
 	ImageId        string
 	InstanceType   string
+	DisableCVM     bool
 	DiskType       string
 }
 
