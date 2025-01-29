@@ -100,6 +100,7 @@ gcp() {
     [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-machine-type ${GCP_MACHINE_TYPE} "     # default e2-medium
     [[ "${GCP_NETWORK}" ]] && optionals+="-gcp-network ${GCP_NETWORK} "                # defaults to 'default'
     [[ "${GCP_DISK_TYPE}" ]] && optionals+="-disk-type ${GCP_DISK_TYPE} "              # defaults to 'pd-standard'
+    [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
 
     set -x
     exec cloud-api-adaptor gcp \

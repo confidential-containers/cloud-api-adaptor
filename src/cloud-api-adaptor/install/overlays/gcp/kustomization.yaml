@@ -23,6 +23,7 @@ configMapGenerator:
   - GCP_MACHINE_TYPE="e2-medium" # replace if needed. caa defaults to e2-medium
   - GCP_NETWORK="global/networks/default" # replace if needed.
   #- GCP_DISK_TYPE="" # Uncomment and set if you want to use a specific disk type. Defaults to pd-standard
+  #- DISABLECVM="true" # Uncomment it if you want a generic VM
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"strings"
 
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
@@ -141,6 +142,40 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			},
 		},
 	}
+
+	if !p.serviceConfig.DisableCVM {
+		confidentialInstanceTypes := map[string]string{
+			"c2d-": "SEV",
+			"c3-":  "TDX",
+			"c3d-": "SEV",
+			"n2d-": "SEV_SNP",
+		}
+
+		var confidentialType string
+		for prefix, cType := range confidentialInstanceTypes {
+			if strings.HasPrefix(p.serviceConfig.MachineType, prefix) {
+				confidentialType = cType
+				break
+			}
+		}
+
+		if confidentialType == "" {
+			return nil, fmt.Errorf("unsupported instance type %s for confidential computing", p.serviceConfig.MachineType)
+		}
+
+		insertReq.InstanceResource.ConfidentialInstanceConfig = &computepb.ConfidentialInstanceConfig{
+			ConfidentialInstanceType:  proto.String(confidentialType),
+			EnableConfidentialCompute: proto.Bool(true),
+		}
+
+		// TODO: We need to better investigate the implications here. Confidential
+		// VM does not support migration at GCP.
+		insertReq.InstanceResource.Scheduling = &computepb.Scheduling{
+			OnHostMaintenance: proto.String("TERMINATE"),
+		}
+
+	}
+
 	op, err := p.instancesClient.Insert(ctx, insertReq)
 	if err != nil {
 		return nil, fmt.Errorf("Instances.Insert error: %s. req: %v", err, insertReq)

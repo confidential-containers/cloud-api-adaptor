@@ -16,7 +16,8 @@ type Config struct {
 	GcpNetworkId   string
 	// CAA configuration
 	ImageId        string
-	MachineType   string
+	MachineType    string
+	DisableCVM     bool
 	DiskType       string
 }
 
