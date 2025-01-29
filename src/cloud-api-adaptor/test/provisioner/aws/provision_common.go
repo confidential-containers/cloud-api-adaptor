@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -321,7 +322,8 @@ func (a *AWSProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg 
 		return err
 	}
 
-	imageName := strings.Replace(filepath.Base(imagePath), ".qcow2", ".raw", 1)
+	imageNameSuffix := "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	imageName := strings.Replace(filepath.Base(imagePath), ".qcow2", imageNameSuffix, 1)
 	log.Infof("Register image with name: %s", imageName)
 	err = a.Image.registerImage(imageName)
 	if err != nil {
