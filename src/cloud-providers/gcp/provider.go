@@ -90,8 +90,15 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 	logger.Printf("userDataEnc:  %s", userDataEnc)
 
-	// It's expected that the image from the annotation will follow the format "projects/<project>/global/images/<image>"
-	srcImage := proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.GcpProjectId, p.serviceConfig.ImageId))
+	// It's expected that the image from the annotation will follow the format
+	// "projects/<project>/global/images/<imageid>" or just the "<imageid>" if the
+	// image is present on the same project.
+	var srcImage *string
+	if strings.HasPrefix(p.serviceConfig.ImageId, "projects/") {
+		srcImage = proto.String(p.serviceConfig.ImageId)
+	} else {
+		srcImage = proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.GcpProjectId, p.serviceConfig.ImageId))
+	}
 
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the GCP image for the PodVM image", spec.Image)

@@ -13,12 +13,12 @@ type Config struct {
 	GcpProjectId   string
 	GcpZone        string
 	// VPC Configuration
-	GcpNetworkId   string
+	GcpNetworkId string
 	// CAA configuration
-	ImageId        string
-	MachineType    string
-	DisableCVM     bool
-	DiskType       string
+	ImageId     string
+	MachineType string
+	DisableCVM  bool
+	DiskType    string
 }
 
 func (c Config) Redact() Config {
