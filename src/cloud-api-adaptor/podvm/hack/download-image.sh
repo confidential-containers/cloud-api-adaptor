@@ -3,7 +3,7 @@
 # takes an image reference and a directory and
 # extracts the qcow image into that directory
 function usage() {
-    echo "Usage: $0 <image> <directory> [-o <name>] [-p <platform>] [--clean-up]"
+    echo "Usage: $0 <image> <directory> [-o <name>] [-p <platform>] [--pull always(default)|missing|never] [--clean-up]"
 }
 
 function error() {
@@ -15,6 +15,7 @@ directory=$2
 output=
 platform=
 clean_up_image=
+pull=always
 
 shift 2
 while (( "$#" )); do
@@ -23,6 +24,7 @@ while (( "$#" )); do
         --output) output=$2 ;;
         -p) platform=$2 ;;
         --platform) platform=$2 ;;
+        --pull) pull=$2 ;;
         --clean-up) clean_up_image="yes"; shift 1 ;;
         --help) usage; exit 0 ;;
         *)      usage 1>&2; exit 1;;
@@ -54,7 +56,7 @@ elif [[ "${image}" == *"podvm-generic-ubuntu-s390x"* ]]; then
 fi
 
 # Create a non-running container to extract image
-$container_binary create --pull=always ${platform_flag} --name "$container_name" "$image" /bin/sh >/dev/null 2>&1;
+$container_binary create --pull=${pull} ${platform_flag} --name "$container_name" "$image" /bin/sh >/dev/null 2>&1;
 # Destory container after use
 rm-container(){
     $container_binary rm -f "$container_name" >/dev/null 2>&1;
