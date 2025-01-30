@@ -12,7 +12,7 @@ error(){
 script_dir=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 
 function usage() {
-    echo "Usage: $0 <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint> --os <operating-system>]"
+    echo "Usage: $0 <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint> --os <operating-system> --pull always(default)|missing|never]"
 }
 
 image_file=$1
@@ -24,6 +24,7 @@ endpoint=
 api=${IBMCLOUD_API_ENDPOINT-https://cloud.ibm.com}
 platform=
 operating_system=
+pull=always
 
 shift 2
 while (( "$#" )); do
@@ -35,6 +36,7 @@ while (( "$#" )); do
         --os) operating_system=$2 ;;
         --api) api=$2 ;;
         --platform) platform=$2 ;;
+        --pull) pull=$2 ;;
         --help) usage; exit 0 ;;
         *)      usage 1>&2; exit 1;;
     esac
@@ -79,7 +81,7 @@ if [ -f ${image_file} ]; then
 else
     # Download image
     echo "Downloading file from image ${image_file}"
-    file=$($script_dir/../../podvm/hack/download-image.sh ${image_file} . --platform "${platform}") || error "Unable to download ${image_file}"
+    file=$($script_dir/../../podvm/hack/download-image.sh ${image_file} . --platform "${platform}" --pull "${pull}") || error "Unable to download ${image_file}"
 fi
 
 echo "Uploading file ${file}"
