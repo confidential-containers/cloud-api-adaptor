@@ -255,6 +255,12 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 		}
 	}
 
+	if a.Image.ID != "" || a.Image.EBSSnapshotId != "" {
+		if err = a.Image.deregisterImage(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -898,6 +904,34 @@ func (i *AMIImage) registerImage(imageName string) error {
 	// Save the AMI ID
 	i.ID = *result.ImageId
 	return nil
+}
+
+// deregisterImage Deregisters an AMI image. The associated EBS snapshot is deleted too.
+func (i *AMIImage) deregisterImage() error {
+	var err error
+
+	if i.ID != "" {
+		log.Infof("Deregister AMI ID: %s", i.ID)
+		_, err = i.Client.DeregisterImage(context.TODO(), &ec2.DeregisterImageInput{
+			ImageId: aws.String(i.ID),
+		})
+		if err != nil {
+			log.Errorf("Failed to deregister AMI: %s", err)
+		}
+	}
+
+	// Removing the EBS snapshot
+	if i.EBSSnapshotId != "" {
+		log.Infof("Delete Snapshot ID: %s", i.EBSSnapshotId)
+		_, err = i.Client.DeleteSnapshot(context.TODO(), &ec2.DeleteSnapshotInput{
+			SnapshotId: aws.String(i.EBSSnapshotId),
+		})
+		if err != nil {
+			log.Errorf("Failed to delete snapshot: %s", err)
+		}
+	}
+
+	return err
 }
 
 // uploadLargeFileWithCli Uploads large files (>5GB) using the AWS CLI
