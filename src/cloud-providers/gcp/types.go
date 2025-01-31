@@ -8,12 +8,17 @@ import (
 )
 
 type Config struct {
+	// Generic GCP
 	GcpCredentials string
-	ProjectId      string
-	Zone           string
-	ImageName      string
-	MachineType    string
-	Network        string
+	GcpProjectId   string
+	GcpZone        string
+	// VPC Configuration
+	SubnetId string
+	// CAA configuration
+	ImageId      string
+	InstanceType string
+	DisableCVM   bool
+	DiskType     string
 }
 
 func (c Config) Redact() Config {

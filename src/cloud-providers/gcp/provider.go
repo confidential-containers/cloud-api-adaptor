@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"strings"
 
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
@@ -90,7 +91,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	logger.Printf("userDataEnc:  %s", userDataEnc)
 
 	// It's expected that the image from the annotation will follow the format "projects/<project>/global/images/<image>"
-	srcImage := proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectId, p.serviceConfig.ImageName))
+	srcImage := proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.GcpProjectId, p.serviceConfig.ImageId))
 
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the GCP image for the PodVM image", spec.Image)
@@ -98,8 +99,8 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	}
 
 	insertReq := &computepb.InsertInstanceRequest{
-		Project: p.serviceConfig.ProjectId,
-		Zone:    p.serviceConfig.Zone,
+		Project: p.serviceConfig.GcpProjectId,
+		Zone:    p.serviceConfig.GcpZone,
 		InstanceResource: &computepb.Instance{
 			Name: proto.String(instanceName),
 			Disks: []*computepb.AttachedDisk{
@@ -107,7 +108,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 					InitializeParams: &computepb.AttachedDiskInitializeParams{
 						DiskSizeGb:  proto.Int64(20),
 						SourceImage: srcImage,
-						DiskType:    proto.String(fmt.Sprintf("zones/%s/diskTypes/pd-standard", p.serviceConfig.Zone)),
+						DiskType:    proto.String(fmt.Sprintf("zones/%s/diskTypes/%s", p.serviceConfig.GcpZone, p.serviceConfig.DiskType)),
 					},
 					AutoDelete: proto.Bool(true),
 					Boot:       proto.Bool(true),
@@ -126,7 +127,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 					},
 				},
 			},
-			MachineType: proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, p.serviceConfig.MachineType)),
+			MachineType: proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.GcpZone, p.serviceConfig.InstanceType)),
 			NetworkInterfaces: []*computepb.NetworkInterface{
 				{
 					AccessConfigs: []*computepb.AccessConfig{
@@ -136,11 +137,44 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 						},
 					},
 					StackType: proto.String("IPV4_Only"),
-					Name:      proto.String(p.serviceConfig.Network),
+					Name:      proto.String(p.serviceConfig.SubnetId),
 				},
 			},
 		},
 	}
+
+	if !p.serviceConfig.DisableCVM {
+		confidentialInstanceTypes := map[string]string{
+			"c3-":  "TDX",
+			"n2d-": "SEV_SNP",
+			"t2d-": "SEV_SNP",
+		}
+
+		var confidentialType string
+		for prefix, cType := range confidentialInstanceTypes {
+			if strings.HasPrefix(p.serviceConfig.InstanceType, prefix) {
+				confidentialType = cType
+				break
+			}
+		}
+
+		if confidentialType == "" {
+			return nil, fmt.Errorf("unsupported instance type %s for confidential computing", p.serviceConfig.InstanceType)
+		}
+
+		insertReq.InstanceResource.ConfidentialInstanceConfig = &computepb.ConfidentialInstanceConfig{
+			ConfidentialInstanceType:  proto.String(confidentialType),
+			EnableConfidentialCompute: proto.Bool(true),
+		}
+
+		// TODO: We need to better investigate the implications here. Confidential
+		// VM does not support migration at GCP.
+		insertReq.InstanceResource.Scheduling = &computepb.Scheduling{
+			OnHostMaintenance: proto.String("TERMINATE"),
+		}
+
+	}
+
 	op, err := p.instancesClient.Insert(ctx, insertReq)
 	if err != nil {
 		return nil, fmt.Errorf("Instances.Insert error: %s. req: %v", err, insertReq)
@@ -152,8 +186,8 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	logger.Printf("created an instance %s for sandbox %s", instanceName, sandboxID)
 
 	getReq := &computepb.GetInstanceRequest{
-		Project:  p.serviceConfig.ProjectId,
-		Zone:     p.serviceConfig.Zone,
+		Project:  p.serviceConfig.GcpProjectId,
+		Zone:     p.serviceConfig.GcpZone,
 		Instance: instanceName,
 	}
 
@@ -178,8 +212,8 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 func (p *gcpProvider) DeleteInstance(ctx context.Context, instanceID string) error {
 	req := &computepb.DeleteInstanceRequest{
-		Project:  p.serviceConfig.ProjectId,
-		Zone:     p.serviceConfig.Zone,
+		Project:  p.serviceConfig.GcpProjectId,
+		Zone:     p.serviceConfig.GcpZone,
 		Instance: instanceID,
 	}
 	op, err := p.instancesClient.Delete(ctx, req)
