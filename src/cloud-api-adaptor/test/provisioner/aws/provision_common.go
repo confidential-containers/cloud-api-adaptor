@@ -261,6 +261,13 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 		}
 	}
 
+	if a.Bucket.Key != "" {
+		log.Infof("Delete key %s from bucket: %s", a.Bucket.Key, a.Bucket.Name)
+		if err = a.Bucket.deleteKey(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -960,6 +967,17 @@ func (b *S3Bucket) uploadLargeFileWithCli(filepath string) error {
 	out, err := cmd.CombinedOutput()
 	fmt.Printf("%s\n", out)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *S3Bucket) deleteKey() error {
+	if _, err := b.Client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String(b.Name),
+		Key:    aws.String(b.Key),
+	}); err != nil {
 		return err
 	}
 
