@@ -3,7 +3,7 @@
 
 #include Makefile.defaults
 
-.PHONY: check fmt
+.PHONY: check
 
 SHELL = bash -o pipefail
 
@@ -24,11 +24,7 @@ help: ## Display this help.
 
  ## Run formatters and linters against the code.
 .PHONY: check
-check: fmt golangci-lint shellcheck tidy-check govulncheck packer-check terraform-check
-
-.PHONY: fmt
-fmt: ## Run go fmt against code.
-	find . -name '*.go' -print0 | xargs -0 gofmt -l -s -w
+check: golangci-lint shellcheck tidy-check govulncheck packer-check terraform-check
 
 .PHONY: shellcheck
 shellcheck: ## Run shellcheck against shell scripts.
