@@ -63,6 +63,8 @@ aws() {
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "                 # Use public IP for pod vm
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
     [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
+    [[ "${EXTERNAL_NETWORK_VIA_PODVM}" ]] && optionals+="-ext-network-via-podvm  "
+    [[ "${POD_SUBNET_CIDRS}" ]] && optionals+="-pod-subnet-cidrs ${POD_SUBNET_CIDRS} "
 
     set -x
     exec cloud-api-adaptor aws \

@@ -67,4 +67,5 @@ type InstanceTypeSpec struct {
 	Arch         string
 	GPUs         int64
 	Image        string
+	MultiNic     bool
 }
