@@ -11,15 +11,16 @@ In order to build locally it requires the source trees and softwares mentioned i
 * On Ubuntu:
 
   ```bash
-  $ apt-get install -y qemu-kvm cloud-utils qemu-utils protobuf-compiler pkg-config libdevmapper-dev libgpgme-dev
+  apt-get install -y qemu-kvm cloud-utils qemu-utils protobuf-compiler pkg-config libdevmapper-dev libgpgme-dev
   ```
 
 Finally run the following commands to build the qcow2 image:
 
 ```bash
-$ export CLOUD_PROVIDER=[aws|azure|ibmcloud|libvirt|vsphere|generic]
-$ make image
+export CLOUD_PROVIDER=[aws|azure|ibmcloud|libvirt|vsphere|generic]
+make image
 ```
+
 **NOTE:** "generic" is a best-effort provider agnostic image creation
 
 # How to build within container
@@ -42,16 +43,18 @@ the binaries (e.g. *kata-agent* and *agent-protocol-forwarder*) that should be i
 
 The builder image is agnostic to cloud providers in the sense that one can be used to build for multiple providers, however it is
 dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each
-supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)),
+supported distributions, which are currently Ubuntu 24.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)),
 Fedora 39 ([Dockerfile.podvm_builder.fedora](./Dockerfile.podvm_builder)) and RHEL 9
 ([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
 
 You can create the builder image using the make target by running:
+
 ```bash
-$ make -C .. podvm-builder
+make -C .. podvm-builder
 ```
 
 You can optionally customize the builder image, by specify shell variables to the `make` command:
+
 | Variable            | Default value  | Description                                                     |
 | ------------------- | -------------- | --------------------------------------------------------------- |
 | `ARCH`              | `amd64`/`s390x`| Architecture of the podvm image to be built. Defaults to the architecture the of the current machine |
@@ -60,6 +63,7 @@ You can optionally customize the builder image, by specify shell variables to th
 | `ACTIVATION_KEY`    | `""`           | rhel only: the activation key for Red Hat Subscription Management (RHSM)  |
 
 e.g. to produce an s390x architecture builder image
+
 ```
 ARCH=s390x make -C .. podvm-builder
 ```
@@ -75,7 +79,7 @@ Like the builder image, we have make targets for the binaries image in the paren
 To build the binaries image, use the following command:
 
 ```bash
-$ BUILDER_IMG=<your_builder_image> make -C .. podvm-binaries
+BUILDER_IMG=<your_builder_image> make -C .. podvm-binaries
 ```
 
 The build process can take significant time.
@@ -113,9 +117,11 @@ use the QEMU builder in emulation mode when running within container.
 > **Note:** Beware that the process consume a bunch of memory and disk from the host.
 If the build fails at the point QEMU was launched but packer couldn't
 connect via ssh, with an error similar to:
+>
 > ```
 > Build 'qemu.ubuntu' errored after 5 minutes 57 seconds: Timeout waiting for SSH.
 > ```
+>
 > then it might indicate lack of memory, so try to increase the amount of memory if running on VM.
 
 The podvm image can be built for other architectures than `x86_64` by passing
@@ -130,6 +136,7 @@ $ docker build -t podvm_s390x \
 ```
 
 The Secure Execution enabled podvm image can be built by passing the `SE_BOOT` build argument to docker. Currently this is only supported for Ubutu `s390x`, which also needs put the `HOST KEY documents` to the [files](files) folder, please follow the `Download host key document from Resource Link` section at [this document](../ibmcloud/SECURE_EXECUTION.md) to download `HOST KEY documents`.
+
 ```bash
 $ tree -L 1 files
 files
@@ -137,7 +144,9 @@ files
 ├── etc
 └── usr
 ```
+
 Running below command will build the Secure Execution enabled qcow2 image:
+
 ```bash
 $ docker build -t se_podvm_s390x \
          --build-arg ARCH=s390x \
@@ -174,12 +183,13 @@ file out of the podvm container image.
 Running the below command will extract the qcow2 image built in the previous step.
 
 ```bash
-$ ./hack/download-image.sh podvm:latest . -o podvm.qcow2
+./hack/download-image.sh podvm:latest . -o podvm.qcow2
 ```
+
 Running the below command will extract the Secure Execution enabled qcow2 image built in the previous step.
 
 ```bash
-$ ./hack/download-image.sh se_podvm_s390x:latest . -o se_podvm.qcow2
+./hack/download-image.sh se_podvm_s390x:latest . -o se_podvm.qcow2
 ```
 
 # How to add support for a new Linux distribution
@@ -189,7 +199,7 @@ In order to add a new Linux distribution essentially it is needed to create some
 Follow the steps below, replacing `DISTRO` with the name of the distribution being added:
 
 1. Create the builder dockerfile by copying `Dockerfile.podvm_builder` to `Dockerfile.podvm_builder.DISTRO` and
-   adjusting the file properly (e.g. replace `FROM ubuntu:20.04` with `FROM DISTRO`). Try to keep the same
+   adjusting the file properly (e.g. replace `FROM ubuntu:24.04` with `FROM DISTRO`). Try to keep the same
    software versions (e.g. Golang) as much as possible.
 2. Create the podvm image dockerfile by copying `Dockerfile.podvm` to `Dockerfile.podvm.DISTRO` and adjusting the file
    properly likewise. In particular, the *PODVM_DISTRO* and *BUILDER_IMG* arguments should be changed.
