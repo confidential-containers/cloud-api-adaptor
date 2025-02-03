@@ -226,6 +226,13 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	// Get Pod VM image from annotations
 	image := util.GetImageFromAnnotation(req.Annotations)
 
+	netNSPath := req.NetworkNamespacePath
+
+	podNetworkConfig, err := s.workerNode.Inspect(netNSPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
+	}
+
 	// Pod VM spec
 	vmSpec := provider.InstanceTypeSpec{
 		InstanceType: instanceType,
@@ -233,17 +240,11 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		Memory:       memory,
 		GPUs:         gpus,
 		Image:        image,
+		MultiNic:     podNetworkConfig.ExternalNetViaPodVM,
 	}
 
 	// TODO: server name is also generated in each cloud provider, and possibly inconsistent
 	serverName := putil.GenerateInstanceName(pod, string(sid), 63)
-
-	netNSPath := req.NetworkNamespacePath
-
-	podNetworkConfig, err := s.workerNode.Inspect(netNSPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
-	}
 
 	podDir := filepath.Join(s.serverConfig.PodsDir, string(sid))
 	if err := os.MkdirAll(podDir, os.ModePerm); err != nil {
