@@ -42,7 +42,7 @@ the binaries (e.g. *kata-agent* and *agent-protocol-forwarder*) that should be i
 
 The builder image is agnostic to cloud providers in the sense that one can be used to build for multiple providers, however it is
 dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each
-supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)),
+supported distributions, which are currently Ubuntu 24.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)),
 Fedora 39 ([Dockerfile.podvm_builder.fedora](./Dockerfile.podvm_builder)) and RHEL 9
 ([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
 

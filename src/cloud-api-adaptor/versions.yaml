@@ -4,14 +4,14 @@ cloudimg:
   ubuntu:
     focal:
       amd64:
-        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-amd64.img
-        checksum: "sha256:3895e38566e5c2c019f5c6f825ab7570ee34dac6b9142fab0c7e5a78084c4280"
+        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-amd64.img
+        checksum: "sha256:28d2f9df3ac0d24440eaf6998507df3405142cf94a55e1f90802c78e43d2d9df"
       s390x:
-        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-s390x.img
-        checksum: "sha256:24673aa86785573d3a92e15166ff81beff88cbb0abc01938f156eb1332e87cd3"
+        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-s390x.img
+        checksum: "sha256:367eef35e239ebd123bd00a1fb66cd048604b70bca362eccad1f95b0021d7458"
       arm64:
-        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-arm64.img
-        checksum: "sha256:5bb6152947fa566d6ab40dc2e5b849aea3e07ab7e1c113d00372a7f99b950cae"
+        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-arm64.img
+        checksum: "f11282a728ad42f8bfe0b646a6807674d79a019bfc229d80032345dd3228a2db"
   rhel:
     9: # dummy links, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
       amd64:
