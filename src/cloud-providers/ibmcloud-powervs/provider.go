@@ -87,13 +87,13 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 	ins := (*pvsInstances)[0]
 	instanceID := *ins.PvmInstanceID
 
-	ctx, cancel := context.WithTimeout(ctx, 150*time.Second)
+	getctx, cancel := context.WithTimeout(ctx, 150*time.Second)
 	defer cancel()
 
 	logger.Printf("Waiting for instance to reach state: ACTIVE")
 	err = retry.Do(
 		func() error {
-			in, err := p.powervsService.instanceClient(ctx).Get(*ins.PvmInstanceID)
+			in, err := p.powervsService.instanceClient(getctx).Get(*ins.PvmInstanceID)
 			if err != nil {
 				return fmt.Errorf("failed to get the instance: %v", err)
 			}
@@ -109,7 +109,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 
 			return fmt.Errorf("Instance failed to reach ACTIVE state")
 		},
-		retry.Context(ctx),
+		retry.Context(getctx),
 		retry.Attempts(0),
 		retry.MaxDelay(5*time.Second),
 	)

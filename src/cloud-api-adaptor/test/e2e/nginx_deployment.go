@@ -28,8 +28,10 @@ const (
 	WAIT_NGINX_DEPLOYMENT_TIMEOUT                    = time.Second * 900
 )
 
-type contextValueString string
-type deploymentOption func(*appsv1.Deployment)
+type (
+	contextValueString string
+	deploymentOption   func(*appsv1.Deployment)
+)
 
 func WithReplicaCount(replicas int32) deploymentOption {
 	return func(deployment *appsv1.Deployment) {
@@ -191,7 +193,7 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 		}
 		for _, pod := range podlist.Items {
 			if pod.ObjectMeta.Labels["app"] == "nginx" {
-				//Added logs for debugging nightly tests
+				// Added logs for debugging nightly tests
 				t.Log("===================")
 				t.Logf("Debug info for pod: %v", pod.ObjectMeta.Name)
 				yamlData, err := yaml.Marshal(pod.Status)
@@ -205,11 +207,11 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 					t.Logf("===================")
 					podLogString, _ := GetPodLog(ctx, client, &pod)
 					if podLogString != "" {
-						t.Logf(podLogString)
+						t.Log(podLogString)
 					} else {
-						t.Logf("No logs found")
+						t.Log("No logs found")
 					}
-					t.Logf("===================")
+					t.Log("===================")
 				}
 			}
 		}

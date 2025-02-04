@@ -63,7 +63,7 @@ update_provider_overlays() {
 
         # libvirt uses the dev built image
         tag_prefix=""
-        if [[ "${provider}" == "libvirt" ]]; then
+        if [ "${provider}" == "libvirt" ] || [ "${provider}" == "docker" ] ; then
             tag_prefix="dev-"
         fi
 

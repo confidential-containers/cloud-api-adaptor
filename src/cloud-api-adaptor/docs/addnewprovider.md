@@ -212,7 +212,7 @@ go mod tidy
 ### Step 4: build the external cloud provider plugin file via docker
 ```bash
 cat > Dockerfile <<EOF
-ARG BUILDER_BASE=quay.io/confidential-containers/golang-fedora:1.22.7-40
+ARG BUILDER_BASE=quay.io/confidential-containers/golang-fedora:1.22.11-40
 FROM --platform="\$TARGETPLATFORM" \$BUILDER_BASE AS builder
 RUN dnf install -y libvirt-devel && dnf clean all
 WORKDIR /work

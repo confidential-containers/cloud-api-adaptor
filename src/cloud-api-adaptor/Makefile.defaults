@@ -34,6 +34,7 @@ rhel_s390x_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.url)
 rhel_s390x_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.checksum)
 
 COCO_OPERATOR_REF := $(or $(COCO_OPERATOR_REF),$(call query,git.coco-operator.reference))
+COCO_OPERATOR_CONFIG := $(or $(COCO_OPERATOR_CONFIG),$(call query,git.coco-operator.config))
 COCO_OPERATOR_REPO := $(or $(COCO_OPERATOR_REPO),$(call query,git.coco-operator.url))
 KATA_REGISTRY := $(or $(KATA_REGISTRY), $(call query,oci.kata-containers.registry))
 KATA_REF := $(or $(KATA_REF), $(call query,oci.kata-containers.reference))
