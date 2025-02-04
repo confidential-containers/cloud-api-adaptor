@@ -180,3 +180,13 @@ jobs:
           export TEST_E2E_TIMEOUT="90m"
 
           make test-e2e
+
+        # In case the tests execution failed and deprovision code from e2e
+        # didn't run, let's try to delete any resources created.
+      - name: Force AWS clean-up
+        if: failure() && steps.runTests.outcome == 'failure'
+        working-directory: ./
+        run: |
+          ./hack/ci-e2e-aws-cleanup.sh
+        # Avoid running with `set -e` as command fails should be allowed
+        shell: bash {0}
