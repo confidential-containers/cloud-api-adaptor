@@ -234,16 +234,16 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 	var err error
 	vpc := a.Vpc
 
-	if vpc.SecurityGroupId != "" {
-		log.Infof("Delete security group: %s", vpc.SecurityGroupId)
-		if err = vpc.deleteSecurityGroup(); err != nil {
+	if vpc.SubnetId != "" {
+		log.Infof("Delete subnet: %s", vpc.SubnetId)
+		if err = vpc.deleteSubnet(); err != nil {
 			return err
 		}
 	}
 
-	if vpc.SubnetId != "" {
-		log.Infof("Delete subnet: %s", vpc.SubnetId)
-		if err = vpc.deleteSubnet(); err != nil {
+	if vpc.SecurityGroupId != "" {
+		log.Infof("Delete security group: %s", vpc.SecurityGroupId)
+		if err = vpc.deleteSecurityGroup(); err != nil {
 			return err
 		}
 	}
@@ -650,6 +650,13 @@ func (v *Vpc) deleteSubnet() error {
 			&ec2.TerminateInstancesInput{
 				InstanceIds: instanceIds,
 			}); err != nil {
+			return err
+		}
+		// Wait them to terminate
+		waiter := ec2.NewInstanceTerminatedWaiter(v.Client)
+		if err = waiter.Wait(context.TODO(), &ec2.DescribeInstancesInput{
+			InstanceIds: instanceIds,
+		}, time.Minute*5); err != nil {
 			return err
 		}
 	}
