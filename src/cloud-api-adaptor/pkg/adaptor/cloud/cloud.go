@@ -232,6 +232,10 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		return nil, fmt.Errorf("failed to inspect netns %s: %w", netNSPath, err)
 	}
 
+	if podNetworkConfig == nil {
+		return nil, fmt.Errorf("pod network config is nil")
+	}
+
 	// Pod VM spec
 	vmSpec := provider.InstanceTypeSpec{
 		InstanceType: instanceType,
