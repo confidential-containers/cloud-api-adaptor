@@ -86,6 +86,10 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s",
 		filepath.Join(p.DataDir, "kata-containers"), "/run/kata-containers"))
 
+	// Add host bind mounts required by iptables
+	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s", "/lib/modules", "/lib/modules"))
+	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s", "/run/xtables.lock", "/run/xtables.lock"))
+
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the docker image for the PodVM image", spec.Image)
 		p.PodVMDockerImage = spec.Image
