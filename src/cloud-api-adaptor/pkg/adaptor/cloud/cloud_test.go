@@ -16,6 +16,7 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/kubemgr"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/ppssh"
@@ -97,7 +98,11 @@ func (f *mockProxyFactory) New(serverName, socketPath string) proxy.AgentProxy {
 type mockWorkerNode struct{}
 
 func (n mockWorkerNode) Inspect(nsPath string) (*tunneler.Config, error) {
-	return nil, nil
+	return &tunneler.Config{
+		TunnelType:          podnetwork.DefaultTunnelType,
+		Index:               0,
+		ExternalNetViaPodVM: false,
+	}, nil
 }
 
 func (n *mockWorkerNode) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunneler.Config) error {
