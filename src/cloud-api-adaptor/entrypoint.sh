@@ -98,7 +98,7 @@ gcp() {
     [[ "${GCP_PROJECT_ID}" ]] && optionals+="-gcp-project-id ${GCP_PROJECT_ID} "
     [[ "${GCP_ZONE}" ]] && optionals+="-gcp-zone ${GCP_ZONE} "                         # if not set retrieved from IMDS
     [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-machine-type ${GCP_MACHINE_TYPE} "     # default e2-medium
-    [[ "${GCP_NETWORK}" ]] && optionals+="-gcp-network ${GCP_NETWORK} "                # defaults to 'default'
+    [[ "${GCP_NETWORK}" ]] && optionals+="-network ${GCP_NETWORK} "                # defaults to 'default'
 
     set -x
     exec cloud-api-adaptor gcp \
