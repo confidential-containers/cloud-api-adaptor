@@ -137,6 +137,7 @@ jobs:
         run: |
           cat <<EOF>>aws.properties
           CAA_IMAGE="${{ inputs.caa_image }}"
+          container_runtime="${{ inputs.container_runtime }}"
           disablecvm="true"
           cluster_type="${{ inputs.cluster_type }}"
           ssh_kp_name="caa-e2e-test"
