@@ -131,6 +131,7 @@ Use the properties on the table below for AWS:
 |aws_vpc_sg_id|AWS VPC Security Groups ID||
 |aws_vpc_subnet_id|AWS VPC Subnet ID||
 |cluster_type|Kubernetes cluster type. Either **onprem** or **eks** (see Notes below) |onprem|
+|container_runtime|Test cluster configured container runtime. Either **containerd** or **crio** |containerd|
 |disablecvm|Set to `true` to disable confidential VM||
 |pause_image|Kubernetes pause image||
 |podvm_aws_ami_id|AWS AMI ID of the podvm||

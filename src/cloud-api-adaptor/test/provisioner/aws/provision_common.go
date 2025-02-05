@@ -101,20 +101,21 @@ type OnPremCluster struct {
 
 // AWSProvisioner implements the CloudProvision interface.
 type AWSProvisioner struct {
-	AwsConfig  aws.Config
-	iamClient  *iam.Client
-	Cluster    Cluster
-	Disablecvm string
-	ec2Client  *ec2.Client
-	s3Client   *s3.Client
-	Bucket     *S3Bucket
-	PauseImage string
-	Image      *AMIImage
-	Vpc        *Vpc
-	PublicIP   string
-	TunnelType string
-	VxlanPort  string
-	SshKpName  string
+	AwsConfig        aws.Config
+	iamClient        *iam.Client
+	containerRuntime string // Name of the container runtime
+	Cluster          Cluster
+	Disablecvm       string
+	ec2Client        *ec2.Client
+	s3Client         *s3.Client
+	Bucket           *S3Bucket
+	PauseImage       string
+	Image            *AMIImage
+	Vpc              *Vpc
+	PublicIP         string
+	TunnelType       string
+	VxlanPort        string
+	SshKpName        string
 }
 
 // AwsInstallOverlay implements the InstallOverlay interface
@@ -163,15 +164,16 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 			Name:   "peer-pods-tests",
 			Key:    "", // To be defined when the file is uploaded
 		},
-		Cluster:    cluster,
-		Image:      NewAMIImage(ec2Client, properties),
-		Disablecvm: properties["disablecvm"],
-		PauseImage: properties["pause_image"],
-		Vpc:        vpc,
-		PublicIP:   properties["use_public_ip"],
-		TunnelType: properties["tunnel_type"],
-		VxlanPort:  properties["vxlan_port"],
-		SshKpName:  properties["ssh_kp_name"],
+		containerRuntime: properties["container_runtime"],
+		Cluster:          cluster,
+		Image:            NewAMIImage(ec2Client, properties),
+		Disablecvm:       properties["disablecvm"],
+		PauseImage:       properties["pause_image"],
+		Vpc:              vpc,
+		PublicIP:         properties["use_public_ip"],
+		TunnelType:       properties["tunnel_type"],
+		VxlanPort:        properties["vxlan_port"],
+		SshKpName:        properties["ssh_kp_name"],
 	}
 
 	return AWSProps, nil
@@ -275,6 +277,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 	credentials, _ := a.AwsConfig.Credentials.Retrieve(context.TODO())
 
 	return map[string]string{
+		"CONTAINER_RUNTIME":    a.containerRuntime,
 		"disablecvm":           a.Disablecvm,
 		"pause_image":          a.PauseImage,
 		"podvm_launchtemplate": "",
