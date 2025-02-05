@@ -24,7 +24,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&gcpcfg.Zone, "gcp-zone", "", "Zone")
 	flags.StringVar(&gcpcfg.ImageName, "image-name", "", "Pod VM image name")
 	flags.StringVar(&gcpcfg.MachineType, "machine-type", "e2-medium", "Pod VM instance type")
-	flags.StringVar(&gcpcfg.Network, "gcp-network", "", "Network ID to be used for the Pod VMs")
+	flags.StringVar(&gcpcfg.Network, "network", "", "Network ID to be used for the Pod VMs")
 }
 
 func (_ *Manager) LoadEnv() {
