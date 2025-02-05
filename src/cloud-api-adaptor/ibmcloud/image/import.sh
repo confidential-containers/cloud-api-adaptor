@@ -66,15 +66,19 @@ fi
 
 [ -n "$endpoint" ] && ibmcloud cos config endpoint-url --url "$endpoint" >/dev/null
 
-if ! ibmcloud cos buckets --output JSON | jq -r '.Buckets[].Name'; then
-    error "Can't find any buckets in $instance"
-fi
-
 if [ -z "$bucket" ]; then
-    bucket=$(ibmcloud cos buckets --output JSON | jq -r '.Buckets[0].Name')
+    for i in $(ibmcloud cos buckets --output JSON | jq -r '.Buckets[].Name'); do
+        if ibmcloud cos bucket-head --bucket $i >/dev/null 2>&1; then
+            bucket=$i
+            break
+        fi
+    done
+    if [ -z "$bucket" ]; then
+        error "Can't find any buckets in target region"
+    fi
+else
+    ibmcloud cos bucket-head --bucket "$bucket" || error "Bucket $bucket not found"
 fi
-
-ibmcloud cos bucket-head --bucket "$bucket" || error "Bucket $bucket not found"
 
 if [ -f ${image_file} ]; then
     file=${image_file}
