@@ -222,6 +222,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        container_runtime:
+          - crio
         os:
           - ubuntu
         provider:
@@ -231,6 +233,7 @@ jobs:
     uses: ./.github/workflows/e2e_aws.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}
+      container_runtime: ${{ matrix.container_runtime }}
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       oras: false
