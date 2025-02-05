@@ -115,7 +115,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 					InitializeParams: &computepb.AttachedDiskInitializeParams{
 						DiskSizeGb:  proto.Int64(20),
 						SourceImage: srcImage,
-						DiskType:    proto.String(fmt.Sprintf("zones/%s/diskTypes/pd-standard", p.serviceConfig.Zone)),
+						DiskType:    proto.String(fmt.Sprintf("zones/%s/diskTypes/%s", p.serviceConfig.Zone, p.serviceConfig.DiskType)),
 					},
 					AutoDelete: proto.Bool(true),
 					Boot:       proto.Bool(true),
