@@ -99,6 +99,7 @@ gcp() {
     [[ "${GCP_ZONE}" ]] && optionals+="-zone ${GCP_ZONE} "                         # if not set retrieved from IMDS
     [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-machine-type ${GCP_MACHINE_TYPE} "     # default e2-medium
     [[ "${GCP_NETWORK}" ]] && optionals+="-network ${GCP_NETWORK} "                # defaults to 'default'
+    [[ "${GCP_DISK_TYPE}" ]] && optionals+="-disk-type ${GCP_DISK_TYPE} "              # defaults to 'pd-standard'
 
     set -x
     exec cloud-api-adaptor gcp \
