@@ -165,6 +165,9 @@ jobs:
           echo "::endgroup::"
           export CONTAINER_RUNTIME=${{ inputs.container_runtime }}
           echo "::group::Create cluster with $CONTAINER_RUNTIME"
+          # Use less space as possible so the Git runner doesn't run out of
+          # disk space.
+          export CLUSTER_DISK_SIZE=15
           ./libvirt/kcli_cluster.sh create
           echo "KUBECONFIG=$HOME/.kcli/clusters/peer-pods/auth/kubeconfig" >> "$GITHUB_ENV"
           echo "::endgroup::"
