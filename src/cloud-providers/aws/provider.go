@@ -50,6 +50,34 @@ type ec2Client interface {
 	DescribeImages(ctx context.Context,
 		params *ec2.DescribeImagesInput,
 		optFns ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error)
+	// Add AllocateAddress method
+	AllocateAddress(ctx context.Context,
+		params *ec2.AllocateAddressInput,
+		optFns ...func(*ec2.Options)) (*ec2.AllocateAddressOutput, error)
+	AssociateAddress(ctx context.Context,
+		params *ec2.AssociateAddressInput,
+		optFns ...func(*ec2.Options)) (*ec2.AssociateAddressOutput, error)
+	DescribeAddresses(ctx context.Context,
+		params *ec2.DescribeAddressesInput,
+		optFns ...func(*ec2.Options)) (*ec2.DescribeAddressesOutput, error)
+	ReleaseAddress(ctx context.Context,
+		params *ec2.ReleaseAddressInput,
+		optFns ...func(*ec2.Options)) (*ec2.ReleaseAddressOutput, error)
+	DisassociateAddress(ctx context.Context,
+		params *ec2.DisassociateAddressInput,
+		optFns ...func(*ec2.Options)) (*ec2.DisassociateAddressOutput, error)
+	CreateNetworkInterface(ctx context.Context,
+		params *ec2.CreateNetworkInterfaceInput,
+		optFns ...func(*ec2.Options)) (*ec2.CreateNetworkInterfaceOutput, error)
+	AttachNetworkInterface(ctx context.Context,
+		params *ec2.AttachNetworkInterfaceInput,
+		optFns ...func(*ec2.Options)) (*ec2.AttachNetworkInterfaceOutput, error)
+	DeleteNetworkInterface(ctx context.Context,
+		params *ec2.DeleteNetworkInterfaceInput,
+		optFns ...func(*ec2.Options)) (*ec2.DeleteNetworkInterfaceOutput, error)
+	ModifyNetworkInterfaceAttribute(ctx context.Context,
+		params *ec2.ModifyNetworkInterfaceAttributeInput,
+		optFns ...func(*ec2.Options)) (*ec2.ModifyNetworkInterfaceAttributeOutput, error)
 }
 
 // Make instanceRunningWaiter as an interface
@@ -224,7 +252,6 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			input.KeyName = aws.String(p.serviceConfig.KeyName)
 		}
 
-		// Auto assign public IP address if UsePublicIP is set
 		if p.serviceConfig.UsePublicIP {
 			// Auto-assign public IP
 			input.NetworkInterfaces = []types.InstanceNetworkInterfaceSpecification{
@@ -303,6 +330,20 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	}
 
+	if spec.MultiNic {
+		nIfaceId, err := p.createAddonNICforInstance(ctx, instanceID)
+		if err != nil {
+			return nil, err
+		}
+		// If public IP is set, then create an ElasticIP and associate it with this secondary interface
+		if p.serviceConfig.UsePublicIP {
+			err = p.createElasticIPforInstance(ctx, instanceID, nIfaceId)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	instance := &provider.Instance{
 		ID:   instanceID,
 		Name: instanceName,
@@ -313,6 +354,12 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 }
 
 func (p *awsProvider) DeleteInstance(ctx context.Context, instanceID string) error {
+
+	err := p.deleteElasticIPforInstance(ctx, instanceID)
+	if err != nil {
+		logger.Printf("failed to deallocate the Elastic IP address: %v", err)
+	}
+
 	terminateInput := &ec2.TerminateInstancesInput{
 		InstanceIds: []string{
 			instanceID,
@@ -462,6 +509,193 @@ func (p *awsProvider) getPublicIP(ctx context.Context, instanceID string) (netip
 	}
 
 	return publicIPAddr, nil
+}
+
+// Create a NIC and attach it to the instance
+func (p *awsProvider) createAddonNICforInstance(ctx context.Context, instanceID string) (nIfaceId *string, err error) {
+	// Create network interface
+	// Add create network interface input
+	nicName := fmt.Sprintf("nic-%s", instanceID)
+	createNetworkInterfaceInput := &ec2.CreateNetworkInterfaceInput{
+		SubnetId: aws.String(p.serviceConfig.SubnetId),
+		Groups:   p.serviceConfig.SecurityGroupIds,
+
+		TagSpecifications: []types.TagSpecification{
+			{
+				ResourceType: types.ResourceTypeNetworkInterface,
+				Tags: []types.Tag{
+					{
+						Key:   aws.String("Name"),
+						Value: aws.String(nicName),
+					},
+				},
+			},
+		},
+	}
+
+	nic, err := p.ec2Client.CreateNetworkInterface(ctx, createNetworkInterfaceInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create a network interface: %v", err)
+	}
+
+	nIfaceId = nic.NetworkInterface.NetworkInterfaceId
+
+	// Wait for instance to be ready before attaching the network interface
+	describeInstanceInput := &ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceID},
+	}
+	err = p.waiter.Wait(ctx, describeInstanceInput, maxWaitTime)
+	if err != nil {
+		logger.Printf("failed to wait for the instance to be ready : %v ", err)
+		return nil, err
+
+	}
+
+	// Attach network interface
+	attachNetworkInterfaceInput := &ec2.AttachNetworkInterfaceInput{
+		InstanceId:         aws.String(instanceID),
+		NetworkInterfaceId: nIfaceId,
+		DeviceIndex:        aws.Int32(1),
+	}
+
+	nicAttachOp, err := p.ec2Client.AttachNetworkInterface(ctx, attachNetworkInterfaceInput)
+	if err != nil {
+		_, nicDelErr := p.ec2Client.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
+			NetworkInterfaceId: nIfaceId,
+		})
+		if nicDelErr != nil {
+			logger.Printf("failed to delete the network interface: %v", nicDelErr)
+		}
+
+		return nil, fmt.Errorf("failed to attach a network interface: %v", err)
+	}
+
+	if nicAttachOp.AttachmentId == nil {
+		logger.Printf("AttachmentId is nil. This will prevent deletion of the network interface")
+		return nil, fmt.Errorf("AttachmentId is nil")
+	}
+
+	// Set Delete on termination to true
+	_, err = p.ec2Client.ModifyNetworkInterfaceAttribute(ctx, &ec2.ModifyNetworkInterfaceAttributeInput{
+		Attachment: &types.NetworkInterfaceAttachmentChanges{
+			AttachmentId:        nicAttachOp.AttachmentId,
+			DeleteOnTermination: aws.Bool(true),
+		},
+		NetworkInterfaceId: nIfaceId,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to modify the network interface attribute: %v", err)
+	}
+
+	logger.Printf("created a network interface %s and attached it to the instance %s", *nIfaceId, instanceID)
+
+	return nIfaceId, nil
+}
+
+// Create Elastic IP and attach it to the interface
+func (p *awsProvider) createElasticIPforInstance(ctx context.Context, instanceID string, nIfaceId *string) error {
+	eipName := fmt.Sprintf("eip-%s", instanceID)
+
+	// Create Elastic IP. Allocate from AWS pool
+	allocateAddressInput := &ec2.AllocateAddressInput{
+		Domain: types.DomainTypeVpc,
+		TagSpecifications: []types.TagSpecification{
+			{
+				ResourceType: types.ResourceTypeElasticIp,
+				Tags: []types.Tag{
+					{
+						Key:   aws.String("Name"),
+						Value: aws.String(eipName),
+					},
+				},
+			},
+		},
+	}
+
+	eip, err := p.ec2Client.AllocateAddress(ctx, allocateAddressInput)
+	if err != nil {
+		return fmt.Errorf("failed to allocate an Elastic IP address: %v", err)
+	}
+
+	// Wait for instance to be ready before associating the Elastic IP address
+	describeInstanceInput := &ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceID},
+	}
+	err = p.waiter.Wait(ctx, describeInstanceInput, maxWaitTime)
+	if err != nil {
+		logger.Printf("failed to wait for the instance to be ready : %v ", err)
+		return err
+	}
+
+	// Associate the Elastic IP with the instance
+	_, err = p.ec2Client.AssociateAddress(ctx, &ec2.AssociateAddressInput{
+		AllocationId:       eip.AllocationId,
+		AllowReassociation: aws.Bool(true),
+		NetworkInterfaceId: nIfaceId,
+	})
+	if err != nil {
+		// Release the Elastic IP address
+		_, relErr := p.ec2Client.ReleaseAddress(ctx, &ec2.ReleaseAddressInput{
+			AllocationId: eip.AllocationId,
+		})
+		if relErr != nil {
+			logger.Printf("failed to release the Elastic IP address: %v", relErr)
+		}
+		return fmt.Errorf("failed to associate an Elastic IP address with the instance: %v", err)
+	}
+
+	logger.Printf("associated the Elastic IP address: %s with the instance: %s", *eip.PublicIp, instanceID)
+
+	return nil
+}
+
+func (p *awsProvider) deleteElasticIPforInstance(ctx context.Context, instanceID string) error {
+
+	describeAddressInput := &ec2.DescribeAddressesInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("instance-id"),
+				Values: []string{instanceID},
+			},
+		},
+	}
+
+	// Describe addresses to find the Elastic IP
+	describeAddressesOutput, err := p.ec2Client.DescribeAddresses(ctx, describeAddressInput)
+	if err != nil {
+		return fmt.Errorf("failed to describe the Elastic IP addresses: %v for instance: %s", err, instanceID)
+	}
+
+	if len(describeAddressesOutput.Addresses) == 0 {
+		logger.Printf("No Elastic IP addresses found for instance: %s", instanceID)
+		return nil
+	}
+
+	// Find the Elastic IP associated with the given network interface and delete it
+	for _, addr := range describeAddressesOutput.Addresses {
+		//if addr.NetworkInterfaceId != nil && *addr.NetworkInterfaceId == *nIfaceId {
+		if addr.InstanceId != nil && *addr.InstanceId == instanceID {
+
+			// Disassociate the Elastic IP address
+			_, err = p.ec2Client.DisassociateAddress(ctx, &ec2.DisassociateAddressInput{
+				AssociationId: addr.AssociationId,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to disassociate the Elastic IP address: %v", err)
+			}
+
+			// Release the Elastic IP address
+			_, err = p.ec2Client.ReleaseAddress(ctx, &ec2.ReleaseAddressInput{
+				AllocationId: addr.AllocationId,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to release the Elastic IP address: %v", err)
+			}
+			logger.Printf("released the Elastic IP address: %s for instance: %s", *addr.PublicIp, instanceID)
+		}
+	}
+
+	return nil
 }
 
 func (p *awsProvider) getDeviceNameAndSize(imageID string) (string, int32, error) {

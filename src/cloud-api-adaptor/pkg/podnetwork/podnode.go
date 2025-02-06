@@ -151,6 +151,13 @@ func (n *podNode) Setup() error {
 		}
 	}
 
+	if n.config.ExternalNetViaPodVM {
+		err = setupExternalNetwork(hostNS, hostPrimaryInterface, podNS)
+		if err != nil {
+			logger.Printf("failed to set up external network: %s", err)
+		}
+	}
+
 	return nil
 }
 
@@ -197,6 +204,7 @@ func detectPrimaryInterface(hostNS netops.Namespace, timeout time.Duration) (str
 
 		hostPrimaryInterface, err := findPrimaryInterface(hostNS)
 		if err == nil {
+			logger.Printf("Detected primary interface: %s", hostPrimaryInterface)
 			return hostPrimaryInterface, nil
 		}
 
