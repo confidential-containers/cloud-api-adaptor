@@ -74,6 +74,10 @@ func TestAwsCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testin
 }
 
 func TestAwsCreatePeerPodWithLargeImage(t *testing.T) {
+	// This test running on default Github runner makes the disk full
+	// (`System.IO.IOException: No space left on device`) to the point
+	// the job gets aborted.
+	SkipTestOnCI(t)
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodWithLargeImage(t, testEnv, assert)
