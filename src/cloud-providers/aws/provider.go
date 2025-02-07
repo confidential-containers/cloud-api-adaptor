@@ -428,11 +428,9 @@ func (p *awsProvider) getPublicIP(ctx context.Context, instanceID string) (netip
 	}
 
 	// Wait for instance to be ready before getting the public IP address
-	err := p.waiter.Wait(ctx, describeInstanceInput, maxWaitTime)
-	if err != nil {
+	if err := p.waiter.Wait(ctx, describeInstanceInput, maxWaitTime); err != nil {
 		logger.Printf("failed to wait for instance %s to be ready: %v", instanceID, err)
 		return netip.Addr{}, err
-
 	}
 
 	// Add describe instance output
@@ -456,12 +454,7 @@ func (p *awsProvider) getPublicIP(ctx context.Context, instanceID string) (netip
 	logger.Printf("public IP address instance %s: %s", instanceID, *publicIP)
 
 	// Parse the public IP address
-	publicIPAddr, err := netip.ParseAddr(*publicIP)
-	if err != nil {
-		return netip.Addr{}, err
-	}
-
-	return publicIPAddr, nil
+	return netip.ParseAddr(*publicIP)
 }
 
 func (p *awsProvider) getDeviceNameAndSize(imageID string) (string, int32, error) {
