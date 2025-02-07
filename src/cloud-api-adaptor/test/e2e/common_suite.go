@@ -576,7 +576,7 @@ func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbs
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaining opa in kbs
 // as test cases might be run in parallel
 func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
-	t.Log("Do test kbs key release")
+	t.Log("Do test https kbs key release")
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-key-release", kbsEndpoint).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
