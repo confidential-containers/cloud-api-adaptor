@@ -21,8 +21,10 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
-var logger = log.New(log.Writer(), "[adaptor/cloud/aws] ", log.LstdFlags|log.Lmsgprefix)
-var errNotReady = errors.New("address not ready")
+var (
+	logger      = log.New(log.Writer(), "[adaptor/cloud/aws] ", log.LstdFlags|log.Lmsgprefix)
+	errNotReady = errors.New("address not ready")
+)
 
 const (
 	maxInstanceNameLen = 63
@@ -69,7 +71,6 @@ type awsProvider struct {
 }
 
 func NewProvider(config *Config) (provider.Provider, error) {
-
 	logger.Printf("aws config: %#v", config.Redact())
 
 	if err := retrieveMissingConfig(config); err != nil {
@@ -127,7 +128,6 @@ func NewProvider(config *Config) (provider.Provider, error) {
 }
 
 func getIPs(instance types.Instance) ([]netip.Addr, error) {
-
 	var podNodeIPs []netip.Addr
 	for i, nic := range instance.NetworkInterfaces {
 		addr := nic.PrivateIpAddress
@@ -149,7 +149,6 @@ func getIPs(instance types.Instance) ([]netip.Addr, error) {
 }
 
 func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
-
 	// Public IP address
 	var publicIPAddr netip.Addr
 
@@ -160,7 +159,7 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		return nil, err
 	}
 
-	//Convert userData to base64
+	// Convert userData to base64
 	b64EncData := base64.StdEncoding.EncodeToString([]byte(cloudConfigData))
 
 	instanceType, err := p.selectInstanceType(ctx, spec)
@@ -296,7 +295,6 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		// Get the public IP address of the instance
 		publicIPAddr, err = p.getPublicIP(ctx, instanceID)
 		if err != nil {
-
 			return nil, err
 		}
 
@@ -324,14 +322,12 @@ func (p *awsProvider) DeleteInstance(ctx context.Context, instanceID string) err
 	logger.Printf("Deleting instance (%s)", instanceID)
 
 	resp, err := p.ec2Client.TerminateInstances(ctx, terminateInput)
-
 	if err != nil {
 		logger.Printf("failed to delete an instance: %v and the response is %v", err, resp)
 		return err
 	}
 	logger.Printf("deleted an instance %s", instanceID)
 	return nil
-
 }
 
 func (p *awsProvider) Teardown() error {
@@ -348,13 +344,11 @@ func (p *awsProvider) ConfigVerifier() error {
 
 // Add SelectInstanceType method to select an instance type based on the memory and vcpu requirements
 func (p *awsProvider) selectInstanceType(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
-
 	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceTypeSpecList, p.serviceConfig.InstanceTypes, p.serviceConfig.InstanceType)
 }
 
 // Add a method to populate InstanceTypeSpecList for all the instanceTypes
 func (p *awsProvider) updateInstanceTypeSpecList() error {
-
 	// Get the instance types from the service config
 	instanceTypes := p.serviceConfig.InstanceTypes
 
@@ -384,8 +378,8 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 
 // Add a method to retrieve cpu, memory, and storage from the instance type
 func (p *awsProvider) getInstanceTypeInformation(instanceType string) (vcpu int64, memory int64,
-	gpuCount int64, err error) {
-
+	gpuCount int64, err error,
+) {
 	// Get the instance type information from the instance type using AWS API
 	input := &ec2.DescribeInstanceTypesInput{
 		InstanceTypes: []types.InstanceType{
@@ -414,7 +408,6 @@ func (p *awsProvider) getInstanceTypeInformation(instanceType string) (vcpu int6
 		return vcpu, memory, gpuCount, nil
 	}
 	return 0, 0, 0, fmt.Errorf("instance type %s not found", instanceType)
-
 }
 
 // Add a method to get public IP address of the instance
@@ -425,9 +418,6 @@ func (p *awsProvider) getPublicIP(ctx context.Context, instanceID string) (netip
 	describeInstanceInput := &ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceID},
 	}
-
-	// Create New InstanceRunningWaiter
-	//waiter := ec2.NewInstanceRunningWaiter(p.ec2Client)
 
 	// Wait for instance to be ready before getting the public IP address
 	err := p.waiter.Wait(ctx, describeInstanceInput, maxWaitTime)
