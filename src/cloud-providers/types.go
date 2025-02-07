@@ -60,11 +60,25 @@ type Instance struct {
 	IPs  []netip.Addr
 }
 
+type PodVMResources struct {
+	VCPUs   int64
+	Memory  int64
+	GPUs    int64
+	Storage int64
+}
+
+func NewPodVMResources(vcpus, memory int64) PodVMResources {
+	return PodVMResources{
+		VCPUs:   vcpus,
+		Memory:  memory,
+		GPUs:    0,
+		Storage: 0,
+	}
+}
+
 type InstanceTypeSpec struct {
 	InstanceType string
-	VCPUs        int64
-	Memory       int64
+	Resources    PodVMResources
 	Arch         string
-	GPUs         int64
 	Image        string
 }
