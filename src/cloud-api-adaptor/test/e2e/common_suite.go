@@ -597,10 +597,33 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kb
 	NewTestCase(t, e, "KbsKeyReleasePod", assert, "Kbs key release is successful").WithPod(pod).WithTestCommands(testCommands).Run()
 }
 
+func DoTestHTTPSKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
+	t.Log("Do test https kbs key release")
+	pod := NewBusyboxPodWithNameWithInitdatahttps(E2eNamespace, "kbs-key-release", kbsEndpoint).GetPodOrFatal(t)
+	testCommands := []TestCommand{
+		{
+			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + resourcePath},
+			ContainerName: pod.Spec.Containers[0].Name,
+			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if strings.Contains(stdout.String(), expectedSecret) {
+					t.Logf("Success to get secret key: %s", stdout.String())
+					return true
+				} else {
+					t.Errorf("Failed to access secret key: %s", stdout.String())
+					return false
+				}
+			},
+		},
+	}
+
+	NewTestCase(t, e, "KbsKeyReleasePod", assert, "Kbs key release is successful").WithPod(pod).WithTestCommands(testCommands).Run()
+}
+
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaining opa in kbs
 // as test cases might be run in parallel
 func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
 	t.Log("Do test kbs key release failure case")
+	t.Logf("kbsendpoint is %s", kbsEndpoint)
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-failure", kbsEndpoint).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
@@ -627,6 +650,36 @@ func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert Cloud
 	}
 
 	NewTestCase(t, e, "DoTestKbsKeyReleaseForFailure", assert, "Kbs key release is failed").WithPod(pod).WithTestCommands(testCommands).Run()
+}
+
+func DoTestHTTPSKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
+	t.Log("Do test kbs key release failure case")
+	pod := NewBusyboxPodWithNameWithInitdatahttps(E2eNamespace, "kbs-failure", kbsEndpoint).GetPodOrFatal(t)
+	testCommands := []TestCommand{
+		{
+			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + resourcePath},
+			ContainerName: pod.Spec.Containers[0].Name,
+			TestErrorFn: func(err error) bool {
+				if strings.Contains(err.Error(), "command terminated with exit code 1") {
+					return true
+				} else {
+					t.Errorf("Got unexpected error: %s", err.Error())
+					return false
+				}
+			},
+			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+				if strings.Contains(stdout.String(), expectedSecret) {
+					t.Errorf("FAIL as succeed to get secret key: %s", stdout.String())
+					return false
+				} else {
+					t.Logf("PASS as failed to access secret key: %s", stdout.String())
+					return true
+				}
+			},
+		},
+	}
+
+	NewTestCase(t, e, "DoTestHTTPSKbsKeyReleaseForFailure", assert, "Kbs key release is failed").WithPod(pod).WithTestCommands(testCommands).Run()
 }
 
 func DoTestRestrictivePolicyBlocksExec(t *testing.T, e env.Environment, assert CloudAssert) {

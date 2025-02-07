@@ -211,6 +211,30 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 		}
 		DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 	}
+
+	DoTestHTTPSKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
+	if isTestWithKbsIBMSE() {
+		t.Log("HTTPS KBS with ibmse cases")
+		// the allow_*_.rego file is created by follow document
+		// https://github.com/confidential-containers/trustee/blob/main/deps/verifier/src/se/README.md#set-attestation-policy
+		err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_with_wrong_image_tag.rego")
+		if err != nil {
+			t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
+		}
+		DoTestHTTPSKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
+		err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_with_correct_claims.rego")
+		if err != nil {
+			t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
+		}
+		DoTestHTTPSKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
+	} else {
+		t.Log("KBS normal cases")
+		err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+		if err != nil {
+			t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
+		}
+		DoTestHTTPSKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
+	}
 }
 
 func TestLibvirtRestrictivePolicyBlocksExec(t *testing.T) {
