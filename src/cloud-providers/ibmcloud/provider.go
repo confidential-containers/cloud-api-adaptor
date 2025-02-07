@@ -25,8 +25,10 @@ const (
 	queryInterval = 2
 )
 
-var logger = log.New(log.Writer(), "[adaptor/cloud/ibmcloud] ", log.LstdFlags|log.Lmsgprefix)
-var errNotReady = errors.New("address not ready")
+var (
+	logger      = log.New(log.Writer(), "[adaptor/cloud/ibmcloud] ", log.LstdFlags|log.Lmsgprefix)
+	errNotReady = errors.New("address not ready")
+)
 
 const maxInstanceNameLen = 63
 
@@ -44,7 +46,6 @@ type ibmcloudVPCProvider struct {
 }
 
 func NewProvider(config *Config) (provider.Provider, error) {
-
 	var authenticator core.Authenticator
 
 	if config.ApiKey != "" {
@@ -83,7 +84,6 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		Authenticator: authenticator,
 		URL:           config.VpcServiceURL,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -104,12 +104,15 @@ func NewProvider(config *Config) (provider.Provider, error) {
 			if config.PrimarySubnetID == "" {
 				config.PrimarySubnetID = primarySubnetID
 			}
+
 			if config.VpcID == "" {
 				config.VpcID = vpcID
 			}
+
 			if config.ResourceGroupID == "" {
 				config.ResourceGroupID = rgID
 			}
+
 			if config.PrimarySecurityGroupID == "" {
 				config.PrimarySecurityGroupID = sgID
 			}
@@ -158,7 +161,6 @@ func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourc
 }
 
 func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageId string) *vpcv1.InstancePrototype {
-
 	prototype := &vpcv1.InstancePrototype{
 		Name:     &instanceName,
 		Image:    &vpcv1.ImageIdentity{ID: &imageId},
@@ -212,8 +214,7 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 	return prototype
 }
 
-func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]netip.Addr, error) {
-
+func getIPs(instance *vpcv1.Instance, _ string, numInterfaces int) ([]netip.Addr, error) {
 	interfaces := []*vpcv1.NetworkInterfaceInstanceContextReference{instance.PrimaryNetworkInterface}
 	for i, nic := range instance.NetworkInterfaces {
 		if *nic.ID != *instance.PrimaryNetworkInterface.ID {
@@ -224,10 +225,10 @@ func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]n
 	var ips []netip.Addr
 
 	for i, nic := range interfaces {
-
 		if nic.PrimaryIP == nil {
 			return nil, errNotReady
 		}
+
 		addr := nic.PrimaryIP.Address
 		if addr == nil || *addr == "" || *addr == "0.0.0.0" {
 			return nil, errNotReady
@@ -250,7 +251,6 @@ func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]n
 }
 
 func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
-
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
 	userData, err := cloudConfig.Generate()
@@ -284,12 +284,12 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	var ips []netip.Addr
 
 	for retries := 0; retries < maxRetries; retries++ {
-
 		ips, err = getIPs(vpcInstance, instanceID, numInterfaces)
 
 		if err == nil {
 			break
 		}
+
 		if err != errNotReady {
 			return nil, err
 		}
@@ -314,14 +314,12 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 }
 
 // Select an instance profile based on the memory and vcpu requirements
-func (p *ibmcloudVPCProvider) selectInstanceProfile(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
-
+func (p *ibmcloudVPCProvider) selectInstanceProfile(_ context.Context, spec provider.InstanceTypeSpec) (string, error) {
 	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceProfileSpecList, p.serviceConfig.InstanceProfiles, p.serviceConfig.ProfileName)
 }
 
 // Populate instanceProfileSpecList for all the instanceProfiles
 func (p *ibmcloudVPCProvider) updateInstanceProfileSpecList() error {
-
 	// Get the instance types from the service config
 	instanceProfiles := p.serviceConfig.InstanceProfiles
 
@@ -350,14 +348,12 @@ func (p *ibmcloudVPCProvider) updateInstanceProfileSpecList() error {
 
 // Add a method to retrieve cpu, memory, and arch from the profile name
 func (p *ibmcloudVPCProvider) getProfileNameInformation(profileName string) (vcpu int64, memory int64, arch string, err error) {
-
 	// Get the profile information from the instance type using IBMCloud API
 	result, details, err := p.vpc.GetInstanceProfileWithContext(context.Background(),
 		&vpcv1.GetInstanceProfileOptions{
 			Name: &profileName,
 		},
 	)
-
 	if err != nil {
 		return 0, 0, "", fmt.Errorf("instance profile name %s not found, due to %w\nFurther Details:\n%v", profileName, err, details)
 	}
@@ -370,8 +366,7 @@ func (p *ibmcloudVPCProvider) getProfileNameInformation(profileName string) (vcp
 }
 
 // Select Image from list, invalid image IDs should have already been removed
-func (p *ibmcloudVPCProvider) selectImage(ctx context.Context, spec provider.InstanceTypeSpec, selectedInstanceProfile string) (string, error) {
-
+func (p *ibmcloudVPCProvider) selectImage(_ context.Context, spec provider.InstanceTypeSpec, selectedInstanceProfile string) (string, error) {
 	specArch := spec.Arch
 	if specArch == "" {
 		for _, instanceProfileSpec := range p.serviceConfig.InstanceProfileSpecList {
@@ -424,7 +419,6 @@ func (p *ibmcloudVPCProvider) getImageDetails(ctx context.Context, imageID strin
 }
 
 func (p *ibmcloudVPCProvider) DeleteInstance(ctx context.Context, instanceID string) error {
-
 	options := &vpcv1.DeleteInstanceOptions{}
 	options.SetID(instanceID)
 	resp, err := p.vpc.DeleteInstanceWithContext(ctx, options)
