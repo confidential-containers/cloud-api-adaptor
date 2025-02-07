@@ -25,9 +25,38 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/env"
+	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
 const WAIT_NAMESPACE_AVAILABLE_TIMEOUT = time.Second * 120
+
+func getFirstWorkerNodeIPAndName(cfg *envconf.Config) (string, string, error) {
+	client, err := cfg.NewClient()
+	if err != nil {
+		return "", "", err
+	}
+	nodeList := &corev1.NodeList{}
+	if err := client.Resources("").List(context.TODO(), nodeList); err != nil {
+		return "", "", err
+	}
+	// Filter out control plane nodes and get the IP of the first worker node
+	for _, node := range nodeList.Items {
+		if isWorkerNode(&node) {
+			return node.Status.Addresses[0].Address, node.Name, nil
+		}
+	}
+	return "", "", fmt.Errorf("no worker nodes found")
+}
+
+func isWorkerNode(node *corev1.Node) bool {
+	// Check for the existence of the label or taint that identifies control plane nodes
+	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
+	_, isControlPlane := node.Labels["node-role.kubernetes.io/control-plane"]
+	if isMaster || isControlPlane {
+		return false
+	}
+	return true
+}
 
 func reverseSlice(slice []string) []string {
 	length := len(slice)

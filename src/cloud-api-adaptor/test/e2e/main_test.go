@@ -21,6 +21,7 @@ var (
 	cloudProvider    string
 	provisioner      pv.CloudProvisioner
 	keyBrokerService *pv.KeyBrokerService
+	workerNodeIP     string
 )
 
 const (
@@ -100,8 +101,10 @@ func TestMain(m *testing.M) {
 
 	// The DEPLOY_KBS is exported then provisioner will install kbs before installing CAA
 	shouldDeployKbs := false
+	// shouldDeployHTTPSKbs := false
 	if os.Getenv("DEPLOY_KBS") == "true" || os.Getenv("DEPLOY_KBS") == "yes" {
 		shouldDeployKbs = true
+		// shouldDeployHTTPSKbs = true
 		os.Setenv("TEST_KBS", "true")
 	}
 
@@ -163,9 +166,28 @@ func TestMain(m *testing.M) {
 			if kbsEndpoint, err = keyBrokerService.GetKbsEndpoint(ctx, cfg); err != nil {
 				return ctx, err
 			}
-
-			log.Infof("kbsEndpoint: %s", kbsEndpoint)
+			workerNodeIP, _, _ = getFirstWorkerNodeIPAndName(cfg)
+			log.Infof("Https kbsEndpoint is: %s", kbsEndpoint)
+			log.Infof("workernode ip is: %s", workerNodeIP)
 		}
+
+		// if shouldDeployHTTPSKbs {
+		// 	log.Info("Deploying kbs")
+
+		// 	if keyBrokerService, err = pv.NewHTTPSKeyBrokerService(props["CLUSTER_NAME"], cfg); err != nil {
+		// 		return ctx, err
+		// 	}
+
+		// 	if err = keyBrokerService.Deploy(ctx, cfg, props); err != nil {
+		// 		return ctx, err
+		// 	}
+		// 	var HTTPSkbsEndpoint string
+		// 	if HTTPSkbsEndpoint, err = keyBrokerService.GetKbsEndpoint(ctx, cfg); err != nil {
+		// 		return ctx, err
+		// 	}
+
+		// 	log.Infof("kbsEndpoint for https kbs: %s", HTTPSkbsEndpoint)
+		// }
 
 		if podvmImage != "" {
 			log.Info("Podvm uploading")

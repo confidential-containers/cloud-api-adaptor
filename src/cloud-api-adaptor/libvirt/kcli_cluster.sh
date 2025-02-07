@@ -83,7 +83,7 @@ create () {
 
 	# The autolabeller docker image do not support s390x arch yet
 	# use node name to wait one worker node in 'Ready' status and then label worker nodes
-	local cmd="kubectl get nodes --no-headers | grep 'worker-.* Ready'"
+	local cmd="kubectl get nodes --no-headers -o wide| grep 'worker-.* Ready'"
 	echo "Wait at least one worker be Ready"
 	if ! wait_for_process "330" "30" "$cmd"; then
 		echo "ERROR: worker nodes not ready."
@@ -95,7 +95,8 @@ create () {
 		kubectl label --overwrite "$worker" node.kubernetes.io/worker=
 		kubectl label --overwrite "$worker" node-role.kubernetes.io/worker=
 	done
-
+    export WorkerNodeIP=$(kubectl get node peer-pods-worker-0 -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
+    echo "WorkerNodeIP: $WorkerNodeIP"
 	# Ensure that system pods are running or completed.
 	cmd="[ \$(kubectl get pods -A --no-headers | grep -v 'Running\|Completed' | wc -l) -eq 0 ]"
 	echo "Wait system pods be running or completed"
