@@ -383,8 +383,8 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 var errInstanceTypeNotFound = errors.New("instance type not found")
 
 // Add a method to retrieve cpu, memory, and storage from the instance type
-func (p *awsProvider) getInstanceTypeInformation(instanceType string) (vcpu int64, memory int64,
-	gpuCount int64, err error,
+func (p *awsProvider) getInstanceTypeInformation(instanceType string) (int64, int64,
+	int64, error,
 ) {
 	// Get the instance type information from the instance type using AWS API
 	input := &ec2.DescribeInstanceTypesInput{
@@ -401,10 +401,11 @@ func (p *awsProvider) getInstanceTypeInformation(instanceType string) (vcpu int6
 	// Get the vcpu, memory and gpu from the result
 	if len(result.InstanceTypes) > 0 {
 		instanceInfo := result.InstanceTypes[0]
-		vcpu = int64(*instanceInfo.VCpuInfo.DefaultVCpus)
-		memory = int64(*instanceInfo.MemoryInfo.SizeInMiB)
+		vcpu := int64(*instanceInfo.VCpuInfo.DefaultVCpus)
+		memory := *instanceInfo.MemoryInfo.SizeInMiB
+
 		// Get the GPU information
-		gpuCount = int64(0)
+		gpuCount := int64(0)
 		if instanceInfo.GpuInfo != nil {
 			for _, gpu := range instanceInfo.GpuInfo.Gpus {
 				gpuCount += int64(*gpu.Count)
@@ -413,6 +414,7 @@ func (p *awsProvider) getInstanceTypeInformation(instanceType string) (vcpu int6
 
 		return vcpu, memory, gpuCount, nil
 	}
+
 	return 0, 0, 0, errInstanceTypeNotFound
 }
 
