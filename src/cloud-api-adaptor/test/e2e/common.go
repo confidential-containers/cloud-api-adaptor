@@ -4,11 +4,15 @@
 package e2e
 
 import (
+	"bytes"
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net"
+	"net/url"
 	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -83,6 +87,162 @@ default WaitProcessRequest := true
 default WriteStreamRequest := true
 '''
 `
+
+var testInitdatahttps string = `algorithm = "sha384"
+version = "0.1.0"
+
+[data]
+"aa.toml" = '''
+[token_configs]
+[token_configs.coco_as]
+url = '%s'
+
+[token_configs.kbs]
+url = '%s'
+cert = """%s"""
+'''
+
+"cdh.toml"  = '''
+socket = 'unix:///run/confidential-containers/cdh.sock'
+
+[kbc]
+name = 'cc_kbc'
+url = '%s'
+kbs_cert = """%s"""
+'''
+
+"policy.rego" = '''
+package agent_policy
+
+import future.keywords.in
+import future.keywords.every
+
+import input
+
+# Default values, returned by OPA when rules cannot be evaluated to true.
+default CopyFileRequest := true
+default CreateContainerRequest := true
+default CreateSandboxRequest := true
+default DestroySandboxRequest := true
+default ExecProcessRequest := true
+default GetOOMEventRequest := true
+default GuestDetailsRequest := true
+default OnlineCPUMemRequest := true
+default PullImageRequest := true
+default ReadStreamRequest := true
+default RemoveContainerRequest := true
+default RemoveStaleVirtiofsShareMountsRequest := true
+default SignalProcessRequest := true
+default StartContainerRequest := true
+default StatsContainerRequest := true
+default TtyWinResizeRequest := true
+default UpdateEphemeralMountsRequest := true
+default UpdateInterfaceRequest := true
+default UpdateRoutesRequest := true
+default WaitProcessRequest := true
+default WriteStreamRequest := true
+'''
+`
+
+func ExtractIPAndPort(endpoint string) (string, string, error) {
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse URL: %v", err)
+	}
+
+	ip := parsedURL.Hostname()
+	port := parsedURL.Port()
+
+	if ip == "" || port == "" {
+		return "", "", fmt.Errorf("invalid IP or port extracted")
+	}
+
+	return ip, port, nil
+}
+
+func FormatHTTPSURL(ip, port string) string {
+	return fmt.Sprintf("https://%s:%s", ip, port)
+}
+
+func generateCert(ip string) (string, string, error) {
+	configTemplate := `[req]
+default_bits       = 2048
+default_keyfile    = localhost.key
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+x509_extensions    = v3_ca
+
+[req_distinguished_name]
+countryName                 = Country Name (2 letter code)
+countryName_default         = CN
+stateOrProvinceName         = State or Province Name (full name)
+stateOrProvinceName_default = Beijing
+localityName                = Locality Name (eg, city)
+localityName_default        = Beijing
+organizationName            = Organization Name (eg, company)
+organizationName_default    = localhost
+organizationalUnitName      = organizationalunit
+organizationalUnitName_default = Development
+commonName                  = Common Name (e.g. server FQDN or YOUR name)
+commonName_default          = localhost
+commonName_max              = 64
+
+[req_ext]
+subjectAltName = @alt_names
+
+[v3_ca]
+subjectAltName = @alt_names
+
+[alt_names]
+IP.1    = {{.IP}}
+DNS.1   = localhost
+DNS.2   = 127.0.0.1
+`
+
+	// Generate OpenSSL config dynamically
+	var configBuffer bytes.Buffer
+	tmpl, err := template.New("opensslConfig").Parse(configTemplate)
+	if err != nil {
+		return "", "", err
+	}
+	if err := tmpl.Execute(&configBuffer, struct{ IP string }{IP: ip}); err != nil {
+		return "", "", err
+	}
+
+	cmd := exec.Command("openssl", "req", "-x509", "-nodes", "-days", "365",
+		"-newkey", "rsa:2048",
+		"-keyout", "/dev/stdout",
+		"-out", "/dev/stdout",
+		"-config", "/dev/stdin",
+		"-subj", "/C=CN/ST=Beijing/L=Beijing/O=localhost/OU=Development/CN=localhost",
+		"-passin", "pass:")
+
+	cmd.Stdin = &configBuffer
+
+	var outputBuffer bytes.Buffer
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
+
+	if err := cmd.Run(); err != nil {
+		return "", "", fmt.Errorf("OpenSSL error: %v\n%s", err, outputBuffer.String())
+	}
+
+	output := outputBuffer.String()
+	keyStart := "-----BEGIN PRIVATE KEY-----"
+	certStart := "-----BEGIN CERTIFICATE-----"
+
+	keyIndex := bytes.Index([]byte(output), []byte(keyStart))
+	certIndex := bytes.Index([]byte(output), []byte(certStart))
+
+	if keyIndex == -1 || certIndex == -1 {
+		return "", "", fmt.Errorf("Failed to parse OpenSSL output")
+	}
+
+	keyContent := output[keyIndex:certIndex]
+	certContent := output[certIndex:]
+
+	return keyContent, certContent, nil
+}
 
 func isTestWithKbs() bool {
 	return os.Getenv("TEST_KBS") == "yes" || os.Getenv("TEST_KBS") == "true"
@@ -365,6 +525,39 @@ func NewBusyboxPodWithName(namespace, podName string) PodOrError {
 
 func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string) PodOrError {
 	initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
+	annotationData := map[string]string{
+		"io.katacontainers.config.runtime.cc_init_data": b64Data,
+	}
+	busyboxImage, err := utils.GetImage("busybox")
+	if err != nil {
+		return fromError(err)
+	}
+	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData)))
+}
+
+func NewBusyboxPodWithNameWithInitdatahttps(namespace, podName string, kbsEndpoint string) PodOrError {
+	kbsIP, port, err := ExtractIPAndPort(kbsEndpoint)
+	if err != nil {
+		fmt.Println("Error extracting IP:", err)
+	} else {
+		fmt.Println("Extracted IP:", kbsIP)
+	}
+	// Generate the certificate and key content
+	keyContent, certContent, err := generateCert(kbsIP)
+	if err != nil {
+		fmt.Println("Error generating certificate and key:", err)
+	}
+
+	// Send cert & key content to initdata (replace with actual logic)
+	fmt.Println("Certificate Content:")
+	fmt.Println(certContent)
+	fmt.Println("Key Content:")
+	fmt.Println(keyContent)
+
+	kbsEndpoint = FormatHTTPSURL(kbsIP, port)
+	initdata := fmt.Sprintf(testInitdatahttps, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+	fmt.Printf("[INFO] INITDATA %s", initdata)
 	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
 	annotationData := map[string]string{
 		"io.katacontainers.config.runtime.cc_init_data": b64Data,
