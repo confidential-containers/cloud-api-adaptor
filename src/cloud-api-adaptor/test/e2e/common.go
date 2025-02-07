@@ -144,21 +144,27 @@ default WriteStreamRequest := true
 '''
 `
 
-func extractIP(endpoint string) (string, error) {
+func ExtractIPAndPort(endpoint string) (string, string, error) {
 	parsedURL, err := url.Parse(endpoint)
 	if err != nil {
-		return "", err
+		return "", "", fmt.Errorf("failed to parse URL: %v", err)
 	}
 
-	host, _, err := net.SplitHostPort(parsedURL.Host)
-	if err != nil {
-		return parsedURL.Host, nil
+	ip := parsedURL.Hostname()
+	port := parsedURL.Port()
+
+	if ip == "" || port == "" {
+		return "", "", fmt.Errorf("invalid IP or port extracted")
 	}
 
-	return host, nil
+	return ip, port, nil
 }
 
-func generateCert(ip string) error {
+func FormatHTTPSURL(ip, port string) string {
+	return fmt.Sprintf("https://%s:%s", ip, port)
+}
+
+func generateCert(ip string) (string, string, error) {
 	configTemplate := `[req]
 default_bits       = 2048
 default_keyfile    = localhost.key
@@ -197,25 +203,45 @@ DNS.2   = 127.0.0.1
 	var configBuffer bytes.Buffer
 	tmpl, err := template.New("opensslConfig").Parse(configTemplate)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	if err := tmpl.Execute(&configBuffer, struct{ IP string }{IP: ip}); err != nil {
-		return err
+		return "", "", err
 	}
 
-	// Run OpenSSL using the generated config via stdin
 	cmd := exec.Command("openssl", "req", "-x509", "-nodes", "-days", "365",
 		"-newkey", "rsa:2048",
-		"-keyout", "localhost.key",
-		"-out", "localhost.crt",
+		"-keyout", "/dev/stdout",
+		"-out", "/dev/stdout",
 		"-config", "/dev/stdin",
+		"-subj", "/C=CN/ST=Beijing/L=Beijing/O=localhost/OU=Development/CN=localhost",
 		"-passin", "pass:")
 
-	cmd.Stdin = &configBuffer // Pass config via stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdin = &configBuffer
 
-	return cmd.Run()
+	var outputBuffer bytes.Buffer
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
+
+	if err := cmd.Run(); err != nil {
+		return "", "", fmt.Errorf("OpenSSL error: %v\n%s", err, outputBuffer.String())
+	}
+
+	output := outputBuffer.String()
+	keyStart := "-----BEGIN PRIVATE KEY-----"
+	certStart := "-----BEGIN CERTIFICATE-----"
+
+	keyIndex := bytes.Index([]byte(output), []byte(keyStart))
+	certIndex := bytes.Index([]byte(output), []byte(certStart))
+
+	if keyIndex == -1 || certIndex == -1 {
+		return "", "", fmt.Errorf("Failed to parse OpenSSL output")
+	}
+
+	keyContent := output[keyIndex:certIndex]
+	certContent := output[certIndex:]
+
+	return keyContent, certContent, nil
 }
 
 func isTestWithKbs() bool {
@@ -511,20 +537,26 @@ func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint st
 }
 
 func NewBusyboxPodWithNameWithInitdatahttps(namespace, podName string, kbsEndpoint string) PodOrError {
-	kbsIP, err := extractIP(kbsEndpoint)
+	kbsIP, port, err := ExtractIPAndPort(kbsEndpoint)
 	if err != nil {
 		fmt.Println("Error extracting IP:", err)
 	} else {
 		fmt.Println("Extracted IP:", kbsIP)
 	}
-	if err := generateCert(kbsIP); err != nil {
-		fmt.Println("Error generating certificate:", err)
+	// Generate the certificate and key content
+	keyContent, certContent, err := generateCert(kbsIP)
+	if err != nil {
+		fmt.Println("Error generating certificate and key:", err)
 	}
 
-	fmt.Println("Generated localhost.crt and localhost.key")
-	fmt.Println("Certificate Path: localhost.crt")
-	fmt.Println("Key Path: localhost.key")
-	initdata := fmt.Sprintf(testInitdatahttps, kbsEndpoint, kbsEndpoint, "localhost.crt", kbsEndpoint, "localhost.crt")
+	// Send cert & key content to initdata (replace with actual logic)
+	fmt.Println("Certificate Content:")
+	fmt.Println(certContent)
+	fmt.Println("Key Content:")
+	fmt.Println(keyContent)
+
+	kbsEndpoint = FormatHTTPSURL(kbsIP, port)
+	initdata := fmt.Sprintf(testInitdatahttps, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
 	fmt.Printf("[INFO] INITDATA %s", initdata)
 	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
 	annotationData := map[string]string{
