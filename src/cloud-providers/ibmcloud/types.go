@@ -77,6 +77,7 @@ type Config struct {
 	VpcID                    string
 	InstanceProfiles         instanceProfiles
 	InstanceProfileSpecList  []provider.InstanceTypeSpec
+	ConfidentialComputing    bool
 }
 
 func (c Config) Redact() Config {

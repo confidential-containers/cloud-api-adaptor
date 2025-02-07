@@ -56,8 +56,9 @@ type IBMCloudProperties struct {
 	WorkerCount   int
 	IsSelfManaged bool
 
-	VPC        *vpcv1.VpcV1
-	ClusterAPI containerv2.Clusters
+	VPC                   *vpcv1.VpcV1
+	ClusterAPI            containerv2.Clusters
+	ConfidentialComputing bool
 }
 
 var IBMCloudProps = &IBMCloudProperties{}
@@ -134,6 +135,10 @@ func InitIBMCloudProperties(properties map[string]string) error {
 	selfManagedStr := properties["IS_SELF_MANAGED_CLUSTER"]
 	if strings.EqualFold(selfManagedStr, "yes") || strings.EqualFold(selfManagedStr, "true") {
 		IBMCloudProps.IsSelfManaged = true
+	}
+	confidentialComputingStr := properties["CONFIDENTIAL_COMPUTING"]
+	if strings.EqualFold(confidentialComputingStr, "yes") || strings.EqualFold(confidentialComputingStr, "true") {
+		IBMCloudProps.ConfidentialComputing = true
 	}
 
 	if len(IBMCloudProps.ResourceGroupID) <= 0 {

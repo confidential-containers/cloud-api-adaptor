@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -958,23 +959,24 @@ func getProfileList() string {
 
 func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
-		"CLOUD_PROVIDER":                       IBMCloudProps.IBMCloudProvider,
-		"IBMCLOUD_VPC_ENDPOINT":                IBMCloudProps.VpcServiceURL,
-		"IBMCLOUD_RESOURCE_GROUP_ID":           IBMCloudProps.ResourceGroupID,
-		"IBMCLOUD_SSH_KEY_ID":                  IBMCloudProps.SshKeyID,
-		"IBMCLOUD_PODVM_IMAGE_ID":              IBMCloudProps.PodvmImageID,
-		"IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME": IBMCloudProps.InstanceProfile,
-		"IBMCLOUD_ZONE":                        IBMCloudProps.Zone,
-		"IBMCLOUD_VPC_SUBNET_ID":               IBMCloudProps.SubnetID,
-		"IBMCLOUD_VPC_SG_ID":                   IBMCloudProps.SecurityGroupID,
-		"IBMCLOUD_VPC_ID":                      IBMCloudProps.VpcID,
-		"CRI_RUNTIME_ENDPOINT":                 "/run/cri-runtime/containerd.sock",
-		"IBMCLOUD_API_KEY":                     IBMCloudProps.ApiKey,
-		"IBMCLOUD_IAM_PROFILE_ID":              IBMCloudProps.IamProfileID,
-		"IBMCLOUD_IAM_ENDPOINT":                IBMCloudProps.IamServiceURL,
-		"IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST": getProfileList(),
-		"TUNNEL_TYPE":                          IBMCloudProps.TunnelType,
-		"VXLAN_PORT":                           IBMCloudProps.VxlanPort,
+		"CLOUD_PROVIDER":                        IBMCloudProps.IBMCloudProvider,
+		"IBMCLOUD_VPC_ENDPOINT":                 IBMCloudProps.VpcServiceURL,
+		"IBMCLOUD_RESOURCE_GROUP_ID":            IBMCloudProps.ResourceGroupID,
+		"IBMCLOUD_SSH_KEY_ID":                   IBMCloudProps.SshKeyID,
+		"IBMCLOUD_PODVM_IMAGE_ID":               IBMCloudProps.PodvmImageID,
+		"IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME":  IBMCloudProps.InstanceProfile,
+		"IBMCLOUD_PODVM_CONFIDENTIAL_COMPUTING": strconv.FormatBool(IBMCloudProps.ConfidentialComputing),
+		"IBMCLOUD_ZONE":                         IBMCloudProps.Zone,
+		"IBMCLOUD_VPC_SUBNET_ID":                IBMCloudProps.SubnetID,
+		"IBMCLOUD_VPC_SG_ID":                    IBMCloudProps.SecurityGroupID,
+		"IBMCLOUD_VPC_ID":                       IBMCloudProps.VpcID,
+		"CRI_RUNTIME_ENDPOINT":                  "/run/cri-runtime/containerd.sock",
+		"IBMCLOUD_API_KEY":                      IBMCloudProps.ApiKey,
+		"IBMCLOUD_IAM_PROFILE_ID":               IBMCloudProps.IamProfileID,
+		"IBMCLOUD_IAM_ENDPOINT":                 IBMCloudProps.IamServiceURL,
+		"IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST":  getProfileList(),
+		"TUNNEL_TYPE":                           IBMCloudProps.TunnelType,
+		"VXLAN_PORT":                            IBMCloudProps.VxlanPort,
 	}
 }
 
