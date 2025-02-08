@@ -332,18 +332,19 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		return err
 	}
 
-	log.Info("Installing cert-manager")
-	cmd = exec.Command("make", "-C", "../webhook", "deploy-cert-manager")
-	// Run the deployment from the root src dir
-	cmd.Dir = p.rootSrcDir
-	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
-	stdoutStderr, err = cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
-	if err != nil {
-		log.Infof("Error  in install cert-manager: %s: %s", err, stdoutStderr)
+	// TODO:
+	// log.Info("Installing cert-manager")
+	// cmd = exec.Command("make", "-C", "../webhook", "deploy-cert-manager")
+	// // Run the deployment from the root src dir
+	// cmd.Dir = p.rootSrcDir
+	// cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
+	// stdoutStderr, err = cmd.CombinedOutput()
+	// log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	// if err != nil {
+	// 	log.Infof("Error  in install cert-manager: %s: %s", err, stdoutStderr)
 
-		return err
-	}
+	// 	return err
+	// }
 
 	log.Info("Installing webhook")
 	cmd = exec.Command("make", "-C", "../webhook", "deploy")
