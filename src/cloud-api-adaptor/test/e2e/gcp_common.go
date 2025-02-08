@@ -8,26 +8,23 @@ import (
 	"fmt"
 	"testing"
 	"time"
-	
+
 	compute "cloud.google.com/go/compute/apiv1"
-	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/gcp"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
+	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/gcp"
 	log "github.com/sirupsen/logrus"
 )
 
 // GCPCloudAssert implements the CloudAssert interface for gcp.
 type GCPCloudAssert struct{}
 
-
 func NewGCPAssert() GCPCloudAssert {
 	return GCPCloudAssert{}
 }
 
-
 func (c GCPCloudAssert) DefaultTimeout() time.Duration {
 	return 2 * time.Minute
 }
-
 
 func gcpFindVM(prefixName string) (*computepb.Instance, error) {
 	ctx := context.Background()
@@ -36,7 +33,6 @@ func gcpFindVM(prefixName string) (*computepb.Instance, error) {
 		return nil, fmt.Errorf("NewInstancesRESTClient: %w", err)
 	}
 	defer instancesClient.Close()
-
 
 	filter := fmt.Sprintf("name eq ^%s.*", prefixName)
 	req := &computepb.ListInstancesRequest{
@@ -55,10 +51,9 @@ func gcpFindVM(prefixName string) (*computepb.Instance, error) {
 	return instance, nil
 }
 
-
 func (c GCPCloudAssert) HasPodVM(t *testing.T, id string) {
 	pod_vm_prefix := "podvm-" + id
-	vm, err := gcpFindVM(pod_vm_prefix) 
+	vm, err := gcpFindVM(pod_vm_prefix)
 	if vm != nil {
 		t.Logf("Vitural machine %s found.", id)
 	} else {
@@ -66,7 +61,6 @@ func (c GCPCloudAssert) HasPodVM(t *testing.T, id string) {
 		t.Error("PodVM was not created")
 	}
 }
- 
 
 func (c GCPCloudAssert) GetInstanceType(t *testing.T, podName string) (string, error) {
 	// Get Instance Type of PodVM
