@@ -205,15 +205,17 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		}
 	} else {
 
+		imageId := p.serviceConfig.ImageId
+
 		if spec.Image != "" {
 			logger.Printf("Choosing %s from annotation as the AWS AMI for the PodVM image", spec.Image)
-			p.serviceConfig.ImageId = spec.Image
+			imageId = spec.Image
 		}
 
 		input = &ec2.RunInstancesInput{
 			MinCount:          aws.Int32(1),
 			MaxCount:          aws.Int32(1),
-			ImageId:           aws.String(p.serviceConfig.ImageId),
+			ImageId:           aws.String(imageId),
 			InstanceType:      types.InstanceType(instanceType),
 			SecurityGroupIds:  p.serviceConfig.SecurityGroupIds,
 			SubnetId:          aws.String(p.serviceConfig.SubnetId),
@@ -337,8 +339,8 @@ func (p *awsProvider) Teardown() error {
 }
 
 func (p *awsProvider) ConfigVerifier() error {
-	ImageId := p.serviceConfig.ImageId
-	if len(ImageId) == 0 {
+	imageId := p.serviceConfig.ImageId
+	if len(imageId) == 0 {
 		return fmt.Errorf("ImageId is empty")
 	}
 	return nil
