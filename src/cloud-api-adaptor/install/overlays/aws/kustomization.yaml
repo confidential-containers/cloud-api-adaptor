@@ -34,6 +34,8 @@ configMapGenerator:
   #- AWS_SUBNET_ID="" # if not set retrieved from IMDS
   #- TAGS="" # Uncomment and add key1=value1,key2=value2 etc if you want to use specific tags for podvm
   #- USE_PUBLIC_IP="true" # Uncomment if you want to use public ip for podvm
+  #- EXTERNAL_NETWORK_VIA_PODVM="true" # Uncomment if you want to use podvm as external network
+  #- POD_SUBNET_CIDRS="10.244.0.0/16,10.96.0.0/12" # Uncomment and set if you want to use specific subnet cidrs for podvm. Comma separated. The default is for a kind cluster
   #- ROOT_VOLUME_SIZE="30" # Uncomment and set if you want to use a specific root volume size. Defaults to 30
   #- FORWARDER_PORT="" # Uncomment and set if you want to use a specific port for agent-protocol-forwarder. Defaults to 15150
   #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10

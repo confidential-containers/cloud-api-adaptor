@@ -123,6 +123,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.IntVar(&cfg.networkConfig.VXLAN.Port, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN UDP port number (VXLAN tunnel mode only")
 		flags.IntVar(&cfg.networkConfig.VXLAN.MinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
 		flags.BoolVar(&cfg.networkConfig.ExternalNetViaPodVM, "ext-network-via-podvm", false, "Enable external networking via pod VM")
+		// Local pod subnets. This will be used by APF to create routes for local pod subnets when using external networking via pod VM
+		flags.Var(&cfg.networkConfig.PodSubnetCIDRs, "pod-subnet-cidrs", "Local pod subnets")
 		flags.StringVar(&cfg.serverConfig.Initdata, "initdata", "", "Default initdata for all Pods")
 		flags.BoolVar(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "Enable cloud config verify - should use it for production")
 		flags.IntVar(&cfg.serverConfig.PeerPodsLimitPerNode, "peerpods-limit-per-node", 10, "peer pods limit per node (default=10)")

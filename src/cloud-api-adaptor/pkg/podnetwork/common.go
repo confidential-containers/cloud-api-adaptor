@@ -220,7 +220,7 @@ func isInterfaceFilteredOut(ifName string) bool {
 // Function to move the network interface to a different network namespace
 // Also set the default route and address for the interface in the new namespace
 
-func moveInterfaceToNamespace(srcNs, dstNs netops.Namespace, iface string, addrCIDR netip.Prefix, route *netops.Route) error {
+func moveInterfaceToNamespace(srcNs, dstNs netops.Namespace, iface string, addrCIDR netip.Prefix, defRoute *netops.Route) error {
 
 	// Get the network interface object
 	link, err := srcNs.LinkFind(iface)
@@ -261,9 +261,9 @@ func moveInterfaceToNamespace(srcNs, dstNs netops.Namespace, iface string, addrC
 	}
 
 	// Set the default route for the network interface in the new namespace
-	err = dstNs.RouteAdd(route)
+	err = dstNs.RouteAdd(defRoute)
 	if err != nil {
-		return fmt.Errorf("failed to set route %v for link %q: %w", route, iface, err)
+		return fmt.Errorf("failed to set route %v for link %q: %w", defRoute, iface, err)
 	}
 
 	return nil
