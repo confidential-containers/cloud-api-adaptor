@@ -326,7 +326,7 @@ func (p *awsProvider) DeleteInstance(ctx context.Context, instanceID string) err
 
 	resp, err := p.ec2Client.TerminateInstances(ctx, terminateInput)
 	if err != nil {
-		logger.Printf("failed to delete instance: %v and the response is %v", err, resp)
+		logger.Printf("failed to delete instance %v: %v and the response is %v", instanceID, err, resp)
 		return err
 	}
 
