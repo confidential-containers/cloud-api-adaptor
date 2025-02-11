@@ -90,7 +90,6 @@ azure() {
         -region "${AZURE_REGION}" \
         -instance-size "${AZURE_INSTANCE_SIZE}" \
         -resourcegroup "${AZURE_RESOURCE_GROUP}" \
-        -vxlan-port 8472 \
         -subnetid "${AZURE_SUBNET_ID}" \
         -securitygroupid "${AZURE_NSG_ID}" \
         -imageid "${AZURE_IMAGE_ID}" \
