@@ -110,6 +110,8 @@ gcp() {
 ibmcloud() {
     one_of IBMCLOUD_API_KEY IBMCLOUD_IAM_PROFILE_ID
 
+    [[ "${DISABLECVM}" = "true" ]] && optionals+="-disable-cvm "
+
     set -x
     exec cloud-api-adaptor ibmcloud \
         -iam-service-url "${IBMCLOUD_IAM_ENDPOINT}" \

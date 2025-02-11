@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -975,6 +976,7 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST": getProfileList(),
 		"TUNNEL_TYPE":                          IBMCloudProps.TunnelType,
 		"VXLAN_PORT":                           IBMCloudProps.VxlanPort,
+		"DISABLECVM":                           strconv.FormatBool(IBMCloudProps.DisableCVM),
 	}
 }
 

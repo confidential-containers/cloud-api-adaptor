@@ -30,6 +30,7 @@ configMapGenerator:
   - IBMCLOUD_VPC_SG_ID="" #set
   - IBMCLOUD_VPC_ID="" #set
   - CRI_RUNTIME_ENDPOINT="/run/cri-runtime/containerd.sock"
+  - DISABLECVM="true" # Set to false to enable confidential VM
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789

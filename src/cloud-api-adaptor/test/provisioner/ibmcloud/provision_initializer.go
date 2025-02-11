@@ -55,6 +55,7 @@ type IBMCloudProperties struct {
 
 	WorkerCount   int
 	IsSelfManaged bool
+	DisableCVM    bool
 
 	VPC        *vpcv1.VpcV1
 	ClusterAPI containerv2.Clusters
@@ -134,6 +135,10 @@ func InitIBMCloudProperties(properties map[string]string) error {
 	selfManagedStr := properties["IS_SELF_MANAGED_CLUSTER"]
 	if strings.EqualFold(selfManagedStr, "yes") || strings.EqualFold(selfManagedStr, "true") {
 		IBMCloudProps.IsSelfManaged = true
+	}
+	confidentialComputingStr := properties["DISABLECVM"]
+	if strings.EqualFold(confidentialComputingStr, "yes") || strings.EqualFold(confidentialComputingStr, "true") {
+		IBMCloudProps.DisableCVM = true
 	}
 
 	if len(IBMCloudProps.ResourceGroupID) <= 0 {
