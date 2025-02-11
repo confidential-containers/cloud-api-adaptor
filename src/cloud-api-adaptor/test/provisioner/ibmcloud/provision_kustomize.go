@@ -59,6 +59,8 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "VXLAN_PORT":
 		return true
+	case "DISABLECVM":
+		return true
 	default:
 		return false
 	}
