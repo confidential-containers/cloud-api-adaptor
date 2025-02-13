@@ -29,7 +29,7 @@ KBS_SHA="$(git rev-parse HEAD)"
 
 YAML_FILE="kbs/config/kubernetes/base/deployment.yaml"
 
-yq -i '.spec.template.spec.containers[0].volumeMounts += [{"name": "kbs-https-certificate", "mountPath": "/etc/kbs"}, {"name": "kbs-https-key", "mountPath": "/etc/kbs}]' "$YAML_FILE"
+yq -i '.spec.template.spec.containers[0].volumeMounts += [{"name": "kbs-https-certificate", "mountPath": "/etc/kbs"}, {"name": "kbs-https-key", "mountPath": "/etc/kbs"}]' "$YAML_FILE"
 
 yq -i '.spec.template.spec.volumes += [{"name": "kbs-https-certificate", "secret": {"secretName": "kbs-https-certificate"}}, {"name": "kbs-https-key", "secret": {"secretName": "kbs-https-key"}}]' "$YAML_FILE"
 
