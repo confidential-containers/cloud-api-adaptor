@@ -137,7 +137,7 @@ DNS.2   = 127.0.0.1
 		return "", "", fmt.Errorf("Failed to write cert file: %v", err)
 	}
 
-	if err := os.WriteFile(keyPath, []byte(certContent), 0600); err != nil {
+	if err := os.WriteFile(keyPath, []byte(keyContent), 0600); err != nil {
 		return "", "", fmt.Errorf("Failed to write cert file: %v", err)
 	}
 	dir, _ = os.Getwd()
