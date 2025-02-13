@@ -97,15 +97,35 @@ DNS.2   = 127.0.0.1
 	keyStart := "-----BEGIN PRIVATE KEY-----"
 	certStart := "-----BEGIN CERTIFICATE-----"
 
-	keyIndex := bytes.Index([]byte(output), []byte(keyStart))
-	certIndex := bytes.Index([]byte(output), []byte(certStart))
+	keyIndex := strings.Index(output, keyStart)
+	certIndex := strings.Index(output, certStart)
 
-	if keyIndex == -1 || certIndex == -1 {
-		return "", "", fmt.Errorf("Failed to parse OpenSSL output")
+	if keyIndex == -1 && certIndex == -1 {
+		return "", "", fmt.Errorf("failed to parse OpenSSL output: no key or certificate found")
 	}
 
-	keyContent := output[keyIndex:certIndex]
-	certContent := output[certIndex:]
+	var keyContent, certContent string
+
+	// Extract Private Key if present
+	if keyIndex != -1 {
+		endKeyIndex := strings.Index(output[keyIndex:], "-----END PRIVATE KEY-----")
+		if endKeyIndex == -1 {
+			return "", "", fmt.Errorf("failed to parse private key")
+		}
+		endKeyIndex += keyIndex + len("-----END PRIVATE KEY-----")
+		keyContent = strings.TrimSpace(output[keyIndex:endKeyIndex])
+	}
+
+	// Extract Certificate if present
+	if certIndex != -1 {
+		endCertIndex := strings.Index(output[certIndex:], "-----END CERTIFICATE-----")
+		if endCertIndex == -1 {
+			return "", "", fmt.Errorf("failed to parse certificate")
+		}
+		endCertIndex += certIndex + len("-----END CERTIFICATE-----")
+		certContent = strings.TrimSpace(output[certIndex:endCertIndex])
+	}
+
 	fmt.Println("keycontent in function:", keyContent)
 	fmt.Println("certcontent in function:", certContent)
 	dir, _ := os.Getwd()
@@ -113,7 +133,7 @@ DNS.2   = 127.0.0.1
 	keyPath := filepath.Join("../trustee", "kbs", "config", "kubernetes", "base", "https-key.pem")
 	certPath := filepath.Join("../trustee", "kbs", "config", "kubernetes", "base", "https-cert.pem")
 
-	if err := os.WriteFile(certPath, []byte(certContent), 0644); err != nil {
+	if err := os.WriteFile(certPath, []byte(certContent), 0640); err != nil {
 		return "", "", fmt.Errorf("Failed to write cert file: %v", err)
 	}
 
