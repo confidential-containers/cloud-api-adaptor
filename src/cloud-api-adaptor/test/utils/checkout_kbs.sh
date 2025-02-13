@@ -17,7 +17,7 @@ install_kbs_client() {
     kbs_sha=$1
     arch=$(uname -m)
 
-    oras pull "ghcr.io/confidential-containers/staged-images/kbs-client:sample_only-${arch}-linux-gnu-${kbs_sha}"
+    oras pull "ghcr.io/confidential-containers/staged-images/kbs-client:sample_only-${kbs_sha}-${arch}"
     chmod +x ./kbs-client
 }
 
