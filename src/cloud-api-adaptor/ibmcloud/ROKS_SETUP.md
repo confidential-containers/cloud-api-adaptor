@@ -188,6 +188,7 @@ REGION="$(ibmcloud is zone $ZONE -json | jq -r .region.name)"
 IBMCLOUD_PROVIDER="ibmcloud"
 INSTANCE_PROFILE_NAME="bx2-2x8"
 CAA_IMAGE_TAG="latest-amd64"
+DISABLECVM="true"
 EOF
 ```
 
