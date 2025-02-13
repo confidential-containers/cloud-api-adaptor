@@ -58,13 +58,14 @@ type Daemon interface {
 }
 
 type daemon struct {
-	tlsConfig   *tlsutil.TLSConfig
-	interceptor interceptor.Interceptor
-	podNode     podnetwork.PodNode
-	readyCh     chan struct{}
-	stopCh      chan struct{}
-	listenAddr  string
-	stopOnce    sync.Once
+	tlsConfig           *tlsutil.TLSConfig
+	interceptor         interceptor.Interceptor
+	podNode             podnetwork.PodNode
+	readyCh             chan struct{}
+	stopCh              chan struct{}
+	listenAddr          string
+	stopOnce            sync.Once
+	externalNetViaPodVM bool
 }
 
 func NewDaemon(spec *Config, listenAddr string, tlsConfig *tlsutil.TLSConfig, interceptor interceptor.Interceptor, podNode podnetwork.PodNode) Daemon {
@@ -85,6 +86,10 @@ func NewDaemon(spec *Config, listenAddr string, tlsConfig *tlsutil.TLSConfig, in
 		podNode:     podNode,
 		readyCh:     make(chan struct{}),
 		stopCh:      make(chan struct{}),
+	}
+
+	if spec.PodNetwork != nil {
+		daemon.externalNetViaPodVM = spec.PodNetwork.ExternalNetViaPodVM
 	}
 
 	return daemon
