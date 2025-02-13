@@ -572,17 +572,31 @@ func NewHTTPSKbsInstallOverlay(installDir string, workerNodeIP string) (InstallO
 	// 	fmt.Println("Error moving file:", err)
 	// }
 	fmt.Printf("worker node ip in https kbs overlay %s", workerNodeIP)
-	keyContent, certContent, err := generateCert(workerNodeIP)
-	fmt.Println("Certificate Content:")
-	fmt.Println(certContent)
-	fmt.Println("Key Content:")
-	fmt.Println(keyContent)
+	if workerNodeIP != "" {
+		keyContent, certContent, err := generateCert(workerNodeIP)
+		fmt.Println("Certificate Content:")
+		fmt.Println(certContent)
+		fmt.Println("Key Content:")
+		fmt.Println(keyContent)
 
-	if err != nil {
-		fmt.Println("Error generating certificate and key:", err)
+		if err != nil {
+			fmt.Println("Error generating certificate and key:", err)
+		}
 	}
 
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/base/"))
+	platform, err := getHardwarePlatform()
+	if err != nil {
+		return nil, err
+	}
+
+	var overlayFolder string
+	if platform == "x86_64" && os.Getenv("CUSTOM_PCCS_URL") != "" {
+		log.Info("CUSTOM_PCCS_URL is provided on x86_64, deploy with custom pccs config")
+		overlayFolder = "kbs/config/kubernetes/custom_pccs"
+	} else {
+		overlayFolder = "kbs/config/kubernetes/nodeport/"
+	}
+	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, overlayFolder))
 	if err != nil {
 		return nil, err
 	}
@@ -803,7 +817,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 	}
 
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay(trusteeRepoPath)
+	tmpoverlay, err := NewHTTPSKbsInstallOverlay(trusteeRepoPath, "")
 	if err != nil {
 		return err
 	}
@@ -817,7 +831,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 
 func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) error {
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay(trusteeRepoPath)
+	tmpoverlay, err := NewHTTPSKbsInstallOverlay(trusteeRepoPath, "")
 	if err != nil {
 		return err
 	}
