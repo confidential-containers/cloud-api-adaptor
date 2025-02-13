@@ -119,12 +119,12 @@ func TestDockerKbsKeyRelease(t *testing.T) {
 	}
 	assert := DockerAssert{}
 	t.Parallel()
-	DoTestKbsKeyReleaseForFailure(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
+	DoTestHTTPSKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
 	}
-	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
+	DoTestHTTPSKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
 func TestDockerCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
