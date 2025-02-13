@@ -16,6 +16,7 @@ RUN mkosi --version
 
 RUN mkdir /image
 WORKDIR /image
+COPY mkosi.packages /image/mkosi.packages
 COPY mkosi.postinst /image/mkosi.postinst
 COPY mkosi.presets /image/mkosi.presets
 COPY mkosi.profiles /image/mkosi.profiles
