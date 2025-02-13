@@ -146,15 +146,21 @@ jobs:
             fi
             echo "sleeping for ${n} seconds"
             sleep "$n"
-            VM_IP="$(sudo virsh -q domifaddr smoketest | awk '{print $4}' | cut -d/ -f1)"
-            if [ -n "$VM_IP" ]; then
+            vm_ip="$(sudo virsh -q domifaddr smoketest | awk '{print $4}' | cut -d/ -f1)"
+            if [ -n "$vm_ip" ]; then
               break
             fi
           done
-          echo "VM_IP=$VM_IP" >> "$GITHUB_ENV"
+          echo "VM_IP=$vm_ip" >> "$GITHUB_ENV"
 
       - name: Run smoke test
         run: |
-          socat UNIX-LISTEN:./apf.sock,fork "TCP:${VM_IP}:15150" &
-          sleep 1
-          kata-agent-ctl connect --server-address unix://./apf.sock --cmd CreateSandbox
+          host_port="${VM_IP}:15150"
+          sock="./agent.sock"
+          echo "bridge ${host_port} to ${sock}"
+          socat "UNIX-LISTEN:${sock},fork" "TCP:${host_port}" &
+          echo "sleeping for 5 seconds"
+          sleep 5
+          kata-agent-ctl connect \
+            --server-address "unix://${sock}" \
+            --cmd CreateSandbox
