@@ -29,7 +29,7 @@ KBS_SHA="$(git rev-parse HEAD)"
 
 YAML_FILE="kbs/config/kubernetes/base/deployment.yaml"
 
-yq -i '.spec.template.spec.containers[0].volumeMounts += [{"name": "kbs-https-certificate", "mountPath": "/etc/https-cert.pem"}, {"name": "kbs-https-key", "mountPath": "/etc/https-key.pem"}]' "$YAML_FILE"
+yq -i '.spec.template.spec.containers[0].volumeMounts += [{"name": "kbs-https-certificate", "mountPath": "/etc/kbs"}, {"name": "kbs-https-key", "mountPath": "/etc/kbs}]' "$YAML_FILE"
 
 yq -i '.spec.template.spec.volumes += [{"name": "kbs-https-certificate", "secret": {"secretName": "kbs-https-certificate"}}, {"name": "kbs-https-key", "secret": {"secretName": "kbs-https-key"}}]' "$YAML_FILE"
 
@@ -40,8 +40,8 @@ TOML_FILE="kbs/config/kubernetes/base/kbs-config.toml"
 
 sed -i '/insecure_http = true/c\
 insecure_api = true \
-private_key = "/etc/https-key.pem" \
-certificate = "/etc/https-cert.pem"' "$TOML_FILE"
+private_key = "/etc/kbs/https-key.pem" \
+certificate = "/etc/kbs/https-cert.pem"' "$TOML_FILE"
 
 cat "$TOML_FILE"
 
