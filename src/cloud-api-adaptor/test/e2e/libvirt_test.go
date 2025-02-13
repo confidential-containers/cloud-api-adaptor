@@ -151,6 +151,7 @@ func TestLibvirtSealedSecret(t *testing.T) {
 	}
 
 	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
+	fmt.Printf("testSecret is: %s", testSecret)
 	resourcePath := "caa/workload_key/test_key.bin"
 	err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
 	if err != nil {
@@ -174,7 +175,7 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 	}
 	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
 	dir, _ := os.Getwd()
-	fmt.Println("current directory from trustee_kbs.go:", dir)
+	fmt.Println("current directory from libvirt_test.go:", dir)
 	resourcePath := "caa/workload_key/test_key.bin"
 	err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
 	if err != nil {
