@@ -24,12 +24,10 @@ import (
 var (
 	logger = log.New(log.Writer(), "[adaptor/cloud/aws] ", log.LstdFlags|log.Lmsgprefix)
 
-	errNotReady             = errors.New("address not ready")
-	errNoImageID            = errors.New("ImageId is empty")
-	errNilPublicIPAddress   = errors.New("public IP address is nil")
-	errEmptyPublicIPAddress = errors.New("public IP address is empty")
-	errImageDetailsFailed   = errors.New("unable to get image details")
-	errDeviceNameEmpty      = errors.New("empty device name")
+	errNotReady           = errors.New("address not ready")
+	errNoImageID          = errors.New("ImageId is empty")
+	errImageDetailsFailed = errors.New("unable to get image details")
+	errDeviceNameEmpty    = errors.New("empty device name")
 )
 
 const (
@@ -137,7 +135,6 @@ func getIPs(instance types.Instance) ([]netip.Addr, error) {
 	var podNodeIPs []netip.Addr
 	for i, nic := range instance.NetworkInterfaces {
 		addr := nic.PrivateIpAddress
-
 		if addr == nil || *addr == "" || *addr == "0.0.0.0" {
 			return nil, errNotReady
 		}
@@ -329,9 +326,7 @@ func (p *awsProvider) DeleteInstance(ctx context.Context, instanceID string) err
 		logger.Printf("failed to delete instance %v: %v and the response is %v", instanceID, err, resp)
 		return err
 	}
-
-	logger.Printf("Deleted instance %s", instanceID)
-
+	logger.Printf("deleted an instance %s", instanceID)
 	return nil
 }
 
@@ -380,42 +375,35 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 	return nil
 }
 
-var errInstanceTypeNotFound = errors.New("instance type not found")
-
 // Add a method to retrieve cpu, memory, and storage from the instance type
-func (p *awsProvider) getInstanceTypeInformation(instanceType string) (int64, int64,
-	int64, error,
-) {
+func (p *awsProvider) getInstanceTypeInformation(instanceType string) (int64, int64, int64, error) {
 	// Get the instance type information from the instance type using AWS API
 	input := &ec2.DescribeInstanceTypesInput{
-		InstanceTypes: []types.InstanceType{
-			types.InstanceType(instanceType),
-		},
+		InstanceTypes: []types.InstanceType{types.InstanceType(instanceType)},
 	}
+
 	// Get the instance type information from the instance type using AWS API
 	result, err := p.ec2Client.DescribeInstanceTypes(context.Background(), input)
 	if err != nil {
 		return 0, 0, 0, err
 	}
 
-	// Get the vcpu, memory and gpu from the result
-	if len(result.InstanceTypes) > 0 {
-		instanceInfo := result.InstanceTypes[0]
-		vcpu := int64(*instanceInfo.VCpuInfo.DefaultVCpus)
-		memory := *instanceInfo.MemoryInfo.SizeInMiB
-
-		// Get the GPU information
-		gpuCount := int64(0)
-		if instanceInfo.GpuInfo != nil {
-			for _, gpu := range instanceInfo.GpuInfo.Gpus {
-				gpuCount += int64(*gpu.Count)
-			}
-		}
-
-		return vcpu, memory, gpuCount, nil
+	if len(result.InstanceTypes) == 0 {
+		return 0, 0, 0, fmt.Errorf("instance type %s not found", instanceType)
 	}
 
-	return 0, 0, 0, errInstanceTypeNotFound
+	// Get the vcpu, memory and gpu from the result
+	instanceInfo := result.InstanceTypes[0]
+	vcpu := *instanceInfo.VCpuInfo.DefaultVCpus
+	memory := *instanceInfo.MemoryInfo.SizeInMiB
+	gpuCount := int64(0)
+	if instanceInfo.GpuInfo != nil {
+		for _, gpu := range instanceInfo.GpuInfo.Gpus {
+			gpuCount += int64(*gpu.Count)
+		}
+	}
+
+	return int64(vcpu), memory, gpuCount, nil
 }
 
 // Add a method to get public IP address of the instance
@@ -426,6 +414,9 @@ func (p *awsProvider) getPublicIP(ctx context.Context, instanceID string) (netip
 	describeInstanceInput := &ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceID},
 	}
+
+	// Create New InstanceRunningWaiter
+	// waiter := ec2.NewInstanceRunningWaiter(p.ec2Client)
 
 	// Wait for instance to be ready before getting the public IP address
 	if err := p.waiter.Wait(ctx, describeInstanceInput, maxWaitTime); err != nil {
@@ -439,29 +430,20 @@ func (p *awsProvider) getPublicIP(ctx context.Context, instanceID string) (netip
 		logger.Printf("failed to describe instance %s: %v", instanceID, err)
 		return netip.Addr{}, err
 	}
-	// Get the public IP address from InstanceNetworkInterfaceAssociation
-	publicIP := describeInstanceOutput.Reservations[0].Instances[0].NetworkInterfaces[0].Association.PublicIp
 
-	// Check if the public IP address is nil
-	if publicIP == nil {
-		return netip.Addr{}, errNilPublicIPAddress
-	}
-	// If the public IP address is empty, return an error
-	if *publicIP == "" {
-		return netip.Addr{}, errEmptyPublicIPAddress
+	publicIP := describeInstanceOutput.Reservations[0].Instances[0].NetworkInterfaces[0].Association.PublicIp
+	if publicIP == nil || *publicIP == "" {
+		return netip.Addr{}, fmt.Errorf("invalid public IP address: %v", publicIP)
 	}
 
 	logger.Printf("public IP address instance %s: %s", instanceID, *publicIP)
 
-	// Parse the public IP address
 	return netip.ParseAddr(*publicIP)
 }
 
 func (p *awsProvider) getDeviceNameAndSize(imageID string) (string, int32, error) {
 	// Add describe images input
-	describeImagesInput := &ec2.DescribeImagesInput{
-		ImageIds: []string{imageID},
-	}
+	describeImagesInput := &ec2.DescribeImagesInput{ImageIds: []string{imageID}}
 
 	// Add describe images output
 	describeImagesOutput, err := p.ec2Client.DescribeImages(context.Background(), describeImagesInput)
@@ -474,17 +456,12 @@ func (p *awsProvider) getDeviceNameAndSize(imageID string) (string, int32, error
 		return "", 0, errImageDetailsFailed
 	}
 
-	// Get the device name
 	deviceName := describeImagesOutput.Images[0].RootDeviceName
-
-	// Check if the device name is empty
 	if deviceName == nil || *deviceName == "" {
 		return "", 0, errDeviceNameEmpty
 	}
 
-	// Get the device size if it is set
 	deviceSize := describeImagesOutput.Images[0].BlockDeviceMappings[0].Ebs.VolumeSize
-
 	if deviceSize == nil {
 		logger.Printf("image %s device size not set", imageID)
 		return *deviceName, 0, nil

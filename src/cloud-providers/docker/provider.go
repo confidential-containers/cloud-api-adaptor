@@ -29,7 +29,6 @@ type dockerProvider struct {
 const maxInstanceNameLen = 63
 
 func NewProvider(config *Config) (*dockerProvider, error) {
-
 	logger.Printf("docker config: %#v", config)
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -38,7 +37,7 @@ func NewProvider(config *Config) (*dockerProvider, error) {
 	}
 
 	// Create the data directory if it doesn't exist
-	err = os.MkdirAll(config.DataDir, 0755)
+	err = os.MkdirAll(config.DataDir, 0o755)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +51,8 @@ func NewProvider(config *Config) (*dockerProvider, error) {
 }
 
 func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID string,
-	cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
-
+	cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec,
+) (*provider.Instance, error) {
 	instanceName := putil.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
@@ -119,11 +118,9 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 		Name: instanceName,
 		IPs:  []netip.Addr{ipAddr}, // Convert ipAddr to a slice of netip.Addr
 	}, nil
-
 }
 
 func (p *dockerProvider) DeleteInstance(ctx context.Context, instanceID string) error {
-
 	logger.Printf("DeleteInstance: instanceID: %q", instanceID)
 
 	// Delete the container
