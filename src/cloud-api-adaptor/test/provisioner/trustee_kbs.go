@@ -4,6 +4,7 @@
 package provisioner
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -15,6 +16,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -27,6 +29,121 @@ import (
 )
 
 var trusteeRepoPath string
+
+func generateCert(ip string) (string, string, error) {
+	configTemplate := `[req]
+default_bits       = 2048
+default_keyfile    = localhost.key
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+x509_extensions    = v3_ca
+
+[req_distinguished_name]
+countryName                 = Country Name (2 letter code)
+countryName_default         = CN
+stateOrProvinceName         = State or Province Name (full name)
+stateOrProvinceName_default = Beijing
+localityName                = Locality Name (eg, city)
+localityName_default        = Beijing
+organizationName            = Organization Name (eg, company)
+organizationName_default    = localhost
+organizationalUnitName      = organizationalunit
+organizationalUnitName_default = Development
+commonName                  = Common Name (e.g. server FQDN or YOUR name)
+commonName_default          = localhost
+commonName_max              = 64
+
+[req_ext]
+subjectAltName = @alt_names
+
+[v3_ca]
+subjectAltName = @alt_names
+
+[alt_names]
+IP.1    = {{.IP}}
+DNS.1   = localhost
+DNS.2   = 127.0.0.1
+`
+
+	// Generate OpenSSL config dynamically
+	var configBuffer bytes.Buffer
+	tmpl, err := template.New("opensslConfig").Parse(configTemplate)
+	if err != nil {
+		return "", "", err
+	}
+	if err := tmpl.Execute(&configBuffer, struct{ IP string }{IP: ip}); err != nil {
+		return "", "", err
+	}
+
+	cmd := exec.Command("openssl", "req", "-x509", "-nodes", "-days", "365",
+		"-newkey", "rsa:2048",
+		"-keyout", "/dev/stdout",
+		"-out", "/dev/stdout",
+		"-config", "/dev/stdin",
+		"-subj", "/C=CN/ST=Beijing/L=Beijing/O=localhost/OU=Development/CN=localhost",
+		"-passin", "pass:")
+
+	cmd.Stdin = &configBuffer
+
+	var outputBuffer bytes.Buffer
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
+
+	if err := cmd.Run(); err != nil {
+		return "", "", fmt.Errorf("OpenSSL error: %v\n%s", err, outputBuffer.String())
+	}
+
+	output := outputBuffer.String()
+	keyStart := "-----BEGIN PRIVATE KEY-----"
+	certStart := "-----BEGIN CERTIFICATE-----"
+
+	keyIndex := strings.Index(output, keyStart)
+	certIndex := strings.Index(output, certStart)
+
+	if keyIndex == -1 && certIndex == -1 {
+		return "", "", fmt.Errorf("failed to parse OpenSSL output: no key or certificate found")
+	}
+
+	var keyContent, certContent string
+
+	// Extract Private Key if present
+	if keyIndex != -1 {
+		endKeyIndex := strings.Index(output[keyIndex:], "-----END PRIVATE KEY-----")
+		if endKeyIndex == -1 {
+			return "", "", fmt.Errorf("failed to parse private key")
+		}
+		endKeyIndex += keyIndex + len("-----END PRIVATE KEY-----")
+		keyContent = strings.TrimSpace(output[keyIndex:endKeyIndex])
+	}
+
+	// Extract Certificate if present
+	if certIndex != -1 {
+		endCertIndex := strings.Index(output[certIndex:], "-----END CERTIFICATE-----")
+		if endCertIndex == -1 {
+			return "", "", fmt.Errorf("failed to parse certificate")
+		}
+		endCertIndex += certIndex + len("-----END CERTIFICATE-----")
+		certContent = strings.TrimSpace(output[certIndex:endCertIndex])
+	}
+
+	fmt.Println("keycontent in function:", keyContent)
+	fmt.Println("certcontent in function:", certContent)
+	dir, _ := os.Getwd()
+	fmt.Println("current directory from trustee_kbs.go:", dir)
+	keyPath := filepath.Join("../trustee", "kbs", "config", "kubernetes", "base", "https-key.pem")
+	certPath := filepath.Join("../trustee", "kbs", "config", "kubernetes", "base", "https-cert.pem")
+
+	if err := os.WriteFile(certPath, []byte(certContent), 0640); err != nil {
+		return "", "", fmt.Errorf("Failed to write cert file: %v", err)
+	}
+
+	if err := os.WriteFile(keyPath, []byte(keyContent), 0600); err != nil {
+		return "", "", fmt.Errorf("Failed to write cert file: %v", err)
+	}
+	dir, _ = os.Getwd()
+	fmt.Println("current directory from trustee_kbs.go after writing file:", dir)
+	return keyContent, certContent, nil
+}
 
 func getHardwarePlatform() (string, error) {
 	out, err := exec.Command("uname", "-m").Output()
@@ -148,11 +265,11 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 	}
 
 	// IBM_SE_CREDS_DIR describe at https://github.com/confidential-containers/trustee/blob/main/kbs/config/kubernetes/README.md#deploy-kbs
+	workerNodeIP, workerNodeName, _ := getFirstWorkerNodeIPAndName(cfg)
 	ibmseCredsDir := os.Getenv("IBM_SE_CREDS_DIR")
 	if ibmseCredsDir != "" {
 		log.Info("IBM_SE_CREDS_DIR is providered, deploy KBS with IBM SE verifier")
 		// We always deploy the KBS pod to first worker node
-		workerNodeIP, workerNodeName, _ := getFirstWorkerNodeIPAndName(cfg)
 		log.Infof("Copying IBM_SE_CREDS files to first worker node: %s", workerNodeIP)
 		err := copyGivenFilesToWorkerNode(ibmseCredsDir, workerNodeIP)
 		if err != nil {
@@ -177,7 +294,7 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		}
 	}
 
-	overlay, err := NewBaseKbsInstallOverlay(trusteeRepoPath)
+	overlay, err := NewHTTPSKbsInstallOverlay(trusteeRepoPath, workerNodeIP)
 	if err != nil {
 		return nil, err
 	}
@@ -187,6 +304,144 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		endpoint:       "",
 	}, nil
 }
+
+// func NewHTTPSKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerService, error) {
+// 	e2e_dir, err := os.Getwd()
+// 	if err != nil {
+// 		err = fmt.Errorf("getting the current working directory: %w\n", err)
+// 		log.Errorf("%v", err)
+// 		return nil, err
+// 	}
+// 	trusteeRepoPath = filepath.Join(e2e_dir, "../trustee")
+
+// 	log.Info("creating key.bin")
+
+// 	// Create secret
+// 	content := []byte("This is my cluster name: " + clusterName)
+// 	overlaysPath, err := getOverlaysPath()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	filePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
+
+// 	err = os.WriteFile(filePath, content, 0o644)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	kbsCert := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.pem")
+// 	if _, err := os.Stat(kbsCert); os.IsNotExist(err) {
+// 		kbsKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
+// 		keyOutputFile, err := os.Create(kbsKey)
+// 		if err != nil {
+// 			err = fmt.Errorf("creating key file: %w\n", err)
+// 			log.Errorf("%v", err)
+// 			return nil, err
+// 		}
+// 		defer keyOutputFile.Close()
+
+// 		pubKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+// 		if err != nil {
+// 			err = fmt.Errorf("generating Ed25519 key pair: %w\n", err)
+// 			log.Errorf("%v", err)
+// 			return nil, err
+// 		}
+
+// 		b, err := x509.MarshalPKCS8PrivateKey(privateKey)
+// 		if err != nil {
+// 			err = fmt.Errorf("MarshalPKCS8PrivateKey private key: %w\n", err)
+// 			log.Errorf("%v", err)
+// 			return nil, err
+// 		}
+
+// 		privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+// 			Type:  "PRIVATE KEY",
+// 			Bytes: b,
+// 		})
+
+// 		// Save private key to file
+// 		err = saveToFile(kbsKey, privateKeyPEM)
+// 		if err != nil {
+// 			err = fmt.Errorf("saving private key to file: %w\n", err)
+// 			log.Errorf("%v", err)
+// 			return nil, err
+// 		}
+
+// 		b, err = x509.MarshalPKIXPublicKey(pubKey)
+// 		if err != nil {
+// 			err = fmt.Errorf("MarshalPKIXPublicKey Ed25519 public key: %w\n", err)
+// 			log.Errorf("%v", err)
+// 			return nil, err
+// 		}
+
+// 		publicKeyPEM := pem.EncodeToMemory(&pem.Block{
+// 			Type:  "PUBLIC KEY",
+// 			Bytes: b,
+// 		})
+
+// 		// Save public key to file
+// 		err = saveToFile(kbsCert, publicKeyPEM)
+// 		if err != nil {
+// 			err = fmt.Errorf("saving public key to file: %w\n", err)
+// 			log.Errorf("%v", err)
+// 			return nil, err
+// 		}
+
+// 	}
+
+// 	customPCCSURL := os.Getenv("CUSTOM_PCCS_URL")
+// 	if customPCCSURL != "" {
+// 		log.Info("CUSTOM_PCCS_URL is provided, write custom PCCS config")
+// 		configFilePath := filepath.Join(getKbsKubernetesFilePath(), "custom_pccs/sgx_default_qcnl.conf")
+// 		collateralUrl := "https://api.trustedservices.intel.com/sgx/certification/v4/"
+// 		config := fmt.Sprintf(`{ "pccs_url": "%s", "collateral_service": "%s"}`, customPCCSURL, collateralUrl)
+// 		err = saveToFile(configFilePath, []byte(config))
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 	}
+
+// 	// IBM_SE_CREDS_DIR describe at https://github.com/confidential-containers/trustee/blob/main/kbs/config/kubernetes/README.md#deploy-kbs
+// 	ibmseCredsDir := os.Getenv("IBM_SE_CREDS_DIR")
+// 	if ibmseCredsDir != "" {
+// 		log.Info("IBM_SE_CREDS_DIR is providered, deploy KBS with IBM SE verifier")
+// 		// We always deploy the KBS pod to first worker node
+// 		workerNodeIP, workerNodeName, _ := getFirstWorkerNodeIPAndName(cfg)
+// 		log.Infof("Copying IBM_SE_CREDS files to first worker node: %s", workerNodeIP)
+// 		err := copyGivenFilesToWorkerNode(ibmseCredsDir, workerNodeIP)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		log.Infof("Creating PV for kbs with ibm-se")
+
+// 		overlaysPath, err := getOverlaysPath()
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		pvFilePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "pv.yaml")
+// 		err = createPVonTargetWorkerNode(pvFilePath, workerNodeName, cfg)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		patchFile := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "patch.yaml")
+// 		// skip the SE related certs check as we are running the test case on a dev machine
+// 		err = skipSeCertsVerification(patchFile)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 	}
+
+// 	overlay, err := NewHTTPSKbsInstallOverlay(trusteeRepoPath)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return &KeyBrokerService{
+// 		installOverlay: overlay,
+// 		endpoint:       "",
+// 	}, nil
+// }
 
 func saveToFile(filename string, content []byte) error {
 	// Save contents to file
@@ -313,9 +568,55 @@ func decompressFileOnTargetNode(targetNodeIP, remoteFilePath, targetDir string) 
 	return cmd.Run()
 }
 
-func NewBaseKbsInstallOverlay(installDir string) (InstallOverlay, error) {
-	log.Info("Creating kbs install overlay")
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/base/"))
+// func NewBaseKbsInstallOverlay(installDir string) (InstallOverlay, error) {
+// 	log.Info("Creating kbs install overlay")
+// 	fmt.Printf("Installdir value: %s", installDir)
+// 	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, "kbs/config/kubernetes/base/"))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+//		return &KbsInstallOverlay{
+//			overlay: overlay,
+//		}, nil
+//	}
+func NewHTTPSKbsInstallOverlay(installDir string, workerNodeIP string) (InstallOverlay, error) {
+	log.Info("Creating https kbs install overlay")
+	// dir, _ := os.Getwd()
+	// fmt.Println("current directory :", dir)
+	// source := "utils/kbs-config.toml"
+	// destination := "kbs/config/kubernetes/base/kbs-config.toml"
+
+	// err := os.Rename(source, destination)
+	// if err != nil {
+	// 	fmt.Println("Error moving file:", err)
+	// }
+	fmt.Printf("worker node ip in https kbs overlay %s", workerNodeIP)
+	if workerNodeIP != "" {
+		keyContent, certContent, err := generateCert(workerNodeIP)
+		fmt.Println("Certificate Content:")
+		fmt.Println(certContent)
+		fmt.Println("Key Content:")
+		fmt.Println(keyContent)
+
+		if err != nil {
+			fmt.Println("Error generating certificate and key:", err)
+		}
+	}
+
+	platform, err := getHardwarePlatform()
+	if err != nil {
+		return nil, err
+	}
+
+	var overlayFolder string
+	if platform == "x86_64" && os.Getenv("CUSTOM_PCCS_URL") != "" {
+		log.Info("CUSTOM_PCCS_URL is provided on x86_64, deploy with custom pccs config")
+		overlayFolder = "kbs/config/kubernetes/custom_pccs"
+	} else {
+		overlayFolder = "kbs/config/kubernetes/nodeport/"
+	}
+	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, overlayFolder))
 	if err != nil {
 		return nil, err
 	}
@@ -536,7 +837,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 	}
 
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay(trusteeRepoPath)
+	tmpoverlay, err := NewHTTPSKbsInstallOverlay(trusteeRepoPath, "")
 	if err != nil {
 		return err
 	}
@@ -550,7 +851,7 @@ func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, prop
 
 func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) error {
 	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewKbsInstallOverlay(trusteeRepoPath)
+	tmpoverlay, err := NewHTTPSKbsInstallOverlay(trusteeRepoPath, "")
 	if err != nil {
 		return err
 	}

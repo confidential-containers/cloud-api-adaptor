@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -30,7 +31,61 @@ import (
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
 
-var testInitdata string = `algorithm = "sha384"
+// var testInitdata string = `algorithm = "sha384"
+// version = "0.1.0"
+
+// [data]
+// "aa.toml" = '''
+// [token_configs]
+// [token_configs.coco_as]
+// url = '%s'
+
+// [token_configs.kbs]
+// url = '%s'
+// '''
+
+// "cdh.toml"  = '''
+// socket = 'unix:///run/confidential-containers/cdh.sock'
+
+// [kbc]
+// name = 'cc_kbc'
+// url = '%s'
+// '''
+
+// "policy.rego" = '''
+// package agent_policy
+
+// import future.keywords.in
+// import future.keywords.every
+
+// import input
+
+// # Default values, returned by OPA when rules cannot be evaluated to true.
+// default CopyFileRequest := true
+// default CreateContainerRequest := true
+// default CreateSandboxRequest := true
+// default DestroySandboxRequest := true
+// default ExecProcessRequest := true
+// default GetOOMEventRequest := true
+// default GuestDetailsRequest := true
+// default OnlineCPUMemRequest := true
+// default PullImageRequest := true
+// default ReadStreamRequest := true
+// default RemoveContainerRequest := true
+// default RemoveStaleVirtiofsShareMountsRequest := true
+// default SignalProcessRequest := true
+// default StartContainerRequest := true
+// default StatsContainerRequest := true
+// default TtyWinResizeRequest := true
+// default UpdateEphemeralMountsRequest := true
+// default UpdateInterfaceRequest := true
+// default UpdateRoutesRequest := true
+// default WaitProcessRequest := true
+// default WriteStreamRequest := true
+// '''
+// `
+
+var testInitdatahttps string = `algorithm = "sha384"
 version = "0.1.0"
 
 [data]
@@ -41,6 +96,7 @@ url = '%s'
 
 [token_configs.kbs]
 url = '%s'
+cert = """%s"""
 '''
 
 "cdh.toml"  = '''
@@ -49,6 +105,7 @@ socket = 'unix:///run/confidential-containers/cdh.sock'
 [kbc]
 name = 'cc_kbc'
 url = '%s'
+kbs_cert = """%s"""
 '''
 
 "policy.rego" = '''
@@ -83,6 +140,26 @@ default WaitProcessRequest := true
 default WriteStreamRequest := true
 '''
 `
+
+func ExtractIPAndPort(endpoint string) (string, string, error) {
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse URL: %v", err)
+	}
+
+	ip := parsedURL.Hostname()
+	port := parsedURL.Port()
+
+	if ip == "" || port == "" {
+		return "", "", fmt.Errorf("invalid IP or port extracted")
+	}
+
+	return ip, port, nil
+}
+
+func FormatHTTPSURL(ip, port string) string {
+	return fmt.Sprintf("https://%s:%s", ip, port)
+}
 
 func isTestWithKbs() bool {
 	return os.Getenv("TEST_KBS") == "yes" || os.Getenv("TEST_KBS") == "true"
@@ -241,7 +318,7 @@ func WithInitdata(kbsEndpoint string) PodOption {
 			p.ObjectMeta.Annotations = make(map[string]string)
 		}
 		key := "io.katacontainers.config.runtime.cc_init_data"
-		initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+		initdata := fmt.Sprintf(testInitdatahttps, kbsEndpoint, kbsEndpoint, kbsEndpoint)
 		value := b64.StdEncoding.EncodeToString([]byte(initdata))
 		p.ObjectMeta.Annotations[key] = value
 	}
@@ -363,8 +440,36 @@ func NewBusyboxPodWithName(namespace, podName string) PodOrError {
 	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"})))
 }
 
-func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string) PodOrError {
-	initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+// func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string) PodOrError {
+// 	initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+// 	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
+// 	annotationData := map[string]string{
+// 		"io.katacontainers.config.runtime.cc_init_data": b64Data,
+// 	}
+// 	busyboxImage, err := utils.GetImage("busybox")
+// 	if err != nil {
+// 		return fromError(err)
+// 	}
+// 	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData)))
+// }
+
+func NewBusyboxPodWithNameWithInitdatahttps(namespace, podName string, kbsEndpoint string, workernodeIP string) PodOrError {
+	kbsIP, port, err := ExtractIPAndPort(kbsEndpoint)
+	if err != nil {
+		fmt.Println("Error extracting IP:", err)
+	} else {
+		fmt.Println("Extracted IP:", kbsIP)
+	}
+	kbsEndpoint = FormatHTTPSURL(workernodeIP, port)
+	dir, _ := os.Getwd()
+	fmt.Println("current directory :", dir)
+	content, err := os.ReadFile("${TEST_DIR}/trustee/kbs/config/base/https-cert.pem")
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+	}
+	certContent := string(content)
+	initdata := fmt.Sprintf(testInitdatahttps, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+	fmt.Printf("[INFO] INITDATA %s", initdata)
 	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
 	annotationData := map[string]string{
 		"io.katacontainers.config.runtime.cc_init_data": b64Data,
