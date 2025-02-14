@@ -36,7 +36,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&libvirtcfg.NetworkName, "network-name", defaultNetworkName, "libvirt network pool")
 	flags.StringVar(&libvirtcfg.DataDir, "data-dir", defaultDataDir, "libvirt storage dir")
 	flags.BoolVar(&libvirtcfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
-	flags.StringVar(&libvirtcfg.LaunchSecurity, "launch-security", defaultLaunchSecurity, "Libvirt's LaunchSecurity element for Confidential VMs. SEV or s390-pv. If omitted, will automatically determine.")
+	flags.StringVar(&libvirtcfg.LaunchSecurity, "launch-security", defaultLaunchSecurity, "Libvirt's LaunchSecurity element for Confidential VMs: s390-pv. If omitted, will automatically determine.")
 	flags.StringVar(&libvirtcfg.Firmware, "firmware", defaultFirmware, "Path to OVMF")
 
 }
