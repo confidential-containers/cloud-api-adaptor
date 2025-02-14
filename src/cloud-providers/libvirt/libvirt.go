@@ -40,30 +40,6 @@ type domainConfig struct {
 	cidataDisk  string
 }
 
-// https://www.amd.com/system/files/TechDocs/55766_SEV-KM_API_Specification.pdf
-type sevGuestPolicy struct {
-	noDebug    bool
-	noKeyShare bool
-	es         bool
-	noSend     bool
-	domain     bool
-	sev        bool
-}
-
-// Struct bitmap to unsigned integer (needed for enabling sev)
-func (s *sevGuestPolicy) getGuestPolicy() uint {
-	bitmap := []bool{s.noDebug, s.noKeyShare, s.es, s.noSend, s.domain, s.sev}
-	res := uint(0)
-
-	for i := 0; i < len(bitmap); i++ {
-		if bitmap[i] {
-			res |= 1 << i
-		}
-	}
-
-	return res
-}
-
 // createCloudInitISO creates an ISO file with a userdata and a metadata file. The ISO image will be created in-memory since it is small
 func createCloudInitISO(v *vmConfig) ([]byte, error) {
 	logger.Println("Create cloudInit iso")
@@ -411,103 +387,10 @@ func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfi
 	switch l := vm.launchSecurityType; l {
 	case NoLaunchSecurity:
 		return domain, nil
-	case SEV:
-		return enableSEV(client, cfg, vm, domain)
 	default:
 		return nil, fmt.Errorf("launch Security type is not supported for this domain: %s", l)
 	}
 
-}
-
-func enableSEV(client *libvirtClient, cfg *domainConfig, vm *vmConfig, domain *libvirtxml.Domain) (*libvirtxml.Domain, error) {
-
-	if vm.launchSecurityType != SEV {
-		return nil, fmt.Errorf("launch Security must be set as SEV to enable SEV")
-	}
-
-	const sevMachine = "q35"
-	var domCapflags uint32 = 0
-	arch := "x86_64"
-	virttype := "qemu"
-
-	// Determine whether machine supports SEV
-	guest, err := getGuestForArchType(client.caps, arch, "hvm")
-	if err != nil {
-		return nil, fmt.Errorf("unable to find guest machine to determine SEV capabilities")
-	}
-	domCaps, err := GetDomainCapabilities(client.connection, guest.Arch.Emulator, arch, sevMachine, virttype, domCapflags)
-	if err != nil {
-		return nil, fmt.Errorf("unable to determine guest domain capabilities: %+v", err)
-	}
-	if domCaps.Features.SEV.Supported != "yes" {
-		return nil, fmt.Errorf("SEV is not supported for this domain")
-	}
-
-	// Enable Launch Security
-	guestPolicyStruct := sevGuestPolicy{
-		noDebug:    false,
-		noKeyShare: false,
-		es:         false,
-		noSend:     false,
-		domain:     false,
-		sev:        false,
-	}
-
-	guestPolicy := guestPolicyStruct.getGuestPolicy()
-
-	domain.LaunchSecurity = &libvirtxml.DomainLaunchSecurity{
-		SEV: &libvirtxml.DomainLaunchSecuritySEV{
-			CBitPos:         &domCaps.Features.SEV.CBitPos,
-			ReducedPhysBits: &domCaps.Features.SEV.ReducedPhysBits,
-			Policy:          &guestPolicy,
-		},
-	}
-
-	domain.OS.Type.Machine = sevMachine
-	domain.OS.Loader = &libvirtxml.DomainLoader{
-		Path:      vm.firmware,
-		Readonly:  "yes",
-		Stateless: "yes",
-		Type:      "pflash",
-	}
-
-	nvramPath := fmt.Sprintf("/var/lib/libvirt/qemu/nvram/%s_VARS.fd", cfg.name)
-	domain.OS.NVRam = &libvirtxml.DomainNVRam{NVRam: nvramPath}
-
-	// Must allocate memory (8 GiB) + extra for qemu to use to calculate total memory limit
-	domain.MemoryTune = &libvirtxml.DomainMemoryTune{
-		HardLimit: &libvirtxml.DomainMemoryTuneLimit{
-			Value: 8912896,
-			Unit:  "KiB",
-		},
-	}
-
-	// IDE controllers are unsupported for q35 machines.
-	cidataDiskIndex := 1
-	var cidataDiskAddr uint = 1
-	domain.Devices.Disks[cidataDiskIndex].Target.Bus = "sata"
-	domain.Devices.Disks[cidataDiskIndex].Target.Dev = "sdb"
-	domain.Devices.Disks[cidataDiskIndex].Address.Drive.Unit = &cidataDiskAddr
-
-	// Devices with type virtio must have IOMMU turned on
-	for devInterfaceNum := range domain.Devices.Interfaces {
-		deviceInterface := domain.Devices.Interfaces[devInterfaceNum]
-		if deviceInterface.Model.Type == "virtio" {
-			if deviceInterface.Source.Network != nil {
-				// Disable ROM for virtio-nets
-				domain.Devices.Interfaces[devInterfaceNum].ROM = &libvirtxml.DomainROM{Enabled: "no"}
-			}
-			domain.Devices.Interfaces[devInterfaceNum].Driver = &libvirtxml.DomainInterfaceDriver{IOMMU: "on"}
-		}
-	}
-	for devControllerNum := range domain.Devices.Controllers {
-		if domain.Devices.Controllers[devControllerNum].Type == "virtio" {
-			domain.Devices.Controllers[devControllerNum].Driver = &libvirtxml.DomainControllerDriver{IOMMU: "on"}
-		}
-	}
-	domain.Devices.MemBalloon = &libvirtxml.DomainMemBalloon{Model: "virtio", Driver: &libvirtxml.DomainMemBalloonDriver{IOMMU: "on"}}
-
-	return domain, nil
 }
 
 func createDomainXMLaarch64(client *libvirtClient, cfg *domainConfig, vm *vmConfig) (*libvirtxml.Domain, error) {
@@ -904,7 +787,7 @@ func freeDomain(domain *libvirt.Domain, errCtx *error) {
 }
 
 // Attempts to determine launchSecurity Type from domain capabilities and hardware
-// Currently only supports SEV and S390PV
+// Currently only supports S390PV
 func GetLaunchSecurityType(uri string) (LaunchSecurityType, error) {
 	conn, err := libvirt.NewConnect(uri)
 	if err != nil {
@@ -920,16 +803,6 @@ func GetLaunchSecurityType(uri string) (LaunchSecurityType, error) {
 	case archS390x:
 		return S390PV, nil
 	case "x86_64":
-		domCapflags := uint32(0)
-		emulator := "/usr/bin/qemu-system-x86_64"
-
-		domCaps, err := GetDomainCapabilities(conn, emulator, nodeInfo.Model, "q35", "qemu", domCapflags)
-		if err != nil {
-			return NoLaunchSecurity, fmt.Errorf("unable to get domain capabilities [%v]", err)
-		}
-		if domCaps.Features.SEV.Supported == "yes" {
-			return SEV, nil
-		}
 		return NoLaunchSecurity, nil
 	default:
 		return NoLaunchSecurity, nil
