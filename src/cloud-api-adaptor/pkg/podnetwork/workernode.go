@@ -10,6 +10,8 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/netops"
+	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 )
 
 const DefaultTunnelType = "vxlan"
@@ -66,8 +68,9 @@ func NewWorkerNode(networkConfig *tunneler.NetworkConfig) (WorkerNode, error) {
 func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	config := &tunneler.Config{
-		TunnelType: n.TunnelType,
-		Index:      podIndexManager.Get(),
+		TunnelType:          n.TunnelType,
+		Index:               podIndexManager.Get(),
+		ExternalNetViaPodVM: n.ExternalNetViaPodVM,
 	}
 
 	hostNS, err := netops.OpenCurrentNamespace()
@@ -184,6 +187,26 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 			Scope:    route.Scope,
 		}
 		config.Routes = append(config.Routes, r)
+	}
+
+	// Add route for the subnet CIDRs in the new namespace
+	if n.PodSubnetCIDRs != nil {
+		for _, cidr := range n.PodSubnetCIDRs {
+			prefix, err := netip.ParsePrefix(cidr)
+			if err != nil {
+				logger.Printf("failed to parse CIDR %q: %s", cidr, err)
+				continue
+			}
+			route := &tunneler.Route{
+				Dst: prefix,
+				// The gateway address is 0.0.0.0
+				GW:       netip.Addr{},
+				Dev:      podInterface,
+				Scope:    netops.RouteScope(netlink.SCOPE_LINK),
+				Protocol: netops.RouteProtocol(unix.RTPROT_KERNEL),
+			}
+			config.Routes = append(config.Routes, route)
+		}
 	}
 
 	for _, neighbor := range neighbors {
