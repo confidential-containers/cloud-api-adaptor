@@ -35,6 +35,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&ibmcloudVPCConfig.SecondarySecurityGroupID, "secondary-security-group-id", "", "Secondary security group ID")
 	flags.StringVar(&ibmcloudVPCConfig.KeyID, "key-id", "", "SSH Key ID")
 	flags.StringVar(&ibmcloudVPCConfig.VpcID, "vpc-id", "", "VPC ID")
+	flags.BoolVar(&ibmcloudVPCConfig.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
 
 }
 

@@ -1,12 +1,21 @@
 # Adapted from https://github.com/kubernetes-sigs/kind/blob/main/images/base/Dockerfile
 
 ARG BASE_IMAGE=registry.fedoraproject.org/fedora:40
+
+FROM $BASE_IMAGE AS iptables
+
+RUN echo "Building iptables-wrapper... " \
+    && dnf install -y git golang \
+    && git clone https://github.com/kubernetes-sigs/iptables-wrappers.git /iptables \
+    && cd /iptables \
+    && make BIN_DIR=. build
+
 FROM $BASE_IMAGE AS base
 
 RUN echo "Installing Packages ..." \
     && dnf install -y \
       systemd \
-      conntrack iptables nftables iproute ethtool util-linux kmod \
+      conntrack iptables iptables-legacy iptables-nft nftables iproute ethtool util-linux kmod \
       libseccomp pigz fuse-overlayfs \
       nfs-utils which systemd-pam \
       bash ca-certificates curl jq procps \
@@ -22,6 +31,8 @@ RUN echo "Enabling / Disabling services ... " \
     && systemctl mask systemd-binfmt.service \
     && systemctl enable systemd-logind dbus.socket
 
+RUN --mount=type=cache,target=/iptables,from=iptables,source=/iptables,readonly \
+    cd /iptables && ./iptables-wrapper-installer.sh --no-sanity-check --no-cleanup
 
 # Add podvm resources
 COPY ./resources/binaries-tree/etc/ /etc/

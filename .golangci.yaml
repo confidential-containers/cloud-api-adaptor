@@ -71,7 +71,7 @@ run:
   # Define the Go version limit.
   # Mainly related to generics support in go1.18.
   # Default: use Go version from the go.mod file, fallback on the env var `GOVERSION`, fallback on 1.17
-  #go: '1.18'
+  go: '1.20'
 
 
 # output configuration options
@@ -149,17 +149,10 @@ linters-settings:
     #simplify: false
 
   gosimple:
-    # Select the Go version to target.
-    # Default: 1.13
-    go: "1.20"
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
 
   govet:
-    # Report about shadowed variables.
-    # Default: false
-    check-shadowing: true
-
     # Settings per analyzer.
     #settings:
       # Analyzer name, run `go tool vet help` to see all analyzers.
@@ -176,8 +169,8 @@ linters-settings:
     #disable-all: true
     # Enable analyzers by name.
     # Run `go tool vet help` to see all analyzers.
-    #enable:
-    #  - asmdecl
+    enable:
+      - shadow
 
     # Enable all analyzers.
     # Default: false
@@ -188,9 +181,6 @@ linters-settings:
     #  - asmdecl
 
   staticcheck:
-    # Select the Go version to target.
-    # Default: 1.13
-    go: "1.20"
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
 

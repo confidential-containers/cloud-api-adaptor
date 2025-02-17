@@ -7,5 +7,5 @@ const (
 	InitDataPath     = "/run/peerpod/initdata"
 	AgentCfgPath     = "/run/peerpod/agent-config.toml"
 	ForwarderCfgPath = "/run/peerpod/daemon.json"
-	UserDataPath     = "/run/media/cidata/user-data"
+	UserDataPath     = "/media/cidata/user-data"
 )

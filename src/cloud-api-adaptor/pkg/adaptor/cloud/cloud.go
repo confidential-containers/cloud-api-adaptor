@@ -23,7 +23,6 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/agent"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
@@ -255,7 +254,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	agentProxy := s.proxyFactory.New(serverName, socketPath)
 
 	var authJSON []byte
-	var authFilePath string
 	_, err = os.Stat(SrcAuthfilePath)
 	if err != nil {
 		logger.Printf("credential file %s is not present, skipping image auth config", SrcAuthfilePath)
@@ -264,13 +262,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		if err != nil {
 			return nil, fmt.Errorf("error reading %s: %v", SrcAuthfilePath, err)
 		}
-		authFilePath = AuthFilePath
 		logger.Printf("configure agent to use credentials file %s", SrcAuthfilePath)
-	}
-
-	agentConfig, err := agent.CreateConfigFile(authFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("creating agent config: %w", err)
 	}
 
 	daemonConfig := forwarder.Config{
@@ -321,10 +313,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	cloudConfig := &cloudinit.CloudConfig{
 		WriteFiles: []cloudinit.WriteFile{
-			{
-				Path:    agent.ConfigFilePath,
-				Content: agentConfig,
-			},
 			{
 				Path:    forwarder.DefaultConfigPath,
 				Content: string(daemonJSON),

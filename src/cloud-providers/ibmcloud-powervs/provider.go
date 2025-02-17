@@ -52,14 +52,16 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		return nil, err
 	}
 
+	imageId := p.serviceConfig.ImageId
+
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the Power VS image for the PodVM image", spec.Image)
-		p.serviceConfig.ImageId = spec.Image
+		imageId = spec.Image
 	}
 
 	body := &models.PVMInstanceCreate{
 		ServerName:  &instanceName,
-		ImageID:     &p.serviceConfig.ImageId,
+		ImageID:     &imageId,
 		KeyPairName: p.serviceConfig.SSHKey,
 		Networks: []*models.PVMInstanceAddNetwork{
 			{
@@ -87,13 +89,13 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 	ins := (*pvsInstances)[0]
 	instanceID := *ins.PvmInstanceID
 
-	ctx, cancel := context.WithTimeout(ctx, 150*time.Second)
+	getctx, cancel := context.WithTimeout(ctx, 150*time.Second)
 	defer cancel()
 
 	logger.Printf("Waiting for instance to reach state: ACTIVE")
 	err = retry.Do(
 		func() error {
-			in, err := p.powervsService.instanceClient(ctx).Get(*ins.PvmInstanceID)
+			in, err := p.powervsService.instanceClient(getctx).Get(*ins.PvmInstanceID)
 			if err != nil {
 				return fmt.Errorf("failed to get the instance: %v", err)
 			}
@@ -109,7 +111,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 
 			return fmt.Errorf("Instance failed to reach ACTIVE state")
 		},
-		retry.Context(ctx),
+		retry.Context(getctx),
 		retry.Attempts(0),
 		retry.MaxDelay(5*time.Second),
 	)
@@ -148,8 +150,8 @@ func (p *ibmcloudPowerVSProvider) Teardown() error {
 }
 
 func (p *ibmcloudPowerVSProvider) ConfigVerifier() error {
-	ImageId := p.serviceConfig.ImageId
-	if len(ImageId) == 0 {
+	imageId := p.serviceConfig.ImageId
+	if len(imageId) == 0 {
 		return fmt.Errorf("ImageId is empty")
 	}
 	return nil

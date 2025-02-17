@@ -14,6 +14,7 @@ type Config struct {
 	ImageName      string
 	MachineType    string
 	Network        string
+	DiskType       string
 }
 
 func (c Config) Redact() Config {
