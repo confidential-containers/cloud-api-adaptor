@@ -14,10 +14,6 @@ import (
 	"time"
 )
 
-var testAgentConfig string = `server_addr = 'unix:///run/kata-containers/agent.sock'
-guest_components_procs = 'none'
-`
-
 var testDaemonConfig string = `{
 	"pod-network": {
 		"podip": "10.244.0.19/24",
@@ -336,12 +332,11 @@ func TestProcessCloudConfig(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	var aaCfgPath = filepath.Join(tempDir, "aa.toml")
-	var agentCfgPath = filepath.Join(tempDir, "agent-config.toml")
 	var cdhCfgPath = filepath.Join(tempDir, "cdh.toml")
 	var daemonPath = filepath.Join(tempDir, "daemon.json")
 	var authPath = filepath.Join(tempDir, "auth.json")
 	var initdataPath = filepath.Join(tempDir, "initdata")
-	var writeFilesList = []string{aaCfgPath, agentCfgPath, cdhCfgPath, daemonPath, authPath, initdataPath}
+	var writeFilesList = []string{aaCfgPath, cdhCfgPath, daemonPath, authPath, initdataPath}
 
 	content := fmt.Sprintf(`#cloud-config
 write_files:
@@ -360,14 +355,9 @@ write_files:
 - path: %s
   content: |
 %s
-- path: %s
-  content: |
-%s
 `,
 		aaCfgPath,
 		indentTextBlock(testAAConfig, 4),
-		agentCfgPath,
-		indentTextBlock(testAgentConfig, 4),
 		cdhCfgPath,
 		indentTextBlock(testCDHConfig, 4),
 		daemonPath,
@@ -403,12 +393,6 @@ write_files:
 		t.Fatalf("file content does not match aa config fixture: got %q", fileContent)
 	}
 
-	data, _ = os.ReadFile(agentCfgPath)
-	fileContent = string(data)
-	if fileContent != testAgentConfig {
-		t.Fatalf("file content does not match agent config fixture: got %q", fileContent)
-	}
-
 	data, _ = os.ReadFile(cdhCfgPath)
 	fileContent = string(data)
 	if fileContent != testCDHConfig {
@@ -439,12 +423,11 @@ func TestProcessCloudConfigWithMalicious(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	var aaCfgPath = filepath.Join(tempDir, "aa.toml")
-	var agentCfgPath = filepath.Join(tempDir, "agent-config.toml")
 	var cdhCfgPath = filepath.Join(tempDir, "cdh.toml")
 	var daemonPath = filepath.Join(tempDir, "daemon.json")
 	var authPath = filepath.Join(tempDir, "auth.json")
 	var malicious = filepath.Join(tempDir, "malicious")
-	var writeFilesList = []string{aaCfgPath, agentCfgPath, cdhCfgPath, daemonPath, authPath}
+	var writeFilesList = []string{aaCfgPath, cdhCfgPath, daemonPath, authPath}
 
 	content := fmt.Sprintf(`#cloud-config
 write_files:
@@ -463,14 +446,9 @@ write_files:
 - path: %s
   content: |
 %s
-- path: %s
-  content: |
-%s
 `,
 		aaCfgPath,
 		indentTextBlock(testAAConfig, 4),
-		agentCfgPath,
-		indentTextBlock(testAgentConfig, 4),
 		cdhCfgPath,
 		indentTextBlock(testCDHConfig, 4),
 		daemonPath,
@@ -504,12 +482,6 @@ write_files:
 	fileContent := string(data)
 	if fileContent != testAAConfig {
 		t.Fatalf("file content does not match aa config fixture: got %q", fileContent)
-	}
-
-	data, _ = os.ReadFile(agentCfgPath)
-	fileContent = string(data)
-	if fileContent != testAgentConfig {
-		t.Fatalf("file content does not match agent config fixture: got %q", fileContent)
 	}
 
 	data, _ = os.ReadFile(cdhCfgPath)

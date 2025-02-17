@@ -159,10 +159,6 @@ func TestLibvirtSealedSecret(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
 	}
-	err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
-	if err != nil {
-		t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
-	}
 	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
 	if err != nil {
 		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
@@ -182,13 +178,9 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SetSecret failed with: %v", err)
 	}
-	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("deny_all.rego")
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
-	}
-	err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("deny_all.rego")
-	if err != nil {
-		t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
 	}
 	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
 	if err != nil {
@@ -213,9 +205,9 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 		DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 	} else {
 		t.Log("KBS normal cases")
-		err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
+		err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
 		if err != nil {
-			t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
+			t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
 		}
 		DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 	}

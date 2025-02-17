@@ -20,9 +20,6 @@ var logger = log.New(log.Writer(), "[adaptor/cloud/libvirt] ", log.LstdFlags|log
 
 const maxInstanceNameLen = 63
 
-// Convert Memory size from MegaBytes to GigaBytes
-LIBVIRT_CONV_MEM  = 1000
-
 type libvirtProvider struct {
 	libvirtClient *libvirtClient
 	serviceConfig *Config
@@ -59,16 +56,16 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		return nil, err
 	}
 
-	// Convert the memory units in gigabytes
+	// Convert the memory units in gibibytes
 	instanceMemory := uint(spec.Memory / LIBVIRT_CONV_MEM)
 	if instanceMemory == 0 {
-		instanceMemory =  uint(p.serviceConfig.Memory / LIBVIRT_CONV_MEM)
-	}	
+		instanceMemory = uint(p.serviceConfig.Memory / LIBVIRT_CONV_MEM)
+	}
 
 	instanceVCPUs := uint(spec.VCPUs)
 	if instanceVCPUs == 0 {
 		instanceVCPUs = uint(p.serviceConfig.CPU)
-	}	
+	}
 
 	// TODO: Specify the maximum instance name length in Libvirt
 	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, userData: userData, firmware: p.serviceConfig.Firmware}

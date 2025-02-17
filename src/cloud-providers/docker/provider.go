@@ -72,12 +72,12 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 
 	// Create volume binding for the container
 
-	// mount userdata to /run/media/cidata/user-data
+	// mount userdata to /media/cidata/user-data
 	// This file will be read by process-user-data and daemon.json will be written to
 	// /run/peerpods/daemon.json at runtime
 	volumeBinding := []string{
 		// note: we are not importing that path from the CAA package to avoid circular dependencies
-		fmt.Sprintf("%s:%s", instanceUserdataFile, "/run/media/cidata/user-data"),
+		fmt.Sprintf("%s:%s", instanceUserdataFile, "/media/cidata/user-data"),
 	}
 
 	// Add host bind mount for /run/kata-containers and /run/image to avoid
@@ -85,6 +85,10 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 	// (host)kata-containers dir -> (container) /run/kata-containers
 	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s",
 		filepath.Join(p.DataDir, "kata-containers"), "/run/kata-containers"))
+
+	// Add host bind mounts required by iptables
+	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s", "/lib/modules", "/lib/modules"))
+	volumeBinding = append(volumeBinding, fmt.Sprintf("%s:%s", "/run/xtables.lock", "/run/xtables.lock"))
 
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the docker image for the PodVM image", spec.Image)

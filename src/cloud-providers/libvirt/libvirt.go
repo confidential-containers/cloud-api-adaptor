@@ -29,6 +29,8 @@ const (
 	GetDomainIPsRetries = 20
 	// The sleep time between retries to get the domain IP addresses
 	GetDomainIPsSleep = time.Second * 3
+	// Convert Memory size from MegaBytes to GigaBytes
+	LIBVIRT_CONV_MEM = 1024
 )
 
 type domainConfig struct {
