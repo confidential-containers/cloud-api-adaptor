@@ -56,13 +56,13 @@ func (_ *Manager) LoadEnv() {
 	var memoryStr, processorsStr string
 	provider.DefaultToEnv(&memoryStr, "LIBVIRT_MEMORY", defaultMemory)
 	if memoryStr != "" {
-		memory, _ := strconv.ParseUint(memoryStr, 10, 64)
+		memory, _ := strconv.ParseUint(memoryStr, 10, 32)
 		libvirtcfg.Memory = uint(memory)
 	}
 
 	provider.DefaultToEnv(&processorsStr, "LIBVIRT_CPU", defaultCPU)
 	if processorsStr != "" {
-		cpu, _ := strconv.ParseUint(processorsStr, 10, 64)
+		cpu, _ := strconv.ParseUint(processorsStr, 10, 32)
 		libvirtcfg.CPU = uint(cpu)
 	}
 

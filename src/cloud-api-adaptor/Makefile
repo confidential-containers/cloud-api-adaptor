@@ -16,6 +16,9 @@ ifeq ($(ARCH),aarch64)
 else ifeq ($(ARCH),s390x)
 	TARGET_ARCH := s390x
 	PROTOC_ARCH := s390_64
+else ifeq ($(ARCH),ppc64le)
+	TARGET_ARCH := ppc64le
+	PROTOC_ARCH := ppc64le_64
 endif
 
 # Default is dev build. To create release build set RELEASE_BUILD=true
@@ -133,7 +136,7 @@ image-with-arch: .git-commit ## Build the per arch image
 .PHONY: deploy
 deploy: ## Deploy cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
 ifneq ($(CLOUD_PROVIDER),)
-	kubectl apply -k "$(COCO_OPERATOR_REPO)/config/default?ref=$(COCO_OPERATOR_REF)"
+	kubectl apply -k "$(COCO_OPERATOR_REPO)/config/$(COCO_OPERATOR_CONFIG)?ref=$(COCO_OPERATOR_REF)"
 	kubectl apply -k "$(COCO_OPERATOR_REPO)/config/samples/ccruntime/peer-pods?ref=$(COCO_OPERATOR_REF)"
 	kubectl apply -k install/overlays/$(CLOUD_PROVIDER)
 else

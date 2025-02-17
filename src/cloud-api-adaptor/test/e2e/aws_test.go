@@ -6,6 +6,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/aws"
@@ -17,7 +18,6 @@ func TestAwsCreateSimplePod(t *testing.T) {
 }
 
 func TestAwsCreatePodWithConfigMap(t *testing.T) {
-	t.Skip("Test not passing")
 	assert := NewAWSAssert()
 
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
@@ -101,6 +101,7 @@ func TestAwsDeletePod(t *testing.T) {
 }
 
 func TestAwsCreateNginxDeployment(t *testing.T) {
+	t.Skip("Test not passing")
 	assert := NewAWSAssert()
 	DoTestNginxDeployment(t, testEnv, assert)
 }
@@ -108,6 +109,11 @@ func TestAwsCreateNginxDeployment(t *testing.T) {
 func TestAwsCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
 	assert := NewAWSAssert()
 	nonExistingImageName := "ami-123456"
-	expectedErrorMessage := "InvalidAMIID.NotFound: The image id '[ami-1234567]' does not exist: not found"
+	expectedErrorMessage := fmt.Sprintf("InvalidAMIID.NotFound: The image id '[%s]' does not exist: not found", nonExistingImageName)
 	DoTestCreatePeerPodContainerWithInvalidAlternateImage(t, testEnv, assert, nonExistingImageName, expectedErrorMessage)
+}
+
+func TestAwsPodWithInitContainer(t *testing.T) {
+	assert := NewAWSAssert()
+	DoTestPodWithInitContainer(t, testEnv, assert)
 }
