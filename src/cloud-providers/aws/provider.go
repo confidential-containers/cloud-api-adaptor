@@ -383,9 +383,7 @@ func (p *awsProvider) updateInstanceTypeSpecList() error {
 var errInstanceTypeNotFound = errors.New("instance type not found")
 
 // Add a method to retrieve cpu, memory, and storage from the instance type
-func (p *awsProvider) getInstanceTypeInformation(instanceType string) (int64, int64,
-	int64, error,
-) {
+func (p *awsProvider) getInstanceTypeInformation(instanceType string) (int64, int64, int64, error) {
 	// Get the instance type information from the instance type using AWS API
 	input := &ec2.DescribeInstanceTypesInput{
 		InstanceTypes: []types.InstanceType{
