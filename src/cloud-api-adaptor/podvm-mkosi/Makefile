@@ -74,7 +74,7 @@ ifeq ($(SE_BOOT),true)
 	sudo mkosi --profile production --image system
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
-	sudo mkosi --profile production --image system
+	sudo mkosi --tools-tree=default --tools-tree-release=40 --profile production --image system
 	sudo -E ../hack/build-s390x-image.sh
 else
 	mkdir -p build
@@ -95,10 +95,10 @@ image-debug: insecure-builder
 	rm -rf ./build
 	@echo "Building debug image..."
 ifeq ($(SE_BOOT),true)
-	sudo mkosi --profile debug
+	sudo mkosi --tools-tree=default --tools-tree-release=40 --profile debug
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
-	sudo mkosi --profile debug
+	sudo mkosi --tools-tree=default --tools-tree-release=40 --profile debug
 	sudo -E ../hack/build-s390x-image.sh
 else
 	mkdir -p build
