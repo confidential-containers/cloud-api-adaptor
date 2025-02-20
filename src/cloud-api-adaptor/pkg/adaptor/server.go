@@ -78,9 +78,11 @@ func (s *server) Start(ctx context.Context) (err error) {
 		}
 	}
 	// Advertise node resources
-	err = k8sops.AdvertiseExtendedResources(s.PeerPodsLimitPerNode)
-	if err != nil {
-		return err
+	if k8sops.IsKubernetesEnvironment() {
+		err = k8sops.AdvertiseExtendedResources(s.PeerPodsLimitPerNode)
+		if err != nil {
+			return err
+		}
 	}
 
 	ttRpc, err := ttrpc.NewServer()
