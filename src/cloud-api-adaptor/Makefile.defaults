@@ -19,7 +19,7 @@ $(or $(shell $(YQ_COMMAND) '.$(1)' $(VERSIONS_SRC)), \
 	$(error $(1) is not set, and could not be automatically set from $(VERSIONS_SRC)))
 endef
 
-ubuntu_RELEASE ?= focal
+ubuntu_RELEASE ?= noble
 rhel_RELEASE ?= 9
 
 ubuntu_amd64_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.url)
