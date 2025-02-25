@@ -11,7 +11,7 @@ require (
 	github.com/IBM-Cloud/power-go-client v1.2.3
 	github.com/IBM/go-sdk-core/v5 v5.18.1
 	github.com/IBM/platform-services-go-sdk v0.36.0
-	github.com/IBM/vpc-go-sdk v0.64.0
+	github.com/IBM/vpc-beta-go-sdk v0.8.2 // TEMPORARY for early tdx dev
 	github.com/avast/retry-go/v4 v4.5.1
 	github.com/aws/aws-sdk-go-v2 v1.21.0
 	github.com/aws/aws-sdk-go-v2/config v1.15.11

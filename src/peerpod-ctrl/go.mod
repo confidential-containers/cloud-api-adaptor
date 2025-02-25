@@ -27,7 +27,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2 v2.2.1 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
 	github.com/IBM/go-sdk-core/v5 v5.18.1 // indirect
-	github.com/IBM/vpc-go-sdk v0.64.0 // indirect
+	github.com/IBM/vpc-beta-go-sdk v0.8.2 // indirect; TEMPORARY for early tdx dev
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/avast/retry-go/v4 v4.5.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.21.0 // indirect
