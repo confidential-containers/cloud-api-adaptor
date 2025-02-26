@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM --platform=$TARGETPLATFORM quay.io/confidential-containers/golang-fedora:1.22.12-40 AS builder
+FROM --platform=$TARGETPLATFORM quay.io/confidential-containers/golang-fedora:1.23.6-40 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG CGO_ENABLED=1
