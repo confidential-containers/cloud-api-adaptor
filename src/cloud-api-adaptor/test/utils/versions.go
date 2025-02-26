@@ -6,7 +6,7 @@ package utils
 import (
 	"os"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // Relative to test/e2e
