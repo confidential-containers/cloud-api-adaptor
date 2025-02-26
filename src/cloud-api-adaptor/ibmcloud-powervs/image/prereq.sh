@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # FIXME to pickup these values from versions.yaml
-GO_VERSION="1.22.12"
+GO_VERSION="1.23.6"
 
 # Install dependencies
 yum install -y curl libseccomp-devel openssl openssl-devel skopeo clang clang-devel
