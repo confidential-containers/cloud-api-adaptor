@@ -28,7 +28,7 @@ import (
 	"github.com/IBM/ibm-cos-sdk-go/aws/credentials/ibmiam"
 	cosession "github.com/IBM/ibm-cos-sdk-go/aws/session"
 	"github.com/IBM/ibm-cos-sdk-go/service/s3/s3manager"
-	"github.com/IBM/vpc-go-sdk/vpcv1"
+	vpcv1 "github.com/IBM/vpc-beta-go-sdk/vpcbetav1"
 	log "github.com/sirupsen/logrus"
 )
 
