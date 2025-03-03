@@ -238,7 +238,7 @@ jobs:
       dev_tags: ${{ inputs.caa_image_tag }}-s390x-dev
       release_tags: ${{ inputs.caa_image_tag }}-s390x
       git_ref: ${{ inputs.git_ref }}
-      runner: 's390x'
+      runner: s390x-large
     secrets: inherit
 
   libvirt_e2e_arch_prep:
