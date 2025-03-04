@@ -256,13 +256,21 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	var authJSON []byte
 	_, err = os.Stat(SrcAuthfilePath)
 	if err != nil {
-		logger.Printf("credential file %s is not present, skipping image auth config", SrcAuthfilePath)
+		logger.Printf("credential file %s is not present, skipping cluster wide image auth config", SrcAuthfilePath)
 	} else {
 		authJSON, err = os.ReadFile(SrcAuthfilePath)
 		if err != nil {
 			return nil, fmt.Errorf("error reading %s: %v", SrcAuthfilePath, err)
 		}
-		logger.Printf("configure agent to use credentials file %s", SrcAuthfilePath)
+		logger.Printf("configure agent to use cluster wide credentials file %s", SrcAuthfilePath)
+	}
+	// Look up image pull secrets for the pod and merge into cluster wide image auth
+	authJSON, err = k8sops.GetImagePullSecrets(pod, namespace, authJSON)
+	if err != nil {
+		// Ignore errors
+		logger.Printf("error reading image pull secrets: %v", err)
+	} else {
+		logger.Printf("successfully retrieved pod image pull secrets for %s/%s", namespace, pod)
 	}
 
 	daemonConfig := forwarder.Config{
