@@ -50,7 +50,7 @@ If you are using an existing cluster, you can skip this section and proceed to [
 1. Create a ROKS cluster
 
     ```bash
-    ibmcloud ks cluster create vpc-gen2 --flavor bx2.4x16 --name "$CLUSTER_NAME" --subnet-id "$SUBNET_ID" --vpc-id "$VPC_ID" --zone "$ZONE" --operating-system RHCOS --workers 2 --version 4.17.12_openshift --disable-outbound-traffic-protection --cos-instance "$COS_CRN"
+    ibmcloud ks cluster create vpc-gen2 --flavor bx2.4x16 --name "$CLUSTER_NAME" --subnet-id "$SUBNET_ID" --vpc-id "$VPC_ID" --zone "$ZONE" --operating-system RHCOS --workers 2 --version 4.17.14_openshift --disable-outbound-traffic-protection --cos-instance "$COS_CRN"
 
     ```
 
@@ -193,6 +193,15 @@ EOF
 ```
 
 This will create a `peerpods-cluster.properties` files in your home directory.
+
+You can optionally run peer pods in confidential (TDX enabled) VMs by changing the `DISABLECVM` property to `false`, but make sure you also change the `INSTANCE_PROFILE_NAME` property to a profile that supports the TDX confidential computing mode. For example:
+
+```bash
+sed -i ".bak" -e 's/DISABLECVM="true"/DISABLECVM="false"/' -e 's/bx2-2x8/bx3dc-2x10/' ~/peerpods-cluster.properties
+```
+
+> [!WARNING]
+> Confidential (CVM) mode is still a work in progress and should only be enabled for development purposes at this time.
 
 Finally, run the `caa-provisioner-cli` command to install the operator and cloud-api-adaptor:
 
