@@ -127,20 +127,6 @@ jobs:
           echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)" >> "$GITHUB_ENV"
           echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
 
-      - name: Install mkosi dependencies
-        if: ${{ inputs.arch == 's390x' }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y bubblewrap alien dnf qemu-utils uidmap
-
-      - name: Install mkosi
-        if: ${{ inputs.arch == 's390x' }}
-        run: |
-          git clone -b "${MKOSI_VERSION}" https://github.com/systemd/mkosi
-          sudo rm -f /usr/local/bin/mkosi
-          sudo ln -s "$PWD/mkosi/bin/mkosi" /usr/local/bin/mkosi
-          mkosi --version
-
       - uses: oras-project/setup-oras@v1
         with:
           version: ${{ env.ORAS_VERSION }}
