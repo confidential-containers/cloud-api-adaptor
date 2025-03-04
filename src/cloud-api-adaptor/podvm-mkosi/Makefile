@@ -30,6 +30,14 @@ ifeq ($(ARCH),s390x)
 YQ_CHECKSUM = $(YQ_CHECKSUM_s390x)
 endif
 
+define run_mkosi_in_container
+	docker run --rm --privileged \
+		-v "$(shell pwd)":/workspace \
+		-w /workspace \
+		fedora:40 \
+		bash -c "dnf install -y mkosi && mkosi --tools-tree=default --tools-tree-release=40 $(1)"
+endef
+
 binaries:
 	@echo "Building binaries..."
 	rm -rf ./resources/binaries-tree
@@ -71,10 +79,10 @@ image: insecure-builder
 	rm -rf ./build
 	@echo "Building image..."
 ifeq ($(SE_BOOT),true)
-	sudo mkosi --profile production --image system
+	$(call run_mkosi_in_container,--profile production --image system)
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
-	sudo mkosi --tools-tree=default --tools-tree-release=40 --profile production --image system
+	$(call run_mkosi_in_container,--profile production --image system)
 	sudo -E ../hack/build-s390x-image.sh
 else
 	mkdir -p build
@@ -95,10 +103,10 @@ image-debug: insecure-builder
 	rm -rf ./build
 	@echo "Building debug image..."
 ifeq ($(SE_BOOT),true)
-	sudo mkosi --tools-tree=default --tools-tree-release=40 --profile debug
+	$(call run_mkosi_in_container,--profile debug)
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
-	sudo mkosi --tools-tree=default --tools-tree-release=40 --profile debug
+	$(call run_mkosi_in_container,--profile debug)
 	sudo -E ../hack/build-s390x-image.sh
 else
 	mkdir -p build
