@@ -21,8 +21,10 @@ import (
 	proto "google.golang.org/protobuf/proto"
 )
 
-var logger = log.New(log.Writer(), "[adaptor/cloud/gcp] ", log.LstdFlags|log.Lmsgprefix)
-var computeScope = "https://www.googleapis.com/auth/compute"
+var (
+	logger       = log.New(log.Writer(), "[adaptor/cloud/gcp] ", log.LstdFlags|log.Lmsgprefix)
+	computeScope = "https://www.googleapis.com/auth/compute"
+)
 
 const maxInstanceNameLen = 63
 
@@ -41,11 +43,13 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		serviceConfig:   config,
 		instancesClient: nil,
 	}
+
 	if config.GcpCredentials != "" {
 		creds, err := google.CredentialsFromJSON(context.TODO(), []byte(config.GcpCredentials), computeScope)
 		if err != nil {
 			return nil, fmt.Errorf("configuration error when using creds: %s", err)
 		}
+
 		provider.instancesClient, err = compute.NewInstancesRESTClient(context.TODO(), option.WithCredentials(creds))
 		if err != nil {
 			return nil, fmt.Errorf("NewInstancesRESTClient with credentials error: %s", err)
@@ -57,11 +61,13 @@ func NewProvider(config *Config) (provider.Provider, error) {
 			return nil, fmt.Errorf("NewInstancesRESTClient error: %s", err)
 		}
 	}
+
 	return provider, nil
 }
 
 func getIPs(instance *computepb.Instance) ([]netip.Addr, error) {
 	var podNodeIPs []netip.Addr
+
 	for _, nic := range instance.GetNetworkInterfaces() {
 		for _, access := range nic.GetAccessConfigs() {
 			ipStr := access.GetNatIP()
@@ -69,15 +75,16 @@ func getIPs(instance *computepb.Instance) ([]netip.Addr, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse pod node IP %q: %w", ipStr, err)
 			}
+
 			podNodeIPs = append(podNodeIPs, ip)
 			logger.Printf("Found pod node IP: %s", ip.String())
 		}
 	}
+
 	return podNodeIPs, nil
 }
 
 func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
-
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
@@ -86,7 +93,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		return nil, err
 	}
 
-	//Convert userData to base64
+	// Convert userData to base64
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 	logger.Printf("userDataEnc:  %s", userDataEnc)
 
@@ -153,6 +160,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	if err != nil {
 		return nil, fmt.Errorf("Instances.Insert error: %s. req: %v", err, insertReq)
 	}
+
 	err = op.Wait(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("waiting for Instances.Insert error: %s. req: %v", err, insertReq)
@@ -190,14 +198,17 @@ func (p *gcpProvider) DeleteInstance(ctx context.Context, instanceID string) err
 		Zone:     p.serviceConfig.Zone,
 		Instance: instanceID,
 	}
+
 	op, err := p.instancesClient.Delete(ctx, req)
 	if err != nil {
 		return fmt.Errorf("Instances.Delete error: %w, req: %v", err, req)
 	}
+
 	err = op.Wait(ctx)
 	if err != nil {
 		return fmt.Errorf("waiting for Instances.Delete error: %s. req: %v", err, req)
 	}
+
 	logger.Printf("deleted an instance %s", instanceID)
 	return nil
 }
