@@ -81,6 +81,104 @@ func RemoveExtendedResources() error {
 	return nil
 }
 
+// Auths contains Registries with credentials
+type Auths struct {
+	Registries Registries `json:"auths"`
+}
+
+// Registries contains credentials for hosts
+type Registries map[string]Auth
+
+// Auth contains credentials for a given host
+type Auth struct {
+	Auth string `json:"auth"`
+}
+
+// GetImagePullSecrets gets image pull secrets for the specified pod
+func GetImagePullSecrets(podName string, namespace string, clusterAuth []byte) ([]byte, error) {
+
+	config, err := getKubeConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get k8s config: %v", err)
+	}
+
+	cli, err := getClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get k8s client: %v", err)
+	}
+
+	pod, err := cli.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	accountName := pod.Spec.ServiceAccountName
+	if accountName == "" {
+		accountName = "default"
+	}
+	serviceaAccount, err := cli.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), accountName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	auths := Auths{}
+	if clusterAuth != nil {
+		err := json.Unmarshal(clusterAuth, &auths)
+		if err != nil {
+			return nil, err
+		}
+	}
+	auths.Registries = make(map[string]Auth)
+	for _, secret := range serviceaAccount.ImagePullSecrets {
+		err := getAuths(cli, namespace, secret.Name, &auths)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for _, secret := range pod.Spec.ImagePullSecrets {
+		err := getAuths(cli, namespace, secret.Name, &auths)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(auths.Registries) > 0 {
+		authJSON, err := json.Marshal(auths)
+		if err != nil {
+			return nil, err
+		}
+		return authJSON, nil
+	}
+	return nil, nil
+}
+
+// getAuths get auth credentials from specified docker secret
+func getAuths(cli *k8sclient.Clientset, namespace string, secretName string, auths *Auths) error {
+	secret, err := cli.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+	if err != nil {
+		// Ignore errors getting auth secrets
+		return nil
+	}
+	registries := Registries{}
+	if secretData, ok := secret.Data[".dockerconfigjson"]; ok {
+		auths := Auths{}
+		err := json.Unmarshal(secretData, &auths)
+		if err != nil {
+			return err
+		}
+		registries = auths.Registries
+	} else if secretData, ok := secret.Data[".dockercfg"]; ok {
+		err = json.Unmarshal(secretData, &registries)
+		if err != nil {
+			return err
+		}
+	}
+	for registry, creds := range registries {
+		auths.Registries[registry] = creds
+	}
+	return nil
+}
+
 // patchNodeStatus patches the status of a node
 func patchNodeStatus(c *k8sclient.Clientset, nodeName string, patches []jsonPatch) error {
 	if len(patches) > 0 {
