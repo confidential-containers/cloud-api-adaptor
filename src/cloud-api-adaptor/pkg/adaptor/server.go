@@ -80,7 +80,7 @@ func (s *server) Start(ctx context.Context) (err error) {
 	// Advertise node resources
 	err = k8sops.AdvertiseExtendedResources(s.PeerPodsLimitPerNode)
 	if err != nil {
-		return err
+		logger.Printf("failed AdvertiseExtendedResources: %s", err)
 	}
 
 	ttRpc, err := ttrpc.NewServer()
