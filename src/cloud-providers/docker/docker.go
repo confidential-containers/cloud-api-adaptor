@@ -28,8 +28,8 @@ const defaultDockerNetworkName = "bridge"
 // Returns the container ID and the IP address of the container
 func createContainer(ctx context.Context, client *client.Client,
 	instanceName string, volumeBinding []string,
-	podvmImage string, networkName string) (string, string, error) {
-
+	podvmImage string, networkName string,
+) (string, string, error) {
 	// No need to bind the port to the host
 	portBinding := nat.PortMap{}
 
@@ -78,7 +78,6 @@ func createContainer(ctx context.Context, client *client.Client,
 	// The network name is the key in the networks map
 
 	return resp.ID, inspect.NetworkSettings.Networks[networkName].IPAddress, nil
-
 }
 
 // Method to delete container given container id
