@@ -6,7 +6,7 @@
 # Creates a builder container image that should be used to build the Pod VM
 # disk inside a container.
 #
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 ARG ARCH="amd64"
 ARG YQ_ARCH="amd64"

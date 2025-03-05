@@ -30,7 +30,7 @@ ARG BINARY
 
 RUN cd cloud-api-adaptor/src/csi-wrapper/ && make ARCH=${TARGETARCH} ${BINARY}
 
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 ARG BINARY
 ENV BINARY=${BINARY}
 WORKDIR /
