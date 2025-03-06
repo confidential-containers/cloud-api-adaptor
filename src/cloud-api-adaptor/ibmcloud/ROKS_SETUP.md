@@ -68,13 +68,16 @@ If you are using an existing cluster, you can skip this section and proceed to [
 
 By default, your Red Hat OpenShift cluster will not work with the peer pod components. Using the environment variables set in the previous section, proceed with the following steps. 
 
-1. Add a cluster inbound security group rule for the `kata-agent` client
+1. Add security group rules to allow traffic between the cluster and peer pod VSIs
 
     ```bash
     export CLUSTER_ID=$(ibmcloud ks cluster get --cluster "$CLUSTER_NAME" --output json | jq -r .id)
     export CLUSTER_SG="kube-$CLUSTER_ID"
-    export KATA_SG=$(ibmcloud is vpc "$VPC_ID" -json | jq -r .default_security_group.id)
-    ibmcloud is sg-rulec "$CLUSTER_SG" inbound udp --port-min 4789 --port-max 4789 --remote "$KATA_SG"
+    export VPC_SG=$(ibmcloud is vpc "$VPC_ID" -json | jq -r .default_security_group.id)
+    # Add a cluster inbound security group rule for the kata-agent client
+    ibmcloud is sg-rulec "$CLUSTER_SG" inbound udp --port-min 4789 --port-max 4789 --remote "$VPC_SG"
+    # Add a VPC inbound security group rule for the cluster client
+    ibmcloud is sg-rulec "$VPC_SG" inbound all --remote "$CLUSTER_SG"
     ```
 
 1. Allow `cloud-api-adaptor` to update pod finalizers
