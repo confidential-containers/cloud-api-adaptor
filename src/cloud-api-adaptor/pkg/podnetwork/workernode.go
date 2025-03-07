@@ -66,8 +66,9 @@ func NewWorkerNode(networkConfig *tunneler.NetworkConfig) (WorkerNode, error) {
 func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 
 	config := &tunneler.Config{
-		TunnelType: n.TunnelType,
-		Index:      podIndexManager.Get(),
+		TunnelType:          n.TunnelType,
+		Index:               podIndexManager.Get(),
+		ExternalNetViaPodVM: n.ExternalNetViaPodVM,
 	}
 
 	hostNS, err := netops.OpenCurrentNamespace()
@@ -80,7 +81,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		}
 	}()
 
-	hostPrimaryInterface, err := findPrimaryInterface(hostNS)
+	hostPrimaryInterface, _, err := findPrimaryInterface(hostNS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to identify the host primary interface: %w", err)
 	}
@@ -123,7 +124,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		return nil, err
 	}
 
-	podInterface, err := findPrimaryInterface(podNS)
+	podInterface, gatewayAddr, err := findPrimaryInterface(podNS)
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +143,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		if r.Device != "" {
 			dev = "dev " + r.Device
 		}
+
 		logger.Printf("    %s %s %s", dst, gw, dev)
 	}
 
@@ -186,6 +188,23 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 		config.Routes = append(config.Routes, r)
 	}
 
+	// Add route for the subnet CIDRs in the new namespace
+	if n.PodSubnetCIDRs != nil {
+		for _, cidr := range n.PodSubnetCIDRs {
+			prefix, err := netip.ParsePrefix(cidr)
+			if err != nil {
+				logger.Printf("failed to parse CIDR %q: %s", cidr, err)
+				continue
+			}
+			route := &tunneler.Route{
+				Dst: prefix,
+				GW:  gatewayAddr,
+				Dev: podInterface,
+			}
+			config.Routes = append(config.Routes, route)
+		}
+	}
+
 	for _, neighbor := range neighbors {
 		n := &tunneler.Neighbor{
 			IP:           neighbor.IP,
@@ -226,7 +245,7 @@ func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
 
 	hostInterface := n.HostInterface
 	if hostInterface == "" {
-		hostPrimaryInterface, err := findPrimaryInterface(hostNS)
+		hostPrimaryInterface, _, err := findPrimaryInterface(hostNS)
 		if err != nil {
 			return fmt.Errorf("failed to identify the host primary interface: %w", err)
 		}

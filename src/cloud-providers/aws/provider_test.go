@@ -146,6 +146,78 @@ func (m mockEC2Client) DescribeInstances(ctx context.Context,
 	}, nil
 }
 
+// Create a mock for EC2 AllocateAddress method
+func (m mockEC2Client) AllocateAddress(ctx context.Context,
+	params *ec2.AllocateAddressInput,
+	optFns ...func(*ec2.Options)) (*ec2.AllocateAddressOutput, error) {
+
+	return nil, nil
+}
+
+// Create a mock for EC2 AssociateAddress method
+func (m mockEC2Client) AssociateAddress(ctx context.Context,
+	params *ec2.AssociateAddressInput,
+	optFns ...func(*ec2.Options)) (*ec2.AssociateAddressOutput, error) {
+
+	return nil, nil
+}
+
+// Create a mock for EC2 DescribeAddresses method
+func (m mockEC2Client) DescribeAddresses(ctx context.Context,
+	params *ec2.DescribeAddressesInput,
+	optFns ...func(*ec2.Options)) (*ec2.DescribeAddressesOutput, error) {
+
+	return nil, nil
+}
+
+// Create a mock for EC2 DisassociateAddress method
+func (m mockEC2Client) DisassociateAddress(ctx context.Context,
+	params *ec2.DisassociateAddressInput,
+	optFns ...func(*ec2.Options)) (*ec2.DisassociateAddressOutput, error) {
+
+	return nil, nil
+}
+
+// Create a mock for EC2 ReleaseAddress method
+func (m mockEC2Client) ReleaseAddress(ctx context.Context,
+	params *ec2.ReleaseAddressInput,
+	optFns ...func(*ec2.Options)) (*ec2.ReleaseAddressOutput, error) {
+
+	return nil, nil
+}
+
+// Create a mock for EC2 CreateNetworkInterface method
+func (m mockEC2Client) CreateNetworkInterface(ctx context.Context,
+	params *ec2.CreateNetworkInterfaceInput,
+	optFns ...func(*ec2.Options)) (*ec2.CreateNetworkInterfaceOutput, error) {
+
+	return nil, nil
+}
+
+// Create a mock for EC2 AttachNetworkInterface method
+func (m mockEC2Client) AttachNetworkInterface(ctx context.Context,
+	params *ec2.AttachNetworkInterfaceInput,
+	optFns ...func(*ec2.Options)) (*ec2.AttachNetworkInterfaceOutput, error) {
+
+	return nil, nil
+}
+
+// Create a mock for EC2 DeleteNetworkInterface method
+func (m mockEC2Client) DeleteNetworkInterface(ctx context.Context,
+	params *ec2.DeleteNetworkInterfaceInput,
+	optFns ...func(*ec2.Options)) (*ec2.DeleteNetworkInterfaceOutput, error) {
+
+	return nil, nil
+}
+
+// Create a mock for EC2 ModifyNetworkInterfaceAttribute method
+func (m mockEC2Client) ModifyNetworkInterfaceAttribute(ctx context.Context,
+	params *ec2.ModifyNetworkInterfaceAttributeInput,
+	optFns ...func(*ec2.Options)) (*ec2.ModifyNetworkInterfaceAttributeOutput, error) {
+
+	return nil, nil
+}
+
 // Mock instanceRunningWaiter
 type MockAWSInstanceWaiter struct{}
 
