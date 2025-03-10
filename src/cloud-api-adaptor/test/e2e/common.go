@@ -247,6 +247,18 @@ func WithInitdata(kbsEndpoint string) PodOption {
 	}
 }
 
+func WithEmptyInitdata(kbsEndpoint string) PodOption {
+	return func(p *corev1.Pod) {
+		if p.ObjectMeta.Annotations == nil {
+			p.ObjectMeta.Annotations = make(map[string]string)
+		}
+		key := "io.katacontainers.config.runtime.cc_init_data"
+		initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+		value := b64.StdEncoding.EncodeToString([]byte(initdata))
+		p.ObjectMeta.Annotations[key] = value
+	}
+}
+
 func WithAnnotations(data map[string]string) PodOption {
 	return func(p *corev1.Pod) {
 		p.ObjectMeta.Annotations = data

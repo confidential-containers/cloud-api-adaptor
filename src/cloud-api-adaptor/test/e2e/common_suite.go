@@ -769,25 +769,77 @@ func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 	NewTestCase(t, e, "PodWithCpuMemLimitsAndRequests", assert, "Pod with cpu and memory limits and requests").WithPod(pod).Run()
 }
 
-func DoTestPodVMwithInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, initdataString string) {
-	podName := "initdata-annotations-podvm"
+func DoTestPodwithInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, initdataString string) {
+	podName := "initdata-annotations-pod"
 	containerName := "busybox"
 	imageName := getBusyboxTestImage(t)
 	annotationData := map[string]string{
 		"io.katacontainers.config.runtime.cc_init_data": initdataString,
 	}
+
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
-	NewTestCase(t, e, "PodVMwithInitdataAnnotations", assert, "PodVM with Initdata Annotation is created").WithPod(pod).WithExpectedInitdataAnnotation(initdataString).Run()
+
+	t.Logf("Details of pod edited : RR")
+	t.Logf("Pod details: %+v", pod)
+	t.Logf("Pod details 2: %+v", pod.GetAnnotations())
+	t.Logf("Details of pod edited : RR")
+	t.Logf("Pod details 3: %+v", pod.ObjectMeta.Annotations)
+	NewTestCase(t, e, "PodwithInitdataAnnotations", assert, "PodVM with Initdata Annotation is created").WithPod(pod).WithExpectedInitdataAnnotation(initdataString).Run()
 }
 
-// func DoTestCreatePeerPodContainerWithValidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert, alternateImageName string) {
-// 	podName := "annotations-valid-alternate-image"
+// func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string, resourcePath, expectedSecret string) {
+// 	key := "MY_SECRET"
+// 	value := CreateSealedSecretValue("kbs:///" + resourcePath)
+// 	podName := "sealed-secret"
+// 	imageName := getBusyboxTestImage(t)
+// 	env := []v1.EnvVar{{Name: key, Value: value}}
+// 	cmd := []string{"watch", "-n", "120", "-t", "--", "printenv MY_SECRET"}
+
+// 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithEnvironmentVariables(env), WithInitdata(kbsEndpoint), WithCommand(cmd))
+
+// 	NewTestCase(t, e, "TestSealedSecret", assert, "Unsealed secret has been set to ENV").WithPod(pod).WithExpectedPodLogString(expectedSecret).Run()
+// }
+
+// func DoTestPodSucesswithInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, initdataString string) {
+// 	podName := "initdata-annotations-pod-success"
 // 	containerName := "busybox"
 // 	imageName := getBusyboxTestImage(t)
 // 	annotationData := map[string]string{
-// 		"io.katacontainers.config.hypervisor.image": alternateImageName,
+// 		"io.katacontainers.config.runtime.cc_init_data": initdataString,
 // 	}
-// 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+// 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "ls /run/peerpod/"}), WithAnnotations(annotationData))
 
-// 	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithAlternateImage(alternateImageName).Run()
+// 	NewTestCase(t, e, "PodSuccesswithInitdataAnnotations", assert, "PodVM with Initdata Annotation is created").WithPod(pod).WithExpectedInitdataAnnotation(initdataString).Run()
 // }
+
+// func DoTestCreatePodWithConfigMap(t *testing.T, e env.Environment, assert CloudAssert) {
+// 	podName := "busybox-configmap-pod"
+// 	containerName := "busybox-configmap-container"
+// 	imageName := getBusyboxTestImage(t)
+// 	configMapName := "busybox-configmap"
+// 	configMapFileName := "example.txt"
+// 	podKubeConfigmapDir := "/etc/config/"
+// 	configMapPath := podKubeConfigmapDir + configMapFileName
+// 	configMapContents := "Hello, world"
+// 	configMapData := map[string]string{configMapFileName: configMapContents}
+// 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithConfigMapBinding(podKubeConfigmapDir, configMapName), WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+// 	configMap := NewConfigMap(E2eNamespace, configMapName, configMapData)
+// 	testCommands := []TestCommand{
+// 		{
+// 			Command:       []string{"cat", configMapPath},
+// 			ContainerName: pod.Spec.Containers[0].Name,
+// 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
+// 				if stdout.String() == configMapContents {
+// 					t.Logf("Data Inside Configmap: %s", stdout.String())
+// 					return true
+// 				} else {
+// 					t.Errorf("Configmap has invalid Data: %s", stdout.String())
+// 					return false
+// 				}
+// 			},
+// 			TestCommandStderrFn: IsBufferEmpty,
+// 		},
+// 	}
+
+// // // 	NewTestCase(t, e, "ConfigMapPeerPod", assert, "Configmap is created and contains data").WithPod(pod).WithConfigMap(configMap).WithTestCommands(testCommands).Run()
+// // // }
