@@ -65,7 +65,7 @@ defaults:
 jobs:
   build-image:
     name: Build mkosi image
-    runs-on: ${{ inputs.arch == 's390x' && 's390x-large' || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
     permissions:
       contents: read
       packages: write
