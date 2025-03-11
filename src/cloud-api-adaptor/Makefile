@@ -230,6 +230,8 @@ endif
 	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
 	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
 	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
+	--build-arg ORG_ID=$(ORG_ID) \
+	--build-arg ACTIVATION_KEY=$(ACTIVATION_KEY) \
 	--build-arg ARCH=$(TARGET_ARCH) \
 	--build-arg CLOUD_PROVIDER=$(or $(CLOUD_PROVIDER),generic) \
 	--build-arg IMAGE_URL=$(IMAGE_URL) \
