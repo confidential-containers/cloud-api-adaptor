@@ -101,10 +101,12 @@ gcp() {
 
     [[ "${PODVM_IMAGE_NAME}" ]] && optionals+="-image-name ${PODVM_IMAGE_NAME} "
     [[ "${GCP_PROJECT_ID}" ]] && optionals+="-gcp-project-id ${GCP_PROJECT_ID} "
-    [[ "${GCP_ZONE}" ]] && optionals+="-zone ${GCP_ZONE} "                         # if not set retrieved from IMDS
-    [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-machine-type ${GCP_MACHINE_TYPE} " # default e2-medium
-    [[ "${GCP_NETWORK}" ]] && optionals+="-network ${GCP_NETWORK} "                # defaults to 'default'
-    [[ "${GCP_DISK_TYPE}" ]] && optionals+="-disk-type ${GCP_DISK_TYPE} "          # defaults to 'pd-standard'
+    [[ "${GCP_ZONE}" ]] && optionals+="-zone ${GCP_ZONE} "                                         # if not set retrieved from IMDS
+    [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-machine-type ${GCP_MACHINE_TYPE} "                 # default e2-medium
+    [[ "${GCP_NETWORK}" ]] && optionals+="-network ${GCP_NETWORK} "                                # defaults to 'default'
+    [[ "${GCP_DISK_TYPE}" ]] && optionals+="-disk-type ${GCP_DISK_TYPE} "                          # defaults to 'pd-standard'
+    [[ "${GCP_CONFIDENTIAL_TYPE}" ]] && optionals+="-confidential-type ${GCP_CONFIDENTIAL_TYPE} "  # if not set raise exception only when disablecvm = false
+    [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "                                  # defaults to false
 
     set -x
     exec cloud-api-adaptor gcp \
