@@ -34,8 +34,8 @@ define run_mkosi_in_container
 	docker run --rm --privileged \
 		-v "$(shell pwd)":/workspace \
 		-w /workspace \
-		fedora:40 \
-		bash -c "dnf install -y mkosi && mkosi --tools-tree=default --tools-tree-release=40 $(1)"
+		fedora:41 \
+		bash -c "dnf install -y mkosi && mkosi --tools-tree=default --tools-tree-release=41 $(1)"
 endef
 
 binaries:
