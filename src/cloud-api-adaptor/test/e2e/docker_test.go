@@ -136,10 +136,19 @@ func TestDockerCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.
 	}
 }
 
-func TestDockerCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T) {
+func TestDockerCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t *testing.T) {
 	assert := DockerAssert{}
 	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
-		DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t, testEnv, assert)
+		DoTestCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t, testEnv, assert)
+	} else {
+		t.Skip("Registry Credentials, or authenticated image name not exported")
+	}
+}
+
+func TestDockerCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *testing.T) {
+	assert := DockerAssert{}
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		DoTestCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t, testEnv, assert)
 	} else {
 		t.Skip("Registry Credentials, or authenticated image name not exported")
 	}

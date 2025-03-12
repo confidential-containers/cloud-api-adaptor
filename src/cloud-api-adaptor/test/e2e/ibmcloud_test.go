@@ -146,12 +146,23 @@ func TestCreatePeerPodWithPVC(t *testing.T) {
 	}
 }
 
-func TestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T) {
+func TestIBMCloudCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
-		DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t, testEnv, assert)
+		DoTestCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t, testEnv, assert)
+	} else {
+		t.Skip("Registry Credentials not exported")
+	}
+}
+
+func TestIBMCloudCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t *testing.T) {
+	assert := IBMCloudAssert{
+		VPC: pv.IBMCloudProps.VPC,
+	}
+	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
+		DoTestCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t, testEnv, assert)
 	} else {
 		t.Skip("Registry Credentials not exported")
 	}
