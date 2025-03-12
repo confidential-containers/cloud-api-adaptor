@@ -107,7 +107,12 @@ image_ref="cos://$location/$bucket/$file"
 # If OS isn't specified infer from file name
 if [ -z "$operating_system" ]; then
     image_arch="${image_name##*-}"
-    operating_system="ubuntu-20-04-${image_arch/x86_64/amd64}"
+    operating_system="ubuntu-24-04"
+    # 24.04 image type isn't available for s390x yet, so label it 22-04 as a workaround
+    if [[ ${image_arch} == "s390x" ]]; then
+        operating_system="ubuntu-22-04"
+    fi
+    operating_system=${operating_system}"-${image_arch/x86_64/amd64}"
 fi
 image_name="$(echo ${image_name} | tr '[:upper:]' '[:lower:]' | sed 's/\./-/g' | sed 's/_/-/g')"
 image_json=$(ibmcloud is image-create "$image_name" --os-name "$operating_system" --file "$image_ref" --output JSON) || error "Unable to create vpc image $image_name"
