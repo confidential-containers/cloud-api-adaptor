@@ -29,10 +29,10 @@ variable "subnet_name" {
   default     = ""
 }
 
-# amd64: ibm-ubuntu-20-04-3-minimal-amd64-1
-# s390x: ibm-ubuntu-20-04-2-minimal-s390x-1
+# amd64: ibm-ubuntu-22-04-5-minimal-amd64-1
+# s390x: ibm-ubuntu-22-04-4-minimal-s390x-3
 variable "node_image" {
-  default = "ibm-ubuntu-20-04-2-minimal-s390x-1"
+  default = "ibm-ubuntu-22-04-4-minimal-s390x-3"
 }
 
 # amd64: bx2-2x8

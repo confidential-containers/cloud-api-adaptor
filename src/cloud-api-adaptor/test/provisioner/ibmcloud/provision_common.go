@@ -912,10 +912,10 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 		if strings.Contains(IBMCloudProps.InstanceProfile, "e-") {
 			osNames = []string{"hyper-protect-1-0-s390x"}
 		} else {
-			osNames = []string{"ubuntu-20-04-s390x"}
+			osNames = []string{"ubuntu-22-04-s390x"}
 		}
 	} else {
-		osNames = []string{"ubuntu-20-04-amd64"}
+		osNames = []string{"ubuntu-24-04-amd64"}
 
 	}
 	operatingSystemIdentityModel := &vpcv1.OperatingSystemIdentityByName{
