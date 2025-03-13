@@ -23,6 +23,9 @@ ARCH        := $(or $(ARCH),$(HOST_ARCH))
 # Normalise x86_64 / amd64 for input ARCH
 ARCH        := $(subst amd64,x86_64,$(ARCH))
 DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
+# Normalize aarch64 / arm64 for input ARCH
+ARCH        := $(subst arm64,aarch64,$(ARCH))
+DEB_ARCH    := $(subst aarch64,arm64,$(ARCH))
 LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
 
 # Auth json file for registry access. Used with skopeo
