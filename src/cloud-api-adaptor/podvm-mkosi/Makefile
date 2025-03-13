@@ -1,6 +1,14 @@
 include ../Makefile.defaults
 
 ARCH      ?= $(subst x86_64,amd64,$(shell uname -m))
+PROTOC_ARCH ?= x86_64
+ifeq ($(ARCH),aarch64)
+	PROTOC_ARCH := aarch_64
+else ifeq ($(ARCH),s390x)
+	PROTOC_ARCH := s390_64
+else ifeq ($(ARCH),ppc64le)
+	PROTOC_ARCH := ppc64le_64
+endif
 SE_BOOT   ?= false
 IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
 
@@ -53,7 +61,7 @@ endif
 		--build-arg YQ_VERSION=$(YQ_VERSION) \
 		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
 		--build-arg YQ_ARCH=$(ARCH) \
-		--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390x) \
+		--build-arg PROTOC_ARCH=$(PROTOC_ARCH) \
 		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
 		--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
 		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
