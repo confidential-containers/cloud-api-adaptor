@@ -13,13 +13,6 @@ PODVM_DISTRO ?= ubuntu
 IMAGE_URL := $(or $(IMAGE_URL),$($(PODVM_DISTRO)_$(DEB_ARCH)_IMAGE_URL))
 IMAGE_CHECKSUM := $(or $(IMAGE_CHECKSUM),$($(PODVM_DISTRO)_$(DEB_ARCH)_IMAGE_CHECKSUM))
 
-ifndef IMAGE_URL
-$(error "IMAGE_URL is not defined")
-endif
-ifndef IMAGE_CHECKSUM
-$(error "IMAGE_CHECKSUM is not defined")
-endif
-
 AGENT_PROTOCOL_FORWARDER_SRC := ../
 
 QEMU_MACHINE_TYPE_s390x := s390-ccw-virtio
@@ -37,6 +30,13 @@ PACKER_DEFAULT_OPTS ?= -var qemu_image_name=${IMAGE_FILE} \
 image: $(IMAGE_FILE)
 
 setopts:
+ifndef IMAGE_URL
+	$(error "IMAGE_URL is not defined")
+endif
+ifndef IMAGE_CHECKSUM
+	$(error "IMAGE_CHECKSUM is not defined")
+endif
+
 ifeq ($(PODVM_DISTRO),ubuntu)
 	@echo defined
 	$(eval OPTS := -var se_boot=${SE_BOOT})
