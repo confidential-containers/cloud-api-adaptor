@@ -82,7 +82,7 @@ type InstallOverlay interface {
 const PodWaitTimeout = time.Second * 30
 
 func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, error) {
-	namespace := "confidential-containers-system"
+	namespace := GetCAANamespace()
 
 	overlay, err := GetInstallOverlay(provider, installDir)
 	if err != nil {
@@ -297,7 +297,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		}
 	}
 
-	cmd = exec.Command("kubectl", "get", "cm", "peer-pods-cm", "-n", "confidential-containers-system", "-o", "yaml")
+	cmd = exec.Command("kubectl", "get", "cm", "peer-pods-cm", "-n", GetCAANamespace(), "-o", "yaml")
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
@@ -416,4 +416,12 @@ func GetDaemonSetOwnedPods(ctx context.Context, cfg *envconf.Config, daemonset *
 	}
 
 	return retPods, nil
+}
+
+func GetCAANamespace() string {
+	namespace := os.Getenv("TEST_CAA_NAMESPACE")
+	if namespace == "" {
+		namespace = "confidential-containers-system"
+	}
+	return namespace
 }

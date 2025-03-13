@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -189,7 +190,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 			}
 
 			caaDaemonSetName := "cloud-api-adaptor-daemonset"
-			caaNamespace := "confidential-containers-system"
+			caaNamespace := pv.GetCAANamespace()
 
 			ds := &appsv1.DaemonSet{}
 			if err = client.Resources().Get(ctx, caaDaemonSetName, caaNamespace, ds); err != nil {
