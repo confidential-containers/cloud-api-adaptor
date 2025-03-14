@@ -124,13 +124,13 @@ func GetImagePullSecrets(podName string, namespace string) ([]byte, error) {
 	auths := Auths{}
 	auths.Registries = make(map[string]Auth)
 	for _, secret := range serviceaAccount.ImagePullSecrets {
-		err := getAuths(cli, namespace, secret.Name, &auths)
+		err := addAuths(cli, namespace, secret.Name, &auths)
 		if err != nil {
 			return nil, err
 		}
 	}
 	for _, secret := range pod.Spec.ImagePullSecrets {
-		err := getAuths(cli, namespace, secret.Name, &auths)
+		err := addAuths(cli, namespace, secret.Name, &auths)
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +147,7 @@ func GetImagePullSecrets(podName string, namespace string) ([]byte, error) {
 }
 
 // getAuths get auth credentials from specified docker secret
-func getAuths(cli *k8sclient.Clientset, namespace string, secretName string, auths *Auths) error {
+func addAuths(cli *k8sclient.Clientset, namespace string, secretName string, auths *Auths) error {
 	secret, err := cli.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		// Ignore errors getting secrets to match K8S behavior

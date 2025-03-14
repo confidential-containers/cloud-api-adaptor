@@ -730,7 +730,6 @@ func setImagePullSecretsOnServiceAccount(ctx context.Context, client klient.Clie
 	if err != nil {
 		return err
 	}
-	log.Infof("ServiceAccount %s updated successfully.", "default")
 	return nil
 }
 
