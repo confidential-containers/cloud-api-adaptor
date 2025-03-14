@@ -19,7 +19,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
-const maxInstanceNameLen = 63
+const maxInstanceNameLen = 47
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/ibmcloud-powervs] ", log.LstdFlags|log.Lmsgprefix)
 
