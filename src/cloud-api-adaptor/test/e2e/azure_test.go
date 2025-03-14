@@ -10,13 +10,13 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	b64 "encoding/base64"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/azure"
+	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
@@ -189,7 +189,10 @@ func TestAzureImageDecryption(t *testing.T) {
 // the az tpm attester requires the digest to be sha256 and is hence truncated
 func TestInitDataMeasurement(t *testing.T) {
 	kbsEndpoint := "http://some.endpoint"
-	initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+	initdata, err := buildInitdataBody(kbsEndpoint)
+	if err != nil {
+		log.Fatalf("failed to build initdata %s", err)
+	}
 
 	digest := sha512.Sum384([]byte(initdata))
 	truncatedDigest := digest[:32]
