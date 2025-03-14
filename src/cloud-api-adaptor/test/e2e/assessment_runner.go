@@ -7,18 +7,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/e2e-framework/klient"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/env"
@@ -67,7 +64,7 @@ type TestCase struct {
 	expectedPodEventErrorString string
 	podState                    v1.PodPhase
 	imagePullTimer              bool
-	noAuthJson                  bool
+	saImagePullSecret           string
 	deletionWithin              time.Duration
 	expectedInstanceType        string
 	isNydusSnapshotter          bool
@@ -165,43 +162,14 @@ func (tc *TestCase) WithPodWatcher() *TestCase {
 	return tc
 }
 
-func (tc *TestCase) WithNoAuthJson() *TestCase {
-	tc.noAuthJson = true
+func (tc *TestCase) WithSAImagePullSecret(secretName string) *TestCase {
+	tc.saImagePullSecret = secretName
 	return tc
 }
 
 func (tc *TestCase) WithNydusSnapshotter() *TestCase {
 	tc.isNydusSnapshotter = true
 	return tc
-}
-
-func writeAuthSecret(client klient.Client, ctx context.Context) error {
-	secret := &corev1.Secret{}
-	secretExists := false
-	err := client.Resources().Get(ctx, DEFAULT_AUTH_SECRET, E2eNamespace, secret)
-	if err == nil {
-		secretExists = true
-	}
-	if secretExists {
-		return nil
-	}
-
-	providerName := os.Getenv("CLOUD_PROVIDER")
-	// this path is relative to ./test/e2e
-	authFilePath := "../../install/overlays/" + providerName + "/auth.json"
-	authfile, err := os.ReadFile(authFilePath)
-	if err != nil {
-		return err
-	}
-
-	secretData := map[string][]byte{v1.DockerConfigJsonKey: authfile}
-	secret = NewSecret(E2eNamespace, DEFAULT_AUTH_SECRET, secretData, v1.SecretTypeDockerConfigJson)
-	err = client.Resources().Create(ctx, secret)
-	if err != nil {
-		return err
-	}
-
-	return AddImagePullSecretToDefaultServiceAccount(ctx, client, DEFAULT_AUTH_SECRET)
 }
 
 func (tc *TestCase) Run() {
@@ -214,12 +182,6 @@ func (tc *TestCase) Run() {
 
 			if tc.configMap != nil {
 				if err = client.Resources().Create(ctx, tc.configMap); err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
-				if err = writeAuthSecret(client, ctx); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -244,6 +206,12 @@ func (tc *TestCase) Run() {
 				}
 			}
 
+			if tc.saImagePullSecret != "" {
+				if err = AddImagePullSecretToDefaultServiceAccount(ctx, client, tc.saImagePullSecret); err != nil {
+					t.Fatal(err)
+				}
+			}
+
 			if tc.job != nil {
 				if err = client.Resources().Create(ctx, tc.job); err != nil {
 					t.Fatal(err)
@@ -251,24 +219,6 @@ func (tc *TestCase) Run() {
 				if err = wait.For(conditions.New(client.Resources()).JobCompleted(tc.job), wait.WithTimeout(WAIT_JOB_RUNNING_TIMEOUT)); err != nil {
 					//Using t.log instead of t.Fatal here because we need to assess number of success and failure pods if job fails to complete
 					t.Log(err)
-				}
-			}
-
-			if tc.noAuthJson {
-				clientSet, err := kubernetes.NewForConfig(client.RESTConfig())
-				if err != nil {
-					t.Fatal(err)
-				}
-				_, err = clientSet.CoreV1().Secrets(E2eNamespace).Get(ctx, DEFAULT_AUTH_SECRET, metav1.GetOptions{})
-				if err == nil {
-					t.Logf("Deleting pre-existing %v...", DEFAULT_AUTH_SECRET)
-					if err = clientSet.CoreV1().Secrets(E2eNamespace).Delete(ctx, DEFAULT_AUTH_SECRET, metav1.DeleteOptions{}); err != nil {
-						t.Fatal(err)
-					}
-					t.Logf("Creating empty %v...", DEFAULT_AUTH_SECRET)
-					if err = client.Resources().Create(ctx, &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: DEFAULT_AUTH_SECRET, Namespace: E2eNamespace}, Type: v1.SecretTypeOpaque}); err != nil {
-						t.Fatal(err)
-					}
 				}
 			}
 
@@ -490,13 +440,9 @@ func (tc *TestCase) Run() {
 				}
 			}
 
-			if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" {
-				clientSet, err := kubernetes.NewForConfig(client.RESTConfig())
-				if err != nil {
+			if tc.saImagePullSecret != "" {
+				if err = RemoveImagePullSecretFromDefaultServiceAccount(ctx, client, tc.saImagePullSecret); err != nil {
 					t.Fatal(err)
-				}
-				if err = clientSet.CoreV1().Secrets(E2eNamespace).Delete(ctx, DEFAULT_AUTH_SECRET, metav1.DeleteOptions{}); err != nil {
-					t.Error(err)
 				}
 			}
 
