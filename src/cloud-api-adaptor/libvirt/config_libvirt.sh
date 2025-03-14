@@ -79,7 +79,7 @@ installLibvirt() {
 installKcli() {
     if ! command -v kcli >/dev/null; then
         echo "Installing kcli"
-        kcli_version="$(./hack/yq-shim.sh '.tools.kcli' versions.yaml)"
+        kcli_version="$(./hack/yq-shim.sh ".tools.kcli.${TARGET_ARCH}" versions.yaml)"
         if [ $OS_DISTRO == "ubuntu" ]; then
             # Work around newer Ubuntu's python venv errors by using pipx to install kcli
             sudo DEBIAN_FRONTEND=noninteractive apt-get install pipx -y

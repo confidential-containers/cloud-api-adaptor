@@ -25,7 +25,9 @@ tools:
   bats: 1.10.0
   iptables-wrapper: v0.0.0-20240819165702-06cad2ec6cb5
   golang: 1.23.6
-  kcli: 99.0.202408152044
+  kcli:
+    amd64: 99.0.202408152044
+    s390x: 99.0.202503141523
   mkosi: v22
   protoc: 3.16.0
   packer: v1.9.4
