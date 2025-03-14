@@ -30,7 +30,6 @@ import (
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
 
-var certContent string
 var testInitdata string = `algorithm = "sha384"
 version = "0.1.0"
 
@@ -86,6 +85,16 @@ default WaitProcessRequest := true
 default WriteStreamRequest := true
 '''
 `
+
+func buildInitdataBody(kbsEndpoint string) (string, error) {
+	content, err := os.ReadFile("../trustee/kbs/config/kubernetes/base/https-cert.pem")
+	if err != nil {
+		return "", err
+	}
+	certContent := string(content)
+	body := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+	return body, nil
+}
 
 func isTestWithKbs() bool {
 	return os.Getenv("TEST_KBS") == "yes" || os.Getenv("TEST_KBS") == "true"
@@ -243,13 +252,11 @@ func WithInitdata(kbsEndpoint string) PodOption {
 		if p.ObjectMeta.Annotations == nil {
 			p.ObjectMeta.Annotations = make(map[string]string)
 		}
-		content, err := os.ReadFile("../trustee/kbs/config/kubernetes/base/https-cert.pem")
-		if err != nil {
-			fmt.Println("Error reading file:", err)
-		}
-		certContent = string(content)
 		key := "io.katacontainers.config.runtime.cc_init_data"
-		initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+		initdata, err := buildInitdataBody(kbsEndpoint)
+		if err != nil {
+			log.Fatalf("failed to build initdata %s", err)
+		}
 		value := b64.StdEncoding.EncodeToString([]byte(initdata))
 		p.ObjectMeta.Annotations[key] = value
 	}
@@ -372,7 +379,10 @@ func NewBusyboxPodWithName(namespace, podName string) PodOrError {
 }
 
 func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string) PodOrError {
-	initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+	initdata, err := buildInitdataBody(kbsEndpoint)
+	if err != nil {
+		return fromError(err)
+	}
 	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
 	annotationData := map[string]string{
 		"io.katacontainers.config.runtime.cc_init_data": b64Data,
