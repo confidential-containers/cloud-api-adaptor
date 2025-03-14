@@ -35,6 +35,8 @@ func NewPodVMNodeService(targetEndpoint, namespace string, peerpodvolumeClientSe
 }
 
 func (s *PodVMNodeService) redirect(ctx context.Context, req interface{}, fn func(context.Context, csi.NodeClient)) error {
+	// grpc.Dial is deprecated and supported only with grpc 1.x
+	//nolint:staticcheck
 	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		glog.Errorf("failed to connect s.TargetEndpoint: %v, err:%v", s.TargetEndpoint, err)
