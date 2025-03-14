@@ -172,7 +172,7 @@ func (p *AzureCloudProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Conf
 
 // CAA pods will use this identity to talk to the Azure API. This ensures we don't need to pass secrets.
 func createFederatedIdentityCredential(aksOIDCIssuer string) error {
-	namespace := "confidential-containers-system"
+	namespace := pv.GetCAANamespace()
 	serviceAccountName := "cloud-api-adaptor"
 
 	if _, err := AzureProps.FederatedIdentityCredentialsClient.CreateOrUpdate(

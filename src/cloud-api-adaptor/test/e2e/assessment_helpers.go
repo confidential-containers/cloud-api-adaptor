@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
@@ -122,7 +123,7 @@ func WatchImagePullTime(ctx context.Context, client klient.Client, caaPod *v1.Po
 func getCaaPod(ctx context.Context, client klient.Client, t *testing.T, nodeName string) (*v1.Pod, error) {
 	caaPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "confidential-containers-system",
+			Namespace: pv.GetCAANamespace(),
 		},
 	}
 	pods, err := GetPodNamesByLabel(ctx, client, t, caaPod.GetObjectMeta().GetNamespace(), "app", "cloud-api-adaptor", nodeName)
