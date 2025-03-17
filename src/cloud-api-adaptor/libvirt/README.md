@@ -252,7 +252,6 @@ clusterrolebinding.rbac.authorization.k8s.io "node-viewer" deleted
 clusterrolebinding.rbac.authorization.k8s.io "peerpod-editor" deleted
 clusterrolebinding.rbac.authorization.k8s.io "pod-viewer" deleted
 configmap "peer-pods-cm" deleted
-secret "auth-json-secret" deleted
 secret "peer-pods-secret" deleted
 secret "ssh-key-secret" deleted
 daemonset.apps "cloud-api-adaptor-daemonset" deleted

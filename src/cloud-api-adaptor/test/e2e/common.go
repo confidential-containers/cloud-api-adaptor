@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -402,6 +403,22 @@ func NewConfigMap(namespace, name string, configMapData map[string]string) *core
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Data:       configMapData,
 	}
+}
+
+// NewImagePullSecret returns a new imagePull secret object.
+func NewImagePullSecret(namespace, name string, image string, credentials string) *corev1.Secret {
+	registryName := strings.Split(image, "/")[0]
+	template := `{
+	"auths": {
+		"%s": {
+			"auth": "%s"
+		}
+	}
+}`
+	authJSON := fmt.Sprintf(template, registryName, credentials)
+	secretData := map[string][]byte{v1.DockerConfigJsonKey: []byte(authJSON)}
+
+	return NewSecret(namespace, name, secretData, v1.SecretTypeDockerConfigJson)
 }
 
 // NewSecret returns a new secret object.

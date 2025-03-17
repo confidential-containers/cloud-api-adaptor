@@ -48,9 +48,6 @@ spec:
           periodSeconds: 20
           initialDelaySeconds: 20
         volumeMounts:
-        - name: auth-json
-          mountPath: "/root/containers/" # hardcoded
-          readOnly: true
         - mountPath: /root/.ssh/
           name: ssh
           readOnly: true
@@ -73,10 +70,6 @@ spec:
       nodeSelector:
         node.kubernetes.io/worker: ""
       volumes:
-      - name: auth-json
-        secret:
-          secretName: auth-json-secret
-          optional: true # failing?
       - name: ssh
         secret:
           defaultMode: 384

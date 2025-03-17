@@ -250,12 +250,30 @@ func DoTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, e env.Environment, as
 	NewTestCase(t, e, "PeerPodWithPVCAndCSIWrapper", assert, "PVC is created and mounted as expected").WithPod(pod).WithPVC(myPVC).WithTestCommands(testCommands).Run()
 }
 
-func DoTestCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testing.T, e env.Environment, assert CloudAssert) {
+func DoTestCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t *testing.T, e env.Environment, assert CloudAssert) {
 	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
 	podName := "authenticated-image-with-creds-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
+
 	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
+	cred := os.Getenv("REGISTRY_CREDENTIAL_ENCODED")
+	secretName := "regcred"
+	regcredSecret := NewImagePullSecret(E2eNamespace, secretName, imageName, cred)
+
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever))
-	NewTestCase(t, e, "ValidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with Valid Credentials(Default service account) has been created").WithPod(pod).WithCustomPodState(v1.PodRunning).Run()
+	NewTestCase(t, e, "ValidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with imagePullSecret in service account has been created").WithPod(pod).WithSecret(regcredSecret).WithSAImagePullSecret(secretName).WithCustomPodState(v1.PodRunning).Run()
+}
+
+func DoTestCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *testing.T, e env.Environment, assert CloudAssert) {
+	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
+	podName := "authenticated-image-with-creds-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
+
+	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
+	cred := os.Getenv("REGISTRY_CREDENTIAL_ENCODED")
+	secretName := "regcred"
+	regcredSecret := NewImagePullSecret(E2eNamespace, secretName, imageName, cred)
+
+	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever), WithImagePullSecrets(secretName))
+	NewTestCase(t, e, "ValidAuthImagePeerPod", assert, "Peer pod with Authenticated Image with imagePullSecret in pod spec has been created").WithPod(pod).WithSecret(regcredSecret).WithCustomPodState(v1.PodRunning).Run()
 }
 
 // Check that without creds the image can't be pulled to ensure we don't have a false positive in our auth test
@@ -268,7 +286,7 @@ func DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T, e
 	if isTestOnCrio() {
 		expectedErrorString = "access to the requested resource is not authorized"
 	}
-	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image without Credentials has been created").WithPod(pod).WithNoAuthJson().WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
+	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image without Credentials has been created").WithPod(pod).WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestPodVMwithNoAnnotations(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
