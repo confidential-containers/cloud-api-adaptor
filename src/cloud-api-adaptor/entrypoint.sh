@@ -35,7 +35,12 @@ optionals+=""
 [[ "${PEERPODS_LIMIT_PER_NODE}" ]] && optionals+="-peerpods-limit-per-node ${PEERPODS_LIMIT_PER_NODE} "
 [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
 [[ "${ENABLE_SCRATCH_DISK}" == "true" ]] && optionals+="-enable-scratch-disk "
-[[ "${PEERPODS_DEVELOPER_MODE}" == "true" ]] && optionals+="-developer-mode "
+if [[ "${PEERPODS_DEVELOPER_MODE}" == "true" ]]; then
+    optionals+="-developer-mode "
+    if [[ -z "${PEERPODS_LIMIT_PER_NODE}" ]]; then
+        optionals+="-peerpods-limit-per-node 1 "
+    fi
+fi
 
 test_vars() {
     for i in "$@"; do
