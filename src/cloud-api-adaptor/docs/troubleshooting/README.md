@@ -9,3 +9,6 @@ default behaviour, which is to delete peer pod VM instances when it received the
 a configuration issue in the peer pod VM, and it fails to connect to the cloud-api-adaptor process, then it will be
 automatically deleted, removing the ability to debug this problem. To override this behaviour, set
 `PEERPODS_DEVELOPER_MODE` to `true` in the peer-pods-cm configmap.
+> [!NOTE]
+> In developer mode, the `PEERPODS_LIMIT_PER_NODE` defaults to 1 to avoid Kubernetes creating multiple instances of
+> pods that don't work. If you wish to override this then please set the value in peer-pods-cm.
