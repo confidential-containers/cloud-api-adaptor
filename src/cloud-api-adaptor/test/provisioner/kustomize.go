@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -428,26 +427,5 @@ func setSecretGeneratorLiteral(k *ktypes.Kustomization, secretName string, key s
 	newLiterals := setLiteral(secretg.GeneratorArgs.DataSources.LiteralSources, key, value)
 	secretg.GeneratorArgs.DataSources.LiteralSources = newLiterals
 
-	return nil
-}
-
-func (kh *KustomizeOverlay) SetAuthJsonSecretIfApplicable() error {
-	if cred := os.Getenv("REGISTRY_CREDENTIAL_ENCODED"); cred != "" {
-		registryName := strings.Split(os.Getenv("AUTHENTICATED_REGISTRY_IMAGE"), "/")[0]
-		template := `{
-			"auths": {
-				"%s": {
-					"auth": "%s"
-				}
-			}
-		}`
-		authJSON := fmt.Sprintf(template, registryName, cred)
-		if err := os.WriteFile(filepath.Join(kh.ConfigDir, "auth.json"), []byte(authJSON), 0644); err != nil {
-			return err
-		}
-		if err := kh.SetKustomizeSecretGeneratorFile("auth-json-secret", "auth.json"); err != nil {
-			return err
-		}
-	}
 	return nil
 }

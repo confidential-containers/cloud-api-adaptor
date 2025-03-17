@@ -36,8 +36,7 @@ import (
 )
 
 const (
-	SrcAuthfilePath = "/root/containers/auth.json"
-	Version         = "0.0.0"
+	Version = "0.0.0"
 )
 
 type InitData struct {
@@ -253,18 +252,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	agentProxy := s.proxyFactory.New(serverName, socketPath)
 
-	var authJSON []byte
-	_, err = os.Stat(SrcAuthfilePath)
-	if err != nil {
-		logger.Printf("credential file %s is not present, skipping image auth config", SrcAuthfilePath)
-	} else {
-		authJSON, err = os.ReadFile(SrcAuthfilePath)
-		if err != nil {
-			return nil, fmt.Errorf("error reading %s: %v", SrcAuthfilePath, err)
-		}
-		logger.Printf("configure agent to use credentials file %s", SrcAuthfilePath)
-	}
-
 	daemonConfig := forwarder.Config{
 		PodNamespace: namespace,
 		PodName:      pod,
@@ -320,7 +307,14 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		},
 	}
 
+	// Look up image pull secrets for the pod
+	authJSON, err := k8sops.GetImagePullSecrets(pod, namespace)
+	if err != nil {
+		// Ignore errors getting secrets to match K8S behavior
+		logger.Printf("error reading image pull secrets: %v", err)
+	}
 	if authJSON != nil {
+		logger.Printf("successfully retrieved pod image pull secrets for %s/%s", namespace, pod)
 		if len(authJSON) > cloudinit.DefaultAuthfileLimit {
 			logger.Printf("Credentials file is too large to be included in cloud-config")
 		} else {

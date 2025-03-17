@@ -42,10 +42,6 @@ configMapGenerator:
 ##TLS_SETTINGS
 
 secretGenerator:
-- name: auth-json-secret
-  namespace: confidential-containers-system
-  files:
-  #- auth.json # set - path to auth.json pull credentials file
 - name: ssh-key-secret
   namespace: confidential-containers-system
   files: # key generation example: ssh-keygen -f ./id_rsa -N "" && sudo cat id_rsa.pub >> /root/.ssh/authorized_keys

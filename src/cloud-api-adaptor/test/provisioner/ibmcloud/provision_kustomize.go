@@ -170,10 +170,6 @@ func (lio *IBMCloudInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config
 		}
 	}
 
-	if err = lio.Overlay.SetAuthJsonSecretIfApplicable(); err != nil {
-		return err
-	}
-
 	if err = lio.Overlay.YamlReload(); err != nil {
 		return err
 	}
