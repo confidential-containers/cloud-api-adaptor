@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
+	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
+	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	log "github.com/sirupsen/logrus"
 )
@@ -34,6 +34,8 @@ type AzureProperties struct {
 	CaaImage            string
 	IsSelfManaged       bool
 	Tags                string
+	TunnelType          string
+	VxlanPort           string
 
 	InstanceSize string
 	NodeName     string
@@ -70,6 +72,8 @@ func initAzureProperties(properties map[string]string) error {
 		Tags:                    properties["TAGS"],
 		FederatedCredentialName: properties["FEDERATED_CREDENTIAL_NAME"],
 		ContainerRuntime:        properties["CONTAINER_RUNTIME"],
+		TunnelType:              properties["TUNNEL_TYPE"],
+		VxlanPort:               properties["VXLAN_PORT"],
 	}
 
 	CIManagedStr := properties["IS_CI_MANAGED_CLUSTER"]

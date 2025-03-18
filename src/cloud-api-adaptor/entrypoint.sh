@@ -5,6 +5,9 @@ CLOUD_PROVIDER=${1:-$CLOUD_PROVIDER}
 ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN=${ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN:-false}
 
 CRI_RUNTIME_ENDPOINT=${CRI_RUNTIME_ENDPOINT:-/run/cri-runtime.sock}
+REMOTE_HYPERVISOR_ENDPOINT=${REMOTE_HYPERVISOR_ENDPOINT:-/run/peerpod/hypervisor.sock}
+PEER_PODS_DIR=${PODS_DIR:-/run/peerpod/pods}
+
 optionals+=""
 
 # Ensure you add a space before the closing quote (") when updating the optionals
@@ -13,6 +16,7 @@ optionals+=""
 # following is the incorrect method: optionals+="-option val"
 
 [[ "${PAUSE_IMAGE}" ]] && optionals+="-pause-image ${PAUSE_IMAGE} "
+[[ "${TUNNEL_TYPE}" ]] && optionals+="-tunnel-type ${TUNNEL_TYPE} "
 [[ "${VXLAN_PORT}" ]] && optionals+="-vxlan-port ${VXLAN_PORT} "
 [[ "${CACERT_FILE}" ]] && optionals+="-ca-cert-file ${CACERT_FILE} "
 [[ "${CERT_FILE}" ]] && [[ "${CERT_KEY}" ]] && optionals+="-cert-file ${CERT_FILE} -cert-key ${CERT_KEY} "
@@ -62,9 +66,10 @@ aws() {
 
     set -x
     exec cloud-api-adaptor aws \
-        -pods-dir /run/peerpod/pods \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
+        ${optionals}
+
 }
 
 azure() {
@@ -79,11 +84,12 @@ azure() {
 
     set -x
     exec cloud-api-adaptor azure \
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
         -subscriptionid "${AZURE_SUBSCRIPTION_ID}" \
         -region "${AZURE_REGION}" \
         -instance-size "${AZURE_INSTANCE_SIZE}" \
         -resourcegroup "${AZURE_RESOURCE_GROUP}" \
-        -vxlan-port 8472 \
         -subnetid "${AZURE_SUBNET_ID}" \
         -securitygroupid "${AZURE_NSG_ID}" \
         -imageid "${AZURE_IMAGE_ID}" \
@@ -93,23 +99,31 @@ azure() {
 gcp() {
     test_vars GCP_CREDENTIALS GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
 
-    [[ "${PODVM_IMAGE_NAME}" ]] && optionals+="-gcp-image-name ${PODVM_IMAGE_NAME} "
+    [[ "${PODVM_IMAGE_NAME}" ]] && optionals+="-image-name ${PODVM_IMAGE_NAME} "
     [[ "${GCP_PROJECT_ID}" ]] && optionals+="-gcp-project-id ${GCP_PROJECT_ID} "
-    [[ "${GCP_ZONE}" ]] && optionals+="-gcp-zone ${GCP_ZONE} "                         # if not set retrieved from IMDS
-    [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-gcp-machine-type ${GCP_MACHINE_TYPE} " # default e2-medium
-    [[ "${GCP_NETWORK}" ]] && optionals+="-gcp-network ${GCP_NETWORK} "                # defaults to 'default'
+    [[ "${GCP_ZONE}" ]] && optionals+="-zone ${GCP_ZONE} "                                         # if not set retrieved from IMDS
+    [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-machine-type ${GCP_MACHINE_TYPE} "                 # default e2-medium
+    [[ "${GCP_NETWORK}" ]] && optionals+="-network ${GCP_NETWORK} "                                # defaults to 'default'
+    [[ "${GCP_DISK_TYPE}" ]] && optionals+="-disk-type ${GCP_DISK_TYPE} "                          # defaults to 'pd-standard'
+    [[ "${GCP_CONFIDENTIAL_TYPE}" ]] && optionals+="-confidential-type ${GCP_CONFIDENTIAL_TYPE} "  # if not set raise exception only when disablecvm = false
+    [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "                                  # defaults to false
 
     set -x
     exec cloud-api-adaptor gcp \
-        -pods-dir /run/peerpod/pods \
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
         ${optionals}
 }
 
 ibmcloud() {
     one_of IBMCLOUD_API_KEY IBMCLOUD_IAM_PROFILE_ID
 
+    [[ "${DISABLECVM}" = "true" ]] && optionals+="-disable-cvm "
+
     set -x
     exec cloud-api-adaptor ibmcloud \
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
         -iam-service-url "${IBMCLOUD_IAM_ENDPOINT}" \
         -vpc-service-url "${IBMCLOUD_VPC_ENDPOINT}" \
         -resource-group-id "${IBMCLOUD_RESOURCE_GROUP_ID}" \
@@ -121,9 +135,8 @@ ibmcloud() {
         -primary-subnet-id "${IBMCLOUD_VPC_SUBNET_ID}" \
         -primary-security-group-id "${IBMCLOUD_VPC_SG_ID}" \
         -vpc-id "${IBMCLOUD_VPC_ID}" \
-        -pods-dir /run/peerpod/pods \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        ${optionals}
+
 }
 
 ibmcloud_powervs() {
@@ -137,14 +150,15 @@ ibmcloud_powervs() {
 
     set -x
     exec cloud-api-adaptor ibmcloud-powervs \
-        -service-instance-id ${POWERVS_SERVICE_INSTANCE_ID} \
-        -zone ${POWERVS_ZONE} \
-        -image-id ${POWERVS_IMAGE_ID} \
-        -network-id ${POWERVS_NETWORK_ID} \
-        -ssh-key ${POWERVS_SSH_KEY_NAME} \
-        -pods-dir /run/peerpod/pods \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
+        -service-instance-id "${POWERVS_SERVICE_INSTANCE_ID}" \
+        -zone "${POWERVS_ZONE}" \
+        -image-id "${POWERVS_IMAGE_ID}" \
+        -network-id "${POWERVS_NETWORK_ID}" \
+        -ssh-key "${POWERVS_SSH_KEY_NAME}" \
+        ${optionals}
+
 }
 
 libvirt() {
@@ -153,13 +167,14 @@ libvirt() {
     [[ "${DISABLECVM}" = "true" ]] && optionals+="-disable-cvm "
     set -x
     exec cloud-api-adaptor libvirt \
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
         -uri "${LIBVIRT_URI}" \
         -data-dir /opt/data-dir \
-        -pods-dir /run/peerpod/pods \
         -network-name "${LIBVIRT_NET:-default}" \
         -pool-name "${LIBVIRT_POOL:-default}" \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        ${optionals}
+
 }
 
 vsphere() {
@@ -174,10 +189,12 @@ vsphere() {
 
     set -x
     exec cloud-api-adaptor vsphere \
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
         -vcenter-url ${GOVC_URL} \
         -data-center ${GOVC_DATACENTER} \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        ${optionals}
+
 }
 
 docker() {
@@ -190,9 +207,9 @@ docker() {
 
     set -x
     exec cloud-api-adaptor docker \
-        -pods-dir /run/peerpod/pods \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
+        ${optionals}
 
 }
 

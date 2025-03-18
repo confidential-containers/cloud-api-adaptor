@@ -2,7 +2,7 @@ package e2e
 
 import (
 	b64 "encoding/base64"
-	"fmt"
+	"log"
 	"testing"
 
 	"sigs.k8s.io/e2e-framework/pkg/env"
@@ -14,7 +14,10 @@ func DoTestRemoteAttestation(t *testing.T, e env.Environment, assert CloudAssert
 	image := "quay.io/curl/curl:latest"
 	// fail on non 200 code, silent, but output on failure
 	cmd := []string{"curl", "-f", "-s", "-S", "-o", "/dev/null", "http://127.0.0.1:8006/aa/token?token_type=kbs"}
-	initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+	initdata, err := buildInitdataBody(kbsEndpoint)
+	if err != nil {
+		log.Fatalf("failed to build initdata %s", err)
+	}
 	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
 	annotations := map[string]string{
 		"io.katacontainers.config.runtime.cc_init_data": b64Data,

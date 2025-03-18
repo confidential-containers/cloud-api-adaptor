@@ -42,7 +42,7 @@ the binaries (e.g. *kata-agent* and *agent-protocol-forwarder*) that should be i
 
 The builder image is agnostic to cloud providers in the sense that one can be used to build for multiple providers, however it is
 dependent on the Linux distribution the image is built for. Therefore, in this directory you will find dockerfiles for each
-supported distributions, which are currently Ubuntu 20.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)),
+supported distributions, which are currently Ubuntu 24.04 ([Dockerfile.podvm_builder](./Dockerfile.podvm_builder)),
 Fedora 39 ([Dockerfile.podvm_builder.fedora](./Dockerfile.podvm_builder)) and RHEL 9
 ([Dockerfile.podvm_builder.rhel](./Dockerfile.podvm_builder.rhel)).
 
@@ -189,7 +189,7 @@ In order to add a new Linux distribution essentially it is needed to create some
 Follow the steps below, replacing `DISTRO` with the name of the distribution being added:
 
 1. Create the builder dockerfile by copying `Dockerfile.podvm_builder` to `Dockerfile.podvm_builder.DISTRO` and
-   adjusting the file properly (e.g. replace `FROM ubuntu:20.04` with `FROM DISTRO`). Try to keep the same
+   adjusting the file properly (e.g. replace `FROM ubuntu:24.04` with `FROM DISTRO`). Try to keep the same
    software versions (e.g. Golang) as much as possible.
 2. Create the podvm image dockerfile by copying `Dockerfile.podvm` to `Dockerfile.podvm.DISTRO` and adjusting the file
    properly likewise. In particular, the *PODVM_DISTRO* and *BUILDER_IMG* arguments should be changed.

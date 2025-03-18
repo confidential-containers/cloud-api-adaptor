@@ -106,7 +106,10 @@ build {
     remote_folder = "~"
     environment_vars = [
       "CLOUD_PROVIDER=${var.cloud_provider}",
-      "PODVM_DISTRO=${var.podvm_distro}"
+      "PODVM_DISTRO=${var.podvm_distro}",
+      "ACTIVATION_KEY=${var.activation_key}",
+      "ORG_ID=${var.org_id}",
+      "ARCH=${var.os_arch}"
     ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"

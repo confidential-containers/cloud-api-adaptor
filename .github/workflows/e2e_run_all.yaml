@@ -116,12 +116,13 @@ jobs:
   # IMPORTANT: If you are enabling e2e tests for a given provider,
   # then please update the PROVIDERS list (space-separated names, e.g.,
   # "aws libvirt").
+  # TODO - when the packer approach is removed this can go as well
   prep_install:
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     env:
-      PROVIDERS: "libvirt"
+      PROVIDERS: "aws docker libvirt"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -173,6 +174,28 @@ jobs:
         id: matrix
         run: |
           echo "matrix=$(jq -c . < ./libvirt/e2e_matrix_libvirt.json)" >> "$GITHUB_OUTPUT"
+  # Run AWS e2e tests
+  aws:
+    name: aws
+    if: |
+      github.event_name == 'workflow_dispatch'
+    needs: [podvm, image, prep_install]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu
+        provider:
+          - generic
+        arch:
+          - amd64
+    uses: ./.github/workflows/e2e_aws.yaml
+    with:
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}
+      podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      oras: false
+    secrets: inherit
 
   # Run libvirt e2e tests if pull request labeled 'test_e2e_libvirt'
   libvirt:
@@ -265,18 +288,49 @@ jobs:
   # Run libvirt s390x e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_s390x:
     name: E2E tests on libvirt for the s390x architecture
-    # Skip s390x e2e tests until Choi is available to set-up the s390x runner's pre-action properly. Then revert this.
-    if: false
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
     needs: [podvm_mkosi_s390x, libvirt_e2e_arch_prep, caa_image_s390x]
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.libvirt_e2e_arch_prep.outputs.matrix) }}
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
-      runner: S390X
+      runner: s390x-large
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-s390x-dev
       podvm_image: ${{ needs.podvm_mkosi_s390x.outputs.qcow2_oras_image }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
       oras: true
+    secrets: inherit
+
+  # Run docker e2e tests if pull request labeled 'test_e2e_docker'
+  docker:
+    name: docker
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_docker')
+    needs: [podvm_mkosi_amd64, caa_image_amd64]
+    strategy:
+      fail-fast: false
+      matrix:
+        container_runtime:
+          - crio
+        os:
+          - fedora
+        provider:
+          - docker
+        arch:
+          - amd64
+    uses: ./.github/workflows/e2e_docker.yaml
+    with:
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
+      container_runtime: ${{ matrix.container_runtime }}
+      podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.docker_oci_image }}
+      install_directory_artifact: install_directory
+      git_ref: ${{ inputs.git_ref }}
     secrets: inherit

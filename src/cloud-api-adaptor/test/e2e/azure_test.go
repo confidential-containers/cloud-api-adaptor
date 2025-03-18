@@ -7,11 +7,16 @@ package e2e
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"crypto/sha512"
+	b64 "encoding/base64"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/azure"
+	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
@@ -177,4 +182,45 @@ func TestAzureImageDecryption(t *testing.T) {
 	t.Parallel()
 
 	DoTestImageDecryption(t, testEnv, assert, keyBrokerService)
+}
+
+// This test is to verify that the initdata is measured correctly. The digest algorith in the initdata fixture
+// is sha384. The initdata spec requires the digest to be truncated/padded to the TEE's requirement. In this case,
+// the az tpm attester requires the digest to be sha256 and is hence truncated
+func TestInitDataMeasurement(t *testing.T) {
+	kbsEndpoint := "http://some.endpoint"
+	initdata, err := buildInitdataBody(kbsEndpoint)
+	if err != nil {
+		log.Fatalf("failed to build initdata %s", err)
+	}
+
+	digest := sha512.Sum384([]byte(initdata))
+	truncatedDigest := digest[:32]
+	zeroes := bytes.Repeat([]byte{0x00}, 32)
+
+	hasher := sha256.New()
+	hasher.Write(zeroes)
+	hasher.Write(truncatedDigest)
+	msmt := hasher.Sum(nil)
+
+	name := "initdata-msmt"
+	image := "quay.io/confidential-containers/test-images:curl-jq"
+
+	// truncate the measurement to 32 bytes
+	strValues := make([]string, len(msmt))
+	for i, v := range msmt {
+		strValues[i] = strconv.Itoa(int(v))
+	}
+	// json array string
+	msStr := "[" + strings.Join(strValues, ",") + "]"
+
+	shCmd := "curl -s \"http://127.0.0.1:8006/aa/evidence?runtime_data=test\" | jq -c '(.quote // .tpm_quote).pcrs[8]'"
+	cmd := []string{"sh", "-c", shCmd}
+
+	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
+	annotations := map[string]string{
+		"io.katacontainers.config.runtime.cc_init_data": b64Data,
+	}
+	job := NewJob(E2eNamespace, name, 0, image, WithJobCommand(cmd), WithJobAnnotations(annotations))
+	NewTestCase(t, testEnv, "InitDataMeasurement", assert, "InitData measured correctly").WithJob(job).WithExpectedPodLogString(msStr).Run()
 }

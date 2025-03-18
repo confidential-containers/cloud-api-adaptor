@@ -1,6 +1,6 @@
 # Importing Public PODVM images into IBM Cloud VPC
 
-As part of the release process pre-built images are published as container images to the confidential-containers quay repository. e.g. `quay.io/confidential-containers/podvm-ibmcloud-ubuntu-s390x` that contain a single qcow2 file that can be extracted. Alternatively images can be built and distributed directly as qcow2 files. These qcow2 that needs to be uploaded to ibmcloud to use as a vpc image. 
+As part of the release process pre-built images are published as container images to the confidential-containers quay repository. e.g. `quay.io/confidential-containers/podvm-ibmcloud-ubuntu-s390x` that contain a single qcow2 file that can be extracted. Alternatively images can be built and distributed directly as qcow2 files. These qcow2 that needs to be uploaded to ibmcloud to use as a vpc image.
 
 To simpify this process a script has been created to aid this. `ibmcloud/image/import.sh`.
 
@@ -10,7 +10,7 @@ To simpify this process a script has been created to aid this. `ibmcloud/image/i
 
 - jq `apt install jq`
 - ibmcloud `curl -fsSL https://clis.cloud.ibm.com/install/linux | sh` (https://cloud.ibm.com/docs/cli?topic=cli-getting-started)
-- docker/podman `apt install docker.io`    
+- docker/podman `apt install docker.io`
 It's failed to install `docker` on Ubuntu20.04 with above single command. `docker` can be installed with `snap` as below.
     ```
     sudo snap install docker
@@ -42,7 +42,7 @@ The later options:
 - `bucket`: name of the bucket to use. Will use an available bucket if not specified
 - `region`: name of the region the bucket is in. Only required if that region is different from the VPC region
 - `endpoint`: the COS endpoint to upload to. Optional, but required if using staging, where the endpoint can be found in the 'Configuration' tab in the COS bucket page of the IBM Cloud UI.
-- `os`: name of the operating-system for the image, will default to `ubuntu-20-04-<< image-suffix >>` e.g. `ubuntu-20-04-s390x`. The HyperProtect OS is `hyper-protect-1-0-s390x`.
+- `os`: name of the operating-system for the image, will default to `ubuntu-22-04-<< image-suffix >>` e.g. `ubuntu-22-04-s390x`. The HyperProtect OS is `hyper-protect-1-0-s390x`.
 
 The script will sanitise `.` and `_` into `-` and lowercase the image name. Only lowercase alphanumeric characters and hyphens only (without spaces) are allowed for image names. If your image file name contains other special characters please rename it before attempting to import.
 

@@ -94,7 +94,7 @@ twice under different SSHs key names. This key needs to be password-less and on 
 > - `node_image` (optional) is a name of IBM Cloud infrastructure image. This name is used to create virtual server
  instances for the Kubernetes control plane and worker. For more information, about VPC custom images, see 
  [IBM Cloud Importing and managing custom images](https://cloud.ibm.com/docs/vpc?topic=vpc-managing-images).
-  If not set it defaults to `ibm-ubuntu-20-04-2-minimal-s390x-1` for **`s390x`** architecture.
+  If not set it defaults to `ibm-ubuntu-22-04-4-minimal-s390x-3` for **`s390x`** architecture.
 > - `node_profile` (optional) is a name of IBM Cloud virtual server instance profile. This name is used to create virtual server instances for the Kubernetes control plane and worker. For more information, about virtual server instance profile, see [instance profiles](https://cloud.ibm.com/docs/vpc?topic=vpc-profiles). If not set it defaults to `bz2-2x8`, which uses the `s390x` architecture, has 2 vCPUs and 8 GB memory.
 > - `nodes` (optional) is the number of VSIs created to be used as Kubernetes nodes. There will be a single control 
 plane node and the rest will be worker nodes. If not set it defaults to `2`.
@@ -108,7 +108,7 @@ and `image_name` parameters. E.g., to create an **x86** architecture based clust
 the `terraform.tfvars` file
 >
 >     node_profile = "bx2-2x8"
->     node_image = "ibm-ubuntu-20-04-3-minimal-amd64-1"
+>     node_image = "ibm-ubuntu-22-04-5-minimal-amd64-1"
 >
 
 After writing you `terraform.tfvars` file you can create your VPC by executing the following commands on your

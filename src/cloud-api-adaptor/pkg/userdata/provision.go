@@ -13,9 +13,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	retry "github.com/avast/retry-go/v4"
 	toml "github.com/pelletier/go-toml/v2"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
@@ -37,7 +37,7 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
-var WriteFilesList = []string{AACfgPath, CDHCfgPath, AgentCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath}
+var WriteFilesList = []string{AACfgPath, CDHCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath}
 var InitdDataFilesList = []string{AACfgPath, CDHCfgPath, PolicyPath}
 
 type Config struct {

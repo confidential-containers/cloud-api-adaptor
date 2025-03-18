@@ -13,8 +13,7 @@ import (
 	"time"
 
 	"github.com/IBM/go-sdk-core/v5/core"
-	"github.com/IBM/vpc-go-sdk/vpcv1"
-
+	vpcv1 "github.com/IBM/vpc-beta-go-sdk/vpcbetav1"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
@@ -79,7 +78,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		config.VpcServiceURL = fmt.Sprintf("https://%s.iaas.cloud.ibm.com/v1", nodeRegion)
 	}
 
-	vpcV1, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{
+	vpcV1, err := vpcv1.NewVpcbetaV1(&vpcv1.VpcbetaV1Options{
 		Authenticator: authenticator,
 		URL:           config.VpcServiceURL,
 	})
@@ -134,7 +133,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
-func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourceGroupID string, securityGroupID string, e error) {
+func fetchVPCDetails(vpcV1 *vpcv1.VpcbetaV1, subnetID string) (vpcID string, resourceGroupID string, securityGroupID string, e error) {
 	subnet, response, err := vpcV1.GetSubnet(&vpcv1.GetSubnetOptions{
 		ID: &subnetID,
 	})
@@ -177,6 +176,13 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 			Enabled:  core.BoolPtr(true),
 			Protocol: core.StringPtr(vpcv1.InstanceMetadataServicePatchProtocolHTTPConst),
 		},
+		ConfidentialComputeMode: core.StringPtr("tdx"), // TODO when available: vpcv1.InstanceConfidentialComputeModeTdxConst
+		EnableSecureBoot:        core.BoolPtr(true),
+	}
+
+	if p.serviceConfig.DisableCVM {
+		prototype.ConfidentialComputeMode = core.StringPtr(vpcv1.InstanceConfidentialComputeModeDisabledConst)
+		prototype.EnableSecureBoot = core.BoolPtr(false)
 	}
 
 	if p.serviceConfig.KeyID != "" {

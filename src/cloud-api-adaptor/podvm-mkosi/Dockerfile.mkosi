@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1.5.0-labs
+FROM fedora:40 AS builder
+
+ARG MKOSI_VERSION="v22"
+ARG PROFILE="debug"
+
+RUN dnf install -y \
+	bubblewrap \
+	git \
+	cpio \
+	systemd-repart \
+	kmod \
+	systemd-boot \
+	cryptsetup-libs \
+	squashfs-tools \
+	systemd-ukify \
+	dosfstools \
+	mtools
+
+RUN mkdir -p /build
+WORKDIR /build
+RUN git clone -b "$MKOSI_VERSION" https://github.com/systemd/mkosi
+ENV PATH="/build/mkosi/bin:$PATH"
+RUN mkosi --version
+
+RUN mkdir /image
+WORKDIR /image
+COPY mkosi.postinst /image/mkosi.postinst
+COPY mkosi.presets /image/mkosi.presets
+COPY mkosi.profiles /image/mkosi.profiles
+COPY mkosi.skeleton /image/mkosi.skeleton
+COPY mkosi.skeleton-debug /image/mkosi.skeleton-debug
+COPY mkosi.workspace /image/mkosi.workspace
+COPY resources /image/resources
+COPY mkosi.conf /image/mkosi.conf
+RUN --security=insecure mkosi --profile=$PROFILE
+
+FROM scratch
+COPY --from=builder /image/build/system.raw /

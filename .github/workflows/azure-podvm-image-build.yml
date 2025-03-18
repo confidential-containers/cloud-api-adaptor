@@ -35,7 +35,7 @@ env:
 
 jobs:
   build-podvm-image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: cloud-api-adaptor/src/cloud-api-adaptor/podvm-mkosi
@@ -49,9 +49,15 @@ jobs:
         path: cloud-api-adaptor
         ref: "${{ inputs.git-ref || 'main' }}"
 
-    - uses: cachix/install-nix-action@v30
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-utils
+        sudo snap install yq
+
+    - name: Read properties from versions.yaml
+      run: |
+        echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' ../versions.yaml)" >> "$GITHUB_ENV"
 
     - name: Install uplosi
       run: |
@@ -65,13 +71,7 @@ jobs:
         TEE_PLATFORM: az-cvm-vtpm
         VERIFY_PROVENANCE: yes
       run: |
-        make fedora-binaries-builder
         make binaries
-
-    - name: Install build dependencies
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install -y qemu-utils
 
     - name: Build image
       run: make image

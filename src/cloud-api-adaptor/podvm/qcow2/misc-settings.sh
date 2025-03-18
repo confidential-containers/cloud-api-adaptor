@@ -15,6 +15,11 @@ echo -n | sudo tee /etc/machine-id
 #Lock password for the ssh user (peerpod) to disallow logins
 sudo passwd -l peerpod
 
+# Subscribe RHEL incase of ACTIVATION_KEY & ORG_ID provided.
+if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
+    subscription-manager register --org="${ORG_ID}" --activationkey="${ACTIVATION_KEY}"
+fi
+
 # install required packages
 if [ "$CLOUD_PROVIDER" == "vsphere" ]
 then
@@ -44,8 +49,8 @@ if [[ "$CLOUD_PROVIDER" == "azure" || "$CLOUD_PROVIDER" == "generic" ]] && [[ "$
     sudo apt-get install -y --no-install-recommends libtss2-tctildr0 libtdx-attest
 fi
 
-# Setup oneshot systemd service for AWS and Azure to enable NAT rules
-if [ "$CLOUD_PROVIDER" == "azure" ] || [ "$CLOUD_PROVIDER" == "aws" ] || [ "$CLOUD_PROVIDER" == "generic" ]
+# Install iptables for all providers except docker/vsphere.
+if [ "$CLOUD_PROVIDER" != "vsphere" ] && [ "$CLOUD_PROVIDER" != "docker" ]
 then
     if [ ! -x "$(command -v iptables)" ]; then
         case $PODVM_DISTRO in
@@ -61,8 +66,11 @@ then
         esac
     fi
 
-    # Enable oneshot serivce
-    systemctl enable setup-nat-for-imds
+    # Enable oneshot systemd service for AWS and Azure to enable NAT rules
+    if [ "$CLOUD_PROVIDER" == "azure" ] || [ "$CLOUD_PROVIDER" == "aws" ] || [ "$CLOUD_PROVIDER" == "generic" ]
+    then
+        systemctl enable setup-nat-for-imds
+    fi
 fi
 
 if [ -e /etc/certificates/tls.crt ] && [ -e /etc/certificates/tls.key ] && [ -e /etc/certificates/ca.crt ]; then
@@ -101,5 +109,10 @@ case $PODVM_DISTRO in
         systemctl disable snap.lxd.activate.service
         ;;
 esac
+
+# Unsubscribe RHEL incase of ACTIVATION_KEY & ORG_ID provided.
+if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
+    subscription-manager unregister
+fi
 
 exit 0

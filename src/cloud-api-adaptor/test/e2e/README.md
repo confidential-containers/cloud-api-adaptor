@@ -129,6 +129,7 @@ Use the properties on the table below for AWS:
 |podvm_aws_ami_id|AWS AMI ID of the podvm||
 |ssh_kp_name|AWS SSH key-pair name ||
 |use_public_ip|Set `true` to instantiate VMs with public IP. If `cluster_type=onprem` then this property is implictly applied||
+|tunnel_type|Tunnel type||
 |vxlan_port|VXLAN port number||
 
 >Notes:
@@ -152,6 +153,7 @@ Use the properties on the table below for Libvirt:
 |libvirt_conn_uri|Libvirt host URI|"qemu:///system"|
 |libvirt_ssh_key_file|Path to SSH private key||
 |pause_image|k8s pause image||
+|tunnel_type|Tunnel type||
 |vxlan_port| VXLAN port number||
 |cluster_name|Cluster Name| "peer-pods"|
 

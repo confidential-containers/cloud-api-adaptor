@@ -52,7 +52,7 @@ func (_ *Manager) LoadEnv() {
 		ibmcloudPowerVSConfig.Memory, _ = strconv.ParseFloat(memoryStr, 64)
 	}
 
-	provider.DefaultToEnv(&processorsStr, "POWERVS_MEMORY", "")
+	provider.DefaultToEnv(&processorsStr, "POWERVS_PROCESSORS", "")
 	if processorsStr != "" {
 		ibmcloudPowerVSConfig.Processors, _ = strconv.ParseFloat(processorsStr, 64)
 	}

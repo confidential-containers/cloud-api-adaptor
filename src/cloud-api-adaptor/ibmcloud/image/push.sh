@@ -95,7 +95,13 @@ fi
 image_ref="cos://$location/$cos_bucket/$object_key"
 
 arch=$(uname -m)
-[ "${SE_BOOT:-false}" = "true" ] && os_name="hyper-protect-1-0-s390x" || os_name="ubuntu-20-04-${arch/x86_64/amd64}"
+if [[ "${SE_BOOT:-false}" = "true" ]]; then
+    os_name="hyper-protect-1-0-s390x"
+elif [[ ${arch} == "s390x" ]]; then
+    os_name="ubuntu-22-04-s390x"
+else
+    os_name="ubuntu-24-04-${arch/x86_64/amd64}"
+fi
 
 echo -e "\nCreating image \"$image_name\" with $image_ref\n"
 image_json=$(ibmcloud is image-create "$image_name" --os-name "$os_name" --file "$image_ref" --output json)

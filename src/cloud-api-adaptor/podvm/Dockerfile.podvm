@@ -34,7 +34,7 @@ ENV ARCH=${ARCH}
 ENV UEFI=${UEFI}
 ENV SE_BOOT=${SE_BOOT}
 
-# Defaults to Ubuntu Focal amd64 release image. These variables can be overriden as needed
+# Defaults to Ubuntu noble amd64 release image. These variables can be overriden as needed
 ARG IMAGE_URL
 ARG IMAGE_CHECKSUM
 

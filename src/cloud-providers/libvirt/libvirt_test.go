@@ -62,18 +62,18 @@ func TestGetArchitecture(t *testing.T) {
 
 func verifyDomainXML(domXML *libvirtxml.Domain) error {
 	arch := domXML.OS.Type.Arch
-	if arch != archS390x {
+	if arch != archS390x && arch != archAArch64 {
 		return nil
 	}
 	// verify we have iommu on the disks
 	for i, disk := range domXML.Devices.Disks {
-		if disk.Driver.IOMMU != "on" {
+		if disk.Target.Bus == "virtio" && disk.Driver.IOMMU != "on" {
 			return fmt.Errorf("disk [%d] does not have IOMMU assigned", i)
 		}
 	}
 	// verify we have iommu on the networks
 	for i, iface := range domXML.Devices.Interfaces {
-		if iface.Driver.IOMMU != "on" {
+		if iface.Model.Type == "virtio" && iface.Driver.IOMMU != "on" {
 			return fmt.Errorf("interface [%d] does not have IOMMU assigned", i)
 		}
 	}
@@ -111,6 +111,42 @@ func TestCreateDomainXMLs390x(t *testing.T) {
 	}
 
 	// verify the config
+	err = verifyDomainXML(domCfg)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestCreateDomainXMLaarch64(t *testing.T) {
+	checkConfig(t)
+
+	client, err := NewLibvirtClient(testCfg)
+	if err != nil {
+		t.Error(err)
+	}
+	defer client.connection.Close()
+
+	vm := vmConfig{}
+
+	domainCfg := domainConfig{
+		name:        "TestCreateDomainAArch64",
+		cpu:         2,
+		mem:         4,
+		networkName: client.networkName,
+		bootDisk:    "/var/lib/libvirt/images/root.qcow2",
+		cidataDisk:  "/var/lib/libvirt/images/cloudinit.iso",
+	}
+
+	domCfg, err := createDomainXML(client, &domainCfg, &vm)
+	if err != nil {
+		t.Error(err)
+	}
+
+	arch := domCfg.OS.Type.Arch
+	if domCfg.OS.Type.Arch != archAArch64 {
+		t.Skipf("Skipping because architecture is [%s] and not [%s].", arch, archAArch64)
+	}
+
 	err = verifyDomainXML(domCfg)
 	if err != nil {
 		t.Error(err)

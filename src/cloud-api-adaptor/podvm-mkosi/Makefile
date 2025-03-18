@@ -1,6 +1,14 @@
 include ../Makefile.defaults
 
 ARCH      ?= $(subst x86_64,amd64,$(shell uname -m))
+PROTOC_ARCH ?= x86_64
+ifeq ($(ARCH),aarch64)
+	PROTOC_ARCH := aarch_64
+else ifeq ($(ARCH),s390x)
+	PROTOC_ARCH := s390_64
+else ifeq ($(ARCH),ppc64le)
+	PROTOC_ARCH := ppc64le_64
+endif
 SE_BOOT   ?= false
 IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
 
@@ -14,42 +22,30 @@ PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(POD
 PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT),true),-se,)-$(ARCH):$(PODVM_TAG)
 PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(ARCH)
 VERIFY_PROVENANCE ?= no
-
-PUSH ?= false
-# If not pushing `--load` into the local docker cache
-DOCKER_OPTS := $(if $(filter $(PUSH),true),--push,--load) $(EXTRA_DOCKER_OPTS)
+MKOSI_VERSION ?= v22
 
 .DEFAULT_GOAL := all
 .PHONY: all
-all: fedora-binaries-builder binaries image
+all: binaries image
 
 .PHONY: debug
-debug: fedora-binaries-builder binaries image-debug
+debug:binaries image-debug
 
 .PHONY: container
-container: fedora-binaries-builder binaries image-container
+container: binaries image-container
 
 ifeq ($(ARCH),s390x)
 YQ_CHECKSUM = $(YQ_CHECKSUM_s390x)
 endif
 
-PHONY: fedora-binaries-builder
-fedora-binaries-builder:
-	@echo "Building $(BUILDER) image..."
-	docker buildx build \
-		-t $(PODVM_BUILDER_IMAGE) \
-		--build-arg GO_VERSION=$(GO_VERSION) \
-		--build-arg ARCH=$(ARCH) \
-		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
-		--build-arg YQ_VERSION=$(YQ_VERSION) \
-		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
-		--build-arg YQ_ARCH=$(ARCH) \
-		--build-arg PROTOC_ARCH=$(if $(filter amd64,$(ARCH)),x86_64,s390x) \
-		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
-		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm_builder.fedora ../.
+define run_mkosi_in_container
+	docker run --rm --privileged \
+		-v "$(shell pwd)":/workspace \
+		-w /workspace \
+		fedora:40 \
+		bash -c "dnf install -y mkosi && mkosi --tools-tree=default --tools-tree-release=40 $(1)"
+endef
 
-PHONY: binaries
 binaries:
 	@echo "Building binaries..."
 	rm -rf ./resources/binaries-tree
@@ -59,7 +55,14 @@ endif
 	docker buildx build \
 		-t $(PODVM_BINARIES_IMAGE) \
 		--progress=plain \
-		--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
+		--build-arg GO_VERSION=$(GO_VERSION) \
+		--build-arg ARCH=$(ARCH) \
+		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
+		--build-arg YQ_VERSION=$(YQ_VERSION) \
+		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
+		--build-arg YQ_ARCH=$(ARCH) \
+		--build-arg PROTOC_ARCH=$(PROTOC_ARCH) \
+		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
 		--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
 		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 		--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
@@ -72,47 +75,60 @@ endif
 		$(DOCKER_OPTS) \
 		-f ../podvm/Dockerfile.podvm_binaries.fedora ../../
 
+PHONY: insecure-builder
+insecure-builder:
+	docker buildx ls | grep "^insecure-builder" || docker buildx create \
+		--driver-opt image=moby/buildkit:master \
+		--name insecure-builder \
+		--buildkitd-flags '--allow-insecure-entitlement security.insecure'
+
 PHONY: image
-image:
-	@echo "Enabling production preset..."
-	rm -rf resources/build*Image
+image: insecure-builder
 	rm -rf ./build
 	@echo "Building image..."
 ifeq ($(SE_BOOT),true)
-	touch resources/buildS390xImage
-	sudo mkosi --profile production.conf --image system
+	$(call run_mkosi_in_container,--profile production --image system)
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
-	touch resources/buildS390xImage
-	sudo mkosi --profile production.conf --image system
+	$(call run_mkosi_in_container,--profile production --image system)
 	sudo -E ../hack/build-s390x-image.sh
 else
-	touch resources/buildBootableImage
-	sudo -E env PATH=$(PATH) nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=production
+	mkdir -p build
+	docker buildx build \
+		-f Dockerfile.mkosi \
+		-t $(PODVM_IMAGE) \
+		--build-arg PROFILE=production --build-arg MKOSI_VERSION \
+		--progress=plain \
+		-o type=local,dest=./build \
+		--builder insecure-builder \
+		--allow security.insecure \
+		.
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
 
 PHONY: image-debug
-image-debug:
-	@echo "Enabling debug preset..."
-	rm -rf resources/build*Image
-	touch resources/buildDebugImage
+image-debug: insecure-builder
 	rm -rf ./build
 	@echo "Building debug image..."
 ifeq ($(SE_BOOT),true)
-	touch resources/buildS390xImage
-	sudo mkosi --profile debug.conf
+	$(call run_mkosi_in_container,--profile debug)
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
-	touch resources/buildS390xImage
-	sudo mkosi --profile debug.conf
+	$(call run_mkosi_in_container,--profile debug)
 	sudo -E ../hack/build-s390x-image.sh
 else
-	touch resources/buildBootableImage
-	sudo -E env PATH=$(PATH) nix develop ..#podvm-mkosi --command mkosi --environment=VARIANT_ID=debug
+	mkdir -p build
+	docker buildx build \
+		-f Dockerfile.mkosi \
+		-t $(PODVM_IMAGE) \
+		--build-arg PROFILE=debug --build-arg MKOSI_VERSION \
+		--progress=plain \
+		-o type=local,dest=./build \
+		--builder insecure-builder \
+		--allow security.insecure \
+		.
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
 endif
-	sudo chown -R $(USER): build
 
 PHONY: image-container
 image-container:
@@ -120,7 +136,6 @@ image-container:
 	docker buildx build \
 		-t $(PODVM_CONTAINER_NAME):$(PODVM_TAG) \
 		-t $(PODVM_CONTAINER_NAME):latest \
-		$(DOCKER_OPTS) \
 		-f Dockerfile.podvm_docker_provider .
 
 PHONY: push-image
@@ -142,6 +157,5 @@ push-image-container:
 
 PHONY: clean
 clean:
-	rm -rf resources/buildDebugImage
 	rm -rf ./build
 	rm -rf ./resources/binaries-tree

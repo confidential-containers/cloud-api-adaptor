@@ -27,7 +27,7 @@ ibmcloud is ins |grep ${your-worker-node-name}
 The expected result should look like:
 ```bash
 ...
-0797_162a604f-82da-4b8c-9144-1204d4c560db   liudali-csi-amd64-node-1                   running   10.242.64.19   141.125.156.56    bx2-2x8     ibm-ubuntu-20-04-3-minimal-amd64-1                se-image-e2e-test-eu-gb        eu-gb-2   Default
+0797_162a604f-82da-4b8c-9144-1204d4c560db   liudali-csi-amd64-node-1                   running   10.242.64.19   141.125.156.56    bx2-2x8     ibm-ubuntu-22-04-5-minimal-amd64-1                se-image-e2e-test-eu-gb        eu-gb-2   Default
 ```
 In the example `0797_162a604f-82da-4b8c-9144-1204d4c560db` is the instanceID, `liudali-csi-amd64-node-1` is the node-name, `eu-gb-2` is the zone, the region should be `eu-gb`.
 

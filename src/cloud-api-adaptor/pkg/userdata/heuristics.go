@@ -5,7 +5,7 @@ import (
 	"os"
 
 	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
-	"github.com/klauspost/cpuid/v2"
+	cpuid "github.com/klauspost/cpuid/v2"
 )
 
 func isAzureVM() bool {

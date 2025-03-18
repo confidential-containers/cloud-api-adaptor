@@ -2,13 +2,16 @@
 # Sources for a base cloud os images
 cloudimg:
   ubuntu:
-    focal:
+    noble:
       amd64:
-        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-amd64.img
-        checksum: "sha256:3895e38566e5c2c019f5c6f825ab7570ee34dac6b9142fab0c7e5a78084c4280"
+        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-amd64.img
+        checksum: "sha256:28d2f9df3ac0d24440eaf6998507df3405142cf94a55e1f90802c78e43d2d9df"
       s390x:
-        url: https://cloud-images.ubuntu.com/releases/focal/release-20230107/ubuntu-20.04-server-cloudimg-s390x.img
-        checksum: "sha256:24673aa86785573d3a92e15166ff81beff88cbb0abc01938f156eb1332e87cd3"
+        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-s390x.img
+        checksum: "sha256:367eef35e239ebd123bd00a1fb66cd048604b70bca362eccad1f95b0021d7458"
+      arm64:
+        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-arm64.img
+        checksum: "f11282a728ad42f8bfe0b646a6807674d79a019bfc229d80032345dd3228a2db"
   rhel:
     9: # dummy links, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
       amd64:
@@ -20,16 +23,18 @@ cloudimg:
 
 tools:
   bats: 1.10.0
-  golang: 1.22.7
-  protoc: 3.15.0
-  packer: v1.9.4
-  kcli: 99.0.202408152044
   iptables-wrapper: v0.0.0-20240819165702-06cad2ec6cb5
+  golang: 1.23.6
+  kcli: 99.0.202408152044
+  mkosi: v22
+  protoc: 3.16.0
+  packer: v1.9.4
   oras: 1.2.0
 # Referenced Git repositories
 git:
   coco-operator:
     url: https://github.com/confidential-containers/operator
+    config: default
     reference: main
   umoci:
     url: https://github.com/opencontainers/umoci
@@ -39,7 +44,7 @@ git:
     reference: v1.5.0
   kbs:
     url: https://github.com/confidential-containers/trustee
-    reference: f287fcd60b0b3ddbef5546d646669813b9e68f8d
+    reference: 68e2a8d25dbfa012b422ff464f31d18f3afa6677
 # If a tag is given it will attempt to pull the oci image by tag. if a
 # reference is specified the corresponding tag will be constructed using
 # the reference and suffixes like architecture or tee.
@@ -49,7 +54,7 @@ oci:
     tag: 3.9
   kata-containers:
     registry: ghcr.io/kata-containers/cached-artefacts
-    reference: 3.11.0
+    reference: 3.14.0
   guest-components:
     registry: ghcr.io/confidential-containers/guest-components
-    reference: d8da69072424e496486dfb5421a26f16ff2a7abf
+    reference: 514c561d933cb11a0f1628621a0b930157af76cd

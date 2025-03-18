@@ -124,6 +124,11 @@ func TestMain(m *testing.M) {
 		// Get properties
 		props := provisioner.GetProperties(ctx, cfg)
 
+		if props["SECURE_COMMS"] == "true" {
+			os.Setenv("SECURE_COMMS", "true")
+			log.Info("Do setup secureComms is active")
+		}
+
 		// Set CONTAINER_RUNTIME env variable if present in the properties
 		// Default value is containerd.
 		containerRuntime := defaultContainerRuntime
@@ -158,8 +163,7 @@ func TestMain(m *testing.M) {
 			if kbsEndpoint, err = keyBrokerService.GetKbsEndpoint(ctx, cfg); err != nil {
 				return ctx, err
 			}
-
-			log.Infof("kbsEndpoint: %s", kbsEndpoint)
+			log.Infof("Https kbsEndpoint is: %s", kbsEndpoint)
 		}
 
 		if podvmImage != "" {

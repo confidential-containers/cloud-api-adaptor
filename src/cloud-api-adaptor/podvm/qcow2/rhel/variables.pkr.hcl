@@ -30,7 +30,7 @@ variable "cloud_image_checksum" {
 
 variable "cloud_image_url" {
   type    = string
-  default = "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
+  default = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 }
 
 variable "memory" {
@@ -71,6 +71,16 @@ variable "podvm_distro" {
 variable "cloud_provider" {
   type    = string
   default = env("CLOUD_PROVIDER")
+}
+
+variable "activation_key" {
+  type    = string
+  default = env("ACTIVATION_KEY")
+}
+
+variable "org_id" {
+  type    = string
+  default = env("ORG_ID")
 }
 
 variable "machine_type" {

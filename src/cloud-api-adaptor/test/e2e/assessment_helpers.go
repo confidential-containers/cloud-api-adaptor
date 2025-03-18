@@ -13,7 +13,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -225,6 +225,26 @@ func GetPodEventWarningDescriptions(ctx context.Context, client klient.Client, p
 	return descriptionsBuilder.String(), nil
 }
 
+func LogPodDebugInfo(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) {
+	podLogString, err := GetPodLog(ctx, client, pod)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("Pod log: %s\n", podLogString)
+
+	events, err := GetPodEventWarningDescriptions(ctx, client, pod)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("Pod error events: %s\n", events)
+
+	caaPodLog, err := getCaaPodLogForPod(ctx, t, client, pod)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("CAA log: %s\n", caaPodLog)
+}
+
 // This function takes an expected pod event "warning" string (note warning also covers errors) and checks to see if it
 // shows up in the event log of the pod. Some pods error in failed state, so can be immediately checks, others fail
 // in waiting state (e.g. ImagePullBackoff errors), so we need to poll for errors showing up on these pods
@@ -292,6 +312,21 @@ func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Clien
 	return nil
 }
 
+func VerifySecureCommsActivated(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) error {
+	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
+	if err != nil {
+		return fmt.Errorf("VerifySecureCommsConnected: GetNodeNameFromPod failed with %v", err)
+	}
+
+	expectedSuccessMessage := "Using PP SecureComms"
+	err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedSuccessMessage)
+	if err != nil {
+		return fmt.Errorf("VerifySecureCommsConnected: failed: %v", err)
+	}
+	t.Logf("PodVM was brought up using SecureComms")
+	return nil
+}
+
 func VerifyCaaPodLogContains(ctx context.Context, t *testing.T, client klient.Client, nodeName, expected string) error {
 	caaPod, err := getCaaPod(ctx, client, t, nodeName)
 	if err != nil {
@@ -355,25 +390,36 @@ func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod *v1
 	return getStringFromPod(ctx, client, customPod, getNodeName)
 }
 
+func GetPodsFromJob(ctx context.Context, t *testing.T, client klient.Client, job *batchv1.Job) (*v1.PodList, error) {
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		return nil, fmt.Errorf("GetPodsFromJob: get Kubernetes clientSet failed: %v", err)
+	}
+
+	pods, err := clientset.CoreV1().Pods(job.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "job-name=" + job.Name})
+	if err != nil {
+		return nil, fmt.Errorf("GetPodsFromJob: get pod list failed: %v", err)
+	}
+
+	return pods, nil
+}
+
 func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klient.Client, job batchv1.Job) (int, int, string, error) {
 	podLogString := ""
 	errorPod := 0
 	successPod := 0
-	var podlist v1.PodList
 	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 	if err != nil {
 		return 0, 0, "", err
 	}
-	if err := client.Resources(job.Namespace).List(ctx, &podlist); err != nil {
+	podList, err := GetPodsFromJob(ctx, t, client, &job)
+	if err != nil {
 		return 0, 0, "", err
 	}
-	for _, pod := range podlist.Items {
-		if pod.ObjectMeta.Labels["job-name"] != job.Name {
-			continue
-		}
+	for _, pod := range podList.Items {
 		if pod.Status.Phase == v1.PodPending {
 			if pod.Status.ContainerStatuses[0].State.Waiting.Reason == "ContainerCreating" {
-				return 0, 0, "", errors.New("Failed to Create PodVM")
+				return 0, 0, "", errors.New("failed to Create PodVM")
 			}
 		}
 		if pod.Status.ContainerStatuses[0].State.Terminated.Reason == "StartError" {
@@ -411,6 +457,35 @@ func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 	}
 
 	return successPod, errorPod, podLogString, nil
+}
+
+func getCaaPodLogForPod(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) (string, error) {
+	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
+	if err != nil {
+		return "", fmt.Errorf("GetCaaPodLog: GetNodeNameFromPod failed with %v", err)
+	}
+	caaPod, err := getCaaPod(ctx, client, t, nodeName)
+	if err != nil {
+		return "", fmt.Errorf("GetCaaPodLog: failed to getCaaPod: %v", err)
+	}
+	podLogString, err := getStringFromPod(ctx, client, caaPod, GetPodLog)
+	if err != nil {
+		return "", fmt.Errorf("GetCaaPodLog: failed to getStringFromPod: %v", err)
+	}
+
+	// Find the logs starting with the pod
+	// e.g. 2024/12/19 17:18:52 [adaptor/cloud] create a sandbox 27e11ff35fd1284b45d3be30b42f435a9a597c322bb66e965785c003338d792a for pod job-pi-fgr78 in namespace coco-pp-e2e-test-9a6697df
+	date_matcher := "[0-9]{4}/[0-9]{2}/[0-9]{2}"
+	time_matcher := "([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
+	pod_matcher := regexp.MustCompile(date_matcher + " " + time_matcher + ` \[adaptor\/cloud\] create a sandbox [0-9|a-f]* for pod ` + pod.Name)
+	index := pod_matcher.FindStringIndex(podLogString)[0]
+	if index < 0 {
+		return "", fmt.Errorf("GetCaaPodLog: couldn't find pod log matcher: %s in CAA log %s", pod_matcher, podLogString)
+	} else {
+		podLogString = podLogString[index:]
+	}
+
+	return podLogString, nil
 }
 
 // SkipTestOnCI skips the test if running on CI
@@ -665,7 +740,7 @@ func GetPodNamesByLabel(ctx context.Context, client klient.Client, t *testing.T,
 
 	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 	if err != nil {
-		return nil, fmt.Errorf("GetPodNamesByLabel: get Kubernetes clientSef failed: %v", err)
+		return nil, fmt.Errorf("GetPodNamesByLabel: get Kubernetes clientSet failed: %v", err)
 	}
 
 	nodeSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)

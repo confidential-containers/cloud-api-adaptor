@@ -16,6 +16,9 @@ This documentation will walk you through setting up CAA (a.k.a. Peer Pods) on Am
 
 ## Create pod VM AMI
 
+> **Note:**
+> There is a pre-built AMI (id:`ami-0af256cec444be636`) for version `0.11.0` in `us-east-2` that you can use for testing.
+
 Building a pod VM AMI is a two step process. First you will need to create a raw image and then
 use the raw image to create the AMI
 
@@ -29,7 +32,7 @@ use the raw image to create the AMI
     ```sh
     cd podvm-mkosi
     export CLOUD_PROVIDER=aws
-    export TEE_PLATFORM=snp
+    export TEE_PLATFORM=amd
     make image
     ```
 
@@ -45,9 +48,6 @@ use the raw image to create the AMI
     ```sh
     export PODVM_AMI_ID=<AMI_ID_CREATED>
     ```
-
-    > **Note:**
-    > There is a pre-built AMI ID `ami-0c2afc4cc79cb9083` in `us-east-2` that you can use for testing.
 
 ## Deploy Kubernetes using EKS
 
@@ -120,7 +120,7 @@ At a minimum you need to update `PODVM_AMI_ID` and `VXLAN_PORT` values
 in [`kustomization.yaml`](../install/overlays/aws/kustomization.yaml).
 
 ```sh
-sed -i -E "s/(PODVM_AMI_ID=).*/\1 \"${PODVM_AMI_ID}\"/" install/overlays/aws/kustomization.yaml
+sed -i -E "s/(PODVM_AMI_ID=).*/\1\"${PODVM_AMI_ID}\"/" install/overlays/aws/kustomization.yaml
 sed -i 's/^\([[:space:]]*\)#- VXLAN_PORT=.*/\1- VXLAN_PORT=9000/'  install/overlays/aws/kustomization.yaml
 ```
 

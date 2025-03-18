@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -35,6 +36,7 @@ const (
 	EksCniAddonVersion = "v1.12.5-eksbuild.2"
 	EksVersion         = "1.26"
 	AwsCredentialsFile = "aws-cred.env"
+	ResourcesBaseName  = "caa-e2e-test"
 )
 
 var AWSProps = &AWSProvisioner{}
@@ -110,6 +112,7 @@ type AWSProvisioner struct {
 	Image      *AMIImage
 	Vpc        *Vpc
 	PublicIP   string
+	TunnelType string
 	VxlanPort  string
 	SshKpName  string
 }
@@ -166,6 +169,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		PauseImage: properties["pause_image"],
 		Vpc:        vpc,
 		PublicIP:   properties["use_public_ip"],
+		TunnelType: properties["tunnel_type"],
 		VxlanPort:  properties["vxlan_port"],
 		SshKpName:  properties["ssh_kp_name"],
 	}
@@ -251,6 +255,19 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 		}
 	}
 
+	if a.Image.ID != "" || a.Image.EBSSnapshotId != "" {
+		if err = a.Image.deregisterImage(); err != nil {
+			return err
+		}
+	}
+
+	if a.Bucket.Key != "" {
+		log.Infof("Delete key %s from bucket: %s", a.Bucket.Key, a.Bucket.Name)
+		if err = a.Bucket.deleteKey(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -270,6 +287,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"access_key_id":        credentials.AccessKeyID,
 		"secret_access_key":    credentials.SecretAccessKey,
 		"use_public_ip":        a.PublicIP,
+		"tunnel_type":          a.TunnelType,
 		"vxlan_port":           a.VxlanPort,
 	}
 }
@@ -317,7 +335,8 @@ func (a *AWSProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg 
 		return err
 	}
 
-	imageName := strings.Replace(filepath.Base(imagePath), ".qcow2", ".raw", 1)
+	imageNameSuffix := "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	imageName := strings.Replace(filepath.Base(imagePath), ".qcow2", imageNameSuffix, 1)
 	log.Infof("Register image with name: %s", imageName)
 	err = a.Image.registerImage(imageName)
 	if err != nil {
@@ -335,7 +354,7 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 	}
 
 	return &Vpc{
-		BaseName:          "caa-e2e-test",
+		BaseName:          ResourcesBaseName,
 		CidrBlock:         cidrBlock,
 		Client:            client,
 		ID:                properties["aws_vpc_id"],
@@ -350,18 +369,8 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 // createVpc creates the VPC
 func (v *Vpc) createVpc() error {
 	vpc, err := v.Client.CreateVpc(context.TODO(), &ec2.CreateVpcInput{
-		CidrBlock: aws.String(v.CidrBlock),
-		TagSpecifications: []ec2types.TagSpecification{
-			{
-				ResourceType: ec2types.ResourceTypeVpc,
-				Tags: []ec2types.Tag{
-					{
-						Key:   aws.String("Name"),
-						Value: aws.String(v.BaseName + "-vpc"),
-					},
-				},
-			},
-		},
+		CidrBlock:         aws.String(v.CidrBlock),
+		TagSpecifications: defaultTagSpecifications(v.BaseName+"-vpc", ec2types.ResourceTypeVpc),
 	})
 	if err != nil {
 		return err
@@ -375,19 +384,9 @@ func (v *Vpc) createVpc() error {
 func (v *Vpc) createSubnet() error {
 	subnet, err := v.Client.CreateSubnet(context.TODO(),
 		&ec2.CreateSubnetInput{
-			VpcId:     aws.String(v.ID),
-			CidrBlock: aws.String("10.0.0.0/25"),
-			TagSpecifications: []ec2types.TagSpecification{
-				{
-					ResourceType: ec2types.ResourceTypeSubnet,
-					Tags: []ec2types.Tag{
-						{
-							Key:   aws.String("Name"),
-							Value: aws.String(v.BaseName + "-subnet"),
-						},
-					},
-				},
-			},
+			VpcId:             aws.String(v.ID),
+			CidrBlock:         aws.String("10.0.0.0/25"),
+			TagSpecifications: defaultTagSpecifications(v.BaseName+"-subnet", ec2types.ResourceTypeSubnet),
 		})
 
 	if err != nil {
@@ -434,20 +433,10 @@ func (v *Vpc) createSecondarySubnet() error {
 
 	subnet, err := v.Client.CreateSubnet(context.TODO(),
 		&ec2.CreateSubnetInput{
-			AvailabilityZone: aws.String(secondarySubnetAz),
-			VpcId:            aws.String(v.ID),
-			CidrBlock:        aws.String("10.0.0.128/25"),
-			TagSpecifications: []ec2types.TagSpecification{
-				{
-					ResourceType: ec2types.ResourceTypeSubnet,
-					Tags: []ec2types.Tag{
-						{
-							Key:   aws.String("Name"),
-							Value: aws.String(v.BaseName + "-subnet-2"),
-						},
-					},
-				},
-			},
+			AvailabilityZone:  aws.String(secondarySubnetAz),
+			VpcId:             aws.String(v.ID),
+			CidrBlock:         aws.String("10.0.0.128/25"),
+			TagSpecifications: defaultTagSpecifications(v.BaseName+"-subnet-2", ec2types.ResourceTypeSubnet),
 		})
 
 	if err != nil {
@@ -474,17 +463,7 @@ func (v *Vpc) setupVpcNetworking() error {
 
 	if igwOutput, err = v.Client.CreateInternetGateway(context.TODO(),
 		&ec2.CreateInternetGatewayInput{
-			TagSpecifications: []ec2types.TagSpecification{
-				{
-					ResourceType: ec2types.ResourceTypeInternetGateway,
-					Tags: []ec2types.Tag{
-						{
-							Key:   aws.String("Name"),
-							Value: aws.String(v.BaseName + "-igw"),
-						},
-					},
-				},
-			},
+			TagSpecifications: defaultTagSpecifications(v.BaseName+"-igw", ec2types.ResourceTypeInternetGateway),
 		}); err != nil {
 		return err
 	}
@@ -500,18 +479,8 @@ func (v *Vpc) setupVpcNetworking() error {
 
 	if rtOutput, err = v.Client.CreateRouteTable(context.TODO(),
 		&ec2.CreateRouteTableInput{
-			VpcId: aws.String(v.ID),
-			TagSpecifications: []ec2types.TagSpecification{
-				{
-					ResourceType: ec2types.ResourceTypeRouteTable,
-					Tags: []ec2types.Tag{
-						{
-							Key:   aws.String("Name"),
-							Value: aws.String(v.BaseName + "-rtb"),
-						},
-					},
-				},
-			},
+			VpcId:             aws.String(v.ID),
+			TagSpecifications: defaultTagSpecifications(v.BaseName+"-rtb", ec2types.ResourceTypeRouteTable),
 		}); err != nil {
 		return err
 	}
@@ -541,9 +510,10 @@ func (v *Vpc) setupVpcNetworking() error {
 func (v *Vpc) setupSecurityGroup() error {
 	if sgOutput, err := v.Client.CreateSecurityGroup(context.TODO(),
 		&ec2.CreateSecurityGroupInput{
-			Description: aws.String("cloud-api-adaptor e2e tests"),
-			GroupName:   aws.String(v.BaseName + "-sg"),
-			VpcId:       aws.String(v.ID),
+			Description:       aws.String("cloud-api-adaptor e2e tests"),
+			GroupName:         aws.String(v.BaseName + "-sg"),
+			VpcId:             aws.String(v.ID),
+			TagSpecifications: defaultTagSpecifications(v.BaseName+"-sg", ec2types.ResourceTypeSecurityGroup),
 		}); err != nil {
 		return err
 	} else {
@@ -743,8 +713,19 @@ func (v *Vpc) deleteVpc() error {
 
 // createBucket Creates the S3 bucket
 func (b *S3Bucket) createBucket() error {
-	// No harm creating a bucket that already exist.
-	_, err := b.Client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
+	buckets, err := b.Client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
+	if err != nil {
+		return err
+	}
+
+	for _, bucket := range buckets.Buckets {
+		if *bucket.Name == b.Name {
+			// Bucket exists
+			return nil
+		}
+	}
+
+	_, err = b.Client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
 		Bucket: &b.Name,
 	})
 	if err != nil {
@@ -859,6 +840,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 				S3Key:    aws.String(bucket.Key),
 			},
 		},
+		TagSpecifications: defaultTagSpecifications(ResourcesBaseName+"-snap", ec2types.ResourceTypeImportSnapshotTask),
 	})
 	if err != nil {
 		return err
@@ -882,6 +864,19 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 	}
 	taskDetail := describeTasks.ImportSnapshotTasks[0].SnapshotTaskDetail
 	i.EBSSnapshotId = *taskDetail.SnapshotId
+
+	// Let's warn but ignore any tagging error
+	if _, err = i.Client.CreateTags(context.TODO(), &ec2.CreateTagsInput{
+		Resources: []string{i.EBSSnapshotId},
+		Tags: []ec2types.Tag{
+			{
+				Key:   aws.String("Name"),
+				Value: aws.String(ResourcesBaseName + "-snap"),
+			},
+		},
+	}); err != nil {
+		log.Warnf("Failed to tag EBS snapshot %s: %v", i.EBSSnapshotId, err)
+	}
 
 	return nil
 }
@@ -907,6 +902,7 @@ func (i *AMIImage) registerImage(imageName string) error {
 		EnaSupport:         aws.Bool(true),
 		RootDeviceName:     aws.String(i.RootDeviceName),
 		VirtualizationType: aws.String("hvm"),
+		TagSpecifications:  defaultTagSpecifications(ResourcesBaseName+"-img", ec2types.ResourceTypeImage),
 	})
 	if err != nil {
 		return err
@@ -915,6 +911,34 @@ func (i *AMIImage) registerImage(imageName string) error {
 	// Save the AMI ID
 	i.ID = *result.ImageId
 	return nil
+}
+
+// deregisterImage Deregisters an AMI image. The associated EBS snapshot is deleted too.
+func (i *AMIImage) deregisterImage() error {
+	var err error
+
+	if i.ID != "" {
+		log.Infof("Deregister AMI ID: %s", i.ID)
+		_, err = i.Client.DeregisterImage(context.TODO(), &ec2.DeregisterImageInput{
+			ImageId: aws.String(i.ID),
+		})
+		if err != nil {
+			log.Errorf("Failed to deregister AMI: %s", err)
+		}
+	}
+
+	// Removing the EBS snapshot
+	if i.EBSSnapshotId != "" {
+		log.Infof("Delete Snapshot ID: %s", i.EBSSnapshotId)
+		_, err = i.Client.DeleteSnapshot(context.TODO(), &ec2.DeleteSnapshotInput{
+			SnapshotId: aws.String(i.EBSSnapshotId),
+		})
+		if err != nil {
+			log.Errorf("Failed to delete snapshot: %s", err)
+		}
+	}
+
+	return err
 }
 
 // uploadLargeFileWithCli Uploads large files (>5GB) using the AWS CLI
@@ -943,6 +967,17 @@ func (b *S3Bucket) uploadLargeFileWithCli(filepath string) error {
 	out, err := cmd.CombinedOutput()
 	fmt.Printf("%s\n", out)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *S3Bucket) deleteKey() error {
+	if _, err := b.Client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String(b.Name),
+		Key:    aws.String(b.Key),
+	}); err != nil {
 		return err
 	}
 
@@ -1017,6 +1052,7 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 		"subnet_id":            "AWS_SUBNET_ID",
 		"ssh_kp_name":          "SSH_KP_NAME",
 		"region":               "AWS_REGION",
+		"tunnel_type":          "TUNNEL_TYPE",
 		"vxlan_port":           "VXLAN_PORT",
 		"use_public_ip":        "USE_PUBLIC_IP",
 	}

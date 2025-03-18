@@ -17,13 +17,19 @@ configMapGenerator:
   namespace: confidential-containers-system
   literals:
   - CLOUD_PROVIDER="gcp"
-  #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
-  #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
   - PODVM_IMAGE_NAME="" # set from step "Build Pod VM Image" in gcp/README.md
   - GCP_PROJECT_ID="" # set
   - GCP_ZONE="" # set e.g. "us-west1-a"
   - GCP_MACHINE_TYPE="e2-medium" # replace if needed. caa defaults to e2-medium
   - GCP_NETWORK="global/networks/default" # replace if needed.
+  - GCP_CONFIDENTIAL_TYPE="" # Needs to be set when DisableCVM=false. i.e: TDX, SEV or SEV_SNP. Check if the machine type is compatible.
+  #- DISABLECVM="true" # Uncomment it if you want a generic VM
+  #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
+  #- REMOTE_HYPERVISOR_ENDPOINT="/run/peerpod/hypervisor.sock" # Path to Kata remote hypervisor socket. Default is /run/peerpod/hypervisor.sock
+  #- PEER_PODS_DIR="/run/peerpod/pods" # Path to peer pods directory. Default is /run/peerpod/pods
+  #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
+  #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
 ##TLS_SETTINGS
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS
@@ -39,7 +45,7 @@ secretGenerator:
 - name: peer-pods-secret
   namespace: confidential-containers-system
   files:
-  - GCP_CREDENTIALS # make sure this file has the application credentials. You can reuse the Packer creds created in "Build Pod VM Image"
+  #- GCP_CREDENTIALS # make sure this file has the application credentials. You can reuse the Packer creds created in "Build Pod VM Image"
 ##TLS_SETTINGS
 #- name: certs-for-tls
 #  namespace: confidential-containers-system
