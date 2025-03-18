@@ -72,6 +72,7 @@ type TestCase struct {
 	expectedInstanceType        string
 	isNydusSnapshotter          bool
 	alternateImageName          string
+	initdataString              string
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -166,6 +167,11 @@ func (tc *TestCase) WithNoAuthJson() *TestCase {
 
 func (tc *TestCase) WithNydusSnapshotter() *TestCase {
 	tc.isNydusSnapshotter = true
+	return tc
+}
+
+func (tc *TestCase) WithExpectedInitdataAnnotation(initdataString string) *TestCase {
+	tc.initdataString = initdataString
 	return tc
 }
 
