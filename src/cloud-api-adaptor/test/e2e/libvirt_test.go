@@ -6,6 +6,7 @@
 package e2e
 
 import (
+	"encoding/base64"
 	"os"
 	"testing"
 
@@ -244,4 +245,27 @@ func TestLibvirtCreatePeerPodWithAuthenticatedImageWithValidCredentials(t *testi
 func TestLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "200Mi")
+}
+
+func TestLibvirtCreatePodVMwithInitdataAnnotations(t *testing.T) {
+	assert := LibvirtAssert{}
+	// Input data
+	data := `algorithm = "sha384"
+version = "0.1.0"
+[data]
+		`
+	encodedData := base64.StdEncoding.EncodeToString([]byte(data))
+
+	DoTestPodVMwithInitdataAnnotations(t, testEnv, assert, encodedData)
+}
+
+func TestLibvirtCreatePodwithInitdataAnnotations(t *testing.T) {
+	assert := LibvirtAssert{}
+	// Input data
+	data := `
+		`
+
+	encodedData := base64.StdEncoding.EncodeToString([]byte(data))
+
+	DoTestPodwithInitdataAnnotations(t, testEnv, assert, encodedData)
 }

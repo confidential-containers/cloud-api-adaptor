@@ -775,3 +775,21 @@ func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 
 	NewTestCase(t, e, "PodWithCpuMemLimitsAndRequests", assert, "Pod with cpu and memory limits and requests").WithPod(pod).Run()
 }
+
+func DoTestPodwithInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, initdataString string) {
+	podName := "initdata-annotations-pod"
+	containerName := "busybox"
+	imageName := getBusyboxTestImage(t)
+	annotationData := map[string]string{
+		"io.katacontainers.config.runtime.cc_init_data": initdataString,
+	}
+
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+
+	t.Logf("Details of pod edited : RR")
+	t.Logf("Pod details: %+v", pod)
+	t.Logf("Pod details 2: %+v", pod.GetAnnotations())
+	t.Logf("Details of pod edited : RR")
+	t.Logf("Pod details 3: %+v", pod.ObjectMeta.Annotations)
+	NewTestCase(t, e, "PodwithInitdataAnnotations", assert, "PodVM with Initdata Annotation is created").WithPod(pod).WithExpectedInitdataAnnotation(initdataString).Run()
+}

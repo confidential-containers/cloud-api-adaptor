@@ -288,6 +288,18 @@ func WithInitContainers(initContainers []corev1.Container) PodOption {
 	}
 }
 
+func WithEmptyInitdata(kbsEndpoint string) PodOption {
+	return func(p *corev1.Pod) {
+		if p.ObjectMeta.Annotations == nil {
+			p.ObjectMeta.Annotations = make(map[string]string)
+		}
+		key := "io.katacontainers.config.runtime.cc_init_data"
+		initdata := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, kbsEndpoint)
+		value := b64.StdEncoding.EncodeToString([]byte(initdata))
+		p.ObjectMeta.Annotations[key] = value
+	}
+}
+
 func NewPod(namespace string, podName string, containerName string, imageName string, options ...PodOption) *corev1.Pod {
 	runtimeClassName := "kata-remote"
 	annotationData := map[string]string{}
