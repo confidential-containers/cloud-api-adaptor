@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -73,6 +73,7 @@ type TestCase struct {
 	isNydusSnapshotter          bool
 	alternateImageName          string
 	initdataString              string
+	secureCommsIsActive         bool
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -132,6 +133,11 @@ func (tc *TestCase) WithExpectedInstanceType(expectedInstanceType string) *TestC
 
 func (tc *TestCase) WithAlternateImage(alternateImageName string) *TestCase {
 	tc.alternateImageName = alternateImageName
+	return tc
+}
+
+func (tc *TestCase) WithSecureCommsIsActive() *TestCase {
+	tc.secureCommsIsActive = true
 	return tc
 }
 
@@ -272,7 +278,7 @@ func (tc *TestCase) Run() {
 					t.Fatal(err)
 				}
 				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				}
 				if tc.podState == v1.PodRunning || len(tc.testCommands) > 0 {
 					t.Logf("Waiting for containers in pod: %v are ready", tc.pod.Name)
@@ -280,11 +286,11 @@ func (tc *TestCase) Run() {
 						//Added logs for debugging nightly tests
 						clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 						if err != nil {
-							t.Fatal(err)
+							t.Error(err)
 						}
 						pod, err := clientset.CoreV1().Pods(tc.pod.Namespace).Get(ctx, tc.pod.Name, metav1.GetOptions{})
 						if err != nil {
-							t.Fatal(err)
+							t.Error(err)
 						}
 						t.Logf("Expected Pod State: %v", tc.podState)
 						yamlData, err := yaml.Marshal(pod.Status)
@@ -299,7 +305,7 @@ func (tc *TestCase) Run() {
 							t.Log(podLogString)
 							t.Logf("===================\n")
 						}
-						t.Fatal(err)
+						t.Error(err)
 					}
 				}
 			}
@@ -421,19 +427,26 @@ func (tc *TestCase) Run() {
 						t.Errorf("VerifyAlternateImage failed: %v", err)
 					}
 				}
+
+				if tc.secureCommsIsActive {
+					err := VerifySecureCommsActivated(ctx, t, client, tc.pod)
+					if err != nil {
+						t.Errorf("VerifySecureCommsActivated failed: %v", err)
+					}
+				}
 			}
 
 			if tc.extraPods != nil {
 				for _, extraPod := range tc.extraPods {
 					if extraPod.imagePullTimer {
 						// TBD
-						t.Fatal("Please implement assess logic for imagePullTimer")
+						t.Error("Please implement assess logic for imagePullTimer")
 					}
 					if extraPod.expectedPodLogString != "" {
 						LogString, err := ComparePodLogString(ctx, client, extraPod.pod, extraPod.expectedPodLogString)
 						if err != nil {
 							t.Logf("Output:%s", LogString)
-							t.Fatal(err)
+							t.Error(err)
 						}
 						t.Logf("Log output of peer pod:%s", LogString)
 					}
@@ -442,7 +455,7 @@ func (tc *TestCase) Run() {
 							logString, err := AssessPodTestCommands(ctx, client, extraPod.pod, extraPod.testCommands)
 							t.Logf("Output when execute test commands:%s", logString)
 							if err != nil {
-								t.Fatal(err)
+								t.Error(err)
 							}
 						}
 						tc.assert.HasPodVM(t, extraPod.pod.Name)
@@ -450,7 +463,7 @@ func (tc *TestCase) Run() {
 
 					if tc.isNydusSnapshotter {
 						// TBD
-						t.Fatal("Error: isNydusSnapshotter hasn't been implemented in extraPods. Please implement assess function for isNydusSnapshotter.")
+						t.Error("Error: isNydusSnapshotter hasn't been implemented in extraPods. Please implement assess function for isNydusSnapshotter.")
 					}
 				}
 			}
@@ -461,9 +474,10 @@ func (tc *TestCase) Run() {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if tc.configMap != nil {
 				if err = client.Resources().Delete(ctx, tc.configMap); err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				}
 
 				t.Logf("Deleting Configmap... %s", tc.configMap.Name)
@@ -471,7 +485,7 @@ func (tc *TestCase) Run() {
 
 			if tc.secret != nil {
 				if err = client.Resources().Delete(ctx, tc.secret); err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				} else {
 					t.Logf("Deleting Secret... %s", tc.secret.Name)
 				}
@@ -483,14 +497,14 @@ func (tc *TestCase) Run() {
 					t.Fatal(err)
 				}
 				if err = clientSet.CoreV1().Secrets(E2eNamespace).Delete(ctx, DEFAULT_AUTH_SECRET, metav1.DeleteOptions{}); err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				}
 			}
 
 			if tc.extraSecrets != nil {
 				for _, extraSecret := range tc.extraSecrets {
 					if err = client.Resources().Delete(ctx, extraSecret); err != nil {
-						t.Fatal(err)
+						t.Error(err)
 					} else {
 						t.Logf("Deleting extra Secret... %s", extraSecret.Name)
 					}
@@ -499,36 +513,46 @@ func (tc *TestCase) Run() {
 			}
 
 			if tc.job != nil {
-				var podlist v1.PodList
-				if err := client.Resources(tc.job.Namespace).List(ctx, &podlist); err != nil {
-					t.Fatal(err)
+				podList, err := GetPodsFromJob(ctx, t, client, tc.job)
+				if err != nil {
+					t.Error(err)
 				}
+
+				if t.Failed() {
+					if len(podList.Items) > 0 {
+						jobPod := podList.Items[0]
+						LogPodDebugInfo(ctx, t, client, &jobPod)
+					}
+				}
+
 				if err = client.Resources().Delete(ctx, tc.job); err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				} else {
 					t.Logf("Deleting Job... %s", tc.job.Name)
 				}
-				for _, pod := range podlist.Items {
-					if pod.ObjectMeta.Labels["job-name"] == tc.job.Name {
-						if err = client.Resources().Delete(ctx, &pod); err != nil {
-							t.Fatal(err)
-						}
-						t.Logf("Deleting pods created by job... %s", pod.ObjectMeta.Name)
-
+				for _, pod := range podList.Items {
+					if err = client.Resources().Delete(ctx, &pod); err != nil {
+						t.Error(err)
 					}
+					t.Logf("Deleting pods created by job... %s", pod.ObjectMeta.Name)
 				}
 			}
 
 			if tc.pod != nil {
+
+				if t.Failed() {
+					LogPodDebugInfo(ctx, t, client, tc.pod)
+				}
+
 				if err = client.Resources().Delete(ctx, tc.pod); err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				}
 				t.Logf("Deleting pod %s...", tc.pod.Name)
 				if err = wait.For(conditions.New(
 					client.Resources()).ResourceDeleted(tc.pod),
 					wait.WithInterval(5*time.Second),
 					wait.WithTimeout(tc.deletionWithin)); err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				}
 				t.Logf("Pod %s has been successfully deleted within %.0fs", tc.pod.Name, tc.deletionWithin.Seconds())
 			}
@@ -540,7 +564,7 @@ func (tc *TestCase) Run() {
 					err := DeletePod(ctx, client, pod, &tc.deletionWithin)
 					if err != nil {
 						t.Logf("Error occurs when delete pod: %s", extraPod.pod.Name)
-						t.Fatal(err)
+						t.Error(err)
 					}
 					t.Logf("Pod %s has been successfully deleted within %.0fs", pod.Name, tc.deletionWithin.Seconds())
 				}
@@ -548,7 +572,7 @@ func (tc *TestCase) Run() {
 
 			if tc.pvc != nil {
 				if err = client.Resources().Delete(ctx, tc.pvc); err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				} else {
 					t.Logf("Deleting PVC... %s", tc.pvc.Name)
 				}
@@ -556,7 +580,7 @@ func (tc *TestCase) Run() {
 
 			if tc.service != nil {
 				if err = client.Resources().Delete(ctx, tc.service); err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				} else {
 					t.Logf("Deleting Service... %s", tc.service.Name)
 				}

@@ -23,6 +23,8 @@ func NewIdentityService(targetEndpoint string) *IdentityService {
 }
 
 func (s *IdentityService) redirect(ctx context.Context, req interface{}, fn func(context.Context, csi.IdentityClient)) error {
+	// grpc.Dial is deprecated and supported only with grpc 1.x
+	//nolint:staticcheck
 	conn, err := grpc.Dial(s.TargetEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err

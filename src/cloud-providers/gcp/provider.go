@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"strings"
 
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
@@ -89,58 +90,82 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 	logger.Printf("userDataEnc:  %s", userDataEnc)
 
-	// It's expected that the image from the annotation will follow the format "projects/<project>/global/images/<image>"
-	srcImage := proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectId, p.serviceConfig.ImageName))
+	// It's expected that the image from the annotation will follow the format
+	// "projects/<project>/global/images/<imageid>" or just the "<imageid>" if the
+	// image is present on the same project.
+	var srcImage *string
+	if strings.HasPrefix(p.serviceConfig.ImageName, "projects/") {
+		srcImage = proto.String(p.serviceConfig.ImageName)
+	} else {
+		srcImage = proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectId, p.serviceConfig.ImageName))
+	}
 
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the GCP image for the PodVM image", spec.Image)
 		srcImage = proto.String(spec.Image)
 	}
 
-	insertReq := &computepb.InsertInstanceRequest{
-		Project: p.serviceConfig.ProjectId,
-		Zone:    p.serviceConfig.Zone,
-		InstanceResource: &computepb.Instance{
-			Name: proto.String(instanceName),
-			Disks: []*computepb.AttachedDisk{
-				{
-					InitializeParams: &computepb.AttachedDiskInitializeParams{
-						DiskSizeGb:  proto.Int64(20),
-						SourceImage: srcImage,
-						DiskType:    proto.String(fmt.Sprintf("zones/%s/diskTypes/pd-standard", p.serviceConfig.Zone)),
-					},
-					AutoDelete: proto.Bool(true),
-					Boot:       proto.Bool(true),
-					Type:       proto.String(computepb.AttachedDisk_PERSISTENT.String()),
+	instanceResource := &computepb.Instance{
+		Name: proto.String(instanceName),
+		Disks: []*computepb.AttachedDisk{
+			{
+				InitializeParams: &computepb.AttachedDiskInitializeParams{
+					DiskSizeGb:  proto.Int64(20),
+					SourceImage: srcImage,
+					DiskType:    proto.String(fmt.Sprintf("zones/%s/diskTypes/%s", p.serviceConfig.Zone, p.serviceConfig.DiskType)),
 				},
+				AutoDelete: proto.Bool(true),
+				Boot:       proto.Bool(true),
+				Type:       proto.String(computepb.AttachedDisk_PERSISTENT.String()),
 			},
-			Metadata: &computepb.Metadata{
-				Items: []*computepb.Items{
-					{
-						Key:   proto.String("user-data"),
-						Value: proto.String(userDataEnc),
-					},
-					{
-						Key:   proto.String("user-data-encoding"),
-						Value: proto.String("base64"),
-					},
-				},
-			},
-			MachineType: proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, p.serviceConfig.MachineType)),
-			NetworkInterfaces: []*computepb.NetworkInterface{
+		},
+		Metadata: &computepb.Metadata{
+			Items: []*computepb.Items{
 				{
-					AccessConfigs: []*computepb.AccessConfig{
-						{
-							Name:        proto.String("External NAT"),
-							NetworkTier: proto.String("STANDARD"),
-						},
-					},
-					StackType: proto.String("IPV4_Only"),
-					Name:      proto.String(p.serviceConfig.Network),
+					Key:   proto.String("user-data"),
+					Value: proto.String(userDataEnc),
+				},
+				{
+					Key:   proto.String("user-data-encoding"),
+					Value: proto.String("base64"),
 				},
 			},
 		},
+		MachineType: proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, p.serviceConfig.MachineType)),
+		NetworkInterfaces: []*computepb.NetworkInterface{
+			{
+				Network: proto.String(p.serviceConfig.Network),
+				AccessConfigs: []*computepb.AccessConfig{
+					{
+						Name:        proto.String("External NAT"),
+						NetworkTier: proto.String("STANDARD"),
+					},
+				},
+				StackType: proto.String("IPV4_Only"),
+			},
+		},
 	}
+
+	if !p.serviceConfig.DisableCVM {
+		if p.serviceConfig.ConfidentialType == "" {
+			return nil, fmt.Errorf("ConfidentialType must be set when using Confidential VM.")
+		}
+
+		instanceResource.ConfidentialInstanceConfig = &computepb.ConfidentialInstanceConfig{
+			ConfidentialInstanceType:  proto.String(p.serviceConfig.ConfidentialType),
+			EnableConfidentialCompute: proto.Bool(true),
+		}
+		instanceResource.Scheduling = &computepb.Scheduling{
+			OnHostMaintenance: proto.String("TERMINATE"),
+		}
+	}
+
+	insertReq := &computepb.InsertInstanceRequest{
+		Project:          p.serviceConfig.ProjectId,
+		Zone:             p.serviceConfig.Zone,
+		InstanceResource: instanceResource,
+	}
+
 	op, err := p.instancesClient.Insert(ctx, insertReq)
 	if err != nil {
 		return nil, fmt.Errorf("Instances.Insert error: %s. req: %v", err, insertReq)

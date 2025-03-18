@@ -18,7 +18,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
@@ -234,12 +234,14 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
+	imageId := p.serviceConfig.ImageId
+
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the Azure Image for the PodVM image", spec.Image)
-		p.serviceConfig.ImageId = spec.Image
+		imageId = spec.Image
 	}
 
-	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, nicName)
+	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, nicName, imageId)
 	if err != nil {
 		return nil, err
 	}
@@ -300,8 +302,8 @@ func (p *azureProvider) Teardown() error {
 }
 
 func (p *azureProvider) ConfigVerifier() error {
-	ImageId := p.serviceConfig.ImageId
-	if len(ImageId) == 0 {
+	imageId := p.serviceConfig.ImageId
+	if len(imageId) == 0 {
 		return fmt.Errorf("ImageId is empty")
 	}
 
@@ -371,7 +373,7 @@ func (p *azureProvider) getResourceTags() map[string]*string {
 	return tags
 }
 
-func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string) (*armcompute.VirtualMachine, error) {
+func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string, imageId string) (*armcompute.VirtualMachine, error) {
 	userDataB64 := base64.StdEncoding.EncodeToString([]byte(cloudConfig))
 
 	// Azure limits the base64 encrypted userData to 64KB.
@@ -406,11 +408,11 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 	}
 
 	imgRef := &armcompute.ImageReference{
-		ID: to.Ptr(p.serviceConfig.ImageId),
+		ID: to.Ptr(imageId),
 	}
-	if strings.HasPrefix(p.serviceConfig.ImageId, "/CommunityGalleries/") {
+	if strings.HasPrefix(imageId, "/CommunityGalleries/") {
 		imgRef = &armcompute.ImageReference{
-			CommunityGalleryImageID: to.Ptr(p.serviceConfig.ImageId),
+			CommunityGalleryImageID: to.Ptr(imageId),
 		}
 	}
 

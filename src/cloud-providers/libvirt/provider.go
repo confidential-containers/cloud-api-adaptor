@@ -63,8 +63,6 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		vm.launchSecurityType = NoLaunchSecurity
 	} else if p.serviceConfig.LaunchSecurity != "" {
 		switch p.serviceConfig.LaunchSecurity {
-		case "sev":
-			vm.launchSecurityType = SEV
 		case "s390-pv":
 			vm.launchSecurityType = S390PV
 		default:

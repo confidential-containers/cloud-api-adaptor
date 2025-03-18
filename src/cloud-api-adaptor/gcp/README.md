@@ -83,24 +83,45 @@ gcloud compute images create podvm-image \
 
 ### Setup a cluster
 
-You will need a k8s cluster up and running. Since GKE support is blocked by the
-issue #1909, you will need to bootstrap a cluster, either local (with libvirt)
-or using Google Compute Engine.
+You will need a Kubernetes cluster up and running. You can either deploy your
+own cluster manually or use GKE.
 
 For local development, you could use a local libvirt setup with a local Docker
 registry (optional). Follow instructions in
 [libvirt/README.md](../libvirt/README.md) and deploy a Kubernetes cluster in a
 Kubeadm setup.
 
+When using GKE, ensure that the `UBUNTU_CONTAINERD` image is used. For instance:
+
+```bash
+gcloud container clusters create my-cluster \
+  --zone ${GCP_LOCATION}-a \
+  --machine-type e2-standard-4 \
+  --image-type UBUNTU_CONTAINERD \
+  --num-nodes 3
+```
+
+> [!NOTE]
+> Starting with GKE version 1.27, GCP configures containerd with the
+> `discard_unpacked_layers=true` flag to optimize disk usage by removing
+> compressed image layers after they are unpacked. However, this can cause
+> issues with PeerPods, as the workload may fail to locate required layers. To
+> avoid this, disable the `discard_unpacked_layers` setting in the containerd
+> configuration.
+
 Regardless of the method used, at the end you should have a KUBECONFIG pointing
 to the auth file and a cluster up and running:
 
-```
-$ kubectl get nodes
+```bash
+kubectl get nodes
 NAME                 STATUS   ROLES                  AGE     VERSION
 peer-pods-ctlplane-0 Ready    control-plane,master   6m8s    v1.25.3
 peer-pods-worker-0   Ready    worker                 2m47s   v1.25.3
 ```
+
+> [!NOTE]
+> When using GKE, ensure the worker nodes have the following label configured:
+> * node.kubernetes.io/worker=""
 
 ### Deploy the CoCo operator
 
@@ -121,6 +142,7 @@ kubectl apply -k "github.com/confidential-containers/operator/config/samples/ccr
 Build and push docker image to a registry:
 
 ```bash
+cd ../ # make sure you are outside the podvm-mkosi directory
 export registry=quay.io/${QUAY_USER} # If you are using local registry: LOCAL_IP:PORT.
 export RELEASE_BUILD=true
 make image
@@ -133,7 +155,7 @@ later.
 
 We need to make sure port 15150 is open under the `default` VPC network:
 
-```
+```bash
 gcloud compute firewall-rules create allow-port-15150 \
     --project=${GCP_PROJECT_ID} \
     --network=default \
@@ -157,7 +179,7 @@ gcloud compute firewall-rules create allow-port-15150 \
 
 Update [install/overlays/gcp/kustomization.yaml](../install/overlays/gcp/kustomization.yaml) with the required fields:
 
-```
+```yaml
 images:
 - name: cloud-api-adaptor
   newName: 192.168.122.1:5000/cloud-api-adaptor # change image if needed
@@ -183,8 +205,8 @@ secretGenerator:
 ```
 
 ```bash
-$ kubectl apply -k install/overlays/gcp/
-$ kubectl get pods -n confidential-containers-system
+kubectl apply -k install/overlays/gcp/
+kubectl get pods -n confidential-containers-system
 NAME                                              READY   STATUS    RESTARTS   AGE
 cc-operator-controller-manager-546574cf87-b69pb   2/2     Running   0          7d10h
 cc-operator-daemon-install-mfjbj                  1/1     Running   0          7d10h
@@ -196,8 +218,8 @@ cloud-api-adaptor-daemonset-5w8nw                 1/1     Running   0          7
 
 Deploy the `sample_busybox.yaml` (see [libvirt/README.md](../libvirt/README.md)):
 
-```
-$ kubectl apply -f sample_busybox.yaml
+```bash
+kubectl apply -f sample_busybox.yaml
 pod/busybox created
 ```
 

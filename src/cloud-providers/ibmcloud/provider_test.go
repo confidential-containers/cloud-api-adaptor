@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/IBM/go-sdk-core/v5/core"
-	"github.com/IBM/vpc-go-sdk/vpcv1"
+	vpcv1 "github.com/IBM/vpc-beta-go-sdk/vpcbetav1"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/stretchr/testify/assert"
 )
@@ -144,6 +144,7 @@ func TestCreateInstance(t *testing.T) {
 		serviceConfig: &Config{
 			ProfileName: "bx2-2x8",
 			Images:      images,
+			DisableCVM:  true,
 		},
 	}
 
@@ -161,6 +162,8 @@ func TestCreateInstance(t *testing.T) {
 	p, ok := vpc.prototype.(*vpcv1.InstancePrototype)
 	assert.True(t, ok)
 	assert.Equal(t, "cloud config", *p.UserData)
+	assert.Equal(t, false, *p.EnableSecureBoot)
+	assert.Equal(t, "disabled", *p.ConfidentialComputeMode)
 }
 
 func TestDeleteInstance(t *testing.T) {

@@ -12,7 +12,7 @@ error(){
 script_dir=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 
 function usage() {
-    echo "Usage: $0 <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint> --os <operating-system>]"
+    echo "Usage: $0 <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint> --os <operating-system> --pull always(default)|missing|never]"
 }
 
 image_file=$1
@@ -24,6 +24,7 @@ endpoint=
 api=${IBMCLOUD_API_ENDPOINT-https://cloud.ibm.com}
 platform=
 operating_system=
+pull=always
 
 shift 2
 while (( "$#" )); do
@@ -35,6 +36,7 @@ while (( "$#" )); do
         --os) operating_system=$2 ;;
         --api) api=$2 ;;
         --platform) platform=$2 ;;
+        --pull) pull=$2 ;;
         --help) usage; exit 0 ;;
         *)      usage 1>&2; exit 1;;
     esac
@@ -64,22 +66,26 @@ fi
 
 [ -n "$endpoint" ] && ibmcloud cos config endpoint-url --url "$endpoint" >/dev/null
 
-if ! ibmcloud cos buckets --output JSON | jq -r '.Buckets[].Name'; then
-    error "Can't find any buckets in $instance"
-fi
-
 if [ -z "$bucket" ]; then
-    bucket=$(ibmcloud cos buckets --output JSON | jq -r '.Buckets[0].Name')
+    for i in $(ibmcloud cos buckets --output JSON | jq -r '.Buckets[].Name'); do
+        if ibmcloud cos bucket-head --bucket $i >/dev/null 2>&1; then
+            bucket=$i
+            break
+        fi
+    done
+    if [ -z "$bucket" ]; then
+        error "Can't find any buckets in target region"
+    fi
+else
+    ibmcloud cos bucket-head --bucket "$bucket" || error "Bucket $bucket not found"
 fi
-
-ibmcloud cos bucket-head --bucket "$bucket" || error "Bucket $bucket not found"
 
 if [ -f ${image_file} ]; then
     file=${image_file}
 else
     # Download image
     echo "Downloading file from image ${image_file}"
-    file=$($script_dir/../../podvm/hack/download-image.sh ${image_file} . --platform "${platform}") || error "Unable to download ${image_file}"
+    file=$($script_dir/../../podvm/hack/download-image.sh ${image_file} . --platform "${platform}" --pull "${pull}") || error "Unable to download ${image_file}"
 fi
 
 echo "Uploading file ${file}"
@@ -101,7 +107,12 @@ image_ref="cos://$location/$bucket/$file"
 # If OS isn't specified infer from file name
 if [ -z "$operating_system" ]; then
     image_arch="${image_name##*-}"
-    operating_system="ubuntu-20-04-${image_arch/x86_64/amd64}"
+    operating_system="ubuntu-24-04"
+    # 24.04 image type isn't available for s390x yet, so label it 22-04 as a workaround
+    if [[ ${image_arch} == "s390x" ]]; then
+        operating_system="ubuntu-22-04"
+    fi
+    operating_system=${operating_system}"-${image_arch/x86_64/amd64}"
 fi
 image_name="$(echo ${image_name} | tr '[:upper:]' '[:lower:]' | sed 's/\./-/g' | sed 's/_/-/g')"
 image_json=$(ibmcloud is image-create "$image_name" --os-name "$operating_system" --file "$image_ref" --output JSON) || error "Unable to create vpc image $image_name"

@@ -55,6 +55,12 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "CRI_RUNTIME_ENDPOINT":
 		return true
+	case "TUNNEL_TYPE":
+		return true
+	case "VXLAN_PORT":
+		return true
+	case "DISABLECVM":
+		return true
 	default:
 		return false
 	}
@@ -88,18 +94,18 @@ func isWorkerS390xFlavors() bool {
 func getCaaLatestCommitTag() string {
 	resp, err := http.Get("https://quay.io/api/v1/repository/confidential-containers/cloud-api-adaptor/tag/")
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 	}
 
 	var result QuayTagsResponse
 	if err := json.Unmarshal(body, &result); err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 		return ""
 	}
 

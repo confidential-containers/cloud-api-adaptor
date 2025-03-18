@@ -1,0 +1,174 @@
+# (C) Copyright Confidential Containers Contributors 2025.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Run aws e2e tests.
+name: (Callable) aws e2e tests
+
+on:
+  workflow_call:
+    inputs:
+      podvm_image:
+        required: true
+        type: string
+      caa_image:
+        required: true
+        type: string
+      git_ref:
+        default: 'main'
+        description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
+        required: false
+        type: string
+      oras:
+        description: Whether the podvm_image is oras published
+        default: false
+        required: false
+        type: boolean
+      cluster_type:
+        description: Specify the cluster type. Accepted values are "onprem" or "eks".
+        default: onprem
+        required: false
+        type: string
+      container_runtime:
+        default: 'containerd'
+        description: Name of the container runtime. Either containerd or crio.
+        required: false
+        type: string
+env:
+  CLOUD_PROVIDER: aws
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  # Check the org/repository has AWS secrets (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY). On absence of
+  # secrets it should skip the execution of the test job.
+  aws-credentials:
+    runs-on: ubuntu-22.04
+    outputs:
+      has_secrets: ${{ steps.check_secrets.outputs.has_secrets }}
+    steps:
+      - name: Check secrets
+        id: check_secrets
+        run: |
+         if [[ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" && -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]]; then
+           echo "has_secrets=true" >> "$GITHUB_OUTPUT"
+         else
+           echo "has_secrets=false" >> "$GITHUB_OUTPUT"
+         fi
+
+  test-aws:
+    needs: aws-credentials
+    if: needs.aws-credentials.outputs.has_secrets == 'true'
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: src/cloud-api-adaptor
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.git_ref }}
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+
+      - name: Read properties from versions.yaml
+        run: |
+          sudo snap install yq
+          go_version="$(yq '.tools.golang' versions.yaml)"
+          [ -n "$go_version" ]
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+          echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: oras-project/setup-oras@v1
+        with:
+          version: ${{ env.ORAS_VERSION }}
+
+      - name: Extract qcow2 from ${{ inputs.podvm_image }}
+        if: ${{ !inputs.oras }}
+        run: |
+           qcow2=$(echo "${{ inputs.podvm_image }}" | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
+           ./hack/download-image.sh "${{ inputs.podvm_image }}" . -o "${qcow2}"
+           echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
+           # Clean up docker images to make space
+           docker system prune -a -f
+        working-directory: src/cloud-api-adaptor/podvm
+
+      - name: Use oras to get qcow2 from ${{ inputs.podvm_image }}
+        if: ${{ inputs.oras }}
+        run: |
+          oras pull ${{ inputs.podvm_image }}
+          tar xvJpf podvm.tar.xz
+          qcow2=$(find ./*.qcow2)
+          echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
+        working-directory: src/cloud-api-adaptor/podvm
+
+      - name: Install kustomize
+        run: |
+          command -v kustomize >/dev/null || \
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
+            sudo bash -s /usr/local/bin
+
+      - name: Update kustomization configuration
+        run: |
+          cd "install/overlays/aws"
+          kustomize edit set image "cloud-api-adaptor=${{ inputs.caa_image }}"
+          # Print for debugging
+          echo "::group::aws kustomization"
+          cat kustomization.yaml
+          echo "::endgroup::"
+
+      - name: Config aws
+        run: |
+          cat <<EOF>>aws.properties
+          CAA_IMAGE="${{ inputs.caa_image }}"
+          disablecvm="true"
+          cluster_type="${{ inputs.cluster_type }}"
+          ssh_kp_name="caa-e2e-test"
+          EOF
+          # For debugging
+          echo "::group::aws.properties"
+          cat aws.properties
+          echo "::endgroup::"
+
+        # Note: aws cli is already installed on github's runner image.
+      - name: Config aws CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }} --profile default
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile default
+          aws configure set region us-east-1 --profile default
+
+      - name: Create on-prem cluster
+        if: inputs.cluster_type == 'onprem'
+        run: |
+          # Let's use kcli to build a kubeadm cluster for us
+          echo "::group::Configure libvirt"
+          ./libvirt/config_libvirt.sh
+          # Add the kcli install directory to PATH for later steps
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+          echo "::endgroup::"
+          export CONTAINER_RUNTIME=${{ inputs.container_runtime }}
+          echo "::group::Create cluster with $CONTAINER_RUNTIME"
+          ./libvirt/kcli_cluster.sh create
+          echo "KUBECONFIG=$HOME/.kcli/clusters/peer-pods/auth/kubeconfig" >> "$GITHUB_ENV"
+          echo "::endgroup::"
+
+      - name: run tests
+        id: runTests
+        run: |
+          export CLOUD_PROVIDER=aws
+          export DEPLOY_KBS=false
+          export TEST_PROVISION="yes"
+          export TEST_TEARDOWN="yes"
+          export TEST_PROVISION_FILE="$PWD/aws.properties"
+          export TEST_PODVM_IMAGE="${{ env.PODVM_QCOW2 }}"
+          export TEST_E2E_TIMEOUT="90m"
+
+          make test-e2e

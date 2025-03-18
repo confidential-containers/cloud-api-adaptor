@@ -13,7 +13,7 @@ import (
 	"github.com/IBM-Cloud/bluemix-go/api/container/containerv2"
 	bxsession "github.com/IBM-Cloud/bluemix-go/session"
 	"github.com/IBM/go-sdk-core/v5/core"
-	"github.com/IBM/vpc-go-sdk/vpcv1"
+	vpcv1 "github.com/IBM/vpc-beta-go-sdk/vpcbetav1"
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 )
@@ -50,11 +50,14 @@ type IBMCloudProperties struct {
 	WorkerFlavor      string
 	WorkerOS          string
 	Zone              string
+	TunnelType        string
+	VxlanPort         string
 
 	WorkerCount   int
 	IsSelfManaged bool
+	DisableCVM    bool
 
-	VPC        *vpcv1.VpcV1
+	VPC        *vpcv1.VpcbetaV1
 	ClusterAPI containerv2.Clusters
 }
 
@@ -92,6 +95,8 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		SubnetID:          properties["VPC_SUBNET_ID"],
 		SecurityGroupID:   properties["VPC_SECURITY_GROUP_ID"],
 		VpcID:             properties["VPC_ID"],
+		TunnelType:        properties["TUNNEL_TYPE"],
+		VxlanPort:         properties["VXLAN_PORT"],
 	}
 
 	if len(IBMCloudProps.IBMCloudProvider) <= 0 {
@@ -130,6 +135,10 @@ func InitIBMCloudProperties(properties map[string]string) error {
 	selfManagedStr := properties["IS_SELF_MANAGED_CLUSTER"]
 	if strings.EqualFold(selfManagedStr, "yes") || strings.EqualFold(selfManagedStr, "true") {
 		IBMCloudProps.IsSelfManaged = true
+	}
+	confidentialComputingStr := properties["DISABLECVM"]
+	if strings.EqualFold(confidentialComputingStr, "yes") || strings.EqualFold(confidentialComputingStr, "true") {
+		IBMCloudProps.DisableCVM = true
 	}
 
 	if len(IBMCloudProps.ResourceGroupID) <= 0 {
@@ -235,7 +244,7 @@ func initVpcV1() error {
 		return nil
 	}
 
-	vpcService, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{
+	vpcService, err := vpcv1.NewVpcbetaV1(&vpcv1.VpcbetaV1Options{
 		Authenticator: &core.IamAuthenticator{
 			ApiKey: IBMCloudProps.ApiKey,
 			URL:    IBMCloudProps.IamServiceURL,

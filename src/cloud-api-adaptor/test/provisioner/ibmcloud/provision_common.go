@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/IBM/ibm-cos-sdk-go/aws/credentials/ibmiam"
 	cosession "github.com/IBM/ibm-cos-sdk-go/aws/session"
 	"github.com/IBM/ibm-cos-sdk-go/service/s3/s3manager"
-	"github.com/IBM/vpc-go-sdk/vpcv1"
+	vpcv1 "github.com/IBM/vpc-beta-go-sdk/vpcbetav1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -911,10 +912,10 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 		if strings.Contains(IBMCloudProps.InstanceProfile, "e-") {
 			osNames = []string{"hyper-protect-1-0-s390x"}
 		} else {
-			osNames = []string{"ubuntu-20-04-s390x"}
+			osNames = []string{"ubuntu-22-04-s390x"}
 		}
 	} else {
-		osNames = []string{"ubuntu-20-04-amd64"}
+		osNames = []string{"ubuntu-24-04-amd64"}
 
 	}
 	operatingSystemIdentityModel := &vpcv1.OperatingSystemIdentityByName{
@@ -973,6 +974,9 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"IBMCLOUD_IAM_PROFILE_ID":              IBMCloudProps.IamProfileID,
 		"IBMCLOUD_IAM_ENDPOINT":                IBMCloudProps.IamServiceURL,
 		"IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST": getProfileList(),
+		"TUNNEL_TYPE":                          IBMCloudProps.TunnelType,
+		"VXLAN_PORT":                           IBMCloudProps.VxlanPort,
+		"DISABLECVM":                           strconv.FormatBool(IBMCloudProps.DisableCVM),
 	}
 }
 

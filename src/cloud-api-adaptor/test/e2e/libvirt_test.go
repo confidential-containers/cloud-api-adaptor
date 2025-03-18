@@ -19,8 +19,12 @@ func TestLibvirtCreateSimplePod(t *testing.T) {
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
+func TestLibvirtCreateSimplePodWithSecureCommsIsValid(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestLibvirtCreateSimplePodWithSecureCommsIsValid(t, testEnv, assert)
+}
+
 func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
-	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
@@ -95,20 +99,15 @@ func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *te
 }
 
 func TestLibvirtCreateNginxDeployment(t *testing.T) {
-	// This test is causing issues on CI with instability, so skip until we can resolve this.
-	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/2046
-	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestNginxDeployment(t, testEnv, assert)
 }
 
-/*
-Failing due to issues will pulling image (ErrImagePull)
 func TestLibvirtCreatePeerPodWithLargeImage(t *testing.T) {
+	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodWithLargeImage(t, testEnv, assert)
 }
-*/
 
 func TestLibvirtDeletePod(t *testing.T) {
 	assert := LibvirtAssert{}
@@ -117,7 +116,6 @@ func TestLibvirtDeletePod(t *testing.T) {
 
 func TestLibvirtPodToServiceCommunication(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
-	SkipTestOnCI(t)
 	if isTestOnCrio() {
 		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
 	}
@@ -127,7 +125,6 @@ func TestLibvirtPodToServiceCommunication(t *testing.T) {
 
 func TestLibvirtPodsMTLSCommunication(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
-	SkipTestOnCI(t)
 	if isTestOnCrio() {
 		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
 	}
@@ -163,10 +160,6 @@ func TestLibvirtSealedSecret(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
 	}
-	err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
-	if err != nil {
-		t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
-	}
 	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
 	if err != nil {
 		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
@@ -186,13 +179,9 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SetSecret failed with: %v", err)
 	}
-	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+	err = keyBrokerService.EnableKbsCustomizedResourcePolicy("deny_all.rego")
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
-	}
-	err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("deny_all.rego")
-	if err != nil {
-		t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
 	}
 	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
 	if err != nil {
@@ -217,9 +206,9 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 		DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 	} else {
 		t.Log("KBS normal cases")
-		err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
+		err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
 		if err != nil {
-			t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
+			t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
 		}
 		DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 	}

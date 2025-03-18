@@ -13,6 +13,8 @@ FROM ${BUILDER_IMG} AS podvm_builder
 ARG CLOUD_PROVIDER
 ARG PODVM_DISTRO=rhel
 ARG UEFI=false
+ARG ORG_ID
+ARG ACTIVATION_KEY
 
 # If not provided, uses system architecture
 ARG ARCH
@@ -57,7 +59,7 @@ COPY . /src
 
 WORKDIR /src/cloud-api-adaptor/podvm
 
-RUN LIBC=gnu make image
+RUN LIBC=gnu ORG_ID=${ORG_ID} ACTIVATION_KEY=${ACTIVATION_KEY} make image
 
 # The below instructions can be used if you prefer to rebuild all the binaries
 #RUN make binaries

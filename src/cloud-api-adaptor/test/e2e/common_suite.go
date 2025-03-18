@@ -35,6 +35,14 @@ func DoTestCreateSimplePod(t *testing.T, e env.Environment, assert CloudAssert) 
 	}
 }
 
+func DoTestLibvirtCreateSimplePodWithSecureCommsIsValid(t *testing.T, e env.Environment, assert CloudAssert) {
+	if os.Getenv("SECURE_COMMS") != "true" {
+		t.Skip("Skip - SecureComms is configured to be inactive - no need to test")
+	}
+	pod := NewBusyboxPodWithName(E2eNamespace, "simple-test-with-security-comms-is-active").GetPodOrFatal(t)
+	NewTestCase(t, e, "SimplePeerPodWithSecureComms", assert, "PodVM is created with secure comms").WithPod(pod).WithSecureCommsIsActive().Run()
+}
+
 func DoTestDeleteSimplePod(t *testing.T, e env.Environment, assert CloudAssert) {
 	pod := NewBusyboxPodWithName(E2eNamespace, "deletion-test").GetPodOrFatal(t)
 	duration := assert.DefaultTimeout()
@@ -257,6 +265,9 @@ func DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T, e
 	imageName := os.Getenv("AUTHENTICATED_REGISTRY_IMAGE")
 	pod := NewPod(E2eNamespace, podName, podName, imageName, WithRestartPolicy(v1.RestartPolicyNever))
 	expectedErrorString := "401 UNAUTHORIZED"
+	if isTestOnCrio() {
+		expectedErrorString = "access to the requested resource is not authorized"
+	}
 	NewTestCase(t, e, "InvalidAuthImagePeerPod", assert, "Peer pod with Authenticated Image without Credentials has been created").WithPod(pod).WithNoAuthJson().WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
 }
 
@@ -536,10 +547,6 @@ func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, 
 		if err != nil {
 			t.Fatalf("Failed to enable KBS customized resource policy: %v", err)
 		}
-		err = kbs.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
-		if err != nil {
-			t.Fatalf("Failed to enable KBS customized attestation policy: %v", err)
-		}
 		kbsEndpoint, err = kbs.GetCachedKbsEndpoint()
 		if err != nil {
 			t.Fatalf("Failed to get KBS endpoint: %v", err)
@@ -569,7 +576,7 @@ func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbs
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaining opa in kbs
 // as test cases might be run in parallel
 func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
-	t.Log("Do test kbs key release")
+	t.Log("Do test https kbs key release")
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-key-release", kbsEndpoint).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{

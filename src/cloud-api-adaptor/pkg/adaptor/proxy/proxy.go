@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	retry "github.com/avast/retry-go/v4"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	"github.com/containerd/ttrpc"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
@@ -111,7 +111,7 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		func() error {
 			var err error
 			if conn, err = dialer.DialContext(ctx, "tcp", address); err != nil {
-				logger.Printf("Retrying agent proxy connection to %s...", address)
+				logger.Printf("Retrying failed agent proxy connection: %v", err)
 			}
 			return err
 		},

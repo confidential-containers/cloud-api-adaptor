@@ -28,8 +28,8 @@ vm_network_name           = "VM Network"
 vm_hostname		  = "podvm"
 
 // Removable Media Settings
-iso_url            = "https://releases.ubuntu.com/focal/ubuntu-20.04.5-live-server-amd64.iso"
-iso_checksum_value = "5035be37a7e9abbdc09f0d257f3e33416c1a0fb322ba860d42d74aa75c3468d4"
+iso_url            = "https://releases.ubuntu.com/noble/ubuntu-24.04.2-live-server-amd64.iso"
+iso_checksum_value = "d6dab0c3a657988501b4bd76f1297c053df710e06e0c3aece60dead24f270b4d"
 
 // Boot Settings
 vm_boot_wait  = "2s"
