@@ -1,0 +1,48 @@
+ARG BINARIES_IMG
+
+FROM ${BINARIES_IMG} AS podvm_binaries
+
+# Build bootc rhel podvm
+FROM registry.redhat.io/rhel9/rhel-bootc:9.5-1738698007 as podvm-bootc
+
+ARG ORG_ID
+ARG ACTIVATION_KEY
+ARG CLOUD_PROVIDER
+ARG PODVM_DISTRO=rhel
+ARG ARCH
+
+# Setup subscription
+RUN test -n "${ACTIVATION_KEY}" -a -n "${ORG_ID}" && \
+    subscription-manager register --org=${ORG_ID} --activationkey=${ACTIVATION_KEY} && \
+    dnf install -y cloud-init  && \
+    dnf clean all && \
+    systemctl enable cloud-init.service && \
+    systemctl enable cloud-config.service && \
+    systemctl enable cloud-final.service && \
+    systemctl enable cloud-init-local.service
+
+# Copy the binaries to /tmp
+COPY --from=podvm_binaries /podvm-binaries.tar.gz /tmp/podvm-binaries.tar.gz
+# Copy the pause_bundle to /tmp
+COPY --from=podvm_binaries /pause-bundle.tar.gz /tmp/pause-bundle.tar.gz
+# Copy the packer scripts
+COPY podvm/qcow2 /tmp/qcow2
+
+# Get all files to where they need to be like packer does
+RUN mkdir -p /tmp/files && \
+    tar xvf /tmp/podvm-binaries.tar.gz -C /tmp/files && \
+    tar xvf /tmp/pause-bundle.tar.gz -C /tmp/files && \
+    bash -ex /tmp/qcow2/copy-files.sh && \
+    sed -i 's#What=/kata-containers#What=/var/kata-containers#g' \
+        /etc/systemd/system/run-kata\\x2dcontainers.mount && \
+    bash -ex /tmp/qcow2/selinux_relabel.sh && \
+    CLOUD_PROVIDER="${CLOUD_PROVIDER}" \
+    PODVM_DISTRO="${PODVM_DISTRO}" \
+    ACTIVATION_KEY="${ACTIVATION_KEY}" \
+    ORG_ID="${ORG_ID}" \
+    ARCH="${ARCH}" \
+    bash -ex /tmp/qcow2/misc-settings.sh
+
+# a workaround to set podvm-bootc as default target
+FROM podvm-bootc as default-target
+RUN bootc container lint

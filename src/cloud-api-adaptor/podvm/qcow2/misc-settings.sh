@@ -12,12 +12,13 @@
 # This ensures machine-id is generated during first boot and a unique
 # dhcp IP is assigned to the VM
 echo -n | sudo tee /etc/machine-id
-#Lock password for the ssh user (peerpod) to disallow logins
-sudo passwd -l peerpod
+# Lock password for the ssh user (peerpod) to disallow logins. Ignore failure of
+# this command because the user may not exist.
+sudo passwd -l peerpod || :
 
 # Subscribe RHEL incase of ACTIVATION_KEY & ORG_ID provided.
 if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
-    subscription-manager register --org="${ORG_ID}" --activationkey="${ACTIVATION_KEY}"
+    subscription-manager register --org="${ORG_ID}" --activationkey="${ACTIVATION_KEY}" --force
 fi
 
 # install required packages
@@ -96,8 +97,8 @@ fi
 case $PODVM_DISTRO in
     rhel)
         systemctl disable kdump.service
-        systemctl disable tuned.service
-        systemctl disable firewalld.service
+        systemctl disable tuned.service || :
+        systemctl disable firewalld.service || :
         ;;
     ubuntu)
         systemctl disable apt-daily.service

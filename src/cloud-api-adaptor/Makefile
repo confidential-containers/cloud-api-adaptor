@@ -177,6 +177,7 @@ PODVM_TAG ?= $(VERSIONS_HASH)
 PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(PODVM_TAG)
 PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(TARGET_ARCH):$(PODVM_TAG)
 PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(TARGET_ARCH):$(PODVM_TAG)
+PODVM_BOOTC_IMAGE ?= $(REGISTRY)/podvm-bootc-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(TARGET_ARCH):$(PODVM_TAG)
 
 PUSH ?= false
 # If not pushing `--load` into the local docker cache
@@ -186,6 +187,7 @@ DOCKERFILE_SUFFIX := $(if $(filter $(PODVM_DISTRO),ubuntu),,.$(PODVM_DISTRO))
 BUILDER_DOCKERFILE := Dockerfile.podvm_builder$(DOCKERFILE_SUFFIX)
 BINARIES_DOCKERFILE := Dockerfile.podvm_binaries$(DOCKERFILE_SUFFIX)
 PODVM_DOCKERFILE := Dockerfile.podvm$(DOCKERFILE_SUFFIX)
+BOOTC_DOCKERFILE := Dockerfile.podvm_bootc$(DOCKERFILE_SUFFIX)
 
 podvm-builder:
 	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
@@ -243,3 +245,14 @@ endif
 	$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 	$(DOCKER_OPTS) .
 	rm -rf .git
+
+.PHONY: podvm-bootc-image
+podvm-bootc-image:
+	docker buildx build -t $(PODVM_BOOTC_IMAGE) -f podvm/$(BOOTC_DOCKERFILE) \
+	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
+	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
+	--build-arg ORG_ID=$(ORG_ID) \
+	--build-arg ACTIVATION_KEY=$(ACTIVATION_KEY) \
+	--build-arg ARCH=$(TARGET_ARCH) \
+	--build-arg CLOUD_PROVIDER=$(or $(CLOUD_PROVIDER),generic) \
+	$(DOCKER_OPTS) .
