@@ -7,6 +7,7 @@ package libvirt
 
 import (
 	"flag"
+	"strconv"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
@@ -23,6 +24,8 @@ const (
 	defaultVolName        = "podvm-base.qcow2"
 	defaultLaunchSecurity = ""
 	defaultFirmware       = ""
+	defaultCPU            = "2"
+	defaultMemory         = "8000"
 )
 
 func init() {
@@ -38,7 +41,8 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.BoolVar(&libvirtcfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
 	flags.StringVar(&libvirtcfg.LaunchSecurity, "launch-security", defaultLaunchSecurity, "Libvirt's LaunchSecurity element for Confidential VMs: s390-pv. If omitted, will automatically determine.")
 	flags.StringVar(&libvirtcfg.Firmware, "firmware", defaultFirmware, "Path to OVMF")
-
+	flags.UintVar(&libvirtcfg.CPU, "CPU", 2, "Number of processors allocated")
+	flags.UintVar(&libvirtcfg.Memory, "Memory", 8, "Amount of memory in GB")
 }
 
 func (_ *Manager) LoadEnv() {
@@ -48,6 +52,20 @@ func (_ *Manager) LoadEnv() {
 	provider.DefaultToEnv(&libvirtcfg.VolName, "LIBVIRT_VOL_NAME", defaultVolName)
 	provider.DefaultToEnv(&libvirtcfg.LaunchSecurity, "LIBVIRT_LAUNCH_SECURITY", defaultLaunchSecurity)
 	provider.DefaultToEnv(&libvirtcfg.Firmware, "LIBVIRT_EFI_FIRMWARE", defaultFirmware)
+
+	var memoryStr, processorsStr string
+	provider.DefaultToEnv(&memoryStr, "LIBVIRT_MEMORY", defaultMemory)
+	if memoryStr != "" {
+		memory, _ := strconv.ParseUint(memoryStr, 10, 64)
+		libvirtcfg.Memory = uint(memory)
+	}
+
+	provider.DefaultToEnv(&processorsStr, "LIBVIRT_CPU", defaultCPU)
+	if processorsStr != "" {
+		cpu, _ := strconv.ParseUint(processorsStr, 10, 64)
+		libvirtcfg.CPU = uint(cpu)
+	}
+
 }
 
 func (_ *Manager) NewProvider() (provider.Provider, error) {
