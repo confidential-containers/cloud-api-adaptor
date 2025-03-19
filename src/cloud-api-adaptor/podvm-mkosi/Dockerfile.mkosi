@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.5.0-labs
-FROM fedora:40 AS builder
+FROM fedora:41 AS builder
 
 ARG MKOSI_VERSION="v22"
 ARG PROFILE="debug"
@@ -15,7 +15,8 @@ RUN dnf install -y \
 	squashfs-tools \
 	systemd-ukify \
 	dosfstools \
-	mtools
+	mtools \
+	python3
 
 RUN mkdir -p /build
 WORKDIR /build
