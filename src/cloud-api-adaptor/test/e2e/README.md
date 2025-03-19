@@ -81,7 +81,14 @@ To deploy the KBS service and test attestation related cases, export the followi
 
 ```sh
 export DEPLOY_KBS=yes
-````
+```
+
+## Other end-to-end test customizations
+
+Other options are provided via environment variables if you need to further customize the e2e test cases:
+- `TEST_CAA_NAMESPACE` - This option is available, primarily for running the e2e tests on a downstream version
+of confidential containers, where the cloud-api-adaptor pod is deployed to a different namespace than the default
+ `confidential-containers-system`.
 
 # Running end-to-end tests against pre-configured cluster
 
