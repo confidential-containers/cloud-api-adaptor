@@ -188,7 +188,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	deployments := &appsv1.DeploymentList{Items: []appsv1.Deployment{*p.controllerDeployment}}
 
 	log.Info("Uninstall the controller manager")
-	cmd = exec.Command("kubectl", "delete", "-k", p.ccOpGitRepo+"/operator/config/"+p.ccOpConfig+"?ref="+p.ccOpGitRef)
+	cmd = exec.Command("kubectl", "delete", "-k", p.ccOpGitRepo+"/config/"+p.ccOpConfig+"?ref="+p.ccOpGitRef)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
@@ -203,7 +203,7 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	}
 
 	log.Info("Delete the peerpod-ctrl deployment")
-	cmd = exec.Command("make", "-C", "../peerpod-ctrl", "undeploy")
+	cmd = exec.Command("make", "ignore-not-found=true", "-C", "../peerpod-ctrl", "undeploy")
 	// Run the command from the root src dir
 	cmd.Dir = p.rootSrcDir
 	// Set the KUBECONFIG env var
