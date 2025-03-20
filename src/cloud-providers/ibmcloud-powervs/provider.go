@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/IBM-Cloud/power-go-client/power/models"
@@ -59,6 +61,36 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		imageId = spec.Image
 	}
 
+	memory := p.serviceConfig.Memory
+	processors := p.serviceConfig.Processors
+	systemType := p.serviceConfig.SystemType
+
+	// If vCPU and memory are set in annotations then use it
+	// If machine type is set in annotations then use it (ie. shape <system_type>-<cpu>x<memoery>)
+	// vCPU and Memory gets higher priority than instance type from annotation
+	if spec.VCPUs != 0 && spec.Memory != 0 {
+		memory = float64(spec.Memory / 1024)
+		processors = float64(spec.VCPUs)
+		logger.Printf("Instance type selected by the cloud provider based on vCPU and memory annotations: %s-%fx%f", systemType, processors, memory)
+	} else if spec.InstanceType != "" {
+		typeAndSize := strings.Split(spec.InstanceType, "-")
+		systemType = typeAndSize[0]
+		size := strings.Split(typeAndSize[1], "x")
+		f, err := strconv.Atoi(size[0])
+		if err != nil {
+			return nil, err
+		}
+		processors = float64(f)
+		m, err := strconv.Atoi(size[1])
+		if err != nil {
+			return nil, err
+		}
+		memory = float64(m)
+		logger.Printf("Instance type selected by the cloud provider based on instance type annotation: %s", spec.InstanceType)
+	} else {
+		logger.Printf("Instance type selected by the cloud provider based on config: %s-%fx%f", systemType, processors, memory)
+	}
+
 	body := &models.PVMInstanceCreate{
 		ServerName:  &instanceName,
 		ImageID:     &imageId,
@@ -67,10 +99,10 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 			{
 				NetworkID: &p.serviceConfig.NetworkID,
 			}},
-		Memory:     core.Float64Ptr(p.serviceConfig.Memory),
-		Processors: core.Float64Ptr(p.serviceConfig.Processors),
+		Memory:     core.Float64Ptr(memory),
+		Processors: core.Float64Ptr(processors),
 		ProcType:   core.StringPtr(p.serviceConfig.ProcessorType),
-		SysType:    p.serviceConfig.SystemType,
+		SysType:    systemType,
 		UserData:   base64.StdEncoding.EncodeToString([]byte(userData)),
 	}
 
