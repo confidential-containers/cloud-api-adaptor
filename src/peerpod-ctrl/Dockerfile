@@ -30,11 +30,16 @@ COPY peerpod-ctrl/controllers/ controllers/
 RUN CC=gcc CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build ${GOFLAGS} -a -o manager main.go
 
 # Target Image
-FROM --platform=$TARGETPLATFORM registry.fedoraproject.org/fedora:39
+FROM --platform=$TARGETPLATFORM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1179
 ARG CGO_ENABLED=1
 
 RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-libs openssh-clients && dnf clean all; fi
 WORKDIR /
 COPY --from=builder /work/peerpod-ctrl/manager .
+
+RUN microdnf clean all \
+    && microdnf update --nodocs -y
+LABEL compliance.owner=squad:pipeline
+USER 65532
 
 ENTRYPOINT ["/manager"]

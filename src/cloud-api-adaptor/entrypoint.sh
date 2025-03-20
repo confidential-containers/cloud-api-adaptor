@@ -135,10 +135,10 @@ ibmcloud_powervs() {
     set -x
     exec cloud-api-adaptor ibmcloud-powervs \
         -service-instance-id ${POWERVS_SERVICE_INSTANCE_ID} \
-        -zone ${POWERVS_ZONE} \
-        -image-id ${POWERVS_IMAGE_ID} \
-        -network-id ${POWERVS_NETWORK_ID} \
-        -ssh-key ${POWERVS_SSH_KEY_NAME} \
+        -zone "${POWERVS_ZONE}" \
+        -image-id "${POWERVS_IMAGE_ID}" \
+        -network-id "${POWERVS_NETWORK_ID}" \
+        -ssh-key "${POWERVS_SSH_KEY_NAME}" \
         -pods-dir /run/peerpod/pods \
         ${optionals} \
         -socket /run/peerpod/hypervisor.sock

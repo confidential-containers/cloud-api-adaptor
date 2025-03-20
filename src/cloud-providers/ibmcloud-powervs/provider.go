@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/IBM-Cloud/power-go-client/power/models"
@@ -19,7 +21,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
-const maxInstanceNameLen = 63
+const maxInstanceNameLen = 47
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/ibmcloud-powervs] ", log.LstdFlags|log.Lmsgprefix)
 
@@ -52,6 +54,36 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		return nil, err
 	}
 
+	memory := p.serviceConfig.Memory
+	processors := p.serviceConfig.Processors
+	systemType := p.serviceConfig.SystemType
+
+	// If vCPU and memory are set in annotations then use it
+	// If machine type is set in annotations then use it (ie. shape <system_type>-<cpu>x<memoery>)
+	// vCPU and Memory gets higher priority than instance type from annotation
+	if spec.VCPUs != 0 && spec.Memory != 0 {
+		memory = float64(spec.Memory / 1024)
+		processors = float64(spec.VCPUs)
+		logger.Printf("Instance type selected by the cloud provider based on vCPU and memory annotations: %s-%fx%f", systemType, processors, memory)
+	} else if spec.InstanceType != "" {
+		typeAndSize := strings.Split(spec.InstanceType, "-")
+		systemType = typeAndSize[0]
+		size := strings.Split(typeAndSize[1], "x")
+		f, err := strconv.Atoi(size[0])
+		if err != nil {
+			return nil, err
+		}
+		processors = float64(f)
+		m, err := strconv.Atoi(size[1])
+		if err != nil {
+			return nil, err
+		}
+		memory = float64(m)
+		logger.Printf("Instance type selected by the cloud provider based on instance type annotation: %s", spec.InstanceType)
+	} else {
+		logger.Printf("Instance type selected by the cloud provider based on config: %s-%fx%f", systemType, processors, memory)
+	}
+
 	body := &models.PVMInstanceCreate{
 		ServerName:  &instanceName,
 		ImageID:     &p.serviceConfig.ImageID,
@@ -60,10 +92,10 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 			{
 				NetworkID: &p.serviceConfig.NetworkID,
 			}},
-		Memory:     core.Float64Ptr(p.serviceConfig.Memory),
-		Processors: core.Float64Ptr(p.serviceConfig.Processors),
+		Memory:     core.Float64Ptr(memory),
+		Processors: core.Float64Ptr(processors),
 		ProcType:   core.StringPtr(p.serviceConfig.ProcessorType),
-		SysType:    p.serviceConfig.SystemType,
+		SysType:    systemType,
 		UserData:   base64.StdEncoding.EncodeToString([]byte(userData)),
 	}
 
@@ -82,13 +114,13 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 	ins := (*pvsInstances)[0]
 	instanceID := *ins.PvmInstanceID
 
-	ctx, cancel := context.WithTimeout(ctx, 150*time.Second)
+	getctx, cancel := context.WithTimeout(ctx, 600*time.Second)
 	defer cancel()
 
 	logger.Printf("Waiting for instance to reach state: ACTIVE")
 	err = retry.Do(
 		func() error {
-			in, err := p.powervsService.instanceClient(ctx).Get(*ins.PvmInstanceID)
+			in, err := p.powervsService.instanceClient(getctx).Get(*ins.PvmInstanceID)
 			if err != nil {
 				return fmt.Errorf("failed to get the instance: %v", err)
 			}
@@ -104,7 +136,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 
 			return fmt.Errorf("Instance failed to reach ACTIVE state")
 		},
-		retry.Context(ctx),
+		retry.Context(getctx),
 		retry.Attempts(0),
 		retry.MaxDelay(5*time.Second),
 	)

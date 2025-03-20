@@ -233,6 +233,17 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	_, err = os.Stat(SrcAuthfilePath)
 	if err != nil {
 		logger.Printf("credential file %s is not present, skipping image auth config", SrcAuthfilePath)
+
+		// Look up image pull secrets for the pod
+		authJSON, err = k8sops.GetImagePullSecrets(pod, namespace)
+		if err != nil {
+			// Ignore errors
+			logger.Printf("error reading image pull secrets: %v", err)
+		}
+		if authJSON != nil {
+			logger.Printf("successfully retrieved pod image pull secrets for %s/%s", namespace, pod)
+			authFilePath = AuthFilePath
+		}
 	} else {
 		authJSON, err = os.ReadFile(SrcAuthfilePath)
 		if err != nil {

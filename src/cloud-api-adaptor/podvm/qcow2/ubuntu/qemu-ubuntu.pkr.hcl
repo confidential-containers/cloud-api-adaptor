@@ -55,6 +55,40 @@ source "qemu" "ubuntu" {
 build {
   sources = ["source.qemu.ubuntu"]
 
+  provisioner "shell" {
+      remote_folder = "~"
+      inline = [
+        "sudo apt-get update",
+        "sudo apt-get dist-upgrade -y",
+        "sudo bash -c 'if [ $(uname -p) == x86_64 ]; then sudo apt install linux-headers-5.15.0-130-generic linux-image-5.15.0-130-generic -y; fi'"
+      ]
+  }
+
+  provisioner "shell" {
+      remote_folder = "~"
+      expect_disconnect = true
+      skip_clean = true
+      inline = [
+        "echo 'Rebooting...'",
+        "sudo reboot"
+      ]
+  }
+
+  provisioner "shell" {
+      remote_folder = "~"
+      pause_before = "30s"
+      timeout      = "10s"
+      start_retry_timeout = "20m"
+      max_retries  = 5
+      inline = [
+        "echo 'Restarted...'",
+        "dpkg -l | tail -n +6 | grep -E 'linux-(image|modules)-[0-9]+' | awk '{print $2}' | grep -v $(uname -r) | xargs -I {} sudo apt purge -y {}",
+        "sudo apt autoremove --purge snapd -y",
+        "sudo apt autoremove --purge -y",
+        "sudo apt autoclean -y"
+      ]
+  }
+
   provisioner "shell-local" {
     command = "tar cf toupload/files.tar files"
   }
@@ -125,5 +159,16 @@ build {
       "OUTPUT_DIRECTORY=${var.output_directory}",
       "IMAGE_NAME=${var.qemu_image_name}"
     ]
+  }
+
+  provisioner "shell" {
+      remote_folder = "~"
+      inline = [
+        "echo 'Cleanup...'",
+        "sudo apt autoremove --purge -y",
+        "sudo apt autoclean -y",
+        "sudo apt clean",
+        "sudo rm -rf /var/lib/apt/lists/*"
+      ]
   }
 }
