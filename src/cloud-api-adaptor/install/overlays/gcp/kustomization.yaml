@@ -28,6 +28,7 @@ configMapGenerator:
   #- REMOTE_HYPERVISOR_ENDPOINT="/run/peerpod/hypervisor.sock" # Path to Kata remote hypervisor socket. Default is /run/peerpod/hypervisor.sock
   #- PEER_PODS_DIR="/run/peerpod/pods" # Path to peer pods directory. Default is /run/peerpod/pods
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- ROOT_VOLUME_SIZE="10" # Uncomment and set if you want to use a specific root volume size. Defaults to 10
   #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
 ##TLS_SETTINGS
