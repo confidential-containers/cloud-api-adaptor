@@ -156,8 +156,8 @@ Follow the [webhook instructions in README.md](./README.md#deploy-peerpod-webhoo
 The `caa-provisioner-cli` command can be use to simplify deployment of the operator and the cloud-api-adaptor resources on to any cluster. See the [test/tools/README.md](../test/tools/README.md) for full instructions. To create an ibmcloud-ready version of the provisioner CLI, run the following make command:
 
 ```bash
-# Starting from directory src/cloud-api-adaptor of the cloud-api-adaptor repository
-pushd test/tools
+# Starting from root directory of the cloud-api-adaptor repository
+pushd src/cloud-api-adaptor/test/tools
 make BUILTIN_CLOUD_PROVIDERS="ibmcloud" all
 popd
 ```
@@ -212,7 +212,7 @@ Finally, run the `caa-provisioner-cli` command to install the operator and cloud
 export CLOUD_PROVIDER=ibmcloud
 export TEST_PROVISION_FILE="$HOME/peerpods-cluster.properties"
 export TEST_TEARDOWN="no"
-pushd test/tools
+pushd src/cloud-api-adaptor/test/tools
 ./caa-provisioner-cli -action=install
 popd
 ```
@@ -306,10 +306,9 @@ Otherwise:
 1. To uninstall the peer pod components 
 
     ```bash
-    pushd test/tools
+    pushd src/cloud-api-adaptor/test/tools
     export CLOUD_PROVIDER=ibmcloud
     export TEST_PROVISION_FILE="$HOME/peerpods-cluster.properties"
     ./caa-provisioner-cli -action=uninstall
-    oc delete ns confidential-containers-system
     popd
     ```
