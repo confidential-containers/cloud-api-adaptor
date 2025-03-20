@@ -17,6 +17,7 @@ type Config struct {
 	DiskType         string
 	DisableCVM       bool
 	ConfidentialType string
+	RootVolumeSize   int
 }
 
 func (c Config) Redact() Config {
