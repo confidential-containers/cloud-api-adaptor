@@ -76,6 +76,29 @@ func getIPs(instance *computepb.Instance) ([]netip.Addr, error) {
 	return podNodeIPs, nil
 }
 
+func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, error) {
+	client, err := compute.NewImagesRESTClient(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create compute client: %w", err)
+	}
+	defer client.Close()
+
+	parts := strings.Split(image, "/")
+	imageName := parts[len(parts)-1]
+
+	req := &computepb.GetImageRequest{
+		Project: p.serviceConfig.ProjectId,
+		Image:   imageName,
+	}
+
+	img, err := client.Get(ctx, req)
+	if err != nil {
+		return 0, fmt.Errorf("Failed to get image for %s: %w", image, err)
+	}
+
+	return img.GetDiskSizeGb(), nil
+}
+
 func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
@@ -105,12 +128,22 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		srcImage = proto.String(spec.Image)
 	}
 
+	imageSizeGB, err := p.getImageSizeGB(ctx, *srcImage)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get image size: %w", err)
+	}
+
+	// If user provided RootVolumeSize, use the larger of the two
+	if p.serviceConfig.RootVolumeSize > 0 && int64(p.serviceConfig.RootVolumeSize) > imageSizeGB {
+		imageSizeGB = int64(p.serviceConfig.RootVolumeSize)
+	}
+
 	instanceResource := &computepb.Instance{
 		Name: proto.String(instanceName),
 		Disks: []*computepb.AttachedDisk{
 			{
 				InitializeParams: &computepb.AttachedDiskInitializeParams{
-					DiskSizeGb:  proto.Int64(20),
+					DiskSizeGb:  proto.Int64(imageSizeGB),
 					SourceImage: srcImage,
 					DiskType:    proto.String(fmt.Sprintf("zones/%s/diskTypes/%s", p.serviceConfig.Zone, p.serviceConfig.DiskType)),
 				},
