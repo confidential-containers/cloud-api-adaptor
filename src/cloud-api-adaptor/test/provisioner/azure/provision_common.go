@@ -126,10 +126,7 @@ func syncKubeconfig(kubeconfigdirpath string, kubeconfigpath string) error {
 }
 
 func WaitForCondition(pollingFunc func() (bool, error), timeout time.Duration, interval time.Duration) error {
-
-	// Ignore SA1019 for now. PollImmediate is deprecrated and we need to switch it with PollWithContextTimeout
-	//nolint:staticcheck
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(_ context.Context) (bool, error) {
 		condition, err := pollingFunc()
 		if err != nil {
 			return false, err
@@ -429,12 +426,10 @@ func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, p
 			return err
 		}
 
-		// Ignore SA1019 for now. reference.SplitObject is deprecated. Need to use spec.Digest
-		//nolint:staticcheck
-		tag, digest := reference.SplitObject(spec.Object)
-
-		if tag != "" && strings.HasSuffix(tag, "@") {
-			tag = tag[:len(tag)-1]
+		digest := spec.Digest()
+		tag := spec.Object
+		if i := strings.Index(tag, "@"); i >= 0 {
+			tag = tag[:i]
 		}
 
 		log.Infof("Updating CAA image tag with %q", tag)
