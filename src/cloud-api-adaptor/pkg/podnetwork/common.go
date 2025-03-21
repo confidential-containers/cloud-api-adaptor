@@ -183,7 +183,8 @@ func getSecondaryInterfaceDetails(ns netops.Namespace, primaryInterface string) 
 		if err != nil {
 			return "", netip.Prefix{}, nil, err
 		}
-		if priAddrCIDR.Bits() == addr.Bits() {
+
+		if priAddrCIDR.Masked() == addr.Masked() {
 			secIface = link.Name()
 			secRoute = &netops.Route{
 				Destination: defRoute.Destination,
