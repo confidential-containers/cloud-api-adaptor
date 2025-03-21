@@ -172,12 +172,21 @@ endif
 REGISTRY ?= quay.io/confidential-containers
 
 PODVM_DISTRO ?= ubuntu
+ifeq ($(PODVM_SHORT_TAG),)
+	ifeq ($(PODVM_TAG),)
+		PODVM_SHORT_TAG := $(shell echo "$(VERSIONS_HASH)" | cut -c 1-7)
+	else
+		PODVM_SHORT_TAG := $(PODVM_TAG)
+	endif
+endif
 PODVM_TAG ?= $(VERSIONS_HASH)
 
 PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(PODVM_TAG)
 PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(TARGET_ARCH):$(PODVM_TAG)
 PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(TARGET_ARCH):$(PODVM_TAG)
 PODVM_BOOTC_IMAGE ?= $(REGISTRY)/podvm-bootc-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(TARGET_ARCH):$(PODVM_TAG)
+PODVM_BOOTC_IMAGE_FILE ?= podvm-bootc-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(TARGET_ARCH)-$(PODVM_SHORT_TAG)
+PODVM_BOOTC_QCOW2 ?= $(PODVM_BOOTC_IMAGE_FILE).qcow2
 
 PUSH ?= false
 # If not pushing `--load` into the local docker cache
@@ -256,3 +265,49 @@ podvm-bootc-image:
 	--build-arg ARCH=$(TARGET_ARCH) \
 	--build-arg CLOUD_PROVIDER=$(or $(CLOUD_PROVIDER),generic) \
 	$(DOCKER_OPTS) .
+
+# We're using podman below because we need to mount the container storage and
+# bootc-image-builder may not work with docker's container storage
+# We're exporting and re-importing the image because we need to use rootful
+# podmam and we've probbly either built it with docker or with rootless podman
+#
+$(PODVM_BOOTC_QCOW2): podvm-bootc-image
+	docker save $(PODVM_BOOTC_IMAGE) | sudo podman load
+	OD="`mktemp -d`" && trap "sudo rm -rf '$$OD'" EXIT && \
+	sudo podman run --rm -it --privileged \
+	--pull=newer \
+	--security-opt label=type:unconfined_t \
+	-v "$$OD":/output \
+	-v /var/lib/containers/storage:/var/lib/containers/storage \
+	quay.io/centos-bootc/bootc-image-builder:latest \
+	--type qcow2 \
+	--use-librepo=True \
+	$(PODVM_BOOTC_IMAGE) && \
+	cp -f "$$OD/qcow2/disk.qcow2" "$(PODVM_BOOTC_QCOW2)"
+
+.PHONY: podvm-bootc-qcow2
+podvm-bootc-qcow2: $(PODVM_BOOTC_QCOW2)
+
+PODVM_BOOTC_AWS_PROFILE ?= default
+PODVM_BOOTC_AWS_BUCKET ?= kata-image-bucket
+PODVM_BOOTC_AWS_REGION ?= us-east-1
+
+.PHONY: podvm-bootc-aws-ami
+podvm-bootc-aws-ami: podvm-bootc-image
+	docker save $(PODVM_BOOTC_IMAGE) | sudo podman load
+	OD="`mktemp -d`" && trap "#sudo rm -rf '$$OD'" EXIT && \
+	sudo podman run --rm -it --privileged \
+	--network host \
+	--pull=newer \
+	--security-opt label=type:unconfined_t \
+	-v ~/.aws:/root/.aws:ro \
+	--env AWS_PROFILE=$(PODVM_BOOTC_AWS_PROFILE) \
+	-v "$$OD":/output \
+	-v /var/lib/containers/storage:/var/lib/containers/storage \
+	quay.io/centos-bootc/bootc-image-builder:latest \
+	--type ami \
+	--use-librepo=True \
+	--aws-ami-name $(PODVM_BOOTC_IMAGE_FILE) \
+	--aws-bucket $(PODVM_BOOTC_AWS_BUCKET) \
+	--aws-region $(PODVM_BOOTC_AWS_REGION) \
+	$(PODVM_BOOTC_IMAGE)
