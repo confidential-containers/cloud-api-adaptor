@@ -13,6 +13,7 @@ ARG ARCH
 
 # Setup subscription
 RUN test -n "${ACTIVATION_KEY}" -a -n "${ORG_ID}" && \
+    rm -f /etc/rhsm-host && \
     subscription-manager register --org=${ORG_ID} --activationkey=${ACTIVATION_KEY} && \
     dnf install -y cloud-init  && \
     dnf clean all && \
