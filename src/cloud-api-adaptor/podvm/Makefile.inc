@@ -175,11 +175,11 @@ endef
 binaries: $(BINARIES)
 
 $(AGENT_PROTOCOL_FORWARDER): always
-	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) agent-protocol-forwarder
+	cd "$(ROOT_DIR)" && ARCH=$(ARCH) $(MAKE) agent-protocol-forwarder
 	install -D --compare "$(ROOT_DIR)/agent-protocol-forwarder" "$@"
 
 $(PROCESS_USER_DATA): always
-	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) process-user-data
+	cd "$(ROOT_DIR)" && ARCH=$(ARCH) $(MAKE) process-user-data
 	install -D --compare "$(ROOT_DIR)/process-user-data" "$@"
 
 $(KATA_AGENT): $(FORCE_TARGET)
