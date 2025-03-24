@@ -349,9 +349,20 @@ func (tc *TestCase) Run() {
 
 				if tc.podState == v1.PodRunning {
 					if len(tc.testCommands) > 0 {
-						logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
-						if err != nil {
-							t.Errorf("AssessPodTestCommands failed, with output: %s and error: %v", logString, err)
+						// verifying pod available or not
+						var podlist v1.PodList
+						if err := client.Resources(tc.pod.Namespace).List(ctx, &podlist); err != nil {
+							t.Fatal("Failed to list pod, error : %s", err.Error())
+						}
+						for _, podItem := range podlist.Items {
+							if podItem.ObjectMeta.Name == tc.pod.Name {
+								for _, testcommand := range tc.testCommands {
+									logString, err := AssessPodTestCommand(ctx, client, tc.pod, testcommand)
+									if err != nil {
+										t.Errorf("AssessPodTestCommand failed, with output: %s and error: %v", logString, err)
+									}
+								}
+							}
 						}
 					}
 
@@ -401,10 +412,16 @@ func (tc *TestCase) Run() {
 					}
 					if extraPod.podState == v1.PodRunning {
 						if len(extraPod.testCommands) > 0 {
-							logString, err := AssessPodTestCommands(ctx, client, extraPod.pod, extraPod.testCommands)
-							t.Logf("Output when execute test commands:%s", logString)
-							if err != nil {
-								t.Error(err)
+							for _, podItem := range podlist.Items {
+								if podItem.ObjectMeta.Name == extraPod.pod.Name {
+									for _, testcommand := range extraPod.testCommands {
+										logString, err := AssessPodTestCommand(ctx, client, extraPod.pod, testcommand)
+										t.Logf("Output when execute test command : %s", logString)
+										if err != nil {
+											t.Error(err)
+										}
+									}
+								}
 							}
 						}
 						tc.assert.HasPodVM(t, extraPod.pod.Name)

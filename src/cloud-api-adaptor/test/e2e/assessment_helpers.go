@@ -541,44 +541,38 @@ func AssessPodRequestAndLimit(ctx context.Context, client klient.Client, pod *v1
 
 }
 
-func AssessPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Pod, testCommands []TestCommand) (string, error) {
+func AssessPodTestCommand(ctx context.Context, client klient.Client, pod *v1.Pod, testCommand TestCommand) (string, error) {
 	var podlist v1.PodList
 	if err := client.Resources(pod.Namespace).List(ctx, &podlist); err != nil {
 		return "Failed to list pod", err
 	}
-	for _, testCommand := range testCommands {
-		log.Tracef("Running test command: %v", testCommand)
-		var stdout, stderr bytes.Buffer
-		for _, podItem := range podlist.Items {
-			if podItem.ObjectMeta.Name == pod.Name {
-				//adding sleep time to intialize container and ready for Executing commands
-				time.Sleep(5 * time.Second)
-				if err := client.Resources(pod.Namespace).ExecInPod(ctx, pod.Namespace, pod.Name, testCommand.ContainerName, testCommand.Command, &stdout, &stderr); err != nil {
-					if testCommand.TestErrorFn != nil {
-						if !testCommand.TestErrorFn(err) {
-							return err.Error(), fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
-						}
-					} else {
-						return err.Error(), fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
-					}
-				} else if testCommand.TestErrorFn != nil {
-					return "", fmt.Errorf("We expected an error from Pod %s, but it was not found", pod.Name)
-				}
-				if testCommand.TestCommandStderrFn != nil {
-					if !testCommand.TestCommandStderrFn(stderr) {
-						return stderr.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stderr: %s, stdout: %s", testCommand.Command, testCommand.ContainerName, stderr.String(), stdout.String())
-					} else {
-						return stderr.String(), nil
-					}
-				}
-				if testCommand.TestCommandStdoutFn != nil {
-					if !testCommand.TestCommandStdoutFn(stdout) {
-						return stdout.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, stdout.String(), stderr.String())
-					} else {
-						return stdout.String(), nil
-					}
-				}
+	log.Tracef("Running test command: %v", testCommand)
+	var stdout, stderr bytes.Buffer
+	//adding sleep time to intialize container and ready for Executing commands
+	time.Sleep(5 * time.Second)
+	if err := client.Resources(pod.Namespace).ExecInPod(ctx, pod.Namespace, pod.Name, testCommand.ContainerName, testCommand.Command, &stdout, &stderr); err != nil {
+		if testCommand.TestErrorFn != nil {
+			if !testCommand.TestErrorFn(err) {
+				return err.Error(), fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
 			}
+		} else {
+			return err.Error(), fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
+		}
+	} else if testCommand.TestErrorFn != nil {
+		return "", fmt.Errorf("We expected an error from Pod %s, but it was not found", pod.Name)
+	}
+	if testCommand.TestCommandStderrFn != nil {
+		if !testCommand.TestCommandStderrFn(stderr) {
+			return stderr.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stderr: %s, stdout: %s", testCommand.Command, testCommand.ContainerName, stderr.String(), stdout.String())
+		} else {
+			return stderr.String(), nil
+		}
+	}
+	if testCommand.TestCommandStdoutFn != nil {
+		if !testCommand.TestCommandStdoutFn(stdout) {
+			return stdout.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, stdout.String(), stderr.String())
+		} else {
+			return stdout.String(), nil
 		}
 	}
 	return "", nil
