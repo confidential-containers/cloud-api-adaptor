@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 
 	peerPodV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl/api/v1alpha1"
 
@@ -26,18 +25,12 @@ var logger = log.New(log.Writer(), "[util/k8sops] ", log.LstdFlags|log.Lmsgprefi
 var ppFinalizer string = "peer.pod/finalizer"
 
 type PeerPodService struct {
-	client        *kubernetes.Clientset
-	uclient       *rest.RESTClient // use generated client instead
-	cloudProvider string
-	podToPP       map[string]string // map Pod UID to owned PeerPod Name
+	client  *kubernetes.Clientset
+	uclient *rest.RESTClient  // use generated client instead
+	podToPP map[string]string // map Pod UID to owned PeerPod Name
 }
 
 func NewPeerPodService() (*PeerPodService, error) {
-	cloudProvider := os.Getenv("CLOUD_PROVIDER") // TODO: don't get from env var directly
-	if cloudProvider == "" {
-		return nil, errors.New("NewPeerPodService: failed to get cloudProvider")
-	}
-
 	config, err := getKubeConfig()
 	if err != nil {
 		return nil, fmt.Errorf("NewPeerPodService: failed to get config: %w", err)
@@ -55,10 +48,10 @@ func NewPeerPodService() (*PeerPodService, error) {
 		return nil, fmt.Errorf("NewPeerPodService: failed to create UnversionedRESTClient: %s", err)
 	}
 	logger.Printf("initialized PeerPodService")
-	return &PeerPodService{client: clientset, uclient: restClient, cloudProvider: cloudProvider, podToPP: make(map[string]string)}, nil
+	return &PeerPodService{client: clientset, uclient: restClient, podToPP: make(map[string]string)}, nil
 }
 
-func (s *PeerPodService) newPeerPod(pod *v1.Pod, instanceId string) *peerPodV1alpha1.PeerPod {
+func (s *PeerPodService) newPeerPod(pod *v1.Pod, instanceId string, cloudProvider string) *peerPodV1alpha1.PeerPod {
 	pp := peerPodV1alpha1.PeerPod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: peerPodV1alpha1.GroupVersion.Group + "/" + peerPodV1alpha1.GroupVersion.Version,
@@ -74,7 +67,7 @@ func (s *PeerPodService) newPeerPod(pod *v1.Pod, instanceId string) *peerPodV1al
 		},
 		Spec: peerPodV1alpha1.PeerPodSpec{
 			InstanceID:    string(instanceId),
-			CloudProvider: s.cloudProvider,
+			CloudProvider: cloudProvider,
 		},
 	}
 	*pp.ObjectMeta.OwnerReferences[0].BlockOwnerDeletion = true // needed?
@@ -90,12 +83,12 @@ func (s *PeerPodService) getPod(podname string, podns string) (*v1.Pod, error) {
 }
 
 // make the pod an owner of a PeerPod
-func (s *PeerPodService) OwnPeerPod(podname string, podns string, instanceID string) error {
+func (s *PeerPodService) OwnPeerPod(podname string, podns string, instanceID string, cloudProvider string) error {
 	pod, err := s.getPod(podname, podns)
 	if err != nil {
 		return err
 	}
-	pp := s.newPeerPod(pod, instanceID)
+	pp := s.newPeerPod(pod, instanceID, cloudProvider)
 	result := peerPodV1alpha1.PeerPod{}
 	err = s.uclient.Post().Namespace(pod.Namespace).Resource("peerPods").Body(pp).Do(context.TODO()).Into(&result)
 	if err != nil {

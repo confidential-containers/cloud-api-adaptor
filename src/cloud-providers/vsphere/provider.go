@@ -53,6 +53,14 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
+func (p *vsphereProvider) Name() string {
+	return "vsphere"
+}
+
+func (p *vsphereProvider) Accepts(spec provider.InstanceTypeSpec) bool {
+	return true
+}
+
 func checkConfig(config *Config) error {
 
 	// Do some initial checks of the optional input values

@@ -58,6 +58,14 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
+func (p *azureProvider) Name() string {
+	return "azure"
+}
+
+func (p *azureProvider) Accepts(spec provider.InstanceTypeSpec) bool {
+	return true
+}
+
 func parseIP(addr string) (*netip.Addr, error) {
 	if addr == "" || addr == "0.0.0.0" {
 		return nil, errNotReady

@@ -14,8 +14,10 @@ import (
 )
 
 type Provider interface {
+	Name() string
 	CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec InstanceTypeSpec) (instance *Instance, err error)
 	DeleteInstance(ctx context.Context, instanceID string) error
+	Accepts(spec InstanceTypeSpec) bool
 	Teardown() error
 	ConfigVerifier() error
 }

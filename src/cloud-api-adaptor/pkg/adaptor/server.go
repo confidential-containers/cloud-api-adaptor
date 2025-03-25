@@ -68,12 +68,12 @@ type server struct {
 	PeerPodsLimitPerNode    int
 }
 
-func NewServer(provider provider.Provider, cfg *ServerConfig, workerNode podnetwork.WorkerNode) Server {
+func NewServer(providers []provider.Provider, cfg *ServerConfig, workerNode podnetwork.WorkerNode) Server {
 
 	logger.Printf("server config: %#v", cfg)
 
 	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout)
-	cloudService := cloud.NewService(provider, agentFactory, workerNode,
+	cloudService := cloud.NewService(providers, agentFactory, workerNode,
 		cfg.SecureComms, cfg.SecureCommsInbounds, cfg.SecureCommsOutbounds,
 		cfg.SecureCommsKbsAddress, cfg.PodsDir, cfg.ForwarderPort, cfg.Initdata, sshutil.SSHPORT)
 	vmInfoService := vminfo.NewService(cloudService)

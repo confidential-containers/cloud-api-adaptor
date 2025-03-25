@@ -6,6 +6,9 @@ ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN=${ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN:-f
 
 CRI_RUNTIME_ENDPOINT=${CRI_RUNTIME_ENDPOINT:-/run/cri-runtime.sock}
 optionals+=""
+required+='\
+        -pods-dir /run/peerpod/pods \
+        -socket /run/peerpod/hypervisor.sock '
 
 # Ensure you add a space before the closing quote (") when updating the optionals
 # example:
@@ -56,12 +59,6 @@ aws() {
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "                 # Use public IP for pod vm
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
     [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
-
-    set -x
-    exec cloud-api-adaptor aws \
-        -pods-dir /run/peerpod/pods \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
 }
 
 azure() {
@@ -74,8 +71,7 @@ azure() {
     [[ "${ENABLE_SECURE_BOOT}" == "true" ]] && optionals+="-enable-secure-boot "
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "
 
-    set -x
-    exec cloud-api-adaptor azure \
+    required+='\
         -subscriptionid "${AZURE_SUBSCRIPTION_ID}" \
         -region "${AZURE_REGION}" \
         -instance-size "${AZURE_INSTANCE_SIZE}" \
@@ -84,7 +80,7 @@ azure() {
         -subnetid "${AZURE_SUBNET_ID}" \
         -securitygroupid "${AZURE_NSG_ID}" \
         -imageid "${AZURE_IMAGE_ID}" \
-        ${optionals}
+        '
 }
 
 gcp() {
@@ -95,18 +91,12 @@ gcp() {
     [[ "${GCP_ZONE}" ]] && optionals+="-gcp-zone ${GCP_ZONE} "                         # if not set retrieved from IMDS
     [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-gcp-machine-type ${GCP_MACHINE_TYPE} " # default e2-medium
     [[ "${GCP_NETWORK}" ]] && optionals+="-gcp-network ${GCP_NETWORK} "                # defaults to 'default'
-
-    set -x
-    exec cloud-api-adaptor gcp \
-        -pods-dir /run/peerpod/pods \
-        ${optionals}
 }
 
 ibmcloud() {
     one_of IBMCLOUD_API_KEY IBMCLOUD_IAM_PROFILE_ID
 
-    set -x
-    exec cloud-api-adaptor ibmcloud \
+    required+='\
         -iam-service-url "${IBMCLOUD_IAM_ENDPOINT}" \
         -vpc-service-url "${IBMCLOUD_VPC_ENDPOINT}" \
         -resource-group-id "${IBMCLOUD_RESOURCE_GROUP_ID}" \
@@ -118,9 +108,7 @@ ibmcloud() {
         -primary-subnet-id "${IBMCLOUD_VPC_SUBNET_ID}" \
         -primary-security-group-id "${IBMCLOUD_VPC_SG_ID}" \
         -vpc-id "${IBMCLOUD_VPC_ID}" \
-        -pods-dir /run/peerpod/pods \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        '
 }
 
 ibmcloud_powervs() {
@@ -132,31 +120,26 @@ ibmcloud_powervs() {
     [[ "${POWERVS_SYSTEM_TYPE}" ]] && optionals+="-sys-type ${POWERVS_SYSTEM_TYPE} "
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip " # Use public IP for pod vm
 
-    set -x
-    exec cloud-api-adaptor ibmcloud-powervs \
+    required+='\
         -service-instance-id ${POWERVS_SERVICE_INSTANCE_ID} \
         -zone "${POWERVS_ZONE}" \
-        -image-id "${POWERVS_IMAGE_ID}" \
+        -pi-image-id "${POWERVS_IMAGE_ID}" \
         -network-id "${POWERVS_NETWORK_ID}" \
         -ssh-key "${POWERVS_SSH_KEY_NAME}" \
-        -pods-dir /run/peerpod/pods \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        '
 }
 
 libvirt() {
     test_vars LIBVIRT_URI
 
     [[ "${DISABLECVM}" = "true" ]] && optionals+="-disable-cvm "
-    set -x
-    exec cloud-api-adaptor libvirt \
+
+    required+='\
         -uri "${LIBVIRT_URI}" \
         -data-dir /opt/data-dir \
-        -pods-dir /run/peerpod/pods \
         -network-name "${LIBVIRT_NET:-default}" \
         -pool-name "${LIBVIRT_POOL:-default}" \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        '
 }
 
 vsphere() {
@@ -169,12 +152,10 @@ vsphere() {
     [[ "${GOVC_DRS}" ]] && optionals+="-drs ${GOVC_DRS} "
     [[ "${GOVC_DATASTORE}" ]] && optionals+="-data-store ${GOVC_DATASTORE} "
 
-    set -x
-    exec cloud-api-adaptor vsphere \
+    required+='\
         -vcenter-url ${GOVC_URL} \
         -data-center ${GOVC_DATACENTER} \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
+        '
 }
 
 docker() {
@@ -184,13 +165,6 @@ docker() {
     [[ "${DOCKER_API_VERSION}" ]] && optionals+="-docker-api-version ${DOCKER_API_VERSION} "
     [[ "${DOCKER_PODVM_IMAGE}" ]] && optionals+="-podvm-docker-image ${DOCKER_PODVM_IMAGE} "
     [[ "${DOCKER_NETWORK_NAME}" ]] && optionals+="-docker-network-name ${DOCKER_NETWORK_NAME} "
-
-    set -x
-    exec cloud-api-adaptor docker \
-        -pods-dir /run/peerpod/pods \
-        ${optionals} \
-        -socket /run/peerpod/hypervisor.sock
-
 }
 
 help_msg() {
@@ -205,22 +179,27 @@ in addition all cloud provider specific env variables must be set and valid
 EOF
 }
 
-if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
-    aws
-elif [[ "$CLOUD_PROVIDER" == "azure" ]]; then
-    azure
-elif [[ "$CLOUD_PROVIDER" == "gcp" ]]; then
-    gcp
-elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then
-    ibmcloud
-elif [[ "$CLOUD_PROVIDER" == "ibmcloud-powervs" ]]; then
-    ibmcloud_powervs
-elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
-    libvirt
-elif [[ "$CLOUD_PROVIDER" == "vsphere" ]]; then
-    vsphere
-elif [[ "$CLOUD_PROVIDER" == "docker" ]]; then
-    docker
-else
-    help_msg
-fi
+for PROVIDER in ${CLOUD_PROVIDER//,/ }; do
+    if [[ "$PROVIDER" == "aws" ]]; then
+        aws
+    elif [[ "$PROVIDER" == "azure" ]]; then
+        azure
+    elif [[ "$PROVIDER" == "gcp" ]]; then
+        gcp
+    elif [[ "$PROVIDER" == "ibmcloud" ]]; then
+        ibmcloud
+    elif [[ "$PROVIDER" == "ibmcloud-powervs" ]]; then
+        ibmcloud_powervs
+    elif [[ "$PROVIDER" == "libvirt" ]]; then
+        libvirt
+    elif [[ "$PROVIDER" == "vsphere" ]]; then
+        vsphere
+    elif [[ "$PROVIDER" == "docker" ]]; then
+        docker
+    else
+        help_msg
+    fi
+done
+
+set -x
+eval "cloud-api-adaptor $CLOUD_PROVIDER ${required}${optionals}"

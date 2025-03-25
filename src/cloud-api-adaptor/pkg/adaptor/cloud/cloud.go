@@ -86,7 +86,7 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 	return nil
 }
 
-func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
+func NewService(providers []provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
 	secureComms bool, secureCommsInbounds, secureCommsOutbounds, kbsAddress, podsDir,
 	daemonPort, initdata, sshport string) Service {
 	var err error
@@ -102,7 +102,7 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 	}
 
 	s := &cloudService{
-		provider:     provider,
+		providers:    providers,
 		proxyFactory: proxyFactory,
 		sandboxes:    map[sandboxID]*sandbox{},
 		podsDir:      podsDir,
@@ -121,14 +121,26 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 }
 
 func (s *cloudService) Teardown() error {
-	return s.provider.Teardown()
+	for _, provider := range s.providers {
+		err := provider.Teardown()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *cloudService) ConfigVerifier() error {
-	return s.provider.ConfigVerifier()
+	for _, provider := range s.providers {
+		err := provider.ConfigVerifier()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (s *cloudService) setInstance(sid sandboxID, instanceID, instanceName string) error {
+func (s *cloudService) setInstance(sid sandboxID, instanceID, instanceName string, provider provider.Provider) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -139,6 +151,7 @@ func (s *cloudService) setInstance(sid sandboxID, instanceID, instanceName strin
 
 	sandbox.instanceID = instanceID
 	sandbox.instanceName = instanceName
+	sandbox.provider = provider
 
 	s.cond.Broadcast()
 
@@ -370,18 +383,30 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 		return nil, fmt.Errorf("getting sandbox: %w", err)
 	}
 
-	instance, err := s.provider.CreateInstance(ctx, sandbox.podName, string(sid), sandbox.cloudConfig, sandbox.spec)
+	var provider provider.Provider
+	for _, p := range s.providers {
+		if p.Accepts(sandbox.spec) {
+			provider = p
+			break
+		}
+	}
+
+	if provider == nil {
+		return nil, fmt.Errorf("no provider available for instance spec")
+	}
+
+	instance, err := provider.CreateInstance(ctx, sandbox.podName, string(sid), sandbox.cloudConfig, sandbox.spec)
 	if err != nil {
 		return nil, fmt.Errorf("creating an instance : %w", err)
 	}
 
 	if s.ppService != nil {
-		if err := s.ppService.OwnPeerPod(sandbox.podName, sandbox.podNamespace, instance.ID); err != nil {
+		if err := s.ppService.OwnPeerPod(sandbox.podName, sandbox.podNamespace, instance.ID, provider.Name()); err != nil {
 			logger.Printf("failed to create PeerPod: %v", err)
 		}
 	}
 
-	if err := s.setInstance(sid, instance.ID, instance.Name); err != nil {
+	if err := s.setInstance(sid, instance.ID, instance.Name, provider); err != nil {
 		return nil, fmt.Errorf("setting instance: %w", err)
 	}
 
@@ -464,11 +489,13 @@ func (s *cloudService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.S
 		sandbox.sshClientInst.DisconnectPP(string(sid))
 	}
 
-	if err := s.provider.DeleteInstance(ctx, sandbox.instanceID); err != nil {
-		logger.Printf("Error deleting an instance %s: %v", sandbox.instanceID, err)
-	} else if s.ppService != nil {
-		if err := s.ppService.ReleasePeerPod(sandbox.podName, sandbox.podNamespace, sandbox.instanceID); err != nil {
-			logger.Printf("failed to release PeerPod %v", err)
+	if sandbox.provider != nil {
+		if err := sandbox.provider.DeleteInstance(ctx, sandbox.instanceID); err != nil {
+			logger.Printf("Error deleting an instance %s: %v", sandbox.instanceID, err)
+		} else if s.ppService != nil {
+			if err := s.ppService.ReleasePeerPod(sandbox.podName, sandbox.podNamespace, sandbox.instanceID); err != nil {
+				logger.Printf("failed to release PeerPod %v", err)
+			}
 		}
 	}
 

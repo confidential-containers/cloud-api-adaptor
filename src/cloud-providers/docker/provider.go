@@ -51,6 +51,14 @@ func NewProvider(config *Config) (*dockerProvider, error) {
 	}, nil
 }
 
+func (p *dockerProvider) Name() string {
+	return "docker"
+}
+
+func (p *dockerProvider) Accepts(spec provider.InstanceTypeSpec) bool {
+	return true
+}
+
 func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID string,
 	cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 

@@ -116,6 +116,14 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
+func (p *awsProvider) Name() string {
+	return "aws"
+}
+
+func (p *awsProvider) Accepts(spec provider.InstanceTypeSpec) bool {
+	return true
+}
+
 func getIPs(instance types.Instance) ([]netip.Addr, error) {
 
 	var podNodeIPs []netip.Addr

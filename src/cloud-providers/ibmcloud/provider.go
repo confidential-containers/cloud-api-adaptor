@@ -135,6 +135,22 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
+func (p *ibmcloudVPCProvider) Name() string {
+	return "ibmcloud"
+}
+
+func (p *ibmcloudVPCProvider) Accepts(spec provider.InstanceTypeSpec) bool {
+	if len(spec.InstanceType) != 0 {
+		intanceProfiles := p.serviceConfig.InstanceProfiles
+		for _, profile := range intanceProfiles {
+			if spec.InstanceType == profile {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourceGroupID string, securityGroupID string, e error) {
 	subnet, response, err := vpcV1.GetSubnet(&vpcv1.GetSubnetOptions{
 		ID: &subnetID,

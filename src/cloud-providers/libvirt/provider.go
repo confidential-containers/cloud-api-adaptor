@@ -43,6 +43,14 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
+func (p *libvirtProvider) Name() string {
+	return "libvirt"
+}
+
+func (p *libvirtProvider) Accepts(spec provider.InstanceTypeSpec) bool {
+	return true
+}
+
 func getIPs(instance *vmConfig) ([]netip.Addr, error) {
 	return instance.ips, nil
 }

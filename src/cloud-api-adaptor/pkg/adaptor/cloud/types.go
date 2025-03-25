@@ -26,7 +26,7 @@ type Service interface {
 }
 
 type cloudService struct {
-	provider     provider.Provider
+	providers    []provider.Provider
 	proxyFactory proxy.Factory
 	workerNode   podnetwork.WorkerNode
 	sandboxes    map[sandboxID]*sandbox
@@ -53,4 +53,5 @@ type sandbox struct {
 	netNSPath     string
 	spec          provider.InstanceTypeSpec
 	sshClientInst *wnssh.SshClientInstance
+	provider      provider.Provider
 }

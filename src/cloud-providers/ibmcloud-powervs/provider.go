@@ -25,6 +25,8 @@ const maxInstanceNameLen = 47
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/ibmcloud-powervs] ", log.LstdFlags|log.Lmsgprefix)
 
+var POWERVS_MACHINE_TYPES = []string{"s922", "s1022", "e1080", "e980"}
+
 type ibmcloudPowerVSProvider struct {
 	powervsService
 	serviceConfig *Config
@@ -43,6 +45,21 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		powervsService: *powervs,
 		serviceConfig:  config,
 	}, nil
+}
+
+func (p *ibmcloudPowerVSProvider) Name() string {
+	return "ibmcloud-powervs"
+}
+
+func (p *ibmcloudPowerVSProvider) Accepts(spec provider.InstanceTypeSpec) bool {
+	if len(spec.InstanceType) > 0 {
+		for _, machineType := range POWERVS_MACHINE_TYPES {
+			if strings.HasPrefix(spec.InstanceType, machineType) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {

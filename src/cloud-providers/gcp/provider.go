@@ -59,6 +59,14 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
+func (p *gcpProvider) Name() string {
+	return "gcp"
+}
+
+func (p *gcpProvider) Accepts(spec provider.InstanceTypeSpec) bool {
+	return true
+}
+
 func getIPs(instance *computepb.Instance) ([]netip.Addr, error) {
 	var podNodeIPs []netip.Addr
 	for _, nic := range instance.GetNetworkInterfaces() {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/cmd"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor"
@@ -77,12 +78,16 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		cmd.Exit(1)
 	}
 
-	cloud := provider.Get(cloudName)
+	clouds := make([]provider.CloudProvider, 0)
+	for _, cloudName := range strings.Split(cloudName, ",") {
+		cloud := provider.Get(cloudName)
 
-	if cloud == nil {
-		fmt.Fprintf(os.Stderr, "%s: Unsupported cloud provider: %s\n\n", programName, cloudName)
-		printHelp(os.Stderr)
-		cmd.Exit(1)
+		if cloud == nil {
+			fmt.Fprintf(os.Stderr, "%s: Unsupported cloud provider: %s\n\n", programName, cloudName)
+			printHelp(os.Stderr)
+			cmd.Exit(1)
+		}
+		clouds = append(clouds, cloud)
 	}
 
 	var (
@@ -125,7 +130,9 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.BoolVar(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "Enable cloud config verify - should use it for production")
 		flags.IntVar(&cfg.serverConfig.PeerPodsLimitPerNode, "peerpods-limit-per-node", 10, "peer pods limit per node (default=10)")
 
-		cloud.ParseCmd(flags)
+		for _, cloud := range clouds {
+			cloud.ParseCmd(flags)
+		}
 	})
 
 	cmd.ShowVersion(programName)
@@ -148,16 +155,21 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		}
 	}
 
-	cloud.LoadEnv()
-
 	workerNode := podnetwork.NewWorkerNode(cfg.TunnelType, cfg.HostInterface, cfg.VXLANPort, cfg.VXLANMinID)
 
-	provider, err := cloud.NewProvider()
-	if err != nil {
-		return nil, err
+	providers := make([]provider.Provider, 0)
+	for _, cloud := range clouds {
+		cloud.LoadEnv()
+
+		provider, err := cloud.NewProvider()
+		if err != nil {
+			return nil, err
+		}
+
+		providers = append(providers, provider)
 	}
 
-	server := adaptor.NewServer(provider, &cfg.serverConfig, workerNode)
+	server := adaptor.NewServer(providers, &cfg.serverConfig, workerNode)
 
 	return cmd.NewStarter(server), nil
 }

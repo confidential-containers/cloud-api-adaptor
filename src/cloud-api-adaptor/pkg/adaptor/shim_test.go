@@ -20,6 +20,7 @@ import (
 	daemon "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder/interceptor"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
+	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
@@ -95,8 +96,8 @@ func TestShim(t *testing.T) {
 		PeerPodsLimitPerNode:    -1,
 	}
 
-	provider := &mockProvider{primaryIP: primaryIP, secondaryIP: secondaryIP}
-	srv := NewServer(provider, serverConfig, workerNode)
+	mockProvider := &mockProvider{primaryIP: primaryIP, secondaryIP: secondaryIP}
+	srv := NewServer([]provider.Provider{mockProvider}, serverConfig, workerNode)
 
 	serverDone := make(chan struct{})
 	go func() {

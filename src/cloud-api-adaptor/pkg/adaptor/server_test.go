@@ -149,7 +149,7 @@ func startAgentServer(t *testing.T) string {
 func newServer(t *testing.T, socketPath, podsDir string) Server {
 
 	port := startAgentServer(t)
-	provider := &mockProvider{}
+	mockProvider := &mockProvider{}
 	serverConfig := &ServerConfig{
 		SocketPath:              socketPath,
 		PodsDir:                 podsDir,
@@ -158,7 +158,7 @@ func newServer(t *testing.T, socketPath, podsDir string) Server {
 		EnableCloudConfigVerify: false,
 		PeerPodsLimitPerNode:    -1,
 	}
-	return NewServer(provider, serverConfig, &mockWorkerNode{})
+	return NewServer([]provider.Provider{mockProvider}, serverConfig, &mockWorkerNode{})
 }
 
 func testServerShutdown(t *testing.T, s Server, socketPath, dir string, serverErrCh chan error) {
@@ -194,6 +194,14 @@ func (n *mockWorkerNode) Teardown(nsPath string, config *tunneler.Config) error 
 type mockProvider struct {
 	primaryIP   string
 	secondaryIP string
+}
+
+func (p *mockProvider) Name() string {
+	return "mock"
+}
+
+func (p *mockProvider) Accepts(spec provider.InstanceTypeSpec) bool {
+	return true
 }
 
 func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
