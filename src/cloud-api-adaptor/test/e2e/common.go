@@ -87,13 +87,19 @@ default WriteStreamRequest := true
 '''
 `
 
-func buildInitdataBody(kbsEndpoint string) (string, error) {
+func buildInitdataBody(kbsEndpoint string, initdataannotation string) (string, error) {
 	content, err := os.ReadFile("../trustee/kbs/config/kubernetes/base/https-cert.pem")
 	if err != nil {
 		return "", err
 	}
 	certContent := string(content)
-	body := fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+	var body string
+	if initdataannotation == "with-initdata-annotation" {
+		body = fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+	} else {
+		testemptyInitdata := ""
+		body = fmt.Sprintf(testemptyInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+	}
 	return body, nil
 }
 
@@ -248,13 +254,13 @@ func WithPVCBinding(mountPath string, pvcName string) PodOption {
 	}
 }
 
-func WithInitdata(kbsEndpoint string) PodOption {
+func WithInitdata(kbsEndpoint string, initdataannotation string) PodOption {
 	return func(p *corev1.Pod) {
 		if p.ObjectMeta.Annotations == nil {
 			p.ObjectMeta.Annotations = make(map[string]string)
 		}
 		key := "io.katacontainers.config.runtime.cc_init_data"
-		initdata, err := buildInitdataBody(kbsEndpoint)
+		initdata, err := buildInitdataBody(kbsEndpoint, initdataannotation)
 		if err != nil {
 			log.Fatalf("failed to build initdata %s", err)
 		}
@@ -379,8 +385,8 @@ func NewBusyboxPodWithName(namespace, podName string) PodOrError {
 	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"})))
 }
 
-func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string) PodOrError {
-	initdata, err := buildInitdataBody(kbsEndpoint)
+func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string, initdataannotation string) PodOrError {
+	initdata, err := buildInitdataBody(kbsEndpoint, initdataannotation)
 	if err != nil {
 		return fromError(err)
 	}
