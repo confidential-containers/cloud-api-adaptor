@@ -796,7 +796,7 @@ func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 
 func DoTestPodwithoutInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, testSecret string) {
 
-	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-failure", kbsEndpoint, "without-initdata-annotation").GetPodOrFatal(t)
+	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-podwithout-initdata", kbsEndpoint, "without-initdata-annotation").GetPodOrFatal(t)
 
 	t.Logf("Pod details: %+v", pod)
 	t.Logf("Details of pod edited : RR")
