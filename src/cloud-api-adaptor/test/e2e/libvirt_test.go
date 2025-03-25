@@ -282,9 +282,6 @@ func TestLibvirtCreatePodwithoutInitdataAnnotations(t *testing.T) {
 	assert := LibvirtAssert{}
 	t.Parallel()
 
-	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
-	resourcePath := "caa/workload_key/test_key.bin"
-
 	err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
