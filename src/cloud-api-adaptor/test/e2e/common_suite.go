@@ -794,7 +794,7 @@ func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 	NewTestCase(t, e, "PodWithCpuMemLimitsAndRequests", assert, "Pod with cpu and memory limits and requests").WithPod(pod).Run()
 }
 
-func DoTestPodwithoutInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, initdataString string) {
+func DoTestPodwithoutInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, testSecret string) {
 
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-failure", kbsEndpoint, "without-initdata-annotation").GetPodOrFatal(t)
 
