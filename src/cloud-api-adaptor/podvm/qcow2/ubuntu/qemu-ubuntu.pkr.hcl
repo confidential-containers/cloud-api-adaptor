@@ -1,7 +1,7 @@
 locals {
   machine_type = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "q35" : "${var.machine_type}"
   use_pflash   = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "true" : "false"
-  firmware     = "${var.os_arch}" == "x86_64" && "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
+  firmware     = "${var.is_uefi}" ? "${var.uefi_firmware}" : ""
   se_qemuargs = [
     ["-drive", "file=se-${var.qemu_image_name},if=none,cache=writeback,discard=ignore,format=qcow2,id=se-virtio-drive"],
     ["-device", "virtio-blk,drive=se-virtio-drive,id=virtio-disk1"]
@@ -25,31 +25,37 @@ locals {
       ["-serial", "mon:stdio"]
     ]
   )
+  efi_boot       = "${var.is_uefi}" ? "true" : "false"
   final_qemuargs = "${var.se_boot}" == "true" ? concat(local.qemuargs, local.se_qemuargs) : local.qemuargs
 }
 
 source "qemu" "ubuntu" {
-  disable_vnc      = true
-  disk_compression = true
-  disk_image       = true
-  disk_size        = "${var.disk_size}"
-  format           = "qcow2"
-  headless         = true
-  iso_checksum     = "${var.cloud_image_checksum}"
-  iso_url          = "${var.cloud_image_url}"
-  output_directory = "${var.output_directory}"
-  qemuargs         = "${local.final_qemuargs}"
-  ssh_password     = "${var.ssh_password}"
-  ssh_port         = 22
-  ssh_username     = "${var.ssh_username}"
-  ssh_timeout      = "${var.ssh_timeout}"
-  boot_wait        = "${var.boot_wait}"
-  vm_name          = "${var.qemu_image_name}"
-  shutdown_command = "sudo shutdown -h now"
-  qemu_binary      = "${var.qemu_binary}"
-  machine_type     = "${local.machine_type}"
-  use_pflash       = "${local.use_pflash}"
-  firmware         = "${local.firmware}"
+  disable_vnc       = true
+  disk_compression  = true
+  disk_image        = true
+  disk_size         = "${var.disk_size}"
+  format            = "qcow2"
+  headless          = true
+  iso_checksum      = "${var.cloud_image_checksum}"
+  iso_url           = "${var.cloud_image_url}"
+  output_directory  = "${var.output_directory}"
+  qemuargs          = "${local.final_qemuargs}"
+  ssh_password      = "${var.ssh_password}"
+  ssh_port          = 22
+  ssh_username      = "${var.ssh_username}"
+  ssh_timeout       = "${var.ssh_timeout}"
+  boot_wait         = "${var.boot_wait}"
+  vm_name           = "${var.qemu_image_name}"
+  shutdown_command  = "sudo shutdown -h now"
+  qemu_binary       = "${var.qemu_binary}"
+  machine_type      = "${local.machine_type}"
+  use_pflash        = "${local.use_pflash}"
+  firmware          = "${local.firmware}"
+  efi_boot          = "${local.efi_boot}"
+  efi_firmware_code = "${var.os_arch}" == "aarch64" ? "/usr/share/AAVMF/AAVMF_CODE.fd" : ""
+  efi_firmware_vars = "${var.os_arch}" == "aarch64" ? "/usr/share/AAVMF/AAVMF_VARS.fd" : ""
+  cpu_model         = "${var.os_arch}" == "aarch64" ? "cortex-a57" : ""
+
 }
 
 build {
@@ -92,7 +98,8 @@ build {
     remote_folder = "~"
     environment_vars = [
       "CLOUD_PROVIDER=${var.cloud_provider}",
-      "PODVM_DISTRO=${var.podvm_distro}"
+      "PODVM_DISTRO=${var.podvm_distro}",
+      "ARCH=${var.target_arch}"
     ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"
