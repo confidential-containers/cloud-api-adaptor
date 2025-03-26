@@ -70,6 +70,7 @@ type TestCase struct {
 	isNydusSnapshotter          bool
 	alternateImageName          string
 	secureCommsIsActive         bool
+	expectedFailure             bool
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -172,6 +173,11 @@ func (tc *TestCase) WithNydusSnapshotter() *TestCase {
 	return tc
 }
 
+func (tc *TestCase) ExpectFailure() *TestCase {
+	tc.expectedFailure = true
+	return tc
+}
+
 func (tc *TestCase) Run() {
 	testCaseFeature := features.New(fmt.Sprintf("%s test", tc.testName)).
 		WithSetup("Create testworkload", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -226,6 +232,13 @@ func (tc *TestCase) Run() {
 				if err = client.Resources().Create(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
+
+				if tc.expectedFailure && tc.podState == v1.PodRunning {
+					t.Errorf("Test Failed: Expected the pod to fail, but it is running")
+				} else if tc.expectedFailure {
+					t.Logf("Test Passed: Pod did not start as expected. Status: %s", tc.podState)
+				}
+
 				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
 					t.Error(err)
 				}
@@ -258,6 +271,7 @@ func (tc *TestCase) Run() {
 					}
 				}
 			}
+
 			if tc.service != nil {
 				if err = client.Resources().Create(ctx, tc.service); err != nil {
 					t.Fatal(err)
