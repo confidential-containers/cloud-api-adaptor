@@ -261,11 +261,6 @@ func (tc *TestCase) Run() {
 							t.Log(podLogString)
 							t.Logf("===================\n")
 						}
-						if tc.expectedFailure && pod.Status.Phase == v1.PodRunning {
-							t.Errorf("Test Failed: Expected the pod to fail, but it is running")
-						} else if tc.expectedFailure {
-							t.Logf("Test Passed: Pod did not start as expected. Status: %s", tc.podState)
-						}
 						t.Error(err)
 					}
 				}
@@ -358,6 +353,12 @@ func (tc *TestCase) Run() {
 					if err != nil {
 						t.Errorf("CompareInstanceType failed: %v", err)
 					}
+				}
+
+				if tc.expectedFailure && tc.podState == v1.PodRunning {
+					t.Errorf("Test Failed: Expected the pod to fail, but it is running")
+				} else if tc.expectedFailure {
+					t.Logf("Test Passed: Pod did not start as expected. Status: %s", tc.podState)
 				}
 
 				if tc.podState == v1.PodRunning {
