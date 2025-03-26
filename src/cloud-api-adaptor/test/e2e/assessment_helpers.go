@@ -48,15 +48,14 @@ func timeExtractor(log string) (string, error) {
 
 func NewTestCase(t *testing.T, e env.Environment, testName string, assert CloudAssert, assessMessage string) *TestCase {
 	testCase := &TestCase{
-		testing:         t,
-		testEnv:         e,
-		testName:        testName,
-		assert:          assert,
-		assessMessage:   assessMessage,
-		podState:        v1.PodRunning,
-		imagePullTimer:  false,
-		deletionWithin:  assert.DefaultTimeout(),
-		expectedFailure: false,
+		testing:        t,
+		testEnv:        e,
+		testName:       testName,
+		assert:         assert,
+		assessMessage:  assessMessage,
+		podState:       v1.PodRunning,
+		imagePullTimer: false,
+		deletionWithin: assert.DefaultTimeout(),
 	}
 
 	return testCase
