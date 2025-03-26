@@ -230,7 +230,13 @@ func (tc *TestCase) Run() {
 
 			if tc.pod != nil {
 				if err = client.Resources().Create(ctx, tc.pod); err != nil {
-					t.Fatal(err)
+					if tc.expectedFailure && tc.podState == v1.PodRunning {
+						t.Errorf("Test Failed: Expected the pod to fail, but it is running")
+					} else if tc.expectedFailure {
+						t.Logf("Test Passed: Pod did not start as expected. Status: %s", tc.podState)
+					} else {
+						t.Fatal(err)
+					}
 				}
 
 				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
@@ -353,12 +359,6 @@ func (tc *TestCase) Run() {
 					if err != nil {
 						t.Errorf("CompareInstanceType failed: %v", err)
 					}
-				}
-
-				if tc.expectedFailure && tc.podState == v1.PodRunning {
-					t.Errorf("Test Failed: Expected the pod to fail, but it is running")
-				} else if tc.expectedFailure {
-					t.Logf("Test Passed: Pod did not start as expected. Status: %s", tc.podState)
 				}
 
 				if tc.podState == v1.PodRunning {
