@@ -261,28 +261,14 @@ func TestLibvirtCreatePodwithoutInitdataAnnotations(t *testing.T) {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
 
-	// testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
-	// resourcePath := "caa/workload_key/test_key.bin"
-	// err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
-	// if err != nil {
-	// 	t.Fatalf("SetSecret failed with: %v", err)
-	// }
-	// err = keyBrokerService.EnableKbsCustomizedResourcePolicy("allow_all.rego")
-	// if err != nil {
-	// 	t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
-	// }
-	// err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("deny_all.rego")
-	// if err != nil {
-	// 	t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
-	// }
-	// kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
-	// if err != nil {
-	// 	t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
-	// }
+	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	if err != nil {
+		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+	}
 	assert := LibvirtAssert{}
 	t.Parallel()
 
-	err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
+	err := keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
 	}
