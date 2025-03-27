@@ -794,13 +794,9 @@ func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 	NewTestCase(t, e, "PodWithCpuMemLimitsAndRequests", assert, "Pod with cpu and memory limits and requests").WithPod(pod).Run()
 }
 
-func DoTestPodwithoutInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, testSecret string) {
+func DoTestPodwithoutInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
 
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-podwithout-initdata", kbsEndpoint, "without-initdata-annotation").GetPodOrFatal(t)
-
-	t.Logf("Pod details: %+v", pod)
-	t.Logf("Details of pod edited : RR")
-	t.Logf("Pod details 3: %+v", pod.ObjectMeta.Annotations)
 
 	expectedErrorString := "unmarshalling initdata: toml: invalid character at start of key"
 	NewTestCase(t, e, "PodwithoutInitdataAnnotations", assert, "PodVM without Initdata Annotation is created").WithPod(pod).WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
