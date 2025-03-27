@@ -89,7 +89,7 @@ default WriteStreamRequest := true
 
 func buildInitdataBody(kbsEndpoint string, initdataannotation string) (string, error) {
 	content, err := os.ReadFile("../trustee/kbs/config/kubernetes/base/https-cert.pem")
-	log.Printf("kbs RR: %v", content)
+
 	if err != nil {
 		return "", err
 	}
@@ -99,7 +99,7 @@ func buildInitdataBody(kbsEndpoint string, initdataannotation string) (string, e
 		body = fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
 	} else {
 		testemptyInitdata := ""
-		body = fmt.Sprintf(testemptyInitdata)
+		body = fmt.Sprintf(testemptyInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
 	}
 	return body, nil
 }
