@@ -257,5 +257,7 @@ func TestLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
 
 // Test case for empty initdata
 func TestLibvirtCreatePodwithoutInitdataAnnotations(t *testing.T) {
-	DoTestPodwithoutInitdataAnnotations(t, testEnv, assert)
+	assert := LibvirtAssert{}
+
+	DoTestPodwithoutInitdataAnnotations(t, testEnv, assert, kbsEndpoint)
 }
