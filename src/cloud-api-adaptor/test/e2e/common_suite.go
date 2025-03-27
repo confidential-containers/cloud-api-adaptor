@@ -798,7 +798,7 @@ func DoTestPodwithoutInitdataAnnotations(t *testing.T, e env.Environment, assert
 
 	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "podwithout-initdata", "192.168.122.0", "without-initdata-annotation").GetPodOrFatal(t)
 
-	// expectedErrorString := "unmarshalling initdata: toml: invalid character at start of key" .WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending)
-	NewTestCase(t, e, "PodwithoutInitdataAnnotations", assert, "PodVM without Initdata Annotation is created").WithPod(pod).Run()
+	expectedErrorString := "unmarshalling initdata: toml: invalid character at start of key"
+	NewTestCase(t, e, "PodwithoutInitdataAnnotations", assert, "PodVM without Initdata Annotation is created").WithPod(pod).WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
 
 }
