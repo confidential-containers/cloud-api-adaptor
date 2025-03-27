@@ -268,7 +268,7 @@ func TestLibvirtCreatePodwithoutInitdataAnnotations(t *testing.T) {
 	assert := LibvirtAssert{}
 	t.Parallel()
 
-	err := keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
+	err = keyBrokerService.EnableKbsCustomizedAttestationPolicy("allow_all.rego")
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedAttestationPolicy failed with: %v", err)
 	}
