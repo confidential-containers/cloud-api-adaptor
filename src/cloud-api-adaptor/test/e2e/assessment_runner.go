@@ -226,7 +226,6 @@ func (tc *TestCase) Run() {
 				if err = client.Resources().Create(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
-
 				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
 					t.Error(err)
 				}
@@ -259,7 +258,6 @@ func (tc *TestCase) Run() {
 					}
 				}
 			}
-
 			if tc.service != nil {
 				if err = client.Resources().Create(ctx, tc.service); err != nil {
 					t.Fatal(err)
