@@ -802,7 +802,7 @@ func DoTestPodwithoutInitdataAnnotations(t *testing.T, e env.Environment, assert
 	t.Logf("Details of pod edited : RR")
 	t.Logf("Pod details 3: %+v", pod.ObjectMeta.Annotations)
 
-	expectedErrorString := "unmarshalling initdata: toml: invalid character at start of key: %: unknown"
+	expectedErrorString := "unmarshalling initdata: toml: invalid character at start of key"
 	NewTestCase(t, e, "PodwithoutInitdataAnnotations", assert, "PodVM without Initdata Annotation is created").WithPod(pod).WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
 
 }
