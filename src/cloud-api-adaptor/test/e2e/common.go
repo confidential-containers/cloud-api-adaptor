@@ -98,7 +98,8 @@ func buildInitdataBody(kbsEndpoint string, initdataannotation string) (string, e
 	if initdataannotation == "with-initdata-annotation" {
 		body = fmt.Sprintf(testInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
 	} else {
-		body = ""
+		testemptyInitdata := ""
+		body = fmt.Sprintf(testemptyInitdata, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
 		log.Printf("body in initdata RR: %v", body)
 	}
 	return body, nil
