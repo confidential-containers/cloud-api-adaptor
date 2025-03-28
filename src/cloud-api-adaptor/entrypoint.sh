@@ -173,6 +173,9 @@ libvirt() {
     test_vars LIBVIRT_URI
 
     [[ "${DISABLECVM}" = "true" ]] && optionals+="-disable-cvm "
+    [[ "${LIBVIRT_CPU}" ]] && optionals+="-cpu ${LIBVIRT_CPU} "
+    [[ "${LIBVIRT_MEMORY}" ]] && optionals+="-memory ${LIBVIRT_MEMORY} "
+ 
     set -x
     exec cloud-api-adaptor libvirt \
         -pods-dir "${PEER_PODS_DIR}" \
@@ -180,7 +183,7 @@ libvirt() {
         -uri "${LIBVIRT_URI}" \
         -data-dir /opt/data-dir \
         -network-name "${LIBVIRT_NET:-default}" \
-        -pool-name "${LIBVIRT_POOL:-default}" \
+        -pool-name "${LIBVIRT_POOL:-default}" 
         ${optionals}
 
 }
