@@ -198,6 +198,6 @@ jobs:
           PODVM_TAG=${tag} make push-image-container
           arch=$(uname -m)
           arch=${arch/x86_64/amd64}
-          echo "image=${{ inputs.registry }}/${{ github.repository }}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
+          echo "image=${{ inputs.registry }}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
         env:
-          REGISTRY: ${{ inputs.registry }}/${{ github.repository }}
+          REGISTRY: ${{ inputs.registry }}
