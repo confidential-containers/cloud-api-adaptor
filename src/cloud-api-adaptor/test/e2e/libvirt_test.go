@@ -258,6 +258,9 @@ func TestLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
 // Test case for empty initdata
 func TestLibvirtCreatePodwithoutInitdataAnnotations(t *testing.T) {
 	assert := LibvirtAssert{}
-
+	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	if err != nil {
+		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+	}
 	DoTestPodwithoutInitdataAnnotations(t, testEnv, assert, kbsEndpoint)
 }
