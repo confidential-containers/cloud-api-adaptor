@@ -27,13 +27,15 @@ const (
 	DefaultListenHost          = "0.0.0.0"
 	DefaultListenPort          = "15150"
 	DefaultListenAddr          = DefaultListenHost + ":" + DefaultListenPort
-	DefaultConfigPath          = "/run/peerpod/daemon.json"
+	DefaultDaemonConfigPath    = "/run/peerpod/daemon.json"
+	DefaultAPFConfigPath       = "/run/peerpod/apf.json"
 	DefaultPodNetworkSpecPath  = "/run/peerpod/podnetwork.json"
 	DefaultKataAgentSocketPath = "/run/kata-containers/agent.sock"
 	DefaultPodNamespace        = "/run/netns/podns"
 	AgentURLPath               = "/agent"
 )
 
+// Unmeasured Configuration via User Data
 type Config struct {
 	PodNetwork   *tunneler.Config `json:"pod-network"`
 	PodNamespace string           `json:"pod-namespace"`
@@ -48,6 +50,11 @@ type Config struct {
 	SecureCommsInbounds  string `json:"sc-inbounds,omitempty"`
 	SecureCommsOutbounds string `json:"sc-outbounds,omitempty"`
 	SecureComms          bool   `json:"sc,omitempty"`
+}
+
+// Measured Configuration via InitData
+type ApfConfig struct {
+	SecureComms bool `json:"sc,omitempty"`
 }
 
 type Daemon interface {
