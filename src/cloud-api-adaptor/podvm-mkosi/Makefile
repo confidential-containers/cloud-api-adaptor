@@ -25,8 +25,6 @@ debug:binaries image-debug
 .PHONY: container
 container: binaries image-container
 
-YQ_CHECKSUM_$(GO_ARCH) ?= $(YQ_CHECKSUM)
-
 define run_mkosi_in_container
 	docker run --rm --privileged \
 		-v "$(shell pwd)":/workspace \
