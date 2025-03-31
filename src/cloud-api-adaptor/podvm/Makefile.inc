@@ -20,9 +20,14 @@ IMAGE_PREFIX := podvm
 
 HOST_ARCH   := $(shell uname -m)
 ARCH        := $(or $(ARCH),$(HOST_ARCH))
+DEB_ARCH    := $(ARCH)
+
 # Normalise x86_64 / amd64 for input ARCH
 ARCH        := $(subst amd64,x86_64,$(ARCH))
-DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
+DEB_ARCH    := $(subst x86_64,amd64,$(DEB_ARCH))
+# Normalize aarch64 / arm64 for input ARCH
+ARCH        := $(subst arm64,aarch64,$(ARCH))
+DEB_ARCH    := $(subst aarch64,arm64,$(DEB_ARCH))
 LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
 
 # Auth json file for registry access. Used with skopeo
@@ -170,11 +175,11 @@ endef
 binaries: $(BINARIES)
 
 $(AGENT_PROTOCOL_FORWARDER): always
-	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) agent-protocol-forwarder
+	cd "$(ROOT_DIR)" && ARCH=$(ARCH) $(MAKE) agent-protocol-forwarder
 	install -D --compare "$(ROOT_DIR)/agent-protocol-forwarder" "$@"
 
 $(PROCESS_USER_DATA): always
-	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) process-user-data
+	cd "$(ROOT_DIR)" && ARCH=$(ARCH) $(MAKE) process-user-data
 	install -D --compare "$(ROOT_DIR)/process-user-data" "$@"
 
 $(KATA_AGENT): $(FORCE_TARGET)
