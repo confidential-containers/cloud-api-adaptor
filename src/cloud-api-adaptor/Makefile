@@ -23,7 +23,6 @@ TEST_E2E_TIMEOUT ?= 60m
 RUN_TESTS ?= ''
 
 RESOURCE_CTRL ?= true
-YQ_CHECKSUM_$(GO_ARCH) ?= $(YQ_CHECKSUM)
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
 	BUILTIN_CLOUD_PROVIDERS ?= aws azure gcp ibmcloud vsphere
