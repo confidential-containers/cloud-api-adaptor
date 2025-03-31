@@ -215,3 +215,9 @@ func getClient(kubeConfig *restclient.Config) (*k8sclient.Clientset, error) {
 	}
 	return clientSet, nil
 }
+
+// isKubernetesEnvironment checks if the environment is Kubernetes
+func IsKubernetesEnvironment() bool {
+	nodeName := os.Getenv("NODE_NAME")
+	return nodeName != ""
+}
