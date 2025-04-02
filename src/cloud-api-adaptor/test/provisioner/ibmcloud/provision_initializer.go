@@ -13,7 +13,7 @@ import (
 	"github.com/IBM-Cloud/bluemix-go/api/container/containerv2"
 	bxsession "github.com/IBM-Cloud/bluemix-go/session"
 	"github.com/IBM/go-sdk-core/v5/core"
-	vpcv1 "github.com/IBM/vpc-beta-go-sdk/vpcbetav1"
+	"github.com/IBM/vpc-go-sdk/vpcv1"
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 )
@@ -58,7 +58,7 @@ type IBMCloudProperties struct {
 	IsSelfManaged bool
 	DisableCVM    bool
 
-	VPC        *vpcv1.VpcbetaV1
+	VPC        *vpcv1.VpcV1
 	ClusterAPI containerv2.Clusters
 }
 
@@ -246,7 +246,7 @@ func initVpcV1() error {
 		return nil
 	}
 
-	vpcService, err := vpcv1.NewVpcbetaV1(&vpcv1.VpcbetaV1Options{
+	vpcService, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{
 		Authenticator: &core.IamAuthenticator{
 			ApiKey: IBMCloudProps.ApiKey,
 			URL:    IBMCloudProps.IamServiceURL,
