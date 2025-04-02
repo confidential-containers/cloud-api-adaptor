@@ -349,9 +349,9 @@ func (tc *TestCase) Run() {
 
 				if tc.podState == v1.PodRunning {
 					if len(tc.testCommands) > 0 {
-						logString, err := AssessPodTestCommands(ctx, client, tc.pod, tc.testCommands)
+						err := AssessPodTestCommands(t, ctx, client, tc.pod, tc.testCommands)
 						if err != nil {
-							t.Errorf("AssessPodTestCommands failed, with output: %s and error: %v", logString, err)
+							t.Errorf("AssessPodTestCommands failed with error: %v", err)
 						}
 					}
 
@@ -401,11 +401,11 @@ func (tc *TestCase) Run() {
 					}
 					if extraPod.podState == v1.PodRunning {
 						if len(extraPod.testCommands) > 0 {
-							logString, err := AssessPodTestCommands(ctx, client, extraPod.pod, extraPod.testCommands)
-							t.Logf("Output when execute test commands:%s", logString)
+							err := AssessPodTestCommands(t, ctx, client, extraPod.pod, extraPod.testCommands)
 							if err != nil {
-								t.Error(err)
+								t.Errorf("AssessPodTestCommands failed with error: %v", err)
 							}
+
 						}
 						tc.assert.HasPodVM(t, extraPod.pod.Name)
 					}
