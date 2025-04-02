@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/IBM/go-sdk-core/v5/core"
-	vpcv1 "github.com/IBM/vpc-beta-go-sdk/vpcbetav1"
+	"github.com/IBM/vpc-go-sdk/vpcv1"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/stretchr/testify/assert"
 )
