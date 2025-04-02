@@ -10,8 +10,8 @@ include $(SELF_DIR)Makefile.inc
 
 IMAGE_SUFFIX := .qcow2
 PODVM_DISTRO ?= ubuntu
-IMAGE_URL := $(or $(IMAGE_URL),$($(PODVM_DISTRO)_$(DEB_ARCH)_IMAGE_URL))
-IMAGE_CHECKSUM := $(or $(IMAGE_CHECKSUM),$($(PODVM_DISTRO)_$(DEB_ARCH)_IMAGE_CHECKSUM))
+IMAGE_URL := $(or $(IMAGE_URL),$($(PODVM_DISTRO)_$(DISTRO_ARCH)_IMAGE_URL))
+IMAGE_CHECKSUM := $(or $(IMAGE_CHECKSUM),$($(PODVM_DISTRO)_$(DISTRO_ARCH)_IMAGE_CHECKSUM))
 
 ifndef IMAGE_URL
 $(error "IMAGE_URL is not defined")
@@ -23,6 +23,7 @@ endif
 AGENT_PROTOCOL_FORWARDER_SRC := ../
 
 QEMU_MACHINE_TYPE_s390x := s390-ccw-virtio
+QEMU_MACHINE_TYPE_aarch64 := virt
 
 UEFI ?= false
 UEFI_FIRMWARE_LOCATION ?=
@@ -40,12 +41,16 @@ setopts:
 ifeq ($(PODVM_DISTRO),ubuntu)
 	@echo defined
 	$(eval OPTS := -var se_boot=${SE_BOOT})
-ifneq ($(HOST_ARCH),$(ARCH))
+ifneq ($(ARCH),x86_64)
 	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
 ifndef QEMU_BINARY
 	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
 endif
-
+# UEFI for aarch64 on ubuntu
+ifeq ($(ARCH),aarch64)
+	$(eval OPTS += -var is_uefi=true -var os_arch="aarch64")
+	$(eval OPTS += -var uefi_firmware="/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
+endif
 endif
 else ifeq ($(PODVM_DISTRO),rhel)
 	@echo defined
@@ -67,7 +72,7 @@ ifdef QEMU_BINARY
 	$(eval OPTS += -var qemu_binary=${QEMU_BINARY} )
 endif
 
-# UEFI is enabled for x86_64 only
+# UEFI for x86_64
 ifeq ($(UEFI),true)
 	$(eval OPTS += -var is_uefi=true -var os_arch="x86_64" )
 ifdef UEFI_FIRMWARE_LOCATION
@@ -91,7 +96,7 @@ $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
 		fi \
 	fi
 	packer init ./qcow2/${PODVM_DISTRO}
-	if [ "${ARCH}" = "x86_64" ]; then \
+	if [ "${ARCH}" = "x86_64" ] || [ "${ARCH}" = "aarch64" ]; then \
 		packer plugins install github.com/hashicorp/qemu v1.1.0; \
 	fi
 	packer build ${PACKER_DEFAULT_OPTS} ${OPTS} qcow2/${PODVM_DISTRO}

@@ -18,13 +18,6 @@ include $(ROOT_DIR)Makefile.defaults
 
 IMAGE_PREFIX := podvm
 
-HOST_ARCH   := $(shell uname -m)
-ARCH        := $(or $(ARCH),$(HOST_ARCH))
-# Normalise x86_64 / amd64 for input ARCH
-ARCH        := $(subst amd64,x86_64,$(ARCH))
-DEB_ARCH    := $(subst x86_64,amd64,$(ARCH))
-LIBC        ?= $(if $(filter $(ARCH),s390x ppc64le),gnu,musl)
-
 # Auth json file for registry access. Used with skopeo
 AUTHFILE ?=
 
@@ -76,7 +69,7 @@ COMMIT := $(shell	commit=$$(git describe --match '' --dirty --always) && \
 ifndef COMMIT
 $(error Failed to derive an image name. Explicitly define IMAGE_NAME)
 endif
-IMAGE_NAME := $(IMAGE_PREFIX)-$(COMMIT)-$(DEB_ARCH)
+IMAGE_NAME := $(IMAGE_PREFIX)-$(COMMIT)-$(DISTRO_ARCH)
 endif
 
 IMAGE_SUFFIX ?=
@@ -170,11 +163,11 @@ endef
 binaries: $(BINARIES)
 
 $(AGENT_PROTOCOL_FORWARDER): always
-	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) agent-protocol-forwarder
+	cd "$(ROOT_DIR)" && ARCH=$(ARCH) $(MAKE) agent-protocol-forwarder
 	install -D --compare "$(ROOT_DIR)/agent-protocol-forwarder" "$@"
 
 $(PROCESS_USER_DATA): always
-	cd "$(ROOT_DIR)" && ARCH=$(DEB_ARCH) $(MAKE) process-user-data
+	cd "$(ROOT_DIR)" && ARCH=$(ARCH) $(MAKE) process-user-data
 	install -D --compare "$(ROOT_DIR)/process-user-data" "$@"
 
 $(KATA_AGENT): $(FORCE_TARGET)
@@ -201,7 +194,7 @@ $(UMOCI_SRC)/umoci: $(UMOCI_SRC)
 	cd "$(UMOCI_SRC)" && CC= $(MAKE)
 
 $(PAUSE_SRC): $(SKOPEO_BIN)
-	$(SKOPEO_BIN) --override-arch $(DEB_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy \
+	$(SKOPEO_BIN) --override-arch $(DISTRO_ARCH) --policy "$(FILES_DIR)/etc/containers/policy.json" copy \
 		$(if $(AUTHFILE),--authfile $(AUTHFILE)) "docker://$(PAUSE_REPO):$(PAUSE_VERSION)" "oci:$(PAUSE_SRC):$(PAUSE_VERSION)"
 
 $(PAUSE): | $(PAUSE_SRC) $(UMOCI_SRC)/umoci

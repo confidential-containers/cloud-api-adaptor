@@ -1,14 +1,5 @@
 include ../Makefile.defaults
 
-ARCH      ?= $(subst x86_64,amd64,$(shell uname -m))
-PROTOC_ARCH ?= x86_64
-ifeq ($(ARCH),aarch64)
-	PROTOC_ARCH := aarch_64
-else ifeq ($(ARCH),s390x)
-	PROTOC_ARCH := s390_64
-else ifeq ($(ARCH),ppc64le)
-	PROTOC_ARCH := ppc64le_64
-endif
 SE_BOOT   ?= false
 IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
 
@@ -17,10 +8,10 @@ PODVM_DISTRO ?= fedora
 ifeq ($(PODVM_TAG),)
 	PODVM_TAG := $(VERSIONS_HASH)
 endif
-PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO)-$(ARCH):$(PODVM_TAG)
-PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(ARCH):$(PODVM_TAG)
-PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT),true),-se,)-$(ARCH):$(PODVM_TAG)
-PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(ARCH)
+PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
+PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
+PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT),true),-se,)-$(DISTRO_ARCH):$(PODVM_TAG)
+PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(DISTRO_ARCH)
 VERIFY_PROVENANCE ?= no
 MKOSI_VERSION ?= v22
 
@@ -33,10 +24,6 @@ debug:binaries image-debug
 
 .PHONY: container
 container: binaries image-container
-
-ifeq ($(ARCH),s390x)
-YQ_CHECKSUM = $(YQ_CHECKSUM_s390x)
-endif
 
 define run_mkosi_in_container
 	docker run --rm --privileged \
@@ -57,11 +44,13 @@ endif
 		--progress=plain \
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg ARCH=$(ARCH) \
+		--build-arg GO_ARCH=$(GO_ARCH) \
+		--build-arg DISTRO_ARCH=$(DISTRO_ARCH) \
 		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
-		--build-arg YQ_VERSION=$(YQ_VERSION) \
-		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM) \
-		--build-arg YQ_ARCH=$(ARCH) \
 		--build-arg PROTOC_ARCH=$(PROTOC_ARCH) \
+		--build-arg YQ_VERSION=$(YQ_VERSION) \
+		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM_$(GO_ARCH)) \
+		--build-arg YQ_ARCH=$(GO_ARCH) \
 		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
 		--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
 		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
@@ -103,7 +92,7 @@ else
 		--builder insecure-builder \
 		--allow security.insecure \
 		.
-	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
 endif
 
 PHONY: image-debug
@@ -127,7 +116,7 @@ else
 		--builder insecure-builder \
 		--allow security.insecure \
 		.
-	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(ARCH).qcow2
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
 endif
 
 PHONY: image-container

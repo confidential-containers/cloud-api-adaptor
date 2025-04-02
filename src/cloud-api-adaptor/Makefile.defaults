@@ -6,11 +6,46 @@ PAUSE_BIN ?= pause
 # these values are hardcoded here, all other versions/references should be
 # stored in versions.yaml
 YQ_VERSION := v4.35.1
-YQ_CHECKSUM := "sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
+YQ_CHECKSUM_amd64 := "sha256:bd695a6513f1196aeda17b174a15e9c351843fb1cef5f9be0af170f2dd744f08"
 YQ_CHECKSUM_s390x := "sha256:4e6324d08630e7df733894a11830412a43703682d65a76f1fc925aac08268a45"
 YQ_CHECKSUM_arm64 := "sha256:1d830254fe5cc2fb046479e6c781032976f5cf88f9d01a6385898c29182f9bed"
 # none,az-cvm-vtpm,tdx,se,cca
 TEE_PLATFORM ?= none
+
+# Normalise ARCH constraints and avoid pre-defined global variables in:
+# https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
+ARCH ?= $(shell uname -m)
+ifneq "$(filter $(ARCH),x86_64 amd64)" ""
+	ARCH := x86_64
+	GO_ARCH := amd64
+	PROTOC_ARCH := x86_64
+	DISTRO_ARCH := amd64
+else ifneq "$(filter $(ARCH),aarch64 arm64)" ""
+	ARCH := aarch64
+	GO_ARCH := arm64
+	PROTOC_ARCH := aarch_64
+	DISTRO_ARCH := arm64
+else ifneq "$(filter $(ARCH),s390x)" ""
+	ARCH := s390x
+	GO_ARCH := s390x
+	PROTOC_ARCH := s390_64
+	DISTRO_ARCH := s390x
+else ifneq "$(filter $(ARCH),ppc64le)" ""
+	ARCH := ppc64le
+	GO_ARCH := ppc64le
+	PROTOC_ARCH := ppc64le_64
+	DISTRO_ARCH := ppc64le
+endif
+
+ifndef GO_ARCH
+$(error GO_ARCH is not set)
+endif
+ifndef PROTOC_ARCH
+$(error PROTOC_ARCH is not set)
+endif
+ifndef DISTRO_ARCH
+$(error DISTRO_ARCH is not set)
+endif
 
 VERSIONS_HASH := $(firstword $(shell sha256sum $(VERSIONS_SRC)))
 
