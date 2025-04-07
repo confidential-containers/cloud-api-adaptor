@@ -24,6 +24,8 @@ on:
 permissions:
   id-token: write
   contents: read
+  packages: write
+  attestations: write
 
 env:
   AZURE_PODVM_IMAGE_DEF_NAME: "${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
@@ -52,7 +54,7 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y qemu-utils
+        sudo apt-get install -y qemu-utils swtpm qemu-system-x86
         sudo snap install yq
 
     - name: Read properties from versions.yaml
@@ -61,7 +63,7 @@ jobs:
 
     - name: Install uplosi
       run: |
-        wget "https://github.com/edgelesssys/uplosi/releases/download/v${UPLOSI_VERSION}/uplosi_${UPLOSI_VERSION}_linux_amd64.tar.gz"
+        wget -q "https://github.com/edgelesssys/uplosi/releases/download/v${UPLOSI_VERSION}/uplosi_${UPLOSI_VERSION}_linux_amd64.tar.gz"
         sha256sum -c <(echo "$UPLOSI_SHA256"  "uplosi_${UPLOSI_VERSION}_linux_amd64.tar.gz")
         tar xzf uplosi_0.3.0_linux_amd64.tar.gz uplosi
         sudo mv uplosi /usr/local/bin
@@ -109,3 +111,44 @@ jobs:
         uplosi upload build/system.raw
         echo "successfully built $IMAGE_ID"
         echo "image-id=${IMAGE_ID}" >> "$GITHUB_OUTPUT"
+
+    - uses: oras-project/setup-oras@v1
+      with:
+        version: 1.2.0
+
+    - name: Scrape PodVM measurements
+      run: |
+        wget -q http://security.debian.org/debian-security/pool/updates/main/e/edk2/ovmf_2022.11-6+deb12u1_all.deb
+        mkdir -p ovmf-pkg
+        dpkg-deb -x ovmf_2022.11-6+deb12u1_all.deb ovmf-pkg/
+        cp ovmf-pkg/usr/share/OVMF/OVMF_CODE.fd .
+        ../hack/podvm-measure.sh swtpm &
+        sudo ../hack/podvm-measure.sh -i build/system.raw launch &
+        ../hack/podvm-measure.sh wait
+        ../hack/podvm-measure.sh scrape > measurements.json
+        ../hack/podvm-measure.sh stop
+        # verify json
+        jq -e . measurements.json
+
+    - uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish measurements
+      id: publish-measurements
+      env:
+        OCI_NAME: ghcr.io/${{ github.repository }}/measurements/azure/podvm
+        OCI_TAG: ${{ inputs.image-version }}
+      run: |
+        oras push "${OCI_NAME}:${OCI_TAG}" measurements.json
+        OCI_DIGEST=$(oras resolve "${OCI_NAME}:${OCI_TAG}")
+        echo "oci-name=${OCI_NAME}" >> "$GITHUB_OUTPUT"
+        echo "oci-digest=${OCI_DIGEST}" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/attest-build-provenance@v1
+      with:
+        subject-name: ${{ steps.publish-measurements.outputs.oci-name }}
+        subject-digest: ${{ steps.publish-measurements.outputs.oci-digest }}
+        push-to-registry: true
