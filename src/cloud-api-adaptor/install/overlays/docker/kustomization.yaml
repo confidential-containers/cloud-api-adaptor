@@ -18,6 +18,7 @@ configMapGenerator:
     literals:
       - CLOUD_PROVIDER="docker"
       - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
+    #- DISABLECVM="true" # set as false to enable confidential VM
     #- DOCKER_HOST="unix:///var/run/docker.sock" # Uncomment and set if you want to use a specific docker host
     #- DOCKER_API_VERSION="1.44" # Uncomment and set if you want to use a specific docker api version
     #- DOCKER_TLS_VERIFY="false" # Uncomment and set if you want to use tls
