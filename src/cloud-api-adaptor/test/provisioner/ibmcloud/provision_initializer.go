@@ -31,6 +31,7 @@ type IBMCloudProperties struct {
 	SecurityGroupID   string
 	IamServiceURL     string
 	IksServiceURL     string
+	InitData          string
 	InstanceProfile   string
 	KubeVersion       string
 	PodvmImageID      string
@@ -76,6 +77,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		CosServiceURL:     properties["COS_SERVICE_URL"],
 		IamServiceURL:     properties["IAM_SERVICE_URL"],
 		IksServiceURL:     properties["IKS_SERVICE_URL"],
+		InitData:          properties["INITDATA"],
 		InstanceProfile:   properties["INSTANCE_PROFILE_NAME"],
 		KubeVersion:       properties["KUBE_VERSION"],
 		PodvmImageID:      properties["PODVM_IMAGE_ID"],
