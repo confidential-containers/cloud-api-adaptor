@@ -977,6 +977,7 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"TUNNEL_TYPE":                          IBMCloudProps.TunnelType,
 		"VXLAN_PORT":                           IBMCloudProps.VxlanPort,
 		"DISABLECVM":                           strconv.FormatBool(IBMCloudProps.DisableCVM),
+		"INITDATA":                             IBMCloudProps.InitData,
 	}
 }
 

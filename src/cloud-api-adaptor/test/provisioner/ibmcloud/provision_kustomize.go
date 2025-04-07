@@ -61,6 +61,8 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "DISABLECVM":
 		return true
+	case "INITDATA":
+		return true
 	default:
 		return false
 	}
