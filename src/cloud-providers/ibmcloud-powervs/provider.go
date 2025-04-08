@@ -153,7 +153,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		return nil, err
 	}
 
-	ips, err := p.getVMIPs(ctx, ins)
+	ips, err := p.getVMIPs(ctx, instanceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get IPs for the instance : %v", err)
 	}
@@ -189,9 +189,9 @@ func (p *ibmcloudPowerVSProvider) ConfigVerifier() error {
 	return nil
 }
 
-func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instance *models.PVMInstance) ([]netip.Addr, error) {
+func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instanceID string) ([]netip.Addr, error) {
 	var ips []netip.Addr
-	ins, err := p.powervsService.instanceClient(ctx).Get(*instance.PvmInstanceID)
+	ins, err := p.powervsService.instanceClient(ctx).Get(instanceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the instance: %v", err)
 	}
@@ -223,7 +223,7 @@ func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instance *models
 	// If IP is not assigned to the instance, fetch it from DHCP server
 	logger.Printf("Trying to fetch IP from DHCP server..")
 	err = retry.Do(func() error {
-		ip, err := p.getFromDHCPServer(ctx, ins)
+		ip, err := p.getIPFromDHCPServer(ctx, ins)
 		if err != nil {
 			logger.Print(err)
 			return err
@@ -254,7 +254,7 @@ func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instance *models
 	return ips, nil
 }
 
-func (p *ibmcloudPowerVSProvider) getFromDHCPServer(ctx context.Context, instance *models.PVMInstance) (*string, error) {
+func (p *ibmcloudPowerVSProvider) getIPFromDHCPServer(ctx context.Context, instance *models.PVMInstance) (*string, error) {
 	networkID := p.serviceConfig.NetworkID
 
 	var pvsNetwork *models.PVMInstanceNetwork
