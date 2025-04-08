@@ -46,9 +46,6 @@ wait_for_process() {
 #
 create () {
 	local sdn="flannel"
-	# Networking services don't work fine with the flannel and crio combination
-	# See https://github.com/karmab/kcli/issues/744
-	[ "$CONTAINER_RUNTIME" = "crio" ] && sdn="cilium"
 
 	parameters="-P domain=kata.com \
 		-P pool=$LIBVIRT_POOL \
