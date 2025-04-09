@@ -1,7 +1,7 @@
 #!/bin/bash
 # download-image.sh
 # takes an image reference and a directory and
-# extracts the qcow image into that directory
+# extracts the container image containing the packer generated qcow pod vm image into that directory
 function usage() {
     echo "Usage: $0 <image> <directory> [-o <name>] [-p <platform>] [--pull always(default)|missing|never] [--clean-up]"
 }
