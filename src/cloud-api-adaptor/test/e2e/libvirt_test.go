@@ -254,3 +254,12 @@ func TestLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "200Mi")
 }
+
+func TestLibvirtCreatePodWithoutInitdataAnnotations(t *testing.T) {
+	assert := LibvirtAssert{}
+	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	if err != nil {
+		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+	}
+	DoTestPodWithoutInitdataAnnotations(t, testEnv, assert, kbsEndpoint)
+}
