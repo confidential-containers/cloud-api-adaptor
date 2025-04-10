@@ -595,7 +595,7 @@ func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbs
 // as test cases might be run in parallel
 func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
 	t.Log("Do test https kbs key release")
-	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-key-release", kbsEndpoint).GetPodOrFatal(t)
+	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-key-release", kbsEndpoint, testInitdata).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + resourcePath},
@@ -619,7 +619,7 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kb
 // as test cases might be run in parallel
 func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
 	t.Log("Do test kbs key release failure case")
-	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-failure", kbsEndpoint).GetPodOrFatal(t)
+	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-failure", kbsEndpoint, testInitdata).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + resourcePath},
@@ -792,4 +792,11 @@ func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 	// Custom resource added as req/limit - "kata.peerpods.io/vm
 
 	NewTestCase(t, e, "PodWithCpuMemLimitsAndRequests", assert, "Pod with cpu and memory limits and requests").WithPod(pod).Run()
+}
+
+// Test to check scenarios where initdata body is empty
+func DoTestPodWithoutInitdataAnnotations(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string) {
+	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "podwithout-initdata", kbsEndpoint, testEmptyInitdata).GetPodOrFatal(t)
+	expectedErrorString := "unmarshalling initdata: toml: invalid character at start of key"
+	NewTestCase(t, e, "PodwithoutInitdataAnnotations", assert, "PodVM without Initdata Annotation is created").WithPod(pod).WithExpectedPodEventError(expectedErrorString).WithCustomPodState(v1.PodPending).Run()
 }

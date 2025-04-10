@@ -14,7 +14,7 @@ func DoTestRemoteAttestation(t *testing.T, e env.Environment, assert CloudAssert
 	image := "quay.io/curl/curl:latest"
 	// fail on non 200 code, silent, but output on failure
 	cmd := []string{"curl", "-f", "-s", "-S", "-o", "/dev/null", "http://127.0.0.1:8006/aa/token?token_type=kbs"}
-	initdata, err := buildInitdataBody(kbsEndpoint)
+	initdata, err := buildInitdataBody(kbsEndpoint, testInitdata)
 	if err != nil {
 		log.Fatalf("failed to build initdata %s", err)
 	}
