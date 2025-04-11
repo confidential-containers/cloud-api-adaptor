@@ -29,6 +29,8 @@ const (
 	GetDomainIPsRetries = 20
 	// The sleep time between retries to get the domain IP addresses
 	GetDomainIPsSleep = time.Second * 3
+	// Convert Memory size from MegaBytes to GigaBytes
+	LIBVIRT_CONV_MEM = 1024
 )
 
 type domainConfig struct {
@@ -543,8 +545,6 @@ func getDomainIPs(dom *libvirt.Domain) ([]netip.Addr, error) {
 
 func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig) (result *createDomainOutput, err error) {
 
-	v.cpu = uint(2)
-	v.mem = uint(8)
 	v.rootDiskSize = uint64(10)
 
 	exists, err := checkDomainExistsByName(v.name, libvirtClient)
