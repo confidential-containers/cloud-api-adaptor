@@ -7,15 +7,31 @@ elif [ "${ARCH}" != "s390x" ]; then
     exit 0
 fi
 echo "Building SE podvm image for $ARCH"
-echo "Finding host key files"
-host_keys=""
-rm /tmp/files/.dummy.crt || true
-for i in /tmp/files/*.crt; do
-    [[ -f "$i" ]] || break
-    echo "found host key file: \"${i}\""
-    host_keys+="-k ${i} "
+
+SE_VERIFY=${SE_VERIFY:-true}
+
+if [ "${SE_VERIFY}" = "true" ]; then
+	required_files=("DigiCertCA.crt" "ibm-z-host-key-gen2.crl" "ibm-z-host-key-signing-gen2.crt")
+	for file in "${required_files[@]}"; do
+        if [[ -f "/tmp/files/$file" ]]; then
+            echo "Found required file: $file"
+        else
+            echo "Missing required file: $file"
+            exit 1
+   		fi
+	done
+	signcert="/tmp/files/ibm-z-host-key-signing-gen2.crt"
+    cacert="/tmp/files/DigiCertCA.crt"
+    crl="/tmp/files/ibm-z-host-key-gen2.crl"
+fi
+
+for i in /tmp/files/*HKD.crt; do
+    if [[ -f "$i" ]]; then
+        echo "Found HKD file: \"$i\""
+        host_keys+="-k ${i} "
+    fi
 done
-[[ -z $host_keys ]] && echo "Didn't find host key files, please download host key files to 'files' folder " && exit 1
+rm /tmp/files/.dummy.crt || true
 
 if [ "${PODVM_DISTRO}" = "rhel" ]; then
     export LANG=C.UTF-8
@@ -190,12 +206,19 @@ echo "Generating an IBM Secure Execution image"
 echo "Creating SE boot image"
 export SE_PARMLINE="root=/dev/mapper/$LUKS_NAME rd.auto=1 rd.retry=30 console=ttysclp0 quiet panic=0 rd.shell=0 blacklist=virtio_rng swiotlb=262144"
 sudo -E bash -c 'echo "${SE_PARMLINE}" > ${dst_mnt}/boot/parmfile'
+
+if [ "${SE_VERIFY}" = "true" ]; then
+    EXTRA_ARGS=" --cert=${cacert} --cert=${signcert} --crl=${crl} "
+else
+    EXTRA_ARGS=" --no-verify "
+fi
+
 sudo -E /usr/bin/genprotimg \
     -i ${dst_mnt}/boot/${KERNEL_FILE} \
     -r ${dst_mnt}/boot/${INITRD_FILE} \
     -p ${dst_mnt}/boot/parmfile \
-    --no-verify \
     ${host_keys} \
+    ${EXTRA_ARGS} \
     -o ${dst_mnt}/boot-se/se.img
 
 # exit and throw an error if no se image was created
