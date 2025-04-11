@@ -113,6 +113,11 @@ variable "se_boot" {
   default = env("SE_BOOT")
 }
 
+variable "se_verify" {
+  type    = string
+  default = env("SE_VERIFY")
+}
+
 variable "output_directory" {
   type    = string
   default = "output"
