@@ -57,6 +57,25 @@ Notice that building a debug image will overwrite any previous existing debug or
 For using SSH, create a file `resources/authorized_keys` with your SSH public key. Ensure the permissions
 are set to `0400` for the `authorized_keys` file. SSH access is only possible for the `root` user.
 
+## Testing the image
+
+To verify the podvm image is bootable and responsive before deploying to
+cloud one can use a simple [smoketest](../podvm/hack/smoke_test.sh). It
+uses libvirt to run the image and kata-agent-ctl to establish connection
+to the podvm.
+
+> [!WARNING]
+> This script is intended for CI testing, expects tools in-place and contains
+> only a rough cleanup. Use it on a disposable machine only.
+>
+> The smoke-test won't deploy tls certificates so the image must be built with
+> `-disable-tls`:
+>
+>     mkdir -p ./resources/binaries-tree/etc/default
+>     echo "TLS_OPTIONS=-disable-tls" > ./resources/binaries-tree/etc/default/agent-protocol-forwarder
+>
+> Do not forget to re-enable it before sending the image to production.
+
 ## Custom image configuration
 
 You can easily place additional files in `resources/binaries-tree` after it has been populated by the
