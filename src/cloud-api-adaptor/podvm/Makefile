@@ -14,10 +14,10 @@ IMAGE_URL := $(or $(IMAGE_URL),$($(PODVM_DISTRO)_$(DISTRO_ARCH)_IMAGE_URL))
 IMAGE_CHECKSUM := $(or $(IMAGE_CHECKSUM),$($(PODVM_DISTRO)_$(DISTRO_ARCH)_IMAGE_CHECKSUM))
 
 ifndef IMAGE_URL
-$(error "IMAGE_URL is not defined")
+	$(error "IMAGE_URL is not defined")
 endif
 ifndef IMAGE_CHECKSUM
-$(error "IMAGE_CHECKSUM is not defined")
+	$(error "IMAGE_CHECKSUM is not defined")
 endif
 
 AGENT_PROTOCOL_FORWARDER_SRC := ../
@@ -58,15 +58,15 @@ else ifeq ($(PODVM_DISTRO),alinux)
 else ifeq ($(PODVM_DISTRO),rhel)
 	@echo defined
 	$(eval OPTS := -var disk_size=11144)
-ifeq ($(ARCH),s390x)
-	$(eval OPTS += -var se_boot=${SE_BOOT})
-	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
-	$(eval OPTS += -var cpu_type=max)
-	$(eval OPTS += -var os_arch=s390x)
-ifndef QEMU_BINARY
-	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
-endif
-endif
+	ifeq ($(ARCH),s390x)
+		$(eval OPTS += -var se_boot=${SE_BOOT})
+		$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
+		$(eval OPTS += -var cpu_type=max)
+		$(eval OPTS += -var os_arch=s390x)
+		ifndef QEMU_BINARY
+			$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
+		endif
+	endif
 else
 	$(error PODVM_DISTRO is invalid or not defined)
 endif
@@ -78,9 +78,9 @@ endif
 # UEFI for x86_64
 ifeq ($(UEFI),true)
 	$(eval OPTS += -var is_uefi=true -var os_arch="x86_64" )
-ifdef UEFI_FIRMWARE_LOCATION
-	$(eval OPTS += -var uefi_firmware=${UEFI_FIRMWARE_LOCATION} )
-endif
+	ifdef UEFI_FIRMWARE_LOCATION
+		$(eval OPTS += -var uefi_firmware=${UEFI_FIRMWARE_LOCATION} )
+	endif
 endif
 
 $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
