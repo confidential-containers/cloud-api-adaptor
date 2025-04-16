@@ -20,6 +20,11 @@ cloudimg:
       s390x:
         url: https://access.redhat.com/downloads/content/72/ver=/rhel---9/9.4/s390x/product-software
         checksum: "sha256:e1f1868484db0b7b2fedc708b8a589a4ebbe341fae142d776cba1475d4a93642"
+  alinux:
+    3:
+      amd64:
+        url: "https://alinux3.oss-cn-hangzhou.aliyuncs.com/aliyun_3_x64_20G_nocloud_alibase_20250117.qcow2"
+        checksum: "sha256:73c7631c6a48b182e80c7c808d7e3adab3f07ad517fcf5d5eff8f3815306e37e"
 
 tools:
   bats: 1.10.0

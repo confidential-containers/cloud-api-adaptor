@@ -52,6 +52,9 @@ ifeq ($(ARCH),aarch64)
 	$(eval OPTS += -var uefi_firmware="/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
 endif
 endif
+else ifeq ($(PODVM_DISTRO),alinux)
+	@echo defined
+	$(eval OPTS := -var disk_size=22323)
 else ifeq ($(PODVM_DISTRO),rhel)
 	@echo defined
 	$(eval OPTS := -var disk_size=11144)

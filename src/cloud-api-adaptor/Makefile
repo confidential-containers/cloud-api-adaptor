@@ -25,9 +25,9 @@ RUN_TESTS ?= ''
 RESOURCE_CTRL ?= true
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
-	BUILTIN_CLOUD_PROVIDERS ?= aws azure gcp ibmcloud ibmcloud_powervs vsphere
+	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure gcp ibmcloud ibmcloud_powervs vsphere
 else
-	BUILTIN_CLOUD_PROVIDERS ?= aws azure gcp ibmcloud ibmcloud_powervs vsphere libvirt docker
+	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure gcp ibmcloud ibmcloud_powervs vsphere libvirt docker
 endif
 
 all: build
@@ -167,7 +167,7 @@ PUSH ?= false
 # If not pushing `--load` into the local docker cache
 DOCKER_OPTS := $(if $(filter $(PUSH),true),--push,--load) $(EXTRA_DOCKER_OPTS)
 
-DOCKERFILE_SUFFIX := $(if $(filter $(PODVM_DISTRO),ubuntu),,.$(PODVM_DISTRO))
+DOCKERFILE_SUFFIX := $(if $(filter $(PODVM_DISTRO),ubuntu alinux),,.$(PODVM_DISTRO))
 BUILDER_DOCKERFILE := Dockerfile.podvm_builder$(DOCKERFILE_SUFFIX)
 BINARIES_DOCKERFILE := Dockerfile.podvm_binaries$(DOCKERFILE_SUFFIX)
 PODVM_DOCKERFILE := Dockerfile.podvm$(DOCKERFILE_SUFFIX)
