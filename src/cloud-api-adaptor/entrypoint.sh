@@ -97,6 +97,28 @@ azure() {
         ${optionals}
 }
 
+alibabacloud() {
+    one_of ALIBABACLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ROLE_ARN
+
+    [[ "${REGION}" ]] && optionals+="-region ${REGION} "
+    [[ "${IMAGEID}" ]] && optionals+="-imageid ${IMAGEID} "
+    [[ "${INSTANCE_TYPE}" ]] && optionals+=" -instance-type ${INSTANCE_TYPE} "
+    [[ "${VSWITCH_ID}" ]] && optionals+=" -vswitch-id ${VSWITCH_ID} "
+    [[ "${SECURITY_GROUP_IDS}" ]] && optionals+=" -security-group-ids ${SECURITY_GROUP_IDS} "
+    [[ "${KEYNAME}" ]] && optionals+=" -keyname ${KEYNAME} "
+    [[ "${TAGS}" ]] && optionals+=" -tags ${TAGS} "
+    [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+=" -use-public-ip "
+    [[ "${SYSTEM_DISK_SIZE}" ]] && optionals+=" -system-disk-size ${SYSTEM_DISK_SIZE} "
+    [[ "${DISABLECVM}" == "true" ]] && optionals+=" -disable-cvm "
+    [[ "${EXTERNAL_NETWORK_VIA_PODVM}" ]] && optionals+=" -ext-network-via-podvm"
+
+    set -x
+    exec cloud-api-adaptor alibabacloud \
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
+        ${optionals}
+}
+
 gcp() {
     test_vars GCP_CREDENTIALS GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
 
@@ -219,9 +241,9 @@ docker() {
 help_msg() {
     cat <<EOF
 Usage:
-	CLOUD_PROVIDER=aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker $0
+	CLOUD_PROVIDER=alibabacloud|aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker $0
 or
-	$0 aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker
+	$0 alibabacloud|aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker
 
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
@@ -232,6 +254,8 @@ if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
     aws
 elif [[ "$CLOUD_PROVIDER" == "azure" ]]; then
     azure
+elif [[ "$CLOUD_PROVIDER" == "alibabacloud" ]]; then
+    alibabacloud
 elif [[ "$CLOUD_PROVIDER" == "gcp" ]]; then
     gcp
 elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
+	dmidecode "github.com/fenglyu/go-dmidecode"
 	cpuid "github.com/klauspost/cpuid/v2"
 )
 
@@ -34,4 +35,15 @@ func hasUserDataFile() bool {
 		return false
 	}
 	return true
+}
+
+func isAlibabaCloudVM() bool {
+	t, err := dmidecode.NewDMITable()
+	if err != nil {
+		return false
+	}
+
+	provider := t.Query(dmidecode.KeywordSystemManufacturer)
+
+	return provider == "Alibaba Cloud"
 }
