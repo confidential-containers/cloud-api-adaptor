@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-api-adaptor
+  namespace: confidential-containers-system
+  annotations:
+    pod-identity.alibabacloud.com/role-name: caa-alibaba
+
+---
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: cloud-api-adaptor
+  name: cloud-api-adaptor-daemonset
+  namespace: confidential-containers-system
+spec:
+  selector:
+    matchLabels:
+      app: cloud-api-adaptor
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: cloud-api-adaptor
+    spec:
+      containers:
+      - name: cloud-api-adaptor-con
+        volumeMounts:
+        - mountPath: /var/run/secrets/ack.alibabacloud.com/rrsa-tokens
+          name: rrsa-oidc-token
+          readOnly: true
+      volumes:
+      - name: rrsa-oidc-token
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: sts.aliyuncs.com
+              expirationSeconds: 3600
+              path: token
