@@ -14,6 +14,10 @@ Refer to the [CI workflow](../../../.github/workflows/podvm_mkosi.yaml) to see w
 make # this will rebuild the builder, the binaries and the OS image
 ```
 
+> [!WARNING]
+> The `make` (and `make binaries`) targets will remove all customization made
+> in the `./resources/binaries-tree` dirs
+
 ```sh
 make image # this will only rebuild the OS image
 ```
@@ -56,8 +60,8 @@ are set to `0400` for the `authorized_keys` file. SSH access is only possible fo
 ## Custom image configuration
 
 You can easily place additional files in `resources/binaries-tree` after it has been populated by the
-binaries build step. Notice that systemd units need to be enabled in the presets and links in the tree
-won't be copied into the image.
+`make binaries` step. Notice that systemd units need to be enabled in the presets and links in the tree
+won't be copied into the image. You can use `./mkosi.postinst` script to create symlinks.
 
 If you want to add additional packages to the image, you can define `mkosi.presets/system/mkosi.conf.d/fedora-extra.conf`:
 
