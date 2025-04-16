@@ -29,6 +29,9 @@ const (
 	// Ref: https://cloud.google.com/compute/docs/storing-retrieving-metadata
 	GcpImdsUrl         = "http://metadata.google.internal/computeMetadata/v1/instance"
 	GcpUserDataImdsUrl = "http://metadata.google.internal/computeMetadata/v1/instance/attributes/user-data"
+	// Ref: https://www.alibabacloud.com/help/en/ecs/user-guide/customize-the-initialization-configuration-for-an-instance
+	AlibabaCloudImdsUrl         = "http://100.100.100.200/latest/dynamic/instance-identity/document"
+	AlibabaCloudUserDataImdsUrl = "http://100.100.100.200/latest/user-data"
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
@@ -101,6 +104,15 @@ func (g GCPUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 }
 
 type FileUserDataProvider struct{ DefaultRetry }
+type AlibabaCloudDataProvider struct{ DefaultRetry }
+
+func (a AlibabaCloudDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
+	url := AlibabaCloudUserDataImdsUrl
+	logger.Printf("provider: AlibabaCloud, userDataUrl: %s\n", url)
+	return imdsGet(ctx, url, false, nil)
+}
+
+type DockerUserDataProvider struct{ DefaultRetry }
 
 func (a FileUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 	path := UserDataPath
@@ -130,6 +142,10 @@ func newProvider(ctx context.Context) (UserDataProvider, error) {
 
 	if isGCPVM(ctx) {
 		return GCPUserDataProvider{}, nil
+	}
+
+	if isAlibabaCloudVM() {
+		return AlibabaCloudDataProvider{}, nil
 	}
 
 	return nil, fmt.Errorf("unsupported user data provider")
