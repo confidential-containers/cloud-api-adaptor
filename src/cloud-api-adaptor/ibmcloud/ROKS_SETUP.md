@@ -204,7 +204,36 @@ sed -i ".bak" -e 's/DISABLECVM="true"/DISABLECVM="false"/' -e 's/bx2-2x8/bx3dc-2
 ```
 
 > [!WARNING]
-> Confidential (CVM) mode is still a work in progress and should only be enabled for development purposes at this time.
+> If you want to experiment with attestation, you will also need access to a [Trustee](https://github.com/confidential-containers/trustee) service that is configured to verify TDX evidence. You also need to make sure that your configured peer pod VM image includes the TDX attestation agent and kernel modules.
+
+> [!TIP]
+> If you have a simple Trustee with an http endpoint for testing, you can configure it in your `peerpods-cluster.properties` file by setting the `KBS_SERVICE_ENDPOINT` environment variable to the URL of your Trustee and then running the following commands:
+> ```
+> export INITDATA=$(cat <<EOF | base64
+> algorithm = "sha256"
+> version = "0.1.0"
+>
+> [data]
+> "aa.toml" = '''
+> [token_configs]
+> [token_configs.coco_as]
+> url = "$KBS_SERVICE_ENDPOINT"
+>
+> [token_configs.kbs]
+> url = "$KBS_SERVICE_ENDPOINT"
+> '''
+>
+> "cdh.toml"  = '''
+> socket = 'unix:///run/confidential-containers/cdh.sock'
+> credentials = []
+>
+> [kbc]
+> name = "cc_kbc"
+> url = "$KBS_SERVICE_ENDPOINT"
+> '''
+> EOF
+> )
+> echo "INITDATA=\"$INITDATA\"" >> ~/peerpods-cluster.properties
 
 Finally, run the `caa-provisioner-cli` command to install the operator and cloud-api-adaptor:
 
@@ -286,6 +315,19 @@ If everything is working, you will see the following output:
 ```
 Hello version: v1, instance: helloworld
 ```
+
+> [!NOTE]
+> If you have a Trustee configured, you can also test that attestation is working by running curl inside the helloworld pod to retrieve a key from the confidential data hub (CDH).
+>
+> For example, if your Trustee is configured with the example keys described in [this blog post](https://confidentialcontainers.org/blog/2025/02/19/deploy-trustee-in-kubernetes), you can retrieve the value of key1 using the following command:
+> ```bash
+> kubectl exec -it helloworld -- bash
+> curl http://127.0.0.1:8006/cdh/resource/default/kbsres1/key1
+> ```
+> If it is working, this will output the key's configured value:
+> ```
+> res1val1
+> ```
 
 ## Uninstall and clean up
 
