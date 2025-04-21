@@ -263,9 +263,12 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		return nil, err
 	}
 
-	imageID, err := p.selectImage(ctx, spec, instanceProfile)
-	if err != nil {
-		return nil, err
+	imageID := spec.Image
+	if imageID == "" {
+		imageID, err = p.selectImage(ctx, spec, instanceProfile)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	prototype := p.getInstancePrototype(instanceName, userData, instanceProfile, imageID)
