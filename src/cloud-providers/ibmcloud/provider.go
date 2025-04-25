@@ -264,7 +264,9 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	}
 
 	imageID := spec.Image
-	if imageID == "" {
+	if imageID != "" {
+		logger.Printf("Choosing %s from annotation as the IBM Cloud Image for the PodVM image", imageID)
+	} else {
 		imageID, err = p.selectImage(ctx, spec, instanceProfile)
 		if err != nil {
 			return nil, err
