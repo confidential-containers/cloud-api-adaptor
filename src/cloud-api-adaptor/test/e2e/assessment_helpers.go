@@ -189,6 +189,19 @@ func GetPodLog(ctx context.Context, client klient.Client, pod *v1.Pod) (string, 
 	return strings.TrimSpace(buf.String()), nil
 }
 
+func CompareCaaPodLogString(ctx context.Context, t *testing.T, client klient.Client, customPod *v1.Pod, expectedCaaPodLogString string) error {
+	nodeName, err := GetNodeNameFromPod(ctx, client, customPod)
+	if err != nil {
+		return fmt.Errorf("CompareCaaPodLogString: GetNodeNameFromPod failed with %v", err)
+	}
+
+	err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedCaaPodLogString)
+	if err != nil {
+		return fmt.Errorf("CompareCaaPodLogString: failed: %v", err)
+	}
+	return nil
+}
+
 func ComparePodLogString(ctx context.Context, client klient.Client, customPod *v1.Pod, expectedPodLogString string) (string, error) {
 	//adding sleep time to initialize container and ready for logging
 	time.Sleep(5 * time.Second)
