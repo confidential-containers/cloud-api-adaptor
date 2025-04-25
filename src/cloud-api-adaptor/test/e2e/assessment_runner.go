@@ -60,6 +60,7 @@ type TestCase struct {
 	job                         *batchv1.Job
 	service                     *v1.Service
 	testCommands                []TestCommand
+	expectedCaaPodLogString     string
 	expectedPodLogString        string
 	expectedPodEventErrorString string
 	podState                    v1.PodPhase
@@ -140,6 +141,11 @@ func (tc *TestCase) WithSecureCommsIsActive() *TestCase {
 func (pod *ExtraPod) WithTestCommands(TestCommands []TestCommand) *ExtraPod {
 	pod.testCommands = TestCommands
 	return pod
+}
+
+func (tc *TestCase) WithExpectedCaaPodLogString(expectedCaaPodLogString string) *TestCase {
+	tc.expectedCaaPodLogString = expectedCaaPodLogString
+	return tc
 }
 
 func (tc *TestCase) WithExpectedPodLogString(expectedPodLogString string) *TestCase {
@@ -324,6 +330,13 @@ func (tc *TestCase) Run() {
 					}
 				}
 
+				if tc.expectedCaaPodLogString != "" {
+					err := CompareCaaPodLogString(ctx, t, client, tc.pod, tc.expectedCaaPodLogString)
+					if err != nil {
+						t.Errorf("Looking for %s, in caa pod logs, failed with: %v", tc.expectedCaaPodLogString, err)
+					}
+				}
+
 				if tc.expectedPodEventErrorString != "" {
 					err := ComparePodEventWarningDescriptions(ctx, t, client, tc.pod, tc.expectedPodEventErrorString)
 					if err != nil {
@@ -399,6 +412,7 @@ func (tc *TestCase) Run() {
 						}
 						t.Logf("Log output of peer pod:%s", LogString)
 					}
+
 					if extraPod.podState == v1.PodRunning {
 						if len(extraPod.testCommands) > 0 {
 							err := AssessPodTestCommands(t, ctx, client, extraPod.pod, extraPod.testCommands)
