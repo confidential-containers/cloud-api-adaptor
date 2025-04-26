@@ -39,6 +39,9 @@ debug_common() {
             echo "::group::Describe $pod (namespace/$ns)"
             kubectl describe "$pod" -n "$ns"
             echo "::endgroup::"
+            echo "::group::Annotations $pod (namespace/$ns)"
+            kubectl get "$pod" -n "$ns" -o jsonpath='{.metadata.annotations}'
+            echo "::endgroup::"
         done
     done
 

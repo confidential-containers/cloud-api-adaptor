@@ -5,7 +5,6 @@ package cloud
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,18 +31,11 @@ import (
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	putil "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
-	toml "github.com/pelletier/go-toml/v2"
 )
 
 const (
 	Version = "0.0.0"
 )
-
-type InitData struct {
-	Algorithm string            `toml:"algorithm"`
-	Version   string            `toml:"version"`
-	Data      map[string]string `toml:"data,omitempty"`
-}
 
 type ServerConfig struct {
 	TLSConfig               *tlsutil.TLSConfig
@@ -330,28 +322,21 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		}
 	}
 
-	initdataStr := util.GetInitdataFromAnnotation(req.Annotations)
-	logger.Printf("initdata in Pod annotation: %s", initdataStr)
-
-	if initdataStr == "" {
-		logger.Printf("initdata in pod annotation is empty, use global initdata: %s", s.serverConfig.Initdata)
-		initdataStr = s.serverConfig.Initdata
+	initdataEnc := ""
+	initdataEnc, err = util.GetInitdataFromAnnotation(req.Annotations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set initdata from annotation: %w", err)
 	}
 
-	if initdataStr != "" {
-		decodedBytes, err := base64.StdEncoding.DecodeString(initdataStr)
-		if err != nil {
-			return nil, fmt.Errorf("error base64 decode initdata: %w", err)
-		}
-		initdata := InitData{}
-		err = toml.Unmarshal(decodedBytes, &initdata)
-		if err != nil {
-			return nil, fmt.Errorf("error unmarshalling initdata: %w", err)
-		}
+	// initdata in pod annotation is empty. use global initdata, if set
+	if initdataEnc == "" && s.serverConfig.Initdata != "" {
+		initdataEnc = s.serverConfig.Initdata
+	}
 
+	if initdataEnc != "" {
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
 			Path:    InitDataPath,
-			Content: initdataStr,
+			Content: initdataEnc,
 		})
 	}
 

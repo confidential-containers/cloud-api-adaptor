@@ -4,7 +4,7 @@ test_images:
     tag: "latest"
   unprivileged-nginx:
     registry: "quay.io/nginx/nginx-unprivileged"
-    tag: "latest"
+    tag: "1.27.4"
   busybox:
     registry: "quay.io/prometheus/busybox"
     tag: "latest"

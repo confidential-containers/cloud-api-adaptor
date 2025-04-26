@@ -9,12 +9,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/cmd"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	daemon "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/kubemgr"
@@ -165,6 +167,14 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	provider, err := cloud.NewProvider()
 	if err != nil {
 		return nil, err
+	}
+
+	if cfg.serverConfig.Initdata != "" {
+		idReader := strings.NewReader(cfg.serverConfig.Initdata)
+		_, err = initdata.Parse(idReader)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse global initdata: %w", err)
+		}
 	}
 
 	server := adaptor.NewServer(provider, &cfg.serverConfig, workerNode)

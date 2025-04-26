@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"crypto/sha512"
-	b64 "encoding/base64"
 	"os"
 	"strconv"
 	"strings"
@@ -189,7 +188,7 @@ func TestAzureImageDecryption(t *testing.T) {
 // the az tpm attester requires the digest to be sha256 and is hence truncated
 func TestInitDataMeasurement(t *testing.T) {
 	kbsEndpoint := "http://some.endpoint"
-	initdata, err := buildInitdataBody(kbsEndpoint, testInitdata)
+	initdata, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
 	if err != nil {
 		log.Fatalf("failed to build initdata %s", err)
 	}
@@ -217,9 +216,8 @@ func TestInitDataMeasurement(t *testing.T) {
 	shCmd := "curl -s \"http://127.0.0.1:8006/aa/evidence?runtime_data=test\" | jq -c '(.quote // .tpm_quote).pcrs[8]'"
 	cmd := []string{"sh", "-c", shCmd}
 
-	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
 	annotations := map[string]string{
-		"io.katacontainers.config.runtime.cc_init_data": b64Data,
+		"io.katacontainers.config.runtime.cc_init_data": initdata,
 	}
 	job := NewJob(E2eNamespace, name, 0, image, WithJobCommand(cmd), WithJobAnnotations(annotations))
 	NewTestCase(t, testEnv, "InitDataMeasurement", assert, "InitData measured correctly").WithJob(job).WithExpectedPodLogString(msStr).Run()
