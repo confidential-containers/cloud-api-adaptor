@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 	cri "github.com/containerd/containerd/pkg/cri/annotations"
 	hypannotations "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/annotations"
 )
@@ -88,9 +89,20 @@ func GetPodvmResourcesFromAnnotation(annotations map[string]string) (int64, int6
 	return vcpuInt, memoryInt, gpuInt
 }
 
-// Method to get initdata from annotation
-func GetInitdataFromAnnotation(annotations map[string]string) string {
-	return annotations["io.katacontainers.config.runtime.cc_init_data"]
+// Method to get initdata from annotation. Initdata is delivered as raw
+// string by kata runtime, so we want to compress and base64 it again.
+func GetInitdataFromAnnotation(annotations map[string]string) (string, error) {
+	str := annotations["io.katacontainers.config.runtime.cc_init_data"]
+	if str == "" {
+		return "", nil
+	}
+
+	initdataEnc, err := initdata.Encode(str)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode initdata: %w", err)
+	}
+
+	return initdataEnc, nil
 }
 
 // Method to check if a string exists in a slice

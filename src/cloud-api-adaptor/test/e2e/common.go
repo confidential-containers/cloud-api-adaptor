@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
@@ -86,16 +87,16 @@ default WaitProcessRequest := true
 default WriteStreamRequest := true
 '''
 `
-var testEmptyInitdata string = " "
 
-func buildInitdataBody(kbsEndpoint string, testInitdataVal string) (string, error) {
+// Build gzipped and base64 encoded string
+func buildInitdataAnnotation(kbsEndpoint string, testInitdataVal string) (string, error) {
 	content, err := os.ReadFile("../trustee/kbs/config/kubernetes/base/https-cert.pem")
 	if err != nil {
 		return "", err
 	}
 	certContent := string(content)
-	body := fmt.Sprintf(testInitdataVal, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
-	return body, nil
+	initdataToml := fmt.Sprintf(testInitdataVal, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+	return initdata.Encode(initdataToml)
 }
 
 func isTestWithKbs() bool {
@@ -255,11 +256,10 @@ func WithInitdata(kbsEndpoint string) PodOption {
 			p.ObjectMeta.Annotations = make(map[string]string)
 		}
 		key := "io.katacontainers.config.runtime.cc_init_data"
-		initdata, err := buildInitdataBody(kbsEndpoint, testInitdata)
+		value, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
 		if err != nil {
 			log.Fatalf("failed to build initdata %s", err)
 		}
-		value := b64.StdEncoding.EncodeToString([]byte(initdata))
 		p.ObjectMeta.Annotations[key] = value
 	}
 }
@@ -381,13 +381,12 @@ func NewBusyboxPodWithName(namespace, podName string) PodOrError {
 }
 
 func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string, testInitdataVal string) PodOrError {
-	initdata, err := buildInitdataBody(kbsEndpoint, testInitdataVal)
+	initdata, err := buildInitdataAnnotation(kbsEndpoint, testInitdataVal)
 	if err != nil {
 		return fromError(err)
 	}
-	b64Data := b64.StdEncoding.EncodeToString([]byte(initdata))
 	annotationData := map[string]string{
-		"io.katacontainers.config.runtime.cc_init_data": b64Data,
+		"io.katacontainers.config.runtime.cc_init_data": initdata,
 	}
 	busyboxImage, err := utils.GetImage("busybox")
 	if err != nil {
