@@ -177,7 +177,7 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 			Enabled:  core.BoolPtr(true),
 			Protocol: core.StringPtr(vpcv1.InstanceMetadataServicePatchProtocolHTTPConst),
 		},
-		ConfidentialComputeMode: core.StringPtr("tdx"), // TODO when available: vpcv1.InstanceConfidentialComputeModeTdxConst
+		ConfidentialComputeMode: core.StringPtr(vpcv1.InstanceConfidentialComputeModeTdxConst),
 		EnableSecureBoot:        core.BoolPtr(true),
 	}
 
