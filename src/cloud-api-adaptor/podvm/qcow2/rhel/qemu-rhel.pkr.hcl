@@ -126,7 +126,8 @@ build {
     environment_vars = [
       "SE_BOOT=${var.se_boot}",
       "PODVM_DISTRO=${var.podvm_distro}",
-      "ARCH=${var.os_arch}"
+      "ARCH=${var.os_arch}",
+      "SE_VERIFY=${var.se_verify}"
     ]
     inline = [
       "sudo -E bash ~/build-s390x-se-image.sh"
