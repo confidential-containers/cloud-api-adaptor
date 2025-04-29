@@ -26,6 +26,7 @@ if ! command -v yq > /dev/null; then
 	exit 1
 fi
 
+echo "which yq: $(which yq || true)" >&2
 if yq --version | grep '^.* version v4.*$' > /dev/null; then
 	# convert null to empty string
 	QUERY="${QUERY} | select(. != null)"
