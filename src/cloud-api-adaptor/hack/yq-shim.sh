@@ -26,6 +26,8 @@ if ! command -v yq > /dev/null; then
 	exit 1
 fi
 
+echo "type yq: $(type yq || true)" >&2
+echo "command -v yq: $(command -v yq || true)" >&2
 echo "which yq: $(which yq || true)" >&2
 if yq --version | grep '^.* version v4.*$' > /dev/null; then
 	# convert null to empty string
