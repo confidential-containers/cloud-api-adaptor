@@ -37,7 +37,7 @@ elif yq --version | grep '^.* version 3.*$' > /dev/null; then
 		QUERY="${QUERY:1}"
 	fi
 else
-	echo "unsupported yq version" >&2
+	echo "unsupported yq version: $(yq --version || true)" >&2
 	exit 1
 fi
 
