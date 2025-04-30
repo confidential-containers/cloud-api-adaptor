@@ -70,6 +70,8 @@ type TestCase struct {
 	isNydusSnapshotter          bool
 	alternateImageName          string
 	secureCommsIsActive         bool
+	expectedCPU                 uint
+	expectedMemory              uint
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -169,6 +171,12 @@ func (tc *TestCase) WithSAImagePullSecret(secretName string) *TestCase {
 
 func (tc *TestCase) WithNydusSnapshotter() *TestCase {
 	tc.isNydusSnapshotter = true
+	return tc
+}
+
+func (tc *TestCase) WithExpectedCPUAndMemory(expectedCPU uint, expectedMemory uint) *TestCase {
+	tc.expectedCPU = expectedCPU
+	tc.expectedMemory = expectedMemory
 	return tc
 }
 
@@ -382,6 +390,13 @@ func (tc *TestCase) Run() {
 					if err != nil {
 						t.Errorf("VerifySecureCommsActivated failed: %v", err)
 					}
+				}
+			}
+
+			if tc.expectedCPU > 0 || tc.expectedMemory > 0 {
+				err := ComparePodVMResources(ctx, t, client, *tc.pod, tc.expectedCPU, tc.expectedMemory, tc.assert.GetPodVMResource)
+				if err != nil {
+					t.Errorf("ComparePodVMResources failed: %v", err)
 				}
 			}
 

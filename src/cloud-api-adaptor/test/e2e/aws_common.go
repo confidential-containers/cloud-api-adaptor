@@ -75,3 +75,8 @@ func (aa AWSAssert) GetInstanceType(t *testing.T, podName string) (string, error
 	// Get Instance Type of PodVM
 	return "", nil
 }
+
+func (aa AWSAssert) GetPodVMResource(t *testing.T, podName string) (uint, uint, error) {
+	// Get the resources of PodVM
+	return 0, 0, nil
+}

@@ -51,3 +51,8 @@ func (l DockerAssert) GetInstanceType(t *testing.T, podName string) (string, err
 	// Get Instance Type of PodVM
 	return "", nil
 }
+
+func (l DockerAssert) GetPodVMResource(t *testing.T, podName string) (uint, uint, error) {
+	// Get the resources of PodVM
+	return nil, nil, nil
+}

@@ -85,3 +85,8 @@ func (c AzureCloudAssert) GetInstanceType(t *testing.T, podName string) (string,
 	}
 
 }
+
+func (c AzureCloudAssert) GetPodVMResource(t *testing.T, podName string) (uint, uint, error) {
+	// Get the resources of PodVM
+	return 0, 0, nil
+}

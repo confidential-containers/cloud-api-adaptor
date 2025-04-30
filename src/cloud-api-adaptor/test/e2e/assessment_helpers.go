@@ -384,6 +384,27 @@ func VerifyImagePullTimer(ctx context.Context, t *testing.T, client klient.Clien
 	return nil
 }
 
+func ComparePodVMResources(ctx context.Context, t *testing.T, client klient.Client, pod v1.Pod, expectedCPU uint, expectedMemory uint, getPodVMResourcesFn func(t *testing.T, podName string) (uint, uint, error)) error {
+	var podlist v1.PodList
+	if err := client.Resources(pod.Namespace).List(ctx, &podlist); err != nil {
+		return err
+	}
+	for _, podItem := range podlist.Items {
+		if podItem.ObjectMeta.Name == pod.Name {
+			podVMCPU, podVMMemory, err := getPodVMResourcesFn(t, pod.Name)
+			if err != nil {
+				return fmt.Errorf("ComparePodVMResources: failed to getPodVMResources: %v", err)
+			}
+			if podVMCPU == expectedCPU || podVMMemory == expectedMemory {
+				return nil
+			} else {
+				return fmt.Errorf("ComparePodVMResources: podVMCPU %v podVMMemory %v, but we expected VCPU %v and Memory %c", podVMCPU, podVMMemory, expectedCPU, expectedMemory)
+			}
+		}
+	}
+	return fmt.Errorf("no pod matching %v, was found", pod)
+}
+
 func GetNodeNameFromPod(ctx context.Context, client klient.Client, customPod *v1.Pod) (string, error) {
 	var getNodeName = func(ctx context.Context, client klient.Client, pod *v1.Pod) (string, error) {
 		return pod.Spec.NodeName, nil

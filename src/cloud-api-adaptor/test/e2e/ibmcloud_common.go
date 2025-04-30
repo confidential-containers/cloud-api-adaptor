@@ -388,3 +388,8 @@ func (c *IBMRollingUpdateAssert) VerifyOldVmDeleted(t *testing.T) {
 		}
 	}
 }
+
+func (c IBMCloudAssert) GetPodVMResource(t *testing.T, podName string) (uint, uint, error) {
+	// Get the resources of PodVM
+	return 0, 0, nil
+}
