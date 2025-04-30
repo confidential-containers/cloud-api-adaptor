@@ -15,7 +15,7 @@ option `ext-network-via-podvm` in cloud-api-adaptor. The equivalent option in th
 
 The prerequisite is for the pod VM to have a secondary interface with an IP. This interface will be moved to the pod network namespace and default routes adjusted so that pod network traverses via worker node, and any other traffic uses the secondary interface.
 
-**This is experimental feature and currently only available for AWS**
+**This is experimental feature and currently only available for AWS and Alibaba Cloud**
 
 ## Specifying Pod subnet CIDRs
 
