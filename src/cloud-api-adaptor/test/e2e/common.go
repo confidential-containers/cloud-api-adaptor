@@ -558,6 +558,7 @@ type CloudAssert interface {
 	HasPodVM(t *testing.T, id string)                             // Assert there is a PodVM with `id`.
 	GetInstanceType(t *testing.T, podName string) (string, error) // Get Instance Type of PodVM
 	DefaultTimeout() time.Duration                                // Default timeout for cloud operations
+	GetPodVMResource(t *testing.T, id string) (uint, uint, error) // Get CPU and Memory resource of PodVM
 }
 
 // RollingUpdateAssert defines assertions for rolling update test

@@ -263,3 +263,23 @@ func TestLibvirtCreatePodWithoutInitdataAnnotations(t *testing.T) {
 	}
 	DoTestPodWithoutInitdataAnnotations(t, testEnv, assert, kbsEndpoint)
 }
+
+func TestPodVMwithAnnotationsCPUAndMemory(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodVMwithAnnotationsCPUAndMemory(t, testEnv, assert, 3, 9)
+}
+
+func TestPodVMwithAnnotationCPU(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodVMwithAnnotationCPU(t, testEnv, assert, 4, libvirt.Default_memory)
+}
+
+func TestPodVMwithAnnotationMemory(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodVMwithAnnotationMemory(t, testEnv, assert, libvirt.Default_cpu, 7)
+}
+
+func TestPodVMwithNoCpuAndMemoryAnnotations(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodVMwithNoCpuAndMemoryAnnotations(t, testEnv, assert, libvirt.Default_cpu, libvirt.Default_memory)
+}

@@ -74,3 +74,8 @@ func (c GCPCloudAssert) GetInstanceType(t *testing.T, podName string) (string, e
 
 	return vm.GetMachineType(), nil
 }
+
+func (c GCPCloudAssert) GetPodVMResource(t *testing.T, podName string) (uint, uint, error) {
+	// Get the resources of PodVM
+	return 0, 0, nil
+}

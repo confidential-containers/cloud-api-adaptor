@@ -20,6 +20,8 @@ import (
 )
 
 const AlternateVolumeName = "another-podvm-base.qcow2"
+const Default_memory = 8192
+const Default_cpu = 2
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
