@@ -1,8 +1,8 @@
 # this should be enabled by misc-settings.sh
 [Unit]
 Description=Setup NAT for IMDS
-After=agent-protocol-forwarder.service
-Wants=agent-protocol-forwarder.service
+After=agent-protocol-forwarder.service netns@podns.service
+Wants=agent-protocol-forwarder.service netns@podns.service
 DefaultDependencies=no
 
 [Service]
