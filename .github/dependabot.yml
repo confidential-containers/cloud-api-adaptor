@@ -16,6 +16,22 @@ updates:
       - "src/csi-wrapper"
       - "src/peerpod-ctrl"
       - "src/webhook"
+    groups:
+      aws-sdk-go-v2:
+        patterns:
+          - "*aws-sdk-go-v2*"
+      k8s:
+        patterns:
+          - "*k8s.io*"
+      x/crypto:
+        patterns:
+          - golang.org/x/crypto
+      x/net:
+        patterns:
+          - golang.org/x/net
+      x/sys:
+        patterns:
+          - golang.org/x/sys
     schedule:
       interval: "weekly"
       day: "saturday"
