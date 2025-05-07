@@ -40,7 +40,7 @@ func DoTestLibvirtCreateSimplePodWithSecureCommsIsValid(t *testing.T, e env.Envi
 		t.Skip("Skip - SecureComms is configured to be inactive - no need to test")
 	}
 	pod := NewBusyboxPodWithName(E2eNamespace, "simple-test-with-security-comms-is-active").GetPodOrFatal(t)
-	NewTestCase(t, e, "SimplePeerPodWithSecureComms", assert, "PodVM is created with secure comms").WithPod(pod).WithSecureCommsIsActive().Run()
+	NewTestCase(t, e, "SimplePeerPodWithSecureComms", assert, "PodVM is created with secure comms").WithPod(pod).WithExpectedCaaPodLogStrings("Using PP SecureComms").Run()
 }
 
 func DoTestDeleteSimplePod(t *testing.T, e env.Environment, assert CloudAssert) {
@@ -368,7 +368,7 @@ func DoTestCreatePeerPodContainerWithValidAlternateImage(t *testing.T, e env.Env
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 
-	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithAlternateImage(alternateImageName).Run()
+	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithExpectedCaaPodLogStrings("Choosing " + alternateImageName).Run()
 }
 
 func DoTestCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert,
