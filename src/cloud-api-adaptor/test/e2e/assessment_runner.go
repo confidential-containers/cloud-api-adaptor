@@ -60,7 +60,7 @@ type TestCase struct {
 	job                         *batchv1.Job
 	service                     *v1.Service
 	testCommands                []TestCommand
-	expectedCaaPodLogString     string
+	expectedCaaPodLogStrings    []string
 	expectedPodLogString        string
 	expectedPodEventErrorString string
 	podState                    v1.PodPhase
@@ -69,8 +69,6 @@ type TestCase struct {
 	deletionWithin              time.Duration
 	expectedInstanceType        string
 	isNydusSnapshotter          bool
-	alternateImageName          string
-	secureCommsIsActive         bool
 }
 
 func (tc *TestCase) WithConfigMap(configMap *v1.ConfigMap) *TestCase {
@@ -128,23 +126,13 @@ func (tc *TestCase) WithExpectedInstanceType(expectedInstanceType string) *TestC
 	return tc
 }
 
-func (tc *TestCase) WithAlternateImage(alternateImageName string) *TestCase {
-	tc.alternateImageName = alternateImageName
-	return tc
-}
-
-func (tc *TestCase) WithSecureCommsIsActive() *TestCase {
-	tc.secureCommsIsActive = true
-	return tc
-}
-
 func (pod *ExtraPod) WithTestCommands(TestCommands []TestCommand) *ExtraPod {
 	pod.testCommands = TestCommands
 	return pod
 }
 
-func (tc *TestCase) WithExpectedCaaPodLogString(expectedCaaPodLogString string) *TestCase {
-	tc.expectedCaaPodLogString = expectedCaaPodLogString
+func (tc *TestCase) WithExpectedCaaPodLogStrings(expectedCaaPodLogStrings ...string) *TestCase {
+	tc.expectedCaaPodLogStrings = expectedCaaPodLogStrings
 	return tc
 }
 
@@ -330,10 +318,10 @@ func (tc *TestCase) Run() {
 					}
 				}
 
-				if tc.expectedCaaPodLogString != "" {
-					err := CompareCaaPodLogString(ctx, t, client, tc.pod, tc.expectedCaaPodLogString)
+				if len(tc.expectedCaaPodLogStrings) > 0 {
+					err := CompareCaaPodLogStrings(ctx, t, client, tc.pod, tc.expectedCaaPodLogStrings)
 					if err != nil {
-						t.Errorf("Looking for %s, in caa pod logs, failed with: %v", tc.expectedCaaPodLogString, err)
+						t.Errorf("CompareCaaPodLogStrings, failed with: %v", err)
 					}
 				}
 
@@ -380,20 +368,6 @@ func (tc *TestCase) Run() {
 					err := VerifyNydusSnapshotter(ctx, t, client, tc.pod)
 					if err != nil {
 						t.Errorf("VerifyNydusSnapshotter failed: %v", err)
-					}
-				}
-
-				if tc.alternateImageName != "" {
-					err := VerifyAlternateImage(ctx, t, client, tc.pod, tc.alternateImageName)
-					if err != nil {
-						t.Errorf("VerifyAlternateImage failed: %v", err)
-					}
-				}
-
-				if tc.secureCommsIsActive {
-					err := VerifySecureCommsActivated(ctx, t, client, tc.pod)
-					if err != nil {
-						t.Errorf("VerifySecureCommsActivated failed: %v", err)
 					}
 				}
 			}
