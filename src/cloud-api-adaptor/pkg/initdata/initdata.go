@@ -8,8 +8,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	toml "github.com/pelletier/go-toml/v2"
 	"io"
+	"strings"
+
+	toml "github.com/pelletier/go-toml/v2"
 )
 
 type InitDataBody struct {
@@ -39,14 +41,18 @@ func digest(alg string, body []byte) (string, error) {
 	}
 }
 
-func Parse(reader io.Reader) (*InitData, error) {
+func decode(reader io.Reader) ([]byte, error) {
 	b64Reader := base64.NewDecoder(base64.StdEncoding, reader)
 	gzipReader, err := gzip.NewReader(b64Reader)
 	if err != nil {
 		return nil, err
 	}
 
-	initdataToml, err := io.ReadAll(gzipReader)
+	return io.ReadAll(gzipReader)
+}
+
+func Parse(reader io.Reader) (*InitData, error) {
+	initdataToml, err := decode(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -88,4 +94,10 @@ func Encode(initdataStr string) (string, error) {
 	}
 
 	return val.String(), nil
+}
+
+// Used in e2e testing
+func DecodeAnnotation(annotation string) ([]byte, error) {
+	reader := strings.NewReader(annotation)
+	return decode(reader)
 }
