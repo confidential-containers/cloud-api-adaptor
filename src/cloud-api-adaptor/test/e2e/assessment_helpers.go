@@ -189,15 +189,16 @@ func GetPodLog(ctx context.Context, client klient.Client, pod *v1.Pod) (string, 
 	return strings.TrimSpace(buf.String()), nil
 }
 
-func CompareCaaPodLogString(ctx context.Context, t *testing.T, client klient.Client, customPod *v1.Pod, expectedCaaPodLogString string) error {
+func CompareCaaPodLogStrings(ctx context.Context, t *testing.T, client klient.Client, customPod *v1.Pod, expectedCaaPodLogStrings []string) error {
 	nodeName, err := GetNodeNameFromPod(ctx, client, customPod)
 	if err != nil {
-		return fmt.Errorf("CompareCaaPodLogString: GetNodeNameFromPod failed with %v", err)
+		return fmt.Errorf("CompareCaaPodLogStrings: GetNodeNameFromPod failed with %v", err)
 	}
-
-	err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedCaaPodLogString)
-	if err != nil {
-		return fmt.Errorf("CompareCaaPodLogString: failed: %v", err)
+	for _, expectedCaaPodLogString := range expectedCaaPodLogStrings {
+		err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedCaaPodLogString)
+		if err != nil {
+			return fmt.Errorf("looking for '%s' in caa pod logs : failed: %v", expectedCaaPodLogString, err)
+		}
 	}
 	return nil
 }
@@ -309,36 +310,6 @@ func CompareInstanceType(ctx context.Context, t *testing.T, client klient.Client
 		}
 	}
 	return fmt.Errorf("no pod matching %v, was found", pod)
-}
-
-func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod, alternateImageName string) error {
-	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
-	if err != nil {
-		return fmt.Errorf("VerifyAlternateImage: GetNodeNameFromPod failed with %v", err)
-	}
-
-	expectedSuccessMessage := "Choosing " + alternateImageName
-	err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedSuccessMessage)
-	if err != nil {
-		return fmt.Errorf("VerifyAlternateImage: failed: %v", err)
-	}
-	t.Logf("PodVM was brought up using the alternate PodVM image %s", alternateImageName)
-	return nil
-}
-
-func VerifySecureCommsActivated(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) error {
-	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
-	if err != nil {
-		return fmt.Errorf("VerifySecureCommsConnected: GetNodeNameFromPod failed with %v", err)
-	}
-
-	expectedSuccessMessage := "Using PP SecureComms"
-	err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedSuccessMessage)
-	if err != nil {
-		return fmt.Errorf("VerifySecureCommsConnected: failed: %v", err)
-	}
-	t.Logf("PodVM was brought up using SecureComms")
-	return nil
 }
 
 func VerifyCaaPodLogContains(ctx context.Context, t *testing.T, client klient.Client, nodeName, expected string) error {
