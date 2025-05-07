@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/azure"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -188,12 +189,16 @@ func TestAzureImageDecryption(t *testing.T) {
 // the az tpm attester requires the digest to be sha256 and is hence truncated
 func TestInitDataMeasurement(t *testing.T) {
 	kbsEndpoint := "http://some.endpoint"
-	initdata, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
+	annotation, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
 	if err != nil {
 		log.Fatalf("failed to build initdata %s", err)
 	}
 
-	digest := sha512.Sum384([]byte(initdata))
+	decoded, err := initdata.DecodeAnnotation(annotation)
+	if err != nil {
+		log.Fatalf("failed to decode initdata %s", err)
+	}
+	digest := sha512.Sum384(decoded)
 	truncatedDigest := digest[:32]
 	zeroes := bytes.Repeat([]byte{0x00}, 32)
 
@@ -217,7 +222,7 @@ func TestInitDataMeasurement(t *testing.T) {
 	cmd := []string{"sh", "-c", shCmd}
 
 	annotations := map[string]string{
-		"io.katacontainers.config.runtime.cc_init_data": initdata,
+		"io.katacontainers.config.runtime.cc_init_data": annotation,
 	}
 	job := NewJob(E2eNamespace, name, 0, image, WithJobCommand(cmd), WithJobAnnotations(annotations))
 	NewTestCase(t, testEnv, "InitDataMeasurement", assert, "InitData measured correctly").WithJob(job).WithExpectedPodLogString(msStr).Run()
