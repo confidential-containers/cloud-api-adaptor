@@ -280,7 +280,7 @@ from the curl pod:
 
 ```bash
 export CURL_POD=$(oc get pod -n default -l app=curl -o jsonpath={.items..metadata.name})
-export HELLO_IP=$(oc get pod -n default -l app=helloworld -o jsonpath={.items..status.podIP})
+export HELLO_IP=$(oc get pod -n default helloworld -o jsonpath={.status.podIP})
 oc exec -n default -it $CURL_POD -c curl -- curl http://$HELLO_IP:5000/hello
 ```
 
@@ -295,7 +295,7 @@ Hello version: v1, instance: helloworld
 >
 > For example, if your Trustee is configured with the same example key as used in the [test Trustee](#deploy-a-test-trustee), you can retrieve the value of key1 using the following command:
 > ```bash
-> kubectl exec -it helloworld -- bash
+> oc exec -n default -it helloworld -- bash
 > curl http://127.0.0.1:8006/cdh/resource/default/kbsres1/key1
 > ```
 > If it is working, this will output the key's configured value:
@@ -383,9 +383,9 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
     export KBS_SERVICE_ENDPOINT="http://$(ibmcloud is instance "$CLUSTER_NAME-trustee" --output JSON | jq -r '.network_interfaces[].primary_ip.address'):8080"
     ```
 
-    Then, configure the Trustee in your `peerpods-cluster.properties` file by  running the following commands:
+    Then, set the `INITDATA` environment variable to the compressed and encoded Trustee configuration:
     ```
-    export INITDATA=$(cat <<EOF | base64
+    export INITDATA=$(cat <<EOF | gzip | base64
     algorithm = "sha256"
     version = "0.1.0"
 
@@ -409,5 +409,22 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
     '''
     EOF
     )
+    ```
+
+    If you want to use this Trustee for all peer pods in the cluster, run the following command to configure the global `INITDATA` property in your `peerpods-cluster.properties` file:
+    ```
     echo "INITDATA=\"$INITDATA\"" >> ~/peerpods-cluster.properties
+    ```
+
+    Alternatively, you can configure the Trustee for a specific peer pod, by including the `io.katacontainers.config.runtime.cc_init_data` annotation on the pod. For example:
+    ```
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: mypod
+      annotations:
+        io.katacontainers.config.runtime.cc_init_data: $INITDATA
+    spec:
+      runtimeClassName: kata-remote
+      ...
     ```
