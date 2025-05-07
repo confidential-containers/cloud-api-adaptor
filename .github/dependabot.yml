@@ -1,3 +1,4 @@
+---
 version: 2
 updates:
   # Check updates to action versions in .github/workflows
@@ -5,5 +6,16 @@ updates:
     directory: "/"
     schedule:
       # Check for updates to GitHub Actions every week on Saturday
+      interval: "weekly"
+      day: "saturday"
+  - package-ecosystem: "gomod"
+    directories:
+      - "src/cloud-api-adaptor"
+      - "src/cloud-api-adaptor/podvm"
+      - "src/cloud-providers"
+      - "src/csi-wrapper"
+      - "src/peerpod-ctrl"
+      - "src/webhook"
+    schedule:
       interval: "weekly"
       day: "saturday"
