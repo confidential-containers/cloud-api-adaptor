@@ -69,7 +69,6 @@ type TestCase struct {
 	deletionWithin              time.Duration
 	expectedInstanceType        string
 	isNydusSnapshotter          bool
-	alternateImageName          string
 	secureCommsIsActive         bool
 }
 
@@ -125,11 +124,6 @@ func (tc *TestCase) WithTestCommands(TestCommands []TestCommand) *TestCase {
 
 func (tc *TestCase) WithExpectedInstanceType(expectedInstanceType string) *TestCase {
 	tc.expectedInstanceType = expectedInstanceType
-	return tc
-}
-
-func (tc *TestCase) WithAlternateImage(alternateImageName string) *TestCase {
-	tc.alternateImageName = alternateImageName
 	return tc
 }
 
@@ -383,15 +377,8 @@ func (tc *TestCase) Run() {
 					}
 				}
 
-				if tc.alternateImageName != "" {
-					err := VerifyAlternateImage(ctx, t, client, tc.pod, tc.alternateImageName)
-					if err != nil {
-						t.Errorf("VerifyAlternateImage failed: %v", err)
-					}
-				}
-
 				if tc.secureCommsIsActive {
-					err := VerifySecureCommsActivated(ctx, t, client, tc.pod)
+					err := CompareCaaPodLogString(ctx, t, client, tc.pod, "Using PP SecureComms")
 					if err != nil {
 						t.Errorf("VerifySecureCommsActivated failed: %v", err)
 					}
