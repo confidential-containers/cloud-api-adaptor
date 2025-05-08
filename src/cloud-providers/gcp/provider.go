@@ -113,11 +113,12 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 	logger.Printf("userDataEnc:  %s", userDataEnc)
 
-	// It's expected that the image from the annotation will follow the format
-	// "projects/<project>/global/images/<imageid>" or just the "<imageid>" if the
-	// image is present on the same project.
+	// It's expected that the image from the annotation will follow one of supported formats:
+	// - "projects/<project>/global/images/<imageid>" and "/projects/<project>/global/images/<imageid>",
+	// - url: "https://www.googleapis.com/compute/v1/projects/<project>/global/images/<imageid>",
+	// - simple "<imageid>" if the image is present on the same project.
 	var srcImage *string
-	if strings.HasPrefix(p.serviceConfig.ImageName, "projects/") {
+	if hasAnyPrefix(p.serviceConfig.ImageName, "projects/", "/projects", "https") {
 		srcImage = proto.String(p.serviceConfig.ImageName)
 	} else {
 		srcImage = proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectId, p.serviceConfig.ImageName))
@@ -254,4 +255,13 @@ func (p *gcpProvider) DeleteInstance(ctx context.Context, instanceID string) err
 
 func (p *gcpProvider) Teardown() error {
 	return nil
+}
+
+func hasAnyPrefix(s string, prefixes ...string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(s, prefix) {
+			return true
+		}
+	}
+	return false
 }
