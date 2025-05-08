@@ -60,6 +60,7 @@ type TestCase struct {
 	job                         *batchv1.Job
 	service                     *v1.Service
 	testCommands                []TestCommand
+	expectedCaaPodLogString     string
 	expectedPodLogString        string
 	expectedPodEventErrorString string
 	podState                    v1.PodPhase
@@ -68,7 +69,6 @@ type TestCase struct {
 	deletionWithin              time.Duration
 	expectedInstanceType        string
 	isNydusSnapshotter          bool
-	alternateImageName          string
 	secureCommsIsActive         bool
 }
 
@@ -127,11 +127,6 @@ func (tc *TestCase) WithExpectedInstanceType(expectedInstanceType string) *TestC
 	return tc
 }
 
-func (tc *TestCase) WithAlternateImage(alternateImageName string) *TestCase {
-	tc.alternateImageName = alternateImageName
-	return tc
-}
-
 func (tc *TestCase) WithSecureCommsIsActive() *TestCase {
 	tc.secureCommsIsActive = true
 	return tc
@@ -140,6 +135,11 @@ func (tc *TestCase) WithSecureCommsIsActive() *TestCase {
 func (pod *ExtraPod) WithTestCommands(TestCommands []TestCommand) *ExtraPod {
 	pod.testCommands = TestCommands
 	return pod
+}
+
+func (tc *TestCase) WithExpectedCaaPodLogString(expectedCaaPodLogString string) *TestCase {
+	tc.expectedCaaPodLogString = expectedCaaPodLogString
+	return tc
 }
 
 func (tc *TestCase) WithExpectedPodLogString(expectedPodLogString string) *TestCase {
@@ -324,6 +324,13 @@ func (tc *TestCase) Run() {
 					}
 				}
 
+				if tc.expectedCaaPodLogString != "" {
+					err := CompareCaaPodLogString(ctx, t, client, tc.pod, tc.expectedCaaPodLogString)
+					if err != nil {
+						t.Errorf("Looking for %s, in caa pod logs, failed with: %v", tc.expectedCaaPodLogString, err)
+					}
+				}
+
 				if tc.expectedPodEventErrorString != "" {
 					err := ComparePodEventWarningDescriptions(ctx, t, client, tc.pod, tc.expectedPodEventErrorString)
 					if err != nil {
@@ -370,15 +377,8 @@ func (tc *TestCase) Run() {
 					}
 				}
 
-				if tc.alternateImageName != "" {
-					err := VerifyAlternateImage(ctx, t, client, tc.pod, tc.alternateImageName)
-					if err != nil {
-						t.Errorf("VerifyAlternateImage failed: %v", err)
-					}
-				}
-
 				if tc.secureCommsIsActive {
-					err := VerifySecureCommsActivated(ctx, t, client, tc.pod)
+					err := CompareCaaPodLogString(ctx, t, client, tc.pod, "Using PP SecureComms")
 					if err != nil {
 						t.Errorf("VerifySecureCommsActivated failed: %v", err)
 					}
@@ -399,6 +399,7 @@ func (tc *TestCase) Run() {
 						}
 						t.Logf("Log output of peer pod:%s", LogString)
 					}
+
 					if extraPod.podState == v1.PodRunning {
 						if len(extraPod.testCommands) > 0 {
 							logString, err := AssessPodTestCommands(ctx, client, extraPod.pod, extraPod.testCommands)

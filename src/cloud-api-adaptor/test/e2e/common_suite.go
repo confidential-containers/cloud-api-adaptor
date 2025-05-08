@@ -368,7 +368,7 @@ func DoTestCreatePeerPodContainerWithValidAlternateImage(t *testing.T, e env.Env
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 
-	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithAlternateImage(alternateImageName).Run()
+	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithExpectedCaaPodLogString("Choosing " + alternateImageName).Run()
 }
 
 func DoTestCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert,
