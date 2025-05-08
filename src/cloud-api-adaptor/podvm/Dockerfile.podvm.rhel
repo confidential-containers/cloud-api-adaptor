@@ -4,8 +4,8 @@
 #
 # Builds pod vm image inside container
 #
-ARG BUILDER_IMG
-ARG BINARIES_IMG
+ARG BUILDER_IMG="quay.io/confidential-containers/podvm-builder-rhel"
+ARG BINARIES_IMG="quay.io/confidential-containers/podvm-binaries-rhel-amd64"
 
 FROM ${BINARIES_IMG} AS podvm_binaries
 FROM ${BUILDER_IMG} AS podvm_builder
