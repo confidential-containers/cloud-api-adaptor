@@ -48,9 +48,9 @@ RUN subscription-manager repos --enable codeready-builder-for-rhel-9-${ARCH/amd6
 RUN curl -L -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH} \
     && echo "${YQ_CHECKSUM#sha256:}  /usr/local/bin/yq" | sha256sum -c -
 RUN chmod a+x /usr/local/bin/yq && \
-    curl https://dl.google.com/go/go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz -o go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz && \
-    rm -f go${GO_VERSION}.linux-${YQ_ARCH}.tar.gz
+    curl https://dl.google.com/go/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz -o go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && \
+    rm -f go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:/usr/local/bin:${PATH}"
 
 # Install packer. Packer doesn't have prebuilt s390x arch binaries beyond Packer version 0.1.5
