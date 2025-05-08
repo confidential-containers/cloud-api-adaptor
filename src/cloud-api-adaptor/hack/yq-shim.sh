@@ -26,6 +26,9 @@ if ! command -v yq > /dev/null; then
 	exit 1
 fi
 
+echo "type yq: $(type yq || true)" >&2
+echo "command -v yq: $(command -v yq || true)" >&2
+echo "which yq: $(which yq || true)" >&2
 if yq --version | grep '^.* version v4.*$' > /dev/null; then
 	# convert null to empty string
 	QUERY="${QUERY} | select(. != null)"
@@ -37,7 +40,7 @@ elif yq --version | grep '^.* version 3.*$' > /dev/null; then
 		QUERY="${QUERY:1}"
 	fi
 else
-	echo "unsupported yq version" >&2
+	echo "unsupported yq version: $(yq --version || true)" >&2
 	exit 1
 fi
 
