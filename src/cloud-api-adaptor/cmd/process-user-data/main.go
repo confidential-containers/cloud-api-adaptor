@@ -31,19 +31,26 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	var fetchTimeout int
+	var (
+		fetchTimeout    int
+		listenAddr      string
+		receiveUserData bool
+	)
+
 	rootCmd.PersistentFlags().BoolVarP(&versionFlag, "version", "v", false, "Print the version")
 
 	var provisionFilesCmd = &cobra.Command{
 		Use:   "provision-files",
 		Short: "Provision required files based on user data",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cfg := userdata.NewConfig(fetchTimeout)
+			cfg := userdata.NewConfig(fetchTimeout, listenAddr, receiveUserData)
 			return userdata.ProvisionFiles(cfg)
 		},
 		SilenceUsage: true, // Silence usage on error
 	}
 	provisionFilesCmd.Flags().IntVarP(&fetchTimeout, "user-data-fetch-timeout", "t", 180, "Timeout (in secs) for fetching user data")
+	provisionFilesCmd.Flags().StringVar(&listenAddr, "listen", userdata.DefaultListenAddr, "Listen address for receiving user data over network")
+	provisionFilesCmd.Flags().BoolVar(&receiveUserData, "receive-user-data", false, "Receives user data over network when set to true")
 	rootCmd.AddCommand(provisionFilesCmd)
 }
 

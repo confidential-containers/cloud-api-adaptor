@@ -35,6 +35,8 @@ configMapGenerator:
   #- PROXY_TIMEOUT="" # Uncomment and set if you want to pass a specific timeout. Defaults to 5m
   #- USE_PUBLIC_IP="true" # Uncomment if you want to use public ip for podvm
   #- FORWARDER_PORT="" # Uncomment and set if you want to use a specific port for agent-protocol-forwarder. Defaults to 15150
+  #- PUD_PORT="" # Uncomment and set custom port number if you want to send user data to process-user-data over network. Defaults to 16160
+  #- SKIP_VM_USER_DATA="" Uncomment and set to true if you was to send user data to process-user-data over network. Defaults to false
   #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
   #- REMOTE_HYPERVISOR_ENDPOINT="/run/peerpod/hypervisor.sock" # Path to Kata remote hypervisor socket. Default is /run/peerpod/hypervisor.sock
   #- PEER_PODS_DIR="/run/peerpod/pods" # Path to peer pods directory. Default is /run/peerpod/pods
