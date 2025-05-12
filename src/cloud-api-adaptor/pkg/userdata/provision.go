@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -32,6 +33,12 @@ const (
 	// Ref: https://www.alibabacloud.com/help/en/ecs/user-guide/customize-the-initialization-configuration-for-an-instance
 	AlibabaCloudImdsUrl         = "http://100.100.100.200/latest/dynamic/instance-identity/document"
 	AlibabaCloudUserDataImdsUrl = "http://100.100.100.200/latest/user-data"
+
+	DefaultListenHost = "0.0.0.0"
+	DefaultListenPort = "16160"
+	DefaultListenAddr = DefaultListenHost + ":" + DefaultListenPort
+
+	buffSize = 4096
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
@@ -45,9 +52,11 @@ type Config struct {
 	parentPath    string
 	writeFiles    []string
 	initdataFiles []string
+	listenAddr    string
+	receiveData   bool
 }
 
-func NewConfig(fetchTimeout int) *Config {
+func NewConfig(fetchTimeout int, listenaddr string, receiveData bool) *Config {
 	return &Config{
 		fetchTimeout:  fetchTimeout,
 		parentPath:    ConfigParent,
@@ -55,6 +64,8 @@ func NewConfig(fetchTimeout int) *Config {
 		digestPath:    DigestPath,
 		writeFiles:    WriteFilesList,
 		initdataFiles: InitdDataFilesList,
+		listenAddr:    listenaddr,
+		receiveData:   receiveData,
 	}
 }
 
@@ -274,29 +285,84 @@ func extractInitdataAndHash(cfg *Config) error {
 	return nil
 }
 
+func (cfg *Config) fetchData() ([]byte, error) {
+	logger.Printf("process-user-data is listening on %s", cfg.listenAddr)
+	listener, err := net.Listen("tcp", cfg.listenAddr)
+	if err != nil {
+		return nil, err
+	}
+	defer listener.Close()
+
+	conn, err := listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	logger.Println("Connection established, ready to recevie user data")
+
+	defer conn.Close()
+	buf := make([]byte, buffSize)
+
+	n, err := conn.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf[:n], nil
+}
+
+// retrieveConfigFromNode fetches and parses user-data
+func (cfg *Config) retrieveConfigFromNode() (*CloudConfig, error) {
+	var cc CloudConfig
+	userData, err := cfg.fetchData()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch data from CAA: %w", err)
+	}
+
+	parsed, err := parseUserData(userData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse user data: %w", err)
+	}
+	cc = *parsed
+
+	return &cc, nil
+
+}
+
+// some providers provision config files via process-user-data
+// all providers need extract files from initdata and calculate the hash value for attesters usage
 func ProvisionFiles(cfg *Config) error {
+	var (
+		cc  *CloudConfig
+		err error
+	)
 	bg := context.Background()
 	duration := time.Duration(cfg.fetchTimeout) * time.Second
 	ctx, cancel := context.WithTimeout(bg, duration)
 	defer cancel()
 
-	// some providers provision config files via process-user-data
-	// some providers rely on cloud-init provision config files
-	// all providers need extract files from initdata and calculate the hash value for attesters usage
-	provider, _ := newProvider(ctx)
-	if provider != nil {
-		cc, err := retrieveCloudConfig(ctx, provider)
+	if cfg.receiveData {
+		cc, err = cfg.retrieveConfigFromNode()
 		if err != nil {
-			return fmt.Errorf("failed to retrieve cloud config: %w", err)
+			return fmt.Errorf("failed to retrieve cloud config from CAA: %w", err)
 		}
-
-		if err = processCloudConfig(cfg, cc); err != nil {
-			return fmt.Errorf("failed to process cloud config: %w", err)
-		}
+		logger.Println("retrieved user data over network")
 	} else {
-		logger.Printf("unsupported user data provider, we extract and calculate initdata hash only.\n")
+		provider, _ := newProvider(ctx)
+		if provider != nil {
+			cc, err = retrieveCloudConfig(ctx, provider)
+			if err != nil {
+				return fmt.Errorf("failed to retrieve cloud config: %w", err)
+			}
+		} else {
+			logger.Println("unsupported user data provider")
+		}
 	}
 
+	if err := processCloudConfig(cfg, cc); err != nil {
+		return fmt.Errorf("failed to process cloud config: %w", err)
+	}
+
+	logger.Println("extracting and calculating initdata hash.")
 	if err := extractInitdataAndHash(cfg); err != nil {
 		return fmt.Errorf("failed to extract initdata hash: %w", err)
 	}

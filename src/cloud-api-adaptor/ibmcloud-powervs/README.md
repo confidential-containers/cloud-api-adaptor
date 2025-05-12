@@ -53,6 +53,7 @@ make build
 > pvsadm dhcpserver create --workspace-id <workspace-id> -k  <api-key>
 > ```
 > 3. To use a specific port or address for agent-protocol-forwarder, pass `FORWARDER_PORT=<port-number>` to the `make` command.
+> 4. To receive user data over network, set `PUD_RECEIVE_DATA=true` and to use a custom port for process-user-data, pass `PUD_PORT=<port-number>` to the `make` command.
 
 2. Download the qcow2 image and converts into ova type
 ```

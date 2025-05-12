@@ -23,12 +23,11 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/securecomms/test"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
 type mockProvider struct{}
 
-func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 	return &provider.Instance{
 		Name: "abc",
 		ID:   fmt.Sprintf("%s-%.8s", podName, sandboxID),

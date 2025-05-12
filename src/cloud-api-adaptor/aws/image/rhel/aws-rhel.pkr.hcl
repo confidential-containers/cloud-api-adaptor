@@ -92,7 +92,9 @@ build {
     environment_vars = [
       "CLOUD_PROVIDER=${var.cloud_provider}",
       "PODVM_DISTRO=${var.podvm_distro}",
-      "FORWARDER_PORT=${var.forwarder_port}"
+      "FORWARDER_PORT=${var.forwarder_port}",
+      "PUD_PORT=${var.pud_port}",
+      "PUD_RECEIVE_DATA=${var.pud_receive_data}"
     ]
     inline = [
       "sudo -E bash ~/misc-settings.sh"

@@ -518,7 +518,13 @@ func TestCreateInstance(t *testing.T) {
 				serviceConfig: tt.fields.serviceConfig,
 			}
 
-			got, err := p.CreateInstance(tt.args.ctx, tt.args.podName, tt.args.sandboxID, tt.args.cloudConfig, tt.args.spec)
+			userData, err := tt.args.cloudConfig.Generate()
+			if err != nil {
+				t.Errorf("awsProvider.CreateInstance() error = %v", err)
+				return
+			}
+
+			got, err := p.CreateInstance(tt.args.ctx, tt.args.podName, tt.args.sandboxID, userData, false, tt.args.spec)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("awsProvider.CreateInstance() error = %v, wantErr %v", err, tt.wantErr)
 				return

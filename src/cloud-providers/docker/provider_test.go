@@ -10,7 +10,6 @@ import (
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 	"github.com/docker/docker/client"
 )
 
@@ -46,14 +45,6 @@ func Test_dockerProvider_CreateInstance(t *testing.T) {
 		"tls-client-ca": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n"
 	}`
 
-	// Write tempDaemonConfigJSON to cloud-init config file
-	// Create a CloudConfig struct
-	cloudConfig := &cloudinit.CloudConfig{
-		WriteFiles: []cloudinit.WriteFile{
-			{Path: "/run/peerpod/daemon.json", Content: string(testDaemonConfigJson)},
-		},
-	}
-
 	type args struct {
 		ctx       context.Context
 		podName   string
@@ -88,7 +79,7 @@ func Test_dockerProvider_CreateInstance(t *testing.T) {
 			p := &dockerProvider{
 				Client: tt.fields.Client,
 			}
-			got, err := p.CreateInstance(tt.args.ctx, tt.args.podName, tt.args.sandboxID, cloudConfig, tt.args.spec)
+			got, err := p.CreateInstance(tt.args.ctx, tt.args.podName, tt.args.sandboxID, testDaemonConfigJson, false, tt.args.spec)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("dockerProvider.CreateInstance() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -22,7 +22,6 @@ import (
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/alibabacloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -194,19 +193,15 @@ func (p *alibabaCloudProvider) getIPs(instanceId string, ecsClient ecsClient) ([
 	return podNodeIPs, nil
 }
 
-func (p *alibabaCloudProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
-	// Public IP address
-	var publicIPAddr *netip.Addr
+func (p *alibabaCloudProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+
+	var (
+		// Public IP address
+		publicIPAddr *netip.Addr
+		b64EncData   string
+	)
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
-
-	cloudConfigData, err := cloudConfig.Generate()
-	if err != nil {
-		return nil, err
-	}
-
-	//Convert userData to base64
-	b64EncData := base64.StdEncoding.EncodeToString([]byte(cloudConfigData))
 
 	instanceType, err := p.selectInstanceType(ctx, spec)
 	if err != nil {
@@ -241,10 +236,17 @@ func (p *alibabaCloudProvider) CreateInstance(ctx context.Context, podName, sand
 		InstanceType:     tea.String(instanceType),
 		SecurityGroupIds: securityGroupIds,
 		VSwitchId:        tea.String(p.serviceConfig.VswitchId),
-		UserData:         tea.String(b64EncData),
-		Tag:              tags,
-		InstanceName:     tea.String(instanceName),
+
+		Tag:          tags,
+		InstanceName: tea.String(instanceName),
 	}
+
+	if !skipVMUserData {
+		//Convert userData to base64
+		b64EncData = base64.StdEncoding.EncodeToString([]byte(userData))
+		req.UserData = tea.String(b64EncData)
+	}
+
 	if p.serviceConfig.KeyName != "" {
 		req.KeyPairName = tea.String(p.serviceConfig.KeyName)
 	}

@@ -15,6 +15,21 @@ OPTIONS=-listen 0.0.0.0:${FORWARDER_PORT}
 END
 fi
 
+PUD_OPTIONS=""
+
+if [ -n "${PUD_PORT}" ]; then
+  PUD_OPTIONS="--listen 0.0.0.0:${PUD_PORT}"
+fi
+
+if [ -n "${PUD_RECEIVE_DATA}" ]; then
+  PUD_OPTIONS="${PUD_OPTIONS} --receive-user-data=${PUD_RECEIVE_DATA}"
+fi
+
+if [ -n "${PUD_OPTIONS}" ]; then
+  echo "OPTIONS=${PUD_OPTIONS}" >> /etc/default/process-user-data
+fi
+
+
 sudo cp -a "${PODVM_DIR}"/files/etc/containers/* /etc/containers/
 sudo cp -a "${PODVM_DIR}"/files/etc/systemd/* /etc/systemd/
 if [ -e "${PODVM_DIR}"/files/etc/aa-offline_fs_kbc-resources.json ]; then

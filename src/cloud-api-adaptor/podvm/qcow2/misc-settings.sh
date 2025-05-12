@@ -88,6 +88,20 @@ OPTIONS=-listen 0.0.0.0:${FORWARDER_PORT}
 END
 fi
 
+PUD_OPTIONS=""
+
+if [ -n "${PUD_PORT}" ]; then
+  PUD_OPTIONS="--listen 0.0.0.0:${PUD_PORT}"
+fi
+
+if [ -n "${PUD_RECEIVE_DATA}" ]; then
+  PUD_OPTIONS="${PUD_OPTIONS} --receive-user-data=${PUD_RECEIVE_DATA}"
+fi
+
+if [ -n "${PUD_OPTIONS}" ]; then
+  echo "OPTIONS=${PUD_OPTIONS}" >> /etc/default/process-user-data
+fi
+
 # Disable unnecessary systemd services
 
 case $PODVM_DISTRO in

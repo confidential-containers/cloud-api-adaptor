@@ -21,7 +21,6 @@ import (
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/azure] ", log.LstdFlags|log.Lmsgprefix)
@@ -201,14 +200,9 @@ func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMa
 	return &config
 }
 
-func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
-
-	cloudConfigData, err := cloudConfig.Generate()
-	if err != nil {
-		return nil, err
-	}
 
 	instanceSize, err := p.selectInstanceType(ctx, spec)
 	if err != nil {
@@ -241,9 +235,22 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		imageId = spec.Image
 	}
 
-	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, nicName, imageId)
+	vmParameters, err := p.getVMParameters(instanceSize, diskName, sshBytes, instanceName, nicName, imageId)
 	if err != nil {
 		return nil, err
+	}
+
+	if !skipVMUserData {
+		userDataB64 := base64.StdEncoding.EncodeToString([]byte(userData))
+
+		// Azure limits the base64 encrypted userData to 64KB.
+		// Ref: https://learn.microsoft.com/en-us/azure/virtual-machines/user-data
+		// If the b64EncData is greater than 64KB then return an error
+		if len(userDataB64) > 64*1024 {
+			return nil, fmt.Errorf("base64 encoded userData is greater than 64KB")
+		}
+
+		vmParameters.Properties.UserData = to.Ptr(userDataB64)
 	}
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
@@ -373,15 +380,7 @@ func (p *azureProvider) getResourceTags() map[string]*string {
 	return tags
 }
 
-func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string, imageId string) (*armcompute.VirtualMachine, error) {
-	userDataB64 := base64.StdEncoding.EncodeToString([]byte(cloudConfig))
-
-	// Azure limits the base64 encrypted userData to 64KB.
-	// Ref: https://learn.microsoft.com/en-us/azure/virtual-machines/user-data
-	// If the b64EncData is greater than 64KB then return an error
-	if len(userDataB64) > 64*1024 {
-		return nil, fmt.Errorf("base64 encoded userData is greater than 64KB")
-	}
+func (p *azureProvider) getVMParameters(instanceSize, diskName string, sshBytes []byte, instanceName, nicName string, imageId string) (*armcompute.VirtualMachine, error) {
 	var managedDiskParams *armcompute.ManagedDiskParameters
 	var securityProfile *armcompute.SecurityProfile
 	if !p.serviceConfig.DisableCVM {
@@ -467,7 +466,6 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 					Enabled: to.Ptr(true),
 				},
 			},
-			UserData: to.Ptr(userDataB64),
 		},
 		Tags: p.getResourceTags(),
 	}

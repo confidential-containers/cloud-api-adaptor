@@ -133,3 +133,13 @@ variable "forwarder_port" {
   type    = string
   default = env("FORWARDER_PORT")
 }
+
+variable "pud_port" {
+  type    = string
+  default = env("PUD_PORT")
+}
+
+variable "PUD_RECEIVE_DATA" {
+  type    = bool
+  default = env("pud_receive_data")
+}

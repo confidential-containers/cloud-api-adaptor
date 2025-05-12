@@ -18,7 +18,6 @@ import (
 	resourcemanagerpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	proto "google.golang.org/protobuf/proto"
@@ -140,15 +139,10 @@ func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, 
 	return img.GetDiskSizeGb(), nil
 }
 
-func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 	logger.Printf("CreateInstance: name: %q", instanceName)
-
-	userData, err := cloudConfig.Generate()
-	if err != nil {
-		return nil, err
-	}
 
 	// Check if the tags exist within the project
 	// Otherwise, abort the instance creation
@@ -167,10 +161,6 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		}
 		allTagValues = append(allTagValues, tagId)
 	}
-
-	//Convert userData to base64
-	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
-	logger.Printf("userDataEnc:  %s", userDataEnc)
 
 	// It's expected that the image from the annotation will follow one of supported formats:
 	// - "projects/<project>/global/images/<imageid>" and "/projects/<project>/global/images/<imageid>",
@@ -212,18 +202,6 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 				Type:       proto.String(computepb.AttachedDisk_PERSISTENT.String()),
 			},
 		},
-		Metadata: &computepb.Metadata{
-			Items: []*computepb.Items{
-				{
-					Key:   proto.String("user-data"),
-					Value: proto.String(userDataEnc),
-				},
-				{
-					Key:   proto.String("user-data-encoding"),
-					Value: proto.String("base64"),
-				},
-			},
-		},
 		MachineType: proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, p.serviceConfig.MachineType)),
 		NetworkInterfaces: []*computepb.NetworkInterface{
 			{
@@ -237,6 +215,25 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 				StackType: proto.String("IPV4_Only"),
 			},
 		},
+	}
+
+	if !skipVMUserData {
+		//Convert userData to base64
+		userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
+		logger.Printf("userDataEnc:  %s", userDataEnc)
+
+		instanceResource.Metadata = &computepb.Metadata{
+			Items: []*computepb.Items{
+				{
+					Key:   proto.String("user-data"),
+					Value: proto.String(userDataEnc),
+				},
+				{
+					Key:   proto.String("user-data-encoding"),
+					Value: proto.String("base64"),
+				},
+			},
+		}
 	}
 
 	if !p.serviceConfig.DisableCVM {
