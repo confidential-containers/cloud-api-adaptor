@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -42,6 +43,7 @@ type Config struct {
 	parentPath    string
 	writeFiles    []string
 	initdataFiles []string
+	ListenAddr    string
 }
 
 func NewConfig(fetchTimeout int) *Config {
@@ -259,27 +261,80 @@ func extractInitdataAndHash(cfg *Config) error {
 	return nil
 }
 
+func (cfg *Config) fetchData() ([]byte, error) {
+	logger.Printf("process-user-data is listening on %s", cfg.ListenAddr)
+	listener, err := net.Listen("tcp", cfg.ListenAddr)
+	if err != nil {
+		return nil, err
+	}
+	defer listener.Close()
+
+	conn, err := listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	logger.Println("Connection established and recevied user data")
+
+	defer conn.Close()
+	buf := make([]byte, 4096)
+
+	n, err := conn.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf[:n], nil
+}
+
+// retrieveConfigFromNode fetches and parses user-data
+func (cfg *Config) retrieveConfigFromNode() (*CloudConfig, error) {
+	var cc CloudConfig
+	userData, err := cfg.fetchData()
+	if err != nil {
+		return nil, fmt.Errorf("failed to establish fetch data from CAA: %w", err)
+	}
+
+	parsed, err := parseUserData(userData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse user data: %w", err)
+	}
+	cc = *parsed
+
+	return &cc, nil
+
+}
 func ProvisionFiles(cfg *Config) error {
+	var (
+		cc  *CloudConfig
+		err error
+	)
 	bg := context.Background()
 	duration := time.Duration(cfg.fetchTimeout) * time.Second
 	ctx, cancel := context.WithTimeout(bg, duration)
 	defer cancel()
+
+	if cfg.ListenAddr != "" {
+		cc, err = cfg.retrieveConfigFromNode()
+		if err != nil {
+			return fmt.Errorf("failed to retrieve cloud config from CAA: %w", err)
+		}
+	}
 
 	// some providers provision config files via process-user-data
 	// some providers rely on cloud-init provision config files
 	// all providers need extract files from initdata and calculate the hash value for attesters usage
 	provider, _ := newProvider(ctx)
 	if provider != nil {
-		cc, err := retrieveCloudConfig(ctx, provider)
+		cc, err = retrieveCloudConfig(ctx, provider)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve cloud config: %w", err)
 		}
-
-		if err = processCloudConfig(cfg, cc); err != nil {
-			return fmt.Errorf("failed to process cloud config: %w", err)
-		}
 	} else {
-		logger.Printf("unsupported user data provider, we extract and calculate initdata hash only.\n")
+		logger.Printf("unsupported user data provider or we retrieved the data over network, proceed to extract and calculate initdata hash if present.\n")
+	}
+
+	if err := processCloudConfig(cfg, cc); err != nil {
+		return fmt.Errorf("failed to process cloud config: %w", err)
 	}
 
 	if err := extractInitdataAndHash(cfg); err != nil {
