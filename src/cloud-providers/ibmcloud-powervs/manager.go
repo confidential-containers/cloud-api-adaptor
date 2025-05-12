@@ -31,6 +31,8 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&ibmcloudPowerVSConfig.ProcessorType, "proc-type", "shared", "Name of the processor type")
 	flags.StringVar(&ibmcloudPowerVSConfig.SystemType, "sys-type", "s922", "Name of the system type")
 	flags.BoolVar(&ibmcloudPowerVSConfig.UsePublicIP, "use-public-ip", false, "Use Public IP for connecting to the agent-protocol-forwarder inside the Pod VM")
+	flags.IntVar(&ibmcloudPowerVSConfig.PoolSize, "pool-size", 0, "Pool size of the pre-created pod VMs")
+	flags.StringVar(&ibmcloudPowerVSConfig.PudPort, "pud-port", "", "port number used to connect to process-user-data on the pod VM")
 
 }
 

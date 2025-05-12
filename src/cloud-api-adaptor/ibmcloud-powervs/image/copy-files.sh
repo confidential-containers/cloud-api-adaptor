@@ -31,10 +31,14 @@ if [ -e "${PODVM_DIR}"/files/etc/certificates/ca.crt ]; then
     sudo cp "${PODVM_DIR}"/files/etc/certificates/ca.crt /etc/certificates/
 fi
 
+if [ -n "${PUD_PORT}" ]; then
+    cat <<END >> /etc/default/process-user-data 
+OPTIONS=--listen 0.0.0.0:${PUD_PORT}
+END
+fi
 
 sudo mkdir -p /usr/local/bin
 sudo cp -a "${PODVM_DIR}"/files/usr/* /usr/
-
 sudo cp -a "${PODVM_DIR}"/files/pause_bundle /
 
 # Copy the kata-agent OPA policy files

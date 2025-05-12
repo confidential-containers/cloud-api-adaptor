@@ -25,6 +25,8 @@ configMapGenerator:
   - POWERVS_IMAGE_ID="" #set
   - POWERVS_ZONE="" #set
   - CRI_RUNTIME_ENDPOINT="/run/cri-runtime/containerd.sock"
+  #- PUD_PORT="" # Uncomment and set if you want to send user-data to PUD
+  #- POOL_SIZE="" #  Uncomment and set if you want to create and use pre-created VMs
   #- POWERVS_MEMORY="" # Uncomment and set if you want to use a specific amount of memory
   #- POWERVS_PROCESSORS="" # Uncomment and set if you want to use a specific number of CPUs
   #- POWERVS_PROCESSOR_TYPE="" # Uncomment and set if you want to use a specific processor type

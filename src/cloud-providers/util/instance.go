@@ -2,7 +2,9 @@ package util
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 )
 
 const (
@@ -41,4 +43,15 @@ func GenerateInstanceName(podName, sandboxID string, podvmNameMax int) string {
 	instanceName := fmt.Sprintf("%s-%.*s-%.8s", podvmNamePrefix, podNameLen, podName, sandboxID)
 
 	return instanceName
+}
+
+func RandomString(n int) string {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[r.Intn(len(letters))]
+	}
+
+	return string(b)
 }

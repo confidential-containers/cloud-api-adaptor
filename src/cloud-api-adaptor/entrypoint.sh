@@ -155,7 +155,8 @@ ibmcloud_powervs() {
     [[ "${POWERVS_PROCESSOR_TYPE}" ]] && optionals+="-proc-type ${POWERVS_PROCESSOR_TYPE} "
     [[ "${POWERVS_SYSTEM_TYPE}" ]] && optionals+="-sys-type ${POWERVS_SYSTEM_TYPE} "
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip " # Use public IP for pod vm
-
+    [[ "${PUD_PORT}" ]] && optionals+="-pud-port ${PUD_PORT} "
+    [[ "${POOL_SIZE}" ]] && optionals+="-pool-size ${POOL_SIZE} "
     set -x
     exec cloud-api-adaptor ibmcloud-powervs \
         -pods-dir "${PEER_PODS_DIR}" \
