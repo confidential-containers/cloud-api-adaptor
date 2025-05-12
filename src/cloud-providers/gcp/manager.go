@@ -29,6 +29,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.BoolVar(&gcpcfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
 	flags.StringVar(&gcpcfg.ConfidentialType, "confidential-type", "", "Used when DisableCVM=false. i.e: TDX, SEV or SEV_SNP. Check if the machine type is compatible.")
 	flags.IntVar(&gcpcfg.RootVolumeSize, "root-volume-size", 10, "Root volume size (in GiB) for the Pod VMs")
+	flags.Var(&gcpcfg.Labels, "labels", "Custom labels (key=value pairs) to be used for the Pod VMs, comma separated")
 }
 
 func (_ *Manager) LoadEnv() {
