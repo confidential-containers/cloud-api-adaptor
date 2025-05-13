@@ -129,19 +129,26 @@ By default, your Red Hat OpenShift cluster will not work with the peer pod compo
 
 ## Upload a PeerPod VM Custom Image
 
-A peer pod VM image needs to be created as a VPC custom image in IBM Cloud in order to create the peer pod instances
-from. You can do this by following the [image instructions in README.md](./README.md#peer-pod-vm-image), or run the following command to use a prebuilt demo image.
+A peer pod VM image needs to be available as a VPC custom image in IBM Cloud to create the peer pod instances with. If you want to run the full confidential containers end-to-end demo, including TDX attestation with a [Trustee](https://github.com/confidential-containers/trustee), you will need to make sure that your peer pod VM image is configured with the TDX attestation agent and kernel modules.
 
-> [!WARNING]
-> If you have a previously-downloaded image but have since refreshed the cloud-api-adaptor repo, you should re-import the image to make sure you are using an image that is compatible with the latest code.
-
-Run the following command from the root directory of the `cloud-api-adaptor` repository:
-
+If you don't have a suitable peer pod image, you will need to [build one](./README.md#peer-pod-vm-image). For example, you can use the following command to build a TDX enabled RHEL image:
 ```bash
-src/cloud-api-adaptor/ibmcloud/image/import.sh ghcr.io/confidential-containers/podvm-generic-ubuntu-amd64:latest "$REGION" --platform linux/amd64
+# Run this command in directory src/cloud-api-adaptor
+PODVM_DISTRO=rhel TEE_PLATFORM=tdx ACTIVATION_KEY=<key> ORG_ID=<org id> IMAGE_URL=<path to base kvm qcow2 image> make podvm-builder podvm-binaries podvm-image
 ```
 
-This script will end with the line: `Image <image-name> with id <image-id> is available`. Make note of the `image-id`, which will be
+This will create the RHEL image wrapped in a docker container image. You can then upload the RHEL image to IBM Cloud by running the following command from the root directory of the `cloud-api-adaptor` repository:
+```bash
+src/cloud-api-adaptor/ibmcloud/image/import.sh <built docker image>:<image tag> "$REGION" --pull never --os red-9-amd64
+```
+
+> [!TIP]
+> If you don't have a TDX enabled image and are unable to build one, you can still run the peer pod demo without attestation. Run the following command to import a prebuilt non-TDX demo image:
+> ```bash
+> src/cloud-api-adaptor/ibmcloud/image/import.sh ghcr.io/confidential-containers/podvm-generic-ubuntu-amd64:latest "$REGION" --platform linux/amd64
+> ```
+
+The import script will end with the line: `Image <image-name> with id <image-id> is available`. Make note of the `image-id`, which will be
 needed below.
 
 > [!NOTE]
