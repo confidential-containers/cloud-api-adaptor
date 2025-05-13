@@ -13,6 +13,9 @@ concurrency:
 
 jobs:
   checklinks:
+    # Lychee isn't working, so skip this job for now until we have a new plan
+    # see https://github.com/confidential-containers/confidential-containers/issues/301
+    if: false
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
