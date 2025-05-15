@@ -31,7 +31,6 @@ COPY peerpod-ctrl ./peerpod-ctrl
 WORKDIR /work/cloud-api-adaptor
 RUN go mod download
 COPY cloud-api-adaptor/entrypoint.sh cloud-api-adaptor/Makefile cloud-api-adaptor/Makefile.defaults cloud-api-adaptor/versions.yaml ./
-COPY cloud-api-adaptor/hack  ./hack
 COPY cloud-api-adaptor/cmd   ./cmd
 COPY cloud-api-adaptor/pkg   ./pkg
 COPY cloud-api-adaptor/proto ./proto
