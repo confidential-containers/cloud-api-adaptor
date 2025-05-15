@@ -21,12 +21,14 @@ type Config struct {
 	VolName        string
 	LaunchSecurity string
 	Firmware       string
+	CPU            uint
+	Memory         uint // It stores the value in MiB
 }
 
 type vmConfig struct {
 	name               string
 	cpu                uint
-	mem                uint
+	mem                uint // It stores the value in MiB
 	rootDiskSize       uint64
 	userData           string
 	ips                []netip.Addr

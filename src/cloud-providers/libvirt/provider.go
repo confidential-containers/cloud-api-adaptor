@@ -49,6 +49,8 @@ func getIPs(instance *vmConfig) ([]netip.Addr, error) {
 
 func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
+	var instanceMemory uint
+	var instanceVCPUs uint
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
 	userData, err := cloudConfig.Generate()
@@ -56,8 +58,20 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		return nil, err
 	}
 
+	if spec.Memory != 0 {
+		instanceMemory = uint(spec.Memory)
+	} else {
+		instanceMemory = uint(p.serviceConfig.Memory)
+	}
+
+	if spec.VCPUs != 0 {
+		instanceVCPUs = uint(spec.VCPUs)
+	} else {
+		instanceVCPUs = uint(p.serviceConfig.CPU)
+	}
+
 	// TODO: Specify the maximum instance name length in Libvirt
-	vm := &vmConfig{name: instanceName, userData: userData, firmware: p.serviceConfig.Firmware}
+	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, userData: userData, firmware: p.serviceConfig.Firmware}
 
 	if p.serviceConfig.DisableCVM {
 		vm.launchSecurityType = NoLaunchSecurity
