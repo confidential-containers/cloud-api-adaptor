@@ -10,7 +10,8 @@ DefaultDependencies=no
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/process-user-data provision-files
+EnvironmentFile=/etc/default/process-user-data
+ExecStart=/usr/local/bin/process-user-data provision-files $OPTIONS
 RemainAfterExit=yes
 
 [Install]
