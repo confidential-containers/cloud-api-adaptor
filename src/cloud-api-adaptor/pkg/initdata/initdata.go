@@ -96,7 +96,19 @@ func Encode(initdataStr string) (string, error) {
 	return val.String(), nil
 }
 
-// Used in e2e testing
+func IsEncoded(annotation string) bool {
+	reader := strings.NewReader(annotation)
+	initdataToml, err := decode(reader)
+	if err != nil {
+		return false
+	}
+
+	body := &InitDataBody{}
+	err = toml.Unmarshal(initdataToml, body)
+
+	return err == nil
+}
+
 func DecodeAnnotation(annotation string) ([]byte, error) {
 	reader := strings.NewReader(annotation)
 	return decode(reader)
