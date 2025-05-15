@@ -244,10 +244,10 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 		},
 		Metadata: &libvirtxml.DomainMetadata{},
 		Memory: &libvirtxml.DomainMemory{
-			Value: cfg.mem, Unit: "GiB",
+			Value: cfg.mem, Unit: "MiB",
 		},
 		CurrentMemory: &libvirtxml.DomainCurrentMemory{
-			Value: cfg.mem, Unit: "GiB",
+			Value: cfg.mem, Unit: "MiB",
 		},
 		VCPU: &libvirtxml.DomainVCPU{
 			Value: cfg.cpu,
@@ -308,7 +308,7 @@ func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfi
 		Type:        "kvm",
 		Name:        cfg.name,
 		Description: "This Virtual Machine is the peer-pod VM",
-		Memory:      &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "GiB", DumpCore: "on"},
+		Memory:      &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "MiB", DumpCore: "on"},
 		VCPU:        &libvirtxml.DomainVCPU{Value: cfg.cpu},
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{Arch: "x86_64", Type: typeHardwareVirtualMachine},
@@ -458,7 +458,7 @@ func createDomainXMLaarch64(client *libvirtClient, cfg *domainConfig, vm *vmConf
 			// https://libvirt.org/formatdomain.html#bios-bootloader
 			Firmware: "efi",
 		},
-		Memory: &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "GiB"},
+		Memory: &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "MiB"},
 		VCPU:   &libvirtxml.DomainVCPU{Value: cfg.cpu},
 		CPU:    &libvirtxml.DomainCPU{Mode: "host-passthrough"},
 		Devices: &libvirtxml.DomainDeviceList{
@@ -543,8 +543,6 @@ func getDomainIPs(dom *libvirt.Domain) ([]netip.Addr, error) {
 
 func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig) (result *createDomainOutput, err error) {
 
-	v.cpu = uint(2)
-	v.mem = uint(8)
 	v.rootDiskSize = uint64(10)
 
 	exists, err := checkDomainExistsByName(v.name, libvirtClient)
