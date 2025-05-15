@@ -793,3 +793,29 @@ func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 
 	NewTestCase(t, e, "PodWithCpuMemLimitsAndRequests", assert, "Pod with cpu and memory limits and requests").WithPod(pod).Run()
 }
+
+// Test to create a peer pod with cpu request as annotation
+func DoTestPodVMwithAnnotationCPU(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
+
+	podName := "annotations-cpu"
+	containerName := "busybox"
+	imageName := getBusyboxTestImage(t)
+	annotationData := map[string]string{
+		"io.katacontainers.config.hypervisor.default_vcpus": "4",
+	}
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+	NewTestCase(t, e, "PodVMwithAnnotationCPU", assert, "PodVM with Annotation CPU is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
+}
+
+// Test to create a peer pod with memory request as annotation
+func DoTestPodVMwithAnnotationMemory(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
+
+	podName := "annotations-mem"
+	containerName := "busybox"
+	imageName := getBusyboxTestImage(t)
+	annotationData := map[string]string{
+		"io.katacontainers.config.hypervisor.default_memory": "7168",
+	}
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+	NewTestCase(t, e, "PodVMwithAnnotationMemory", assert, "PodVM with Annotation Memory is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
+}
