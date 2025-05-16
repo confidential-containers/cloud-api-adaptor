@@ -392,7 +392,7 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
 
     Then, set the `INITDATA` environment variable to the compressed and encoded Trustee configuration:
     ```
-    export INITDATA=$(cat <<EOF | gzip | base64
+    export INITDATA=$(cat <<EOF | gzip | base64 -w0
     algorithm = "sha256"
     version = "0.1.0"
 
