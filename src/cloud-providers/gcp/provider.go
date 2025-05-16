@@ -178,6 +178,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 				StackType: proto.String("IPV4_Only"),
 			},
 		},
+		Labels: p.serviceConfig.Labels,
 	}
 
 	if !p.serviceConfig.DisableCVM {
