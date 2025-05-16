@@ -40,7 +40,7 @@ require (
 	github.com/IBM-Cloud/power-go-client v1.2.3 // indirect
 	github.com/IBM/go-sdk-core/v5 v5.19.0 // indirect
 	github.com/IBM/platform-services-go-sdk v0.36.0 // indirect
-	github.com/IBM/vpc-go-sdk v0.66.0 // indirect
+	github.com/IBM/vpc-go-sdk v0.68.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/avast/retry-go/v4 v4.5.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.21.0 // indirect

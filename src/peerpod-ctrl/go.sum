@@ -57,8 +57,8 @@ github.com/IBM/go-sdk-core/v5 v5.19.0 h1:YN2S5JUvq/EwYulmcNFwgyYBxZhVWl9nkY22H7H
 github.com/IBM/go-sdk-core/v5 v5.19.0/go.mod h1:deZO1J5TSlU69bCnl/YV7nPxFZA2UEaup7cq/7ZTOgw=
 github.com/IBM/platform-services-go-sdk v0.36.0 h1:ElwA6czZWfbda6BZPqrqBxin6x0MgLhfLtSYG+t9cSU=
 github.com/IBM/platform-services-go-sdk v0.36.0/go.mod h1:oFW/DQyAXGBcGytB+DtKjE3yNdEGM2bmw5SDOjrRwTw=
-github.com/IBM/vpc-go-sdk v0.66.0 h1:S0HW+f6Qf6OLSGESQ7WRgWLq1bDgvs+vvOJ7AWgUMbw=
-github.com/IBM/vpc-go-sdk v0.66.0/go.mod h1:VL7sy61ybg6tvA60SepoQx7TFe20m7JyNUt+se2tHP4=
+github.com/IBM/vpc-go-sdk v0.68.0 h1:Zs65PWeWBG5IwafAJV0RdPVsi3hCjIkhFZkqr1sLt5g=
+github.com/IBM/vpc-go-sdk v0.68.0/go.mod h1:VL7sy61ybg6tvA60SepoQx7TFe20m7JyNUt+se2tHP4=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
