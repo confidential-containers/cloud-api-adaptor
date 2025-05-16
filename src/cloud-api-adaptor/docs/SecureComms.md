@@ -168,7 +168,7 @@ name = 'cc_kbc'
 url = 'http://127.0.0.1:8080'
 '''
 EOF
-export INITDATA=`base64 -w 0 /tmp/initdata.txt`
+export INITDATA=`cat /tmp/initdata.txt | gzip | base64 -w0`
 kubectl -n confidential-containers-system  get cm peer-pods-cm  -o yaml | sed 's/^\s*INITDATA: .*/  INITDATA: '$INITDATA'/'|kubectl apply -f -
 ```
 
