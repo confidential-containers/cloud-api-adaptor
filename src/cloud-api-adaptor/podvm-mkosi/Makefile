@@ -56,8 +56,8 @@ endif
 		--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
 		--build-arg PROTOC_ARCH=$(PROTOC_ARCH) \
 		--build-arg YQ_VERSION=$(YQ_VERSION) \
-		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM_$(GO_ARCH)) \
-		--build-arg YQ_ARCH=$(GO_ARCH) \
+		--build-arg YQ_CHECKSUM=$(YQ_CHECKSUM_$(YQ_ARCH)) \
+		--build-arg YQ_ARCH=$(YQ_ARCH) \
 		--build-arg ORAS_VERSION=$(ORAS_VERSION) \
 		--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
 		--build-arg PAUSE_REPO=$(PAUSE_REPO) \
