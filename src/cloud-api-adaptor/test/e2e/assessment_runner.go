@@ -341,7 +341,7 @@ func (tc *TestCase) Run() {
 				}
 
 				if tc.expectedInstanceType != "" {
-					err := CompareInstanceType(ctx, t, client, *tc.pod, tc.expectedPodEventErrorString, tc.assert.GetInstanceType)
+					err := CompareInstanceType(ctx, t, client, *tc.pod, tc.expectedInstanceType, tc.assert.GetInstanceType)
 					if err != nil {
 						t.Errorf("CompareInstanceType failed: %v", err)
 					}
