@@ -31,7 +31,10 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	var fetchTimeout int
+	var (
+		fetchTimeout int
+		listenAddr   string
+	)
 	rootCmd.PersistentFlags().BoolVarP(&versionFlag, "version", "v", false, "Print the version")
 
 	var provisionFilesCmd = &cobra.Command{
@@ -39,11 +42,15 @@ func init() {
 		Short: "Provision required files based on user data",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			cfg := userdata.NewConfig(fetchTimeout)
+			if listenAddr != "" {
+				cfg.ListenAddr = listenAddr
+			}
 			return userdata.ProvisionFiles(cfg)
 		},
 		SilenceUsage: true, // Silence usage on error
 	}
 	provisionFilesCmd.Flags().IntVarP(&fetchTimeout, "user-data-fetch-timeout", "t", 180, "Timeout (in secs) for fetching user data")
+	provisionFilesCmd.Flags().StringVar(&listenAddr, "listen", "", "Listen address")
 	rootCmd.AddCommand(provisionFilesCmd)
 }
 
