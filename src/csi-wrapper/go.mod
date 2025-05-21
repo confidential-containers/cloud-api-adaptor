@@ -13,7 +13,7 @@ require (
 	golang.org/x/net v0.39.0
 	google.golang.org/grpc v1.72.0
 	k8s.io/apimachinery v0.30.0
-	k8s.io/client-go v0.26.2
+	k8s.io/client-go v0.29.0
 	k8s.io/code-generator v0.26.3
 )
 
@@ -27,7 +27,6 @@ require (
 	github.com/go-openapi/jsonreference v0.20.3 // indirect
 	github.com/go-openapi/swag v0.22.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -56,7 +55,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.26.2 // indirect
+	k8s.io/api v0.29.0 // indirect
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
 	k8s.io/gengo/v2 v2.0.0-20240228010128-51d4e06bde70 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
