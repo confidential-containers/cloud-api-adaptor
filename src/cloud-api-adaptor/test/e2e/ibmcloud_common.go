@@ -17,7 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func CreateConfidentialPodCheckIBMSECommands() []TestCommand {
@@ -86,9 +86,9 @@ func NewPodWithPVCFromIBMVPCBlockDriver(namespace, podName, containerName, image
 					Image:           csiImageName,
 					ImagePullPolicy: corev1.PullAlways,
 					SecurityContext: &corev1.SecurityContext{
-						Privileged:   pointer.Bool(true),
-						RunAsNonRoot: pointer.Bool(false),
-						RunAsUser:    pointer.Int64(0),
+						Privileged:   ptr.To(true),
+						RunAsNonRoot: ptr.To(false),
+						RunAsUser:    func(i int64) *int64 { return &i }(0),
 					},
 					Ports: []corev1.ContainerPort{
 						{
