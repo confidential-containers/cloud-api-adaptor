@@ -13,12 +13,15 @@ import (
 
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
+	crm "cloud.google.com/go/resourcemanager/apiv3"
+	crmpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 	"golang.org/x/oauth2/google"
 	option "google.golang.org/api/option"
 	proto "google.golang.org/protobuf/proto"
+	"os/exec"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/gcp] ", log.LstdFlags|log.Lmsgprefix)
@@ -76,6 +79,62 @@ func getIPs(instance *computepb.Instance) ([]netip.Addr, error) {
 	return podNodeIPs, nil
 }
 
+func (p *gcpProvider) getProjectNumber(ctx context.Context) (string, error) {
+	client, err := crm.NewProjectsClient(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer client.Close()
+
+	req := &crmpb.GetProjectRequest{
+		Name: fmt.Sprintf("projects/%s", p.serviceConfig.ProjectId),
+	}
+	project, err := client.GetProject(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprint(project.Name), nil
+}
+
+func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*crmpb.TagValue, error) {
+	tagKeysClient, err := crm.NewTagKeysClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tagKeysClient.Close()
+
+	tagValuesClient, err := crm.NewTagValuesClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tagValuesClient.Close()
+
+	parent := fmt.Sprintf("projects/%s", p.serviceConfig.ProjectId)
+	tags := make(map[string]map[string]*crmpb.TagValue)
+
+	it := tagKeysClient.ListTagKeys(ctx, &crmpb.ListTagKeysRequest{Parent: parent})
+	for {
+		key, err := it.Next()
+		if err != nil {
+			break
+		}
+		tagKeyID := key.Name
+		keyName := key.ShortName
+		tags[keyName] = make(map[string]*crmpb.TagValue)
+
+		valIt := tagValuesClient.ListTagValues(ctx, &crmpb.ListTagValuesRequest{Parent: tagKeyID})
+		for {
+			val, err := valIt.Next()
+			if err != nil {
+				break
+			}
+			tags[keyName][val.ShortName] = val
+		}
+	}
+	return tags, nil
+}
+
 func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, error) {
 	client, err := compute.NewImagesRESTClient(ctx)
 	if err != nil {
@@ -107,6 +166,24 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	userData, err := cloudConfig.Generate()
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if the tags exist within the project
+	// Otherwise, abort the instance creation
+	allTags, err := p.ListAllTags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Aborting: Failed to list tags: %w", err)
+	}
+
+	allTagValues := make([]*crmpb.TagValue, 0)
+	for tagKey, tagValue := range p.serviceConfig.Tags {
+		tagId := allTags[tagKey][tagValue]
+		if tagId == nil {
+			msg := fmt.Sprintf("Aborting: Tag %s=%s not found", tagKey, tagValue)
+			logger.Printf(msg)
+			return nil, fmt.Errorf(msg)
+		}
+		allTagValues = append(allTagValues, tagId)
 	}
 
 	//Convert userData to base64
@@ -221,6 +298,41 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		return nil, fmt.Errorf("unable to get instance: %w, req: %v", err, getReq)
 	}
 	logger.Printf("instance name %s, id %d", instance.GetName(), instance.GetId())
+
+	// Binding all the tagValues to the instance that was already created
+	tagBindingsClient, err := crm.NewTagBindingsClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bind client: %w", err)
+	}
+	defer tagBindingsClient.Close()
+
+	projectNumber, err := p.getProjectNumber(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project number: %w", err)
+	}
+
+	parent := fmt.Sprintf("//compute.googleapis.com/%s/zones/%s/instances/%s", projectNumber, p.serviceConfig.Zone, instance.GetName())
+
+	for _, tagValue := range allTagValues {
+		logger.Printf("Creating tag binding for %s on %s", tagValue.Name, parent)
+
+		// Binding tagValues using gcloud because the Go API client doesn’t support binding
+		// tags to zonal resources like VM instances. Gcloud works with --location workaround.
+		// afaik, this is a gap in the Go API client. I couldn't find any other way to do this.
+		cmd := exec.CommandContext(ctx,
+			"gcloud", "resource-manager", "tags", "bindings", "create",
+			"--tag-value", tagValue.Name,
+			"--parent", parent,
+			"--location", p.serviceConfig.Zone,
+		)
+
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, fmt.Errorf("gcloud tag binding failed for %s: %v\nOutput: %s", tagValue.Name, err, string(output))
+		}
+
+		logger.Printf("Created tag binding for %s using gcloud", tagValue.Name)
+	}
 
 	ips, err := getIPs(instance)
 	if err != nil {
