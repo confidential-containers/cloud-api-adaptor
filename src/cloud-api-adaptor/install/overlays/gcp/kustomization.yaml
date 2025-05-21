@@ -31,6 +31,7 @@ configMapGenerator:
   #- ROOT_VOLUME_SIZE="10" # Uncomment and set if you want to use a specific root volume size. Defaults to 10
   #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
+  #- TAGS="" # Uncomment and add key1=value1,key2=value2 etc if you want to use specific tags for podvm. Tags must already exist in the GCP project
 ##TLS_SETTINGS
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS
