@@ -11,12 +11,9 @@ set -euo pipefail
 
 main() {
   mkdir -p /run/issue.d
-  /usr/bin/neofetch \
-    --config /etc/neofetch/config.conf \
-    --ascii /etc/neofetch/coco.ascii \
-    --colors 9 9 9 9 9 12 \
-    --ascii_colors 24 9 \
-    > /run/issue.d/20-neofetch.issue
+  /usr/bin/fastfetch \
+	--config /etc/fastfetch/config.jsonc \
+    > /run/issue.d/20-fastfetch.issue
   {
     echo "Detected vTPM PCR values:"
     /usr/bin/tpm2_pcrread sha256:all
