@@ -35,3 +35,11 @@ func hasUserDataFile() bool {
 	}
 	return true
 }
+
+func isAlibabaCloudVM(ctx context.Context) bool {
+	if cpuid.CPU.HypervisorVendorID != cpuid.KVM {
+		return false
+	}
+	_, err := imdsGet(ctx, AlibabaCloudImdsUrl, false, nil)
+	return err == nil
+}
