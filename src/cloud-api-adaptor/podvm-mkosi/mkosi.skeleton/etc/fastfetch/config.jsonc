@@ -1,0 +1,46 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "display": {
+    "color": {
+	  "keys": "1;white"
+    }
+  },
+  "logo": {
+    "type": "file",
+    "source": "/etc/fastfetch/logo.txt",
+    "color": {
+      "1": "blue",
+      "2": "red"
+    },
+    "padding": {
+	  "right": 3
+	}
+  },
+  "modules": [
+	{
+	  "type": "custom",
+	  "format": "PodVM image for cloud-api-adaptor"
+	},
+	"break",
+    "os",
+    "host",
+    "kernel",
+    "uptime",
+    "cpu",
+    "memory",
+    "swap",
+    "disk",
+    "localip",
+	"break",
+	{
+	  "type": "command",
+	  "key": "Variant",
+	  "text": "grep VARIANT_ID /etc/os-release | cut -d'=' -f2"
+	},
+	{
+	  "type": "command",
+	  "key": "Version",
+	  "text": "grep IMAGE_VERSION /etc/os-release | cut -d'=' -f2"
+	}
+  ]
+}

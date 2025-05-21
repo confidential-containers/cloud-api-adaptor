@@ -15,6 +15,13 @@ PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(DISTRO_ARCH)
 VERIFY_PROVENANCE ?= no
 MKOSI_VERSION ?= v22
 
+_SHA := $(shell git rev-parse --short HEAD)
+_SHA_DIRTY := $(shell [ -n "$$(git status --porcelain 2>/dev/null)" ] && printf -- '-dirty')
+IMAGE_VERSION ?= $(_SHA)$(_SHA_DIRTY)
+
+export IMAGE_VERSION
+export MKOSI_VERSION
+
 .DEFAULT_GOAL := all
 .PHONY: all
 all: binaries image
@@ -86,7 +93,9 @@ else
 	docker buildx build \
 		-f Dockerfile.mkosi \
 		-t $(PODVM_IMAGE) \
-		--build-arg PROFILE=production --build-arg MKOSI_VERSION \
+		--build-arg PROFILE=production \
+		--build-arg IMAGE_VERSION \
+		--build-arg MKOSI_VERSION \
 		--progress=plain \
 		-o type=local,dest=./build \
 		--builder insecure-builder \
@@ -106,11 +115,14 @@ else ifeq ($(ARCH),s390x)
 	$(call run_mkosi_in_container,--profile debug)
 	sudo -E ../hack/build-s390x-image.sh
 else
+
 	mkdir -p build
 	docker buildx build \
 		-f Dockerfile.mkosi \
 		-t $(PODVM_IMAGE) \
-		--build-arg PROFILE=debug --build-arg MKOSI_VERSION \
+		--build-arg PROFILE=debug \
+		--build-arg IMAGE_VERSION \
+		--build-arg MKOSI_VERSION \
 		--progress=plain \
 		-o type=local,dest=./build \
 		--builder insecure-builder \
