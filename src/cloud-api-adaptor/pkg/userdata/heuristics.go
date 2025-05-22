@@ -6,6 +6,7 @@ import (
 
 	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 	cpuid "github.com/klauspost/cpuid/v2"
+	"github.com/yumaojun03/dmidecode/smbios"
 )
 
 func isAzureVM() bool {
@@ -36,10 +37,19 @@ func hasUserDataFile() bool {
 	return true
 }
 
-func isAlibabaCloudVM(ctx context.Context) bool {
-	if cpuid.CPU.HypervisorVendorID != cpuid.KVM {
+func isAlibabaCloudVM(_ context.Context) bool {
+	_, s, err := smbios.ReadStructures()
+	if err != nil {
 		return false
 	}
-	_, err := imdsGet(ctx, AlibabaCloudImdsUrl, false, nil)
-	return err == nil
+
+	if len(s) == 0 {
+		return false
+	}
+
+	if len(s[0].Strings) == 0 {
+		return false
+	}
+
+	return s[0].Strings[0] == "Alibaba Cloud"
 }
