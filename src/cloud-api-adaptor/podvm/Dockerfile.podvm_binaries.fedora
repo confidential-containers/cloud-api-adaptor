@@ -5,7 +5,7 @@
 #
 # Build binaries for mkosi podvm image
 #
-FROM registry.fedoraproject.org/fedora:40 AS builder
+FROM registry.fedoraproject.org/fedora:41 AS builder
 
 ARG ARCH="x86_64"
 ARG GO_ARCH="amd64"
@@ -18,7 +18,7 @@ ARG YQ_VERSION
 ARG YQ_CHECKSUM
 ARG ORAS_VERSION
 
-RUN dnf groupinstall -y 'Development Tools' && \
+RUN dnf -y group install development-tools && \
     dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
     device-mapper-devel unzip libassuan-devel \
     perl-FindBin openssl-devel tpm2-tss-devel \
@@ -31,7 +31,7 @@ RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${GO_AR
 ENV PATH="/usr/local/go/bin:$PATH"
 
 RUN if [ "$(uname -m)" != "s390x" ]; then dnf install 'dnf-command(config-manager)' && \
-    dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
+    dnf config-manager addrepo --from-repofile="https://cli.github.com/packages/rpm/gh-cli.repo" && \
     dnf install -y gh --repo gh-cli; else git clone https://github.com/cli/cli.git gh-cli && \
     cd gh-cli && mkdir -p /usr/local/gh && make install prefix=/usr/local/gh && cd .. && \
     rm -rf gh-cli; fi
