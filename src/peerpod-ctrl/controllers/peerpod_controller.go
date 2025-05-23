@@ -37,8 +37,8 @@ import (
 // PeerPodReconciler reconciles a PeerPod object
 type PeerPodReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Provider provider.Provider
+	Scheme    *runtime.Scheme
+	Providers map[string]provider.Provider
 }
 
 const (
@@ -57,19 +57,13 @@ func (r *PeerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	logger := log.FromContext(ctx)
 	pp := confidentialcontainersorgv1alpha1.PeerPod{}
 
-	// cloud provider was not set, try to fetch cloud provider and its configs dynamically from ConfigMap or Secret
+	// Load cloud providers ConfigMap and Secret
 	// make sure the matching RBAC rules are set
-	if r.Provider == nil {
+	if len(r.Providers) == 0 {
 		logger.Info("trying to fetch cloud provider configs for peerpod-ctrl")
 		if err := r.cloudConfigsGetter(); err != nil {
 			// don't requeue, if cloud configs are missing it will requeue later
 			logger.Info("cannot fetch cloud configs at the moment", "error", err)
-		}
-
-		var pErr error
-		r.Provider, pErr = SetProvider()
-		if pErr != nil {
-			return ctrl.Result{}, pErr
 		}
 	}
 
@@ -105,7 +99,16 @@ func (r *PeerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	if controllerutil.ContainsFinalizer(&pp, ppFinalizer) {
 		logger.Info("deleting instance", "InstanceID", pp.Spec.InstanceID, "CloudProvider", pp.Spec.CloudProvider)
-		if err := r.Provider.DeleteInstance(ctx, pp.Spec.InstanceID); err != nil {
+		provider := r.Providers[pp.Spec.CloudProvider]
+		if provider == nil {
+			p, err := GetProvider(pp.Spec.CloudProvider)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			r.Providers[pp.Spec.CloudProvider] = p
+			provider = p
+		}
+		if err := provider.DeleteInstance(ctx, pp.Spec.InstanceID); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -159,8 +162,7 @@ func (r *PeerPodReconciler) cloudConfigsGetter() error {
 	return nil
 }
 
-func SetProvider() (provider.Provider, error) {
-	cloudName := os.Getenv("CLOUD_PROVIDER")
+func GetProvider(cloudName string) (provider.Provider, error) {
 	if cloud := provider.Get(cloudName); cloud != nil {
 		cloud.LoadEnv()
 		provider, err := cloud.NewProvider()
