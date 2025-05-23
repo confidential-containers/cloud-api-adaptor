@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	confidentialcontainersorgv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl/api/v1alpha1"
 	"github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl/controllers"
 	//+kubebuilder:scaffold:imports
@@ -96,15 +97,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	provider, err := controllers.SetProvider()
-	if err != nil {
-		setupLog.Info("unable to set provider at init, will retry at reconcile", "error", err)
-	}
-
 	if err = (&controllers.PeerPodReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Provider: provider,
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Providers: make(map[string]provider.Provider),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PeerPod")
 		os.Exit(1)
