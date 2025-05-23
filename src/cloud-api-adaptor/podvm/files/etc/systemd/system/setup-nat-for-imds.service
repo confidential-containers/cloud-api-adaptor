@@ -1,11 +1,15 @@
 # this should be enabled by misc-settings.sh
 [Unit]
+StartLimitIntervalSec=60
+StartLimitBurst=3
 Description=Setup NAT for IMDS
 After=agent-protocol-forwarder.service
 Wants=agent-protocol-forwarder.service
 DefaultDependencies=no
 
 [Service]
+Restart=on-failure
+RestartSec=5s
 Type=oneshot
 ExecStart=/usr/local/bin/setup-nat-for-imds.sh
 
