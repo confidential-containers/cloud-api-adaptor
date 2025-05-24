@@ -190,6 +190,10 @@ ibmcloud_powervs() {
 libvirt() {
     test_vars LIBVIRT_URI
 
+    [[ "${DISABLECVM}" = "true" ]] && optionals+="-disable-cvm "
+    [[ "${LIBVIRT_CPU}" ]] && optionals+="-cpu ${LIBVIRT_CPU} "
+    [[ "${LIBVIRT_MEMORY}" ]] && optionals+="-memory ${LIBVIRT_MEMORY} "
+    
     set -x
     exec cloud-api-adaptor libvirt \
         -pods-dir "${PEER_PODS_DIR}" \

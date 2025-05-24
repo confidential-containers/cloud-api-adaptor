@@ -254,3 +254,22 @@ func TestLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "200Mi")
 }
+
+func TestLibvirtPodVMwithAnnotationsCPUMemory(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodVMwithAnnotationsCPUMemory(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(2, 12288))
+}
+func TesLibvirtPodVMwithAnnotationCPU(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodVMwithAnnotationCPU(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(4, libvirt.DefaultMemory))
+}
+
+func TestLibvirtPodVMwithAnnotationMemory(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodVMwithAnnotationMemory(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(libvirt.DefaultCPU, 7168))
+}
+
+func TestLibvirtPodVMwithNoAnnotations(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodVMwithNoAnnotations(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(libvirt.DefaultCPU, libvirt.DefaultMemory))
+}
