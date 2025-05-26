@@ -1,3 +1,4 @@
+---
 version: 2
 updates:
   # Check updates to action versions in .github/workflows
@@ -5,5 +6,32 @@ updates:
     directory: "/"
     schedule:
       # Check for updates to GitHub Actions every week on Saturday
+      interval: "weekly"
+      day: "saturday"
+  - package-ecosystem: "gomod"
+    directories:
+      - "src/cloud-api-adaptor"
+      - "src/cloud-api-adaptor/podvm"
+      - "src/cloud-providers"
+      - "src/csi-wrapper"
+      - "src/peerpod-ctrl"
+      - "src/webhook"
+    groups:
+      aws-sdk-go-v2:
+        patterns:
+          - "*aws-sdk-go-v2*"
+      k8s:
+        patterns:
+          - "*k8s.io*"
+      x/crypto:
+        patterns:
+          - golang.org/x/crypto
+      x/net:
+        patterns:
+          - golang.org/x/net
+      x/sys:
+        patterns:
+          - golang.org/x/sys
+    schedule:
       interval: "weekly"
       day: "saturday"
