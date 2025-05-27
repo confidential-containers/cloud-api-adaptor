@@ -16,6 +16,8 @@ concurrency:
 jobs:
   commit-message-check:
     runs-on: ubuntu-24.04
+    env:
+      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
     name: Commit Message Check
     steps:
       - name: Get PR Commits
@@ -73,7 +75,7 @@ jobs:
           post_error: ${{ env.error_msg }}
 
       - name: Check Subsystem
-        if: ${{ ( success() || failure() ) }}
+        if: ${{ (env.PR_AUTHOR != 'dependabot[bot]') && ( success() || failure() ) }}
         uses: tim-actions/commit-message-checker-with-regex@v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
