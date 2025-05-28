@@ -18,7 +18,7 @@ This documentation will walk you through setting up CAA (a.k.a. Peer Pods) on Al
 ## Create pod VM Image
 
 > **Note:**
-> There is a pre-built Community Image (id:`m-2ze59gkxzzupnfsstc8b`) for version `0.13.0` in `cn-beijing` that you can use for testing.
+> There is a pre-built Community Image (id:`m-2ze1w9aj2aonwckv64cw`) for version `0.13.0` in `cn-beijing` that you can use for testing.
 
 If you want to build a pod VM image yourself, please follow the steps.
 
@@ -254,7 +254,7 @@ in [`kustomization.yaml`](../install/overlays/alibabacloud/kustomization.yaml).
 
 - `VSWITCH_ID`: Use one of the values of `${VSWITCH_IDS}`
 - `SECURITY_GROUP_IDS`: We can reuse the ACK's security group id `${SECURITY_GROUP_ID}`.
-- `IMAGEID`: The ECS images ID, e.g. `m-2ze59gkxzzupnfsstc8b` in `cn-beijing` region.
+- `IMAGEID`: The ECS images ID, e.g. `m-2ze1w9aj2aonwckv64cw` in `cn-beijing` region.
 - `REGION`: The region where Peer Pods run, e.g. `cn-beijing`. 
 
 ### Deploy CAA on the Kubernetes cluster
