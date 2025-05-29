@@ -26,9 +26,9 @@ configMapGenerator:
   - VSWITCH_ID="" # Set
   - SECURITY_GROUP_IDS="" # Set
   - REGION="cn-beijing" # The ECS pod instance region
-  - IMAGEID="m-2ze59gkxzzupnfsstc8b" # This is the default image-id. Change if you want to use yours
+  - IMAGEID="m-2ze1w9aj2aonwckv64cw" # This is the default image-id. Change if you want to use yours
   - SYSTEM_DISK_SIZE="50" # Change if need to
-  - USE_PUBLIC_IP="true" # Change if need to
+  # - USE_PUBLIC_IP="true" # Change if need to
   # Comment out the following variable(s) if using launch template
   # - INSTANCE_TYPE="ecs.g8i.xlarge"
   # - KEYNAME="" # The ssh-key id to login the instance. It's useful when you want to connect to the VM via ssh for debugging.
