@@ -4,6 +4,7 @@
 package gcp
 
 import (
+	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 )
 
@@ -18,6 +19,7 @@ type Config struct {
 	DisableCVM       bool
 	ConfidentialType string
 	RootVolumeSize   int
+	Tags             provider.KeyValueFlag
 }
 
 func (c Config) Redact() Config {
