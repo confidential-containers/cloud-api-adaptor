@@ -43,6 +43,9 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions:
+  contents: read
+
 jobs:
   build_push_job:
     name: build and push

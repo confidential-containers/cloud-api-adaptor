@@ -22,6 +22,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   build_push_webhook:
     name: build and push webhook

@@ -52,6 +52,9 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ${{ inputs.runner }}

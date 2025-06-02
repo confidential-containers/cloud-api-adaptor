@@ -23,6 +23,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   peerpod_push:
     name: build and push peerpod-ctrl

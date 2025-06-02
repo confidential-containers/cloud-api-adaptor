@@ -1,7 +1,6 @@
 name: azure-e2e-test
 
 permissions:
-  id-token: write
   contents: read
 
 env:
@@ -38,6 +37,8 @@ jobs:
         working-directory: src/cloud-api-adaptor
     outputs:
       caa-image: "${{ steps.build-container.outputs.caa-image }}"
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@v4
 
@@ -81,6 +82,8 @@ jobs:
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
             jitter: 10
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@v4
 
@@ -167,6 +170,8 @@ jobs:
             machine_type: "Standard_DC2es_v5"
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@v4
 
@@ -257,6 +262,8 @@ jobs:
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
             jitter: 10
+    permissions:
+      id-token: write
     steps:
     - uses: azure/login@v2
       name: 'Az CLI login'

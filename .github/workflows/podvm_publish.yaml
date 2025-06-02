@@ -7,6 +7,9 @@ name: Publish pod VM Images
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   podvm_builder:
     uses: ./.github/workflows/podvm_builder.yaml
