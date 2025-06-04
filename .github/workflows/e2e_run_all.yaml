@@ -47,6 +47,8 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions: {}
+
 jobs:
   podvm_builder:
     uses: ./.github/workflows/podvm_builder.yaml
@@ -54,6 +56,9 @@ jobs:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -64,6 +69,9 @@ jobs:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -74,6 +82,9 @@ jobs:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -85,17 +96,28 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
       arch: amd64
       debug: true
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm_mkosi_s390x:
     uses: ./.github/workflows/podvm_mkosi.yaml
+
     with:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       arch: s390x
       debug: true
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -119,6 +141,9 @@ jobs:
       dev_tags: ${{ inputs.caa_image_tag }}-dev
       release_tags: ${{ inputs.caa_image_tag }}
       git_ref: ${{ inputs.git_ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -244,6 +269,9 @@ jobs:
       dev_tags: ${{ inputs.caa_image_tag }}-amd64-dev
       release_tags: ${{ inputs.caa_image_tag }}-amd64
       git_ref: ${{ inputs.git_ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -257,6 +285,9 @@ jobs:
       release_tags: ${{ inputs.caa_image_tag }}-s390x
       git_ref: ${{ inputs.git_ref }}
       runner: 's390x'
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 

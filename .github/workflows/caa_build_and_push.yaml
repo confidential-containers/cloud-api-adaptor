@@ -46,6 +46,8 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions: {}
+
 jobs:
   build_push_job:
     name: build and push
@@ -58,6 +60,9 @@ jobs:
             arches: ${{ inputs.dev_arches }}
           - type: release
             arches: ${{ inputs.release_arches }}
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout the code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

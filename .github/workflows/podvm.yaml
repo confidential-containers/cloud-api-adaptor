@@ -22,6 +22,8 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions: {}
+
 jobs:
   build:
     name: Create pod vm image
@@ -38,6 +40,9 @@ jobs:
         exclude:
           - provider: vsphere
             arch: s390x
+    permissions:
+      contents: read
+      packages: write
     steps:
     - name: Checkout Code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

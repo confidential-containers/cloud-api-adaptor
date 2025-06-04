@@ -65,6 +65,8 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions: {}
+
 jobs:
   build-image:
     name: Build mkosi image

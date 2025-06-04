@@ -7,12 +7,17 @@ name: Publish pod VM Images
 on:
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   podvm_builder:
     uses: ./.github/workflows/podvm_builder.yaml
     with:
       git_ref: ${{ github.sha }}
       image_tag: ${{ github.sha }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -22,20 +27,31 @@ jobs:
     with:
       git_ref: ${{ github.sha }}
       image_tag: ${{ github.sha }}
+
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-
   podvm:
     needs: [podvm_binaries]
     uses: ./.github/workflows/podvm.yaml
     with:
       git_ref: ${{ github.sha }}
       image_tag: ${{ github.sha }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm-mkosi:
     uses: ./.github/workflows/podvm_mkosi.yaml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:

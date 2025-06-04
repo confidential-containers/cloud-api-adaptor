@@ -25,6 +25,8 @@ on:
       QUAY_PASSWORD:
         required: true
 
+permissions: {}
+
 jobs:
   build_push_webhook:
     name: build and push webhook
@@ -32,6 +34,9 @@ jobs:
     defaults:
       run:
         working-directory: src/webhook
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout the code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

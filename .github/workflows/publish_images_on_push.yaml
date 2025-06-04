@@ -15,11 +15,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   caa:
     uses: ./.github/workflows/caa_build_and_push_per_arch.yaml
     with:
       git_ref: ${{ github.sha }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -28,6 +33,9 @@ jobs:
     with:
       image_tags: latest,${{ github.sha }}
       git_ref: ${{ github.sha }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -36,6 +44,10 @@ jobs:
     with:
       image_tags: latest,${{ github.sha }}
       git_ref: ${{ github.sha }}
+
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -44,5 +56,8 @@ jobs:
     with:
       image_tags: ${{ github.sha }},latest
       git_ref: ${{ github.sha }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
