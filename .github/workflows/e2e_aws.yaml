@@ -43,6 +43,8 @@ env:
   CLOUD_PROVIDER: aws
   DEBIAN_FRONTEND: noninteractive
 
+permissions: {}
+
 jobs:
   # Check the org/repository has AWS secrets (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY). On absence of
   # secrets it should skip the execution of the test job.

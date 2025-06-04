@@ -3,6 +3,8 @@ name: smoke test
 on:
   pull_request:
 
+permissions: {}
+
 jobs:
   podvm-mkosi:
     # We're pinning the runner to 22.04 b/c libvirt struggles with the
@@ -34,7 +36,7 @@ jobs:
         working-directory: src/cloud-api-adaptor
         run: |
           {
-            echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)"; 
+            echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)";
             echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)";
             echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
             echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
@@ -57,11 +59,11 @@ jobs:
 
       - name: Build image
         run: make image
-     
+
       - name: Install kata-agent-ctl
         run: |
           oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
-          tar xf kata-static-agent-ctl.tar.xz 
+          tar xf kata-static-agent-ctl.tar.xz
           cp opt/kata/bin/kata-agent-ctl /usr/local/bin
 
       # TODO: generate the cloud-init iso from code

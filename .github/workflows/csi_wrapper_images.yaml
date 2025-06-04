@@ -26,6 +26,8 @@ on:
       QUAY_PASSWORD:
         required: true
 
+permissions: {}
+
 jobs:
   build_push_job:
     name: build and push
@@ -37,6 +39,9 @@ jobs:
           - csi-controller-wrapper
           - csi-node-wrapper
           - csi-podvm-wrapper
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout the code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

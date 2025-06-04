@@ -41,6 +41,8 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions: {}
+
 jobs:
   test-docker:
     runs-on: ubuntu-22.04

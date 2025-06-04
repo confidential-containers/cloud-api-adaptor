@@ -1,8 +1,6 @@
 name: azure-e2e-test
 
-permissions:
-  id-token: write
-  contents: read
+permissions: {}
 
 env:
   CLUSTER_NAME_TEMPLATE: "{0}-e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
@@ -45,6 +43,8 @@ jobs:
         working-directory: src/cloud-api-adaptor
     outputs:
       caa-image: "${{ steps.build-container.outputs.caa-image }}"
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -88,6 +88,8 @@ jobs:
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
             jitter: 10
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -174,6 +176,8 @@ jobs:
             machine_type: "Standard_DC2es_v5"
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -264,6 +268,8 @@ jobs:
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
             jitter: 10
+    permissions:
+      id-token: write
     steps:
     - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
       name: 'Az CLI login'

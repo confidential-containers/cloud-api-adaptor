@@ -13,6 +13,8 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions: {}
+
 jobs:
   list-dockerfiles:
     runs-on: ubuntu-24.04
@@ -31,7 +33,9 @@ jobs:
       matrix:
         targets: ${{ fromJson(needs.list-dockerfiles.outputs.matrix) }}
         arch: [amd64, s390x]
-
+    permissions:
+      contents: read
+      packages: write
     steps:
     - name: Checkout Code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

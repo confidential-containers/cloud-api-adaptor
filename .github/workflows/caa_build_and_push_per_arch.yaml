@@ -31,6 +31,8 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions: {}
+
 jobs:
   upload_tags:
     runs-on: ubuntu-22.04
@@ -78,6 +80,9 @@ jobs:
             arches: "linux/s390x"
           - type: release-ppc64le
             arches: "linux/ppc64le"
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout the code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

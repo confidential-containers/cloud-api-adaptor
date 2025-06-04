@@ -28,11 +28,7 @@ on:
         default: 'main'
         description: tag, branch, sha
 
-permissions:
-  id-token: write
-  contents: read
-  packages: write
-  attestations: write
+permissions: {}
 
 env:
   AZURE_PODVM_IMAGE_DEF_NAME: "${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
@@ -50,7 +46,11 @@ jobs:
         working-directory: cloud-api-adaptor/src/cloud-api-adaptor/podvm-mkosi
     outputs:
       image-id: "${{ steps.upload-image.outputs.image-id }}"
-
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+      attestations: write
     steps:
     - name: Clone cloud-api-adaptor repository
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

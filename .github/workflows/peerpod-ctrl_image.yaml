@@ -27,6 +27,8 @@ on:
         required: true
 
 
+permissions: {}
+
 jobs:
   peerpod_push:
     name: build and push peerpod-ctrl
@@ -34,7 +36,9 @@ jobs:
     defaults:
       run:
         working-directory: src/peerpod-ctrl
-
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

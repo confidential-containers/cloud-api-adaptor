@@ -8,6 +8,8 @@ on:
   release:
     types: [created]
 
+permissions: {}
+
 jobs:
   caa:
     uses: ./.github/workflows/caa_build_and_push_per_arch.yaml
@@ -15,6 +17,9 @@ jobs:
       dev_tags: ${{ github.event.release.tag_name }}-dev
       release_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -23,6 +28,9 @@ jobs:
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -31,6 +39,9 @@ jobs:
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -39,6 +50,9 @@ jobs:
     with:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -48,6 +62,9 @@ jobs:
     with:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -57,11 +74,19 @@ jobs:
     with:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm-mkosi:
     uses: ./.github/workflows/podvm_mkosi.yaml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -79,5 +104,8 @@ jobs:
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
+    permissions:
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}

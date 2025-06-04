@@ -10,6 +10,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   generate-podvm-image-version:
     if: github.event.inputs.podvm-image-id == ''
@@ -26,8 +28,14 @@ jobs:
 
   build-podvm-image:
     uses: ./.github/workflows/azure-podvm-image-build.yml
+
     needs:
     - generate-podvm-image-version
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+      attestations: write
     with:
       image-version: ${{ needs.generate-podvm-image-version.outputs.image-version }}
     secrets:

@@ -22,6 +22,8 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions: {}
+
 jobs:
   build:
     name: Create pod vm binaries image
@@ -33,6 +35,9 @@ jobs:
         arch: [amd64, s390x]
         include:
           - os: ubuntu
+    permissions:
+      contents: read
+      packages: write
     steps:
     - name: Checkout Code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
