@@ -67,6 +67,24 @@ function setup_proxy_arp() {
   fi
 }
 
+echo "Waiting for net namespace '$NETNS'..."
+SECONDS=0
+while :; do
+  if ip netns list | grep -qw "$NETNS"; then
+    echo "Namespace $NETNS is ready, proceeding..."
+    break
+  fi
+  if (( SECONDS > 60 )); then
+	  echo "Namespace $NETNS is not ready after ${SECONDS}s"
+	  echo "ip netns list:"
+	  ip netns list || true
+	  echo "ip netns exec:"
+	  ip netns exec "$NETNS" ip link show "$VETH_HOST" || true
+	  exit 1
+  fi
+  sleep 1
+done
+
 echo "Configuring the NAT..."
 # Allow re-tries in case the netns is still initializing
 SECONDS=0
