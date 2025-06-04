@@ -7,12 +7,17 @@ name: Publish pod VM Images
 on:
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   podvm_builder:
     uses: ./.github/workflows/podvm_builder.yaml
     with:
       git_ref: ${{ github.sha }}
       image_tag: ${{ github.sha }}
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
 
   podvm_binaries:
@@ -21,6 +26,9 @@ jobs:
     with:
       git_ref: ${{ github.sha }}
       image_tag: ${{ github.sha }}
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
 
   podvm:
@@ -29,10 +37,18 @@ jobs:
     with:
       git_ref: ${{ github.sha }}
       image_tag: ${{ github.sha }}
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
 
   podvm-mkosi:
     uses: ./.github/workflows/podvm_mkosi.yaml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
