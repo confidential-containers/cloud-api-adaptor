@@ -125,7 +125,7 @@ jobs:
       PROVIDERS: "aws docker libvirt"
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
           ref: ${{ inputs.git_ref }}
@@ -164,7 +164,7 @@ jobs:
           done
 
       - name: Upload install directory for next test runs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: install_directory
           path: src/cloud-api-adaptor/install/
@@ -247,7 +247,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
           ref: ${{ inputs.git_ref }}

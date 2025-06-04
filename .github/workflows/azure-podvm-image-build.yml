@@ -46,7 +46,7 @@ jobs:
 
     steps:
     - name: Clone cloud-api-adaptor repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
         path: cloud-api-adaptor
         ref: "${{ inputs.git-ref || 'main' }}"
@@ -78,7 +78,7 @@ jobs:
     - name: Build image
       run: make image
 
-    - uses: azure/login@v2
+    - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -112,7 +112,7 @@ jobs:
         echo "successfully built $IMAGE_ID"
         echo "image-id=${IMAGE_ID}" >> "$GITHUB_OUTPUT"
 
-    - uses: oras-project/setup-oras@v1
+    - uses: oras-project/setup-oras@8d34698a59f5ffe24821f0b48ab62a3de8b64b20 # v1
       with:
         version: 1.2.0
 
@@ -130,7 +130,7 @@ jobs:
         # verify json
         jq -e . measurements.json
 
-    - uses: docker/login-action@v3
+    - uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -147,7 +147,7 @@ jobs:
         echo "oci-name=${OCI_NAME}" >> "$GITHUB_OUTPUT"
         echo "oci-digest=${OCI_DIGEST}" >> "$GITHUB_OUTPUT"
 
-    - uses: actions/attest-build-provenance@v2
+    - uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2
       with:
         subject-name: ${{ steps.publish-measurements.outputs.oci-name }}
         subject-digest: ${{ steps.publish-measurements.outputs.oci-digest }}
