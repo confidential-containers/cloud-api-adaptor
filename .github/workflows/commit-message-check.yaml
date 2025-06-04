@@ -13,6 +13,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   commit-message-check:
     runs-on: ubuntu-24.04

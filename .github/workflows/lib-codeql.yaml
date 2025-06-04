@@ -3,9 +3,7 @@ name: "CodeQL"
 on:
   workflow_call:
 
-permissions:
-  actions: read
-  contents: read
+permissions: {}
 
 jobs:
   analyze:
