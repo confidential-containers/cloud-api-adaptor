@@ -67,5 +67,18 @@ function setup_proxy_arp() {
   fi
 }
 
-# Execute functions
-setup_proxy_arp
+echo "Configuring the NAT..."
+# Allow re-tries in case the netns is still initializing
+SECONDS=0
+while :; do
+	if setup_proxy_arp; then
+		break
+	fi
+	if (( SECONDS > 60 )); then
+		echo "Failed to setup proxy in ${SECONDS}s"
+		exit 2
+	fi
+	sleep 1
+done
+
+echo "Successfully configured in ${SECONDS}s"
