@@ -14,6 +14,15 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository.
         required: true
         type: string
+    secrets:
+      DOCKER_USERNAME:
+        required: true
+      DOCKER_PASSWORD:
+        required: true
+      QUAY_USERNAME:
+        required: true
+      QUAY_PASSWORD:
+        required: true
 
 defaults:
   run:

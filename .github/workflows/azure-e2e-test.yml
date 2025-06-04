@@ -19,6 +19,19 @@ on:
       podvm-image-id:
         type: string
         description: prebuilt podvm image
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_RESOURCE_GROUP:
+        required: true
+      AZURE_REGION:
+        required: true
+      AZURE_MANAGED_IDENTITY_NAME:
+        required: true
 
   workflow_dispatch:
     inputs:

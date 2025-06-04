@@ -6,6 +6,17 @@ on:
       image-version:
         type: string
         required: true
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_RESOURCE_GROUP:
+        required: true
+      AZURE_PODVM_GALLERY_NAME:
+        required: true
     outputs:
       image-id:
         description: "The PodVM image id"
