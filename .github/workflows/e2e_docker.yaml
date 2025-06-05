@@ -28,6 +28,9 @@ on:
         description: Name of the container runtime. Either containerd or crio.
         required: false
         type: string
+    secrets:
+      QUAY_PASSWORD:
+        required: true
 
 env:
   CLOUD_PROVIDER: docker

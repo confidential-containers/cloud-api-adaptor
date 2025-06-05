@@ -33,6 +33,12 @@ on:
         description: Name of the container runtime. Either containerd or crio.
         required: false
         type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
 env:
   CLOUD_PROVIDER: aws
   DEBIAN_FRONTEND: noninteractive

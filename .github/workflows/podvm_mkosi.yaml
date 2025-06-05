@@ -50,6 +50,9 @@ on:
         default: false
         required: false
         type: boolean
+    secrets:
+      QUAY_PASSWORD:
+        required: true
     outputs:
       qcow2_oras_image:
         description: The location of the qcow2 oras container this workflow pushed

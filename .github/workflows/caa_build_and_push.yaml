@@ -38,6 +38,9 @@ on:
         description: The runner to execute the workflow on. Defaults to 'ubuntu-24.04'.
         required: false
         type: string
+    secrets:
+      QUAY_PASSWORD:
+        required: true
 
 defaults:
   run:
