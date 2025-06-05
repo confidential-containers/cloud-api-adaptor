@@ -97,8 +97,8 @@ jobs:
         [base.azure]
         subscriptionID = "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
         location = "eastus"
-        resourceGroup = "${{ secrets.AZURE_RESOURCE_GROUP }}"
-        sharedImageGallery = "${{ secrets.AZURE_PODVM_GALLERY_NAME }}"
+        resourceGroup = "${{ vars.AZURE_RESOURCE_GROUP }}"
+        sharedImageGallery = "${{ vars.AZURE_PODVM_GALLERY_NAME }}"
         sharingNamePrefix = "$SHARING_NAME_PREFIX"
 
         [variant.default]
