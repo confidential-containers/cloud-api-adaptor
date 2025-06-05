@@ -392,6 +392,10 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 
 	logger.Printf("created an instance %s for sandbox %s", instance.Name, sid)
 
+	if len(instance.IPs) == 0 {
+		return nil, fmt.Errorf("instance IP is not available")
+	}
+
 	instanceIP := instance.IPs[0].String()
 	forwarderPort := s.serverConfig.ForwarderPort
 
