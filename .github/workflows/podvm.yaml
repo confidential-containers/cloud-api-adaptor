@@ -56,7 +56,7 @@ jobs:
       if: ${{ startsWith(inputs.registry, 'quay.io') }}
       with:
         registry: quay.io
-        username: ${{ secrets.QUAY_USERNAME }}
+        username: ${{ vars.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
     - name: Login to Github Container Registry
