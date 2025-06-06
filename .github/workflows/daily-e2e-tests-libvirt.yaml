@@ -16,6 +16,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   e2e:
     uses: ./.github/workflows/e2e_run_all.yaml
@@ -24,4 +26,9 @@ jobs:
       git_ref: refs/heads/main
       podvm_image_tag: latest
       registry: ghcr.io/${{ github.repository_owner }}
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+      attestations: write
     secrets: inherit
