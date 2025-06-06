@@ -24,4 +24,8 @@ jobs:
       git_ref: refs/heads/main
       podvm_image_tag: latest
       registry: ghcr.io/${{ github.repository_owner }}
-    secrets: inherit
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
