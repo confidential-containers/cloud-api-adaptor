@@ -20,24 +20,25 @@ type MetadataRetriever struct {
 // no error return, if something is wrong, will fail on get()
 func newMetadataRetriever() *MetadataRetriever {
 	var r MetadataRetriever
+
 	r.client = imds.New(imds.Options{ClientEnableState: imds.ClientDefaultEnableState}) // use imds.ClientEnabled to enforce enabling
 	mac, err := r.get("mac")
 	if err != nil {
 		logger.Printf("NewMetadataRetriever is initialized without mac (%v)", err)
 		return &r
 	}
+
 	r.mac = mac
 	return &r
 }
 
 func (r MetadataRetriever) get(path string) (string, error) {
-	output, err := r.client.GetMetadata(context.TODO(), &imds.GetMetadataInput{
-		Path: path,
-	})
+	output, err := r.client.GetMetadata(context.TODO(), &imds.GetMetadataInput{Path: path})
 	if err != nil {
 		return "", err
 	}
 	defer output.Content.Close()
+
 	bytes, err := io.ReadAll(output.Content)
 	if err != nil {
 		return "", err
@@ -54,24 +55,29 @@ func retrieveMissingConfig(cfg *Config) error {
 		if err != nil {
 			return err
 		}
+
 		cfg.SubnetId = subnetId
 		logger.Printf("\"%s\" SubnetId retrieved from IMDS", subnetId)
 	}
+
 	if cfg.Region == "" {
 		logger.Printf("Region was not provided, trying to fetch it from IMDS")
 		region, err := mdr.get("placement/region")
 		if err != nil {
 			return err
 		}
+
 		cfg.Region = region
 		logger.Printf("\"%s\" Region retrieved from IMDS", region)
 	}
+
 	if cfg.KeyName == "" {
 		logger.Printf("KeyName was not provided, trying to fetch it from IMDS")
 		rawKey, err := mdr.get("public-keys")
 		if err != nil {
 			logger.Printf("failed to retrieve key, skipped: %v", err)
 		}
+
 		var keyName string
 		n, err := fmt.Sscanf(rawKey, "0=%s", &keyName)
 		if err != nil || n < 1 {
@@ -81,15 +87,18 @@ func retrieveMissingConfig(cfg *Config) error {
 			logger.Printf("\"%s\" KeyName retrieved from IMDS", keyName)
 		}
 	}
-	if len(cfg.SecurityGroupIds) < 1 {
+
+	if len(cfg.SecurityGroupIds) == 0 {
 		logger.Printf("SecurityGroupIds was not provided, trying to fetch it from IMDS")
 		securityGroupIdsPath := fmt.Sprintf("network/interfaces/macs/%s/security-group-ids", mdr.mac)
 		securityGroupIds, err := mdr.get(securityGroupIdsPath)
 		if err != nil {
 			return err
 		}
+
 		cfg.SecurityGroupIds = strings.Fields(securityGroupIds)
 		logger.Printf("\"%s\" SecurityGroupIds retrieved from IMDS", &cfg.SecurityGroupIds)
 	}
+
 	return nil
 }

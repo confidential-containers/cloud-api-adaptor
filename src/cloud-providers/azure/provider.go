@@ -24,9 +24,11 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
-var logger = log.New(log.Writer(), "[adaptor/cloud/azure] ", log.LstdFlags|log.Lmsgprefix)
-var errNotReady = errors.New("address not ready")
-var errNotFound = errors.New("VM name not found")
+var (
+	logger      = log.New(log.Writer(), "[adaptor/cloud/azure] ", log.LstdFlags|log.Lmsgprefix)
+	errNotReady = errors.New("address not ready")
+	errNotFound = errors.New("VM name not found")
+)
 
 const (
 	maxInstanceNameLen = 63
@@ -38,7 +40,6 @@ type azureProvider struct {
 }
 
 func NewProvider(config *Config) (provider.Provider, error) {
-
 	logger.Printf("azure config %+v", config.Redact())
 
 	// Clean the config.SSHKeyPath to avoid bad paths
@@ -79,6 +80,7 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 	if err != nil {
 		return nil, fmt.Errorf("create network interfaces client: %w", err)
 	}
+
 	rgName := p.serviceConfig.ResourceGroupName
 	nicRefs := vm.Properties.NetworkProfile.NetworkInterfaces
 
@@ -93,6 +95,7 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 		if err != nil {
 			return nil, fmt.Errorf("get network interface: %w", err)
 		}
+
 		ipcs = append(ipcs, nic.Properties.IPConfigurations...)
 	}
 
@@ -102,10 +105,12 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 		if err != nil {
 			return nil, fmt.Errorf("create public ip client: %w", err)
 		}
+
 		for i, ipc := range ipcs {
 			if ipc.Properties.PublicIPAddress == nil {
 				continue
 			}
+
 			ipID := *ipc.Properties.PublicIPAddress.ID
 			// the last segment of a ip id is the name
 			ipName := ipID[strings.LastIndex(ipID, "/")+1:]
@@ -113,12 +118,14 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 			if err != nil {
 				return nil, fmt.Errorf("get public ip: %w", err)
 			}
+
 			addr := publicIP.Properties.IPAddress
 			if addr != nil {
 				ip, err := parseIP(*addr)
 				if err != nil {
 					return nil, err
 				}
+
 				ips = append(ips, *ip)
 				logger.Printf("pod vm IP[%d][public]=%s", i, ip.String())
 			}
@@ -130,10 +137,12 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 		if addr == nil {
 			return nil, fmt.Errorf("private IP address not found in IP configuration %d", i)
 		}
+
 		ip, err := parseIP(*addr)
 		if err != nil {
 			return nil, err
 		}
+
 		ips = append(ips, *ip)
 		logger.Printf("pod vm IP[%d][private]=%s", i, ip.String())
 	}
@@ -202,9 +211,6 @@ func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMa
 }
 
 func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
-
-	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
-
 	cloudConfigData, err := cloudConfig.Generate()
 	if err != nil {
 		return nil, err
@@ -215,6 +221,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, err
 	}
 
+	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 	diskName := fmt.Sprintf("%s-disk", instanceName)
 	nicName := fmt.Sprintf("%s-net", instanceName)
 
@@ -277,7 +284,7 @@ func (p *azureProvider) DeleteInstance(ctx context.Context, instanceID string) e
 	// instanceID in the form of /subscriptions/<subID>/resourceGroups/<resource_name>/providers/Microsoft.Compute/virtualMachines/<VM_Name>.
 	re := regexp.MustCompile(`^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Compute/virtualMachines/(.*)$`)
 	match := re.FindStringSubmatch(instanceID)
-	if len(match) < 1 {
+	if len(match) == 0 {
 		logger.Print("finding VM name using regexp:", match)
 		return errNotFound
 	}
@@ -315,15 +322,13 @@ func (p *azureProvider) ConfigVerifier() error {
 }
 
 // Add SelectInstanceType method to select an instance type based on the memory and vcpu requirements
-func (p *azureProvider) selectInstanceType(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
-
+func (p *azureProvider) selectInstanceType(_ context.Context, spec provider.InstanceTypeSpec) (string, error) {
 	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceSizeSpecList, p.serviceConfig.InstanceSizes, p.serviceConfig.Size)
 }
 
 // Add a method to populate InstanceSizeSpecList for all the instanceSizes
 // available in Azure
 func (p *azureProvider) updateInstanceSizeSpecList() error {
-
 	// Create a new instance of the Virtual Machine Sizes client
 	vmSizesClient, err := armcompute.NewVirtualMachineSizesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
 	if err != nil {
@@ -352,7 +357,13 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 		}
 		for _, vmSize := range nextResult.VirtualMachineSizeListResult.Value {
 			if util.Contains(instanceSizes, *vmSize.Name) {
-				instanceSizeSpecList = append(instanceSizeSpecList, provider.InstanceTypeSpec{InstanceType: *vmSize.Name, VCPUs: int64(*vmSize.NumberOfCores), Memory: int64(*vmSize.MemoryInMB)})
+				instanceSizeSpecList = append(
+					instanceSizeSpecList,
+					provider.InstanceTypeSpec{
+						InstanceType: *vmSize.Name,
+						VCPUs:        int64(*vmSize.NumberOfCores),
+						Memory:       int64(*vmSize.MemoryInMB),
+					})
 			}
 		}
 	}
@@ -439,7 +450,7 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 				ComputerName:  to.Ptr(instanceName),
 				LinuxConfiguration: &armcompute.LinuxConfiguration{
 					DisablePasswordAuthentication: to.Ptr(true),
-					//TBD: replace with a suitable mechanism to use precreated SSH key
+					// TBD: replace with a suitable mechanism to use precreated SSH key
 					SSH: &armcompute.SSHConfiguration{
 						PublicKeys: []*armcompute.SSHPublicKey{{
 							Path:    to.Ptr(fmt.Sprintf("/home/%s/.ssh/authorized_keys", p.serviceConfig.SSHUserName)),
