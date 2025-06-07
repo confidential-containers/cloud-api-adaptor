@@ -43,7 +43,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.27
 	github.com/BurntSushi/toml v1.3.2
 	github.com/IBM/ibm-cos-sdk-go v1.9.4
-	github.com/avast/retry-go/v4 v4.5.1
+	github.com/avast/retry-go/v4 v4.6.1
 	github.com/aws/aws-sdk-go-v2/service/eks v1.66.0
 	github.com/aws/aws-sdk-go-v2/service/iam v1.42.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.80.2
