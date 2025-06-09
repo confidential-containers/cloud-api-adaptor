@@ -82,6 +82,7 @@ azure() {
     [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
     [[ "${ENABLE_SECURE_BOOT}" == "true" ]] && optionals+="-enable-secure-boot "
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "
+    [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
 
     set -x
     exec cloud-api-adaptor azure \

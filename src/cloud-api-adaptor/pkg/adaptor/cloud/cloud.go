@@ -54,6 +54,7 @@ type ServerConfig struct {
 	SecureCommsPpOutbounds  string
 	SecureCommsKbsAddress   string
 	PeerPodsLimitPerNode    int
+	RootVolumeSize          int
 }
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)

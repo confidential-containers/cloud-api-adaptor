@@ -418,6 +418,21 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 
 	networkConfig := p.buildNetworkConfig(nicName)
 
+	// Configure OS disk with optional root volume size
+	osDisk := &armcompute.OSDisk{
+		Name:         to.Ptr(diskName),
+		CreateOption: to.Ptr(armcompute.DiskCreateOptionTypesFromImage),
+		Caching:      to.Ptr(armcompute.CachingTypesReadWrite),
+		DeleteOption: to.Ptr(armcompute.DiskDeleteOptionTypesDelete),
+		ManagedDisk:  managedDiskParams,
+	}
+
+	// Set disk size if RootVolumeSize is configured
+	if p.serviceConfig.RootVolumeSize > 0 {
+		osDisk.DiskSizeGB = to.Ptr(int32(p.serviceConfig.RootVolumeSize))
+		logger.Printf("Setting root volume size to %d GB", p.serviceConfig.RootVolumeSize)
+	}
+
 	vmParameters := armcompute.VirtualMachine{
 		Location: to.Ptr(p.serviceConfig.Region),
 		Properties: &armcompute.VirtualMachineProperties{
@@ -426,13 +441,7 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 			},
 			StorageProfile: &armcompute.StorageProfile{
 				ImageReference: imgRef,
-				OSDisk: &armcompute.OSDisk{
-					Name:         to.Ptr(diskName),
-					CreateOption: to.Ptr(armcompute.DiskCreateOptionTypesFromImage),
-					Caching:      to.Ptr(armcompute.CachingTypesReadWrite),
-					DeleteOption: to.Ptr(armcompute.DiskDeleteOptionTypesDelete),
-					ManagedDisk:  managedDiskParams,
-				},
+				OSDisk:         osDisk,
 			},
 			OSProfile: &armcompute.OSProfile{
 				AdminUsername: to.Ptr(p.serviceConfig.SSHUserName),
