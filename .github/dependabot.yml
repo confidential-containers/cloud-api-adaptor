@@ -17,6 +17,9 @@ updates:
       - "src/peerpod-ctrl"
       - "src/webhook"
     groups:
+      avast/retry-go:
+        patterns:
+          - github.com/avast/retry-go
       aws-sdk-go-v2:
         patterns:
           - "*aws-sdk-go-v2*"
