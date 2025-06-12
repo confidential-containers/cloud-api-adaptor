@@ -1,8 +1,13 @@
 #!/bin/bash
 
-# FIXME to pickup these values from versions.yaml
-GO_VERSION="1.23.8"
-ORAS_VERSION="1.2.0"
+# Get the directory where the script is located
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+
+# Determine the path to versions.yaml relative to the script's directory
+VERSIONS_YAML_PATH=$(realpath "${SCRIPT_DIR}/../../versions.yaml")
+
+GO_VERSION="$(yq '.tools.golang' "${VERSIONS_YAML_PATH}")"
+ORAS_VERSION="$(yq '.tools.oras' "${VERSIONS_YAML_PATH}")"
 
 # Install dependencies
 yum install -y curl libseccomp-devel openssl openssl-devel skopeo clang clang-devel
