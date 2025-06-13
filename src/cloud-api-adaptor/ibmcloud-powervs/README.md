@@ -30,7 +30,7 @@ pvsadm image qcow2ova --prep-template-default > image-prep.template
 
 Add the following snippet to `image-prep.template`
 ```
-yum install -y gcc gcc-c++ git make wget perl
+yum install -y gcc gcc-c++ git make wget
 export PATH=${PATH}:/usr/local/go/bin:${HOME}/.cargo/bin
 wget https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_ppc64le
 chmod +x yq_linux_ppc64le && mv yq_linux_ppc64le /usr/local/bin/yq
