@@ -15,7 +15,6 @@ import (
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
@@ -76,7 +75,7 @@ func checkConfig(config *Config) error {
 
 type VmConfig []types.BaseOptionValue
 
-func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, requirement provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool, requirement provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	vmname := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -247,34 +246,29 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		relocateSpec.Datastore = datastoreref
 	}
 
-	userData, err := cloudConfig.Generate()
-	if err != nil {
-		logger.Printf("cloud config error: %s", err)
-		return nil, err
-	}
+	if !skipVMUserData {
+		//Convert userData to base64
+		userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 
-	//Convert userData to base64
-	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
+		var extraconfig VmConfig
+		extraconfig = append(extraconfig,
+			&types.OptionValue{
+				Key:   "guestinfo.userdata",
+				Value: userDataEnc,
+			},
+			&types.OptionValue{
+				Key:   "guestinfo.userdata.encoding",
+				Value: "base64",
+			},
+		)
 
-	var extraconfig VmConfig
-
-	extraconfig = append(extraconfig,
-		&types.OptionValue{
-			Key:   "guestinfo.userdata",
-			Value: userDataEnc,
-		},
-		&types.OptionValue{
-			Key:   "guestinfo.userdata.encoding",
-			Value: "base64",
-		},
-	)
-
-	configSpec := types.VirtualMachineConfigSpec{
-		ExtraConfig: extraconfig,
+		configSpec := types.VirtualMachineConfigSpec{
+			ExtraConfig: extraconfig,
+		}
+		cloneSpec.Config = &configSpec
 	}
 
 	cloneSpec.Location = relocateSpec
-	cloneSpec.Config = &configSpec
 
 	task, err := vm.Clone(ctx, vmfolder, vmname, *cloneSpec)
 	if err != nil {

@@ -17,7 +17,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	"github.com/google/uuid"
@@ -197,7 +196,7 @@ type mockProvider struct {
 	secondaryIP string
 }
 
-func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	primaryIP := p.primaryIP
 	if primaryIP == "" {

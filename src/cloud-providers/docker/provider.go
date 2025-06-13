@@ -13,7 +13,6 @@ import (
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	putil "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 	"github.com/docker/docker/client"
 )
 
@@ -51,17 +50,13 @@ func NewProvider(config *Config) (*dockerProvider, error) {
 	}, nil
 }
 
-func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID string,
-	cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool,
+	spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := putil.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
-	userData, err := cloudConfig.Generate()
-	if err != nil {
-		return nil, err
-	}
 	// Write userdata to a file named after the instance name in the data directory
 	// File name: $data-dir/instanceName-userdata
 	// File content: userdata
