@@ -154,7 +154,7 @@ jobs:
         echo "oci-name=${OCI_NAME}" >> "$GITHUB_OUTPUT"
         echo "oci-digest=${OCI_DIGEST}" >> "$GITHUB_OUTPUT"
 
-    - uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2
+    - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
       with:
         subject-name: ${{ steps.publish-measurements.outputs.oci-name }}
         subject-digest: ${{ steps.publish-measurements.outputs.oci-digest }}
