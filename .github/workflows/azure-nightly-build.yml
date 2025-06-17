@@ -47,6 +47,8 @@ jobs:
     uses: ./.github/workflows/azure-e2e-test.yml
     needs:
     - build-podvm-image
+    permissions:
+      id-token: write
     with:
       podvm-image-id: ${{ needs.build-podvm-image.outputs.image-id }}
     secrets:
