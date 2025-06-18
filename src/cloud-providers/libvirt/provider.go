@@ -13,7 +13,6 @@ import (
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/libvirt] ", log.LstdFlags|log.Lmsgprefix)
@@ -47,16 +46,15 @@ func getIPs(instance *vmConfig) ([]netip.Addr, error) {
 	return instance.ips, nil
 }
 
-func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
-	var instanceMemory uint
-	var instanceVCPUs uint
+	var (
+		instanceMemory uint
+		instanceVCPUs  uint
+		err            error
+	)
+
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
-
-	userData, err := cloudConfig.Generate()
-	if err != nil {
-		return nil, err
-	}
 
 	if spec.Memory != 0 {
 		instanceMemory = uint(spec.Memory)
@@ -71,7 +69,11 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	}
 
 	// TODO: Specify the maximum instance name length in Libvirt
-	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, userData: userData, firmware: p.serviceConfig.Firmware}
+	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, firmware: p.serviceConfig.Firmware}
+
+	if !skipVMUserData {
+		vm.userData = userData
+	}
 
 	if p.serviceConfig.DisableCVM {
 		vm.launchSecurityType = NoLaunchSecurity

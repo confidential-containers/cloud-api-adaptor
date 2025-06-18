@@ -18,7 +18,6 @@ import (
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
 var (
@@ -182,19 +181,14 @@ func getIPs(instance types.Instance) ([]netip.Addr, error) {
 	return podNodeIPs, nil
 }
 
-func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
-	// Public IP address
-	var publicIPAddr netip.Addr
+func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+	var (
+		// Public IP address
+		publicIPAddr netip.Addr
+		b64EncData   string
+	)
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
-
-	cloudConfigData, err := cloudConfig.Generate()
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert userData to base64
-	b64EncData := base64.StdEncoding.EncodeToString([]byte(cloudConfigData))
 
 	instanceType, err := p.selectInstanceType(ctx, spec)
 	if err != nil {
@@ -233,7 +227,6 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			LaunchTemplate: &types.LaunchTemplateSpecification{
 				LaunchTemplateName: aws.String(p.serviceConfig.LaunchTemplateName),
 			},
-			UserData:          &b64EncData,
 			TagSpecifications: tagSpecifications,
 		}
 	} else {
@@ -252,8 +245,13 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			InstanceType:      types.InstanceType(instanceType),
 			SecurityGroupIds:  p.serviceConfig.SecurityGroupIds,
 			SubnetId:          aws.String(p.serviceConfig.SubnetId),
-			UserData:          &b64EncData,
 			TagSpecifications: tagSpecifications,
+		}
+
+		if !skipVMUserData {
+			//Convert userData to base64
+			b64EncData = base64.StdEncoding.EncodeToString([]byte(userData))
+			input.UserData = &b64EncData
 		}
 		if p.serviceConfig.KeyName != "" {
 			input.KeyName = aws.String(p.serviceConfig.KeyName)
