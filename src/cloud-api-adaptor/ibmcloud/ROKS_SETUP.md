@@ -80,6 +80,14 @@ By default, your Red Hat OpenShift cluster will not work with the peer pod compo
     ibmcloud is sg-rulec "$VPC_SG" inbound all --remote "$CLUSTER_SG"
     ```
 
+1. Allow your peer pod VSIs to send traffic through the VPE gateway to access services like `icr.io`
+
+    ```bash
+    export VPEGW_SG="kube-vpegw-$VPC_ID"
+    export CIDR=$(ibmcloud is subnet $SUBNET_ID --output json | jq -r '.ipv4_cidr_block')
+    ibmcloud is sg-rulec $VPEGW_SG inbound tcp --remote $CIDR
+    ```
+
 1. Allow `cloud-api-adaptor` to update pod finalizers
 
     ```bash
