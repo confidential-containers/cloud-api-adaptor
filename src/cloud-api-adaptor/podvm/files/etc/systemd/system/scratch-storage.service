@@ -1,0 +1,14 @@
+[Unit]
+Description=Configurable Scratch Storage Setup for Kata Agent
+After=systemd-repart.service process-user-data.service
+# It must complete before the kata-agent starts
+Before=kata-agent.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/setup-scratch-storage
+
+[Install]
+WantedBy=multi-user.target
