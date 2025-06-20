@@ -55,6 +55,8 @@ type ServerConfig struct {
 	SecureCommsKbsAddress   string
 	PeerPodsLimitPerNode    int
 	RootVolumeSize          int
+	EnableScratchDisk       bool
+	EnableScratchEncryption bool
 }
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -282,6 +284,16 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 			daemonConfig.SecureCommsInbounds = s.serverConfig.SecureCommsPpInbounds
 			daemonConfig.SecureComms = true
 		}
+	}
+
+	// Set scratch disk configuration
+	// If EnableScratchEncryption is set, then automatically set EnableScratchDisk
+	// as well and log it
+	daemonConfig.EnableScratchDisk = s.serverConfig.EnableScratchDisk
+	if s.serverConfig.EnableScratchEncryption {
+		daemonConfig.EnableScratchDisk = true
+		daemonConfig.EnableScratchEncryption = true
+		logger.Printf("EnableScratchEncryption is set, enabling scratch disk as well")
 	}
 
 	daemonJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
