@@ -130,6 +130,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.StringVar(&cfg.serverConfig.Initdata, "initdata", "", "Default initdata for all Pods")
 		flags.BoolVar(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "Enable cloud config verify - should use it for production")
 		flags.IntVar(&cfg.serverConfig.PeerPodsLimitPerNode, "peerpods-limit-per-node", 10, "peer pods limit per node (default=10)")
+		flags.BoolVar(&cfg.serverConfig.EnableScratchDisk, "enable-scratch-disk", false, "Enable scratch disk for pod VMs")
+		flags.BoolVar(&cfg.serverConfig.EnableScratchEncryption, "enable-scratch-encryption", false, "Enable encryption for scratch disk")
 
 		cloud.ParseCmd(flags)
 	})
