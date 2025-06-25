@@ -6,6 +6,8 @@ SKOPEO_SRC =
 SKOPEO_BIN = /usr/bin/skopeo
 
 export FORWARDER_PORT ?=
+export PUD_PORT ?=
+export RECEIVE_USER_DATA ?=
 
 ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
 include $(ROOT_DIR)podvm/Makefile.inc

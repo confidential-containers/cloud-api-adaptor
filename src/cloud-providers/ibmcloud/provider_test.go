@@ -148,7 +148,11 @@ func TestCreateInstance(t *testing.T) {
 		},
 	}
 
-	instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, provider.InstanceTypeSpec{InstanceType: "bx2-2x8"})
+	cloudConfig := &mockCloudConfig{}
+	userData, err := cloudConfig.Generate()
+	assert.NoError(t, err)
+
+	instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", userData, false, provider.InstanceTypeSpec{InstanceType: "bx2-2x8"})
 
 	assert.NoError(t, err)
 	assert.NotNil(t, instance)
