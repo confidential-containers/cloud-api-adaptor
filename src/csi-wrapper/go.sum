@@ -53,8 +53,8 @@ github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8Hm
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
-github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250521110624-a897bce29f3c h1:rS5zT2DEWTSZhzjPtXp5NwsM4b/29dMkHZpqKx/BLlE=
-github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250521110624-a897bce29f3c/go.mod h1:n5xbY8R3GVf48ETNisJH/ZP+Ms004FN4Wvma4ihDIx8=
+github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250627024506-a43e06e0ebd5 h1:WZlZxkH0UZG/mRaBTbIGNtsyr0WMCzJJnuO+wwRX1a8=
+github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250627024506-a43e06e0ebd5/go.mod h1:n5xbY8R3GVf48ETNisJH/ZP+Ms004FN4Wvma4ihDIx8=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kr/pretty v0.2.0/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
