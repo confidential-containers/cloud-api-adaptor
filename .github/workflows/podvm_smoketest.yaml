@@ -58,7 +58,7 @@ jobs:
           echo "TLS_OPTIONS=-disable-tls" > ./resources/binaries-tree/etc/default/agent-protocol-forwarder
 
       - name: Build image
-        run: make image
+        run: make image-debug
 
       - name: Install kata-agent-ctl
         run: |
