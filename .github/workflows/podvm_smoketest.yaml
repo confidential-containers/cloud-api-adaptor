@@ -10,6 +10,16 @@ jobs:
     # We're pinning the runner to 22.04 b/c libvirt struggles with the
     # OVMF_CODE_4M firmware that is default on 24.04.
     runs-on: 'ubuntu-22.04'
+    
+    strategy:
+      matrix:
+        test-mode:
+          - name: podvm-mkosi
+            mode: basic
+          - name: podvm-mkosi-with-scratch-space
+            mode: scratch-space
+          - name: podvm-mkosi-with-encrypted-scratch-space
+            mode: encrypted-scratch-space
 
     defaults:
       run:
@@ -66,6 +76,6 @@ jobs:
           tar xf kata-static-agent-ctl.tar.xz
           cp opt/kata/bin/kata-agent-ctl /usr/local/bin
 
-      - name: Run smoke test
+      - name: Run smoke test (${{ matrix.test-mode.name }})
         run: |
-          ../podvm/hack/smoke_test.sh -d build/podvm-fedora-amd64.qcow2
+          ../podvm/hack/smoke_test.sh -m ${{ matrix.test-mode.mode }} build/podvm-fedora-amd64.qcow2
