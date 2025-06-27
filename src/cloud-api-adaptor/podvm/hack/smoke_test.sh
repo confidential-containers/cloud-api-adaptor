@@ -125,7 +125,9 @@ write_files:
             "dedicated": false
         },
         "pod-namespace": "default",
-        "pod-name": "smoketest"
+        "pod-name": "smoketest",
+        "enable-scratch-disk": true,
+        "enable-scratch-encryption": true
     }
 EOF
 genisoimage -output cloud-init.iso -volid cidata -joliet -rock cloud-init/user-data cloud-init/meta-data
@@ -141,6 +143,9 @@ fi
 chmod a+rwx "${WORKDIR}"
 sudo chown -R libvirt-qemu "${WORKDIR}" || true
 sudo chmod +x "${WORKDIR}"
+
+# Resize the VM disk image to add free space
+sudo qemu-img resize -f "${FMT}" "${IMAGE}" +1G
 
 # Start the VM
 echo "::debug:: Starting VM"
@@ -159,7 +164,8 @@ sudo virt-install \
 	--virt-type=kvm \
 	--boot loader="${OVMF}" \
 	--transient \
-	--noautoconsole
+	--noautoconsole \
+	--channel unix,mode=bind,path=${WORKDIR}/smoketest.agent,target_type=virtio,name=org.qemu.guest_agent.0
 
 SECONDS=0
 while [ $SECONDS -lt 120 ]; do
@@ -197,3 +203,74 @@ if ! $KATACTL connect --server-address "unix://${SOCK}" --cmd DestroySandbox; th
 	echo "::error:: Failed to DestroySandbox"
 	exit 1;
 fi
+
+# Check encrypted disk mount
+# Connect to qemu-ga to run lsblk and process o/p
+# qemu-ga expects the command in json format
+# virsh qemu-agent-command smoketest '{"execute": "guest-exec", "arguments": { "path": "/usr/bin/lsblk", "capture-output": true }}'
+# The o/p will be like '{"return":{"pid":1609}}'.
+# Then need to execute guest-exec-status with the returned pid
+# virsh qemu-agent-command smoketest '{"execute": "guest-exec-status", "arguments": { "pid": 1609}}'
+# The o/p will be like  {"return":{"exitcode":0,"out-data":"TkFNRSAgICAgICAgICAgICAgICAgICAgICAgICBNQ....","exited":true}}
+# base64 decoding will of the out-data will show the details
+#NAME                         MAJ:MIN RM  SIZE RO TYPE  MOUNTPOINTS
+#sda                            8:0    0  2.9G  0 disk
+#├─sda1                         8:1    0  512M  0 part
+#├─sda2                         8:2    0  345M  0 part
+#│ └─root                     252:0    0  345M  1 crypt /
+#├─sda3                         8:3    0   64M  0 part
+#│ └─root                     252:0    0  345M  1 crypt /
+#└─sda4                         8:4    0    1G  0 part
+#  └─encrypted_disk_py7P1_dif 252:1    0    1G  0 crypt
+#    └─encrypted_disk_py7P1   252:2    0    1G  0 crypt /run/kata-containers/image
+#sr0
+
+check_encrypted_disk_mount() {
+  local domain="$1"  # e.g., "smoketest"
+  local exec_output exec_pid exec_status base64_data decoded_output
+
+  # Run lsblk via guest-exec
+  exec_output=$(sudo virsh qemu-agent-command "$domain" '{"execute": "guest-exec", "arguments": { "path": "/usr/bin/lsblk", "capture-output": true }}')
+  exec_pid=$(echo "$exec_output" | jq -r '.return.pid')
+
+  if [[ -z "$exec_pid" || "$exec_pid" == "null" ]]; then
+    echo "Failed to get PID from guest-exec."
+    return 1
+  fi
+
+  # Wait for the command to finish
+  exec_status=$(sudo virsh qemu-agent-command "$domain" \
+       --timeout 5 \
+      "{\"execute\": \"guest-exec-status\", \"arguments\": { \"pid\": $exec_pid }}")
+
+  exited=$(echo "$exec_status" | jq -r '.return.exited')
+
+  if [[ "$exited" != "true" ]]; then
+    echo "Command did not exit in time."
+    return 1
+  fi
+
+  # Decode the output
+  base64_data=$(echo "$exec_status" | jq -r '.return["out-data"]')
+  if [[ -z "$base64_data" || "$base64_data" == "null" ]]; then
+    echo "No output from lsblk."
+    return 1
+  fi
+
+  decoded_output=$(echo "$base64_data" | base64 -d)
+
+  # Check if an encrypted device is mounted at /run/kata-containers/image
+  if echo "$decoded_output" | grep -q "crypt.*/run/kata-containers/image"; then
+    echo "Encrypted disk is mounted at /run/kata-containers/image"
+    return 0
+  else
+    echo "Encrypted disk is NOT mounted at /run/kata-containers/image"
+    return 1
+  fi
+}
+
+if ! check_encrypted_disk_mount smoketest; then
+   echo "::error:: Encrypted disk not found"
+   exit 1
+fi
+
