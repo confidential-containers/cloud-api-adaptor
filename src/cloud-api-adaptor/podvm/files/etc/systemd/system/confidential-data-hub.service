@@ -4,6 +4,7 @@ After=network.target cloud-init.service process-user-data.service
 
 [Service]
 Type=simple
+Environment=OCICRYPT_KEYPROVIDER_CONFIG=/etc/ocicrypt_config.json
 ExecStart=/bin/bash -c \
     'if [ -f /run/peerpod/cdh.toml ]; \
     then /usr/local/bin/confidential-data-hub -c /run/peerpod/cdh.toml; \
