@@ -14,11 +14,14 @@ func isAzureVM() bool {
 }
 
 func isAWSVM(ctx context.Context) bool {
-	if cpuid.CPU.HypervisorVendorID != cpuid.KVM {
+	t, err := dmidecode.NewDMITable()
+	if err != nil {
 		return false
 	}
-	_, err := imdsGet(ctx, AWSImdsUrl, false, nil)
-	return err == nil
+
+	provider := t.Query(dmidecode.KeywordSystemManufacturer)
+
+	return provider == "Amazon EC2"
 }
 
 func isGCPVM(ctx context.Context) bool {
