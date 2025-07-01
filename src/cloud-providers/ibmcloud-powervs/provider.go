@@ -18,7 +18,6 @@ import (
 	retry "github.com/avast/retry-go/v4"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
 const maxInstanceNameLen = 47
@@ -45,14 +44,9 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	}, nil
 }
 
-func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, sandboxID string, userData string, skipVMUserData bool, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
-
-	userData, err := cloudConfig.Generate()
-	if err != nil {
-		return nil, err
-	}
 
 	imageId := p.serviceConfig.ImageId
 
@@ -103,7 +97,10 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		Processors: core.Float64Ptr(processors),
 		ProcType:   core.StringPtr(p.serviceConfig.ProcessorType),
 		SysType:    systemType,
-		UserData:   base64.StdEncoding.EncodeToString([]byte(userData)),
+	}
+
+	if !skipVMUserData {
+		body.UserData = base64.StdEncoding.EncodeToString([]byte(userData))
 	}
 
 	logger.Printf("CreateInstance: name: %q", instanceName)

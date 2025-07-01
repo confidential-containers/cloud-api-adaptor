@@ -20,6 +20,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/kubemgr"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/userdata"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 
@@ -106,6 +107,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		flags.StringVar(&cfg.serverConfig.PodsDir, "pods-dir", adaptor.DefaultPodsDir, "base directory for pod directories")
 		flags.StringVar(&cfg.serverConfig.PauseImage, "pause-image", "", "pause image to be used for the pods")
 		flags.StringVar(&cfg.serverConfig.ForwarderPort, "forwarder-port", daemon.DefaultListenPort, "port number of agent protocol forwarder")
+		flags.StringVar(&cfg.serverConfig.PudPort, "pud-port", userdata.DefaultListenPort, "port number of process-user-data")
+		flags.BoolVar(&cfg.serverConfig.SkipVMUserData, "skip-user-data", false, "Skips passing user data while VM creation when set to true")
 		flags.StringVar(&tlsConfig.CAFile, "ca-cert-file", "", "CA cert file")
 		flags.StringVar(&tlsConfig.CertFile, "cert-file", "", "cert file")
 		flags.StringVar(&tlsConfig.KeyFile, "cert-key", "", "cert key")

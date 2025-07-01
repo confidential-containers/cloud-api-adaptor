@@ -17,7 +17,6 @@ import (
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
 
 const (
@@ -157,16 +156,15 @@ func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourc
 	return
 }
 
-func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageId string) *vpcv1.InstancePrototype {
+func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, instanceProfile, imageId string) *vpcv1.InstancePrototype {
 
 	prototype := &vpcv1.InstancePrototype{
-		Name:     &instanceName,
-		Image:    &vpcv1.ImageIdentity{ID: &imageId},
-		UserData: &userData,
-		Profile:  &vpcv1.InstanceProfileIdentity{Name: &instanceProfile},
-		Zone:     &vpcv1.ZoneIdentity{Name: &p.serviceConfig.ZoneName},
-		Keys:     []vpcv1.KeyIdentityIntf{},
-		VPC:      &vpcv1.VPCIdentity{ID: &p.serviceConfig.VpcID},
+		Name:    &instanceName,
+		Image:   &vpcv1.ImageIdentity{ID: &imageId},
+		Profile: &vpcv1.InstanceProfileIdentity{Name: &instanceProfile},
+		Zone:    &vpcv1.ZoneIdentity{Name: &p.serviceConfig.ZoneName},
+		Keys:    []vpcv1.KeyIdentityIntf{},
+		VPC:     &vpcv1.VPCIdentity{ID: &p.serviceConfig.VpcID},
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfacePrototype{
 			Subnet: &vpcv1.SubnetIdentity{ID: &p.serviceConfig.PrimarySubnetID},
 			SecurityGroups: []vpcv1.SecurityGroupIdentityIntf{
@@ -249,14 +247,9 @@ func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]n
 	return ips, nil
 }
 
-func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandboxID, userData string, skipVMUserData bool, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
-
-	userData, err := cloudConfig.Generate()
-	if err != nil {
-		return nil, err
-	}
 
 	instanceProfile, err := p.selectInstanceProfile(ctx, spec)
 	if err != nil {
@@ -273,7 +266,11 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		}
 	}
 
-	prototype := p.getInstancePrototype(instanceName, userData, instanceProfile, imageID)
+	prototype := p.getInstancePrototype(instanceName, instanceProfile, imageID)
+
+	if !skipVMUserData {
+		prototype.UserData = &userData
+	}
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 

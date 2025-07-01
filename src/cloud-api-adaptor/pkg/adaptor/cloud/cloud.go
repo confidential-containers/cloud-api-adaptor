@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	retry "github.com/avast/retry-go/v4"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 
@@ -43,6 +44,8 @@ type ServerConfig struct {
 	PauseImage              string
 	PodsDir                 string
 	ForwarderPort           string
+	PudPort                 string
+	SkipVMUserData          bool
 	ProxyTimeout            time.Duration
 	Initdata                string
 	EnableCloudConfigVerify bool
@@ -376,7 +379,12 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 		return nil, fmt.Errorf("getting sandbox: %w", err)
 	}
 
-	instance, err := s.provider.CreateInstance(ctx, sandbox.podName, string(sid), sandbox.cloudConfig, sandbox.spec)
+	userData, err := sandbox.cloudConfig.Generate()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate user data: %w", err)
+	}
+
+	instance, err := s.provider.CreateInstance(ctx, sandbox.podName, string(sid), userData, s.serverConfig.SkipVMUserData, sandbox.spec)
 	if err != nil {
 		return nil, fmt.Errorf("creating an instance : %w", err)
 	}
@@ -399,6 +407,12 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 
 	instanceIP := instance.IPs[0].String()
 	forwarderPort := s.serverConfig.ForwarderPort
+
+	if s.serverConfig.SkipVMUserData {
+		if err := s.sendUserdata(ctx, instanceIP, userData); err != nil {
+			return nil, fmt.Errorf("failed to send user data to process-user-data: %w", err)
+		}
+	}
 
 	if s.sshClient != nil {
 		if err := sandbox.sshClientInst.Start(instance.IPs); err != nil {
@@ -446,6 +460,42 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	logger.Print("agent proxy is ready")
 
 	return &pb.StartVMResponse{}, nil
+}
+
+func (s *cloudService) sendUserdata(ctx context.Context, instanceIP, userData string) error {
+	var conn net.Conn
+	address := fmt.Sprintf("%s:%s", instanceIP, s.serverConfig.PudPort)
+	logger.Printf("Connecting to pod VM: %s", address)
+	ctx, cancel := context.WithTimeout(ctx, s.serverConfig.ProxyTimeout)
+	defer cancel()
+
+	err := retry.Do(
+		func() error {
+			var err error
+			if conn, err = (&net.Dialer{}).DialContext(ctx, "tcp", address); err != nil {
+				logger.Printf("Retrying failed process-user-data connection: %v", err)
+			}
+			return err
+		},
+		retry.Attempts(0),
+		retry.Context(ctx),
+		retry.MaxDelay(5*time.Second),
+	)
+	if err != nil {
+		err = fmt.Errorf("failed to establish connection to process-user-data: %s: %w", address, err)
+		logger.Print(err)
+		return err
+	}
+	defer conn.Close()
+
+	logger.Println("Connection established, prepare to send data..")
+	_, err = conn.Write([]byte(userData))
+	if err != nil {
+		return err
+	}
+
+	logger.Printf("Successfully sent user-data to pod VM, IP:%s", instanceIP)
+	return nil
 }
 
 func (s *cloudService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.StopVMResponse, error) {
