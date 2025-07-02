@@ -5,7 +5,7 @@ ARG MKOSI_VERSION="v22"
 ARG PROFILE="debug"
 ARG IMAGE_VERSION="0.0.0"
 
-RUN dnf install -y \
+RUN dnf install -y --skip-unavailable \
 	bubblewrap \
 	git \
 	cpio \
@@ -35,8 +35,9 @@ COPY mkosi.skeleton-debug /image/mkosi.skeleton-debug
 COPY mkosi.workspace /image/mkosi.workspace
 COPY resources /image/resources
 COPY mkosi.conf /image/mkosi.conf
-RUN --security=insecure mkosi --profile=$PROFILE --image-version=$IMAGE_VERSION
+RUN --security=insecure mkosi --tools-tree-release=41 --profile=$PROFILE --image-version=$IMAGE_VERSION
 
 FROM scratch
 
-COPY --from=builder /image/build/system.raw /
+# system.raw needed by amd64, initrd.cpio.zst & system.vmlinuz needed by s390x
+COPY --from=builder /image/build/system.raw /image/build/initrd.cpio.zst /image/build/system.vmlinuz /

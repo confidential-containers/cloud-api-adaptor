@@ -32,14 +32,6 @@ debug:binaries image-debug
 .PHONY: container
 container: binaries image-container
 
-define run_mkosi_in_container
-	docker run --rm --privileged \
-		-v "$(shell pwd)":/workspace \
-		-w /workspace \
-		fedora:40 \
-		bash -c "dnf install -y mkosi && mkosi --tools-tree=default --tools-tree-release=41 $(1)"
-endef
-
 binaries:
 	@echo "Building binaries..."
 	rm -rf ./resources/binaries-tree
@@ -82,13 +74,6 @@ PHONY: image
 image: insecure-builder
 	rm -rf ./build
 	@echo "Building image..."
-ifeq ($(SE_BOOT),true)
-	$(call run_mkosi_in_container,--profile production --image system)
-	sudo -E ../hack/build-s390x-se-image.sh
-else ifeq ($(ARCH),s390x)
-	$(call run_mkosi_in_container,--profile production --image system)
-	sudo -E ../hack/build-s390x-image.sh
-else
 	mkdir -p build
 	docker buildx build \
 		-f Dockerfile.mkosi \
@@ -101,6 +86,11 @@ else
 		--builder insecure-builder \
 		--allow security.insecure \
 		.
+ifeq ($(SE_BOOT),true)
+	sudo -E ../hack/build-s390x-se-image.sh
+else ifeq ($(ARCH),s390x)
+	sudo -E ../hack/build-s390x-image.sh
+else
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
 endif
 
@@ -108,14 +98,6 @@ PHONY: image-debug
 image-debug: insecure-builder
 	rm -rf ./build
 	@echo "Building debug image..."
-ifeq ($(SE_BOOT),true)
-	$(call run_mkosi_in_container,--profile debug)
-	sudo -E ../hack/build-s390x-se-image.sh
-else ifeq ($(ARCH),s390x)
-	$(call run_mkosi_in_container,--profile debug)
-	sudo -E ../hack/build-s390x-image.sh
-else
-
 	mkdir -p build
 	docker buildx build \
 		-f Dockerfile.mkosi \
@@ -128,6 +110,11 @@ else
 		--builder insecure-builder \
 		--allow security.insecure \
 		.
+ifeq ($(SE_BOOT),true)
+	sudo -E ../hack/build-s390x-se-image.sh
+else ifeq ($(ARCH),s390x)
+	sudo -E ../hack/build-s390x-image.sh
+else
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
 endif
 
