@@ -10,6 +10,7 @@ ifeq ($(PODVM_TAG),)
 endif
 PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
 PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
+PODVM_IMAGE_TARGET ?= $(DISTRO_ARCH)-image
 PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT),true),-se,)-$(DISTRO_ARCH):$(PODVM_TAG)
 PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(DISTRO_ARCH)
 VERIFY_PROVENANCE ?= no
@@ -85,6 +86,7 @@ image: insecure-builder
 		-o type=local,dest=./build \
 		--builder insecure-builder \
 		--allow security.insecure \
+		--target $(PODVM_IMAGE_TARGET) \
 		.
 ifeq ($(SE_BOOT),true)
 	sudo -E ../hack/build-s390x-se-image.sh
@@ -109,6 +111,7 @@ image-debug: insecure-builder
 		-o type=local,dest=./build \
 		--builder insecure-builder \
 		--allow security.insecure \
+		--target $(PODVM_IMAGE_TARGET) \
 		.
 ifeq ($(SE_BOOT),true)
 	sudo -E ../hack/build-s390x-se-image.sh
