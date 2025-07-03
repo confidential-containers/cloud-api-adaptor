@@ -44,17 +44,17 @@ FROM scratch as amd64-image
 
 COPY --from=builder /image/build/system.raw /
 
-FROM fedora:41 as s390x-image-converter
+FROM fedora:41 as s390x-qcow2-converter
 
 COPY --from=builder /image/build/ /
-COPY hack/build-s390x-se-image.sh /
-RUN /build-s390x-se-image.sh
+COPY hack/build-s390x-image.sh /
+RUN /build-s390x-image.sh
 
 FROM scratch as s390x-image
 
-COPY --from=s390x-image-converter podvm-fedora-s390x.qcow2 /
+COPY --from=s390x-qcow2-converter podvm-fedora-s390x.qcow2 /
 
-FROM fedora:41 as s390x-se-image-converter
+FROM fedora:41 as s390x-se-qcow2-converter
 
 COPY --from=builder /image/build/ /
 COPY hack/build-s390x-se-image.sh /
@@ -62,4 +62,4 @@ RUN /build-s390x-se-image.sh
 
 FROM scratch as s390x-se-image
 
-COPY --from=s390x-se-image-converter podvm-fedora-s390x-se.qcow2 /
+COPY --from=s390x-se-qcow2-converter podvm-fedora-s390x-se.qcow2 /
