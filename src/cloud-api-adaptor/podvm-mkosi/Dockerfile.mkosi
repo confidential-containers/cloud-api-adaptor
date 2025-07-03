@@ -44,7 +44,7 @@ COPY --from=builder /image/build/system.raw /
 FROM fedora:41 as s390x-qcow2-converter
 
 RUN dnf install -y \
-	qemu-utils
+	qemu-img
 
 COPY --from=builder /image/build/ /
 COPY hack/build-s390x-image.sh /
@@ -57,7 +57,7 @@ COPY --from=s390x-qcow2-converter podvm-fedora-s390x.qcow2 /
 FROM fedora:41 as s390x-se-qcow2-converter
 
 RUN dnf install -y \
-	qemu-utils
+	qemu-img
 
 COPY --from=builder /image/build/ /
 COPY hack/build-s390x-se-image.sh /
