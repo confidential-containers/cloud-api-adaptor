@@ -73,8 +73,8 @@ func (p *dockerProvider) CreateInstance(ctx context.Context, podName, sandboxID 
 	// Create volume binding for the container
 
 	// mount userdata to /media/cidata/user-data
-	// This file will be read by process-user-data and daemon.json will be written to
-	// /run/peerpods/daemon.json at runtime
+	// This file will be read by process-user-data and apf.json will be written to
+	// /run/peerpods/apf.json at runtime
 	volumeBinding := []string{
 		// note: we are not importing that path from the CAA package to avoid circular dependencies
 		fmt.Sprintf("%s:%s", instanceUserdataFile, "/media/cidata/user-data"),

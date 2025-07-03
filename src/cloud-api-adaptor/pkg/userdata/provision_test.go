@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var testDaemonConfig string = `{
+var testAPFConfig string = `{
 	"pod-network": {
 		"podip": "10.244.0.19/24",
 		"pod-hw-addr": "0e:8f:62:f3:81:ad",
@@ -289,7 +289,7 @@ func (p *TestProvider) GetRetryDelay() time.Duration {
 	return 1 * time.Millisecond
 }
 
-// TestRetrieveCloudConfig tests retrieving and parsing of a daemon config
+// TestRetrieveCloudConfig tests retrieving and parsing of a apf config
 func TestRetrieveCloudConfig(t *testing.T) {
 	var provider TestProvider
 
@@ -333,10 +333,10 @@ func TestProcessCloudConfig(t *testing.T) {
 
 	var aaCfgPath = filepath.Join(tempDir, "aa.toml")
 	var cdhCfgPath = filepath.Join(tempDir, "cdh.toml")
-	var daemonPath = filepath.Join(tempDir, "daemon.json")
+	var apfCfgPath = filepath.Join(tempDir, "apf.json")
 	var authPath = filepath.Join(tempDir, "auth.json")
 	var initdataPath = filepath.Join(tempDir, "initdata")
-	var writeFilesList = []string{aaCfgPath, cdhCfgPath, daemonPath, authPath, initdataPath}
+	var writeFilesList = []string{aaCfgPath, cdhCfgPath, apfCfgPath, authPath, initdataPath}
 
 	content := fmt.Sprintf(`#cloud-config
 write_files:
@@ -360,8 +360,8 @@ write_files:
 		indentTextBlock(testAAConfig, 4),
 		cdhCfgPath,
 		indentTextBlock(testCDHConfig, 4),
-		daemonPath,
-		indentTextBlock(testDaemonConfig, 4),
+		apfCfgPath,
+		indentTextBlock(testAPFConfig, 4),
 		authPath,
 		indentTextBlock(testAuthJson, 4),
 		initdataPath,
@@ -399,10 +399,10 @@ write_files:
 		t.Fatalf("file content does not match cdh config fixture: got %q", fileContent)
 	}
 
-	data, _ = os.ReadFile(daemonPath)
+	data, _ = os.ReadFile(apfCfgPath)
 	fileContent = string(data)
-	if fileContent != testDaemonConfig {
-		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
+	if fileContent != testAPFConfig {
+		t.Fatalf("file content does not match apf config fixture: got %q", fileContent)
 	}
 
 	data, _ = os.ReadFile(authPath)
@@ -424,10 +424,10 @@ func TestProcessCloudConfigWithMalicious(t *testing.T) {
 
 	var aaCfgPath = filepath.Join(tempDir, "aa.toml")
 	var cdhCfgPath = filepath.Join(tempDir, "cdh.toml")
-	var daemonPath = filepath.Join(tempDir, "daemon.json")
+	var apfCfgPath = filepath.Join(tempDir, "apf.json")
 	var authPath = filepath.Join(tempDir, "auth.json")
 	var malicious = filepath.Join(tempDir, "malicious")
-	var writeFilesList = []string{aaCfgPath, cdhCfgPath, daemonPath, authPath}
+	var writeFilesList = []string{aaCfgPath, cdhCfgPath, apfCfgPath, authPath}
 
 	content := fmt.Sprintf(`#cloud-config
 write_files:
@@ -451,8 +451,8 @@ write_files:
 		indentTextBlock(testAAConfig, 4),
 		cdhCfgPath,
 		indentTextBlock(testCDHConfig, 4),
-		daemonPath,
-		indentTextBlock(testDaemonConfig, 4),
+		apfCfgPath,
+		indentTextBlock(testAPFConfig, 4),
 		authPath,
 		indentTextBlock(testAuthJson, 4),
 		malicious,
@@ -490,10 +490,10 @@ write_files:
 		t.Fatalf("file content does not match cdh config fixture: got %q", fileContent)
 	}
 
-	data, _ = os.ReadFile(daemonPath)
+	data, _ = os.ReadFile(apfCfgPath)
 	fileContent = string(data)
-	if fileContent != testDaemonConfig {
-		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
+	if fileContent != testAPFConfig {
+		t.Fatalf("file content does not match apf config fixture: got %q", fileContent)
 	}
 
 	data, _ = os.ReadFile(authPath)

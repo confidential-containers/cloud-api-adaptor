@@ -19,7 +19,7 @@ func Test_dockerProvider_CreateInstance(t *testing.T) {
 		Client *client.Client
 	}
 
-	testDaemonConfigJson := `{
+	testAPFConfigJson := `{
 		"pod-network": {
 			"podip": "10.244.0.19/24",
 			"pod-hw-addr": "0e:8f:62:f3:81:ad",
@@ -46,11 +46,11 @@ func Test_dockerProvider_CreateInstance(t *testing.T) {
 		"tls-client-ca": "-----BEGIN CERTIFICATE-----\n....\n-----END CERTIFICATE-----\n"
 	}`
 
-	// Write tempDaemonConfigJSON to cloud-init config file
+	// Write tempAPFConfigJSON to cloud-init config file
 	// Create a CloudConfig struct
 	cloudConfig := &cloudinit.CloudConfig{
 		WriteFiles: []cloudinit.WriteFile{
-			{Path: "/run/peerpod/daemon.json", Content: string(testDaemonConfigJson)},
+			{Path: "/run/peerpod/apf.json", Content: string(testAPFConfigJson)},
 		},
 	}
 

@@ -239,7 +239,7 @@ cat <<EOF > cloud-init/user-data
 #cloud-config
 
 write_files:
-- path: /run/peerpod/daemon.json
+- path: /run/peerpod/apf.json
   content: |
     {
         "pod-network": {
