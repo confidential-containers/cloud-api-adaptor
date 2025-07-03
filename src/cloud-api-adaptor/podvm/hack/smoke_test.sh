@@ -31,6 +31,44 @@ TEST_MODE="basic"
 #    └─encrypted_disk_py7P1   252:2    0    1G  0 crypt /run/kata-containers/image
 #sr0
 
+check_systemd_units() {
+  local domain="$1"  # e.g., "smoketest"
+  local exec_output exec_pid exec_status base64_data decoded_output
+
+  exec_output=$(sudo virsh qemu-agent-command "$domain" '{"execute": "guest-exec", "arguments": { "path": "/usr/bin/bash", "arg": ["-c", "systemctl list-units --failed" ], "capture-output": true }}')
+  exec_pid=$(echo "$exec_output" | jq -r '.return.pid')
+
+  if [[ -z "$exec_pid" || "$exec_pid" == "null" ]]; then
+    echo "Failed to get PID from guest-exec."
+    return 1
+  fi
+
+  # Wait for the command to finish
+  exec_status=$(sudo virsh qemu-agent-command "$domain" \
+       --timeout 5 \
+      "{\"execute\": \"guest-exec-status\", \"arguments\": { \"pid\": $exec_pid }}")
+
+  exited=$(echo "$exec_status" | jq -r '.return.exited')
+
+  if [[ "$exited" != "true" ]]; then
+    echo "Command did not exit in time."
+    return 1
+  fi
+
+  # Decode the output
+  base64_data=$(echo "$exec_status" | jq -r '.return["out-data"]')
+  if [[ -z "$base64_data" || "$base64_data" == "null" ]]; then
+    echo "No output from lsblk."
+    return 1
+  fi
+
+  decoded_output=$(echo "$base64_data" | base64 -d)
+
+  echo "systemctl output: $decoded_output"
+
+  return 0;
+}
+
 check_encrypted_disk_mount() {
   local domain="$1"  # e.g., "smoketest"
   local exec_output exec_pid exec_status base64_data decoded_output
@@ -354,6 +392,11 @@ if ! $KATACTL connect --server-address "unix://${SOCK}" --cmd DestroySandbox; th
 	exit 1;
 fi
 
+if ! check_systemd_units "${VM_NAME}"; then
+	echo "::error:: Systemd units check failed"
+	exit 1
+fi
+
 if [ "$TEST_MODE" = "scratch-space" ]; then
 	if ! check_scratch_disk_mount "${VM_NAME}"; then
 		echo "::error:: Scratch disk not found"
@@ -366,7 +409,7 @@ if [ "$TEST_MODE" = "encrypted-scratch-space" ]; then
 	if ! check_encrypted_disk_mount "${VM_NAME}"; then
 		echo "::error:: Encrypted disk not found"
 		exit 1
-	fi	
+	fi
 
 	# Copy a unique string to the VM under /run/kata-containers/image using virsh qemu-agent-command
 	# Search for the string in the VM image from the host (only for scratch space modes)
