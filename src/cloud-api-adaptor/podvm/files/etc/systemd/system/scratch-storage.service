@@ -8,6 +8,7 @@ DefaultDependencies=no
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+ConditionPathExists=/run/peerpod/scratch-space.marker
 ExecStart=/usr/local/bin/setup-scratch-storage
 
 [Install]

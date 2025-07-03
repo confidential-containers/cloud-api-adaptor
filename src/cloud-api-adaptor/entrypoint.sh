@@ -35,7 +35,6 @@ optionals+=""
 [[ "${PEERPODS_LIMIT_PER_NODE}" ]] && optionals+="-peerpods-limit-per-node ${PEERPODS_LIMIT_PER_NODE} "
 [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
 [[ "${ENABLE_SCRATCH_DISK}" == "true" ]] && optionals+="-enable-scratch-disk "
-[[ "${ENABLE_SCRATCH_ENCRYPTION}" == "true" ]] && optionals+="-enable-scratch-encryption "
 
 test_vars() {
     for i in "$@"; do

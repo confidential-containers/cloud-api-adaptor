@@ -55,8 +55,7 @@ type ServerConfig struct {
 	SecureCommsKbsAddress   string
 	PeerPodsLimitPerNode    int
 	RootVolumeSize          int
-	EnableScratchDisk       bool
-	EnableScratchEncryption bool
+	EnableScratchSpace      bool
 }
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -286,16 +285,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		}
 	}
 
-	// Set scratch disk configuration
-	// If EnableScratchEncryption is set, then automatically set EnableScratchDisk
-	// as well and log it
-	daemonConfig.EnableScratchDisk = s.serverConfig.EnableScratchDisk
-	if s.serverConfig.EnableScratchEncryption {
-		daemonConfig.EnableScratchDisk = true
-		daemonConfig.EnableScratchEncryption = true
-		logger.Printf("EnableScratchEncryption is set, enabling scratch disk as well")
-	}
-
 	apfJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
 	if err != nil {
 		return nil, fmt.Errorf("generating JSON data: %w", err)
@@ -350,6 +339,14 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
 			Path:    InitDataPath,
 			Content: initdataEnc,
+		})
+	}
+
+	// Set encrypted scratch space config
+	if s.serverConfig.EnableScratchSpace {
+		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+			Path:    ScratchSpacePath,
+			Content: "",
 		})
 	}
 

@@ -6,20 +6,8 @@ on:
 permissions: {}
 
 jobs:
-  podvm-mkosi:
-    # We're pinning the runner to 22.04 b/c libvirt struggles with the
-    # OVMF_CODE_4M firmware that is default on 24.04.
-    runs-on: 'ubuntu-22.04'
-    
-    strategy:
-      matrix:
-        test-mode:
-          - name: podvm-mkosi
-            mode: basic
-          - name: podvm-mkosi-with-scratch-space
-            mode: scratch-space
-          - name: podvm-mkosi-with-encrypted-scratch-space
-            mode: encrypted-scratch-space
+  build:
+    runs-on: 'ubuntu-24.04'
 
     defaults:
       run:
@@ -29,17 +17,15 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       # Required by rootless mkosi on Ubuntu 24.04
-      # - name: Un-restrict user namespaces
-      #   run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Un-restrict user namespaces
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             genisoimage \
-            qemu-utils \
-            socat \
-            virt-manager
+            qemu-utils
           sudo snap install yq
 
       - name: Read properties from versions.yaml
@@ -70,12 +56,60 @@ jobs:
       - name: Build image
         run: make image-debug
 
+      # Upload the image to the artifacts
+      - name: Upload qcow2 artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4
+        with:
+          name: podvm-build
+          path: src/cloud-api-adaptor/podvm-mkosi/build/podvm-fedora-amd64.qcow2
+
+  test:
+    # We're pinning the runner to 22.04 b/c libvirt struggles with the
+    # OVMF_CODE_4M firmware that is default on 24.04.
+    runs-on: 'ubuntu-22.04'
+    needs: build
+
+    strategy:
+      matrix:
+        test-mode:
+          - name: podvm-mkosi
+            mode: basic
+          - name: podvm-mkosi-with-scratch-space
+            mode: scratch-space
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            genisoimage \
+            qemu-utils\
+            socat \
+            virt-manager
+          sudo snap install yq
+
+      - name: Read properties from versions.yaml
+        working-directory: src/cloud-api-adaptor
+        run: |
+          {
+            echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
+            echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
+          } >> "$GITHUB_ENV"
+
       - name: Install kata-agent-ctl
         run: |
           oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
           tar xf kata-static-agent-ctl.tar.xz
           cp opt/kata/bin/kata-agent-ctl /usr/local/bin
 
+      - name: Download qcow2 artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: podvm-build
+          path: .
+
       - name: Run smoke test (${{ matrix.test-mode.name }})
-        run: |
-          ../podvm/hack/smoke_test.sh -m ${{ matrix.test-mode.mode }} build/podvm-fedora-amd64.qcow2
+        env:
+          TEST_MODE: ${{ matrix.test-mode.mode }}
+        run: src/cloud-api-adaptor/podvm/hack/smoke_test.sh -m "$TEST_MODE" podvm-fedora-amd64.qcow2

@@ -22,30 +22,6 @@ die() {
     exit 1
 }
 
-# Check if apf.json exists and parse configuration
-APF_CONFIG_PATH="/run/peerpod/apf.json"
-SCRATCH_ENABLED="false"
-ENCRYPTION_ENABLED="false"
-
-if [ -f "$APF_CONFIG_PATH" ]; then
-    if grep -q '"enable-scratch-disk":.*true' "$APF_CONFIG_PATH"; then
-        SCRATCH_ENABLED="true"
-    fi
-    if grep -q '"enable-scratch-encryption":.*true' "$APF_CONFIG_PATH"; then
-        ENCRYPTION_ENABLED="true"
-    fi
-
-fi
-
-echo "Scratch disk enabled: $SCRATCH_ENABLED"
-echo "Scratch encryption enabled: $ENCRYPTION_ENABLED"
-
-# Exit early if scratch disk is not enabled
-if [ "$SCRATCH_ENABLED" != "true" ]; then
-    echo "Scratch disk is disabled. Exiting."
-    exit 0
-fi
-
 # Check if the trusted_store device exists
 DISK_LABEL="trusted_store"
 DEV_PATH="/dev/disk/by-label/$DISK_LABEL"
@@ -70,16 +46,9 @@ mkdir -p "$MOUNT_POINT"
 # Using xargs to strip leading/trailing whitespace
 DEV_NUM=$(lsblk -no MAJ:MIN "$DEV_PATH" | xargs)
 
-if [ "$ENCRYPTION_ENABLED" = "true" ]; then
-    # Generate encryption key and use LUKS encryption
-    echo "Setting up LUKS encrypted scratch storage"
-    head -c 4096 /dev/urandom >/run/encrypt_storage.key
-    /usr/local/bin/luks-encrypt-storage "$DEV_NUM" false "$MOUNT_POINT" /run/encrypt_storage.key
-else
-    # Use plain ext4 without encryption
-    echo "Setting up plain scratch storage"
-    mkfs.ext4 "$DEV_PATH" -F
-    mount "$DEV_PATH" "$MOUNT_POINT"
-fi
+# Generate encryption key and use LUKS encryption
+echo "Setting up LUKS encrypted scratch storage"
+head -c 4096 /dev/urandom >/run/encrypt_storage.key
+/usr/local/bin/luks-encrypt-storage "$DEV_NUM" false "$MOUNT_POINT" /run/encrypt_storage.key
 
 echo "Scratch storage setup completed"
