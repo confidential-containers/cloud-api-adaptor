@@ -10,7 +10,7 @@ DESTRUCTIVE=0
 IMG=""
 TEST_MODE="basic"
 
-# Check encrypted disk mount
+# Check encrypted device mount
 # Connect to qemu-ga to run lsblk and process o/p
 # qemu-ga expects the command in json format
 # virsh qemu-agent-command smoketest '{"execute": "guest-exec", "arguments": { "path": "/usr/bin/lsblk", "capture-output": true }}'
@@ -31,7 +31,7 @@ TEST_MODE="basic"
 #    └─encrypted_disk_py7P1   252:2    0    1G  0 crypt /run/kata-containers/image
 #sr0
 
-check_encrypted_disk_mount() {
+check_scratch_space_mount() {
   local domain="$1"  # e.g., "smoketest"
   local exec_output exec_pid exec_status base64_data decoded_output
 
@@ -67,54 +67,10 @@ check_encrypted_disk_mount() {
 
   # Check if an encrypted device is mounted at /run/kata-containers/image
   if echo "$decoded_output" | grep -q "crypt.*/run/kata-containers/image"; then
-    echo "Encrypted disk is mounted at /run/kata-containers/image"
+    echo "Encrypted device is mounted at /run/kata-containers/image"
     return 0
   else
-    echo "Encrypted disk is NOT mounted at /run/kata-containers/image"
-    return 1
-  fi
-}
-
-check_scratch_disk_mount() {
-  local domain="$1"  # e.g., "smoketest"
-  local exec_output exec_pid exec_status base64_data decoded_output
-
-  # Run lsblk via guest-exec
-  exec_output=$(sudo virsh qemu-agent-command "$domain" '{"execute": "guest-exec", "arguments": { "path": "/usr/bin/lsblk", "capture-output": true }}')
-  exec_pid=$(echo "$exec_output" | jq -r '.return.pid')
-
-  if [[ -z "$exec_pid" || "$exec_pid" == "null" ]]; then
-    echo "Failed to get PID from guest-exec."
-    return 1
-  fi
-
-  # Wait for the command to finish
-  exec_status=$(sudo virsh qemu-agent-command "$domain" \
-       --timeout 5 \
-      "{\"execute\": \"guest-exec-status\", \"arguments\": { \"pid\": $exec_pid }}")
-
-  exited=$(echo "$exec_status" | jq -r '.return.exited')
-
-  if [[ "$exited" != "true" ]]; then
-    echo "Command did not exit in time."
-    return 1
-  fi
-
-  # Decode the output
-  base64_data=$(echo "$exec_status" | jq -r '.return["out-data"]')
-  if [[ -z "$base64_data" || "$base64_data" == "null" ]]; then
-    echo "No output from lsblk."
-    return 1
-  fi
-
-  decoded_output=$(echo "$base64_data" | base64 -d)
-
-  # Check if any device is mounted at /run/kata-containers/image
-  if echo "$decoded_output" | grep -q "/run/kata-containers/image"; then
-    echo "Scratch disk is mounted at /run/kata-containers/image"
-    return 0
-  else
-    echo "Scratch disk is NOT mounted at /run/kata-containers/image"
+    echo "Encrypted device is NOT mounted at /run/kata-containers/image"
     return 1
   fi
 }
@@ -123,7 +79,7 @@ usage() {
 	echo "Usage: $0 [-d] [-m MODE] IMG"
 	echo "  IMG     : Required positional argument for the image file."
 	echo "  -d      : Destructive, it moves the image and avoids any cleanup (0)."
-	echo "  -m MODE : Test mode: basic, scratch-space, encrypted-scratch-space (basic)."
+	echo "  -m MODE : Test mode: basic, scratch-space (basic)."
 	exit 1
 }
 
@@ -169,10 +125,10 @@ fi
 
 # Validate test mode
 case "$TEST_MODE" in
-	basic|scratch-space|encrypted-scratch-space)
+	basic|scratch-space)
 		;;
 	*)
-		echo "Error: Invalid test mode '$TEST_MODE'. Valid modes: basic, scratch-space, encrypted-scratch-space"
+		echo "Error: Invalid test mode '$TEST_MODE'. Valid modes: basic, scratch-space"
 		exit 1
 		;;
 esac
@@ -216,25 +172,6 @@ echo "::debug:: Preparing cloud-init iso for mode: $TEST_MODE"
 mkdir cloud-init
 touch cloud-init/meta-data
 
-# Set scratch disk and encryption options based on test mode
-ENABLE_SCRATCH_DISK="false"
-ENABLE_SCRATCH_ENCRYPTION="false"
-
-case "$TEST_MODE" in
-	basic)
-		ENABLE_SCRATCH_DISK="false"
-		ENABLE_SCRATCH_ENCRYPTION="false"
-		;;
-	scratch-space)
-		ENABLE_SCRATCH_DISK="true"
-		ENABLE_SCRATCH_ENCRYPTION="false"
-		;;
-	encrypted-scratch-space)
-		ENABLE_SCRATCH_DISK="true"
-		ENABLE_SCRATCH_ENCRYPTION="true"
-		;;
-esac
-
 cat <<EOF > cloud-init/user-data
 #cloud-config
 
@@ -271,11 +208,14 @@ write_files:
             "dedicated": false
         },
         "pod-namespace": "default",
-        "pod-name": "smoketest",
-        "enable-scratch-disk": $ENABLE_SCRATCH_DISK,
-        "enable-scratch-encryption": $ENABLE_SCRATCH_ENCRYPTION
+        "pod-name": "smoketest"
     }
 EOF
+
+if [ "$TEST_MODE" = "scratch-space" ]; then
+	echo "- { path: /run/peerpod/scratch-space.marker, content: '' }" >> cloud-init/user-data
+fi
+
 genisoimage -output cloud-init.iso -volid cidata -joliet -rock cloud-init/user-data cloud-init/meta-data
 
 # Move files to libvirt-accessible location
@@ -355,22 +295,14 @@ if ! $KATACTL connect --server-address "unix://${SOCK}" --cmd DestroySandbox; th
 fi
 
 if [ "$TEST_MODE" = "scratch-space" ]; then
-	if ! check_scratch_disk_mount "${VM_NAME}"; then
-		echo "::error:: Scratch disk not found"
+	if ! check_scratch_space_mount "${VM_NAME}"; then
+		echo "::error:: Encrypted scratch space not found"
 		exit 1
 	fi
-	echo "::debug:: Scratch disk check passed for $TEST_MODE mode"
-fi
-
-if [ "$TEST_MODE" = "encrypted-scratch-space" ]; then
-	if ! check_encrypted_disk_mount "${VM_NAME}"; then
-		echo "::error:: Encrypted disk not found"
-		exit 1
-	fi	
 
 	# Copy a unique string to the VM under /run/kata-containers/image using virsh qemu-agent-command
 	# Search for the string in the VM image from the host (only for scratch space modes)
-	echo "::debug:: Testing encrypted disk space by writing a unique string"
+	echo "::debug:: Testing encrypted scratch space by writing a unique string"
 	UNIQUE_STRING="smoketest-podvm-123456"
 
 	sudo virsh qemu-agent-command "${VM_NAME}" \
@@ -378,10 +310,10 @@ if [ "$TEST_MODE" = "encrypted-scratch-space" ]; then
 
 	grep -qa "${UNIQUE_STRING}" "${IMAGE}"
 	if [ $? -eq 0 ]; then
-		echo "::error:: Unique string written to encrypted disk is visible from the host"
+		echo "::error:: Unique string written to encrypted device is visible from the host"
 		exit 1
 	fi
 
-	echo "::debug:: Encrypted disk check passed for $TEST_MODE mode"
+	echo "::debug:: Encrypted scratch space check passed for $TEST_MODE mode"
 
 fi
