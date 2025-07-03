@@ -41,6 +41,30 @@ FROM scratch as amd64-image
 
 COPY --from=builder /image/build/system.raw /
 
+FROM fedora:41 as s390x-qcow2-converter
+
+RUN dnf install -y \
+	kmod \
+	qemu-img
+
+COPY --from=builder /image/build/ /
+COPY hack/build-s390x-image.sh /
+RUN /build-s390x-image.sh
+
 FROM scratch as s390x-image
 
-COPY --from=builder /image/build/system /image/build/initrd.cpio.zst /image/build/system.vmlinuz /
+COPY --from=s390x-qcow2-converter podvm-fedora-s390x.qcow2 /
+
+FROM fedora:41 as s390x-se-qcow2-converter
+
+RUN dnf install -y \
+	kmod \
+	qemu-img
+
+COPY --from=builder /image/build/ /
+COPY hack/build-s390x-se-image.sh /
+RUN /build-s390x-se-image.sh
+
+FROM scratch as s390x-se-image
+
+COPY --from=s390x-se-qcow2-converter podvm-fedora-s390x-se.qcow2 /
