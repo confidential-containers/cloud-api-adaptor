@@ -22,16 +22,16 @@ die() {
     exit 1
 }
 
-# Check if daemon.json exists and parse configuration
-DAEMON_CONFIG_PATH="/run/peerpod/daemon.json"
+# Check if apf.json exists and parse configuration
+APF_CONFIG_PATH="/run/peerpod/apf.json"
 SCRATCH_ENABLED="false"
 ENCRYPTION_ENABLED="false"
 
-if [ -f "$DAEMON_CONFIG_PATH" ]; then
-    if grep -q '"enable-scratch-disk":.*true' "$DAEMON_CONFIG_PATH"; then
+if [ -f "$APF_CONFIG_PATH" ]; then
+    if grep -q '"enable-scratch-disk":.*true' "$APF_CONFIG_PATH"; then
         SCRATCH_ENABLED="true"
     fi
-    if grep -q '"enable-scratch-encryption":.*true' "$DAEMON_CONFIG_PATH"; then
+    if grep -q '"enable-scratch-encryption":.*true' "$APF_CONFIG_PATH"; then
         ENCRYPTION_ENABLED="true"
     fi
 

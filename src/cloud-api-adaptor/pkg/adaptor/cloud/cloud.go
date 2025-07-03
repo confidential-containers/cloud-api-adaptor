@@ -296,23 +296,23 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		logger.Printf("EnableScratchEncryption is set, enabling scratch disk as well")
 	}
 
-	daemonJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
+	apfJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
 	if err != nil {
 		return nil, fmt.Errorf("generating JSON data: %w", err)
 	}
 
-	// Store daemon.json in worker node for debugging
-	daemonJSONPath := filepath.Join(podDir, "daemon.json")
-	if err := os.WriteFile(daemonJSONPath, daemonJSON, 0o666); err != nil {
-		return nil, fmt.Errorf("storing %s: %w", daemonJSONPath, err)
+	// Store apf.json in worker node for debugging
+	apfJSONPath := filepath.Join(podDir, "apf.json")
+	if err := os.WriteFile(apfJSONPath, apfJSON, 0o666); err != nil {
+		return nil, fmt.Errorf("storing %s: %w", apfJSONPath, err)
 	}
-	logger.Printf("stored %s", daemonJSONPath)
+	logger.Printf("stored %s", apfJSONPath)
 
 	cloudConfig := &cloudinit.CloudConfig{
 		WriteFiles: []cloudinit.WriteFile{
 			{
 				Path:    forwarder.DefaultConfigPath,
-				Content: string(daemonJSON),
+				Content: string(apfJSON),
 			},
 		},
 	}
