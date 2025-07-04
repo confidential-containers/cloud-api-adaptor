@@ -5,7 +5,7 @@ ARG MKOSI_VERSION="v22"
 ARG PROFILE="debug"
 ARG IMAGE_VERSION="0.0.0"
 
-RUN dnf install -y \
+RUN dnf install -y --skip-unavailable \
 	bubblewrap \
 	git \
 	cpio \
@@ -35,8 +35,36 @@ COPY mkosi.skeleton-debug /image/mkosi.skeleton-debug
 COPY mkosi.workspace /image/mkosi.workspace
 COPY resources /image/resources
 COPY mkosi.conf /image/mkosi.conf
-RUN --security=insecure mkosi --profile=$PROFILE --image-version=$IMAGE_VERSION
+RUN --security=insecure mkosi --tools-tree-release=41 --profile=$PROFILE --image-version=$IMAGE_VERSION
 
-FROM scratch
+FROM scratch as amd64-image
 
 COPY --from=builder /image/build/system.raw /
+
+FROM fedora:41 as s390x-qcow2-converter
+
+RUN dnf install -y \
+	kmod \
+	qemu-img
+
+COPY --from=builder /image/build/ /
+COPY hack/build-s390x-image.sh /
+RUN /build-s390x-image.sh
+
+FROM scratch as s390x-image
+
+COPY --from=s390x-qcow2-converter podvm-fedora-s390x.qcow2 /
+
+FROM fedora:41 as s390x-se-qcow2-converter
+
+RUN dnf install -y \
+	kmod \
+	qemu-img
+
+COPY --from=builder /image/build/ /
+COPY hack/build-s390x-se-image.sh /
+RUN /build-s390x-se-image.sh
+
+FROM scratch as s390x-se-image
+
+COPY --from=s390x-se-qcow2-converter podvm-fedora-s390x-se.qcow2 /

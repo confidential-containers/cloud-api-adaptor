@@ -10,6 +10,7 @@ ifeq ($(PODVM_TAG),)
 endif
 PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
 PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
+PODVM_IMAGE_TARGET ?= $(DISTRO_ARCH)$(if $(filter $(SE_BOOT),true),-se,)-image
 PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT),true),-se,)-$(DISTRO_ARCH):$(PODVM_TAG)
 PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(DISTRO_ARCH)
 VERIFY_PROVENANCE ?= no
@@ -31,14 +32,6 @@ debug:binaries image-debug
 
 .PHONY: container
 container: binaries image-container
-
-define run_mkosi_in_container
-	docker run --rm --privileged \
-		-v "$(shell pwd)":/workspace \
-		-w /workspace \
-		fedora:40 \
-		bash -c "dnf install -y mkosi && mkosi --tools-tree=default --tools-tree-release=41 $(1)"
-endef
 
 binaries:
 	@echo "Building binaries..."
@@ -82,13 +75,6 @@ PHONY: image
 image: insecure-builder
 	rm -rf ./build
 	@echo "Building image..."
-ifeq ($(SE_BOOT),true)
-	$(call run_mkosi_in_container,--profile production --image system)
-	sudo -E ../hack/build-s390x-se-image.sh
-else ifeq ($(ARCH),s390x)
-	$(call run_mkosi_in_container,--profile production --image system)
-	sudo -E ../hack/build-s390x-image.sh
-else
 	mkdir -p build
 	docker buildx build \
 		-f Dockerfile.mkosi \
@@ -100,7 +86,13 @@ else
 		-o type=local,dest=./build \
 		--builder insecure-builder \
 		--allow security.insecure \
+		--target $(PODVM_IMAGE_TARGET) \
 		.
+ifeq ($(SE_BOOT),true)
+	# sudo -E ../hack/build-s390x-se-image.sh
+else ifeq ($(ARCH),s390x)
+	# sudo -E ../hack/build-s390x-image.sh
+else
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
 endif
 
@@ -108,14 +100,6 @@ PHONY: image-debug
 image-debug: insecure-builder
 	rm -rf ./build
 	@echo "Building debug image..."
-ifeq ($(SE_BOOT),true)
-	$(call run_mkosi_in_container,--profile debug)
-	sudo -E ../hack/build-s390x-se-image.sh
-else ifeq ($(ARCH),s390x)
-	$(call run_mkosi_in_container,--profile debug)
-	sudo -E ../hack/build-s390x-image.sh
-else
-
 	mkdir -p build
 	docker buildx build \
 		-f Dockerfile.mkosi \
@@ -127,7 +111,13 @@ else
 		-o type=local,dest=./build \
 		--builder insecure-builder \
 		--allow security.insecure \
+		--target $(PODVM_IMAGE_TARGET) \
 		.
+ifeq ($(SE_BOOT),true)
+	sudo -E ../hack/build-s390x-se-image.sh
+else ifeq ($(ARCH),s390x)
+	sudo -E ../hack/build-s390x-image.sh
+else
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
 endif
 
