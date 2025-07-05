@@ -25,3 +25,8 @@ ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase@.service"
 ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase-initrd.service"
 ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase-sysinit.service"
 ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase.service"
+
+# Update NVIDIA config
+#
+echo "blacklist nouveau" > "${BUILDROOT}/etc/modprobe.d/blacklist_nouveau.conf"
+#
