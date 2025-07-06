@@ -134,12 +134,11 @@ gcp() {
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} "             # Specify root volume size for pod vm
     [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} "                                                 # Custom tags applied to pod vm. Tags must exist in the GCP project.
 
-    set -x
-
     # Avoid using node's metadata service credentials for GCP authentication
     echo "$GCP_CREDENTIALS" > /tmp/gcp-creds.json
     export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-creds.json
 
+    set -x
     exec cloud-api-adaptor gcp \
         -pods-dir "${PEER_PODS_DIR}" \
         -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
