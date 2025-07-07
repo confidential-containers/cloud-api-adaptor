@@ -190,6 +190,9 @@ export PODVM_IMAGE_ID= # the image id of the peerpod vm uploaded to ibmcloud
 #export SUBNET_ID=<your subnet id> # subnet to use (must have a public gateway attached)
 ```
 
+> [!TIP]
+> You can configure IAM for the cloud api adaptor using a [Trusted Profile](https://cloud.ibm.com/docs/account?topic=account-create-trusted-profile&interface=ui), instead of an API key. To do so, replace the line `APIKEY="$IBMCLOUD_API_KEY"` with `IAM_PROFILE_ID="the_id_of_your_trusted_profile"`, in the following `.properties` file.
+
 Then run the following command to generate the `.properties` file:
 
 ```bash
