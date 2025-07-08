@@ -4,9 +4,11 @@ FROM fedora:41 AS builder
 ARG MKOSI_VERSION="v22"
 ARG PROFILE="debug"
 ARG IMAGE_VERSION="0.0.0"
+ARG MKOSI_OPTIONS=""
 
 RUN dnf install -y --skip-unavailable \
 	bubblewrap \
+	coreutils \
 	git \
 	cpio \
 	systemd-repart \
@@ -35,7 +37,7 @@ COPY mkosi.skeleton-debug /image/mkosi.skeleton-debug
 COPY mkosi.workspace /image/mkosi.workspace
 COPY resources /image/resources
 COPY mkosi.conf /image/mkosi.conf
-RUN --security=insecure mkosi --tools-tree-release=41 --profile=$PROFILE --image-version=$IMAGE_VERSION
+RUN --security=insecure mkosi --tools-tree-release=41 --profile=$PROFILE --image-version=$IMAGE_VERSION $MKOSI_OPTIONS
 
 FROM scratch as amd64-image
 

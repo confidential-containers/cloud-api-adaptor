@@ -16,6 +16,10 @@ PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(DISTRO_ARCH)
 VERIFY_PROVENANCE ?= no
 MKOSI_VERSION ?= v22
 
+ifeq ($(DISTRO_ARCH), s390x)
+	MKOSI_OPTIONS="--image system"
+endif
+
 _SHA := $(shell git rev-parse --short HEAD)
 _SHA_DIRTY := $(shell [ -n "$$(git status --porcelain 2>/dev/null)" ] && printf -- '-dirty')
 IMAGE_VERSION ?= $(_SHA)$(_SHA_DIRTY)
@@ -82,6 +86,7 @@ image: insecure-builder
 		--build-arg PROFILE=production \
 		--build-arg IMAGE_VERSION \
 		--build-arg MKOSI_VERSION \
+		--build-arg MKOSI_OPTIONS=$(MKOSI_OPTIONS) \
 		--progress=plain \
 		-o type=local,dest=./build \
 		--builder insecure-builder \
@@ -89,9 +94,9 @@ image: insecure-builder
 		--target $(PODVM_IMAGE_TARGET) \
 		.
 ifeq ($(SE_BOOT),true)
-	# sudo -E ../hack/build-s390x-se-image.sh
+	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
-	# sudo -E ../hack/build-s390x-image.sh
+	sudo -E ../hack/build-s390x-image.sh
 else
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
 endif
@@ -107,6 +112,7 @@ image-debug: insecure-builder
 		--build-arg PROFILE=debug \
 		--build-arg IMAGE_VERSION \
 		--build-arg MKOSI_VERSION \
+		--build-arg MKOSI_OPTIONS=$(MKOSI_OPTIONS) \
 		--progress=plain \
 		-o type=local,dest=./build \
 		--builder insecure-builder \
