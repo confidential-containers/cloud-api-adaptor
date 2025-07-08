@@ -1,0 +1,70 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../yamls
+
+images: # TODO: update this image once it is released officially by CoCo
+- name: cloud-api-adaptor
+  newName: registry-cn-hangzhou.ack.aliyuncs.com/dev/coco-cloud-api-adaptor # change image if needed
+  newTag: v0.12.0-alibaba-alpha0
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="alibabacloud"
+  - ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN="false" # flag to enable/disable dynamically load cloud provider external plugin feature
+  - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
+  # - DISABLECVM="true" # Uncomment it if you want a generic VM
+  # - PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  # - VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
+  # - PODVM_LAUNCHTEMPLATE_NAME="" # Uncomment and set if you want to use launch template
+  - VSWITCH_ID="" # Set
+  - SECURITY_GROUP_IDS="" # Set
+  - REGION="cn-beijing" # The ECS pod instance region
+  - IMAGEID="m-2ze1w9aj2aonwckv64cw" # This is the default image-id. Change if you want to use yours
+  - SYSTEM_DISK_SIZE="50" # Change if need to
+  # - USE_PUBLIC_IP="true" # Change if need to
+  # Comment out the following variable(s) if using launch template
+  # - INSTANCE_TYPE="ecs.g8i.xlarge"
+  # - KEYNAME="" # The ssh-key id to login the instance. It's useful when you want to connect to the VM via ssh for debugging.
+  # - EXTERNAL_NETWORK_VIA_PODVM="true"   # [Experimental] Uncomment if you want to use podvm as external network
+  # - PODVM_INSTANCE_TYPES="" # comma separated
+  # - TAGS="" # Uncomment and add key1=value1,key2=value2 etc if you want to use specific tags for podvm
+  # - FORWARDER_PORT="" # Uncomment and set if you want to use a specific port for agent-protocol-forwarder. Defaults to 15150
+  # - PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
+##TLS_SETTINGS
+  # - CACERT_FILE="/etc/certificates/ca.crt" # for TLS
+  # - CERT_FILE="/etc/certificates/client.crt" # for TLS
+  # - CERT_KEY="/etc/certificates/client.key" # for TLS
+  # - TLS_SKIP_VERIFY="" # for testing only
+  
+##TLS_SETTINGS
+
+secretGenerator:
+- name: auth-json-secret
+  namespace: confidential-containers-system
+  files:
+  #- auth.json # set - path to auth.json pull credentials file
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  envs:
+    - alibabacloud-cred.env
+##TLS_SETTINGS
+#- name: certs-for-tls
+#  namespace: confidential-containers-system
+#  files:
+#  - <path_to_ca.crt> # set - relative path to ca.crt, located either in the same folder as the kustomization.yaml file or within a subfolder
+#  - <path_to_client.crt> # set - relative path to client.crt, located either in the same folder as the kustomization.yaml file or within a subfolder
+#  - <path_to_client.key> # set - relative path to client.key, located either in the same folder as the kustomization.yaml file or within a subfolder
+##TLS_SETTINGS
+
+patchesStrategicMerge:
+  - patch.yaml
+##TLS_SETTINGS
+  #- tls_certs_volume_mount.yaml # set (for tls)
+##TLS_SETTINGS

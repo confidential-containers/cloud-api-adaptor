@@ -54,6 +54,8 @@ type ServerConfig struct {
 	SecureCommsPpOutbounds  string
 	SecureCommsKbsAddress   string
 	PeerPodsLimitPerNode    int
+	RootVolumeSize          int
+	EnableScratchSpace      bool
 }
 
 var logger = log.New(log.Writer(), "[adaptor/cloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -283,23 +285,23 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		}
 	}
 
-	daemonJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
+	apfJSON, err := json.MarshalIndent(daemonConfig, "", "    ")
 	if err != nil {
 		return nil, fmt.Errorf("generating JSON data: %w", err)
 	}
 
-	// Store daemon.json in worker node for debugging
-	daemonJSONPath := filepath.Join(podDir, "daemon.json")
-	if err := os.WriteFile(daemonJSONPath, daemonJSON, 0o666); err != nil {
-		return nil, fmt.Errorf("storing %s: %w", daemonJSONPath, err)
+	// Store apf.json in worker node for debugging
+	apfJSONPath := filepath.Join(podDir, "apf.json")
+	if err := os.WriteFile(apfJSONPath, apfJSON, 0o666); err != nil {
+		return nil, fmt.Errorf("storing %s: %w", apfJSONPath, err)
 	}
-	logger.Printf("stored %s", daemonJSONPath)
+	logger.Printf("stored %s", apfJSONPath)
 
 	cloudConfig := &cloudinit.CloudConfig{
 		WriteFiles: []cloudinit.WriteFile{
 			{
 				Path:    forwarder.DefaultConfigPath,
-				Content: string(daemonJSON),
+				Content: string(apfJSON),
 			},
 		},
 	}
@@ -337,6 +339,14 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
 			Path:    InitDataPath,
 			Content: initdataEnc,
+		})
+	}
+
+	// Set encrypted scratch space config
+	if s.serverConfig.EnableScratchSpace {
+		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
+			Path:    ScratchSpacePath,
+			Content: "",
 		})
 	}
 
@@ -391,6 +401,10 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	}
 
 	logger.Printf("created an instance %s for sandbox %s", instance.Name, sid)
+
+	if len(instance.IPs) == 0 {
+		return nil, fmt.Errorf("instance IP is not available")
+	}
 
 	instanceIP := instance.IPs[0].String()
 	forwarderPort := s.serverConfig.ForwarderPort

@@ -4,11 +4,13 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   stale:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9
         with:
           stale-pr-message: 'This PR has been opened without with no activity for 90 days. Comment on the issue otherwise it will be closed in 7 days'
           days-before-pr-stale: 90

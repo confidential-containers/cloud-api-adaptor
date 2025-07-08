@@ -39,5 +39,24 @@ function setup_proxy_arp() {
   iptables -t nat -A POSTROUTING -s "$pod_ip/32" -d "$IMDS_IP/32" -j MASQUERADE
 }
 
+# Wait for namespace and network to be available
+echo "Waiting for net namespace podns and route to $IMDS_IP..."
+SECONDS=0
+while :; do
+	if ip netns exec podns ip route get "$IMDS_IP"; then
+		echo "Namespace podns is ready, proceeding..."
+		break
+	fi
+	if (( SECONDS > 60 )); then
+		echo "Namespace podns is not ready after ${SECONDS}s"
+		echo "ip netns list:"
+		ip netns list || true
+		echo "ip netns exec:"
+		ip netns exec podns ip route show || true
+		exit 1
+	fi
+	sleep 1
+done
+
 # Execute functions
 setup_proxy_arp

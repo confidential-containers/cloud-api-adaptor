@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var testDaemonConfig string = `{
+var testAPFConfig string = `{
 	"pod-network": {
 		"podip": "10.244.0.19/24",
 		"pod-hw-addr": "0e:8f:62:f3:81:ad",
@@ -154,6 +154,8 @@ default WriteStreamRequest := false
 var testCheckSum = "52af3178dd7ad4bf551e629b84b45bfd1fbe1434b980120267181ae3575ea20ca9013b8eadf31d27eed7ff2552d500ef"
 var cc_init_data = "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"
 
+var testScratchSpaceEnv string = ""
+
 // Test server to simulate the metadata service
 func startTestServer() *httptest.Server {
 	// Create base64 encoded test data
@@ -289,7 +291,7 @@ func (p *TestProvider) GetRetryDelay() time.Duration {
 	return 1 * time.Millisecond
 }
 
-// TestRetrieveCloudConfig tests retrieving and parsing of a daemon config
+// TestRetrieveCloudConfig tests retrieving and parsing of a apf config
 func TestRetrieveCloudConfig(t *testing.T) {
 	var provider TestProvider
 
@@ -333,13 +335,17 @@ func TestProcessCloudConfig(t *testing.T) {
 
 	var aaCfgPath = filepath.Join(tempDir, "aa.toml")
 	var cdhCfgPath = filepath.Join(tempDir, "cdh.toml")
-	var daemonPath = filepath.Join(tempDir, "daemon.json")
+	var apfCfgPath = filepath.Join(tempDir, "apf.json")
 	var authPath = filepath.Join(tempDir, "auth.json")
 	var initdataPath = filepath.Join(tempDir, "initdata")
-	var writeFilesList = []string{aaCfgPath, cdhCfgPath, daemonPath, authPath, initdataPath}
+	var scratchSpacePath = filepath.Join(tempDir, "scratch-space.marker")
+	var writeFilesList = []string{aaCfgPath, cdhCfgPath, apfCfgPath, authPath, initdataPath, scratchSpacePath}
 
 	content := fmt.Sprintf(`#cloud-config
 write_files:
+- path: %s
+  content: |
+%s
 - path: %s
   content: |
 %s
@@ -360,12 +366,15 @@ write_files:
 		indentTextBlock(testAAConfig, 4),
 		cdhCfgPath,
 		indentTextBlock(testCDHConfig, 4),
-		daemonPath,
-		indentTextBlock(testDaemonConfig, 4),
+		apfCfgPath,
+		indentTextBlock(testAPFConfig, 4),
 		authPath,
 		indentTextBlock(testAuthJson, 4),
 		initdataPath,
-		indentTextBlock(cc_init_data, 4))
+		indentTextBlock(cc_init_data, 4),
+		scratchSpacePath,
+		indentTextBlock(testScratchSpaceEnv, 4),
+	)
 
 	provider := TestProvider{content: content}
 
@@ -399,10 +408,10 @@ write_files:
 		t.Fatalf("file content does not match cdh config fixture: got %q", fileContent)
 	}
 
-	data, _ = os.ReadFile(daemonPath)
+	data, _ = os.ReadFile(apfCfgPath)
 	fileContent = string(data)
-	if fileContent != testDaemonConfig {
-		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
+	if fileContent != testAPFConfig {
+		t.Fatalf("file content does not match apf config fixture: got %q", fileContent)
 	}
 
 	data, _ = os.ReadFile(authPath)
@@ -424,10 +433,10 @@ func TestProcessCloudConfigWithMalicious(t *testing.T) {
 
 	var aaCfgPath = filepath.Join(tempDir, "aa.toml")
 	var cdhCfgPath = filepath.Join(tempDir, "cdh.toml")
-	var daemonPath = filepath.Join(tempDir, "daemon.json")
+	var apfCfgPath = filepath.Join(tempDir, "apf.json")
 	var authPath = filepath.Join(tempDir, "auth.json")
 	var malicious = filepath.Join(tempDir, "malicious")
-	var writeFilesList = []string{aaCfgPath, cdhCfgPath, daemonPath, authPath}
+	var writeFilesList = []string{aaCfgPath, cdhCfgPath, apfCfgPath, authPath}
 
 	content := fmt.Sprintf(`#cloud-config
 write_files:
@@ -451,8 +460,8 @@ write_files:
 		indentTextBlock(testAAConfig, 4),
 		cdhCfgPath,
 		indentTextBlock(testCDHConfig, 4),
-		daemonPath,
-		indentTextBlock(testDaemonConfig, 4),
+		apfCfgPath,
+		indentTextBlock(testAPFConfig, 4),
 		authPath,
 		indentTextBlock(testAuthJson, 4),
 		malicious,
@@ -490,10 +499,10 @@ write_files:
 		t.Fatalf("file content does not match cdh config fixture: got %q", fileContent)
 	}
 
-	data, _ = os.ReadFile(daemonPath)
+	data, _ = os.ReadFile(apfCfgPath)
 	fileContent = string(data)
-	if fileContent != testDaemonConfig {
-		t.Fatalf("file content does not match daemon config fixture: got %q", fileContent)
+	if fileContent != testAPFConfig {
+		t.Fatalf("file content does not match apf config fixture: got %q", fileContent)
 	}
 
 	data, _ = os.ReadFile(authPath)

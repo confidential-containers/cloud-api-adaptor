@@ -8,6 +8,8 @@ on:
   release:
     types: [created]
 
+permissions: {}
+
 jobs:
   caa:
     uses: ./.github/workflows/caa_build_and_push_per_arch.yaml
@@ -15,28 +17,44 @@ jobs:
       dev_tags: ${{ github.event.release.tag_name }}-dev
       release_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   csi-wrapper:
     uses: ./.github/workflows/csi_wrapper_images.yaml
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   peerpod-ctrl:
     uses: ./.github/workflows/peerpod-ctrl_image.yaml
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm_builder:
     uses: ./.github/workflows/podvm_builder.yaml
     with:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm_binaries:
     needs: [podvm_builder]
@@ -44,7 +62,11 @@ jobs:
     with:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm:
     needs: [podvm_binaries]
@@ -52,10 +74,19 @@ jobs:
     with:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm-mkosi:
     uses: ./.github/workflows/podvm_mkosi.yaml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -65,11 +96,16 @@ jobs:
       git_ref: ${{ github.ref }}
       arch: ${{ matrix.arch}}
       debug: false
-    secrets: inherit
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   webhook:
     uses: ./.github/workflows/webhook_image.yaml
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}

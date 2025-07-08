@@ -38,6 +38,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.Var(&azurecfg.Tags, "tags", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
 	flags.BoolVar(&azurecfg.EnableSecureBoot, "enable-secure-boot", false, "Enable secure boot for the VMs")
 	flags.BoolVar(&azurecfg.UsePublicIP, "use-public-ip", false, "Assign public IP to the PoD VM and use to connect to kata-agent")
+	flags.IntVar(&azurecfg.RootVolumeSize, "root-volume-size", 0, "Root volume size in GB. Default is 0, which implies the default image disk size")
 }
 
 func (_ *Manager) LoadEnv() {

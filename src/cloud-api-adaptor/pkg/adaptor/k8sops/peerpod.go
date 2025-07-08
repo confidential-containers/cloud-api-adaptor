@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	peerPodV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl/api/v1alpha1"
 
@@ -30,6 +31,7 @@ type PeerPodService struct {
 	uclient       *rest.RESTClient // use generated client instead
 	cloudProvider string
 	podToPP       map[string]string // map Pod UID to owned PeerPod Name
+	mutex         sync.Mutex
 }
 
 func NewPeerPodService() (*PeerPodService, error) {
@@ -101,6 +103,8 @@ func (s *PeerPodService) OwnPeerPod(podname string, podns string, instanceID str
 	if err != nil {
 		return err
 	}
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	s.podToPP[string(pod.UID)] = string(pp.Name)
 	logger.Printf("%s is now owning a PeerPod object", podname)
 	return nil
@@ -113,6 +117,8 @@ func (s *PeerPodService) ReleasePeerPod(podname string, podns string, instanceID
 		return err
 	}
 
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	ownedPPName, ok := s.podToPP[string(pod.UID)]
 	if !ok {
 		return errors.New("pod to PeerPod mapping not found")

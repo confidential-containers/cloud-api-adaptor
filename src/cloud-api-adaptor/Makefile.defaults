@@ -26,21 +26,25 @@ ifneq "$(filter $(ARCH),x86_64 amd64)" ""
 	GO_ARCH := amd64
 	PROTOC_ARCH := x86_64
 	DISTRO_ARCH := amd64
+	YQ_ARCH := amd64
 else ifneq "$(filter $(ARCH),aarch64 arm64)" ""
 	ARCH := aarch64
 	GO_ARCH := arm64
 	PROTOC_ARCH := aarch_64
 	DISTRO_ARCH := arm64
+	YQ_ARCH := arm64
 else ifneq "$(filter $(ARCH),s390x)" ""
 	ARCH := s390x
 	GO_ARCH := s390x
 	PROTOC_ARCH := s390_64
 	DISTRO_ARCH := s390x
+	YQ_ARCH := s390x
 else ifneq "$(filter $(ARCH),ppc64le)" ""
 	ARCH := ppc64le
 	GO_ARCH := ppc64le
 	PROTOC_ARCH := ppc64le_64
 	DISTRO_ARCH := ppc64le
+	YQ_ARCH := ppc64le
 endif
 
 ifndef GO_ARCH
@@ -51,6 +55,9 @@ $(error PROTOC_ARCH is not set)
 endif
 ifndef DISTRO_ARCH
 $(error DISTRO_ARCH is not set)
+endif
+ifndef YQ_ARCH
+$(error YQ_ARCH is not set)
 endif
 
 MINIMUM_YQ_MAJOR_VERSION := 4
@@ -68,6 +75,7 @@ endef
 
 ubuntu_RELEASE ?= noble
 rhel_RELEASE ?= 9
+alinux_RELEASE ?= 3
 
 ubuntu_amd64_IMAGE_URL := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.url)
 ubuntu_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.ubuntu.$(ubuntu_RELEASE).amd64.checksum)
@@ -79,6 +87,8 @@ rhel_amd64_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.url)
 rhel_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).amd64.checksum)
 rhel_s390x_IMAGE_URL := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.url)
 rhel_s390x_IMAGE_CHECKSUM := $(call query,cloudimg.rhel.$(rhel_RELEASE).s390x.checksum)
+alinux_amd64_IMAGE_URL := $(call query,cloudimg.alinux.$(alinux_RELEASE).amd64.url)
+alinux_amd64_IMAGE_CHECKSUM := $(call query,cloudimg.alinux.$(alinux_RELEASE).amd64.checksum)
 
 COCO_OPERATOR_REF := $(or $(COCO_OPERATOR_REF),$(call query,git.coco-operator.reference))
 COCO_OPERATOR_CONFIG := $(or $(COCO_OPERATOR_CONFIG),$(call query,git.coco-operator.config))

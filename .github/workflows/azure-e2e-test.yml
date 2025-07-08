@@ -1,8 +1,6 @@
 name: azure-e2e-test
 
-permissions:
-  id-token: write
-  contents: read
+permissions: {}
 
 env:
   CLUSTER_NAME_TEMPLATE: "{0}-e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
@@ -19,6 +17,13 @@ on:
       podvm-image-id:
         type: string
         description: prebuilt podvm image
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
 
   workflow_dispatch:
     inputs:
@@ -38,10 +43,12 @@ jobs:
         working-directory: src/cloud-api-adaptor
     outputs:
       caa-image: "${{ steps.build-container.outputs.caa-image }}"
+    permissions:
+      id-token: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-    - uses: azure/login@v2
+    - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -49,7 +56,7 @@ jobs:
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
     - name: Build container image
       id: build-container
@@ -81,14 +88,16 @@ jobs:
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
             jitter: 10
+    permissions:
+      id-token: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: Extract go version number
       run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
 
     - name: Set up Go environment
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
       with:
         go-version: "${{ env.GO_VERSION }}"
         cache-dependency-path: "**/go.sum"
@@ -108,13 +117,13 @@ jobs:
         cat << EOF > "$TEST_PROVISION_FILE"
           AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           AZURE_CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
-          RESOURCE_GROUP_NAME="${{ secrets.AZURE_RESOURCE_GROUP }}"
+          RESOURCE_GROUP_NAME="${{ vars.AZURE_RESOURCE_GROUP }}"
           CLUSTER_NAME="${{ env.CLUSTER_NAME }}"
-          LOCATION="${{ secrets.AZURE_REGION }}"
+          LOCATION="${{ vars.AZURE_REGION }}"
           SSH_KEY_ID="id_rsa.pub"
           AZURE_IMAGE_ID="$AZURE_IMAGE_ID"
           IS_CI_MANAGED_CLUSTER="true"
-          MANAGED_IDENTITY_NAME="${{ secrets.AZURE_MANAGED_IDENTITY_NAME}}"
+          MANAGED_IDENTITY_NAME="${{ vars.AZURE_MANAGED_IDENTITY_NAME}}"
           CAA_IMAGE="${CAA_IMAGE}"
           AZURE_INSTANCE_SIZE="${AZURE_INSTANCE_SIZE}"
           TAGS="${{ env.TEST_TAGS }}"
@@ -128,14 +137,14 @@ jobs:
       run: ssh-keygen -t rsa -b 4096 -f install/overlays/azure/id_rsa -N "" -C dev@coco.io
 
     - name: Save the configuration created here
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         path: |
           src/cloud-api-adaptor/install/overlays/azure/id_rsa.pub
           ${{ env.TEST_PROVISION_FILE }}
         name: e2e-configuration-${{ matrix.parameters.id }}
 
-    - uses: azure/login@v2
+    - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -167,20 +176,22 @@ jobs:
             machine_type: "Standard_DC2es_v5"
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
+    permissions:
+      id-token: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: Extract version numbers
       run: |
         echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
         echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
 
-    - uses: oras-project/setup-oras@v1
+    - uses: oras-project/setup-oras@8d34698a59f5ffe24821f0b48ab62a3de8b64b20 # v1
       with:
         version: ${{ env.ORAS_VERSION }}
 
     - name: Set up Go environment
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
       with:
         go-version: ${{ env.GO_VERSION }}
         cache-dependency-path: "**/go.sum"
@@ -202,11 +213,11 @@ jobs:
           echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
 
     - name: Restore the configuration created before
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
       with:
         name: e2e-configuration-${{ matrix.parameters.id }}
 
-    - uses: azure/login@v2
+    - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -215,13 +226,13 @@ jobs:
 
     - name: Create peerpod subnet
       run: |
-        NODE_RG="$(az aks show -g ${{ secrets.AZURE_RESOURCE_GROUP }} -n "$CLUSTER_NAME" --query nodeResourceGroup -o tsv)"
+        NODE_RG="$(az aks show -g ${{ vars.AZURE_RESOURCE_GROUP }} -n "$CLUSTER_NAME" --query nodeResourceGroup -o tsv)"
         VNET_NAME="$(az network vnet list -g "$NODE_RG" --query '[].name' -o tsv)"
         NODE_CIDR="$(az network vnet show -n "$VNET_NAME" -g "$NODE_RG" --query "subnets[?name == 'aks-subnet'].addressPrefix" -o tsv)"
         MASK="${NODE_CIDR#*/}"
         PEERPOD_CIDR="$(sipcalc "$NODE_CIDR" -n 2 | grep ^Network | grep -v current | cut -d' ' -f2)/${MASK}"
         az network public-ip create -g "$NODE_RG" -n peerpod
-        az network nat gateway create -g "$NODE_RG" -l ${{ secrets.AZURE_REGION }} --public-ip-addresses peerpod -n peerpod
+        az network nat gateway create -g "$NODE_RG" -l ${{ vars.AZURE_REGION }} --public-ip-addresses peerpod -n peerpod
         az network vnet subnet create -g "$NODE_RG" --vnet-name "$VNET_NAME" --nat-gateway peerpod --address-prefixes "$PEERPOD_CIDR" -n peerpod
         SUBNET_ID="$(az network vnet subnet show -g "$NODE_RG" --vnet-name "$VNET_NAME" -n peerpod --query id -o tsv)"
         echo "AZURE_SUBNET_ID=\"${SUBNET_ID}\"" >> "$TEST_PROVISION_FILE"
@@ -239,7 +250,7 @@ jobs:
         # Since we install the cluster in parallel, we need to get the credentials here.
         echo "running e2e test for ${{ matrix.parameters.id }} machine"
         az aks get-credentials \
-          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
           --name "${CLUSTER_NAME}"
         make test-e2e RUN_TESTS="^Test\(CreateSimplePodAzure\|RemoteAttestation\|InitDataMeasurement\)$"
 
@@ -257,8 +268,10 @@ jobs:
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
             jitter: 10
+    permissions:
+      id-token: write
     steps:
-    - uses: azure/login@v2
+    - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
       name: 'Az CLI login'
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -270,7 +283,7 @@ jobs:
       # which prevents deletion of the AKS cluster
       run: |
         az aks get-credentials \
-          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
           --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" || true
         namespace="confidential-containers-system"
         kubectl patch namespace "$namespace" -p '{"metadata":{"finalizers": null }}' || true
@@ -296,7 +309,7 @@ jobs:
           --tag run="${{ github.run_id }}-${{ github.run_attempt }}" \
           -o tsv --query "[?type == 'Microsoft.Compute/virtualMachines'].name")
         for vm in $vms; do
-          az vm delete -n "$vm" -g "${{ secrets.AZURE_RESOURCE_GROUP }}" --yes || true
+          az vm delete -n "$vm" -g "${{ vars.AZURE_RESOURCE_GROUP }}" --yes || true
         done
 
     - name: Remove dangling NICs
@@ -309,7 +322,7 @@ jobs:
           -o tsv --query "[?type == 'Microsoft.Network/networkInterfaces'].name")
         sleep 180
         for nic in $nics; do
-          az network nic delete -n "$nic" -g "${{ secrets.AZURE_RESOURCE_GROUP }}" || true
+          az network nic delete -n "$nic" -g "${{ vars.AZURE_RESOURCE_GROUP }}" || true
         done
 
     - name: Remove AKS cluster
@@ -317,7 +330,7 @@ jobs:
         # Delete the cluster even if it has been deleted already or does not exists.
         az aks delete \
           --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" \
-          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
           --no-wait \
           --yes || true
 
@@ -325,7 +338,7 @@ jobs:
       run: |
         sleep ${{ matrix.parameters.jitter }}
         az identity federated-credential delete \
-          --identity-name "${{ secrets.AZURE_MANAGED_IDENTITY_NAME }}" \
+          --identity-name "${{ vars.AZURE_MANAGED_IDENTITY_NAME }}" \
           --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" \
-          --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+          --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
           --yes || true

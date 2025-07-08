@@ -29,10 +29,13 @@ const (
 	// Ref: https://cloud.google.com/compute/docs/storing-retrieving-metadata
 	GcpImdsUrl         = "http://metadata.google.internal/computeMetadata/v1/instance"
 	GcpUserDataImdsUrl = "http://metadata.google.internal/computeMetadata/v1/instance/attributes/user-data"
+	// Ref: https://www.alibabacloud.com/help/en/ecs/user-guide/customize-the-initialization-configuration-for-an-instance
+	AlibabaCloudImdsUrl         = "http://100.100.100.200/latest/dynamic/instance-identity/document"
+	AlibabaCloudUserDataImdsUrl = "http://100.100.100.200/latest/user-data"
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
-var WriteFilesList = []string{AACfgPath, CDHCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath}
+var WriteFilesList = []string{AACfgPath, CDHCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath, ScratchSpacePath}
 var InitdDataFilesList = []string{AACfgPath, CDHCfgPath, PolicyPath}
 
 type Config struct {
@@ -113,6 +116,14 @@ func (a FileUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 	return userData, nil
 }
 
+type AlibabaCloudDataProvider struct{ DefaultRetry }
+
+func (a AlibabaCloudDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
+	url := AlibabaCloudUserDataImdsUrl
+	logger.Printf("provider: AlibabaCloud, userDataUrl: %s\n", url)
+	return imdsGet(ctx, url, false, nil)
+}
+
 func newProvider(ctx context.Context) (UserDataProvider, error) {
 	// This checks for the presence of a file and doesn't rely on http req like the
 	// azure, aws ones, thereby making it faster and hence checking this first
@@ -130,6 +141,10 @@ func newProvider(ctx context.Context) (UserDataProvider, error) {
 
 	if isGCPVM(ctx) {
 		return GCPUserDataProvider{}, nil
+	}
+
+	if isAlibabaCloudVM() {
+		return AlibabaCloudDataProvider{}, nil
 	}
 
 	return nil, fmt.Errorf("unsupported user data provider")

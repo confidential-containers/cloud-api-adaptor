@@ -71,7 +71,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 	if spec.VCPUs != 0 && spec.Memory != 0 {
 		memory = float64(spec.Memory / 1024)
 		processors = float64(spec.VCPUs)
-		logger.Printf("Instance type selected by the cloud provider based on vCPU and memory annotations: %s-%fx%f", systemType, processors, memory)
+		logger.Printf("Instance type selected by the cloud provider based on vCPU and memory annotations: %s-%gx%g", systemType, processors, memory)
 	} else if spec.InstanceType != "" {
 		typeAndSize := strings.Split(spec.InstanceType, "-")
 		systemType = typeAndSize[0]
@@ -88,7 +88,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		memory = float64(m)
 		logger.Printf("Instance type selected by the cloud provider based on instance type annotation: %s", spec.InstanceType)
 	} else {
-		logger.Printf("Instance type selected by the cloud provider based on config: %s-%fx%f", systemType, processors, memory)
+		logger.Printf("Instance type selected by the cloud provider based on config: %s-%gx%g", systemType, processors, memory)
 	}
 
 	body := &models.PVMInstanceCreate{

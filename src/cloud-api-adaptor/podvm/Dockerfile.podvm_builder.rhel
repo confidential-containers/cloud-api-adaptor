@@ -40,7 +40,7 @@ RUN if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
     fi
 
 RUN subscription-manager repos --enable codeready-builder-for-rhel-9-${ARCH/amd64/x86_64}-rpms; \
-    dnf groupinstall -y 'Development Tools'; \
+    dnf -y group install 'Development Tools' && \
     dnf install -y yum-utils gnupg git --allowerasing curl pkg-config clang perl libseccomp-devel gpgme-devel \
     device-mapper-devel qemu-kvm unzip wget libassuan-devel genisoimage cloud-utils-growpart cloud-init \
     perl-FindBin openssl-devel tpm2-tss-devel jq xz

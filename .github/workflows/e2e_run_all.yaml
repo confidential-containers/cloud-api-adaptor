@@ -25,6 +25,16 @@ on:
         description: the container registry where built images will be pushed to
         required: true
         type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      QUAY_PASSWORD:
+        required: true
+      REGISTRY_CREDENTIAL_ENCODED:
+        required: true
+
 env:
   # cloud-api-adaptor image registry
   E2E_IMG_REGISTRY: ${{ inputs.registry }}
@@ -37,16 +47,20 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+permissions: {}
+
 jobs:
-  # Build the podvm images.
-  #
   podvm_builder:
     uses: ./.github/workflows/podvm_builder.yaml
     with:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm_binaries:
     needs: [podvm_builder]
@@ -55,7 +69,11 @@ jobs:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm:
     needs: [podvm_binaries]
@@ -64,7 +82,11 @@ jobs:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm_mkosi_amd64:
     uses: ./.github/workflows/podvm_mkosi.yaml
@@ -74,17 +96,30 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
       arch: amd64
       debug: true
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm_mkosi_s390x:
     uses: ./.github/workflows/podvm_mkosi.yaml
+
     with:
       registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       arch: s390x
       debug: true
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   # Build and push the cloud-api-adaptor image
   #
@@ -106,7 +141,11 @@ jobs:
       dev_tags: ${{ inputs.caa_image_tag }}-dev
       release_tags: ${{ inputs.caa_image_tag }}
       git_ref: ${{ inputs.git_ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   # Edit the kustomize files under the install directory to reference the
   # built cloud-api-adaptor images. The entire directory is archived so that
@@ -125,7 +164,7 @@ jobs:
       PROVIDERS: "aws docker libvirt"
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
           ref: ${{ inputs.git_ref }}
@@ -164,7 +203,7 @@ jobs:
           done
 
       - name: Upload install directory for next test runs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: install_directory
           path: src/cloud-api-adaptor/install/
@@ -195,7 +234,9 @@ jobs:
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       oras: false
-    secrets: inherit
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   # Run libvirt e2e tests if pull request labeled 'test_e2e_libvirt'
   libvirt:
@@ -216,7 +257,8 @@ jobs:
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
       secure_comms: ${{ matrix.secure_comms }}
-    secrets: inherit
+    secrets:
+      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
   caa_image_amd64:
     uses: ./.github/workflows/caa_build_and_push.yaml
@@ -227,7 +269,11 @@ jobs:
       dev_tags: ${{ inputs.caa_image_tag }}-amd64-dev
       release_tags: ${{ inputs.caa_image_tag }}-amd64
       git_ref: ${{ inputs.git_ref }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   caa_image_s390x:
     uses: ./.github/workflows/caa_build_and_push.yaml
@@ -239,7 +285,11 @@ jobs:
       release_tags: ${{ inputs.caa_image_tag }}-s390x
       git_ref: ${{ inputs.git_ref }}
       runner: 's390x'
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   libvirt_e2e_arch_prep:
     runs-on: ubuntu-24.04
@@ -247,7 +297,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
           ref: ${{ inputs.git_ref }}
@@ -283,7 +333,8 @@ jobs:
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
       oras: true
-    secrets: inherit
+    secrets:
+      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
   # Run libvirt s390x e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_s390x:
@@ -305,7 +356,8 @@ jobs:
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
       oras: true
-    secrets: inherit
+    secrets:
+      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
   # Run docker e2e tests if pull request labeled 'test_e2e_docker'
   docker:
@@ -333,4 +385,5 @@ jobs:
       podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.docker_oci_image }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
-    secrets: inherit
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}

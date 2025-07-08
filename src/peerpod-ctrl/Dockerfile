@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM --platform=$TARGETPLATFORM quay.io/confidential-containers/golang-fedora:1.23.8-40 AS builder
+FROM --platform=$TARGETPLATFORM quay.io/confidential-containers/golang-fedora:1.23.10-41 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG CGO_ENABLED=1
@@ -30,7 +30,7 @@ COPY peerpod-ctrl/controllers/ controllers/
 RUN CC=gcc CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build ${GOFLAGS} -a -o manager main.go
 
 # Target Image
-FROM --platform=$TARGETPLATFORM registry.fedoraproject.org/fedora:40
+FROM --platform=$TARGETPLATFORM registry.fedoraproject.org/fedora:41
 ARG CGO_ENABLED=1
 
 RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-libs openssh-clients && dnf clean all; fi

@@ -15,30 +15,49 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   caa:
     uses: ./.github/workflows/caa_build_and_push_per_arch.yaml
     with:
       git_ref: ${{ github.sha }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   csi-wrapper:
     uses: ./.github/workflows/csi_wrapper_images.yaml
     with:
       image_tags: latest,${{ github.sha }}
       git_ref: ${{ github.sha }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   peerpod-ctrl:
     uses: ./.github/workflows/peerpod-ctrl_image.yaml
     with:
       image_tags: latest,${{ github.sha }}
       git_ref: ${{ github.sha }}
-    secrets: inherit
+
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   webhook:
     uses: ./.github/workflows/webhook_image.yaml
     with:
       image_tags: ${{ github.sha }},latest
       git_ref: ${{ github.sha }}
-    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}

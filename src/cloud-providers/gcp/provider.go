@@ -13,11 +13,14 @@ import (
 
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
+	crm "cloud.google.com/go/resourcemanager/apiv3"
+	crmpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
+	resourcemanagerpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 	"golang.org/x/oauth2/google"
-	option "google.golang.org/api/option"
+	"google.golang.org/api/option"
 	proto "google.golang.org/protobuf/proto"
 )
 
@@ -76,6 +79,44 @@ func getIPs(instance *computepb.Instance) ([]netip.Addr, error) {
 	return podNodeIPs, nil
 }
 
+func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*crmpb.TagValue, error) {
+	tagKeysClient, err := crm.NewTagKeysClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tagKeysClient.Close()
+
+	tagValuesClient, err := crm.NewTagValuesClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tagValuesClient.Close()
+
+	parent := fmt.Sprintf("projects/%s", p.serviceConfig.ProjectId)
+	tags := make(map[string]map[string]*crmpb.TagValue)
+
+	it := tagKeysClient.ListTagKeys(ctx, &crmpb.ListTagKeysRequest{Parent: parent})
+	for {
+		key, err := it.Next()
+		if err != nil {
+			break
+		}
+		tagKeyID := key.Name
+		keyName := key.ShortName
+		tags[keyName] = make(map[string]*crmpb.TagValue)
+
+		valIt := tagValuesClient.ListTagValues(ctx, &crmpb.ListTagValuesRequest{Parent: tagKeyID})
+		for {
+			val, err := valIt.Next()
+			if err != nil {
+				break
+			}
+			tags[keyName][val.ShortName] = val
+		}
+	}
+	return tags, nil
+}
+
 func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, error) {
 	client, err := compute.NewImagesRESTClient(ctx)
 	if err != nil {
@@ -107,6 +148,24 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	userData, err := cloudConfig.Generate()
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if the tags exist within the project
+	// Otherwise, abort the instance creation
+	allTags, err := p.ListAllTags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Aborting: Failed to list tags: %w", err)
+	}
+
+	allTagValues := make([]*crmpb.TagValue, 0)
+	for tagKey, tagValue := range p.serviceConfig.Tags {
+		tagId := allTags[tagKey][tagValue]
+		if tagId == nil {
+			msg := fmt.Sprintf("Aborting: Tag %s=%s not found", tagKey, tagValue)
+			logger.Print(msg)
+			return nil, fmt.Errorf("%s", msg)
+		}
+		allTagValues = append(allTagValues, tagId)
 	}
 
 	//Convert userData to base64
@@ -221,6 +280,44 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		return nil, fmt.Errorf("unable to get instance: %w, req: %v", err, getReq)
 	}
 	logger.Printf("instance name %s, id %d", instance.GetName(), instance.GetId())
+
+	// Binding all the tagValues to the instance that was already created
+	// Specific endpoint is needed for tag bindings because global endpoint
+	// doesn't work for zonal resources.
+	tagBindingsClient, err := crm.NewTagBindingsClient(ctx,
+		option.WithEndpoint(fmt.Sprintf("%s-cloudresourcemanager.googleapis.com:443", p.serviceConfig.Zone)),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bind client: %w", err)
+	}
+	defer tagBindingsClient.Close()
+
+	parent := fmt.Sprintf("//compute.googleapis.com/projects/%s/zones/%s/instances/%d", p.serviceConfig.ProjectId, p.serviceConfig.Zone, instance.GetId())
+
+	for _, tagValue := range allTagValues {
+		logger.Printf("Creating tag binding for %s on %s", tagValue.Name, parent)
+
+		tagBinding := &resourcemanagerpb.TagBinding{
+			Parent:   parent,
+			TagValue: tagValue.Name,
+		}
+
+		req := &resourcemanagerpb.CreateTagBindingRequest{
+			TagBinding: tagBinding,
+		}
+
+		op, err := tagBindingsClient.CreateTagBinding(ctx, req)
+		if err != nil {
+			return nil, fmt.Errorf("API call to create tag binding failed for %s: %v", tagValue, err)
+		}
+
+		_, err = op.Wait(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("Long-running operation for tag binding %s failed: %v", tagValue, err)
+		}
+
+		logger.Printf("Created tag binding for %s on %s successfully", tagValue, parent)
+	}
 
 	ips, err := getIPs(instance)
 	if err != nil {

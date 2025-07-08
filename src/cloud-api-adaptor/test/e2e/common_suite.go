@@ -40,7 +40,7 @@ func DoTestLibvirtCreateSimplePodWithSecureCommsIsValid(t *testing.T, e env.Envi
 		t.Skip("Skip - SecureComms is configured to be inactive - no need to test")
 	}
 	pod := NewBusyboxPodWithName(E2eNamespace, "simple-test-with-security-comms-is-active").GetPodOrFatal(t)
-	NewTestCase(t, e, "SimplePeerPodWithSecureComms", assert, "PodVM is created with secure comms").WithPod(pod).WithSecureCommsIsActive().Run()
+	NewTestCase(t, e, "SimplePeerPodWithSecureComms", assert, "PodVM is created with secure comms").WithPod(pod).WithExpectedCaaPodLogStrings("Using PP SecureComms").Run()
 }
 
 func DoTestDeleteSimplePod(t *testing.T, e env.Environment, assert CloudAssert) {
@@ -368,7 +368,7 @@ func DoTestCreatePeerPodContainerWithValidAlternateImage(t *testing.T, e env.Env
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 
-	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithAlternateImage(alternateImageName).Run()
+	NewTestCase(t, e, "PodVMwithAnnotationsValidAlternateImage", assert, "PodVM created with an alternate image").WithPod(pod).WithExpectedCaaPodLogStrings("Choosing " + alternateImageName).Run()
 }
 
 func DoTestCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert,
@@ -792,4 +792,30 @@ func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 	// Custom resource added as req/limit - "kata.peerpods.io/vm
 
 	NewTestCase(t, e, "PodWithCpuMemLimitsAndRequests", assert, "Pod with cpu and memory limits and requests").WithPod(pod).Run()
+}
+
+// Test to create a peer pod with cpu request as annotation
+func DoTestPodVMwithAnnotationCPU(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
+
+	podName := "annotations-cpu"
+	containerName := "busybox"
+	imageName := getBusyboxTestImage(t)
+	annotationData := map[string]string{
+		"io.katacontainers.config.hypervisor.default_vcpus": "4",
+	}
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+	NewTestCase(t, e, "PodVMwithAnnotationCPU", assert, "PodVM with Annotation CPU is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
+}
+
+// Test to create a peer pod with memory request as annotation
+func DoTestPodVMwithAnnotationMemory(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
+
+	podName := "annotations-mem"
+	containerName := "busybox"
+	imageName := getBusyboxTestImage(t)
+	annotationData := map[string]string{
+		"io.katacontainers.config.hypervisor.default_memory": "7168",
+	}
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
+	NewTestCase(t, e, "PodVMwithAnnotationMemory", assert, "PodVM with Annotation Memory is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
 }

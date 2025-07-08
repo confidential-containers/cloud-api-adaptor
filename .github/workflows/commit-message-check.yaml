@@ -13,14 +13,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   commit-message-check:
     runs-on: ubuntu-24.04
+    env:
+      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
     name: Commit Message Check
     steps:
       - name: Get PR Commits
         id: "get-pr-commits"
-        uses: tim-actions/get-pr-commits@v1.3.1
+        uses: tim-actions/get-pr-commits@198af03565609bb4ed924d1260247b4881f09e7d # v1.3.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # Filter out revert commits
@@ -32,13 +36,13 @@ jobs:
 
       - name: Commit Body Missing Check
         if: ${{ ( success() || failure() ) }}
-        uses: tim-actions/commit-body-check@v1.0.2
+        uses: tim-actions/commit-body-check@d2e0e8e1f0332b3281c98867c42a2fbe25ad3f15 # v1.0.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
 
       - name: Check Subject Line Length
         if: ${{ ( success() || failure() ) }}
-        uses: tim-actions/commit-message-checker-with-regex@v0.3.2
+        uses: tim-actions/commit-message-checker-with-regex@094fc16ff83d04e2ec73edb5eaf6aa267db33791 # v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
           pattern: '^.{0,75}(\n.*)*$'
@@ -47,7 +51,7 @@ jobs:
 
       - name: Check Body Line Length
         if: ${{ ( success() || failure() ) }}
-        uses: tim-actions/commit-message-checker-with-regex@v0.3.2
+        uses: tim-actions/commit-message-checker-with-regex@094fc16ff83d04e2ec73edb5eaf6aa267db33791 # v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
           # Notes:
@@ -73,8 +77,8 @@ jobs:
           post_error: ${{ env.error_msg }}
 
       - name: Check Subsystem
-        if: ${{ ( success() || failure() ) }}
-        uses: tim-actions/commit-message-checker-with-regex@v0.3.2
+        if: ${{ (env.PR_AUTHOR != 'dependabot[bot]') && ( success() || failure() ) }}
+        uses: tim-actions/commit-message-checker-with-regex@094fc16ff83d04e2ec73edb5eaf6aa267db33791 # v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
           pattern: '^[\s\t]*[^:\s\t]+[\s\t]*:'

@@ -49,6 +49,7 @@ type Config struct {
 	// Secure boot brings no additional security.
 	EnableSecureBoot bool
 	UsePublicIP      bool
+	RootVolumeSize   int
 }
 
 func (c Config) Redact() Config {

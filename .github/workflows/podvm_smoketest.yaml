@@ -3,49 +3,47 @@ name: smoke test
 on:
   pull_request:
 
+permissions: {}
+
 jobs:
-  podvm-mkosi:
-    # We're pinning the runner to 22.04 b/c libvirt struggles with the
-    # OVMF_CODE_4M firmware that is default on 24.04.
-    runs-on: 'ubuntu-22.04'
+  build:
+    runs-on: 'ubuntu-24.04'
 
     defaults:
       run:
         working-directory: src/cloud-api-adaptor/podvm-mkosi
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       # Required by rootless mkosi on Ubuntu 24.04
-      # - name: Un-restrict user namespaces
-      #   run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Un-restrict user namespaces
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             genisoimage \
-            qemu-utils \
-            socat \
-            virt-manager
+            qemu-utils
           sudo snap install yq
 
       - name: Read properties from versions.yaml
         working-directory: src/cloud-api-adaptor
         run: |
           {
-            echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)"; 
+            echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)";
             echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)";
             echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
             echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
           } >> "$GITHUB_ENV"
 
-      - uses: oras-project/setup-oras@v1
+      - uses: oras-project/setup-oras@8d34698a59f5ffe24821f0b48ab62a3de8b64b20 # v1
         with:
           version: ${{ env.ORAS_VERSION }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
       - name: Build binaries
         run: make binaries
@@ -56,111 +54,62 @@ jobs:
           echo "TLS_OPTIONS=-disable-tls" > ./resources/binaries-tree/etc/default/agent-protocol-forwarder
 
       - name: Build image
-        run: make image
-     
+        run: make image-debug
+
+      # Upload the image to the artifacts
+      - name: Upload qcow2 artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4
+        with:
+          name: podvm-build
+          path: src/cloud-api-adaptor/podvm-mkosi/build/podvm-fedora-amd64.qcow2
+
+  test:
+    # We're pinning the runner to 22.04 b/c libvirt struggles with the
+    # OVMF_CODE_4M firmware that is default on 24.04.
+    runs-on: 'ubuntu-22.04'
+    needs: build
+
+    strategy:
+      matrix:
+        test-mode:
+          - name: podvm-mkosi
+            mode: basic
+          - name: podvm-mkosi-with-scratch-space
+            mode: scratch-space
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            genisoimage \
+            qemu-utils\
+            socat \
+            virt-manager
+          sudo snap install yq
+
+      - name: Read properties from versions.yaml
+        working-directory: src/cloud-api-adaptor
+        run: |
+          {
+            echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
+            echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
+          } >> "$GITHUB_ENV"
+
       - name: Install kata-agent-ctl
         run: |
           oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
-          tar xf kata-static-agent-ctl.tar.xz 
+          tar xf kata-static-agent-ctl.tar.xz
           cp opt/kata/bin/kata-agent-ctl /usr/local/bin
 
-      # TODO: generate the cloud-init iso from code
-      - name: Create cloud-init iso
-        run: |
-          mkdir cloud-init
-          touch cloud-init/meta-data
-          cat <<EOF > cloud-init/user-data
-          #cloud-config
+      - name: Download qcow2 artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: podvm-build
+          path: .
 
-          write_files:
-          - path: /run/peerpod/daemon.json
-            content: |
-              {
-                  "pod-network": {
-                      "podip": "10.244.1.21/24",
-                      "pod-hw-addr": "32:b9:59:6b:f0:d5",
-                      "interface": "eth0",
-                      "worker-node-ip": "10.224.0.5/16",
-                      "tunnel-type": "vxlan",
-                      "routes": [
-                          {
-                              "dst": "0.0.0.0/0",
-                              "gw": "10.244.1.1",
-                              "dev": "eth0",
-                              "protocol": "boot"
-                          },
-                          {
-                              "dst": "10.244.1.0/24",
-                              "gw": "",
-                              "dev": "eth0",
-                              "protocol": "kernel",
-                              "scope": "link"
-                          }
-                      ],
-                      "neighbors": null,
-                      "mtu": 1500,
-                      "index": 2,
-                      "vxlan-port": 8472,
-                      "vxlan-id": 555002,
-                      "dedicated": false
-                  },
-                  "pod-namespace": "default",
-                  "pod-name": "smoketest"
-              }
-          EOF
-          genisoimage -output cloud-init.iso -volid cidata -joliet -rock cloud-init/user-data cloud-init/meta-data
-
-      - name: Setup Libvirt
-        run: |
-          sudo mkdir /tmp/libvirt
-          sudo mv cloud-init.iso /tmp/libvirt
-          sudo mv build/podvm-fedora-amd64.qcow2 /tmp/libvirt
-          sudo chown -R libvirt-qemu /tmp/libvirt
-          sudo chmod +x /tmp
-
-      - name: Launch PodVM
-        run: |
-          CI_IMAGE="/tmp/libvirt/cloud-init.iso"
-          OS_IMAGE="/tmp/libvirt/podvm-fedora-amd64.qcow2"
-          OVMF="/usr/share/OVMF/OVMF_CODE.fd"
-
-          sudo virt-install \
-            --name smoketest \
-            --ram 1024 \
-            --vcpus 2 \
-            --disk "path=${OS_IMAGE},format=qcow2" \
-            --disk "path=${CI_IMAGE},device=cdrom" \
-            --import \
-            --network network=default \
-            --os-variant detect=on \
-            --graphics none \
-            --virt-type=kvm \
-            --boot loader="$OVMF"
-
-      - name: Wait for VM to claim IP address
-        run: |
-          for n in 30 10 10 10 10 10 0; do
-            if [ $n -eq 0 ]; then
-              echo "PodVM did not claim an IP address in time"
-              exit 1
-            fi
-            echo "sleeping for ${n} seconds"
-            sleep "$n"
-            vm_ip="$(sudo virsh -q domifaddr smoketest | awk '{print $4}' | cut -d/ -f1)"
-            if [ -n "$vm_ip" ]; then
-              break
-            fi
-          done
-          echo "VM_IP=$vm_ip" >> "$GITHUB_ENV"
-
-      - name: Run smoke test
-        run: |
-          host_port="${VM_IP}:15150"
-          sock="./agent.sock"
-          echo "bridge ${host_port} to ${sock}"
-          socat "UNIX-LISTEN:${sock},fork" "TCP:${host_port}" &
-          echo "sleeping for 5 seconds"
-          sleep 5
-          kata-agent-ctl connect \
-            --server-address "unix://${sock}" \
-            --cmd CreateSandbox
+      - name: Run smoke test (${{ matrix.test-mode.name }})
+        env:
+          TEST_MODE: ${{ matrix.test-mode.mode }}
+        run: src/cloud-api-adaptor/podvm/hack/smoke_test.sh -m "$TEST_MODE" podvm-fedora-amd64.qcow2

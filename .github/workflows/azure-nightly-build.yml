@@ -10,6 +10,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   generate-podvm-image-version:
     if: github.event.inputs.podvm-image-id == ''
@@ -26,16 +28,30 @@ jobs:
 
   build-podvm-image:
     uses: ./.github/workflows/azure-podvm-image-build.yml
+
     needs:
     - generate-podvm-image-version
-    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+      attestations: write
     with:
       image-version: ${{ needs.generate-podvm-image-version.outputs.image-version }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
   run-e2e-test:
     uses: ./.github/workflows/azure-e2e-test.yml
     needs:
     - build-podvm-image
-    secrets: inherit
+    permissions:
+      id-token: write
     with:
       podvm-image-id: ${{ needs.build-podvm-image.outputs.image-id }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

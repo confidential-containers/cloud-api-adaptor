@@ -189,6 +189,20 @@ func GetPodLog(ctx context.Context, client klient.Client, pod *v1.Pod) (string, 
 	return strings.TrimSpace(buf.String()), nil
 }
 
+func CompareCaaPodLogStrings(ctx context.Context, t *testing.T, client klient.Client, customPod *v1.Pod, expectedCaaPodLogStrings []string) error {
+	nodeName, err := GetNodeNameFromPod(ctx, client, customPod)
+	if err != nil {
+		return fmt.Errorf("CompareCaaPodLogStrings: GetNodeNameFromPod failed with %v", err)
+	}
+	for _, expectedCaaPodLogString := range expectedCaaPodLogStrings {
+		err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedCaaPodLogString)
+		if err != nil {
+			return fmt.Errorf("looking for '%s' in caa pod logs : failed: %v", expectedCaaPodLogString, err)
+		}
+	}
+	return nil
+}
+
 func ComparePodLogString(ctx context.Context, client klient.Client, customPod *v1.Pod, expectedPodLogString string) (string, error) {
 	//adding sleep time to initialize container and ready for logging
 	time.Sleep(5 * time.Second)
@@ -296,36 +310,6 @@ func CompareInstanceType(ctx context.Context, t *testing.T, client klient.Client
 		}
 	}
 	return fmt.Errorf("no pod matching %v, was found", pod)
-}
-
-func VerifyAlternateImage(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod, alternateImageName string) error {
-	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
-	if err != nil {
-		return fmt.Errorf("VerifyAlternateImage: GetNodeNameFromPod failed with %v", err)
-	}
-
-	expectedSuccessMessage := "Choosing " + alternateImageName
-	err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedSuccessMessage)
-	if err != nil {
-		return fmt.Errorf("VerifyAlternateImage: failed: %v", err)
-	}
-	t.Logf("PodVM was brought up using the alternate PodVM image %s", alternateImageName)
-	return nil
-}
-
-func VerifySecureCommsActivated(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) error {
-	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
-	if err != nil {
-		return fmt.Errorf("VerifySecureCommsConnected: GetNodeNameFromPod failed with %v", err)
-	}
-
-	expectedSuccessMessage := "Using PP SecureComms"
-	err = VerifyCaaPodLogContains(ctx, t, client, nodeName, expectedSuccessMessage)
-	if err != nil {
-		return fmt.Errorf("VerifySecureCommsConnected: failed: %v", err)
-	}
-	t.Logf("PodVM was brought up using SecureComms")
-	return nil
 }
 
 func VerifyCaaPodLogContains(ctx context.Context, t *testing.T, client klient.Client, nodeName, expected string) error {
@@ -542,47 +526,68 @@ func AssessPodRequestAndLimit(ctx context.Context, client klient.Client, pod *v1
 
 }
 
-func AssessPodTestCommands(ctx context.Context, client klient.Client, pod *v1.Pod, testCommands []TestCommand) (string, error) {
-	var podlist v1.PodList
-	if err := client.Resources(pod.Namespace).List(ctx, &podlist); err != nil {
-		return "Failed to list pod", err
+func findPod(ctx context.Context, client klient.Client, pod *v1.Pod) (*v1.Pod, error) {
+	var podList v1.PodList
+	if err := client.Resources(pod.Namespace).List(ctx, &podList); err != nil {
+		return nil, fmt.Errorf("Failed to list pod, error : %s", err.Error())
 	}
-	for _, testCommand := range testCommands {
-		log.Tracef("Running test command: %v", testCommand)
-		var stdout, stderr bytes.Buffer
-		for _, podItem := range podlist.Items {
-			if podItem.ObjectMeta.Name == pod.Name {
-				//adding sleep time to intialize container and ready for Executing commands
-				time.Sleep(5 * time.Second)
-				if err := client.Resources(pod.Namespace).ExecInPod(ctx, pod.Namespace, pod.Name, testCommand.ContainerName, testCommand.Command, &stdout, &stderr); err != nil {
-					if testCommand.TestErrorFn != nil {
-						if !testCommand.TestErrorFn(err) {
-							return err.Error(), fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
-						}
-					} else {
-						return err.Error(), fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
-					}
-				} else if testCommand.TestErrorFn != nil {
-					return "", fmt.Errorf("We expected an error from Pod %s, but it was not found", pod.Name)
-				}
-				if testCommand.TestCommandStderrFn != nil {
-					if !testCommand.TestCommandStderrFn(stderr) {
-						return stderr.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stderr: %s, stdout: %s", testCommand.Command, testCommand.ContainerName, stderr.String(), stdout.String())
-					} else {
-						return stderr.String(), nil
-					}
-				}
-				if testCommand.TestCommandStdoutFn != nil {
-					if !testCommand.TestCommandStdoutFn(stdout) {
-						return stdout.String(), fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, stdout.String(), stderr.String())
-					} else {
-						return stdout.String(), nil
-					}
-				}
-			}
+	for _, podItem := range podList.Items {
+		if podItem.ObjectMeta.Name == pod.Name {
+			return &podItem, nil
 		}
 	}
-	return "", nil
+	return nil, fmt.Errorf("Pod not found with name %s in namespace %s", pod.Name, pod.Namespace)
+}
+
+func AssessPodTestCommands(t *testing.T, ctx context.Context, client klient.Client, pod *v1.Pod, testCommands []TestCommand) error {
+	pod, err := findPod(ctx, client, pod)
+	if err != nil {
+		return err
+	}
+	//adding sleep time to intialize container and ready for Executing commands
+	time.Sleep(5 * time.Second)
+	for _, testCommand := range testCommands {
+		err := assessPodTestCommand(t, ctx, client, pod, testCommand)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func assessPodTestCommand(t *testing.T, ctx context.Context, client klient.Client, pod *v1.Pod, testCommand TestCommand) error {
+	log.Tracef("Running test command: %v", testCommand)
+	var stdout, stderr bytes.Buffer
+	if err := client.Resources(pod.Namespace).ExecInPod(ctx, pod.Namespace, pod.Name, testCommand.ContainerName, testCommand.Command, &stdout, &stderr); err != nil {
+		if testCommand.TestErrorFn != nil {
+			if !testCommand.TestErrorFn(err) {
+				t.Logf("Output when execute test command : %s", err.Error())
+				return fmt.Errorf("Command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
+			}
+		} else {
+			t.Logf("Output when execute test command : %s", err.Error())
+			return fmt.Errorf("Command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
+		}
+	} else if testCommand.TestErrorFn != nil {
+		return fmt.Errorf("We expected an error from Pod %s, but it was not found", pod.Name)
+	}
+	if testCommand.TestCommandStderrFn != nil {
+		if !testCommand.TestCommandStderrFn(stderr) {
+			t.Logf("Output when execute test command : %s", stderr.String())
+			return fmt.Errorf("Command %v running in container %s produced unexpected output on stderr: %s, stdout: %s", testCommand.Command, testCommand.ContainerName, stderr.String(), stdout.String())
+		} else {
+			t.Logf("Output when execute test command : %s", stderr.String())
+		}
+	}
+	if testCommand.TestCommandStdoutFn != nil {
+		if !testCommand.TestCommandStdoutFn(stdout) {
+			t.Logf("Output when execute test command : %s", stdout.String())
+			return fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, stdout.String(), stderr.String())
+		} else {
+			t.Logf("Output when execute test command : %s", stdout.String())
+		}
+	}
+	return nil
 }
 
 func ProvisionPod(ctx context.Context, client klient.Client, t *testing.T, pod *v1.Pod, podState v1.PodPhase, testCommands []TestCommand) error {

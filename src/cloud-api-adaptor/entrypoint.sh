@@ -34,6 +34,7 @@ optionals+=""
 [[ "${SECURE_COMMS_KBS_ADDR}" ]] && optionals+="-secure-comms-kbs ${SECURE_COMMS_KBS_ADDR} "
 [[ "${PEERPODS_LIMIT_PER_NODE}" ]] && optionals+="-peerpods-limit-per-node ${PEERPODS_LIMIT_PER_NODE} "
 [[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
+[[ "${ENABLE_SCRATCH_DISK}" == "true" ]] && optionals+="-enable-scratch-disk "
 
 test_vars() {
     for i in "$@"; do
@@ -82,6 +83,7 @@ azure() {
     [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
     [[ "${ENABLE_SECURE_BOOT}" == "true" ]] && optionals+="-enable-secure-boot "
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "
+    [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
 
     set -x
     exec cloud-api-adaptor azure \
@@ -97,6 +99,28 @@ azure() {
         ${optionals}
 }
 
+alibabacloud() {
+    one_of ALIBABACLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ROLE_ARN
+
+    [[ "${REGION}" ]] && optionals+="-region ${REGION} "
+    [[ "${IMAGEID}" ]] && optionals+="-imageid ${IMAGEID} "
+    [[ "${INSTANCE_TYPE}" ]] && optionals+=" -instance-type ${INSTANCE_TYPE} "
+    [[ "${VSWITCH_ID}" ]] && optionals+=" -vswitch-id ${VSWITCH_ID} "
+    [[ "${SECURITY_GROUP_IDS}" ]] && optionals+=" -security-group-ids ${SECURITY_GROUP_IDS} "
+    [[ "${KEYNAME}" ]] && optionals+=" -keyname ${KEYNAME} "
+    [[ "${TAGS}" ]] && optionals+=" -tags ${TAGS} "
+    [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+=" -use-public-ip "
+    [[ "${SYSTEM_DISK_SIZE}" ]] && optionals+=" -system-disk-size ${SYSTEM_DISK_SIZE} "
+    [[ "${DISABLECVM}" == "true" ]] && optionals+=" -disable-cvm "
+    [[ "${EXTERNAL_NETWORK_VIA_PODVM}" ]] && optionals+=" -ext-network-via-podvm"
+
+    set -x
+    exec cloud-api-adaptor alibabacloud \
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
+        ${optionals}
+}
+
 gcp() {
     test_vars GCP_CREDENTIALS GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
 
@@ -108,6 +132,7 @@ gcp() {
     [[ "${GCP_DISK_TYPE}" ]] && optionals+="-disk-type ${GCP_DISK_TYPE} "                          # defaults to 'pd-standard'
     [[ "${GCP_CONFIDENTIAL_TYPE}" ]] && optionals+="-confidential-type ${GCP_CONFIDENTIAL_TYPE} "  # if not set raise exception only when disablecvm = false
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} "             # Specify root volume size for pod vm
+    [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} "                                                 # Custom tags applied to pod vm. Tags must exist in the GCP project.
 
     set -x
 
@@ -168,6 +193,9 @@ ibmcloud_powervs() {
 libvirt() {
     test_vars LIBVIRT_URI
 
+    [[ "${LIBVIRT_CPU}" ]] && optionals+="-cpu ${LIBVIRT_CPU} "
+    [[ "${LIBVIRT_MEMORY}" ]] && optionals+="-memory ${LIBVIRT_MEMORY} "
+    
     set -x
     exec cloud-api-adaptor libvirt \
         -pods-dir "${PEER_PODS_DIR}" \
@@ -219,9 +247,9 @@ docker() {
 help_msg() {
     cat <<EOF
 Usage:
-	CLOUD_PROVIDER=aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker $0
+	CLOUD_PROVIDER=alibabacloud|aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker $0
 or
-	$0 aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker
+	$0 alibabacloud|aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker
 
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
@@ -232,6 +260,8 @@ if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
     aws
 elif [[ "$CLOUD_PROVIDER" == "azure" ]]; then
     azure
+elif [[ "$CLOUD_PROVIDER" == "alibabacloud" ]]; then
+    alibabacloud
 elif [[ "$CLOUD_PROVIDER" == "gcp" ]]; then
     gcp
 elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then

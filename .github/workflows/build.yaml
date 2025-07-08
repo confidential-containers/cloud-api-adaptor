@@ -13,6 +13,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   caa:
     name: cloud-api-adaptor
@@ -30,14 +32,14 @@ jobs:
         working-directory: src/cloud-api-adaptor
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Read properties from versions.yaml
         run: |
           go_version="$(yq '.tools.golang' versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
       - name: Setup Golang version ${{ env.GO_VERSION }}
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/go.sum"
@@ -64,7 +66,7 @@ jobs:
           < tests_report.txt "$(go env GOPATH)/bin/go-junit-report" -set-exit-code > tests_report_junit.xml
         shell: bash
       - name: Upload tests report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: matrix.type == 'dev'
         with:
           name: tests_report_junit-${{ matrix.runner }}_${{ env.GO_VERSION }}
@@ -84,7 +86,7 @@ jobs:
         working-directory: src/${{ matrix.controller }}
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Read properties from versions.yaml
         run: |
@@ -93,7 +95,7 @@ jobs:
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/go.sum"
@@ -129,7 +131,7 @@ jobs:
         working-directory: src/${{ matrix.controller }}
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Read properties from versions.yaml
         run: |
@@ -138,13 +140,13 @@ jobs:
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/go.sum"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
       - name: Build the controllers
         run: make build
@@ -176,7 +178,7 @@ jobs:
         working-directory: src/webhook
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Read properties from versions.yaml
         run: |
@@ -185,13 +187,13 @@ jobs:
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/go.sum"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
       - name: Install kind
         run: |

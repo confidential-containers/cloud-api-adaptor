@@ -20,11 +20,16 @@ cloudimg:
       s390x:
         url: https://access.redhat.com/downloads/content/72/ver=/rhel---9/9.4/s390x/product-software
         checksum: "sha256:e1f1868484db0b7b2fedc708b8a589a4ebbe341fae142d776cba1475d4a93642"
+  alinux:
+    3:
+      amd64:
+        url: "https://alinux3.oss-cn-hangzhou.aliyuncs.com/aliyun_3_x64_20G_nocloud_alibase_20250117.qcow2"
+        checksum: "sha256:73c7631c6a48b182e80c7c808d7e3adab3f07ad517fcf5d5eff8f3815306e37e"
 
 tools:
   bats: 1.10.0
   iptables-wrapper: v0.0.0-20240819165702-06cad2ec6cb5
-  golang: 1.23.8
+  golang: 1.23.10
   kcli: 99.0.202504041449
   mkosi: v22
   protoc: 3.16.0
@@ -44,7 +49,7 @@ git:
     reference: v1.5.0
   kbs:
     url: https://github.com/confidential-containers/trustee
-    reference: bc26ac5acd8314ba34fe837d6886beb1ce384106
+    reference: d9eb5e0cb0aca97abe35b58908e061850ff60a51
 # If a tag is given it will attempt to pull the oci image by tag. if a
 # reference is specified the corresponding tag will be constructed using
 # the reference and suffixes like architecture or tee.
@@ -54,7 +59,7 @@ oci:
     tag: 3.9
   kata-containers:
     registry: ghcr.io/kata-containers/cached-artefacts
-    reference: 3.15.0
+    reference: 3.17.0
   guest-components:
     registry: ghcr.io/confidential-containers/guest-components
-    reference: 1191f8257eb65f42892ab0328cec02e58d40de84
+    reference: 0a06ef241190780840fbb0542e51b198f1f72b0b

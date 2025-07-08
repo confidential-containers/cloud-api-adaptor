@@ -30,6 +30,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   authorize:
     runs-on: ubuntu-24.04
@@ -46,4 +48,13 @@ jobs:
       git_ref: ${{ github.event.pull_request.head.sha }}
       podvm_image_tag: ci-pr${{ github.event.number }}
       registry: ghcr.io/${{ github.repository_owner }}
-    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+      attestations: write
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}

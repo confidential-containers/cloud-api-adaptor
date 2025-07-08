@@ -5,7 +5,7 @@ The document describes the implementation of the [initdata](https://github.com/c
 
 ## Initdata example
 
-[attestation-agent](https://github.com/confidential-containers/guest-components/tree/main/attestation-agent) config file `aa.toml`, [confidential-data-hub](https://github.com/confidential-containers/guest-components/tree/main/confidential-data-hub) config file `cdh.toml` and a lightweight policy file `polciy.rego` can be passed into PeerPod via initdata.
+[attestation-agent](https://github.com/confidential-containers/guest-components/tree/main/attestation-agent) config file `aa.toml`, [confidential-data-hub](https://github.com/confidential-containers/guest-components/tree/main/confidential-data-hub) config file `cdh.toml` and a lightweight policy file `policy.rego` can be passed into PeerPod via initdata.
 
 Example:
 ```toml
@@ -143,10 +143,10 @@ spec:
 ```
 
 ## Structure in `write_files`
-cloud-api-adaptor will read the annotation and write it to [write_files](../../cloud-providers/util/cloudinit/cloudconfig.go). Note: files unrelated to initdata (like network tunnel configuration in `/run/peerpod/daemon.json`) are also part of the `write_files` directive.
+cloud-api-adaptor will read the annotation and write it to [write_files](../../cloud-providers/util/cloudinit/cloudconfig.go). Note: files unrelated to initdata (like network tunnel configuration in `/run/peerpod/apf.json`) are also part of the `write_files` directive.
 ```yaml
 write_files:
-- path: /run/peerpod/daemon.json
+- path: /run/peerpod/apf.json
   content:
 - path: /run/peerpod/auth.json
   content:
@@ -192,4 +192,4 @@ kind: ConfigMap
 ```
 
 ## TODO
-A large policy bodies that cannot be provisioned via IMDS user-data, the limitation depends on providers IMDS limitation. We need add checking and limitations according to test result future. 
+A large policy bodies that cannot be provisioned via IMDS user-data, the limitation depends on providers IMDS limitation. We need add checking and limitations according to test result future.

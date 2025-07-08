@@ -2,6 +2,7 @@ package k8sops
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -91,7 +92,9 @@ type Registries map[string]Auth
 
 // Auth contains credentials for a given host
 type Auth struct {
-	Auth string `json:"auth"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	Auth     string `json:"auth"`
 }
 
 // GetImagePullSecrets gets image pull secrets for the specified pod
@@ -168,6 +171,15 @@ func addAuths(cli *k8sclient.Clientset, namespace string, secretName string, aut
 		}
 	}
 	for registry, creds := range registries {
+		if creds.Auth == "" {
+			if creds.Username != "" && creds.Password != "" {
+				creds.Auth = base64.StdEncoding.EncodeToString([]byte(creds.Username + ":" + creds.Password))
+			} else {
+				continue
+			}
+		}
+		creds.Username = ""
+		creds.Password = ""
 		auths.Registries[registry] = creds
 	}
 	return nil

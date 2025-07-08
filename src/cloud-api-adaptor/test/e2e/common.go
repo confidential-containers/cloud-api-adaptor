@@ -488,7 +488,7 @@ func NewPVC(namespace, name, storageClassName, diskSize string, accessModel core
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				accessModel,
 			},
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse(diskSize),
 				},

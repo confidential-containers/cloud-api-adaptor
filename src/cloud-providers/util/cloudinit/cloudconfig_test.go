@@ -12,7 +12,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-const forwarderConfigPath = "/peerpod/daemon.json"
+const forwarderConfigPath = "/peerpod/apf.json"
 const authJSONPath = "/run/peerpod/auth.json"
 
 func TestUserData(t *testing.T) {
@@ -45,11 +45,11 @@ func TestUserData(t *testing.T) {
 	}
 }
 
-// Add a test to create a cloud-init config with daemon.json and auth.json file
-// The test should verify that the config has both the daemon.json and the auth.json
+// Add a test to create a cloud-init config with apf.json and auth.json file
+// The test should verify that the config has both the apf.json and the auth.json
 // files in the write_files section.
-func TestUserDataWithDaemonAndAuth(t *testing.T) {
-	testDaemonConfigJson := `{
+func TestUserDataWithAPFConfigAndAuth(t *testing.T) {
+	testAPFConfigJson := `{
 		"pod-network": {
 			"podip": "10.244.0.19/24",
 			"pod-hw-addr": "0e:8f:62:f3:81:ad",
@@ -88,11 +88,11 @@ func TestUserDataWithDaemonAndAuth(t *testing.T) {
 
 	testResourcesJson := AuthJSONToResourcesJSON(string(testAuthJson))
 
-	// Write tempDaemonConfigJSON to cloud-init config file
+	// Write tempAPFConfigJSON to cloud-init config file
 	// Create a CloudConfig struct
 	cloudConfig := &CloudConfig{
 		WriteFiles: []WriteFile{
-			{Path: forwarderConfigPath, Content: string(testDaemonConfigJson)},
+			{Path: forwarderConfigPath, Content: string(testAPFConfigJson)},
 			{Path: authJSONPath, Content: testResourcesJson},
 		},
 	}
@@ -106,7 +106,7 @@ func TestUserDataWithDaemonAndAuth(t *testing.T) {
 	// Pretty print the userData
 	fmt.Printf("userData: %s\n", userData)
 
-	// Verify that the userData has the daemon.json and auth.json files
+	// Verify that the userData has the apf.json and auth.json files
 	// in the write_files section
 	if !strings.Contains(userData, forwarderConfigPath) {
 		t.Fatalf("Expect %q, got %q", forwarderConfigPath, userData)
@@ -125,10 +125,10 @@ func TestUserDataWithDaemonAndAuth(t *testing.T) {
 	// Pretty print the userData output
 	fmt.Printf("userData: %s\n", output)
 
-	// Verify that the output yaml has the testDaemonConfigJson and testb64AuthJson contents
+	// Verify that the output yaml has the testAPFConfigJson and testb64AuthJson contents
 	// in the write_files section
-	if !strings.Contains(output.WriteFiles[0].Content, testDaemonConfigJson) {
-		t.Fatalf("Expect %q, got %q", testDaemonConfigJson, output.WriteFiles[0].Content)
+	if !strings.Contains(output.WriteFiles[0].Content, testAPFConfigJson) {
+		t.Fatalf("Expect %q, got %q", testAPFConfigJson, output.WriteFiles[0].Content)
 	}
 
 	if !strings.Contains(output.WriteFiles[1].Content, testResourcesJson) {
