@@ -1,6 +1,6 @@
 # Adapted from https://github.com/kubernetes-sigs/kind/blob/main/images/base/Dockerfile
 
-ARG BASE_IMAGE=registry.fedoraproject.org/fedora:41
+ARG BASE_IMAGE=registry.fedoraproject.org/fedora:42
 
 FROM $BASE_IMAGE AS iptables
 

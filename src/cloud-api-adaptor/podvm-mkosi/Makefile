@@ -37,7 +37,7 @@ define run_mkosi_in_container
 		-v "$(shell pwd)":/workspace \
 		-w /workspace \
 		fedora:40 \
-		bash -c "dnf install -y mkosi && mkosi --tools-tree=default --tools-tree-release=41 $(1)"
+		bash -c "dnf install -y mkosi && mkosi --tools-tree=default --tools-tree-release=42 $(1)"
 endef
 
 binaries:

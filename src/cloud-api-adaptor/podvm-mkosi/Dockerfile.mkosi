@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.5.0-labs
-FROM fedora:41 AS builder
+FROM fedora:42 AS builder
 
 ARG MKOSI_VERSION="v22"
 ARG PROFILE="debug"
