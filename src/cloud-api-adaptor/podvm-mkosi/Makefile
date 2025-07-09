@@ -88,11 +88,12 @@ image: insecure-builder
 		--build-arg MKOSI_VERSION \
 		--build-arg MKOSI_OPTIONS=$(MKOSI_OPTIONS) \
 		--progress=plain \
-		-o type=local,dest=./build \
+		-o type=tar,dest=system.tar \
 		--builder insecure-builder \
 		--allow security.insecure \
 		--target $(PODVM_IMAGE_TARGET) \
 		.
+	tar -xvf system.tar -C build && rm system.tar
 ifeq ($(SE_BOOT),true)
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
@@ -114,11 +115,12 @@ image-debug: insecure-builder
 		--build-arg MKOSI_VERSION \
 		--build-arg MKOSI_OPTIONS=$(MKOSI_OPTIONS) \
 		--progress=plain \
-		-o type=local,dest=./build \
+		-o type=tar,dest=system.tar \
 		--builder insecure-builder \
 		--allow security.insecure \
 		--target $(PODVM_IMAGE_TARGET) \
 		.
+	tar -xvf system.tar -C build && rm system.tar
 ifeq ($(SE_BOOT),true)
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
