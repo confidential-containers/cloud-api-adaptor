@@ -66,27 +66,7 @@ If you are using an existing cluster, you can skip this section and proceed to [
 
 ### Configure an OpenShift cluster
 
-By default, your Red Hat OpenShift cluster will not work with the peer pod components. Using the environment variables set in the previous section, proceed with the following steps. 
-
-1. Add security group rules to allow traffic between the cluster and peer pod VSIs
-
-    ```bash
-    export CLUSTER_ID=$(ibmcloud ks cluster get --cluster "$CLUSTER_NAME" --output json | jq -r .id)
-    export CLUSTER_SG="kube-$CLUSTER_ID"
-    export VPC_SG=$(ibmcloud is vpc "$VPC_ID" -json | jq -r .default_security_group.id)
-    # Add a cluster inbound security group rule for the kata-agent client
-    ibmcloud is sg-rulec "$CLUSTER_SG" inbound udp --port-min 4789 --port-max 4789 --remote "$VPC_SG"
-    # Add a VPC inbound security group rule for the cluster client
-    ibmcloud is sg-rulec "$VPC_SG" inbound all --remote "$CLUSTER_SG"
-    ```
-
-1. Allow your peer pod VSIs to send traffic through the VPE gateway to access services like `icr.io`
-
-    ```bash
-    export VPEGW_SG="kube-vpegw-$VPC_ID"
-    export CIDR=$(ibmcloud is subnet $SUBNET_ID --output json | jq -r '.ipv4_cidr_block')
-    ibmcloud is sg-rulec $VPEGW_SG inbound tcp --remote $CIDR
-    ```
+By default, your Red Hat OpenShift cluster will not work with the peer pod components. Proceed with the following steps.
 
 1. Allow `cloud-api-adaptor` to update pod finalizers
 
@@ -179,7 +159,7 @@ popd
 
 This will create `caa-provisioner-cli` in the `src/cloud-api-adaptor/test/tools` directory. To use the command you will need to set up a `.properties` file containing the relevant ibmcloud information to enable your cluster to create and use peer-pods. 
 
-Set the SSH_KEY_ID and PODVM_IMAGE_ID environment variables to your values (Note that the IBMCLOUD_API_KEY, VPC_ID, and SUBNET_ID environment variables should already have been set in [Set up an OpenShift Kubernetes cluster for PeerPod VMs
+Set the SSH_KEY_ID and PODVM_IMAGE_ID environment variables to your values (Note that the IBMCLOUD_API_KEY, VPC_ID, SUBNET_ID and CLUSTER_NAME environment variables should already have been set in [Set up an OpenShift Kubernetes cluster for PeerPod VMs
 ](#set-up-an-openshift-kubernetes-cluster-for-peerpod-vms)):
 
 ```bash
@@ -188,6 +168,7 @@ export PODVM_IMAGE_ID= # the image id of the peerpod vm uploaded to ibmcloud
 #export IBMCLOUD_API_KEY= # your ibmcloud apikey
 #export VPC_ID=<your vpc id> # vpc that the cluster is in
 #export SUBNET_ID=<your subnet id> # subnet to use (must have a public gateway attached)
+#export CLUSTER_NAME= # your cluster's name
 ```
 
 > [!TIP]
@@ -202,7 +183,7 @@ SSH_KEY_ID="$SSH_KEY_ID"
 PODVM_IMAGE_ID="$PODVM_IMAGE_ID"
 VPC_ID="$VPC_ID"
 VPC_SUBNET_ID="$SUBNET_ID"
-VPC_SECURITY_GROUP_ID="$(ibmcloud is vpc "$VPC_ID" -json | jq -r .default_security_group.id)"
+VPC_SECURITY_GROUP_ID="$(ibmcloud ks security-group ls --cluster $CLUSTER_NAME -json | jq -r '.[] | select(.type == "cluster") | .id')"
 RESOURCE_GROUP_ID="$(ibmcloud is vpc "$VPC_ID" -json | jq -r .resource_group.id)"
 ZONE="$(ibmcloud is subnet $SUBNET_ID -json | jq -r .zone.name)"
 REGION="$(ibmcloud is zone $ZONE -json | jq -r .region.name)"
