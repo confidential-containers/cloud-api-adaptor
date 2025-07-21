@@ -9,7 +9,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang/glog v1.2.4
 	github.com/golang/protobuf v1.5.4
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250627024506-a43e06e0ebd5
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250722070015-acae4480ac84
 	golang.org/x/net v0.41.0
 	google.golang.org/grpc v1.72.0
 	k8s.io/apimachinery v0.30.0
