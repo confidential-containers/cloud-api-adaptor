@@ -34,19 +34,21 @@ on:
         required: false
         type: string
     secrets:
-      AWS_ACCESS_KEY_ID:
-        required: true
-      AWS_SECRET_ACCESS_KEY:
+      AWS_IAM_ROLE_ARN:
         required: true
 
 env:
   CLOUD_PROVIDER: aws
   DEBIAN_FRONTEND: noninteractive
 
-permissions: {}
+permissions:
+  # Required by aws-actions/configure-aws-credentials
+  id-token: write
+  # Required by aws-actions/configure-aws-credentials
+  contents: read
 
 jobs:
-  # Check the org/repository has AWS secrets (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY). On absence of
+  # Check the org/repository has AWS secrets (AWS_IAM_ROLE_ARN). On absence of
   # secrets it should skip the execution of the test job.
   aws-credentials:
     runs-on: ubuntu-22.04
@@ -56,7 +58,7 @@ jobs:
       - name: Check secrets
         id: check_secrets
         run: |
-         if [[ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" && -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]]; then
+         if [[ -n "${{ secrets.AWS_IAM_ROLE_ARN }}" ]]; then
            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
          else
            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
@@ -147,12 +149,11 @@ jobs:
           cat aws.properties
           echo "::endgroup::"
 
-        # Note: aws cli is already installed on github's runner image.
-      - name: Config aws CLI
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }} --profile default
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile default
-          aws configure set region us-east-1 --profile default
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.2.1
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
       - name: Create on-prem cluster
         if: inputs.cluster_type == 'onprem'
