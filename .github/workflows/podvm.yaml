@@ -84,3 +84,4 @@ jobs:
         PODVM_TAG: ${{ inputs.image_tag }}
         PODVM_DISTRO: ${{ matrix.os }}
         CLOUD_PROVIDER: ${{ matrix.provider }}
+        PACKER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
