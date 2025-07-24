@@ -186,6 +186,7 @@ jobs:
         env:
           AUTHENTICATED_REGISTRY_IMAGE: ${{ vars.AUTHENTICATED_REGISTRY_IMAGE }}
           REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export CLOUD_PROVIDER=libvirt
           export CONTAINER_RUNTIME="${{ inputs.container_runtime }}"

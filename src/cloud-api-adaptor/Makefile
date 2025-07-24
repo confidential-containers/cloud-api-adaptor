@@ -229,6 +229,7 @@ endif
 	--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 	--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
 	--build-arg PAUSE_BIN=$(PAUSE_BIN) \
+	--build-arg PACKER_GITHUB_API_TOKEN=$(PACKER_GITHUB_API_TOKEN) \
 	$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 	$(DOCKER_OPTS) .
 	rm -rf .git

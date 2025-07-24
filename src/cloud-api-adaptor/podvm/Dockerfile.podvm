@@ -33,6 +33,7 @@ ENV PODVM_DISTRO=${PODVM_DISTRO}
 ENV ARCH=${ARCH}
 ENV UEFI=${UEFI}
 ENV SE_BOOT=${SE_BOOT}
+ENV PACKER_GITHUB_API_TOKEN=${PACKER_GITHUB_API_TOKEN}
 
 # Defaults to Ubuntu noble amd64 release image. These variables can be overriden as needed
 ARG IMAGE_URL
