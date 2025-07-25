@@ -362,7 +362,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "peer-pods-webhook-controller-manager", Namespace: "peer-pods-webhook-system"}},
 		appsv1.DeploymentAvailable, corev1.ConditionTrue),
-		wait.WithTimeout(time.Minute*5)); err != nil {
+		wait.WithTimeout(time.Minute*10)); err != nil {
 		return err
 	}
 
