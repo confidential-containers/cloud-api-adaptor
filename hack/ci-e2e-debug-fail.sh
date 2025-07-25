@@ -16,6 +16,10 @@ CLOUD_PROVIDER=${CLOUD_PROVIDER:-}
 # Get common debug information.
 #
 debug_common() {
+    echo "::group::Kubernetes"
+    kubectl get pods -A
+    echo "::endgroup::"
+
     echo "::group::KBS installation"
     kubectl get pods -n coco-tenant
     kubectl describe pods -n coco-tenant
@@ -24,6 +28,11 @@ debug_common() {
     echo "::group::CoCo and Peer Pods installation"
     kubectl get pods -n confidential-containers-system
     kubectl describe pods -n confidential-containers-system
+    echo "::endgroup::"
+
+    echo "::group::webhook installation logs"
+    kubectl get pods -n peer-pods-webhook-system
+    kubectl describe pods -n peer-pods-webhook-system
     echo "::endgroup::"
 
     echo "::group::cloud-api-adaptor logs"
