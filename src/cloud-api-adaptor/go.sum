@@ -415,8 +415,8 @@ github.com/json-iterator/go v1.1.10/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
-github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250627024506-a43e06e0ebd5 h1:WZlZxkH0UZG/mRaBTbIGNtsyr0WMCzJJnuO+wwRX1a8=
-github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250627024506-a43e06e0ebd5/go.mod h1:n5xbY8R3GVf48ETNisJH/ZP+Ms004FN4Wvma4ihDIx8=
+github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250722070015-acae4480ac84 h1:u0OL8IvS9xoUbtuH38hSuo5ajCCr6JZL2UqmbesO+Ro=
+github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250722070015-acae4480ac84/go.mod h1:n5xbY8R3GVf48ETNisJH/ZP+Ms004FN4Wvma4ihDIx8=
 github.com/kdomanski/iso9660 v0.4.0 h1:BPKKdcINz3m0MdjIMwS0wx1nofsOjxOq8TOr45WGHFg=
 github.com/kdomanski/iso9660 v0.4.0/go.mod h1:OxUSupHsO9ceI8lBLPJKWBTphLemjrCQY8LPXM7qSzU=
 github.com/keybase/go-keychain v0.0.1 h1:way+bWYa6lDppZoZcgMbYsvC7GxljxrskdNInRtuthU=
