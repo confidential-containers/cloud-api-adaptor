@@ -34,6 +34,8 @@ configMapGenerator:
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
   #- PROXY_TIMEOUT="" # Uncomment and set if you want to pass a specific timeout. Defaults to 5m
   #- USE_PUBLIC_IP="true" # Uncomment if you want to use public ip for podvm
+  #- ENABLE_SFTP="true" # Uncomment if you want to send user-data via SFTP
+  #- CLOUD_USER_NAME="" # Uncomment and set the cloud user name
   #- FORWARDER_PORT="" # Uncomment and set if you want to use a specific port for agent-protocol-forwarder. Defaults to 15150
   #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
   #- REMOTE_HYPERVISOR_ENDPOINT="/run/peerpod/hypervisor.sock" # Path to Kata remote hypervisor socket. Default is /run/peerpod/hypervisor.sock
