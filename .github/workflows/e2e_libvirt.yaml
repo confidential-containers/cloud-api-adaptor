@@ -202,6 +202,7 @@ jobs:
 
       - name: Debug tests failure
         if: failure() && steps.runTests.outcome == 'failure'
+        timeout-minutes: 15
         working-directory: ./
         run: |
           export KUBECONFIG="${HOME}/.kcli/clusters/peer-pods/auth/kubeconfig"
