@@ -33,10 +33,14 @@ func isGCPVM(ctx context.Context) bool {
 }
 
 func hasUserDataFile() bool {
-	_, err := os.Stat(UserDataPath)
+	path := UserDataPath
+	logger.Printf("Checking if file is present at path: %s\n", path)
+	_, err := os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		return false
 	}
+
+	logger.Printf("User data file is present at path %s\n", path)
 	return true
 }
 

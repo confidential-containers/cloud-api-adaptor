@@ -31,6 +31,11 @@ if [ -e "${PODVM_DIR}"/files/etc/certificates/ca.crt ]; then
     sudo cp "${PODVM_DIR}"/files/etc/certificates/ca.crt /etc/certificates/
 fi
 
+if [ "${ENABLE_SFTP}" = "true" ]; then
+    sudo cp -a "${PODVM_DIR}"/files/etc/systemd-addons/* /etc/systemd/system/
+    systemctl disable process-user-data
+    systemctl enable process-user-data.path
+fi
 
 sudo mkdir -p /usr/local/bin
 sudo cp -a "${PODVM_DIR}"/files/usr/* /usr/

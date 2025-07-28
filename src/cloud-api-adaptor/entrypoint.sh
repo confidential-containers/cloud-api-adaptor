@@ -175,6 +175,8 @@ ibmcloud_powervs() {
     [[ "${POWERVS_PROCESSOR_TYPE}" ]] && optionals+="-proc-type ${POWERVS_PROCESSOR_TYPE} "
     [[ "${POWERVS_SYSTEM_TYPE}" ]] && optionals+="-sys-type ${POWERVS_SYSTEM_TYPE} "
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip " # Use public IP for pod vm
+    [[ "${ENABLE_SFTP}" == "true" ]] && optionals+="-enable-sftp "
+    [[ "${CLOUD_USER_NAME}" ]] && optionals+="-cloud-user-name ${CLOUD_USER_NAME} "
 
     set -x
     exec cloud-api-adaptor ibmcloud-powervs \
