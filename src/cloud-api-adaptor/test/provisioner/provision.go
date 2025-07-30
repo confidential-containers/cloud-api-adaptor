@@ -297,6 +297,15 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		}
 	}
 
+	log.Info("Show kata payload")
+	cmd = exec.Command("kubectl", "describe", "ds/cc-operator-daemon-install", "-n", "confidential-containers-system")
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
+	stdoutStderr, err = cmd.CombinedOutput()
+	log.Infof("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return err
+	}
+
 	cmd = exec.Command("kubectl", "get", "cm", "peer-pods-cm", "-n", GetCAANamespace(), "-o", "yaml")
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
