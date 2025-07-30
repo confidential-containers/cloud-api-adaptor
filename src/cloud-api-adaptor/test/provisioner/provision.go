@@ -239,7 +239,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	cmd := exec.Command("kubectl", "apply", "-k", p.ccOpGitRepo+"/config/"+p.ccOpConfig+"?ref="+p.ccOpGitRef)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	log.Infof("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	cmd = exec.Command("kubectl", "apply", "-k", p.ccOpGitRepo+"/config/samples/ccruntime/peer-pods?ref="+p.ccOpGitRef)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	log.Infof("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	cmd = exec.Command("kubectl", "get", "cm", "peer-pods-cm", "-n", GetCAANamespace(), "-o", "yaml")
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	log.Infof("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		return err
 	}
@@ -318,7 +318,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	// Set the KUBECONFIG env var
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	log.Infof("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		return err
 	}
@@ -338,7 +338,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	cmd.Dir = p.rootSrcDir
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	log.Infof("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		log.Infof("Error  in install cert-manager: %s: %s", err, stdoutStderr)
 
@@ -352,7 +352,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	// Set the KUBECONFIG env var
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
 	stdoutStderr, err = cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	log.Infof("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
 		return err
 	}

@@ -516,10 +516,10 @@ func AssessPodRequestAndLimit(ctx context.Context, client klient.Client, pod *v1
 
 	// Check if the request and limit are set to "1"
 	if request.Cmp(resource.MustParse("1")) != 0 {
-		return fmt.Errorf("request for podvm extended resource is not set to 1")
+		return fmt.Errorf("request for podvm extended resource is not set to 1: %v", request)
 	}
 	if limit.Cmp(resource.MustParse("1")) != 0 {
-		return fmt.Errorf("limit for podvm extended resource is not set to 1")
+		return fmt.Errorf("limit for podvm extended resource is not set to 1: %v", limit)
 	}
 
 	return nil
