@@ -62,12 +62,6 @@ then
             ;;
         esac
     fi
-
-    # Enable oneshot systemd service for AWS and Azure to enable NAT rules
-    if [ "$CLOUD_PROVIDER" == "azure" ] || [ "$CLOUD_PROVIDER" == "aws" ] || [ "$CLOUD_PROVIDER" == "generic" ]
-    then
-        systemctl enable setup-nat-for-imds
-    fi
 fi
 
 if [ -e /etc/certificates/tls.crt ] && [ -e /etc/certificates/tls.key ] && [ -e /etc/certificates/ca.crt ]; then
