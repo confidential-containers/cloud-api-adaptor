@@ -1,8 +1,7 @@
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fconfidential-containers%2Fcloud-api-adaptor.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fconfidential-containers%2Fcloud-api-adaptor?ref=badge_shield&issueType=license)
-
 [![daily e2e tests for libvirt](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/daily-e2e-tests-libvirt.yaml/badge.svg)](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/daily-e2e-tests-libvirt.yaml)
-
 [![nightly build for azure](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/azure-nightly-build.yml/badge.svg)](https://github.com/confidential-containers/cloud-api-adaptor/actions/workflows/azure-nightly-build.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/confidential-containers/cloud-api-adaptor/badge)](https://scorecard.dev/viewer/?uri=github.com/confidential-containers/cloud-api-adaptor)
 
 # Introduction
 
