@@ -16,6 +16,10 @@ CLOUD_PROVIDER=${CLOUD_PROVIDER:-}
 # Get common debug information.
 #
 debug_common() {
+    echo "::group::Kubernetes"
+    kubectl get pods -A
+    echo "::endgroup::"
+
     echo "::group::KBS installation"
     kubectl get pods -n coco-tenant
     kubectl describe pods -n coco-tenant
@@ -24,6 +28,11 @@ debug_common() {
     echo "::group::CoCo and Peer Pods installation"
     kubectl get pods -n confidential-containers-system
     kubectl describe pods -n confidential-containers-system
+    echo "::endgroup::"
+
+    echo "::group::webhook installation logs"
+    kubectl get pods -n peer-pods-webhook-system
+    kubectl describe pods -n peer-pods-webhook-system
     echo "::endgroup::"
 
     echo "::group::cloud-api-adaptor logs"
@@ -45,12 +54,12 @@ debug_common() {
         done
     done
 
-    for worker in $(kubectl get node -o name -l node.kubernetes.io/worker 2>/dev/null); do
-        echo "::group::journalctl -t kata ($worker)"
-        kubectl debug --image quay.io/prometheus/busybox -q -i \
-            "$worker" -- chroot /host journalctl -x -t kata --no-pager
-        echo "::endgroup::"
-    done
+    # for worker in $(kubectl get node -o name -l node.kubernetes.io/worker 2>/dev/null); do
+    #     echo "::group::journalctl -t kata ($worker)"
+    #     kubectl debug --image quay.io/prometheus/busybox -q -i \
+    #         "$worker" -- chroot /host journalctl -x -t kata --no-pager
+    #     echo "::endgroup::"
+    # done
 }
 
 # Debugger for Libvirt.

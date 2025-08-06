@@ -38,9 +38,9 @@ tools:
 # Referenced Git repositories
 git:
   coco-operator:
-    url: https://github.com/confidential-containers/operator
+    url: https://github.com/stevenhorsman/cc-operator
     config: default
-    reference: main
+    reference: payload-bisect
   umoci:
     url: https://github.com/opencontainers/umoci
     reference: v0.5.0
