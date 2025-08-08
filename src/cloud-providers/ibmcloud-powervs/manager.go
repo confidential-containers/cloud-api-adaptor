@@ -31,6 +31,8 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&ibmcloudPowerVSConfig.ProcessorType, "proc-type", "shared", "Name of the processor type")
 	flags.StringVar(&ibmcloudPowerVSConfig.SystemType, "sys-type", "s922", "Name of the system type")
 	flags.BoolVar(&ibmcloudPowerVSConfig.UsePublicIP, "use-public-ip", false, "Use Public IP for connecting to the agent-protocol-forwarder inside the Pod VM")
+	flags.BoolVar(&ibmcloudPowerVSConfig.EnableSftp, "enable-sftp", false, "When set to true, transfers the user-data via SFTP")
+	flags.StringVar(&ibmcloudPowerVSConfig.CloudUserName, "cloud-user-name", "", "name of the cloud user")
 
 }
 
