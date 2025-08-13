@@ -20,49 +20,49 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-func TestDeletePodAzure(t *testing.T) {
+func TestBasicAzureDeletePod(t *testing.T) {
 	t.Parallel()
 	DoTestDeleteSimplePod(t, testEnv, assert)
 }
 
-func TestCreateSimplePodAzure(t *testing.T) {
+func TestBasicAzureCreateSimplePod(t *testing.T) {
 	t.Parallel()
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
-func TestCreatePodWithConfigMapAzure(t *testing.T) {
+func TestBasicAzureCreatePodWithConfigMap(t *testing.T) {
 	t.Parallel()
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
 
-func TestCreatePodWithSecretAzure(t *testing.T) {
+func TestBasicAzureCreatePodWithSecret(t *testing.T) {
 	t.Parallel()
 	DoTestCreatePodWithSecret(t, testEnv, assert)
 }
 
-func TestCreateNginxDeploymentAzure(t *testing.T) {
+func TestBasicAzureCreateNginxDeployment(t *testing.T) {
 	t.Parallel()
 	DoTestNginxDeployment(t, testEnv, assert)
 }
 
-func TestPodToServiceCommunicationAzure(t *testing.T) {
+func TestNetAzurePodToServiceCommunication(t *testing.T) {
 	t.Parallel()
 	DoTestPodToServiceCommunication(t, testEnv, assert)
 }
 
-func TestPodsMTLSCommunicationAzure(t *testing.T) {
+func TestNetAzurePodsMTLSCommunication(t *testing.T) {
 	t.Parallel()
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
 
-func TestPodVMwithAnnotationsInstanceTypeAzure(t *testing.T) {
+func TestResAzurePodVMwithAnnotationsInstanceType(t *testing.T) {
 	SkipTestOnCI(t)
 	t.Parallel()
 	instanceSize := "Standard_DC2as_v5"
 	DoTestPodVMwithAnnotationsInstanceType(t, testEnv, assert, instanceSize)
 }
 
-func TestPodVMwithAnnotationsInvalidInstanceTypeAzure(t *testing.T) {
+func TestResAzurePodVMwithAnnotationsInvalidInstanceType(t *testing.T) {
 	t.Parallel()
 	// Using an instance type that's not configured in the AZURE_INSTANCE_SIZE
 	instanceSize := "Standard_D8as_v5"
@@ -70,7 +70,7 @@ func TestPodVMwithAnnotationsInvalidInstanceTypeAzure(t *testing.T) {
 }
 
 // Test with device annotation
-func TestPodWithCrioDeviceAnnotationAzure(t *testing.T) {
+func TestSecAzurePodWithCrioDeviceAnnotation(t *testing.T) {
 	if !isTestOnCrio() {
 		t.Skip("Skipping test as it is not running on CRI-O")
 	}
@@ -79,7 +79,7 @@ func TestPodWithCrioDeviceAnnotationAzure(t *testing.T) {
 }
 
 // Negative test with device annotation
-func TestPodWithIncorrectDeviceAnnotationAzure(t *testing.T) {
+func TestSecAzurePodWithIncorrectDeviceAnnotation(t *testing.T) {
 	if !isTestOnCrio() {
 		t.Skip("Skipping test as it is not running on CRI-O")
 	}
@@ -88,14 +88,14 @@ func TestPodWithIncorrectDeviceAnnotationAzure(t *testing.T) {
 }
 
 // Test with init container
-func TestPodWithInitContainerAzure(t *testing.T) {
+func TestBasicAzurePodWithInitContainer(t *testing.T) {
 	t.Parallel()
 	DoTestPodWithInitContainer(t, testEnv, assert)
 }
 
 // Test to check the presence if pod can access files from internet
 // Use DoTestPodWithSpecificCommands and provide the commands to be executed in the pod
-func TestPodToDownloadExternalFileAzure(t *testing.T) {
+func TestNetAzurePodToDownloadExternalFile(t *testing.T) {
 	t.Parallel()
 	// Create TestCommand struct with the command to download index.html
 	command1 := TestCommand{
@@ -125,13 +125,13 @@ func TestPodToDownloadExternalFileAzure(t *testing.T) {
 }
 
 // Method to check external IP access using ping
-func TestCreatePeerPodContainerWithExternalIPAccessAzure(t *testing.T) {
+func TestNetAzureCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 	SkipTestOnCI(t)
 	t.Parallel()
 	DoTestCreatePeerPodContainerWithExternalIPAccess(t, testEnv, assert)
 }
 
-func TestKbsKeyRelease(t *testing.T) {
+func TestConfAzureKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
@@ -146,7 +146,7 @@ func TestKbsKeyRelease(t *testing.T) {
 	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
-func TestRemoteAttestation(t *testing.T) {
+func TestConfAzureRemoteAttestation(t *testing.T) {
 	t.Parallel()
 	var kbsEndpoint string
 	if ep := os.Getenv("KBS_ENDPOINT"); ep != "" {
@@ -163,7 +163,7 @@ func TestRemoteAttestation(t *testing.T) {
 	DoTestRemoteAttestation(t, testEnv, assert, kbsEndpoint)
 }
 
-func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
+func TestConfAzureTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
 	if !isTestWithTrusteeOperator() {
 		t.Skip("Skipping kbs related test as Trustee Operator is not deployed")
 	}
@@ -175,7 +175,7 @@ func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
 	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, "default/kbsres1/key1", "res1val1")
 }
 
-func TestAzureImageDecryption(t *testing.T) {
+func TestConfAzureImageDecryption(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
@@ -187,7 +187,7 @@ func TestAzureImageDecryption(t *testing.T) {
 // This test is to verify that the initdata is measured correctly. The digest algorith in the initdata fixture
 // is sha384. The initdata spec requires the digest to be truncated/padded to the TEE's requirement. In this case,
 // the az tpm attester requires the digest to be sha256 and is hence truncated
-func TestInitDataMeasurement(t *testing.T) {
+func TestConfAzureInitDataMeasurement(t *testing.T) {
 	kbsEndpoint := "http://some.endpoint"
 	annotation, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
 	if err != nil {

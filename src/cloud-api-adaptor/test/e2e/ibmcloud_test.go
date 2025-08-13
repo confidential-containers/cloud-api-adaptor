@@ -16,14 +16,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestCreateSimplePod(t *testing.T) {
+func TestBasicIbmCreateSimplePod(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
-func TestCaaDaemonsetRollingUpdate(t *testing.T) {
+func TestBasicIbmCaaDaemonsetRollingUpdate(t *testing.T) {
 	if os.Getenv("TEST_CAA_ROLLING_UPDATE") == "yes" {
 		assert := IBMRollingUpdateAssert{
 			VPC: pv.IBMCloudProps.VPC,
@@ -34,7 +34,7 @@ func TestCaaDaemonsetRollingUpdate(t *testing.T) {
 	}
 }
 
-func TestCreateConfidentialPod(t *testing.T) {
+func TestConfIbmCreateConfidentialPod(t *testing.T) {
 	instanceProfile := pv.IBMCloudProps.InstanceProfile
 	if strings.HasPrefix(instanceProfile, "bz2e") {
 		log.Infof("Test SE pod")
@@ -49,77 +49,77 @@ func TestCreateConfidentialPod(t *testing.T) {
 
 }
 
-func TestCreatePodWithConfigMap(t *testing.T) {
+func TestBasicIbmCreatePodWithConfigMap(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
 
-func TestCreatePodWithSecret(t *testing.T) {
+func TestBasicIbmCreatePodWithSecret(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePodWithSecret(t, testEnv, assert)
 }
 
-func TestCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
+func TestNetIbmCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePeerPodContainerWithExternalIPAccess(t, testEnv, assert)
 }
 
-func TestCreatePeerPodWithJob(t *testing.T) {
+func TestBasicIbmCreatePeerPodWithJob(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePeerPodWithJob(t, testEnv, assert)
 }
 
-func TestCreatePeerPodAndCheckUserLogs(t *testing.T) {
+func TestResIbmCreatePeerPodAndCheckUserLogs(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePeerPodAndCheckUserLogs(t, testEnv, assert)
 }
 
-func TestCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
+func TestResIbmCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePeerPodAndCheckWorkDirLogs(t, testEnv, assert)
 }
 
-func TestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
+func TestResIbmCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t, testEnv, assert)
 }
 
-func TestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T) {
+func TestResIbmCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t, testEnv, assert)
 }
 
-func TestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T) {
+func TestResIbmCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, testEnv, assert)
 }
 
-func TestCreatePeerPodWithLargeImage(t *testing.T) {
+func TestImgIbmCreatePeerPodWithLargeImage(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestCreatePeerPodWithLargeImage(t, testEnv, assert)
 }
 
-func TestCreatePeerPodWithPVC(t *testing.T) {
+func TestStoreIbmCreatePeerPodWithPVC(t *testing.T) {
 	if os.Getenv("TEST_CSI_WRAPPER") == "yes" {
 		assert := IBMCloudAssert{
 			VPC: pv.IBMCloudProps.VPC,
@@ -146,7 +146,7 @@ func TestCreatePeerPodWithPVC(t *testing.T) {
 	}
 }
 
-func TestIBMCloudCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *testing.T) {
+func TestSecIbmCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
@@ -157,7 +157,7 @@ func TestIBMCloudCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *
 	}
 }
 
-func TestIBMCloudCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t *testing.T) {
+func TestSecIbmCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
@@ -168,7 +168,7 @@ func TestIBMCloudCreatePeerPodWithAuthenticatedImageWithImagePullSecretInService
 	}
 }
 
-func TestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
+func TestSecIbmCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
@@ -179,68 +179,68 @@ func TestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
 	}
 }
 
-func TestDeletePod(t *testing.T) {
+func TestBasicIbmDeletePod(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestDeleteSimplePod(t, testEnv, assert)
 }
 
-func TestPodVMwithNoAnnotations(t *testing.T) {
+func TestResIbmPodVMwithNoAnnotations(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestPodVMwithNoAnnotations(t, testEnv, assert, GetIBMInstanceProfileType("b", "2x8"))
 }
 
-func TestPodVMwithAnnotationsInstanceType(t *testing.T) {
+func TestResIbmPodVMwithAnnotationsInstanceType(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestPodVMwithAnnotationsInstanceType(t, testEnv, assert, GetIBMInstanceProfileType("c", "2x4"))
 }
 
-func TestPodVMwithAnnotationsCPUMemory(t *testing.T) {
+func TestResIbmPodVMwithAnnotationsCPUMemory(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestPodVMwithAnnotationsCPUMemory(t, testEnv, assert, GetIBMInstanceProfileType("m", "2x16"))
 }
 
-func TestPodVMwithAnnotationsInvalidInstanceType(t *testing.T) {
+func TestResIbmPodVMwithAnnotationsInvalidInstanceType(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestPodVMwithAnnotationsInvalidInstanceType(t, testEnv, assert, GetIBMInstanceProfileType("b", "2x4"))
 }
-func TestPodVMwithAnnotationsLargerMemory(t *testing.T) {
+func TestResIbmPodVMwithAnnotationsLargerMemory(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestPodVMwithAnnotationsLargerMemory(t, testEnv, assert)
 }
-func TestPodVMwithAnnotationsLargerCPU(t *testing.T) {
+func TestResIbmPodVMwithAnnotationsLargerCPU(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestPodVMwithAnnotationsLargerCPU(t, testEnv, assert)
 }
 
-func TestIBMCreateNginxDeployment(t *testing.T) {
+func TestBasicIbmCreateNginxDeployment(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestNginxDeployment(t, testEnv, assert)
 }
 
-func TestPodToServiceCommunication(t *testing.T) {
+func TestNetIbmPodToServiceCommunication(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestPodToServiceCommunication(t, testEnv, assert)
 }
 
-func TestPodsMTLSCommunication(t *testing.T) {
+func TestNetIbmPodsMTLSCommunication(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
