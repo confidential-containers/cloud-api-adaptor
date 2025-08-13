@@ -213,7 +213,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	// Get Pod VM instance type from annotations
 	instanceType := util.GetInstanceTypeFromAnnotation(req.Annotations)
 
-	// Get Pod VM cpu and memory from annotations
+	// Get Pod VM cpu, memory and gpu from annotations
 	vcpus, memory, gpus := util.GetPodvmResourcesFromAnnotation(req.Annotations)
 
 	// Get Pod VM image from annotations

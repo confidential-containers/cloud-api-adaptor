@@ -64,8 +64,12 @@ func SelectInstanceTypeToUse(spec InstanceTypeSpec, specList []InstanceTypeSpec,
 	var instanceType string
 	var err error
 
-	// GPU gets the highest priority
-	if spec.GPUs > 0 {
+	// spec.InstanceType gets the highest priority
+	if spec.InstanceType != "" {
+		instanceType = spec.InstanceType
+		logger.Printf("Instance type selected by the cloud provider based on instance type annotation: %s", instanceType)
+	} else if spec.GPUs > 0 {
+		// If no explicit instance type, GPU gets the next priority
 		instanceType, err = GetBestFitInstanceTypeWithGPU(specList, spec.GPUs, spec.VCPUs, spec.Memory)
 		if err != nil {
 			return "", fmt.Errorf("failed to get instance type based on GPU, vCPU, and memory annotations: %w", err)
@@ -78,9 +82,6 @@ func SelectInstanceTypeToUse(spec InstanceTypeSpec, specList []InstanceTypeSpec,
 			return "", fmt.Errorf("failed to get instance type based on vCPU and memory annotations: %w", err)
 		}
 		logger.Printf("Instance type selected by the cloud provider based on vCPU and memory annotations: %s", instanceType)
-	} else if spec.InstanceType != "" {
-		instanceType = spec.InstanceType
-		logger.Printf("Instance type selected by the cloud provider based on instance type annotation: %s", instanceType)
 	}
 
 	// Verify the instance type selected via the annotations

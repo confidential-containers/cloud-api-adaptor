@@ -613,3 +613,149 @@ func TestGetBestFitInstanceTypeWithGPU(t *testing.T) {
 		})
 	}
 }
+
+func TestSelectInstanceTypeToUse(t *testing.T) {
+	type args struct {
+		spec                InstanceTypeSpec
+		specList            []InstanceTypeSpec
+		validInstanceTypes  []string
+		defaultInstanceType string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "spec.InstanceType takes priority over GPU requirements",
+			args: args{
+				spec: InstanceTypeSpec{
+					InstanceType: "m5.large",
+					GPUs:         2,
+					VCPUs:        4,
+					Memory:       8,
+				},
+				specList: []InstanceTypeSpec{
+					{InstanceType: "p3.xlarge", GPUs: 1, VCPUs: 4, Memory: 16},
+					{InstanceType: "p3.2xlarge", GPUs: 2, VCPUs: 8, Memory: 32},
+					{InstanceType: "m5.large", GPUs: 0, VCPUs: 2, Memory: 8},
+				},
+				validInstanceTypes:  []string{"m5.large", "p3.xlarge", "p3.2xlarge"},
+				defaultInstanceType: "t3.medium",
+			},
+			want:    "m5.large",
+			wantErr: false,
+		},
+		{
+			name: "spec.InstanceType takes priority over vCPU/memory requirements",
+			args: args{
+				spec: InstanceTypeSpec{
+					InstanceType: "t3.micro",
+					GPUs:         0,
+					VCPUs:        4,
+					Memory:       16,
+				},
+				specList: []InstanceTypeSpec{
+					{InstanceType: "t3.micro", GPUs: 0, VCPUs: 1, Memory: 1},
+					{InstanceType: "t3.large", GPUs: 0, VCPUs: 2, Memory: 8},
+					{InstanceType: "t3.xlarge", GPUs: 0, VCPUs: 4, Memory: 16},
+				},
+				validInstanceTypes:  []string{"t3.micro", "t3.large", "t3.xlarge"},
+				defaultInstanceType: "t3.medium",
+			},
+			want:    "t3.micro",
+			wantErr: false,
+		},
+		{
+			name: "fallback to GPU requirements when spec.InstanceType is empty",
+			args: args{
+				spec: InstanceTypeSpec{
+					InstanceType: "",
+					GPUs:         1,
+					VCPUs:        4,
+					Memory:       16,
+				},
+				specList: []InstanceTypeSpec{
+					{InstanceType: "p3.xlarge", GPUs: 1, VCPUs: 4, Memory: 16},
+					{InstanceType: "p3.2xlarge", GPUs: 2, VCPUs: 8, Memory: 32},
+					{InstanceType: "m5.large", GPUs: 0, VCPUs: 2, Memory: 8},
+				},
+				validInstanceTypes:  []string{"m5.large", "p3.xlarge", "p3.2xlarge"},
+				defaultInstanceType: "t3.medium",
+			},
+			want:    "p3.xlarge",
+			wantErr: false,
+		},
+		{
+			name: "fallback to vCPU/memory when spec.InstanceType empty and no GPU",
+			args: args{
+				spec: InstanceTypeSpec{
+					InstanceType: "",
+					GPUs:         0,
+					VCPUs:        4,
+					Memory:       16,
+				},
+				specList: []InstanceTypeSpec{
+					{InstanceType: "t3.large", GPUs: 0, VCPUs: 2, Memory: 8},
+					{InstanceType: "t3.xlarge", GPUs: 0, VCPUs: 4, Memory: 16},
+					{InstanceType: "t3.2xlarge", GPUs: 0, VCPUs: 8, Memory: 32},
+				},
+				validInstanceTypes:  []string{"t3.large", "t3.xlarge", "t3.2xlarge"},
+				defaultInstanceType: "t3.medium",
+			},
+			want:    "t3.xlarge",
+			wantErr: false,
+		},
+		{
+			name: "spec.InstanceType not in validInstanceTypes should fail verification",
+			args: args{
+				spec: InstanceTypeSpec{
+					InstanceType: "invalid.type",
+					GPUs:         0,
+					VCPUs:        2,
+					Memory:       4,
+				},
+				specList: []InstanceTypeSpec{
+					{InstanceType: "t3.small", GPUs: 0, VCPUs: 2, Memory: 2},
+				},
+				validInstanceTypes:  []string{"t3.small"},
+				defaultInstanceType: "t3.small",
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "use default when no specs provided",
+			args: args{
+				spec: InstanceTypeSpec{
+					InstanceType: "",
+					GPUs:         0,
+					VCPUs:        0,
+					Memory:       0,
+				},
+				specList:            []InstanceTypeSpec{},
+				validInstanceTypes:  []string{},
+				defaultInstanceType: "t3.medium",
+			},
+			want:    "t3.medium",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Sort the spec list first as required by the function
+			sortedList := SortInstanceTypesOnResources(tt.args.specList)
+
+			got, err := SelectInstanceTypeToUse(tt.args.spec, sortedList, tt.args.validInstanceTypes, tt.args.defaultInstanceType)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SelectInstanceTypeToUse() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("SelectInstanceTypeToUse() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
