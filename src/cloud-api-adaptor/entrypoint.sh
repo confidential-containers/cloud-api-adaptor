@@ -10,6 +10,11 @@ PEER_PODS_DIR=${PODS_DIR:-/run/peerpod/pods}
 
 optionals+=""
 
+# Remove spaces after commas and trim leading and trailing spaces
+cleanup_spaces() {
+    echo "$1" | sed -E 's/,\s+/,/g; s/^\s+//; s/\s+$//'
+}
+
 # Ensure you add a space before the closing quote (") when updating the optionals
 # example:
 # following is the correct method: optionals+="-option val "
@@ -61,7 +66,7 @@ aws() {
     [[ "${SSH_KP_NAME}" ]] && optionals+="-keyname ${SSH_KP_NAME} "                    # if not retrieved from IMDS
     [[ "${AWS_SUBNET_ID}" ]] && optionals+="-subnetid ${AWS_SUBNET_ID} "               # if not set retrieved from IMDS
     [[ "${AWS_REGION}" ]] && optionals+="-aws-region ${AWS_REGION} "                   # if not set retrieved from IMDS
-    [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} "                                     # Custom tags applied to pod vm
+    [[ "${TAGS}" ]] && optionals+="-tags $(cleanup_spaces "${TAGS}") "                 # Custom tags applied to pod vm
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "                 # Use public IP for pod vm
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
     [[ "${EXTERNAL_NETWORK_VIA_PODVM}" ]] && optionals+="-ext-network-via-podvm  "
@@ -79,8 +84,8 @@ azure() {
     test_vars AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_SUBNET_ID AZURE_IMAGE_ID
 
     [[ "${SSH_USERNAME}" ]] && optionals+="-ssh-username ${SSH_USERNAME} "
-    [[ "${AZURE_INSTANCE_SIZES}" ]] && optionals+="-instance-sizes ${AZURE_INSTANCE_SIZES} "
-    [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} " # Custom tags applied to pod vm
+    [[ "${AZURE_INSTANCE_SIZES}" ]] && optionals+="-instance-sizes $(cleanup_spaces "${AZURE_INSTANCE_SIZES}") "
+    [[ "${TAGS}" ]] && optionals+="-tags $(cleanup_spaces "${TAGS}") " # Custom tags applied to pod vm
     [[ "${ENABLE_SECURE_BOOT}" == "true" ]] && optionals+="-enable-secure-boot "
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
@@ -108,7 +113,7 @@ alibabacloud() {
     [[ "${VSWITCH_ID}" ]] && optionals+=" -vswitch-id ${VSWITCH_ID} "
     [[ "${SECURITY_GROUP_IDS}" ]] && optionals+=" -security-group-ids ${SECURITY_GROUP_IDS} "
     [[ "${KEYNAME}" ]] && optionals+=" -keyname ${KEYNAME} "
-    [[ "${TAGS}" ]] && optionals+=" -tags ${TAGS} "
+    [[ "${TAGS}" ]] && optionals+=" -tags $(cleanup_spaces "${TAGS}") "
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+=" -use-public-ip "
     [[ "${SYSTEM_DISK_SIZE}" ]] && optionals+=" -system-disk-size ${SYSTEM_DISK_SIZE} "
     [[ "${DISABLECVM}" == "true" ]] && optionals+=" -disable-cvm "
@@ -132,7 +137,7 @@ gcp() {
     [[ "${GCP_DISK_TYPE}" ]] && optionals+="-disk-type ${GCP_DISK_TYPE} "                          # defaults to 'pd-standard'
     [[ "${GCP_CONFIDENTIAL_TYPE}" ]] && optionals+="-confidential-type ${GCP_CONFIDENTIAL_TYPE} "  # if not set raise exception only when disablecvm = false
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} "             # Specify root volume size for pod vm
-    [[ "${TAGS}" ]] && optionals+="-tags ${TAGS} "                                                 # Custom tags applied to pod vm. Tags must exist in the GCP project.
+    [[ "${TAGS}" ]] && optionals+="-tags $(cleanup_spaces "${TAGS}") "                             # Custom tags applied to pod vm. Tags must exist in the GCP project.
 
     # Avoid using node's metadata service credentials for GCP authentication
     echo "$GCP_CREDENTIALS" > /tmp/gcp-creds.json
