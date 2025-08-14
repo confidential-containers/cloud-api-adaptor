@@ -84,6 +84,11 @@ azure() {
     [[ "${ENABLE_SECURE_BOOT}" == "true" ]] && optionals+="-enable-secure-boot "
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
+    [[ "${ENABLE_SFTP}" == "true" ]] && optionals+="-enable-sftp "
+    [[ "${VM_POOL_TYPE}" ]] && optionals+="-vm-pool-type ${VM_POOL_TYPE} "
+    [[ "${VM_POOL_POD_REGEX}" ]] && optionals+="-vm-pool-pod-regex ${VM_POOL_POD_REGEX} "
+    [[ "${VM_POOL_INSTANCE_TYPES}" ]] && optionals+="-vm-pool-instance-types ${VM_POOL_INSTANCE_TYPES} "
+    [[ "${VM_POOL_IPS}" ]] && optionals+="-vm-pool-ips ${VM_POOL_IPS} "
 
     set -x
     exec cloud-api-adaptor azure \

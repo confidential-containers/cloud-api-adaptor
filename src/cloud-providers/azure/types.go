@@ -38,8 +38,11 @@ type Config struct {
 	SecurityGroupId      string
 	Size                 string
 	ImageId              string
-	SSHKeyPath           string
 	SSHUserName          string
+	SSHPubKeyPath        string
+	SSHPrivKeyPath       string
+	SSHPubKey            string
+	SSHPrivKey           string
 	DisableCVM           bool
 	InstanceSizes        instanceSizes
 	InstanceSizeSpecList []provider.InstanceTypeSpec
@@ -50,6 +53,12 @@ type Config struct {
 	EnableSecureBoot bool
 	UsePublicIP      bool
 	RootVolumeSize   int
+	EnableSftp       bool
+	// New VM Pool configuration
+	VMPoolType          string
+	VMPoolPodRegex      string
+	VMPoolInstanceTypes instanceSizes
+	VMPoolIPs           []string
 }
 
 func (c Config) Redact() Config {

@@ -67,7 +67,8 @@ secretGenerator:
 - name: ssh-key-secret
   namespace: confidential-containers-system
   files: # key generation example: ssh-keygen -f ./id_rsa -N ""
-  #- id_rsa.pub # set - path to public key
+  #- id_rsa.pub # set - path to public key (will be used for SSH_PUB_KEY env var)
+  #- id_rsa # set - path to private key (will be used for SSH_PRIV_KEY env var, required for SFTP)
 ##TLS_SETTINGS
 #- name: certs-for-tls
 #  namespace: confidential-containers-system

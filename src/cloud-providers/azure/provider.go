@@ -5,23 +5,31 @@ package azure
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/netip"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	retry "github.com/avast/retry-go/v4"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/azure] ", log.LstdFlags|log.Lmsgprefix)
@@ -30,6 +38,8 @@ var errNotFound = errors.New("VM name not found")
 
 const (
 	maxInstanceNameLen = 63
+	sshPort            = "22"
+	remoteFile         = "/media/cidata/user-data"
 )
 
 type azureProvider struct {
@@ -41,13 +51,16 @@ func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("azure config %+v", config.Redact())
 
-	// Clean the config.SSHKeyPath to avoid bad paths
-	config.SSHKeyPath = filepath.Clean(config.SSHKeyPath)
 
 	azureClient, err := NewAzureClient(*config)
 	if err != nil {
 		logger.Printf("creating azure client: %v", err)
 		return nil, err
+	}
+
+	// Initialize SSH keys for authentication
+	if err := initializeSSHKeys(config); err != nil {
+		return nil, fmt.Errorf("failed to initialize SSH keys: %w", err)
 	}
 
 	provider := &azureProvider{
@@ -218,21 +231,8 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	diskName := fmt.Sprintf("%s-disk", instanceName)
 	nicName := fmt.Sprintf("%s-net", instanceName)
 
-	// require ssh key for authentication on linux
-	sshPublicKeyPath := os.ExpandEnv(p.serviceConfig.SSHKeyPath)
-	var sshBytes []byte
-	if _, err := os.Stat(sshPublicKeyPath); err == nil {
-		sshBytes, err = os.ReadFile(sshPublicKeyPath)
-		if err != nil {
-			err = fmt.Errorf("reading ssh public key file: %w", err)
-			logger.Printf("%v", err)
-			return nil, err
-		}
-	} else {
-		err = fmt.Errorf("ssh public key: %w", err)
-		logger.Printf("%v", err)
-		return nil, err
-	}
+	// Use the configured public key for SSH authentication
+	sshBytes := []byte(strings.TrimSpace(p.serviceConfig.SSHPubKey))
 
 	imageId := p.serviceConfig.ImageId
 
@@ -257,6 +257,13 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	if err != nil {
 		logger.Printf("getting IPs for the instance : %v ", err)
 		return nil, err
+	}
+
+	if p.serviceConfig.EnableSftp {
+		err = p.sendConfigFile(ctx, cloudConfigData, ips[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to send user data using ssh connection: %w", err)
+		}
 	}
 
 	instance := &provider.Instance{
@@ -307,10 +314,6 @@ func (p *azureProvider) ConfigVerifier() error {
 		return fmt.Errorf("ImageId is empty")
 	}
 
-	// Verify it's an SSH key file with the right permissions
-	if err := provider.VerifySSHKeyFile(p.serviceConfig.SSHKeyPath); err != nil {
-		return fmt.Errorf("SSH key is invalid: %s", err)
-	}
 	return nil
 }
 
@@ -374,13 +377,27 @@ func (p *azureProvider) getResourceTags() map[string]*string {
 }
 
 func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string, imageId string) (*armcompute.VirtualMachine, error) {
-	userDataB64 := base64.StdEncoding.EncodeToString([]byte(cloudConfig))
-
-	// Azure limits the base64 encrypted userData to 64KB.
-	// Ref: https://learn.microsoft.com/en-us/azure/virtual-machines/user-data
-	// If the b64EncData is greater than 64KB then return an error
-	if len(userDataB64) > 64*1024 {
-		return nil, fmt.Errorf("base64 encoded userData is greater than 64KB")
+	var userDataB64 string
+	
+	if p.serviceConfig.EnableSftp {
+		// When SFTP is enabled, send minimal cloud-config with just SSH key
+		sshKeyUserData := fmt.Sprintf(`#cloud-config
+users:
+  - name: %s
+    ssh-authorized-keys:
+      - %s
+`, p.serviceConfig.SSHUserName, strings.TrimSpace(p.serviceConfig.SSHPubKey))
+		userDataB64 = base64.StdEncoding.EncodeToString([]byte(sshKeyUserData))
+	} else {
+		// Normal mode: send the full cloud config
+		userDataB64 = base64.StdEncoding.EncodeToString([]byte(cloudConfig))
+		
+		// Azure limits the base64 encrypted userData to 64KB.
+		// Ref: https://learn.microsoft.com/en-us/azure/virtual-machines/user-data
+		// If the b64EncData is greater than 64KB then return an error
+		if len(userDataB64) > 64*1024 {
+			return nil, fmt.Errorf("base64 encoded userData is greater than 64KB")
+		}
 	}
 	var managedDiskParams *armcompute.ManagedDiskParameters
 	var securityProfile *armcompute.SecurityProfile
@@ -473,4 +490,229 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 	}
 
 	return &vmParameters, nil
+}
+
+func (p *azureProvider) sendConfigFile(ctx context.Context, data string, ip netip.Addr) error {
+	server := ip.String() + ":" + sshPort
+
+	signer, err := ssh.ParsePrivateKey([]byte(p.serviceConfig.SSHPrivKey))
+	if err != nil {
+		return fmt.Errorf("failed to parse private key: %w", err)
+	}
+
+	// Dynamically fetch the server host key
+	hostKey, err := p.getServerHostKey(ctx, server)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the server host key : %w", err)
+	}
+
+	sshConfig := &ssh.ClientConfig{
+		User: p.serviceConfig.SSHUserName,
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		},
+		HostKeyCallback: ssh.FixedHostKey(hostKey),
+		Timeout:         5 * time.Second,
+	}
+
+	logger.Printf("Trying to establish SSH connection to %s", server)
+	sshClient, err := ssh.Dial("tcp", server, sshConfig)
+	if err != nil {
+		return fmt.Errorf("failed to establish ssh connection: %w", err)
+	}
+
+	logger.Printf("SSH connection to %s established successfully", server)
+	defer sshClient.Close()
+
+	sftpClient, err := sftp.NewClient(sshClient)
+	if err != nil {
+		return fmt.Errorf("failed to create sftp client: %w", err)
+	}
+	defer sftpClient.Close()
+
+	file, err := sftpClient.Create(remoteFile)
+	if err != nil {
+		return fmt.Errorf("failed to create remote file %q: %w", remoteFile, err)
+	}
+	defer file.Close()
+
+	if _, err := file.Write([]byte(data)); err != nil {
+		return fmt.Errorf("failed to write data to remote file: %w", err)
+	}
+
+	fmt.Printf("Successfully transferred user data to remote file %s\n", remoteFile)
+	return nil
+}
+
+// getServerHostKey will establish an initial unsecure connection to the VM
+// to fetch the server host key to be used further for authentication to
+// create an SSH connection.
+func (p *azureProvider) getServerHostKey(ctx context.Context, addr string) (ssh.PublicKey, error) {
+	var (
+		conn    net.Conn
+		err     error
+		hostKey ssh.PublicKey
+	)
+	ctx, cancel := context.WithTimeout(ctx, 240*time.Second)
+	defer cancel()
+
+	err = retry.Do(
+		func() error {
+			logger.Printf("Trying to establish TCP connection to %s", addr)
+			conn, err = net.Dial("tcp", addr)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.Context(ctx),
+		retry.Attempts(0),
+		retry.MaxDelay(10*time.Second),
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to establish TCP connection: %w", err)
+	}
+	defer conn.Close()
+
+	conf := &ssh.ClientConfig{
+		User: p.serviceConfig.SSHUserName,
+		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			hostKey = key
+			return nil
+		},
+		Timeout: 5 * time.Second,
+	}
+
+	_, _, _, _ = ssh.NewClientConn(conn, addr, conf)
+	if hostKey == nil {
+		return nil, fmt.Errorf("SSH handshake failed: %w", err)
+	}
+	return hostKey, nil
+}
+
+// initializeSSHKeys sets up SSH keys for authentication
+// If SSH keys are provided, use them. Otherwise auto-generate for SFTP.
+func initializeSSHKeys(config *Config) error {
+	// Try to read SSH keys from file paths
+	if config.SSHPubKeyPath != "" {
+		// Read public key from file
+		pubKeyData, err := os.ReadFile(config.SSHPubKeyPath)
+		if err != nil {
+			logger.Printf("Could not read SSH public key from %s: %v", config.SSHPubKeyPath, err)
+		} else {
+			pubKeyContent := strings.TrimSpace(string(pubKeyData))
+			// Validate SSH public key format
+			if err := validateSSHPublicKey(pubKeyContent); err != nil {
+				return fmt.Errorf("invalid SSH public key from file %s: %w", config.SSHPubKeyPath, err)
+			}
+			
+			config.SSHPubKey = pubKeyContent
+			logger.Printf("Using SSH public key from file: %s", config.SSHPubKeyPath)
+			
+			// If SFTP is enabled, try to read private key
+			if config.EnableSftp {
+				if config.SSHPrivKeyPath != "" {
+					privKeyData, err := os.ReadFile(config.SSHPrivKeyPath)
+					if err != nil {
+						logger.Printf("Could not read SSH private key from %s: %v", config.SSHPrivKeyPath, err)
+						logger.Printf("Public key provided but private key missing for SFTP, auto-generating new key pair")
+					} else {
+						privKeyContent := strings.TrimSpace(string(privKeyData))
+						// Validate SSH private key format
+						if err := validateSSHPrivateKey(privKeyContent); err != nil {
+							return fmt.Errorf("invalid SSH private key from file %s: %w", config.SSHPrivKeyPath, err)
+						}
+						config.SSHPrivKey = privKeyContent
+						logger.Printf("Using SSH key pair from files for SFTP")
+						return nil
+					}
+				}
+			} else {
+				logger.Printf("Using SSH public key from file")
+				return nil
+			}
+		}
+	}
+
+	// Auto-generate keys if none were successfully loaded from files
+	if config.SSHPubKey == "" {
+		if config.EnableSftp {
+			logger.Printf("Auto-generating SSH key pair for SFTP")
+		} else {
+			logger.Printf("Auto-generating SSH key pair for Azure VM creation")
+		}
+		
+		pubKeyString, privKeyString, err := generateSSHKeyPair()
+		if err != nil {
+			return fmt.Errorf("failed to generate SSH key pair: %w", err)
+		}
+		
+		if pubKeyString == "" || privKeyString == "" {
+			return fmt.Errorf("generated SSH key pair is empty")
+		}
+		
+		config.SSHPubKey = pubKeyString
+		if config.EnableSftp {
+			config.SSHPrivKey = privKeyString
+		}
+		// Note: Private key not stored for non-SFTP mode as it's not needed
+	}
+
+	return nil
+}
+
+// validateSSHPublicKey validates that the provided string is a valid SSH public key
+func validateSSHPublicKey(pubKey string) error {
+	pubKey = strings.TrimSpace(pubKey)
+	if pubKey == "" {
+		return fmt.Errorf("public key is empty")
+	}
+	
+	// Try to parse the public key
+	_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(pubKey))
+	if err != nil {
+		return fmt.Errorf("failed to parse SSH public key: %w", err)
+	}
+	
+	return nil
+}
+
+// validateSSHPrivateKey validates that the provided string is a valid SSH private key
+func validateSSHPrivateKey(privKey string) error {
+	privKey = strings.TrimSpace(privKey)
+	if privKey == "" {
+		return fmt.Errorf("private key is empty")
+	}
+	
+	// Try to parse the private key
+	_, err := ssh.ParsePrivateKey([]byte(privKey))
+	if err != nil {
+		return fmt.Errorf("failed to parse SSH private key: %w", err)
+	}
+	
+	return nil
+}
+
+func generateSSHKeyPair() (string, string, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate private key: %w", err)
+	}
+
+	privateKeyPEM := pem.EncodeToMemory(
+		&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+		},
+	)
+
+	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate public key: %w", err)
+	}
+
+	publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
+
+	return string(publicKeyBytes), string(privateKeyPEM), nil
 }
