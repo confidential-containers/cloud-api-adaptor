@@ -20,7 +20,14 @@ func (i *instanceSizes) Set(value string) error {
 	if len(value) == 0 {
 		*i = make(instanceSizes, 0)
 	} else {
-		*i = append(*i, strings.Split(value, ",")...)
+		parts := strings.Split(value, ",")
+		for _, p := range parts {
+			trimmed := strings.TrimSpace(p)
+			if trimmed == "" {
+				continue
+			}
+			*i = append(*i, trimmed)
+		}
 	}
 	return nil
 }
