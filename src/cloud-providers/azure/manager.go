@@ -5,6 +5,7 @@ package azure
 
 import (
 	"flag"
+	"strings"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
@@ -12,6 +13,29 @@ import (
 var azurecfg Config
 
 type Manager struct{}
+
+// preCreatedIPsFlag represents a flag for pre-created VM IP addresses
+type preCreatedIPsFlag []string
+
+// String returns the string representation of the preCreatedIPsFlag
+func (p *preCreatedIPsFlag) String() string {
+	return strings.Join(*p, ",")
+}
+
+// Set parses the input string and sets the preCreatedIPsFlag value
+func (p *preCreatedIPsFlag) Set(value string) error {
+	if len(value) == 0 {
+		*p = make(preCreatedIPsFlag, 0)
+		return nil
+	}
+
+	*p = strings.Split(value, ",")
+	// Trim spaces from each IP
+	for i := range *p {
+		(*p)[i] = strings.TrimSpace((*p)[i])
+	}
+	return nil
+}
 
 func init() {
 	provider.AddCloudProvider("azure", &Manager{})

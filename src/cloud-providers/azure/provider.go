@@ -45,12 +45,12 @@ const (
 type azureProvider struct {
 	azureClient   azcore.TokenCredential
 	serviceConfig *Config
+	vmPool        *VMPool
 }
 
 func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("azure config %+v", config.Redact())
-
 
 	azureClient, err := NewAzureClient(*config)
 	if err != nil {
@@ -70,6 +70,23 @@ func NewProvider(config *Config) (provider.Provider, error) {
 
 	if err = provider.updateInstanceSizeSpecList(); err != nil {
 		return nil, err
+	}
+
+	// Initialize VM pool if enabled
+	vmPoolConfig := VMPoolConfig{
+		Type:          VMPoolType(config.VMPoolType),
+		PodRegex:      config.VMPoolPodRegex,
+		InstanceTypes: config.VMPoolInstanceTypes,
+		IPs:           config.VMPoolIPs,
+	}
+
+	provider.vmPool, err = NewVMPool(vmPoolConfig, provider)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize VM pool: %w", err)
+	}
+	if provider.vmPool != nil {
+		total, available, _ := provider.vmPool.GetPoolStatus()
+		logger.Printf("Initialized VM pool with %d VMs (%d available)", total, available)
 	}
 
 	return provider, nil
@@ -216,14 +233,20 @@ func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMa
 
 func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
-	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
-
-	cloudConfigData, err := cloudConfig.Generate()
+	// Determine the instance type that will be used
+	instanceSize, err := p.selectInstanceType(ctx, spec)
 	if err != nil {
 		return nil, err
 	}
 
-	instanceSize, err := p.selectInstanceType(ctx, spec)
+	// Check if VM pool should be used
+	if p.vmPool != nil && p.vmPool.ShouldUsePool(podName, instanceSize) {
+		return p.AllocateFromVMPool(ctx, podName, sandboxID, cloudConfig, instanceSize)
+	}
+
+	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
+
+	cloudConfigData, err := cloudConfig.Generate()
 	if err != nil {
 		return nil, err
 	}
@@ -276,6 +299,17 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 }
 
 func (p *azureProvider) DeleteInstance(ctx context.Context, instanceID string) error {
+	// Check if VM pool is enabled and try to deallocate from pool first
+	if p.vmPool != nil {
+		err := p.DeallocateFromVMPool(instanceID)
+		if err == nil {
+			logger.Printf("VM successfully returned to pool (not deleted): %s", instanceID)
+			return nil // Successfully deallocated from pool - VM preserved for reuse
+		}
+		// If deallocation failed, it's not a pooled VM, continue with actual deletion
+		logger.Printf("VM not found in pool, proceeding with actual deletion: %v", err)
+	}
+
 	vmClient, err := armcompute.NewVirtualMachinesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
 	if err != nil {
 		return fmt.Errorf("creating VM client: %w", err)
@@ -300,7 +334,7 @@ func (p *azureProvider) DeleteInstance(ctx context.Context, instanceID string) e
 		return fmt.Errorf("waiting for the VM deletion: %w", err)
 	}
 
-	logger.Printf("deleted VM successfully: %s", vmName)
+	logger.Printf("VM permanently deleted: %s", vmName)
 	return nil
 }
 
@@ -378,7 +412,7 @@ func (p *azureProvider) getResourceTags() map[string]*string {
 
 func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string, imageId string) (*armcompute.VirtualMachine, error) {
 	var userDataB64 string
-	
+
 	if p.serviceConfig.EnableSftp {
 		// When SFTP is enabled, send minimal cloud-config with just SSH key
 		sshKeyUserData := fmt.Sprintf(`#cloud-config
@@ -391,7 +425,7 @@ users:
 	} else {
 		// Normal mode: send the full cloud config
 		userDataB64 = base64.StdEncoding.EncodeToString([]byte(cloudConfig))
-		
+
 		// Azure limits the base64 encrypted userData to 64KB.
 		// Ref: https://learn.microsoft.com/en-us/azure/virtual-machines/user-data
 		// If the b64EncData is greater than 64KB then return an error
@@ -606,10 +640,10 @@ func initializeSSHKeys(config *Config) error {
 			if err := validateSSHPublicKey(pubKeyContent); err != nil {
 				return fmt.Errorf("invalid SSH public key from file %s: %w", config.SSHPubKeyPath, err)
 			}
-			
+
 			config.SSHPubKey = pubKeyContent
 			logger.Printf("Using SSH public key from file: %s", config.SSHPubKeyPath)
-			
+
 			// If SFTP is enabled, try to read private key
 			if config.EnableSftp {
 				if config.SSHPrivKeyPath != "" {
@@ -642,16 +676,16 @@ func initializeSSHKeys(config *Config) error {
 		} else {
 			logger.Printf("Auto-generating SSH key pair for Azure VM creation")
 		}
-		
+
 		pubKeyString, privKeyString, err := generateSSHKeyPair()
 		if err != nil {
 			return fmt.Errorf("failed to generate SSH key pair: %w", err)
 		}
-		
+
 		if pubKeyString == "" || privKeyString == "" {
 			return fmt.Errorf("generated SSH key pair is empty")
 		}
-		
+
 		config.SSHPubKey = pubKeyString
 		if config.EnableSftp {
 			config.SSHPrivKey = privKeyString
@@ -668,13 +702,13 @@ func validateSSHPublicKey(pubKey string) error {
 	if pubKey == "" {
 		return fmt.Errorf("public key is empty")
 	}
-	
+
 	// Try to parse the public key
 	_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(pubKey))
 	if err != nil {
 		return fmt.Errorf("failed to parse SSH public key: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -684,13 +718,13 @@ func validateSSHPrivateKey(privKey string) error {
 	if privKey == "" {
 		return fmt.Errorf("private key is empty")
 	}
-	
+
 	// Try to parse the private key
 	_, err := ssh.ParsePrivateKey([]byte(privKey))
 	if err != nil {
 		return fmt.Errorf("failed to parse SSH private key: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -715,4 +749,59 @@ func generateSSHKeyPair() (string, string, error) {
 	publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
 
 	return string(publicKeyBytes), string(privateKeyPEM), nil
+}
+
+// getVMIPsFromNetworkProfile extracts IP addresses from VM's network profile
+func (p *azureProvider) getVMIPsFromNetworkProfile(nicClient *armnetwork.InterfacesClient, publicIPClient *armnetwork.PublicIPAddressesClient, nicRefs []*armcompute.NetworkInterfaceReference, rgName string) ([]netip.Addr, error) {
+	var ips []netip.Addr
+	var ipcs []*armnetwork.InterfaceIPConfiguration
+
+	// Get all IP configurations from network interfaces
+	for _, nicRef := range nicRefs {
+		nicId := *nicRef.ID
+		nicName := nicId[strings.LastIndex(nicId, "/")+1:]
+		nic, err := nicClient.Get(context.Background(), rgName, nicName, nil)
+		if err != nil {
+			return nil, fmt.Errorf("get network interface %s: %w", nicName, err)
+		}
+		ipcs = append(ipcs, nic.Properties.IPConfigurations...)
+	}
+
+	// Get public IPs first if UsePublicIP is enabled
+	if p.serviceConfig.UsePublicIP {
+		for _, ipc := range ipcs {
+			if ipc.Properties.PublicIPAddress == nil {
+				continue
+			}
+			ipID := *ipc.Properties.PublicIPAddress.ID
+			ipName := ipID[strings.LastIndex(ipID, "/")+1:]
+			publicIP, err := publicIPClient.Get(context.Background(), rgName, ipName, nil)
+			if err != nil {
+				return nil, fmt.Errorf("get public IP %s: %w", ipName, err)
+			}
+			addr := publicIP.Properties.IPAddress
+			if addr != nil {
+				ip, err := parseIP(*addr)
+				if err != nil {
+					return nil, err
+				}
+				ips = append(ips, *ip)
+			}
+		}
+	}
+
+	// Get private IPs
+	for _, ipc := range ipcs {
+		addr := ipc.Properties.PrivateIPAddress
+		if addr == nil {
+			continue
+		}
+		ip, err := parseIP(*addr)
+		if err != nil {
+			return nil, err
+		}
+		ips = append(ips, *ip)
+	}
+
+	return ips, nil
 }
