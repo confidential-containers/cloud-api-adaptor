@@ -37,15 +37,15 @@ func (i *instanceTypes) Set(value string) error {
 }
 
 type Config struct {
-	AccessKeyId          string
+	AccessKeyID          string
 	SecretKey            string
 	Region               string
 	LoginProfile         string
 	LaunchTemplateName   string
-	ImageId              string
+	ImageID              string
 	InstanceType         string
 	KeyName              string
-	SubnetId             string
+	SubnetID             string
 	SecurityGroupIds     securityGroupIds
 	UseLaunchTemplate    bool
 	InstanceTypes        instanceTypes

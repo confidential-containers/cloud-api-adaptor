@@ -24,13 +24,11 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
-const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
+const waitDeploymentAvailableTimeout = time.Second * 180
 
 var testInitdata string = `algorithm = "sha384"
 version = "0.1.0"
@@ -176,7 +174,7 @@ func WithCommand(command []string) PodOption {
 	}
 }
 
-func WithCpuMemRequestAndLimit(cpuRequest, memRequest, cpuLimit, memLimit string) PodOption {
+func WithCPUMemRequestAndLimit(cpuRequest, memRequest, cpuLimit, memLimit string) PodOption {
 	// If any of the parameters is empty, don't set it
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].Resources = corev1.ResourceRequirements{
@@ -208,7 +206,7 @@ func WithJobCommand(command []string) JobOption {
 
 func WithJobAnnotations(data map[string]string) JobOption {
 	return func(j *batchv1.Job) {
-		j.Spec.Template.ObjectMeta.Annotations = data
+		j.Spec.Template.Annotations = data
 	}
 }
 
@@ -252,27 +250,27 @@ func WithPVCBinding(mountPath string, pvcName string) PodOption {
 
 func WithInitdata(kbsEndpoint string) PodOption {
 	return func(p *corev1.Pod) {
-		if p.ObjectMeta.Annotations == nil {
-			p.ObjectMeta.Annotations = make(map[string]string)
+		if p.Annotations == nil {
+			p.Annotations = make(map[string]string)
 		}
 		key := "io.katacontainers.config.runtime.cc_init_data"
 		value, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
 		if err != nil {
 			log.Fatalf("failed to build initdata %s", err)
 		}
-		p.ObjectMeta.Annotations[key] = value
+		p.Annotations[key] = value
 	}
 }
 
 func WithAnnotations(data map[string]string) PodOption {
 	return func(p *corev1.Pod) {
-		p.ObjectMeta.Annotations = data
+		p.Annotations = data
 	}
 }
 
 func WithLabel(data map[string]string) PodOption {
 	return func(p *corev1.Pod) {
-		p.ObjectMeta.Labels = data
+		p.Labels = data
 	}
 }
 
@@ -311,8 +309,8 @@ func NewPod(namespace string, podName string, containerName string, imageName st
 	// Don't override the policy annotation if it's already set
 	if enableAllowAllPodPolicyOverride() {
 		allowAllPolicyFilePath := "fixtures/policies/allow-all.rego"
-		if _, ok := pod.ObjectMeta.Annotations["io.katacontainers.config.agent.policy"]; !ok {
-			pod.ObjectMeta.Annotations["io.katacontainers.config.agent.policy"] = encodePolicyFile(allowAllPolicyFilePath)
+		if _, ok := pod.Annotations["io.katacontainers.config.agent.policy"]; !ok {
+			pod.Annotations["io.katacontainers.config.agent.policy"] = encodePolicyFile(allowAllPolicyFilePath)
 		}
 	}
 
@@ -426,9 +424,9 @@ func NewImagePullSecret(namespace, name string, image string, credentials string
 	}
 }`
 	authJSON := fmt.Sprintf(template, registryName, credentials)
-	secretData := map[string][]byte{v1.DockerConfigJsonKey: []byte(authJSON)}
+	secretData := map[string][]byte{corev1.DockerConfigJsonKey: []byte(authJSON)}
 
-	return NewSecret(namespace, name, secretData, v1.SecretTypeDockerConfigJson)
+	return NewSecret(namespace, name, secretData, corev1.SecretTypeDockerConfigJson)
 }
 
 // NewSecret returns a new secret object.
@@ -510,10 +508,10 @@ func NewService(namespace, serviceName string, servicePorts []corev1.ServicePort
 	}
 }
 
-func WaitForClusterIP(t *testing.T, client klient.Client, svc *v1.Service) string {
+func WaitForClusterIP(t *testing.T, client klient.Client, svc *corev1.Service) string {
 	var clusterIP string
 	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(svc, func(object k8s.Object) bool {
-		svcObj, ok := object.(*v1.Service)
+		svcObj, ok := object.(*corev1.Service)
 		if !ok {
 			log.Printf("Not a Service object: %v", object)
 			return false
@@ -526,7 +524,7 @@ func WaitForClusterIP(t *testing.T, client klient.Client, svc *v1.Service) strin
 			log.Printf("Current service: %v", svcObj)
 			return false
 		}
-	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
+	}), wait.WithTimeout(waitDeploymentAvailableTimeout)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -561,6 +559,6 @@ type CloudAssert interface {
 
 // RollingUpdateAssert defines assertions for rolling update test
 type RollingUpdateAssert interface {
-	CachePodVmIDs(t *testing.T, deploymentName string) // Cache Pod VM IDs before rolling update
-	VerifyOldVmDeleted(t *testing.T)                   // Verify old Pod VMs have been deleted
+	CachePodVMIDs(t *testing.T, deploymentName string) // Cache Pod VM IDs before rolling update
+	VerifyOldVMDeleted(t *testing.T)                   // Verify old Pod VMs have been deleted
 }

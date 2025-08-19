@@ -17,9 +17,9 @@ func init() {
 	provider.AddCloudProvider("ibmcloud", &Manager{})
 }
 
-func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
 
-	flags.StringVar(&ibmcloudVPCConfig.ApiKey, "api-key", "", "IBM Cloud API key, defaults to `IBMCLOUD_API_KEY`")
+	flags.StringVar(&ibmcloudVPCConfig.APIKey, "api-key", "", "IBM Cloud API key, defaults to `IBMCLOUD_API_KEY`")
 	flags.StringVar(&ibmcloudVPCConfig.IAMProfileID, "iam-profile-id", "", "IBM IAM Profile ID, defaults to `IBMCLOUD_IAM_PROFILE_ID`")
 	flags.StringVar(&ibmcloudVPCConfig.CRTokenFileName, "cr-token-filename", "/var/run/secrets/tokens/vault-token", "Projected service account token")
 	flags.StringVar(&ibmcloudVPCConfig.IamServiceURL, "iam-service-url", "https://iam.cloud.ibm.com/identity/token", "IBM Cloud IAM Service URL")
@@ -39,9 +39,9 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 }
 
-func (_ *Manager) LoadEnv() {
+func (*Manager) LoadEnv() {
 	// overwrite config set by cmd parameters in oci image with env might come from orchastration platform
-	provider.DefaultToEnv(&ibmcloudVPCConfig.ApiKey, "IBMCLOUD_API_KEY", "")
+	provider.DefaultToEnv(&ibmcloudVPCConfig.APIKey, "IBMCLOUD_API_KEY", "")
 	provider.DefaultToEnv(&ibmcloudVPCConfig.IAMProfileID, "IBMCLOUD_IAM_PROFILE_ID", "")
 
 	provider.DefaultToEnv(&ibmcloudVPCConfig.IamServiceURL, "IBMCLOUD_IAM_ENDPOINT", "")
@@ -67,10 +67,10 @@ func (_ *Manager) LoadEnv() {
 	}
 }
 
-func (_ *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&ibmcloudVPCConfig)
 }
 
-func (_ *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &ibmcloudVPCConfig
 }

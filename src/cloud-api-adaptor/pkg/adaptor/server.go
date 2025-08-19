@@ -41,7 +41,7 @@ type server struct {
 	cloudService            cloud.Service
 	vmInfoService           pbPodVMInfo.PodVMInfoService
 	workerNode              podnetwork.WorkerNode
-	ttRpc                   *ttrpc.Server
+	ttRPC                   *ttrpc.Server
 	readyCh                 chan struct{}
 	stopCh                  chan struct{}
 	socketPath              string
@@ -85,36 +85,36 @@ func (s *server) Start(ctx context.Context) (err error) {
 		}
 	}
 
-	ttRpc, err := ttrpc.NewServer()
+	ttRPC, err := ttrpc.NewServer()
 	if err != nil {
 		return err
 	}
-	s.ttRpc = ttRpc
+	s.ttRPC = ttRPC
 	if err := os.MkdirAll(filepath.Dir(s.socketPath), os.ModePerm); err != nil {
 		return err
 	}
 	if err := os.RemoveAll(s.socketPath); err != nil { // just in case socket wasn't cleaned
 		return err
 	}
-	pbHypervisor.RegisterHypervisorService(s.ttRpc, s.cloudService)
-	pbPodVMInfo.RegisterPodVMInfoService(s.ttRpc, s.vmInfoService)
+	pbHypervisor.RegisterHypervisorService(s.ttRPC, s.cloudService)
+	pbPodVMInfo.RegisterPodVMInfoService(s.ttRPC, s.vmInfoService)
 
 	listener, err := net.Listen("unix", s.socketPath)
 	if err != nil {
 		return err
 	}
 
-	ttRpcErr := make(chan error)
+	ttRPCErr := make(chan error)
 	go func() {
-		defer close(ttRpcErr)
-		if err := s.ttRpc.Serve(ctx, listener); err != nil {
-			ttRpcErr <- err
+		defer close(ttRPCErr)
+		if err := s.ttRPC.Serve(ctx, listener); err != nil {
+			ttRPCErr <- err
 		}
 	}()
 	defer func() {
-		ttRpcShutdownErr := s.ttRpc.Shutdown(context.Background())
-		if ttRpcShutdownErr != nil && err == nil {
-			err = ttRpcShutdownErr
+		ttRPCShutdownErr := s.ttRPC.Shutdown(context.Background())
+		if ttRPCShutdownErr != nil && err == nil {
+			err = ttRPCShutdownErr
 		}
 	}()
 
@@ -129,7 +129,7 @@ func (s *server) Start(ctx context.Context) (err error) {
 			err = shutdownErr
 		}
 	case <-s.stopCh:
-	case err = <-ttRpcErr:
+	case err = <-ttRPCErr:
 	}
 	return err
 }

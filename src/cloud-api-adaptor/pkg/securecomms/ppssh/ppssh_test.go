@@ -97,7 +97,7 @@ func getSigner(t *testing.T, privateKeyBytes []byte) ssh.Signer {
 	return signer
 }
 
-func getAttestationClient(t *testing.T, sshport string) (clientSshPeer *sshproxy.SshPeer, clientConn net.Conn) {
+func getAttestationClient(t *testing.T, sshport string) (clientSSHPeer *sshproxy.SSHPeer, clientConn net.Conn) {
 	var err error
 	serverAddr := "127.0.0.1:" + sshport
 	clientConn, err = net.Dial("tcp", serverAddr)
@@ -118,17 +118,17 @@ func getAttestationClient(t *testing.T, sshport string) (clientSshPeer *sshproxy
 		Timeout: 5 * time.Minute,
 	}
 
-	clientNetConn, clientChans, clientSshReqs, err := ssh.NewClientConn(clientConn, serverAddr, clientConfig)
+	clientNetConn, clientChans, clientSSHReqs, err := ssh.NewClientConn(clientConn, serverAddr, clientConfig)
 	if err != nil {
 		t.Errorf("failed to NewServerConn client: %v", err)
 	}
 
-	clientSshPeer = sshproxy.NewSshPeer(context.Background(), sshproxy.ATTESTATION, clientNetConn, clientChans, clientSshReqs, "fake")
+	clientSSHPeer = sshproxy.NewSSHPeer(context.Background(), sshproxy.Attestation, clientNetConn, clientChans, clientSSHReqs, "fake")
 	return
 }
 
-func getKubernetesClient(t *testing.T, sshport string, sPublicKey, cPrivateKey []byte) (clientSshPeer *sshproxy.SshPeer, clientConn net.Conn) {
-	sSshPublicKey, _, _, _, err := ssh.ParseAuthorizedKey(sPublicKey)
+func getKubernetesClient(t *testing.T, sshport string, sPublicKey, cPrivateKey []byte) (clientSSHPeer *sshproxy.SSHPeer, clientConn net.Conn) {
+	sSSHPublicKey, _, _, _, err := ssh.ParseAuthorizedKey(sPublicKey)
 	if err != nil {
 		t.Errorf("Unable to ParseAuthorizedKey serverPublicKey: %v", err)
 
@@ -140,7 +140,7 @@ func getKubernetesClient(t *testing.T, sshport string, sPublicKey, cPrivateKey [
 	}
 	clientConfig := &ssh.ClientConfig{
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			if !bytes.Equal(key.Marshal(), sSshPublicKey.Marshal()) {
+			if !bytes.Equal(key.Marshal(), sSSHPublicKey.Marshal()) {
 				logger.Printf("ssh host key mismatch - %s", key.Type())
 				return fmt.Errorf("ssh host key mismatch")
 			}
@@ -155,12 +155,12 @@ func getKubernetesClient(t *testing.T, sshport string, sPublicKey, cPrivateKey [
 		Timeout: 5 * time.Minute,
 	}
 
-	clientNetConn, clientChans, clientSshReqs, err := ssh.NewClientConn(clientConn, serverAddr, clientConfig)
+	clientNetConn, clientChans, clientSSHReqs, err := ssh.NewClientConn(clientConn, serverAddr, clientConfig)
 	if err != nil {
 		t.Errorf("failed to NewServerConn client: %v", err)
 	}
 
-	clientSshPeer = sshproxy.NewSshPeer(context.Background(), sshproxy.KUBERNETES, clientNetConn, clientChans, clientSshReqs, "fake")
+	clientSSHPeer = sshproxy.NewSSHPeer(context.Background(), sshproxy.Kubernetes, clientNetConn, clientChans, clientSSHReqs, "fake")
 	return
 }
 
@@ -185,13 +185,13 @@ func TestPpssh(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	ppSecrets := NewPpSecrets(GetSecret(getKey))
-	ppSecrets.AddKey(WN_PUBLIC_KEY)
-	ppSecrets.AddKey(PP_PRIVATE_KEY)
+	ppSecrets.AddKey(WNPublicKey)
+	ppSecrets.AddKey(PPPrivateKey)
 
-	sshServer := NewSshServer([]string{"BOTH_PHASES:KBS:9002"}, []string{"KUBERNETES_PHASE:ABC:127.0.0.1:7105"}, ppSecrets, sshport)
+	sshServer := NewSSHServer([]string{"BOTH_PHASES:KBS:9002"}, []string{"KUBERNETES_PHASE:ABC:127.0.0.1:7105"}, ppSecrets, sshport)
 	_ = sshServer.Start(ctx)
-	clientSshPeer, conn := getAttestationClient(t, sshport)
-	clientSshPeer.AddTags(inbounds, outbounds)
+	clientSSHPeer, conn := getAttestationClient(t, sshport)
+	clientSSHPeer.AddTags(inbounds, outbounds)
 
 	test.KBSServer("7015")
 
@@ -212,23 +212,23 @@ func TestPpssh(t *testing.T) {
 		t.Errorf("PostResource: %v", err)
 	}
 
-	s := test.HttpServer("7105")
+	s := test.HTTPServer("7105")
 	if s == nil {
 		t.Error("Failed - could not create server")
 	}
 
-	clientSshPeer.Ready()
-	clientSshPeer.Wait()
-	if !clientSshPeer.IsUpgraded() {
+	clientSSHPeer.Ready()
+	clientSSHPeer.Wait()
+	if !clientSSHPeer.IsUpgraded() {
 		t.Errorf("attestation phase closed without being upgraded")
 	}
 	conn.Close()
 
-	clientSshPeer, conn = getKubernetesClient(t, sshport, sPublicKey, cPrivateKey)
-	clientSshPeer.AddTags(inbounds, outbounds)
+	clientSSHPeer, conn = getKubernetesClient(t, sshport, sPublicKey, cPrivateKey)
+	clientSSHPeer.AddTags(inbounds, outbounds)
 
-	clientSshPeer.Ready()
-	success := test.HttpClient("http://127.0.0.1:7005")
+	clientSSHPeer.Ready()
+	success := test.HTTPClient("http://127.0.0.1:7005")
 	if !success {
 		t.Error("Failed - not successful")
 	}

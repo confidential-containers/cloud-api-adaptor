@@ -13,21 +13,21 @@ import (
 
 var logger = sshutil.Logger
 
-type ApiClient struct {
+type APIClient struct {
 	servicePort uint16
 	nsPath      string
 }
 
 // Create a client for API_SERVER_REST service
-func NewApiClient(servicePort uint16, nsPath string) *ApiClient {
-	return &ApiClient{
+func NewAPIClient(servicePort uint16, nsPath string) *APIClient {
+	return &APIClient{
 		servicePort: servicePort,
 		nsPath:      nsPath,
 	}
 }
 
 // GetKey uses kbs-client to obtain keys such as pp-sid/privateKey, sshclient/publicKey
-func (c *ApiClient) GetKey(key string) (data []byte, err error) {
+func (c *APIClient) GetKey(key string) (data []byte, err error) {
 	url := fmt.Sprintf("http://127.0.0.1:%d/cdh/resource/default/%s", c.servicePort, key)
 
 	client := http.Client{

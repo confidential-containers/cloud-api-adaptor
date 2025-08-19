@@ -113,7 +113,7 @@ func createErrorParsingCAData(pemCerts []byte) error {
 // GetTLSConfigFor returns a tls.Config that will provide the transport level security defined
 // by the provided Config. Will return nil if no transport level security is requested.
 func GetTLSConfigFor(t *TLSConfig) (*tls.Config, error) {
-	if !(t.HasCA() || t.HasCertAuth() || t.SkipVerify) {
+	if !t.HasCA() && !t.HasCertAuth() && !t.SkipVerify {
 		return nil, nil
 	}
 	if t.HasCA() && t.SkipVerify {

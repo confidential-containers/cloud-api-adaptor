@@ -17,10 +17,10 @@ func init() {
 	provider.AddCloudProvider("gcp", &Manager{})
 }
 
-func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
 
 	flags.StringVar(&gcpcfg.GcpCredentials, "gcp-credentials", "", "Google Application Credentials, defaults to `GCP_CREDENTIALS`")
-	flags.StringVar(&gcpcfg.ProjectId, "gcp-project-id", "", "GCP Project ID")
+	flags.StringVar(&gcpcfg.ProjectID, "gcp-project-id", "", "GCP Project ID")
 	flags.StringVar(&gcpcfg.Zone, "zone", "", "Zone")
 	flags.StringVar(&gcpcfg.ImageName, "image-name", "", "Pod VM image name")
 	flags.StringVar(&gcpcfg.MachineType, "machine-type", "e2-medium", "Pod VM instance type")
@@ -32,14 +32,14 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.Var(&gcpcfg.Tags, "tags", "List of tags to be added to the Pod VMs. Tags must already exist in the GCP project. Format: key1=value1,key2=value2")
 }
 
-func (_ *Manager) LoadEnv() {
+func (*Manager) LoadEnv() {
 	provider.DefaultToEnv(&gcpcfg.GcpCredentials, "GCP_CREDENTIALS", "")
 }
 
-func (_ *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&gcpcfg)
 }
 
-func (_ *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &gcpcfg
 }

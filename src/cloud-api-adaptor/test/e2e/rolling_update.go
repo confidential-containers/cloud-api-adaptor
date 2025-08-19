@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
 
-const OLD_VM_DELETION_TIMEOUT = time.Second * 30
+const oldVMDeletionTimeout = time.Second * 30
 
 func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, assert RollingUpdateAssert) {
 	runtimeClassName := "kata-remote"
@@ -151,7 +151,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 			t.Log("webserver deployment is available now")
 
 			// Cache Pod VM instance IDs before upgrade
-			assert.CachePodVmIDs(t, deploymentName)
+			assert.CachePodVMIDs(t, deploymentName)
 
 			t.Log("Creating webserver Service")
 			if err = client.Resources().Create(ctx, svc); err != nil {
@@ -177,7 +177,7 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 			if err = client.Resources().Create(ctx, verifyPod); err != nil {
 				t.Fatal(err)
 			}
-			if err = wait.For(conditions.New(client.Resources()).PodRunning(verifyPod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+			if err = wait.For(conditions.New(client.Resources()).PodRunning(verifyPod), wait.WithTimeout(waitPodRunningTimeout)); err != nil {
 				t.Fatal(err)
 			}
 
@@ -235,9 +235,9 @@ func DoTestCaaDaemonsetRollingUpdate(t *testing.T, testEnv env.Environment, asse
 				t.Fatal(fmt.Errorf("verify pod is not running"))
 			}
 
-			time.Sleep(OLD_VM_DELETION_TIMEOUT)
+			time.Sleep(oldVMDeletionTimeout)
 			t.Log("Verify old VM instances have been deleted:")
-			assert.VerifyOldVmDeleted(t)
+			assert.VerifyOldVMDeleted(t)
 
 			return ctx
 		}).
@@ -279,7 +279,7 @@ func waitForCaaDaemonSetUpdated(t *testing.T, client klient.Client, ds *appsv1.D
 		t.Logf("Current CAA DaemonSet UpdatedNumberScheduled: %d", dsObj.Status.UpdatedNumberScheduled)
 		t.Logf("Current CAA DaemonSet NumberAvailable: %d", dsObj.Status.NumberAvailable)
 		return dsObj.Status.UpdatedNumberScheduled == rc && dsObj.Status.NumberAvailable == rc
-	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
+	}), wait.WithTimeout(waitDeploymentAvailableTimeout)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -294,7 +294,7 @@ func waitForDeploymentAvailable(t *testing.T, client klient.Client, deployment *
 
 		t.Logf("Current deployment available replicas: %d", deployObj.Status.AvailableReplicas)
 		return deployObj.Status.AvailableReplicas == rc
-	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
+	}), wait.WithTimeout(waitDeploymentAvailableTimeout)); err != nil {
 		t.Fatal(err)
 	}
 }

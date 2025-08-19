@@ -119,7 +119,7 @@ func (d *daemon) Start(ctx context.Context) error {
 		// Create a TLS configuration object
 		tlsConfig, err := tlsutil.GetTLSConfigFor(d.tlsConfig)
 		if err != nil {
-			return fmt.Errorf("Failed to create tls config: %v", err)
+			return fmt.Errorf("failed to create tls config: %v", err)
 		}
 
 		listener, err = tls.Listen("tcp", d.listenAddr, tlsConfig)

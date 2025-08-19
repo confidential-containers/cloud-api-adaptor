@@ -172,7 +172,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 	}
 	config.MTU = mtu
 
-	neighbors, err := podNS.NeighborList(&netops.Neighbor{Dev: podInterface, State: netops.NEIGHBOR_STATE_PERMANENT})
+	neighbors, err := podNS.NeighborList(&netops.Neighbor{Dev: podInterface, State: netops.NeighborStatePermanent})
 	if err != nil {
 		return nil, err
 	}

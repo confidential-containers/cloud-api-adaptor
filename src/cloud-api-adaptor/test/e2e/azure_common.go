@@ -21,7 +21,7 @@ var assert = &AzureCloudAssert{}
 
 // findVM is a helper function to find a VM by its prefix name in a resource group.
 func findVM(resourceGroupName, prefixName string) (*armcompute.VirtualMachine, error) {
-	pager := pv.AzureProps.ManagedVmClient.NewListPager(resourceGroupName, nil)
+	pager := pv.AzureProps.ManagedVMClient.NewListPager(resourceGroupName, nil)
 
 	for pager.More() {
 		page, err := pager.NextPage(context.Background())
@@ -54,9 +54,9 @@ func (c AzureCloudAssert) DefaultTimeout() time.Duration {
 }
 
 func (c AzureCloudAssert) HasPodVM(t *testing.T, id string) {
-	pod_vm_prefix := "podvm-" + id
+	podVMPrefix := "podvm-" + id
 	rg := pv.AzureProps.ResourceGroupName
-	if checkVMExistence(rg, pod_vm_prefix) {
+	if checkVMExistence(rg, podVMPrefix) {
 		t.Logf("VM %s found in resource group", id)
 	} else {
 		t.Logf("Virtual machine %s not found in resource group %s", id, rg)

@@ -10,7 +10,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/netops"
 )
 
-func HttpClient(dest string) bool {
+func HTTPClient(dest string) bool {
 	fmt.Printf("HttpClient start : %s\n", dest)
 
 	fmt.Printf("HttpClient sending req: %s\n", dest)
@@ -30,7 +30,7 @@ func HttpClient(dest string) bool {
 	return (resp.StatusCode == 200)
 }
 
-func HttpClientInNamespace(dest string, nsPath string) bool {
+func HTTPClientInNamespace(dest string, nsPath string) bool {
 	fmt.Printf("HttpClient start : %s in namepspace: %s\n", dest, nsPath)
 
 	c := http.Client{

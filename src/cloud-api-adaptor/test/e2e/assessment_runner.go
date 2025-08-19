@@ -23,8 +23,8 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
 
-const WAIT_POD_RUNNING_TIMEOUT = time.Second * 600
-const WAIT_JOB_RUNNING_TIMEOUT = time.Second * 600
+const waitPodRunningTimeout = time.Second * 600
+const waitJobRunningTimeout = time.Second * 600
 
 // TestCommand is a list of commands to execute inside the pod container,
 // each with a function to test if the command outputs the value the test
@@ -210,7 +210,7 @@ func (tc *TestCase) Run() {
 				if err = client.Resources().Create(ctx, tc.job); err != nil {
 					t.Fatal(err)
 				}
-				if err = wait.For(conditions.New(client.Resources()).JobCompleted(tc.job), wait.WithTimeout(WAIT_JOB_RUNNING_TIMEOUT)); err != nil {
+				if err = wait.For(conditions.New(client.Resources()).JobCompleted(tc.job), wait.WithTimeout(waitJobRunningTimeout)); err != nil {
 					//Using t.log instead of t.Fatal here because we need to assess number of success and failure pods if job fails to complete
 					t.Log(err)
 				}
@@ -220,12 +220,12 @@ func (tc *TestCase) Run() {
 				if err = client.Resources().Create(ctx, tc.pod); err != nil {
 					t.Fatal(err)
 				}
-				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(waitPodRunningTimeout)); err != nil {
 					t.Error(err)
 				}
 				if tc.podState == v1.PodRunning || len(tc.testCommands) > 0 {
 					t.Logf("Waiting for containers in pod: %v are ready", tc.pod.Name)
-					if err = wait.For(conditions.New(client.Resources()).ContainersReady(tc.pod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+					if err = wait.For(conditions.New(client.Resources()).ContainersReady(tc.pod), wait.WithTimeout(waitPodRunningTimeout)); err != nil {
 						//Added logs for debugging nightly tests
 						clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 						if err != nil {

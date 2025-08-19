@@ -37,7 +37,7 @@ func digest(alg string, body []byte) (string, error) {
 		hash := sha512.Sum512(body)
 		return hex.EncodeToString(hash[:]), nil
 	default:
-		return "", fmt.Errorf("Error creating initdata digest, algorithm %s is not supported", alg)
+		return "", fmt.Errorf("error creating initdata digest, algorithm %s is not supported", alg)
 	}
 }
 

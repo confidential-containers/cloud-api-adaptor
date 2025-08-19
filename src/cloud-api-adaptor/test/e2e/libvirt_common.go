@@ -20,7 +20,7 @@ type LibvirtAssert struct {
 	//conn libvirt.Connect
 }
 
-func (c LibvirtAssert) DefaultTimeout() time.Duration {
+func (l LibvirtAssert) DefaultTimeout() time.Duration {
 	return 1 * time.Minute
 }
 

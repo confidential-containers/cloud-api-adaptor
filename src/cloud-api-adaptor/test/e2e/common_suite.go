@@ -499,10 +499,10 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 	serverPod := NewPod(E2eNamespace, serverPodName, serverContainerName, serverImageName, WithSecureContainerPort(443), WithSecretBinding(serverSecretDir, serverSecretName), WithLabel(labels), WithConfigMapBinding(podKubeConfigmapDir, configMapName))
 	configMap := NewConfigMap(E2eNamespace, configMapName, configMapData)
 
-	serviceUrl := fmt.Sprintf("https://%s", serviceName)
+	serviceURL := fmt.Sprintf("https://%s", serviceName)
 	testCommands := []TestCommand{
 		{
-			Command:       []string{"curl", "--key", "/etc/certs/tls.key", "--cert", "/etc/certs/tls.crt", "--cacert", "/etc/certs/ca.crt", serviceUrl},
+			Command:       []string{"curl", "--key", "/etc/certs/tls.key", "--cert", "/etc/certs/tls.crt", "--cacert", "/etc/certs/ca.crt", serviceURL},
 			ContainerName: clientPod.pod.Spec.Containers[0].Name,
 			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
 				if strings.Contains(stdout.String(), "Thank you for using nginx") {
@@ -780,10 +780,10 @@ func DoTestPodWithSpecificCommands(t *testing.T, e env.Environment, assert Cloud
 }
 
 // Test to run a pod with cpu and memory limits and requests
-func DoTestPodWithCpuMemLimitsAndRequests(t *testing.T, e env.Environment, assert CloudAssert, cpuRequest, memRequest, cpuLimit, memLimit string) {
+func DoTestPodWithCPUMemLimitsAndRequests(t *testing.T, e env.Environment, assert CloudAssert, cpuRequest, memRequest, cpuLimit, memLimit string) {
 	imageName := getBusyboxTestImage(t)
 	pod := NewPod(E2eNamespace, "pod-with-cpu-mem-limits-requests", "busybox", imageName,
-		WithCpuMemRequestAndLimit(cpuRequest, memRequest, cpuLimit, memLimit))
+		WithCPUMemRequestAndLimit(cpuRequest, memRequest, cpuLimit, memLimit))
 
 	// Add testCommands to check that request/limit are removed from the spec and following annotations
 	// to pod spec is added

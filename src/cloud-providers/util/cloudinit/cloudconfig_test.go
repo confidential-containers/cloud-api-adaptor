@@ -49,7 +49,7 @@ func TestUserData(t *testing.T) {
 // The test should verify that the config has both the apf.json and the auth.json
 // files in the write_files section.
 func TestUserDataWithAPFConfigAndAuth(t *testing.T) {
-	testAPFConfigJson := `{
+	testAPFConfigJSON := `{
 		"pod-network": {
 			"podip": "10.244.0.19/24",
 			"pod-hw-addr": "0e:8f:62:f3:81:ad",
@@ -78,7 +78,7 @@ func TestUserDataWithAPFConfigAndAuth(t *testing.T) {
 
 	// Create a variable to hold sample base64 encoded string which is the auth.json
 	// file
-	testAuthJson := `{
+	testAuthJSON := `{
 				"auths": {
 						"myregistry.io": {
 								"auth": "dXNlcjpwYXNzd29yZAo"
@@ -86,14 +86,14 @@ func TestUserDataWithAPFConfigAndAuth(t *testing.T) {
 				}
 		}`
 
-	testResourcesJson := AuthJSONToResourcesJSON(string(testAuthJson))
+	testResourcesJSON := AuthJSONToResourcesJSON(string(testAuthJSON))
 
 	// Write tempAPFConfigJSON to cloud-init config file
 	// Create a CloudConfig struct
 	cloudConfig := &CloudConfig{
 		WriteFiles: []WriteFile{
-			{Path: forwarderConfigPath, Content: string(testAPFConfigJson)},
-			{Path: authJSONPath, Content: testResourcesJson},
+			{Path: forwarderConfigPath, Content: string(testAPFConfigJSON)},
+			{Path: authJSONPath, Content: testResourcesJSON},
 		},
 	}
 
@@ -127,12 +127,12 @@ func TestUserDataWithAPFConfigAndAuth(t *testing.T) {
 
 	// Verify that the output yaml has the testAPFConfigJson and testb64AuthJson contents
 	// in the write_files section
-	if !strings.Contains(output.WriteFiles[0].Content, testAPFConfigJson) {
-		t.Fatalf("Expect %q, got %q", testAPFConfigJson, output.WriteFiles[0].Content)
+	if !strings.Contains(output.WriteFiles[0].Content, testAPFConfigJSON) {
+		t.Fatalf("Expect %q, got %q", testAPFConfigJSON, output.WriteFiles[0].Content)
 	}
 
-	if !strings.Contains(output.WriteFiles[1].Content, testResourcesJson) {
-		t.Fatalf("Expect %q, got %q", testResourcesJson, output.WriteFiles[1].Content)
+	if !strings.Contains(output.WriteFiles[1].Content, testResourcesJSON) {
+		t.Fatalf("Expect %q, got %q", testResourcesJSON, output.WriteFiles[1].Content)
 	}
 
 }

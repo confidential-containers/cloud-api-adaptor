@@ -17,18 +17,18 @@ func init() {
 	provider.AddCloudProvider("azure", &Manager{})
 }
 
-func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
-	flags.StringVar(&azurecfg.ClientId, "clientid", "", "Client Id, defaults to `AZURE_CLIENT_ID`")
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
+	flags.StringVar(&azurecfg.ClientID, "clientid", "", "Client Id, defaults to `AZURE_CLIENT_ID`")
 	flags.StringVar(&azurecfg.ClientSecret, "secret", "", "Client Secret, defaults to `AZURE_CLIENT_SECRET`")
-	flags.StringVar(&azurecfg.TenantId, "tenantid", "", "Tenant Id, defaults to `AZURE_TENANT_ID`")
+	flags.StringVar(&azurecfg.TenantID, "tenantid", "", "Tenant Id, defaults to `AZURE_TENANT_ID`")
 	flags.StringVar(&azurecfg.ResourceGroupName, "resourcegroup", "", "Resource Group")
 	flags.StringVar(&azurecfg.Zone, "zone", "", "Zone")
 	flags.StringVar(&azurecfg.Region, "region", "", "Region")
-	flags.StringVar(&azurecfg.SubnetId, "subnetid", "", "Network Subnet Id")
-	flags.StringVar(&azurecfg.SecurityGroupId, "securitygroupid", "", "Security Group Id")
+	flags.StringVar(&azurecfg.SubnetID, "subnetid", "", "Network Subnet Id")
+	flags.StringVar(&azurecfg.SecurityGroupID, "securitygroupid", "", "Security Group Id")
 	flags.StringVar(&azurecfg.Size, "instance-size", "Standard_DC2as_v5", "Instance size")
-	flags.StringVar(&azurecfg.ImageId, "imageid", "", "Image Id")
-	flags.StringVar(&azurecfg.SubscriptionId, "subscriptionid", "", "Subscription ID")
+	flags.StringVar(&azurecfg.ImageID, "imageid", "", "Image Id")
+	flags.StringVar(&azurecfg.SubscriptionID, "subscriptionid", "", "Subscription ID")
 	flags.StringVar(&azurecfg.SSHKeyPath, "ssh-key-path", "$HOME/.ssh/id_rsa.pub", "Path to SSH public key")
 	flags.StringVar(&azurecfg.SSHUserName, "ssh-username", "peerpod", "SSH User Name")
 	flags.BoolVar(&azurecfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
@@ -41,20 +41,20 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.IntVar(&azurecfg.RootVolumeSize, "root-volume-size", 0, "Root volume size in GB. Default is 0, which implies the default image disk size")
 }
 
-func (_ *Manager) LoadEnv() {
-	provider.DefaultToEnv(&azurecfg.ClientId, "AZURE_CLIENT_ID", "")
+func (*Manager) LoadEnv() {
+	provider.DefaultToEnv(&azurecfg.ClientID, "AZURE_CLIENT_ID", "")
 	provider.DefaultToEnv(&azurecfg.ClientSecret, "AZURE_CLIENT_SECRET", "")
-	provider.DefaultToEnv(&azurecfg.TenantId, "AZURE_TENANT_ID", "")
-	provider.DefaultToEnv(&azurecfg.SubscriptionId, "AZURE_SUBSCRIPTION_ID", "")
+	provider.DefaultToEnv(&azurecfg.TenantID, "AZURE_TENANT_ID", "")
+	provider.DefaultToEnv(&azurecfg.SubscriptionID, "AZURE_SUBSCRIPTION_ID", "")
 	provider.DefaultToEnv(&azurecfg.Region, "AZURE_REGION", "")
 	provider.DefaultToEnv(&azurecfg.ResourceGroupName, "AZURE_RESOURCE_GROUP", "")
 	provider.DefaultToEnv(&azurecfg.Size, "AZURE_INSTANCE_SIZE", "Standard_DC2as_v5")
 }
 
-func (_ *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&azurecfg)
 }
 
-func (_ *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &azurecfg
 }

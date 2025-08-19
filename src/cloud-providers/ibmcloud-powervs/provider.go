@@ -1,7 +1,7 @@
 // Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package ibmcloud_powervs
+package ibmcloudpowervs
 
 import (
 	"context"
@@ -34,7 +34,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("ibmcloud-powervs config: %#v", config.Redact())
 
-	powervs, err := newPowervsClient(config.ApiKey, config.ServiceInstanceID, config.Zone)
+	powervs, err := newPowervsClient(config.APIKey, config.ServiceInstanceID, config.Zone)
 	if err != nil {
 		return nil, err
 	}
@@ -54,11 +54,11 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		return nil, err
 	}
 
-	imageId := p.serviceConfig.ImageId
+	imageID := p.serviceConfig.ImageID
 
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the Power VS image for the PodVM image", spec.Image)
-		imageId = spec.Image
+		imageID = spec.Image
 	}
 
 	memory := p.serviceConfig.Memory
@@ -93,7 +93,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 
 	body := &models.PVMInstanceCreate{
 		ServerName:  &instanceName,
-		ImageID:     &imageId,
+		ImageID:     &imageID,
 		KeyPairName: p.serviceConfig.SSHKey,
 		Networks: []*models.PVMInstanceAddNetwork{
 			{
@@ -141,7 +141,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 				return nil
 			}
 
-			return fmt.Errorf("Instance failed to reach ACTIVE state")
+			return fmt.Errorf("instance failed to reach ACTIVE state")
 		},
 		retry.Context(getctx),
 		retry.Attempts(0),
@@ -182,8 +182,8 @@ func (p *ibmcloudPowerVSProvider) Teardown() error {
 }
 
 func (p *ibmcloudPowerVSProvider) ConfigVerifier() error {
-	imageId := p.serviceConfig.ImageId
-	if len(imageId) == 0 {
+	imageID := p.serviceConfig.ImageID
+	if len(imageID) == 0 {
 		return fmt.Errorf("ImageId is empty")
 	}
 	return nil
@@ -198,12 +198,12 @@ func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instanceID strin
 
 	for i, network := range ins.Networks {
 		if ins.Networks[i].Type == "fixed" {
-			ip_address := network.IPAddress
+			ipAddress := network.IPAddress
 			if p.serviceConfig.UsePublicIP {
-				ip_address = network.ExternalIP
+				ipAddress = network.ExternalIP
 			}
 
-			ip, err := netip.ParseAddr(ip_address)
+			ip, err := netip.ParseAddr(ipAddress)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse pod node IP %q: %w", network.IPAddress, err)
 			}

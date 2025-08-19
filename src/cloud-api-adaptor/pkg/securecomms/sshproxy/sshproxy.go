@@ -20,20 +20,20 @@ import (
 )
 
 const (
-	PP_SID            = "pp-sid/"
-	PP_PRIVATE_KEY    = PP_SID + "privateKey"
-	ATTESTATION       = "Attestation"
-	KUBERNETES        = "Kubernetes"
-	KUBERNETES_PHASE  = "KUBERNETES_PHASE"
-	ATTESTATION_PHASE = "ATTESTATION_PHASE"
-	BOTH_PHASES       = "BOTH_PHASES"
-	PHASE             = "Phase"
-	UPGRADE           = "Upgrade"
+	PPSID            = "pp-sid/"
+	PPPrivateKey     = PPSID + "privateKey"
+	Attestation      = "Attestation"
+	Kubernetes       = "Kubernetes"
+	KubernetesPhase  = "KUBERNETES_PHASE"
+	AttestationPhase = "ATTESTATION_PHASE"
+	BothPhases       = "BOTH_PHASES"
+	Phase            = "Phase"
+	Upgrade          = "Upgrade"
 )
 
 var logger = sshutil.Logger
 
-type SshPeer struct {
+type SSHPeer struct {
 	sid            string
 	phase          string
 	sshConn        ssh.Conn
@@ -51,7 +51,7 @@ type SshPeer struct {
 type Inbound struct {
 	// tcp peers
 	Name        string
-	TcpListener *net.TCPListener
+	TCPListener *net.TCPListener
 	Connections chan *net.Conn
 	Phase       string // ATTESTATION_PHASE, KUBERNETES_PHASE, BOTH_PHASES
 }
@@ -158,7 +158,7 @@ func (inbounds *Inbounds) Add(namespace string, inPort int, name, phase string, 
 
 	inbound := &Inbound{
 		Phase:       phase,
-		TcpListener: tcpListener,
+		TCPListener: tcpListener,
 		Connections: make(chan *net.Conn),
 		Name:        name,
 	}
@@ -181,7 +181,7 @@ func (inbounds *Inbounds) Add(namespace string, inPort int, name, phase string, 
 // NewInbound create an Inbound and listen to incoming client connections
 func (inbounds *Inbounds) DelAll() {
 	for _, inbound := range inbounds.list {
-		inbound.TcpListener.Close()
+		inbound.TCPListener.Close()
 	}
 	inbounds.list = [](*Inbound){}
 }
@@ -227,7 +227,7 @@ func ParseTag(tag string) (port int, host, name, phase string, err error) {
 		port = int(uint64port)
 	}
 
-	if phase != ATTESTATION_PHASE && phase != KUBERNETES_PHASE && phase != BOTH_PHASES {
+	if phase != AttestationPhase && phase != KubernetesPhase && phase != BothPhases {
 		err = fmt.Errorf("illegal tag phase '%s'", phase)
 	}
 	if name == "" {
@@ -236,9 +236,9 @@ func ParseTag(tag string) (port int, host, name, phase string, err error) {
 	return
 }
 
-// NewSshPeer
-func NewSshPeer(ctx context.Context, phase string, sshConn ssh.Conn, chans <-chan ssh.NewChannel, sshReqs <-chan *ssh.Request, sid string) *SshPeer {
-	peer := &SshPeer{
+// NewSSHPeer
+func NewSSHPeer(ctx context.Context, phase string, sshConn ssh.Conn, chans <-chan ssh.NewChannel, sshReqs <-chan *ssh.Request, sid string) *SSHPeer {
+	peer := &SSHPeer{
 		sid:            sid,
 		phase:          phase,
 		sshConn:        sshConn,
@@ -264,12 +264,12 @@ func NewSshPeer(ctx context.Context, phase string, sshConn ssh.Conn, chans <-cha
 					return
 				}
 				if req.WantReply {
-					if req.Type == PHASE {
+					if req.Type == Phase {
 						logger.Printf("%s phase: peer reported phase %s", phase, string(req.Payload))
 						_ = req.Reply(true, []byte(peer.phase))
 						continue
 					}
-					if phase == ATTESTATION && req.Type == UPGRADE {
+					if phase == Attestation && req.Type == Upgrade {
 						logger.Printf("%s phase: peer reported it is upgrading to Kubernetes phase", phase)
 						_ = req.Reply(true, []byte(peer.phase))
 						peer.upgrade = true
@@ -294,7 +294,7 @@ func NewSshPeer(ctx context.Context, phase string, sshConn ssh.Conn, chans <-cha
 					name := string(ch.ExtraData())
 					<-peer.outboundsReady
 					outbound := peer.outbounds[name]
-					if outbound == nil || (outbound.Phase == ATTESTATION_PHASE && phase != ATTESTATION) || (outbound.Phase == KUBERNETES_PHASE && phase != KUBERNETES) {
+					if outbound == nil || (outbound.Phase == AttestationPhase && phase != Attestation) || (outbound.Phase == KubernetesPhase && phase != Kubernetes) {
 						logger.Printf("%s phase: NewSshPeer rejected tunnel channel: %s", phase, name)
 						_ = ch.Reject(ssh.UnknownChannelType, fmt.Sprintf("%s phase: NewSshPeer rejected tunnel channel - port not allowed: %s", phase, name))
 						continue
@@ -314,7 +314,7 @@ func NewSshPeer(ctx context.Context, phase string, sshConn ssh.Conn, chans <-cha
 			}
 		}
 	}()
-	ok, peerPhase, err := peer.sshConn.SendRequest(PHASE, true, []byte(phase))
+	ok, peerPhase, err := peer.sshConn.SendRequest(Phase, true, []byte(phase))
 	if !ok {
 		logger.Printf("%s phase: NewSshPeer - peer did not ok phase verification", phase)
 		peer.Close("Phase verification failed")
@@ -333,11 +333,11 @@ func NewSshPeer(ctx context.Context, phase string, sshConn ssh.Conn, chans <-cha
 	return peer
 }
 
-func (peer *SshPeer) Wait() {
+func (peer *SSHPeer) Wait() {
 	peer.wg.Wait()
 }
 
-func (peer *SshPeer) Close(who string) {
+func (peer *SSHPeer) Close(who string) {
 	peer.closeOnce.Do(func() {
 		logger.Printf("%s phase: peer done by >>> %s <<<", peer.phase, who)
 		peer.sshConn.Close()
@@ -345,12 +345,12 @@ func (peer *SshPeer) Close(who string) {
 	})
 }
 
-func (peer *SshPeer) IsUpgraded() bool {
+func (peer *SSHPeer) IsUpgraded() bool {
 	return peer.upgrade
 }
 
-func (peer *SshPeer) Upgrade() {
-	ok, _, err := peer.sshConn.SendRequest(UPGRADE, true, []byte{})
+func (peer *SSHPeer) Upgrade() {
+	ok, _, err := peer.sshConn.SendRequest(Upgrade, true, []byte{})
 	if !ok {
 		logger.Printf("%s phase: SshPeer upgrade failed", peer.phase)
 		peer.Close("Phase verification failed")
@@ -363,14 +363,14 @@ func (peer *SshPeer) Upgrade() {
 	}
 }
 
-func (peer *SshPeer) AddTags(inbounds Inbounds, outbounds Outbounds) {
+func (peer *SSHPeer) AddTags(inbounds Inbounds, outbounds Outbounds) {
 	peer.AddOutbounds(outbounds)
 	peer.AddInbounds(inbounds)
 }
 
 // NewInbound create an Inbound and listen to incoming client connections
-func (peer *SshPeer) AddInbound(inbound *Inbound) {
-	if (inbound.Phase == KUBERNETES_PHASE && peer.phase == ATTESTATION) || (inbound.Phase == ATTESTATION_PHASE && peer.phase == KUBERNETES) {
+func (peer *SSHPeer) AddInbound(inbound *Inbound) {
+	if (inbound.Phase == KubernetesPhase && peer.phase == Attestation) || (inbound.Phase == AttestationPhase && peer.phase == Kubernetes) {
 		return
 	}
 	logger.Printf("%s phase: AddInbound: %s", peer.phase, inbound.Name)
@@ -393,7 +393,7 @@ func (peer *SshPeer) AddInbound(inbound *Inbound) {
 	peer.inbounds[inbound.Name] = inbound
 }
 
-func NewInboundInstance(tcpConn io.ReadWriteCloser, peer *SshPeer, inbound *Inbound) {
+func NewInboundInstance(tcpConn io.ReadWriteCloser, peer *SSHPeer, inbound *Inbound) {
 	sshChan, channelReqs, err := peer.sshConn.OpenChannel("tunnel", []byte(inbound.Name))
 	if err != nil {
 		logger.Printf("%s phase: NewInboundInstance OpenChannel %s error: %s", peer.phase, inbound.Name, err)
@@ -443,47 +443,47 @@ func NewInboundInstance(tcpConn io.ReadWriteCloser, peer *SshPeer, inbound *Inbo
 }
 
 // NewOutbound create an outbound and connect to an outgoing server
-func (peer *SshPeer) AddOutbounds(outbounds Outbounds) {
+func (peer *SSHPeer) AddOutbounds(outbounds Outbounds) {
 	for _, outbound := range outbounds.list {
 		peer.AddOutbound(outbound)
 	}
 }
 
-func (peer *SshPeer) Ready() {
+func (peer *SSHPeer) Ready() {
 	// signal that all outbounds were added
 	close(peer.outboundsReady)
 }
 
 // NewOutbound create an outbound and connect to an outgoing server
-func (peer *SshPeer) AddInbounds(inbounds Inbounds) {
+func (peer *SSHPeer) AddInbounds(inbounds Inbounds) {
 	for _, inbound := range inbounds.list {
 		peer.AddInbound(inbound)
 	}
 }
 
 // NewOutbound create an outbound and connect to an outgoing server
-func (peer *SshPeer) AddOutbound(outbound *Outbound) {
+func (peer *SSHPeer) AddOutbound(outbound *Outbound) {
 	peer.outbounds[outbound.Name] = outbound
 }
 
 type SID string
 
 func (sid SID) urlModifier(path string) string {
-	if strings.HasSuffix(path, PP_PRIVATE_KEY) {
-		return strings.Replace(path, PP_SID, fmt.Sprintf("pp-%s/", sid), 1)
+	if strings.HasSuffix(path, PPPrivateKey) {
+		return strings.Replace(path, PPSID, fmt.Sprintf("pp-%s/", sid), 1)
 	}
 	return path
 }
 
 func (outbound *Outbound) acceptProxy(chChan ssh.Channel, chReqs <-chan *ssh.Request, sid string, wg *sync.WaitGroup) {
-	remoteUrl, err := url.Parse("http://" + outbound.OutAddr)
+	remoteURL, err := url.Parse("http://" + outbound.OutAddr)
 	if err != nil {
 		logger.Printf("Outbound %s acceptProxy error parsing address %s: %v", outbound.Name, outbound.OutAddr, err)
 		return
 	}
 
 	// The proxy is a Handler - it has a ServeHTTP method
-	proxy := httputil.NewSingleHostReverseProxy(remoteUrl)
+	proxy := httputil.NewSingleHostReverseProxy(remoteURL)
 	proxy.Transport = http.DefaultTransport
 	logger.Printf("Outbound %s acceptProxy setting up for sid %s", outbound.Name, sid)
 

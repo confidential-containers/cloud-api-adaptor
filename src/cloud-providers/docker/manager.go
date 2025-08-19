@@ -20,7 +20,7 @@ func init() {
 	provider.AddCloudProvider("docker", &Manager{})
 }
 
-func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&dockerCfg.DockerHost, "docker-host", "unix:///var/run/docker.sock", "Docker host, defaults to `unix:///var/run/docker.sock`")
 	flags.StringVar(&dockerCfg.DockerAPIVersion, "docker-api-version", "1.40", "Docker API version")
 	flags.StringVar(&dockerCfg.DockerCertPath, "docker-cert-path", "", "Path to directory with Docker TLS certificates")
@@ -43,10 +43,10 @@ func (m *Manager) LoadEnv() {
 	}
 }
 
-func (_ *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&dockerCfg)
 }
 
-func (_ *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &dockerCfg
 }

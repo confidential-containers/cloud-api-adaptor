@@ -47,15 +47,15 @@ func (r MetadataRetriever) get(path string) (string, error) {
 
 func retrieveMissingConfig(cfg *Config) error {
 	mdr := newMetadataRetriever()
-	if cfg.SubnetId == "" {
+	if cfg.SubnetID == "" {
 		logger.Printf("SubnetId was not provided, trying to fetch it from IMDS")
-		subnetIdPath := fmt.Sprintf("network/interfaces/macs/%s/subnet-id", mdr.mac)
-		subnetId, err := mdr.get(subnetIdPath)
+		subnetIDPath := fmt.Sprintf("network/interfaces/macs/%s/subnet-id", mdr.mac)
+		subnetID, err := mdr.get(subnetIDPath)
 		if err != nil {
 			return err
 		}
-		cfg.SubnetId = subnetId
-		logger.Printf("\"%s\" SubnetId retrieved from IMDS", subnetId)
+		cfg.SubnetID = subnetID
+		logger.Printf("\"%s\" SubnetId retrieved from IMDS", subnetID)
 	}
 	if cfg.Region == "" {
 		logger.Printf("Region was not provided, trying to fetch it from IMDS")

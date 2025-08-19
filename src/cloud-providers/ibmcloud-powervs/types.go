@@ -1,16 +1,16 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package ibmcloud_powervs
+package ibmcloudpowervs
 
 import "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 
 type Config struct {
-	ApiKey            string
+	APIKey            string
 	Zone              string
 	ServiceInstanceID string
 	NetworkID         string
-	ImageId           string
+	ImageID           string
 	SSHKey            string
 	Memory            float64
 	Processors        float64

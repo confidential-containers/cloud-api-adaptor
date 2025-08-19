@@ -127,7 +127,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	// If root volume size is set, then get the device name from the AMI and update the serviceConfig
 	if config.RootVolumeSize > 0 {
 		// Get the device name from the AMI
-		deviceName, deviceSize, err := provider.getDeviceNameAndSize(config.ImageId)
+		deviceName, deviceSize, err := provider.getDeviceNameAndSize(config.ImageID)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +151,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		// Update the serviceConfig with the device name
 		config.RootDeviceName = deviceName
 
-		logger.Printf("RootDeviceName and RootVolumeSize of the image %s is %s, %d", config.ImageId, config.RootDeviceName, config.RootVolumeSize)
+		logger.Printf("RootDeviceName and RootVolumeSize of the image %s is %s, %d", config.ImageID, config.RootDeviceName, config.RootVolumeSize)
 	}
 
 	if err := provider.updateInstanceTypeSpecList(); err != nil {
@@ -238,20 +238,20 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		}
 	} else {
 
-		imageId := p.serviceConfig.ImageId
+		imageID := p.serviceConfig.ImageID
 
 		if spec.Image != "" {
 			logger.Printf("Choosing %s from annotation as the AWS AMI for the PodVM image", spec.Image)
-			imageId = spec.Image
+			imageID = spec.Image
 		}
 
 		input = &ec2.RunInstancesInput{
 			MinCount:          aws.Int32(1),
 			MaxCount:          aws.Int32(1),
-			ImageId:           aws.String(imageId),
+			ImageId:           aws.String(imageID),
 			InstanceType:      types.InstanceType(instanceType),
 			SecurityGroupIds:  p.serviceConfig.SecurityGroupIds,
-			SubnetId:          aws.String(p.serviceConfig.SubnetId),
+			SubnetId:          aws.String(p.serviceConfig.SubnetID),
 			UserData:          &b64EncData,
 			TagSpecifications: tagSpecifications,
 		}
@@ -265,7 +265,7 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 				{
 					AssociatePublicIpAddress: aws.Bool(true),
 					DeviceIndex:              aws.Int32(0),
-					SubnetId:                 aws.String(p.serviceConfig.SubnetId),
+					SubnetId:                 aws.String(p.serviceConfig.SubnetID),
 					Groups:                   p.serviceConfig.SecurityGroupIds,
 					DeleteOnTermination:      aws.Bool(true),
 				},
@@ -334,13 +334,13 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	}
 
 	if spec.MultiNic {
-		nIfaceId, err := p.createAddonNICforInstance(ctx, instanceID)
+		nIfaceID, err := p.createAddonNICforInstance(ctx, instanceID)
 		if err != nil {
 			return nil, err
 		}
 		// If public IP is set, then create an ElasticIP and associate it with this secondary interface
 		if p.serviceConfig.UsePublicIP {
-			err = p.createElasticIPforInstance(ctx, instanceID, nIfaceId)
+			err = p.createElasticIPforInstance(ctx, instanceID, nIfaceID)
 			if err != nil {
 				return nil, err
 			}
@@ -387,7 +387,7 @@ func (p *awsProvider) Teardown() error {
 }
 
 func (p *awsProvider) ConfigVerifier() error {
-	if len(p.serviceConfig.ImageId) == 0 {
+	if len(p.serviceConfig.ImageID) == 0 {
 		return errNoImageID
 	}
 	return nil
@@ -505,12 +505,12 @@ func (p *awsProvider) getPublicIP(ctx context.Context, instanceID string) (netip
 }
 
 // Create a NIC and attach it to the instance
-func (p *awsProvider) createAddonNICforInstance(ctx context.Context, instanceID string) (nIfaceId *string, err error) {
+func (p *awsProvider) createAddonNICforInstance(ctx context.Context, instanceID string) (nIfaceID *string, err error) {
 	// Create network interface
 	// Add create network interface input
 	nicName := fmt.Sprintf("nic-%s", instanceID)
 	createNetworkInterfaceInput := &ec2.CreateNetworkInterfaceInput{
-		SubnetId: aws.String(p.serviceConfig.SubnetId),
+		SubnetId: aws.String(p.serviceConfig.SubnetID),
 		Groups:   p.serviceConfig.SecurityGroupIds,
 
 		TagSpecifications: []types.TagSpecification{
@@ -531,7 +531,7 @@ func (p *awsProvider) createAddonNICforInstance(ctx context.Context, instanceID 
 		return nil, fmt.Errorf("failed to create a network interface: %v", err)
 	}
 
-	nIfaceId = nic.NetworkInterface.NetworkInterfaceId
+	nIfaceID = nic.NetworkInterface.NetworkInterfaceId
 
 	// Wait for instance to be ready before attaching the network interface
 	describeInstanceInput := &ec2.DescribeInstancesInput{
@@ -547,14 +547,14 @@ func (p *awsProvider) createAddonNICforInstance(ctx context.Context, instanceID 
 	// Attach network interface
 	attachNetworkInterfaceInput := &ec2.AttachNetworkInterfaceInput{
 		InstanceId:         aws.String(instanceID),
-		NetworkInterfaceId: nIfaceId,
+		NetworkInterfaceId: nIfaceID,
 		DeviceIndex:        aws.Int32(1),
 	}
 
 	nicAttachOp, err := p.ec2Client.AttachNetworkInterface(ctx, attachNetworkInterfaceInput)
 	if err != nil {
 		_, nicDelErr := p.ec2Client.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
-			NetworkInterfaceId: nIfaceId,
+			NetworkInterfaceId: nIfaceID,
 		})
 		if nicDelErr != nil {
 			logger.Printf("failed to delete the network interface: %v", nicDelErr)
@@ -574,19 +574,19 @@ func (p *awsProvider) createAddonNICforInstance(ctx context.Context, instanceID 
 			AttachmentId:        nicAttachOp.AttachmentId,
 			DeleteOnTermination: aws.Bool(true),
 		},
-		NetworkInterfaceId: nIfaceId,
+		NetworkInterfaceId: nIfaceID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to modify the network interface attribute: %v", err)
 	}
 
-	logger.Printf("created a network interface %s and attached it to the instance %s", *nIfaceId, instanceID)
+	logger.Printf("created a network interface %s and attached it to the instance %s", *nIfaceID, instanceID)
 
-	return nIfaceId, nil
+	return nIfaceID, nil
 }
 
 // Create Elastic IP and attach it to the interface
-func (p *awsProvider) createElasticIPforInstance(ctx context.Context, instanceID string, nIfaceId *string) error {
+func (p *awsProvider) createElasticIPforInstance(ctx context.Context, instanceID string, nIfaceID *string) error {
 	eipName := fmt.Sprintf("eip-%s", instanceID)
 
 	// Create Elastic IP. Allocate from AWS pool
@@ -624,7 +624,7 @@ func (p *awsProvider) createElasticIPforInstance(ctx context.Context, instanceID
 	_, err = p.ec2Client.AssociateAddress(ctx, &ec2.AssociateAddressInput{
 		AllocationId:       eip.AllocationId,
 		AllowReassociation: aws.Bool(true),
-		NetworkInterfaceId: nIfaceId,
+		NetworkInterfaceId: nIfaceID,
 	})
 	if err != nil {
 		// Release the Elastic IP address

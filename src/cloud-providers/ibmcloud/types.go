@@ -60,7 +60,7 @@ func toList(value, sep string) []string {
 }
 
 type Config struct {
-	ApiKey                   string
+	APIKey                   string
 	IAMProfileID             string
 	CRTokenFileName          string
 	IamServiceURL            string

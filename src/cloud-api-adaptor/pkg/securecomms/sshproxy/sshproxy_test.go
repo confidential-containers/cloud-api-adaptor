@@ -28,7 +28,7 @@ func getSigner(t *testing.T) ssh.Signer {
 	return signer
 }
 
-func getPeers(t *testing.T) (clientSshPeer, serverSshPeer *SshPeer) {
+func getPeers(t *testing.T) (clientSSHPeer, serverSSHPeer *SSHPeer) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Error(err)
@@ -68,21 +68,21 @@ func getPeers(t *testing.T) (clientSshPeer, serverSshPeer *SshPeer) {
 
 	done := make(chan bool)
 	go func() {
-		serverNetConn, serverChans, serverSshReqs, err := ssh.NewServerConn(serverConn, serverConfig)
+		serverNetConn, serverChans, serverSSHReqs, err := ssh.NewServerConn(serverConn, serverConfig)
 		if err != nil {
 			logger.Panicf("failed to NewServerConn server: %v", err)
 		}
 
-		serverSshPeer = NewSshPeer(context.Background(), ATTESTATION, serverNetConn, serverChans, serverSshReqs, "")
+		serverSSHPeer = NewSSHPeer(context.Background(), Attestation, serverNetConn, serverChans, serverSSHReqs, "")
 		close(done)
 	}()
 
-	clientNetConn, clientChans, clientSshReqs, err := ssh.NewClientConn(clientConn, serverAddr, clientConfig)
+	clientNetConn, clientChans, clientSSHReqs, err := ssh.NewClientConn(clientConn, serverAddr, clientConfig)
 	if err != nil {
 		t.Errorf("failed to NewServerConn client: %v", err)
 	}
 
-	clientSshPeer = NewSshPeer(context.Background(), ATTESTATION, clientNetConn, clientChans, clientSshReqs, "")
+	clientSSHPeer = NewSSHPeer(context.Background(), Attestation, clientNetConn, clientChans, clientSSHReqs, "")
 	<-done
 	return
 }
@@ -90,7 +90,7 @@ func getPeers(t *testing.T) (clientSshPeer, serverSshPeer *SshPeer) {
 func TestSshProxy(t *testing.T) {
 	var wg sync.WaitGroup
 
-	clientSshPeer, serverSshPeer := getPeers(t)
+	clientSSHPeer, serverSSHPeer := getPeers(t)
 
 	outbounds := Outbounds{}
 	if err := outbounds.AddTags([]string{"ATTESTATION_PHASE:ABC:127.0.0.1:7020", "  	"}); err != nil {
@@ -102,17 +102,17 @@ func TestSshProxy(t *testing.T) {
 		t.Error(err)
 	}
 
-	serverSshPeer.AddOutbounds(outbounds)
-	clientSshPeer.AddInbounds(inbounds)
+	serverSSHPeer.AddOutbounds(outbounds)
+	clientSSHPeer.AddInbounds(inbounds)
 
-	clientSshPeer.Ready()
-	serverSshPeer.Ready()
+	clientSSHPeer.Ready()
+	serverSSHPeer.Ready()
 
-	s := test.HttpServer("7020")
+	s := test.HTTPServer("7020")
 	if s == nil {
 		t.Error("Failed - could not create server")
 	}
-	success := test.HttpClient("http://127.0.0.1:7010")
+	success := test.HTTPClient("http://127.0.0.1:7010")
 	if !success {
 		t.Error("Failed - not successful")
 	}
@@ -120,11 +120,11 @@ func TestSshProxy(t *testing.T) {
 		t.Error(err)
 	}
 
-	serverSshPeer.Upgrade()
-	serverSshPeer.Close("Test Finish")
+	serverSSHPeer.Upgrade()
+	serverSSHPeer.Close("Test Finish")
 
-	clientSshPeer.Wait()
-	if !clientSshPeer.IsUpgraded() {
+	clientSSHPeer.Wait()
+	if !clientSSHPeer.IsUpgraded() {
 		t.Errorf("attestation phase closed without being upgraded")
 	}
 	inbounds.DelAll()
@@ -133,7 +133,7 @@ func TestSshProxy(t *testing.T) {
 func TestSshProxyWithNamespace(t *testing.T) {
 	var wg sync.WaitGroup
 
-	clientSshPeer, serverSshPeer := getPeers(t)
+	clientSSHPeer, serverSSHPeer := getPeers(t)
 
 	testNs, testNsStr := tuntest.NewNamedNS(t, "test-TestSshProxyWithNamespace")
 	defer tuntest.DeleteNamedNS(t, testNs)
@@ -150,18 +150,18 @@ func TestSshProxyWithNamespace(t *testing.T) {
 		return
 	}
 
-	serverSshPeer.AddOutbounds(outbounds)
-	clientSshPeer.AddInbounds(inbounds)
+	serverSSHPeer.AddOutbounds(outbounds)
+	clientSSHPeer.AddInbounds(inbounds)
 
-	clientSshPeer.Ready()
-	serverSshPeer.Ready()
+	clientSSHPeer.Ready()
+	serverSSHPeer.Ready()
 
-	s := test.HttpServer("7020")
+	s := test.HTTPServer("7020")
 	if s == nil {
 		t.Error("Failed - could not create server")
 		return
 	}
-	success := test.HttpClientInNamespace("http://127.0.0.1:7010", testNs.Path())
+	success := test.HTTPClientInNamespace("http://127.0.0.1:7010", testNs.Path())
 	if !success {
 		t.Error("Failed - not successful")
 		return
@@ -171,11 +171,11 @@ func TestSshProxyWithNamespace(t *testing.T) {
 		return
 	}
 
-	serverSshPeer.Upgrade()
-	serverSshPeer.Close("Test Finish")
+	serverSSHPeer.Upgrade()
+	serverSSHPeer.Close("Test Finish")
 
-	clientSshPeer.Wait()
-	if !clientSshPeer.IsUpgraded() {
+	clientSSHPeer.Wait()
+	if !clientSSHPeer.IsUpgraded() {
 		t.Errorf("attestation phase closed without being upgraded")
 		return
 	}
@@ -185,7 +185,7 @@ func TestSshProxyWithNamespace(t *testing.T) {
 func TestSshProxyReverse(t *testing.T) {
 	var wg sync.WaitGroup
 
-	clientSshPeer, serverSshPeer := getPeers(t)
+	clientSSHPeer, serverSSHPeer := getPeers(t)
 
 	outbounds := Outbounds{}
 	if err := outbounds.AddTags([]string{"ATTESTATION_PHASE:XYZ:7001"}); err != nil {
@@ -197,17 +197,17 @@ func TestSshProxyReverse(t *testing.T) {
 		t.Errorf("Unable to add inbounds: %v", err)
 	}
 
-	clientSshPeer.AddOutbounds(outbounds)
-	serverSshPeer.AddInbounds(inbounds)
+	clientSSHPeer.AddOutbounds(outbounds)
+	serverSSHPeer.AddInbounds(inbounds)
 
-	clientSshPeer.Ready()
-	serverSshPeer.Ready()
+	clientSSHPeer.Ready()
+	serverSSHPeer.Ready()
 
-	s := test.HttpServer("7001")
+	s := test.HTTPServer("7001")
 	if s == nil {
 		t.Error("Failed - could not create server")
 	}
-	success := test.HttpClient("http://127.0.0.1:7011")
+	success := test.HTTPClient("http://127.0.0.1:7011")
 	if !success {
 		t.Error("Failed - not successful")
 	}
@@ -215,11 +215,11 @@ func TestSshProxyReverse(t *testing.T) {
 		t.Error(err)
 	}
 
-	serverSshPeer.Upgrade()
-	serverSshPeer.Close("Test Finish")
+	serverSSHPeer.Upgrade()
+	serverSSHPeer.Close("Test Finish")
 
-	clientSshPeer.Wait()
-	if !clientSshPeer.IsUpgraded() {
+	clientSSHPeer.Wait()
+	if !clientSSHPeer.IsUpgraded() {
 		t.Errorf("attestation phase closed without being upgraded")
 	}
 }
@@ -227,7 +227,7 @@ func TestSshProxyReverse(t *testing.T) {
 func TestSshProxyReverseKBS(t *testing.T) {
 	var wg sync.WaitGroup
 
-	clientSshPeer, serverSshPeer := getPeers(t)
+	clientSSHPeer, serverSSHPeer := getPeers(t)
 
 	outbounds := Outbounds{}
 	if err := outbounds.AddTags([]string{"ATTESTATION_PHASE:KBS:7002"}); err != nil {
@@ -239,17 +239,17 @@ func TestSshProxyReverseKBS(t *testing.T) {
 		t.Errorf("Unable to add inbounds: %v", err)
 	}
 
-	clientSshPeer.AddOutbounds(outbounds)
-	serverSshPeer.AddInbounds(inbounds)
+	clientSSHPeer.AddOutbounds(outbounds)
+	serverSSHPeer.AddInbounds(inbounds)
 
-	clientSshPeer.Ready()
-	serverSshPeer.Ready()
+	clientSSHPeer.Ready()
+	serverSSHPeer.Ready()
 
-	s := test.HttpServer("7002")
+	s := test.HTTPServer("7002")
 	if s == nil {
 		t.Error("Failed - could not create server")
 	}
-	success := test.HttpClient("http://127.0.0.1:7012")
+	success := test.HTTPClient("http://127.0.0.1:7012")
 	if !success {
 		t.Error("Failed - not successful")
 	}
@@ -257,11 +257,11 @@ func TestSshProxyReverseKBS(t *testing.T) {
 		t.Error(err)
 	}
 
-	serverSshPeer.Upgrade()
-	serverSshPeer.Close("Test finished")
+	serverSSHPeer.Upgrade()
+	serverSSHPeer.Close("Test finished")
 
-	clientSshPeer.Wait()
-	if !clientSshPeer.IsUpgraded() {
+	clientSSHPeer.Wait()
+	if !clientSSHPeer.IsUpgraded() {
 		t.Errorf("attestation phase closed without being upgraded")
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
-	peerpodvolumeV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolume "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
@@ -131,7 +130,7 @@ func (s *PodVMNodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeEx
 	return
 }
 
-func (s *PodVMNodeService) ReproduceNodeStageVolume(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume) {
+func (s *PodVMNodeService) ReproduceNodeStageVolume(peerPodVolume *v1alpha1.PeerpodVolume) {
 	glog.Infof("Reproducing NodeStageVolumeRequest for peer pod")
 	wrapperRequest := peerPodVolume.Spec.WrapperNodeStageVolumeReq
 	var modifiedRequest csi.NodeStageVolumeRequest
@@ -192,7 +191,7 @@ func (s *PodVMNodeService) ReproduceNodeStageVolume(peerPodVolume *peerpodvolume
 	}
 }
 
-func (s *PodVMNodeService) ReproduceNodePublishVolume(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume) {
+func (s *PodVMNodeService) ReproduceNodePublishVolume(peerPodVolume *v1alpha1.PeerpodVolume) {
 	glog.Infof("Reproducing nodePublishVolumeRequest for peer pod")
 	wrapperRequest := peerPodVolume.Spec.WrapperNodePublishVolumeReq
 	var nodePublishVolumeRequest csi.NodePublishVolumeRequest
@@ -236,7 +235,7 @@ func (s *PodVMNodeService) ReproduceNodePublishVolume(peerPodVolume *peerpodvolu
 	}
 }
 
-func (s *PodVMNodeService) ReproduceNodeUnpublishVolume(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume) {
+func (s *PodVMNodeService) ReproduceNodeUnpublishVolume(peerPodVolume *v1alpha1.PeerpodVolume) {
 	glog.Infof("Reproducing nodeUnPublishVolumeRequest for peer pod")
 	wrapperRequest := peerPodVolume.Spec.WrapperNodeUnpublishVolumeReq
 	var nodeUnpublishVolumeRequest csi.NodeUnpublishVolumeRequest
@@ -264,7 +263,7 @@ func (s *PodVMNodeService) ReproduceNodeUnpublishVolume(peerPodVolume *peerpodvo
 	}
 }
 
-func (s *PodVMNodeService) ReproduceNodeUnstageVolume(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume) {
+func (s *PodVMNodeService) ReproduceNodeUnstageVolume(peerPodVolume *v1alpha1.PeerpodVolume) {
 	glog.Infof("Reproducing nodeUnstageVolumeRequest for peer pod")
 	wrapperRequest := peerPodVolume.Spec.WrapperNodeUnstageVolumeReq
 	var nodeUnstageVolumeRequest csi.NodeUnstageVolumeRequest
@@ -292,7 +291,7 @@ func (s *PodVMNodeService) ReproduceNodeUnstageVolume(peerPodVolume *peerpodvolu
 	}
 }
 
-func (s *PodVMNodeService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume) {
+func (s *PodVMNodeService) SyncHandler(peerPodVolume *v1alpha1.PeerpodVolume) {
 	if peerPodVolume.Spec.PodName != os.Getenv("POD_NAME") || peerPodVolume.Spec.PodNamespace != os.Getenv("POD_NAME_SPACE") {
 		// Only handle the podvm related PeerpodVolume CRD
 		glog.Infof("Only handle the PeerpodVolume crd object for POD_NAME:%v, POD_NAME_SPACE:%v", os.Getenv("POD_NAME"), os.Getenv("POD_NAME_SPACE"))
@@ -300,17 +299,17 @@ func (s *PodVMNodeService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.Peer
 	}
 	glog.Infof("syncHandler from podvm nodeService: %v ", peerPodVolume)
 	switch peerPodVolume.Status.State {
-	case peerpodvolumeV1alpha1.ControllerPublishVolumeApplied:
+	case v1alpha1.ControllerPublishVolumeApplied:
 		s.ReproduceNodeStageVolume(peerPodVolume)
-	case peerpodvolumeV1alpha1.NodeStageVolumeApplied:
+	case v1alpha1.NodeStageVolumeApplied:
 		s.ReproduceNodePublishVolume(peerPodVolume)
-	case peerpodvolumeV1alpha1.NodeUnpublishVolumeCached:
+	case v1alpha1.NodeUnpublishVolumeCached:
 		s.ReproduceNodeUnpublishVolume(peerPodVolume)
-	case peerpodvolumeV1alpha1.NodeUnstageVolumeCached:
+	case v1alpha1.NodeUnstageVolumeCached:
 		s.ReproduceNodeUnstageVolume(peerPodVolume)
 	}
 }
 
-func (s *PodVMNodeService) DeleteFunction(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume) {
+func (s *PodVMNodeService) DeleteFunction(peerPodVolume *v1alpha1.PeerpodVolume) {
 	glog.Infof("deleteFunction from podvm nodeService: %v ", peerPodVolume)
 }

@@ -23,7 +23,7 @@ type PeerpodVolume struct {
 type PeerpodVolumeSpec struct {
 	PodName                           string `json:"podName"`
 	PodNamespace                      string `json:"podNamespace"`
-	PodUid                            string `json:"podUid"`
+	PodUID                            string `json:"podUid"`
 	NodeID                            string `json:"nodeID"`
 	NodeName                          string `json:"nodeName"`
 	VolumeID                          string `json:"volumeID"`

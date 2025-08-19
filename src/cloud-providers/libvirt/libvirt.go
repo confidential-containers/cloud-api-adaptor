@@ -66,7 +66,7 @@ func checkDomainExistsByName(name string, libvirtClient *libvirtClient) (exist b
 
 }
 
-func checkDomainExistsById(id uint32, libvirtClient *libvirtClient) (exist bool, err error) {
+func checkDomainExistsByID(id uint32, libvirtClient *libvirtClient) (exist bool, err error) {
 
 	logger.Printf("Checking if instance (%d) exists", id)
 	domain, err := libvirtClient.connection.LookupDomainById(id)
@@ -525,14 +525,14 @@ func getDomainIPs(dom *libvirt.Domain) ([]netip.Addr, error) {
 	domIfList, err := dom.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 	if err != nil {
 		domName, _ := dom.GetName()
-		return nil, fmt.Errorf("Failed to get domain %s interfaces: %s", domName, err)
+		return nil, fmt.Errorf("failed to get domain %s interfaces: %s", domName, err)
 	}
 
 	for _, domIf := range domIfList {
 		for _, addr := range domIf.Addrs {
 			parsedAddr, err := netip.ParseAddr(addr.Addr)
 			if err != nil {
-				return nil, fmt.Errorf("Failed to parse address: %s", err)
+				return nil, fmt.Errorf("failed to parse address: %s", err)
 			}
 			ips = append(ips, parsedAddr)
 		}
@@ -547,7 +547,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 
 	exists, err := checkDomainExistsByName(v.name, libvirtClient)
 	if err != nil {
-		return nil, fmt.Errorf("Error in checking instance: %s", err)
+		return nil, fmt.Errorf("error in checking instance: %s", err)
 	}
 	if exists {
 		logger.Printf("Instance already exists ")
@@ -559,7 +559,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	rootVolName := v.name + "-root.qcow2"
 	err = createVolume(rootVolName, v.rootDiskSize, libvirtClient.volName, libvirtClient)
 	if err != nil {
-		return nil, fmt.Errorf("Error in creating volume: %s", err)
+		return nil, fmt.Errorf("error in creating volume: %s", err)
 	}
 
 	cloudInitIso, err := createCloudInitISO(v)
@@ -570,17 +570,17 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	isoVolName := v.name + "-cloudinit.iso"
 	isoVolFile, err := uploadIso(cloudInitIso, isoVolName, libvirtClient)
 	if err != nil {
-		return nil, fmt.Errorf("Error in uploading iso volume: %s", err)
+		return nil, fmt.Errorf("error in uploading iso volume: %s", err)
 	}
 
 	rootVol, err := getVolume(libvirtClient, rootVolName)
 	if err != nil {
-		return nil, fmt.Errorf("Error retrieving volume: %s", err)
+		return nil, fmt.Errorf("error retrieving volume: %s", err)
 	}
 
 	rootVolFile, err := rootVol.GetPath()
 	if err != nil {
-		return nil, fmt.Errorf("Error retrieving volume path: %s", err)
+		return nil, fmt.Errorf("error retrieving volume path: %s", err)
 	}
 
 	domainCfg := domainConfig{
@@ -600,29 +600,29 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	logger.Printf("Create XML for '%s'", v.name)
 	domXML, err := domCfg.Marshal()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create domain xml: %s", err)
+		return nil, fmt.Errorf("failed to create domain xml: %s", err)
 	}
 
 	logger.Printf("Creating VM '%s'", v.name)
 	dom, err := libvirtClient.connection.DomainDefineXML(domXML)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to define domain: %s", err)
+		return nil, fmt.Errorf("failed to define domain: %s", err)
 	}
 
 	// Start Domain.
 	logger.Printf("Starting VM '%s'", v.name)
 	err = dom.Create()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to start VM: %s", err)
+		return nil, fmt.Errorf("failed to start VM: %s", err)
 	}
 
 	id, err := dom.GetID()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get domain ID: %s", err)
+		return nil, fmt.Errorf("failed to get domain ID: %s", err)
 	}
 
-	v.instanceId = strconv.FormatUint(uint64(id), 10)
-	logger.Printf("VM id %s", v.instanceId)
+	v.instanceID = strconv.FormatUint(uint64(id), 10)
+	logger.Printf("VM id %s", v.instanceID)
 
 	// Wait for sometime for the IP to be visible
 	if err := retry.Do(
@@ -630,24 +630,24 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 			ips, err := getDomainIPs(dom)
 			if err != nil {
 				// Something went completely wrong so it should return immediately
-				return retry.Unrecoverable(fmt.Errorf("Internal error on getting domain IPs: %s", err))
+				return retry.Unrecoverable(fmt.Errorf("internal error on getting domain IPs: %s", err))
 			}
 
 			if len(ips) > 0 {
 				return nil
 			}
-			return fmt.Errorf("Domain has not IPs assigned yet")
+			return fmt.Errorf("domain has not IPs assigned yet")
 		},
 		retry.Attempts(GetDomainIPsRetries),
 		retry.Delay(GetDomainIPsSleep),
 	); err != nil {
 		logger.Printf("Unable to get IP addresses after %d retries (sleep time=%ds): %s",
 			GetDomainIPsRetries, GetDomainIPsSleep, err)
-		return nil, fmt.Errorf("Domain (id=%d) IP addresses not found", id)
+		return nil, fmt.Errorf("domain (id=%d) IP addresses not found", id)
 	}
 
 	if v.ips, err = getDomainIPs(dom); err != nil {
-		return nil, fmt.Errorf("Internal error on getting domain IPs: %s", err)
+		return nil, fmt.Errorf("internal error on getting domain IPs: %s", err)
 	}
 
 	logger.Printf("Instance created successfully")
@@ -661,7 +661,7 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, id string) 
 	logger.Printf("Deleting instance (%s)", id)
 	idUint, _ := strconv.ParseUint(id, 10, 32)
 	// libvirt API takes uint32
-	exists, err := checkDomainExistsById(uint32(idUint), libvirtClient)
+	exists, err := checkDomainExistsByID(uint32(idUint), libvirtClient)
 	if err != nil {
 		logger.Printf("Unable to check instance (%s)", id)
 		return err

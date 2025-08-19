@@ -55,13 +55,13 @@ func (c *Checker) GetAllPeerPods(startTime time.Time) (ready bool, err error) {
 			if condition.Type != corev1.PodReady {
 				continue
 			}
-			logger.Printf("Dealing with PeerPod: %s, with Ready condition: %v", pod.ObjectMeta.Name, condition)
+			logger.Printf("Dealing with PeerPod: %s, with Ready condition: %v", pod.Name, condition)
 			if condition.Status != corev1.ConditionTrue {
-				return false, fmt.Errorf("PeerPod %s is not Ready.", pod.ObjectMeta.Name)
+				return false, fmt.Errorf("PeerPod %s is not Ready", pod.Name)
 			}
 
 			if condition.LastTransitionTime.Time.Before(startTime) {
-				return false, fmt.Errorf("PeerPod %s has not been restarted.", pod.ObjectMeta.Name)
+				return false, fmt.Errorf("PeerPod %s has not been restarted", pod.Name)
 			}
 		}
 	}
@@ -92,5 +92,5 @@ func GetRuntimeclassName() string {
 	if runtimeclassName != "" {
 		return runtimeclassName
 	}
-	return DEFAULT_CC_RUNTIMECLASS_NAME
+	return DefaultCCRuntimeClassName
 }

@@ -47,9 +47,9 @@ func NewProvider(config *Config) (provider.Provider, error) {
 
 	var authenticator core.Authenticator
 
-	if config.ApiKey != "" {
+	if config.APIKey != "" {
 		authenticator = &core.IamAuthenticator{
-			ApiKey: config.ApiKey,
+			ApiKey: config.APIKey,
 			URL:    config.IamServiceURL,
 		}
 	} else if config.IAMProfileID != "" {
@@ -157,11 +157,11 @@ func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourc
 	return
 }
 
-func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageId string) *vpcv1.InstancePrototype {
+func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageID string) *vpcv1.InstancePrototype {
 
 	prototype := &vpcv1.InstancePrototype{
 		Name:     &instanceName,
-		Image:    &vpcv1.ImageIdentity{ID: &imageId},
+		Image:    &vpcv1.ImageIdentity{ID: &imageID},
 		UserData: &userData,
 		Profile:  &vpcv1.InstanceProfileIdentity{Name: &instanceProfile},
 		Zone:     &vpcv1.ZoneIdentity{Name: &p.serviceConfig.ZoneName},
@@ -196,7 +196,7 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 
 	if p.serviceConfig.SecondarySubnetID != "" {
 
-		var allowIPSpoofing bool = true
+		var allowIPSpoofing = true
 
 		prototype.NetworkInterfaces = []vpcv1.NetworkInterfacePrototype{
 			{

@@ -52,8 +52,8 @@ func gcpFindVM(prefixName string) (*computepb.Instance, error) {
 }
 
 func (c GCPCloudAssert) HasPodVM(t *testing.T, id string) {
-	pod_vm_prefix := "podvm-" + id
-	vm, err := gcpFindVM(pod_vm_prefix)
+	podVMPrefix := "podvm-" + id
+	vm, err := gcpFindVM(podVMPrefix)
 	if vm != nil {
 		t.Logf("Vitural machine %s found.", id)
 	} else {

@@ -23,7 +23,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
-	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/wnssh"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
@@ -99,7 +99,7 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
 	serverConfig *ServerConfig, sshport string) Service {
 	var err error
-	var sshClient *wnssh.SshClient
+	var sshClient *wnssh.SSHClient
 
 	if serverConfig.SecureComms {
 		inbounds := append([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, strings.Split(serverConfig.SecureCommsInbounds, ",")...)
@@ -110,7 +110,7 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 			outbounds = append(outbounds, "BOTH_PHASES:KBS:"+serverConfig.SecureCommsKbsAddress)
 		}
 
-		sshClient, err = wnssh.InitSshClient(inbounds, outbounds, serverConfig.SecureCommsTrustee, serverConfig.SecureCommsKbsAddress, sshport)
+		sshClient, err = wnssh.InitSSHClient(inbounds, outbounds, serverConfig.SecureCommsTrustee, serverConfig.SecureCommsKbsAddress, sshport)
 		if err != nil {
 			log.Fatalf("InitSshClient %v", err)
 		}
@@ -268,7 +268,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		daemonConfig.TLSServerKey = string(keyPEM)
 	}
 
-	var sshCi *wnssh.SshClientInstance
+	var sshCi *wnssh.SSHClientInstance
 
 	if s.sshClient != nil {
 		var ppPrivateKey []byte
@@ -318,7 +318,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 			logger.Printf("Credentials file is too large to be included in cloud-config")
 		} else {
 			cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-				Path:    AuthFilePath,
+				Path:    paths.AuthFilePath,
 				Content: string(authJSON),
 			})
 		}
@@ -337,7 +337,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	if initdataEnc != "" {
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    InitDataPath,
+			Path:    paths.InitDataPath,
 			Content: initdataEnc,
 		})
 	}
@@ -345,7 +345,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	// Set encrypted scratch space config
 	if s.serverConfig.EnableScratchSpace {
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    ScratchSpacePath,
+			Path:    paths.ScratchSpacePath,
 			Content: "",
 		})
 	}

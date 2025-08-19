@@ -318,7 +318,7 @@ func (m *agentMock) GetVolumeStats(ctx context.Context, req *pb.VolumeStatsReque
 func (m *agentMock) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeRequest) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
-func (p *agentMock) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (*emptypb.Empty, error) {
+func (m *agentMock) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
 func (m *agentMock) Check(ctx context.Context, req *pb.CheckRequest) (*pb.HealthCheckResponse, error) {

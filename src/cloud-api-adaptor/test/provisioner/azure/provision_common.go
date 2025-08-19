@@ -260,7 +260,7 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 
 	_, err = pollerResp.PollUntilDone(ctx, nil)
 	if err != nil {
-		err = fmt.Errorf("waiting for cluster %q to be ready: %w.", AzureProps.ClusterName, err)
+		err = fmt.Errorf("waiting for cluster %q to be ready: %w", AzureProps.ClusterName, err)
 		log.Errorf("%v", err)
 		return err
 	}
@@ -276,11 +276,11 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 	}
 
 	// Fetch aks-rg details
-	aks_rg := *cluster.Properties.NodeResourceGroup
+	aksRG := *cluster.Properties.NodeResourceGroup
 
 	// Fetch default vnet name
 	vnetName := ""
-	pager := AzureProps.ManagedVnetClient.NewListPager(aks_rg, nil)
+	pager := AzureProps.ManagedVnetClient.NewListPager(aksRG, nil)
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
@@ -291,7 +291,7 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 		}
 	}
 
-	virtualNetwork, err := AzureProps.ManagedVnetClient.Get(ctx, aks_rg, vnetName, nil)
+	virtualNetwork, err := AzureProps.ManagedVnetClient.Get(ctx, aksRG, vnetName, nil)
 	if err != nil {
 		return fmt.Errorf("failed to fetch vnet: %q: %v", vnetName, err)
 	}
@@ -355,7 +355,7 @@ func getPropertiesImpl() map[string]string {
 		"CLUSTER_NAME":          AzureProps.ClusterName,
 		"AZURE_REGION":          AzureProps.Location,
 		"SSH_KEY_ID":            AzureProps.SSHKeyID,
-		"SSH_USERNAME":          AzureProps.SshUserName,
+		"SSH_USERNAME":          AzureProps.SSHUserName,
 		"AZURE_IMAGE_ID":        AzureProps.ImageID,
 		"AZURE_SUBNET_ID":       AzureProps.SubnetID,
 		"AZURE_INSTANCE_SIZE":   AzureProps.InstanceSize,

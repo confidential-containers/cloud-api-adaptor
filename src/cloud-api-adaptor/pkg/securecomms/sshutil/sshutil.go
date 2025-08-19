@@ -10,8 +10,8 @@ import (
 const SSHPORT = "2222"
 const PpSecureCommsVersion = "v0.2"
 const KBS = "KBS"
-const KBS_CLIENT_SECRET = "kbs-client"
-const ADAPTOR_SSH_SECRET = "sshclient"
+const KBSClientSecret = "kbs-client"
+const AdaptorSSHSecret = "sshclient"
 
 var Logger = log.New(log.Writer(), "[secure-comms] ", log.LstdFlags|log.Lmsgprefix)
 

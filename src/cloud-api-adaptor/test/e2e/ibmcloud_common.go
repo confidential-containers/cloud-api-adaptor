@@ -328,7 +328,7 @@ func (c IBMCloudAssert) GetInstanceType(t *testing.T, podName string) (string, e
 			return *profile, nil
 		}
 	}
-	return "", errors.New("Failed to Create PodVM Instance")
+	return "", errors.New("failed to Create PodVM Instance")
 }
 
 func GetIBMInstanceProfileType(prefix string, config string) string {
@@ -348,7 +348,7 @@ type IBMRollingUpdateAssert struct {
 	InstanceIDs [2]string
 }
 
-func (c *IBMRollingUpdateAssert) CachePodVmIDs(t *testing.T, deploymentName string) {
+func (c *IBMRollingUpdateAssert) CachePodVMIDs(t *testing.T, deploymentName string) {
 	options := &vpcv1.ListInstancesOptions{
 		VPCID: &pv.IBMCloudProps.VpcID,
 	}
@@ -369,7 +369,7 @@ func (c *IBMRollingUpdateAssert) CachePodVmIDs(t *testing.T, deploymentName stri
 	}
 }
 
-func (c *IBMRollingUpdateAssert) VerifyOldVmDeleted(t *testing.T) {
+func (c *IBMRollingUpdateAssert) VerifyOldVMDeleted(t *testing.T) {
 	for _, id := range c.InstanceIDs {
 		options := &vpcv1.GetInstanceOptions{
 			ID: &id,

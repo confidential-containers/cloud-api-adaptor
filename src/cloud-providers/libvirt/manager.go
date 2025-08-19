@@ -32,7 +32,7 @@ func init() {
 	provider.AddCloudProvider("libvirt", &Manager{})
 }
 
-func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
 
 	flags.StringVar(&libvirtcfg.URI, "uri", defaultURI, "libvirt URI")
 	flags.StringVar(&libvirtcfg.PoolName, "pool-name", defaultPoolName, "libvirt storage pool")
@@ -46,7 +46,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 }
 
-func (_ *Manager) LoadEnv() {
+func (*Manager) LoadEnv() {
 	provider.DefaultToEnv(&libvirtcfg.URI, "LIBVIRT_URI", defaultURI)
 	provider.DefaultToEnv(&libvirtcfg.PoolName, "LIBVIRT_POOL", defaultPoolName)
 	provider.DefaultToEnv(&libvirtcfg.NetworkName, "LIBVIRT_NET", defaultNetworkName)
@@ -69,10 +69,10 @@ func (_ *Manager) LoadEnv() {
 
 }
 
-func (_ *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&libvirtcfg)
 }
 
-func (_ *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &libvirtcfg
 }

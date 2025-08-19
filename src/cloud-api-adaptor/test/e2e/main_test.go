@@ -60,25 +60,18 @@ func TestMain(m *testing.M) {
 
 	// TEST_TEARDOWN is an option variable which specifies whether the teardown code path
 	// should run or not.
-	shouldTeardown := true
-	if os.Getenv("TEST_TEARDOWN") == "no" {
-		shouldTeardown = false
-	}
+	shouldTeardown := os.Getenv("TEST_TEARDOWN") != "no"
+
 	// In case TEST_PROVISION is exported then it will try to provision the test environment
 	// in the cloud provider. Otherwise, assume the developer did setup the environment and it will
 	// look for a suitable kubeconfig file.
-	shouldProvisionCluster := false
-	if os.Getenv("TEST_PROVISION") == "yes" || os.Getenv("TEST_PROVISION") == "true" {
-		shouldProvisionCluster = true
-	}
+	shouldProvisionCluster := os.Getenv("TEST_PROVISION") == "yes" || os.Getenv("TEST_PROVISION") == "true"
+
 	// Cloud API Adaptor is installed by default during e2e test.
 	// In case TEST_INSTALL_CAA is exported as "no", it will skip the installation of
 	// Cloud API Adaptor.
 	// In scenario of teardown, CAA will be cleanup when shouldTeardown is true and shouldInstallCAA is true.
-	shouldInstallCAA := true
-	if os.Getenv("TEST_INSTALL_CAA") == "no" {
-		shouldInstallCAA = false
-	}
+	shouldInstallCAA := os.Getenv("TEST_INSTALL_CAA") != "no"
 
 	// The TEST_PODVM_IMAGE is an option variable which specifies the path
 	// to the podvm qcow2 image. If it set then the image should be uploaded to

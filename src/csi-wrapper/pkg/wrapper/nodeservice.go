@@ -14,7 +14,6 @@ import (
 
 	podvminfo "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/proto/podvminfo"
 	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
-	peerpodvolumeV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolume "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned"
 	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/utils"
 	"github.com/containerd/ttrpc"
@@ -83,13 +82,13 @@ func (s *NodeService) redirect(ctx context.Context, req interface{}, fn func(con
 
 	return nil
 }
-func (s *NodeService) getPodUIDandVolumeName(targetPath string) (podUid, volumeName string) {
+func (s *NodeService) getPodUIDandVolumeName(targetPath string) (podUID, volumeName string) {
 	// /var/lib/kubelet/pods/69576836-28c2-447e-a726-fdf8866a0622/volumes/kubernetes.io~csi/pvc-e9d79b06-fd06-487f-ac93-ea6424819a7d/mount
 	paths := strings.Split(targetPath, "/")
 	glog.Infof("split paths is :%v", paths)
-	podUid = paths[5]
+	podUID = paths[5]
 	volumeName = paths[8]
-	glog.Infof("podUid is :%v, volumeName is: %v", podUid, volumeName)
+	glog.Infof("podUid is :%v, volumeName is: %v", podUID, volumeName)
 	return
 }
 
@@ -125,9 +124,9 @@ func (s *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		nodePublishVolumeRequest := reqBuf.String()
 		glog.Infof("NodePublishVolumeRequest JSON string: %s\n", nodePublishVolumeRequest)
 		savedPeerpodvolume.Spec.TargetPath = targetPath
-		podUid, volumeName := s.getPodUIDandVolumeName(targetPath)
-		savedPeerpodvolume.Labels["podUid"] = podUid
-		savedPeerpodvolume.Spec.PodUid = podUid
+		podUID, volumeName := s.getPodUIDandVolumeName(targetPath)
+		savedPeerpodvolume.Labels["podUid"] = podUID
+		savedPeerpodvolume.Spec.PodUID = podUID
 		savedVolumeName := savedPeerpodvolume.Spec.VolumeName
 		if volumeName != savedVolumeName && savedVolumeName != peerpodVolumeNamePlaceholder {
 			glog.Error("The volume name from target path doesn't match with the CR")
@@ -346,7 +345,7 @@ func (s *NodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 	return
 }
 
-func (s *NodeService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume) {
+func (s *NodeService) SyncHandler(peerPodVolume *v1alpha1.PeerpodVolume) {
 	if peerPodVolume.Spec.NodeName != os.Getenv("POD_NODE_NAME") {
 		// Only handle the PeerpodVolume CRD which is assigned to the same compute node
 		glog.Infof("Only handle the PeerpodVolume CRD which is assigned to %v", os.Getenv("POD_NODE_NAME"))
@@ -354,7 +353,7 @@ func (s *NodeService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVo
 	}
 	glog.Infof("syncHandler from nodeService: %v ", peerPodVolume)
 	switch peerPodVolume.Status.State {
-	case peerpodvolumeV1alpha1.PeerPodVSIRunning:
+	case v1alpha1.PeerPodVSIRunning:
 		// The podName and podNamespace MUST be there when it's PeerPodVSIRunning status
 		glog.Infof("Getting vmID for podName:%v, podNamespace:%v", peerPodVolume.Spec.PodName, peerPodVolume.Spec.PodNamespace)
 		req := &podvminfo.GetInfoRequest{
@@ -394,6 +393,6 @@ func (s *NodeService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVo
 	}
 }
 
-func (s *NodeService) DeleteFunction(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume) {
+func (s *NodeService) DeleteFunction(peerPodVolume *v1alpha1.PeerpodVolume) {
 	glog.Infof("deleteFunction from nodeService: %v ", peerPodVolume)
 }

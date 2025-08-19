@@ -13,9 +13,9 @@ func TestApiC(t *testing.T) {
 	testNs, _ := tuntest.NewNamedNS(t, "test-TestApiC")
 	defer tuntest.DeleteNamedNS(t, testNs)
 
-	apic := NewApiClient(7700, testNs.Path())
+	apic := NewAPIClient(7700, testNs.Path())
 
-	s := test.NamespacedHttpServer(7700, testNs.Path())
+	s := test.NamespacedHTTPServer(7700, testNs.Path())
 	data, err := apic.GetKey("default/sshclient/publicKey")
 	if err != nil {
 		t.Error(err)

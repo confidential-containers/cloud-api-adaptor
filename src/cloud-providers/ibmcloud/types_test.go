@@ -15,7 +15,7 @@ func TestIBMCloudMasking(t *testing.T) {
 	apiKey := "abcdefg"
 	zoneName := "eu-gb"
 	cloudCfg := Config{
-		ApiKey:   apiKey,
+		APIKey:   apiKey,
 		ZoneName: zoneName,
 	}
 	checkLine := func(verb string) {
@@ -30,7 +30,7 @@ func TestIBMCloudMasking(t *testing.T) {
 	checkLine("%v")
 	checkLine("%s")
 
-	if cloudCfg.ApiKey != apiKey {
+	if cloudCfg.APIKey != apiKey {
 		t.Errorf("Original ApiKey field value has been overwritten")
 	}
 }

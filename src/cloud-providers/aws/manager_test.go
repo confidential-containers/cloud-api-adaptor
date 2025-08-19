@@ -36,17 +36,17 @@ func TestManager_ParseCmd(t *testing.T) {
 				"-disable-cvm=false",
 			},
 			expected: Config{
-				AccessKeyId:        "test-access-key",
+				AccessKeyID:        "test-access-key",
 				SecretKey:          "test-secret-key",
 				Region:             "test-region",
 				LoginProfile:       "test-profile",
 				LaunchTemplateName: "test-lt-name",
 				UseLaunchTemplate:  true,
-				ImageId:            "test-image-id",
+				ImageID:            "test-image-id",
 				InstanceType:       "test-instance-type",
 				SecurityGroupIds:   []string{"sg-1", "sg-2"},
 				KeyName:            "test-key-name",
-				SubnetId:           "test-subnet-id",
+				SubnetID:           "test-subnet-id",
 				InstanceTypes:      []string{"t2.micro", "t3.small"},
 				Tags:               map[string]string{"key1": "value1", "key2": "value2"},
 				UsePublicIP:        true,
@@ -58,17 +58,17 @@ func TestManager_ParseCmd(t *testing.T) {
 			name: "DefaultValues",
 			args: []string{},
 			expected: Config{
-				AccessKeyId:        "",
+				AccessKeyID:        "",
 				SecretKey:          "",
 				Region:             "",
 				LoginProfile:       "",
 				LaunchTemplateName: "kata",
 				UseLaunchTemplate:  false,
-				ImageId:            "",
+				ImageID:            "",
 				InstanceType:       "m6a.large",
 				SecurityGroupIds:   securityGroupIds{},
 				KeyName:            "",
-				SubnetId:           "",
+				SubnetID:           "",
 				InstanceTypes:      instanceTypes{},
 				Tags:               nil,
 				UsePublicIP:        false,
@@ -113,9 +113,9 @@ func TestManager_ParseCmd(t *testing.T) {
 // This is needed because the reflect.DeepEqual() function does not work with maps
 // Print the expected and actual values to the console if they do not match
 func comparestructs(expected, actual Config) bool {
-	if expected.AccessKeyId != actual.AccessKeyId {
+	if expected.AccessKeyID != actual.AccessKeyID {
 		// Print the expected and actual values to the console if they do not match
-		fmt.Printf("Expected AccessKeyId: %s, but got: %s\n", expected.AccessKeyId, actual.AccessKeyId)
+		fmt.Printf("Expected AccessKeyId: %s, but got: %s\n", expected.AccessKeyID, actual.AccessKeyID)
 		return false
 	}
 	if expected.SecretKey != actual.SecretKey {
@@ -144,9 +144,9 @@ func comparestructs(expected, actual Config) bool {
 		return false
 
 	}
-	if expected.ImageId != actual.ImageId {
+	if expected.ImageID != actual.ImageID {
 		// Print the expected and actual values to the console if they do not match
-		fmt.Printf("Expected ImageId: %s, but got: %s\n", expected.ImageId, actual.ImageId)
+		fmt.Printf("Expected ImageId: %s, but got: %s\n", expected.ImageID, actual.ImageID)
 		return false
 	}
 	if expected.InstanceType != actual.InstanceType {
@@ -179,9 +179,9 @@ func comparestructs(expected, actual Config) bool {
 		fmt.Printf("Expected KeyName: %s, but got: %s\n", expected.KeyName, actual.KeyName)
 		return false
 	}
-	if expected.SubnetId != actual.SubnetId {
+	if expected.SubnetID != actual.SubnetID {
 		// Print the expected and actual values to the console if they do not match
-		fmt.Printf("Expected SubnetId: %s, but got: %s\n", expected.SubnetId, actual.SubnetId)
+		fmt.Printf("Expected SubnetId: %s, but got: %s\n", expected.SubnetID, actual.SubnetID)
 		return false
 	}
 	if expected.UsePublicIP != actual.UsePublicIP {

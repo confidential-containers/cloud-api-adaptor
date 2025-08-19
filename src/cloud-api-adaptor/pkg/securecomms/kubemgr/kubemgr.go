@@ -80,8 +80,8 @@ func InitKubeMgrInVitro() error {
 
 	// Create a secrets client
 	if SkipVerify {
-		kubeCfg.TLSClientConfig.Insecure = true
-		kubeCfg.TLSClientConfig.CAData = nil
+		kubeCfg.Insecure = true
+		kubeCfg.CAData = nil
 	}
 
 	KubeMgr.Client, err = kubernetes.NewForConfig(kubeCfg)

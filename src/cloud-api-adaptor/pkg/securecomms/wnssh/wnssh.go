@@ -19,7 +19,7 @@ import (
 
 var logger = sshutil.Logger
 
-type SshClient struct {
+type SSHClient struct {
 	kc              *KbsClient
 	wnSigner        *ssh.Signer
 	inboundStrings  []string
@@ -28,11 +28,11 @@ type SshClient struct {
 	wnPublicKey     []byte
 }
 
-type SshClientInstance struct {
+type SSHClientInstance struct {
 	sid             string
 	ppPublicKey     []byte
 	ppAddr          []string
-	sshClient       *SshClient
+	sshClient       *SSHClient
 	ctx             context.Context
 	cancel          context.CancelFunc
 	kubernetesPhase bool
@@ -46,20 +46,20 @@ func PpSecretName(sid string) string {
 	return "pp-" + sid
 }
 
-// InitSshClient initializes an SSH Client at the WN
+// InitSSHClient initializes an SSH Client at the WN
 // inbound_strings is a slice of strings where each string is an inbound tag
 // outbounds_strings is a slice of strings where each string is an outbound tag
 // Structure of an inbound tag: "<MyPort>:<InboundName>:<phase>"
 // Structure of an outbound tag: "<DesPort>:<DesHost>:<outboundName>:<phase>"
 // Phase may be "A" (Attestation), "K" (Kubernetes), or "B" (Both)
-func InitSshClient(inbound_strings, outbound_strings []string, secureCommsTrustee bool, kbsAddress string, sshport string) (*SshClient, error) {
+func InitSSHClient(inboundStrings, outboundStrings []string, secureCommsTrustee bool, kbsAddress string, sshport string) (*SSHClient, error) {
 	logger.Printf("Using PP SecureComms: InitSshClient version %s", sshutil.PpSecureCommsVersion)
 
 	// Read WN Secret
-	wnPrivateKey, wnPublicKey, err := kubemgr.KubeMgr.ReadSecret(sshutil.ADAPTOR_SSH_SECRET)
+	wnPrivateKey, wnPublicKey, err := kubemgr.KubeMgr.ReadSecret(sshutil.AdaptorSSHSecret)
 	if err != nil {
 		// auto-create a secret
-		wnPrivateKey, wnPublicKey, err = kubemgr.KubeMgr.CreateSecret(sshutil.ADAPTOR_SSH_SECRET)
+		wnPrivateKey, wnPublicKey, err = kubemgr.KubeMgr.CreateSecret(sshutil.AdaptorSSHSecret)
 		if err != nil {
 			return nil, fmt.Errorf("failed to auto create WN secret: %w", err)
 		}
@@ -75,7 +75,7 @@ func InitSshClient(inbound_strings, outbound_strings []string, secureCommsTruste
 
 	var kc *KbsClient
 	if secureCommsTrustee {
-		kbscPrivateKey, _, err := kubemgr.KubeMgr.ReadSecret(sshutil.KBS_CLIENT_SECRET)
+		kbscPrivateKey, _, err := kubemgr.KubeMgr.ReadSecret(sshutil.KBSClientSecret)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read KBS client secret: %w", err)
 		}
@@ -94,11 +94,11 @@ func InitSshClient(inbound_strings, outbound_strings []string, secureCommsTruste
 		}
 	}
 
-	sshClient := &SshClient{
+	sshClient := &SSHClient{
 		kc:              kc,
 		wnSigner:        &signer,
-		inboundStrings:  inbound_strings,
-		outboundStrings: outbound_strings,
+		inboundStrings:  inboundStrings,
+		outboundStrings: outboundStrings,
 		sshport:         sshport,
 		wnPublicKey:     wnPublicKey,
 	}
@@ -106,7 +106,7 @@ func InitSshClient(inbound_strings, outbound_strings []string, secureCommsTruste
 	return sshClient, nil
 }
 
-func (ci *SshClientInstance) GetPort(name string) string {
+func (ci *SSHClientInstance) GetPort(name string) string {
 	var ok bool
 	var inPort string
 	inPort, ok = ci.inboundPorts[name]
@@ -115,7 +115,7 @@ func (ci *SshClientInstance) GetPort(name string) string {
 	}
 	return inPort
 }
-func (ci *SshClientInstance) DisconnectPP(sid string) {
+func (ci *SSHClientInstance) DisconnectPP(sid string) {
 
 	ci.inbounds.DelAll()
 
@@ -128,11 +128,11 @@ func (ci *SshClientInstance) DisconnectPP(sid string) {
 	kubemgr.KubeMgr.DeleteSecret(PpSecretName(sid))
 }
 
-func (c *SshClient) GetWnPublicKey() []byte {
+func (c *SSHClient) GetWnPublicKey() []byte {
 	return c.wnPublicKey
 }
 
-func (c *SshClient) InitPP(ctx context.Context, sid string) (ci *SshClientInstance, ppPrivateKey []byte) {
+func (c *SSHClient) InitPP(ctx context.Context, sid string) (ci *SSHClientInstance, ppPrivateKey []byte) {
 	// Create peerPod Secret named peerPodId
 	var ppPublicKey []byte
 	var err error
@@ -163,21 +163,21 @@ func (c *SshClient) InitPP(ctx context.Context, sid string) (ci *SshClientInstan
 		}
 
 	}
-	var ppSshPublicKeyBytes []byte
+	var ppSSHPublicKeyBytes []byte
 
 	if len(ppPublicKey) > 0 {
-		ppSshPublicKey, _, _, _, err := ssh.ParseAuthorizedKey(ppPublicKey)
+		ppSSHPublicKey, _, _, _, err := ssh.ParseAuthorizedKey(ppPublicKey)
 		if err != nil {
 			logger.Printf("Unable to ParseAuthorizedKey serverPublicKey: %v", err)
 			return
 		}
-		ppSshPublicKeyBytes = ppSshPublicKey.Marshal()
+		ppSSHPublicKeyBytes = ppSSHPublicKey.Marshal()
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	ci = &SshClientInstance{
+	ci = &SSHClientInstance{
 		sid:             sid,
-		ppPublicKey:     ppSshPublicKeyBytes,
+		ppPublicKey:     ppSSHPublicKeyBytes,
 		sshClient:       c,
 		ctx:             ctx,
 		cancel:          cancel,
@@ -196,7 +196,7 @@ func (c *SshClient) InitPP(ctx context.Context, sid string) (ci *SshClientInstan
 	return
 }
 
-func (ci *SshClientInstance) Start(ipAddr []netip.Addr) error {
+func (ci *SSHClientInstance) Start(ipAddr []netip.Addr) error {
 	ppAddr := make([]string, len(ipAddr))
 	for i, ip := range ipAddr {
 		ppAddr[i] = ip.String() + ":" + ci.sshClient.sshport
@@ -237,10 +237,10 @@ func (ci *SshClientInstance) Start(ipAddr []netip.Addr) error {
 	return nil
 }
 
-func (ci *SshClientInstance) StartKubernetes() error {
+func (ci *SSHClientInstance) StartKubernetes() error {
 	ctx, cancel := context.WithCancel(ci.ctx)
 	defer cancel()
-	peer := ci.StartSshClient(ctx, sshproxy.KUBERNETES, ci.ppPublicKey, ci.sid)
+	peer := ci.StartSSHClient(ctx, sshproxy.Kubernetes, ci.ppPublicKey, ci.sid)
 	if peer == nil {
 
 		return fmt.Errorf("kubernetes phase: failed StartSshClient")
@@ -253,10 +253,10 @@ func (ci *SshClientInstance) StartKubernetes() error {
 	return nil
 }
 
-func (ci *SshClientInstance) StartAttestation() error {
+func (ci *SSHClientInstance) StartAttestation() error {
 	ctx, cancel := context.WithCancel(ci.ctx)
 	defer cancel()
-	peer := ci.StartSshClient(ctx, sshproxy.ATTESTATION, nil, ci.sid)
+	peer := ci.StartSSHClient(ctx, sshproxy.Attestation, nil, ci.sid)
 	if peer == nil {
 		return fmt.Errorf("attestation phase: failed StartSshClient")
 	}
@@ -270,7 +270,7 @@ func (ci *SshClientInstance) StartAttestation() error {
 	return nil
 }
 
-func (ci *SshClientInstance) StartSshClient(ctx context.Context, phase string, publicKey []byte, sid string) *sshproxy.SshPeer {
+func (ci *SSHClientInstance) StartSSHClient(ctx context.Context, phase string, publicKey []byte, sid string) *sshproxy.SSHPeer {
 	config := &ssh.ClientConfig{
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			if len(publicKey) == 0 {
@@ -293,7 +293,7 @@ func (ci *SshClientInstance) StartSshClient(ctx context.Context, phase string, p
 	}
 
 	// Dial your ssh server.
-	var peer *sshproxy.SshPeer
+	var peer *sshproxy.SSHPeer
 	_ = retry.Do(
 		func() error {
 			for _, ppAddr := range ci.ppAddr {
@@ -309,7 +309,7 @@ func (ci *SshClientInstance) StartSshClient(ctx context.Context, phase string, p
 					conn.Close()
 					continue
 				}
-				peer = sshproxy.NewSshPeer(ctx, phase, netConn, chans, sshReqs, sid)
+				peer = sshproxy.NewSSHPeer(ctx, phase, netConn, chans, sshReqs, sid)
 				return nil
 			}
 			return errors.New("Retry")

@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	programName          = "agent-protocol-forwarder"
-	API_SERVER_REST_PORT = 8006
+	programName       = "agent-protocol-forwarder"
+	APIServerRestPort = 8006
 )
 
 var logger = log.New(log.Writer(), "[forwarder] ", log.LstdFlags|log.Lmsgprefix)
@@ -110,18 +110,18 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		// To obtain secrets from KBS, we approach the api-server-rest service which then approaches the CDH asking for a secret resource
 		// the CDH than contact the KBS (possibly after approaching Attestation Agent for a token) and the KBS serves the requested key
 		// The communication between the CDH (and Attestation Agent) and the KBS is performed via an SSH tunnel named  "KBS"
-		apic := apic.NewApiClient(API_SERVER_REST_PORT, cfg.podNamespace)
+		apic := apic.NewAPIClient(APIServerRestPort, cfg.podNamespace)
 
 		ppSecrets := ppssh.NewPpSecrets(ppssh.GetSecret(apic.GetKey))
 
 		if secureComms {
 			// CoCo
-			ppSecrets.AddKey(ppssh.WN_PUBLIC_KEY)
-			ppSecrets.AddKey(ppssh.PP_PRIVATE_KEY)
+			ppSecrets.AddKey(ppssh.WNPublicKey)
+			ppSecrets.AddKey(ppssh.PPPrivateKey)
 		} else {
 			// non-CoCo
-			ppSecrets.SetKey(ppssh.WN_PUBLIC_KEY, cfg.daemonConfig.WnPublicKey)
-			ppSecrets.SetKey(ppssh.PP_PRIVATE_KEY, cfg.daemonConfig.PpPrivateKey)
+			ppSecrets.SetKey(ppssh.WNPublicKey, cfg.daemonConfig.WnPublicKey)
+			ppSecrets.SetKey(ppssh.PPPrivateKey, cfg.daemonConfig.PpPrivateKey)
 		}
 
 		inbounds = append([]string{"BOTH_PHASES:KBS:8080"}, strings.Split(secureCommsInbounds, ",")...)
@@ -130,7 +130,7 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		outbounds = append([]string{"KUBERNETES_PHASE:KATAAGENT:" + port}, strings.Split(secureCommsOutbounds, ",")...)
 		outbounds = append(outbounds, strings.Split(cfg.daemonConfig.SecureCommsOutbounds, ",")...)
 
-		services = append(services, ppssh.NewSshServer(inbounds, outbounds, ppSecrets, sshutil.SSHPORT))
+		services = append(services, ppssh.NewSSHServer(inbounds, outbounds, ppSecrets, sshutil.SSHPORT))
 	} else {
 		if !disableTLS {
 			cfg.tlsConfig = &tlsConfig
