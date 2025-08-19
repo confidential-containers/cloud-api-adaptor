@@ -17,6 +17,10 @@ type Config struct {
 	ProcessorType     string
 	SystemType        string
 	UsePublicIP       bool
+	EnableSftp        bool
+	pubKey            string
+	privKey           string
+	CloudUserName     string
 }
 
 func (c Config) Redact() Config {
