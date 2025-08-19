@@ -73,81 +73,8 @@ run:
   # Default: use Go version from the go.mod file, fallback on the env var `GOVERSION`, fallback on 1.17
   go: '1.20'
 
-
-# output configuration options
-output:
-  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate|junit-xml|github-actions
-  #
-  # Multiple can be specified by separating them by comma, output can be provided
-  # for each of them by separating format name and path by colon symbol.
-  # Output path can be either `stdout`, `stderr` or path to the file to write to.
-  # Example: "checkstyle:report.json,colored-line-number"
-  #
-  # Default: colored-line-number
-  #format: json
-
-  # Print lines of code with issue.
-  # Default: true
-  #print-issued-lines: false
-
-  # Print linter name in the end of issue text.
-  # Default: true
-  #print-linter-name: false
-
-  # Make issues output unique by line.
-  # Default: true
-  #uniq-by-line: false
-
-  # Add a prefix to the output file references.
-  # Default is no prefix.
-  #path-prefix: ""
-
-  # Sort results by: filepath, line and column.
-  #sort-results: false
-
-
 # All available settings of linters enabled.
 linters-settings:
-  errcheck:
-    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
-    # Such cases aren't reported by default.
-    # Default: false
-    #check-type-assertions: true
-
-    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
-    # Such cases aren't reported by default.
-    # Default: false
-    #check-blank: true
-
-    # DEPRECATED comma-separated list of pairs of the form pkg:regex
-    #
-    # the regex is used to ignore names within pkg. (default "fmt:.*").
-    # see https://github.com/kisielk/errcheck#the-deprecated-method for details
-    #ignore: fmt:.*,io/ioutil:^Read.*
-
-    # To disable the errcheck built-in exclude list.
-    # See `-excludeonly` option in https://github.com/kisielk/errcheck#excluding-functions for details.
-    # Default: false
-    #disable-default-exclusions: true
-
-    # DEPRECATED use exclude-functions instead.
-    #
-    # Path to a file containing a list of functions to exclude from checking.
-    # See https://github.com/kisielk/errcheck#excluding-functions for details.
-    #exclude: /path/to/file.txt
-
-    # List of functions to exclude from checking, where each entry is a single function to exclude.
-    # See https://github.com/kisielk/errcheck#excluding-functions for details.
-    #exclude-functions:
-    #  - io/ioutil.ReadFile
-    #  - io.Copy(*bytes.Buffer)
-    #  - io.Copy(os.Stdout)
-
-  gofmt:
-    # Simplify code: gofmt with `-s` option.
-    # Default: true
-    #simplify: false
-
   gosimple:
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
@@ -334,32 +261,3 @@ issues:
 
   # Fix found issues (if it's supported by the linter).
   #fix: true
-
-
-severity:
-  # Set the default severity for issues.
-  #
-  # If severity rules are defined and the issues do not match or no severity is provided to the rule
-  # this will be the default severity applied.
-  # Severities should match the supported severity names of the selected out format.
-  # - Code climate: https://docs.codeclimate.com/docs/issues#issue-severity
-  # - Checkstyle: https://checkstyle.sourceforge.io/property_types.html#severity
-  # - GitHub: https://help.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-error-message
-  #
-  # Default value is an empty string.
-  #default-severity: error
-
-  # If set to true `severity-rules` regular expressions become case-sensitive.
-  # Default: false
-  #case-sensitive: true
-
-  # When a list of severity rules are provided, severity information will be added to lint issues.
-  # Severity rules have the same filtering capability as exclude rules
-  # except you are allowed to specify one matcher per severity rule.
-  # Only affects out formats that support setting severity information.
-  #
-  # Default: []
-  #rules:
-  #  - linters:
-  #    - dupl
-  #    severity: info
