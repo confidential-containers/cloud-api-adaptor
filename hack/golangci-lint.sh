@@ -110,10 +110,8 @@ fi
 
 statuscode=0
 
-flags+=("--path-prefix=<placeholder>")
 for module in "${goModules[@]}"; do
     pushd "$module" >/dev/null
-    flags[${#flags[@]}-1]="--path-prefix=${module}"
     golangci-lint run "${flags[@]}" || statuscode=$?
     popd >/dev/null
 done
