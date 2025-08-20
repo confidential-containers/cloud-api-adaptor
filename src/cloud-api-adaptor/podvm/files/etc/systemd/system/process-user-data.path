@@ -1,0 +1,9 @@
+[Unit]
+Description=Monitor for the user data file path
+
+[Path]
+PathExists=/media/cidata/user-data
+Unit=process-user-data.service
+
+[Install]
+WantedBy=multi-user.target

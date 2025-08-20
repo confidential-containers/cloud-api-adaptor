@@ -12,3 +12,14 @@ if [[ "${ARCHITECTURE}" == "s390x" ]]; then
 	# disable this service since we already have "NetworkManager-wait-online.service"
         systemctl disable systemd-networkd-wait-online.service
 fi
+
+# Conditional SFTP support: enable process-user-data.path only if ENABLE_SFTP is set
+if [[ "${ENABLE_SFTP:-false}" == "true" ]]; then
+	echo "Enabling SFTP user-data processing service (ENABLE_SFTP=true)"
+	systemctl enable process-user-data.path
+	systemctl disable process-user-data.service
+else
+	echo "SFTP user-data processing service disabled (ENABLE_SFTP=${ENABLE_SFTP:-false})"
+	systemctl disable process-user-data.path
+	systemctl enable process-user-data.service
+fi
