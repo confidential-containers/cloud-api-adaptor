@@ -29,6 +29,9 @@ all: binaries image
 .PHONY: debug
 debug:binaries image-debug
 
+.PHONY: sftp
+sftp:binaries image-sftp
+
 .PHONY: container
 container: binaries image-container
 
@@ -121,6 +124,32 @@ else
 		-f Dockerfile.mkosi \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=debug \
+		--build-arg IMAGE_VERSION \
+		--build-arg MKOSI_VERSION \
+		--progress=plain \
+		-o type=local,dest=./build \
+		--builder insecure-builder \
+		--allow security.insecure \
+		.
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
+endif
+
+PHONY: image-sftp
+image-sftp: insecure-builder
+	rm -rf ./build
+	@echo "Building sftp image..."
+ifeq ($(SE_BOOT),true)
+	$(call run_mkosi_in_container,--profile sftp)
+	sudo -E ../hack/build-s390x-se-image.sh
+else ifeq ($(ARCH),s390x)
+	$(call run_mkosi_in_container,--profile sftp)
+	sudo -E ../hack/build-s390x-image.sh
+else
+	mkdir -p build
+	docker buildx build \
+		-f Dockerfile.mkosi \
+		-t $(PODVM_IMAGE) \
+		--build-arg PROFILE=sftp \
 		--build-arg IMAGE_VERSION \
 		--build-arg MKOSI_VERSION \
 		--progress=plain \
