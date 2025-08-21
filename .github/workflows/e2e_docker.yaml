@@ -109,6 +109,7 @@ jobs:
           DOCKER_HOST="unix:///var/run/docker.sock"
           DOCKER_NETWORK_NAME="kind"
           CONTAINER_RUNTIME="${{ inputs.container_runtime }}"
+          DOCKER_API_VERSION="1.44"
           EOF
           # For debugging
           cat docker.properties

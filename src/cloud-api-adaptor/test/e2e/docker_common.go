@@ -26,7 +26,7 @@ func (c DockerAssert) DefaultTimeout() time.Duration {
 }
 
 func (l DockerAssert) HasPodVM(t *testing.T, id string) {
-	conn, err := client.NewClientWithOpts(client.FromEnv)
+	conn, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		t.Fatal(err)
 	}
