@@ -41,8 +41,7 @@ configMapGenerator:
   #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
   #- REMOTE_HYPERVISOR_ENDPOINT="/run/peerpod/hypervisor.sock" # Path to Kata remote hypervisor socket. Default is /run/peerpod/hypervisor.sock
   #- PEER_PODS_DIR="/run/peerpod/pods" # Path to peer pods directory. Default is /run/peerpod/pods
-  #- ENABLE_SCRATCH_DISK="false"  # Enable scratch disk. Default is false
-  #- ENABLE_SCRATCH_ENCRYPTION="false" # Enable scratch disk encryption. Default is false
+  #- ENABLE_SCRATCH_SPACE="false"  # Enable scratch space for pod VMs. Default is false
 ##TLS_SETTINGS
   #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
   #- CERT_FILE="/etc/certificates/client.crt" # for TLS
