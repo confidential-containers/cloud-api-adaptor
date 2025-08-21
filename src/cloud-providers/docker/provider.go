@@ -32,10 +32,20 @@ func NewProvider(config *Config) (*dockerProvider, error) {
 
 	logger.Printf("docker config: %#v", config)
 
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(config.DockerAPIVersion))
 	if err != nil {
 		return nil, err
 	}
+
+	// Log Docker client and server versions for debugging
+	ctx := context.Background()
+	serverVersion, err := cli.ServerVersion(ctx)
+	if err != nil {
+		logger.Printf("Warning: failed to get Docker server version: %v", err)
+	} else {
+		logger.Printf("Docker server version: %s, API version: %s", serverVersion.Version, serverVersion.APIVersion)
+	}
+	logger.Printf("Docker client API version: %s", cli.ClientVersion())
 
 	// Create the data directory if it doesn't exist
 	err = os.MkdirAll(config.DataDir, 0755)
