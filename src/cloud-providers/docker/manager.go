@@ -33,7 +33,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 func (m *Manager) LoadEnv() {
 	provider.DefaultToEnv(&dockerCfg.DockerHost, "DOCKER_HOST", "unix:///var/run/docker.sock")
-	provider.DefaultToEnv(&dockerCfg.DockerAPIVersion, "DOCKER_API_VERSION", "1.40")
+	provider.DefaultToEnv(&dockerCfg.DockerAPIVersion, "DOCKER_API_VERSION", "1.44")
 	provider.DefaultToEnv(&dockerCfg.DockerCertPath, "DOCKER_CERT_PATH", "")
 	dockerTLSVerify := os.Getenv("DOCKER_TLS_VERIFY")
 	if dockerTLSVerify == "1" || dockerTLSVerify == "true" {

@@ -75,8 +75,11 @@ func NewDockerProvisioner(properties map[string]string) (pv.CloudProvisioner, er
 
 	// set environment variables
 	os.Setenv("DOCKER_HOST", DockerProps.DockerHost)
+	if DockerProps.ApiVer != "" {
+		os.Setenv("DOCKER_API_VERSION", DockerProps.ApiVer)
+	}
 
-	conn, err := client.NewClientWithOpts(client.FromEnv)
+	conn, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Errorf("Error creating the Docker client: %v", err)
 		return nil, err
