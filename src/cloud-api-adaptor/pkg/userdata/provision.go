@@ -13,7 +13,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
-	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 )
 
 const (
@@ -21,22 +21,22 @@ const (
 	DigestPath   = "/run/peerpod/initdata.digest"
 	PolicyPath   = "/run/peerpod/policy.rego"
 	// Ref: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
-	AWSImdsUrl         = "http://169.254.169.254/latest/dynamic/instance-identity/document"
-	AWSUserDataImdsUrl = "http://169.254.169.254/latest/user-data"
+	AWSImdsURL         = "http://169.254.169.254/latest/dynamic/instance-identity/document"
+	AWSUserDataImdsURL = "http://169.254.169.254/latest/user-data"
 	// Ref: https://docs.microsoft.com/en-us/azure/virtual-machines/linux/instance-metadata-service
-	AzureImdsUrl         = "http://169.254.169.254/metadata/instance/compute?api-version=2021-01-01"
-	AzureUserDataImdsUrl = "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text"
+	AzureImdsURL         = "http://169.254.169.254/metadata/instance/compute?api-version=2021-01-01"
+	AzureUserDataImdsURL = "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text"
 	// Ref: https://cloud.google.com/compute/docs/storing-retrieving-metadata
-	GcpImdsUrl         = "http://metadata.google.internal/computeMetadata/v1/instance"
-	GcpUserDataImdsUrl = "http://metadata.google.internal/computeMetadata/v1/instance/attributes/user-data"
+	GcpImdsURL         = "http://metadata.google.internal/computeMetadata/v1/instance"
+	GcpUserDataImdsURL = "http://metadata.google.internal/computeMetadata/v1/instance/attributes/user-data"
 	// Ref: https://www.alibabacloud.com/help/en/ecs/user-guide/customize-the-initialization-configuration-for-an-instance
-	AlibabaCloudImdsUrl         = "http://100.100.100.200/latest/dynamic/instance-identity/document"
-	AlibabaCloudUserDataImdsUrl = "http://100.100.100.200/latest/user-data"
+	AlibabaCloudImdsURL         = "http://100.100.100.200/latest/dynamic/instance-identity/document"
+	AlibabaCloudUserDataImdsURL = "http://100.100.100.200/latest/user-data"
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
-var WriteFilesList = []string{AACfgPath, CDHCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath, ScratchSpacePath}
-var InitdDataFilesList = []string{AACfgPath, CDHCfgPath, PolicyPath}
+var WriteFilesList = []string{paths.AACfgPath, paths.CDHCfgPath, paths.ForwarderCfgPath, paths.AuthFilePath, paths.InitDataPath, paths.ScratchSpacePath}
+var InitdDataFilesList = []string{paths.AACfgPath, paths.CDHCfgPath, PolicyPath}
 
 type Config struct {
 	fetchTimeout  int
@@ -51,7 +51,7 @@ func NewConfig(fetchTimeout int) *Config {
 	return &Config{
 		fetchTimeout:  fetchTimeout,
 		parentPath:    ConfigParent,
-		initdataPath:  InitDataPath,
+		initdataPath:  paths.InitDataPath,
 		digestPath:    DigestPath,
 		writeFiles:    WriteFilesList,
 		initdataFiles: InitdDataFilesList,
@@ -81,7 +81,7 @@ func (d DefaultRetry) GetRetryDelay() time.Duration {
 type AzureUserDataProvider struct{ DefaultRetry }
 
 func (a AzureUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := AzureUserDataImdsUrl
+	url := AzureUserDataImdsURL
 	logger.Printf("provider: Azure, userDataUrl: %s\n", url)
 	return imdsGet(ctx, url, true, []kvPair{{"Metadata", "true"}})
 }
@@ -89,7 +89,7 @@ func (a AzureUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) 
 type AWSUserDataProvider struct{ DefaultRetry }
 
 func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := AWSUserDataImdsUrl
+	url := AWSUserDataImdsURL
 	logger.Printf("provider: AWS, userDataUrl: %s\n", url)
 	// aws user data is not base64 encoded
 	return imdsGet(ctx, url, false, nil)
@@ -98,7 +98,7 @@ func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 type GCPUserDataProvider struct{ DefaultRetry }
 
 func (g GCPUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := GcpUserDataImdsUrl
+	url := GcpUserDataImdsURL
 	logger.Printf("provider: GCP, userDataUrl: %s\n", url)
 	return imdsGet(ctx, url, true, []kvPair{{"Metadata-Flavor", "Google"}})
 }
@@ -106,7 +106,7 @@ func (g GCPUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 type FileUserDataProvider struct{ DefaultRetry }
 
 func (a FileUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	path := UserDataPath
+	path := paths.UserDataPath
 	logger.Printf("provider: File, userDataPath: %s\n", path)
 	userData, err := os.ReadFile(path)
 	if err != nil {
@@ -119,7 +119,7 @@ func (a FileUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 type AlibabaCloudDataProvider struct{ DefaultRetry }
 
 func (a AlibabaCloudDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := AlibabaCloudUserDataImdsUrl
+	url := AlibabaCloudUserDataImdsURL
 	logger.Printf("provider: AlibabaCloud, userDataUrl: %s\n", url)
 	return imdsGet(ctx, url, false, nil)
 }
@@ -241,24 +241,24 @@ func extractInitdataAndHash(cfg *Config) error {
 			logger.Printf("File %s not found, skipped initdata processing.\n", path)
 			return nil
 		}
-		return fmt.Errorf("Error stat initdata file: %w", err)
+		return fmt.Errorf("error stat initdata file: %w", err)
 	}
 
 	fileReader, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("Error read initdata file: %w", err)
+		return fmt.Errorf("error read initdata file: %w", err)
 	}
 
 	id, err := initdata.Parse(fileReader)
 	if err != nil {
-		return fmt.Errorf("Error parse initdata: %w", err)
+		return fmt.Errorf("error parse initdata: %w", err)
 	}
 
 	for key, value := range id.Body.Data {
 		path := filepath.Join(cfg.parentPath, key)
 		if isAllowed(path, cfg.initdataFiles) {
 			if err := writeFile(path, []byte(value)); err != nil {
-				return fmt.Errorf("Error write a file in initdata: %w", err)
+				return fmt.Errorf("error write a file in initdata: %w", err)
 			}
 		} else {
 			logger.Printf("File: %s is not allowed in initdata.\n", key)

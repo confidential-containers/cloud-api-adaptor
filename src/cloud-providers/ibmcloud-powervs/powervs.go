@@ -1,7 +1,7 @@
 // Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package ibmcloud_powervs
+package ibmcloudpowervs
 
 import (
 	"context"

@@ -16,7 +16,7 @@ func Parse(ep string) (string, string, error) {
 		if s[1] != "" {
 			return s[0], s[1], nil
 		}
-		return "", "", fmt.Errorf("Invalid endpoint: %v", ep)
+		return "", "", fmt.Errorf("invalid endpoint: %v", ep)
 	}
 	// Assume everything else is a file path for a Unix Domain Socket.
 	return "unix", ep, nil

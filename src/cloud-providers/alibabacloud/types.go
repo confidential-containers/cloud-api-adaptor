@@ -36,14 +36,14 @@ func (i *instanceTypes) Set(value string) error {
 }
 
 type Config struct {
-	AccessKeyId          string
+	AccessKeyID          string
 	SecretKey            string
 	Region               string
-	ImageId              string
+	ImageID              string
 	InstanceType         string
 	KeyName              string
-	VpcId                string
-	VswitchId            string
+	VpcID                string
+	VswitchID            string
 	SecurityGroupIds     securityGroupIds
 	InstanceTypes        instanceTypes
 	InstanceTypeSpecList []provider.InstanceTypeSpec

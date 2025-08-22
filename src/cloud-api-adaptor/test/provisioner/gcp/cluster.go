@@ -110,7 +110,7 @@ func (g *GKECluster) ApplyNodeLabels(ctx context.Context) error {
 			return err
 		})
 		if err != nil {
-			return fmt.Errorf("Failed to label node %s: %v\n", node.Name, err)
+			return fmt.Errorf("failed to label node %s: %v", node.Name, err)
 		}
 		log.Infof("Successfully labeled node %s\n", node.Name)
 	}
@@ -241,20 +241,20 @@ func (g *GKECluster) DeployDaemonSet(ctx context.Context, yamlPath string) error
 // GetKubeconfigFile retrieves the path to the kubeconfig file
 func (g *GKECluster) GetKubeconfigFile(ctx context.Context) (string, error) {
 	if g.cluster == nil {
-		return "", fmt.Errorf("Cluster not found. Call CreateCluster() first.")
+		return "", fmt.Errorf("cluster not found. Call CreateCluster() first")
 	}
 
 	cmd := exec.CommandContext(ctx, "gcloud", "container", "clusters", "get-credentials", g.clusterName, "--zone", g.Zone, "--project", g.ProjectID)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		return "", fmt.Errorf("Failed to get cluster credentials: %v\nOutput: %s", err, output)
+		return "", fmt.Errorf("failed to get cluster credentials: %v\nOutput: %s", err, output)
 	}
 
 	kubeconfigPath := kconf.ResolveKubeConfigFile()
 	_, err = os.Stat(kubeconfigPath)
 	if err != nil {
-		return "", fmt.Errorf("Failed to resolve KubeConfigfile: %v", err)
+		return "", fmt.Errorf("failed to resolve KubeConfigfile: %v", err)
 	}
 	return kubeconfigPath, nil
 }
@@ -279,7 +279,7 @@ func (g *GKECluster) WaitForClusterActive(
 	for {
 		select {
 		case <-timeoutCtx.Done():
-			return nil, fmt.Errorf("GKE: Reached timeout waiting for cluster.")
+			return nil, fmt.Errorf("GKE: Reached timeout waiting for cluster")
 		case <-ticker.C:
 			cluster, err := srv.Projects.Zones.Clusters.Get(g.ProjectID, g.Zone, g.clusterName).Context(ctx).Do()
 			if err != nil {

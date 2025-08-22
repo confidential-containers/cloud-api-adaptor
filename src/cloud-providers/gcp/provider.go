@@ -15,7 +15,6 @@ import (
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
 	crm "cloud.google.com/go/resourcemanager/apiv3"
 	crmpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
-	resourcemanagerpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
@@ -92,7 +91,7 @@ func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*c
 	}
 	defer tagValuesClient.Close()
 
-	parent := fmt.Sprintf("projects/%s", p.serviceConfig.ProjectId)
+	parent := fmt.Sprintf("projects/%s", p.serviceConfig.ProjectID)
 	tags := make(map[string]map[string]*crmpb.TagValue)
 
 	it := tagKeysClient.ListTagKeys(ctx, &crmpb.ListTagKeysRequest{Parent: parent})
@@ -128,13 +127,13 @@ func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, 
 	imageName := parts[len(parts)-1]
 
 	req := &computepb.GetImageRequest{
-		Project: p.serviceConfig.ProjectId,
+		Project: p.serviceConfig.ProjectID,
 		Image:   imageName,
 	}
 
 	img, err := client.Get(ctx, req)
 	if err != nil {
-		return 0, fmt.Errorf("Failed to get image for %s: %w", image, err)
+		return 0, fmt.Errorf("cailed to get image for %s: %w", image, err)
 	}
 
 	return img.GetDiskSizeGb(), nil
@@ -154,18 +153,18 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	// Otherwise, abort the instance creation
 	allTags, err := p.ListAllTags(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Aborting: Failed to list tags: %w", err)
+		return nil, fmt.Errorf("aborting: Failed to list tags: %w", err)
 	}
 
 	allTagValues := make([]*crmpb.TagValue, 0)
 	for tagKey, tagValue := range p.serviceConfig.Tags {
-		tagId := allTags[tagKey][tagValue]
-		if tagId == nil {
+		tagID := allTags[tagKey][tagValue]
+		if tagID == nil {
 			msg := fmt.Sprintf("Aborting: Tag %s=%s not found", tagKey, tagValue)
 			logger.Print(msg)
 			return nil, fmt.Errorf("%s", msg)
 		}
-		allTagValues = append(allTagValues, tagId)
+		allTagValues = append(allTagValues, tagID)
 	}
 
 	//Convert userData to base64
@@ -180,7 +179,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	if hasAnyPrefix(p.serviceConfig.ImageName, "projects/", "/projects", "https") {
 		srcImage = proto.String(p.serviceConfig.ImageName)
 	} else {
-		srcImage = proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectId, p.serviceConfig.ImageName))
+		srcImage = proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectID, p.serviceConfig.ImageName))
 	}
 
 	if spec.Image != "" {
@@ -190,7 +189,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	imageSizeGB, err := p.getImageSizeGB(ctx, *srcImage)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get image size: %w", err)
+		return nil, fmt.Errorf("failed to get image size: %w", err)
 	}
 
 	// If user provided RootVolumeSize, use the larger of the two
@@ -241,7 +240,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	if !p.serviceConfig.DisableCVM {
 		if p.serviceConfig.ConfidentialType == "" {
-			return nil, fmt.Errorf("ConfidentialType must be set when using Confidential VM.")
+			return nil, fmt.Errorf("confidentialType must be set when using Confidential VM")
 		}
 
 		instanceResource.ConfidentialInstanceConfig = &computepb.ConfidentialInstanceConfig{
@@ -254,7 +253,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	}
 
 	insertReq := &computepb.InsertInstanceRequest{
-		Project:          p.serviceConfig.ProjectId,
+		Project:          p.serviceConfig.ProjectID,
 		Zone:             p.serviceConfig.Zone,
 		InstanceResource: instanceResource,
 	}
@@ -270,7 +269,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	logger.Printf("created an instance %s for sandbox %s", instanceName, sandboxID)
 
 	getReq := &computepb.GetInstanceRequest{
-		Project:  p.serviceConfig.ProjectId,
+		Project:  p.serviceConfig.ProjectID,
 		Zone:     p.serviceConfig.Zone,
 		Instance: instanceName,
 	}
@@ -292,17 +291,17 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	}
 	defer tagBindingsClient.Close()
 
-	parent := fmt.Sprintf("//compute.googleapis.com/projects/%s/zones/%s/instances/%d", p.serviceConfig.ProjectId, p.serviceConfig.Zone, instance.GetId())
+	parent := fmt.Sprintf("//compute.googleapis.com/projects/%s/zones/%s/instances/%d", p.serviceConfig.ProjectID, p.serviceConfig.Zone, instance.GetId())
 
 	for _, tagValue := range allTagValues {
 		logger.Printf("Creating tag binding for %s on %s", tagValue.Name, parent)
 
-		tagBinding := &resourcemanagerpb.TagBinding{
+		tagBinding := &crmpb.TagBinding{
 			Parent:   parent,
 			TagValue: tagValue.Name,
 		}
 
-		req := &resourcemanagerpb.CreateTagBindingRequest{
+		req := &crmpb.CreateTagBindingRequest{
 			TagBinding: tagBinding,
 		}
 
@@ -313,7 +312,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 		_, err = op.Wait(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("Long-running operation for tag binding %s failed: %v", tagValue, err)
+			return nil, fmt.Errorf("long-running operation for tag binding %s failed: %v", tagValue, err)
 		}
 
 		logger.Printf("Created tag binding for %s on %s successfully", tagValue, parent)
@@ -334,7 +333,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 func (p *gcpProvider) DeleteInstance(ctx context.Context, instanceID string) error {
 	req := &computepb.DeleteInstanceRequest{
-		Project:  p.serviceConfig.ProjectId,
+		Project:  p.serviceConfig.ProjectID,
 		Zone:     p.serviceConfig.Zone,
 		Instance: instanceID,
 	}

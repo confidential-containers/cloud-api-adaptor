@@ -1,7 +1,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package ibmcloud_powervs
+package ibmcloudpowervs
 
 import (
 	"flag"
@@ -18,13 +18,13 @@ func init() {
 	provider.AddCloudProvider("ibmcloud-powervs", &Manager{})
 }
 
-func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
 
-	flags.StringVar(&ibmcloudPowerVSConfig.ApiKey, "api-key", "", "IBM Cloud API key, defaults to `IBMCLOUD_API_KEY`")
+	flags.StringVar(&ibmcloudPowerVSConfig.APIKey, "api-key", "", "IBM Cloud API key, defaults to `IBMCLOUD_API_KEY`")
 	flags.StringVar(&ibmcloudPowerVSConfig.Zone, "zone", "", "PowerVS zone name")
 	flags.StringVar(&ibmcloudPowerVSConfig.ServiceInstanceID, "service-instance-id", "", "ID of the PowerVS Service Instance")
 	flags.StringVar(&ibmcloudPowerVSConfig.NetworkID, "network-id", "", "ID of the network instance")
-	flags.StringVar(&ibmcloudPowerVSConfig.ImageId, "image-id", "", "ID of the boot image")
+	flags.StringVar(&ibmcloudPowerVSConfig.ImageID, "image-id", "", "ID of the boot image")
 	flags.StringVar(&ibmcloudPowerVSConfig.SSHKey, "ssh-key", "", "Name of the SSH Key")
 	flags.Float64Var(&ibmcloudPowerVSConfig.Memory, "memory", 2, "Amount of memory in GB")
 	flags.Float64Var(&ibmcloudPowerVSConfig.Processors, "cpu", 0.5, "Number of processors allocated")
@@ -34,14 +34,14 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 }
 
-func (_ *Manager) LoadEnv() {
+func (*Manager) LoadEnv() {
 	// overwrite config set by cmd parameters in oci image with env might come from orchastration platform
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ApiKey, "IBMCLOUD_API_KEY", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.APIKey, "IBMCLOUD_API_KEY", "")
 
 	provider.DefaultToEnv(&ibmcloudPowerVSConfig.Zone, "POWERVS_ZONE", "")
 	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ServiceInstanceID, "POWERVS_SERVICE_INSTANCE_ID", "")
 	provider.DefaultToEnv(&ibmcloudPowerVSConfig.NetworkID, "POWERVS_NETWORK_ID", "")
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ImageId, "POWERVS_IMAGE_ID", "")
+	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ImageID, "POWERVS_IMAGE_ID", "")
 	provider.DefaultToEnv(&ibmcloudPowerVSConfig.SSHKey, "POWERVS_SSH_KEY_NAME", "")
 	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ProcessorType, "POWERVS_PROCESSOR_TYPE", "")
 	provider.DefaultToEnv(&ibmcloudPowerVSConfig.SystemType, "POWERVS_SYSTEM_TYPE", "")
@@ -58,10 +58,10 @@ func (_ *Manager) LoadEnv() {
 	}
 }
 
-func (_ *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&ibmcloudPowerVSConfig)
 }
 
-func (_ *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &ibmcloudPowerVSConfig
 }

@@ -28,7 +28,7 @@ type AzureProperties struct {
 	VnetName            string
 	SubnetID            string
 	ImageID             string
-	SshUserName         string
+	SSHUserName         string
 	ManagedIdentityName string
 	IsCIManaged         bool
 	CaaImage            string
@@ -45,7 +45,7 @@ type AzureProperties struct {
 	ManagedVnetClient                  *armnetwork.VirtualNetworksClient
 	ManagedSubnetClient                *armnetwork.SubnetsClient
 	ManagedAksClient                   *armcontainerservice.ManagedClustersClient
-	ManagedVmClient                    *armcompute.VirtualMachinesClient
+	ManagedVMClient                    *armcompute.VirtualMachinesClient
 	FederatedIdentityCredentialsClient *armmsi.FederatedIdentityCredentialsClient
 	FederatedCredentialName            string
 	ContainerRuntime                   string
@@ -65,7 +65,7 @@ func initAzureProperties(properties map[string]string) error {
 		SSHKeyID:                properties["SSH_KEY_ID"],
 		ImageID:                 properties["AZURE_IMAGE_ID"],
 		SubnetID:                properties["AZURE_SUBNET_ID"],
-		SshUserName:             properties["SSH_USERNAME"],
+		SSHUserName:             properties["SSH_USERNAME"],
 		ManagedIdentityName:     properties["MANAGED_IDENTITY_NAME"],
 		CaaImage:                properties["CAA_IMAGE"],
 		InstanceSize:            properties["AZURE_INSTANCE_SIZE"],
@@ -89,20 +89,20 @@ func initAzureProperties(properties map[string]string) error {
 	}
 
 	if AzureProps.SubscriptionID == "" {
-		return errors.New("AZURE_SUBSCRIPTION_ID was not set.")
+		return errors.New("AZURE_SUBSCRIPTION_ID was not set")
 	}
 
 	// TODO: Right now AZURE_CLIENT_ID can be used by the provisioner
 	// application and the same value is passed on to the CAA app inside the
 	// daemonset. Figure out a way to separate these two.
 	if AzureProps.ClientID == "" {
-		return errors.New("AZURE_CLIENT_ID was not set.")
+		return errors.New("AZURE_CLIENT_ID was not set")
 	}
 	if AzureProps.Location == "" {
-		return errors.New("LOCATION was not set.")
+		return errors.New("LOCATION was not set")
 	}
 	if AzureProps.ImageID == "" {
-		return errors.New("AZURE_IMAGE_ID was not set.")
+		return errors.New("AZURE_IMAGE_ID was not set")
 	}
 	if AzureProps.ClusterName == "" {
 		AzureProps.ClusterName = "e2e_test_cluster"
@@ -150,7 +150,7 @@ func initManagedClients() error {
 	AzureProps.ManagedVnetClient = networkClientFactory.NewVirtualNetworksClient()
 	AzureProps.ManagedSubnetClient = networkClientFactory.NewSubnetsClient()
 
-	AzureProps.ManagedVmClient, err = armcompute.NewVirtualMachinesClient(AzureProps.SubscriptionID, cred, nil)
+	AzureProps.ManagedVMClient, err = armcompute.NewVirtualMachinesClient(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
 		return fmt.Errorf("creating virtual machine client: %w", err)
 	}

@@ -205,11 +205,11 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorEnv(sgName string, file s
 	} else {
 		i := slices.IndexFunc(m.SecretGenerator, func(sa ktypes.SecretArgs) bool { return sa.Name == sgName })
 		if i == -1 {
-			return fmt.Errorf("SecretGenerator %s not found\n", sgName)
+			return fmt.Errorf("SecretGenerator %s not found", sgName)
 		}
 		gs := &m.SecretGenerator[i]
-		if !stringSliceContains(gs.GeneratorArgs.DataSources.FileSources, file) {
-			gs.GeneratorArgs.DataSources.EnvSource = file
+		if !stringSliceContains(gs.FileSources, file) {
+			gs.EnvSource = file
 		}
 
 	}
@@ -256,11 +256,11 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorFile(sgName string, file 
 	} else {
 		i := slices.IndexFunc(m.SecretGenerator, func(sa ktypes.SecretArgs) bool { return sa.Name == sgName })
 		if i == -1 {
-			return fmt.Errorf("SecretGenerator %s not found\n", sgName)
+			return fmt.Errorf("SecretGenerator %s not found", sgName)
 		}
 		gs := &m.SecretGenerator[i]
-		if !stringSliceContains(gs.GeneratorArgs.DataSources.FileSources, file) {
-			gs.GeneratorArgs.DataSources.FileSources = append(gs.GeneratorArgs.DataSources.FileSources, file)
+		if !stringSliceContains(gs.FileSources, file) {
+			gs.FileSources = append(gs.FileSources, file)
 		}
 
 	}
@@ -312,7 +312,7 @@ func stringSliceContains(slice []string, value string) bool {
 // `Image`. If `key` does not exist then a new entry is added.
 func (kh *KustomizeOverlay) SetKustomizeImage(imageName string, key string, value string) (err error) {
 	if !isValidImageKey(key) {
-		return fmt.Errorf("Not supported image key: %s\n", key)
+		return fmt.Errorf("not supported image key: %s", key)
 	}
 	// TODO
 	// Unfortunately NewKustomizationFile() needs the work directory (wd) be the overlay directory,
@@ -342,11 +342,11 @@ func (kh *KustomizeOverlay) SetKustomizeImage(imageName string, key string, valu
 	}
 
 	if len(m.Images) == 0 {
-		return fmt.Errorf("None Image found")
+		return fmt.Errorf("no Image found")
 	}
 	i := slices.IndexFunc(m.Images, func(im image.Image) bool { return im.Name == imageName })
 	if i == -1 {
-		return fmt.Errorf("Image %s not found\n", imageName)
+		return fmt.Errorf("image %s not found", imageName)
 	}
 	image := &m.Images[i]
 
@@ -398,34 +398,34 @@ func setLiteral(literals []string, key string, value string) []string {
 
 func setConfigMapGeneratorLiteral(k *ktypes.Kustomization, cmgName string, key string, value string) error {
 	if len(k.ConfigMapGenerator) == 0 {
-		return fmt.Errorf("None ConfigMapGenerator found")
+		return fmt.Errorf("no ConfigMapGenerator found")
 	}
 
 	i := slices.IndexFunc(k.ConfigMapGenerator, func(cma ktypes.ConfigMapArgs) bool { return cma.Name == cmgName })
 	if i == -1 {
-		return fmt.Errorf("ConfigMapGenerator %s not found\n", cmgName)
+		return fmt.Errorf("ConfigMapGenerator %s not found", cmgName)
 	}
 	cmg := &k.ConfigMapGenerator[i]
 
-	newLiterals := setLiteral(cmg.GeneratorArgs.DataSources.LiteralSources, key, value)
-	cmg.GeneratorArgs.DataSources.LiteralSources = newLiterals
+	newLiterals := setLiteral(cmg.LiteralSources, key, value)
+	cmg.LiteralSources = newLiterals
 
 	return nil
 }
 
 func setSecretGeneratorLiteral(k *ktypes.Kustomization, secretName string, key string, value string) error {
 	if len(k.SecretGenerator) == 0 {
-		return fmt.Errorf("None SecretGenerator found")
+		return fmt.Errorf("no SecretGenerator found")
 	}
 
 	i := slices.IndexFunc(k.SecretGenerator, func(sa ktypes.SecretArgs) bool { return sa.Name == secretName })
 	if i == -1 {
-		return fmt.Errorf("SecretGenerator %s not found\n", secretName)
+		return fmt.Errorf("SecretGenerator %s not found", secretName)
 	}
 	secretg := &k.SecretGenerator[i]
 
-	newLiterals := setLiteral(secretg.GeneratorArgs.DataSources.LiteralSources, key, value)
-	secretg.GeneratorArgs.DataSources.LiteralSources = newLiterals
+	newLiterals := setLiteral(secretg.LiteralSources, key, value)
+	secretg.LiteralSources = newLiterals
 
 	return nil
 }

@@ -98,7 +98,7 @@ func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, e
 	return &CloudAPIAdaptor{
 		caaDaemonSet:         &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset", Namespace: namespace}},
 		ccDaemonSet:          &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-daemon-install", Namespace: namespace}},
-		ccOpGitRepo:          ccOperator.Url,
+		ccOpGitRepo:          ccOperator.URL,
 		ccOpConfig:           ccOperator.Config,
 		ccOpGitRef:           ccOperator.Ref,
 		cloudProvider:        provider,
@@ -129,7 +129,7 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 		for provisioner := range NewProvisionerFunctions {
 			log.Info(provisioner)
 		}
-		return nil, fmt.Errorf("Not implemented provisioner for %s\n", provider)
+		return nil, fmt.Errorf("not implemented provisioner for %s", provider)
 	}
 
 	return newProvisioner(properties)
@@ -139,7 +139,7 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 func GetInstallOverlay(provider string, installDir string) (InstallOverlay, error) {
 	overlayFunc, ok := NewInstallOverlayFunctions[provider]
 	if !ok {
-		return nil, fmt.Errorf("Not implemented install overlay for %s\n", provider)
+		return nil, fmt.Errorf("not implemented install overlay for %s", provider)
 	}
 
 	return overlayFunc(installDir, provider)

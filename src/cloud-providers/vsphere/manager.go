@@ -17,7 +17,7 @@ func init() {
 	provider.AddCloudProvider("vsphere", &Manager{})
 }
 
-func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
 
 	flags.StringVar(&vspherecfg.VcenterURL, "vcenter-url", "", "URL of vCenter instance to connect to")
 	flags.StringVar(&vspherecfg.UserName, "user-name", "", "vCenter Username")
@@ -32,16 +32,16 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&vspherecfg.Host, "host", "", "vCenter host name of resource pool destination")
 }
 
-func (_ *Manager) LoadEnv() {
+func (*Manager) LoadEnv() {
 	provider.DefaultToEnv(&vspherecfg.UserName, "GOVC_USERNAME", "")
 	provider.DefaultToEnv(&vspherecfg.Password, "GOVC_PASSWORD", "")
 	provider.DefaultToEnv(&vspherecfg.Thumbprint, "GOVC_THUMBPRINT", "")
 }
 
-func (_ *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&vspherecfg)
 }
 
-func (_ *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &vspherecfg
 }

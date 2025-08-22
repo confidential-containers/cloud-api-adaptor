@@ -135,7 +135,7 @@ func (c *PeerpodvolumeController) syncHandler(key string) error {
 	peerPodVolume, err := c.lister.PeerpodVolumes(namespace).Get(name)
 	if err != nil {
 		if kubeErrors.IsNotFound(err) {
-			utilruntime.HandleError(fmt.Errorf("Peerpodvolume %q in work queue no longer exists", key))
+			utilruntime.HandleError(fmt.Errorf("peerpodvolume %q in work queue no longer exists", key))
 			return nil
 		}
 
@@ -147,8 +147,8 @@ func (c *PeerpodvolumeController) syncHandler(key string) error {
 	}
 
 	glog.Infof("Detected a Peerpodvolume object: %s \n", key)
-	objJsonString, _ := json.Marshal(peerPodVolume)
-	objString := string(objJsonString)
+	objJSONString, _ := json.Marshal(peerPodVolume)
+	objString := string(objJSONString)
 	glog.Infof("Detected Peerpodvolume json.Marshal.string: %s\n", objString)
 	// call the syncFunction from node service or controller service
 	if c.syncFunction != nil {

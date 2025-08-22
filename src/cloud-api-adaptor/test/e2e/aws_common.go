@@ -41,7 +41,7 @@ func (aa AWSAssert) HasPodVM(t *testing.T, id string) {
 			Filters: []ec2types.Filter{
 				{
 					Name:   aws.String("subnet-id"),
-					Values: []string{aa.Vpc.SubnetId},
+					Values: []string{aa.Vpc.SubnetID},
 				},
 			},
 		})

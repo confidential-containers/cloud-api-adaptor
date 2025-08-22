@@ -1,4 +1,4 @@
-package mutating_webhook
+package mutatingwebhook
 
 import (
 	"log"
@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	RUNTIME_CLASS_NAME_DEFAULT       = "kata-remote"
-	POD_VM_EXTENDED_RESOURCE_DEFAULT = "kata.peerpods.io/vm"
-	PEERPODS_CPU_ANNOTATION          = "io.katacontainers.config.hypervisor.default_vcpus"
-	PEERPODS_MEMORY_ANNOTATION       = "io.katacontainers.config.hypervisor.default_memory"
-	GPU_RESOURCE_NAME                = "nvidia.com/gpu"
-	PEERPODS_GPU_ANNOTATION          = "io.katacontainers.config.hypervisor.default_gpus"
+	RuntimeClassNameDefault      = "kata-remote"
+	PodVMExtendedResourceDefault = "kata.peerpods.io/vm"
+	PeerpodsCPUAnnotation        = "io.katacontainers.config.hypervisor.default_vcpus"
+	PeerpodsMemoryAnnotation     = "io.katacontainers.config.hypervisor.default_memory"
+	GPUResourceName              = "nvidia.com/gpu"
+	PeerpodsGPUAnnotation        = "io.katacontainers.config.hypervisor.default_gpus"
 )
 
 var logger = log.New(log.Writer(), "[pod-mutator] ", log.LstdFlags|log.Lmsgprefix)
@@ -29,7 +29,7 @@ func (a *PodMutator) mutatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	mpod := pod.DeepCopy()
 
 	if runtimeClassName = os.Getenv("TARGET_RUNTIMECLASS"); runtimeClassName == "" {
-		runtimeClassName = RUNTIME_CLASS_NAME_DEFAULT
+		runtimeClassName = RuntimeClassNameDefault
 	}
 	// Mutate only if the POD is using specific runtimeClass
 	if mpod.Spec.RuntimeClassName == nil || *mpod.Spec.RuntimeClassName != runtimeClassName {
@@ -62,7 +62,7 @@ func adjustResourceSpec(pod *corev1.Pod) *corev1.Pod {
 	// Get total GPU resource requests
 	// GPU resources are always requested in whole numbers and request and limits are same.
 	// So we don't need to check for limits
-	gpuRequest := utils.GetResourceRequestQuantity(pod, corev1.ResourceName(GPU_RESOURCE_NAME))
+	gpuRequest := utils.GetResourceRequestQuantity(pod, corev1.ResourceName(GPUResourceName))
 
 	// log the resource values
 	logger.Printf("CPU Request: %s, CPU Limit: %s, Memory Request: %s, Memory Limit: %s, GPU Request: %s",
@@ -83,10 +83,10 @@ func adjustResourceSpec(pod *corev1.Pod) *corev1.Pod {
 	if !cpuRequest.IsZero() && cpuLimit.Cmp(cpuRequest) >= 0 {
 		logger.Printf("Adding CPU annotation based on cpuLimit (integer value): %d", cpuLimit.Value())
 		// We need the scaled value for the annotation and not the raw value like 1000m, 0.4 etc for CPU
-		annotations[PEERPODS_CPU_ANNOTATION] = strconv.FormatInt(cpuLimit.Value(), 10)
+		annotations[PeerpodsCPUAnnotation] = strconv.FormatInt(cpuLimit.Value(), 10)
 	} else if cpuRequest.Sign() == 1 {
 		logger.Printf("Adding CPU annotation based on cpuRequest (integer value): %d", cpuRequest.Value())
-		annotations[PEERPODS_CPU_ANNOTATION] = strconv.FormatInt(cpuRequest.Value(), 10)
+		annotations[PeerpodsCPUAnnotation] = strconv.FormatInt(cpuRequest.Value(), 10)
 	}
 
 	// Add memory annotation
@@ -96,7 +96,7 @@ func adjustResourceSpec(pod *corev1.Pod) *corev1.Pod {
 		if err != nil {
 			logger.Printf("Error converting memory quantity to MiB: %v", err)
 		}
-		annotations[PEERPODS_MEMORY_ANNOTATION] = memoryLimitMiBStr
+		annotations[PeerpodsMemoryAnnotation] = memoryLimitMiBStr
 
 	} else if memoryRequest.Sign() == 1 {
 		logger.Printf("Adding Memory annotation based on memoryRequest: %s", memoryRequest.String())
@@ -104,13 +104,13 @@ func adjustResourceSpec(pod *corev1.Pod) *corev1.Pod {
 		if err != nil {
 			logger.Printf("Error converting memory quantity to MiB: %v", err)
 		}
-		annotations[PEERPODS_MEMORY_ANNOTATION] = memoryRequestMiBStr
+		annotations[PeerpodsMemoryAnnotation] = memoryRequestMiBStr
 	}
 
 	// Add GPU annotation
 	if gpuRequest.Sign() == 1 {
 		logger.Printf("Adding GPU annotation based on gpuRequest: %s", gpuRequest.String())
-		annotations[PEERPODS_GPU_ANNOTATION] = gpuRequest.String()
+		annotations[PeerpodsGPUAnnotation] = gpuRequest.String()
 	}
 
 	pod.SetAnnotations(annotations)
@@ -135,12 +135,12 @@ func defaultContainerResourceRequirements() corev1.ResourceRequirements {
 	requirements.Requests = corev1.ResourceList{}
 	requirements.Limits = corev1.ResourceList{}
 
-	var podVmExtResource string
-	if podVmExtResource = os.Getenv("POD_VM_EXTENDED_RESOURCE"); podVmExtResource == "" {
-		podVmExtResource = POD_VM_EXTENDED_RESOURCE_DEFAULT
+	var podVMExtResource string
+	if podVMExtResource = os.Getenv("POD_VM_EXTENDED_RESOURCE"); podVMExtResource == "" {
+		podVMExtResource = PodVMExtendedResourceDefault
 	}
 
-	requirements.Requests[corev1.ResourceName(podVmExtResource)] = resource.MustParse("1")
-	requirements.Limits[corev1.ResourceName(podVmExtResource)] = resource.MustParse("1")
+	requirements.Requests[corev1.ResourceName(podVMExtResource)] = resource.MustParse("1")
+	requirements.Limits[corev1.ResourceName(podVMExtResource)] = resource.MustParse("1")
 	return requirements
 }

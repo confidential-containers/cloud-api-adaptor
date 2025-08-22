@@ -42,7 +42,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 
 	govmomiClient, err := NewGovmomiClient(*config)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating vcenter session for cloud provider: %s", err)
+		return nil, fmt.Errorf("error creating vcenter session for cloud provider: %s", err)
 	}
 
 	provider := &vsphereProvider{
@@ -59,7 +59,7 @@ func checkConfig(config *Config) error {
 
 	if config.DRS == "true" {
 		if config.Cluster == "" {
-			return fmt.Errorf("Error: A cluster name is required with DRS")
+			return fmt.Errorf("error: A cluster name is required with DRS")
 		}
 		return nil
 	}
@@ -68,13 +68,13 @@ func checkConfig(config *Config) error {
 	// We cannot check for a cluster as hosts do not have to be part of a cluster.
 
 	if config.Host == "" || config.Datastore == "" {
-		return fmt.Errorf("Error: A host and datastore name are required")
+		return fmt.Errorf("error: A host and datastore name are required")
 	}
 
 	return nil
 }
 
-type VmConfig []types.BaseOptionValue
+type VMConfig []types.BaseOptionValue
 
 func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, requirement provider.InstanceTypeSpec) (*provider.Instance, error) {
 
@@ -120,23 +120,23 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	// /p.serviceConfig.Datacenter/vm/p.serviceConfig.Deployfolder. If no folder exists it
 	// will be created in the p.serviceConfig.Datacenter inventory path ie /p.serviceConfig.Datacenter/vm/
 
-	inventory_path := path.Join(dc.InventoryPath, "vm")
+	inventoryPath := path.Join(dc.InventoryPath, "vm")
 
-	vmfolder, err := finder.Folder(ctx, inventory_path)
+	vmfolder, err := finder.Folder(ctx, inventoryPath)
 	if err != nil {
-		logger.Printf("Cannot find inventory folder %s error: %s", inventory_path, err)
+		logger.Printf("Cannot find inventory folder %s error: %s", inventoryPath, err)
 		return nil, err
 	}
 
-	deploy_path_dirs := strings.Split(p.serviceConfig.Deployfolder, "/")
-	deploy_path := inventory_path
+	deployPathDirs := strings.Split(p.serviceConfig.Deployfolder, "/")
+	deployPath := inventoryPath
 
-	for _, dir := range deploy_path_dirs {
-		deploy_path = path.Join(deploy_path, dir)
-		current_folder, err := finder.Folder(ctx, deploy_path)
+	for _, dir := range deployPathDirs {
+		deployPath = path.Join(deployPath, dir)
+		currentFolder, err := finder.Folder(ctx, deployPath)
 		if err != nil {
 			if _, ok := err.(*find.NotFoundError); ok {
-				current_folder, err = vmfolder.CreateFolder(ctx, dir)
+				currentFolder, err = vmfolder.CreateFolder(ctx, dir)
 				if err != nil {
 					return nil, err
 				}
@@ -144,7 +144,7 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 				return nil, err
 			}
 		}
-		vmfolder = current_folder
+		vmfolder = currentFolder
 	}
 
 	vmfolderref := vmfolder.Reference()
@@ -193,7 +193,7 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 
 		recs := result.Recommendations
 		if len(recs) == 0 {
-			return nil, fmt.Errorf("Vcenter has no cluster recommendations for cluster %s", p.serviceConfig.Cluster)
+			return nil, fmt.Errorf("vcenter has no cluster recommendations for cluster %s", p.serviceConfig.Cluster)
 		}
 
 		rspec := *recs[0].Action[0].(*types.PlacementAction).RelocateSpec
@@ -256,7 +256,7 @@ func (p *vsphereProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	//Convert userData to base64
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 
-	var extraconfig VmConfig
+	var extraconfig VMConfig
 
 	extraconfig = append(extraconfig,
 		&types.OptionValue{
@@ -325,11 +325,11 @@ func getIPs(vm *object.VirtualMachine) ([]netip.Addr, error) { // TODO Fix to ge
 	}
 
 	logger.Printf("VM IP = %s", ip)
-	ip_item, err := netip.ParseAddr(ip)
+	ipItem, err := netip.ParseAddr(ip)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pod node IP %q: %w", ip, err)
 	}
-	podNodeIPs = append(podNodeIPs, ip_item)
+	podNodeIPs = append(podNodeIPs, ipItem)
 
 	return podNodeIPs, nil
 }
@@ -410,7 +410,7 @@ func (p *vsphereProvider) Teardown() error {
 func (p *vsphereProvider) ConfigVerifier() error {
 	template := p.serviceConfig.Template
 	if len(template) == 0 {
-		return fmt.Errorf("Template is empty")
+		return fmt.Errorf("template is empty")
 	}
 	return nil
 }

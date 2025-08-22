@@ -131,11 +131,11 @@ DNS.2   = 127.0.0.1
 	certPath = filepath.Join("../trustee", "kbs", "config", "kubernetes", "base", "https-cert.pem")
 
 	if err := os.WriteFile(certPath, []byte(certContent), 0640); err != nil {
-		return "", "", fmt.Errorf("Failed to write cert file: %v", err)
+		return "", "", fmt.Errorf("failed to write cert file: %v", err)
 	}
 
 	if err := os.WriteFile(keyPath, []byte(keyContent), 0600); err != nil {
-		return "", "", fmt.Errorf("Failed to write cert file: %v", err)
+		return "", "", fmt.Errorf("failed to write cert file: %v", err)
 	}
 	return keyContent, certContent, nil
 }
@@ -163,13 +163,13 @@ func getKbsKubernetesFilePath() string {
 }
 
 func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerService, error) {
-	e2e_dir, err := os.Getwd()
+	e2eDir, err := os.Getwd()
 	if err != nil {
-		err = fmt.Errorf("getting the current working directory: %w\n", err)
+		err = fmt.Errorf("getting the current working directory: %w", err)
 		log.Errorf("%v", err)
 		return nil, err
 	}
-	trusteeRepoPath = filepath.Join(e2e_dir, "../trustee")
+	trusteeRepoPath = filepath.Join(e2eDir, "../trustee")
 
 	log.Info("creating key.bin")
 
@@ -192,7 +192,7 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		kbsKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
 		keyOutputFile, err := os.Create(kbsKey)
 		if err != nil {
-			err = fmt.Errorf("creating key file: %w\n", err)
+			err = fmt.Errorf("creating key file: %w", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
@@ -200,14 +200,14 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 
 		pubKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
-			err = fmt.Errorf("generating Ed25519 key pair: %w\n", err)
+			err = fmt.Errorf("generating Ed25519 key pair: %w", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
 
 		b, err := x509.MarshalPKCS8PrivateKey(privateKey)
 		if err != nil {
-			err = fmt.Errorf("MarshalPKCS8PrivateKey private key: %w\n", err)
+			err = fmt.Errorf("MarshalPKCS8PrivateKey private key: %w", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
@@ -220,14 +220,14 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		// Save private key to file
 		err = saveToFile(kbsKey, privateKeyPEM)
 		if err != nil {
-			err = fmt.Errorf("saving private key to file: %w\n", err)
+			err = fmt.Errorf("saving private key to file: %w", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
 
 		b, err = x509.MarshalPKIXPublicKey(pubKey)
 		if err != nil {
-			err = fmt.Errorf("MarshalPKIXPublicKey Ed25519 public key: %w\n", err)
+			err = fmt.Errorf("MarshalPKIXPublicKey Ed25519 public key: %w", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
@@ -240,7 +240,7 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		// Save public key to file
 		err = saveToFile(kbsCert, publicKeyPEM)
 		if err != nil {
-			err = fmt.Errorf("saving public key to file: %w\n", err)
+			err = fmt.Errorf("saving public key to file: %w", err)
 			log.Errorf("%v", err)
 			return nil, err
 		}
@@ -251,8 +251,8 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 	if customPCCSURL != "" {
 		log.Info("CUSTOM_PCCS_URL is provided, write custom PCCS config")
 		configFilePath := filepath.Join(getKbsKubernetesFilePath(), "custom_pccs/sgx_default_qcnl.conf")
-		collateralUrl := "https://api.trustedservices.intel.com/sgx/certification/v4/"
-		config := fmt.Sprintf(`{ "pccs_url": "%s", "collateral_service": "%s"}`, customPCCSURL, collateralUrl)
+		collateralURL := "https://api.trustedservices.intel.com/sgx/certification/v4/"
+		config := fmt.Sprintf(`{ "pccs_url": "%s", "collateral_service": "%s"}`, customPCCSURL, collateralURL)
 		err = saveToFile(configFilePath, []byte(config))
 		if err != nil {
 			return nil, err
@@ -315,7 +315,7 @@ func skipSeCertsVerification(patchFile string) error {
 		return fmt.Errorf("failed to read file: %v", err)
 	}
 	content := string(data)
-	content = strings.Replace(content, "false", "true", -1)
+	content = strings.ReplaceAll(content, "false", "true")
 	err = os.WriteFile(patchFile, []byte(content), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
@@ -329,8 +329,8 @@ func createPVonTargetWorkerNode(pvFilePath, nodeName string, cfg *envconf.Config
 		return fmt.Errorf("failed to read file: %v", err)
 	}
 	content := string(data)
-	content = strings.Replace(content, "${IBM_SE_CREDS_DIR}", "/root/ibmse", -1)
-	content = strings.Replace(content, "${NODE_NAME}", nodeName, -1)
+	content = strings.ReplaceAll(content, "${IBM_SE_CREDS_DIR}", "/root/ibmse")
+	content = strings.ReplaceAll(content, "${NODE_NAME}", nodeName)
 	err = os.WriteFile(pvFilePath, []byte(content), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
@@ -503,14 +503,14 @@ func getNodeIPForSvc(deploymentName string, service corev1.Service, cfg *envconf
 		}
 	}
 
-	return "", fmt.Errorf("Node IP not found for Service %s", service.Name)
+	return "", fmt.Errorf("node IP not found for Service %s", service.Name)
 }
 
 func (p *KeyBrokerService) GetCachedKbsEndpoint() (string, error) {
 	if p.endpoint != "" {
 		return p.endpoint, nil
 	}
-	return "", fmt.Errorf("KeyBrokerService not found")
+	return "", fmt.Errorf("keyBrokerService not found")
 }
 
 func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Config) (string, error) {
@@ -538,10 +538,10 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 	}
 
 	for _, service := range services.Items {
-		if service.ObjectMeta.Name == serviceName {
+		if service.Name == serviceName {
 			// Ensure the service is of type NodePort
 			if service.Spec.Type != corev1.ServiceTypeNodePort {
-				return "", fmt.Errorf("Service %s is not of type NodePort", "kbs")
+				return "", fmt.Errorf("service %s is not of type NodePort", "kbs")
 			}
 
 			var nodePort int32
@@ -549,7 +549,7 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 			if len(service.Spec.Ports) > 0 {
 				nodePort = service.Spec.Ports[0].NodePort
 			} else {
-				return "", fmt.Errorf("NodePort is not configured for Service %s", "kbs")
+				return "", fmt.Errorf("nodePort is not configured for Service %s", "kbs")
 			}
 
 			nodeIP, err := getNodeIPForSvc(deploymentName, service, cfg)
@@ -562,7 +562,7 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 		}
 	}
 
-	return "", fmt.Errorf("Service %s not found", serviceName)
+	return "", fmt.Errorf("service %s not found", serviceName)
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile string) error {

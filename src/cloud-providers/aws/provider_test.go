@@ -255,11 +255,11 @@ var serviceConfig = &Config{
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
 	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "ami-1234567890abcdef0",
+	ImageID: "ami-1234567890abcdef0",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{"t2.small", "t2.medium"},
 }
@@ -270,11 +270,11 @@ var serviceConfigPublicIP = &Config{
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
 	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "ami-1234567890abcdef0",
+	ImageID: "ami-1234567890abcdef0",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{"t2.small", "t2.medium"},
 	// Add public IP to serviceConfig
@@ -287,11 +287,11 @@ var serviceConfigInvalidInstanceType = &Config{
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
 	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "ami-1234567890abcdef0",
+	ImageID: "ami-1234567890abcdef0",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{"t2.large", "t2.medium"},
 }
@@ -302,26 +302,26 @@ var serviceConfigEmptyInstanceTypes = &Config{
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
 	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "ami-1234567890abcdef0",
+	ImageID: "ami-1234567890abcdef0",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{},
 }
 
 // Create a serviceConfig with empty ImageId
-var serviceConfigEmptyImageId = &Config{
+var serviceConfigEmptyImageID = &Config{
 	Region: "us-east-1",
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
 	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "",
+	ImageID: "",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{"t2.large", "t2.medium"},
 }
@@ -688,7 +688,7 @@ func TestConfigVerifier(t *testing.T) {
 		{
 			name: "checkInvalidImageId",
 			fields: fields{
-				serviceConfig: serviceConfigEmptyImageId,
+				serviceConfig: serviceConfigEmptyImageID,
 			},
 			// Test should return an error
 			wantErr: true,

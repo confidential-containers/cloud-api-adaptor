@@ -167,7 +167,7 @@ func TestCloudServiceWithSecureComms(t *testing.T) {
 	kubemgr.InitKubeMgrMock()
 	test.CreatePKCS8Secret(t)
 	test.KBSServer("9009")
-	s9009 := test.HttpServer(forwarder.DefaultListenPort)
+	s9009 := test.HTTPServer(forwarder.DefaultListenPort)
 	if s9009 == nil {
 		t.Error("Failed - could not create server")
 	}
@@ -177,10 +177,10 @@ func TestCloudServiceWithSecureComms(t *testing.T) {
 	ctx2, cancel := context.WithCancel(context.Background())
 
 	ppSecrets := ppssh.NewPpSecrets(ppssh.GetSecret(gkc.GetKey))
-	ppSecrets.AddKey(ppssh.WN_PUBLIC_KEY)
-	ppSecrets.AddKey(ppssh.PP_PRIVATE_KEY)
+	ppSecrets.AddKey(ppssh.WNPublicKey)
+	ppSecrets.AddKey(ppssh.PPPrivateKey)
 
-	sshServer := ppssh.NewSshServer([]string{"BOTH_PHASES:KBS:9019"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7111"}, ppSecrets, sshport)
+	sshServer := ppssh.NewSSHServer([]string{"BOTH_PHASES:KBS:9019"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7111"}, ppSecrets, sshport)
 	_ = sshServer.Start(ctx2)
 	defer func() {
 		cancel()

@@ -14,7 +14,7 @@ func sanitize(input string) string {
 	var output string
 
 	for _, c := range strings.ToLower(input) {
-		if !(('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '-') {
+		if (c < 'a' || 'z' < c) && (c < '0' || '9' < c) && c != '-' {
 			c = '-'
 		}
 		output += string(c)

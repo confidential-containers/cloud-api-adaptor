@@ -17,11 +17,11 @@ import (
 func WN() bool {
 	kubemgr.KubeMgr.DeleteSecret(wnssh.PpSecretName("sid"))
 	test.KBSServer("9004")
-	test.HttpServer("8053")
-	test.HttpServer("26443")
+	test.HTTPServer("8053")
+	test.HTTPServer("26443")
 
 	// CAA Initialization
-	sshClient, err := wnssh.InitSshClient([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, []string{"BOTH_PHASES:KBS:9004", "KUBERNETES_PHASE:KUBEAPI:26443", "KUBERNETES_PHASE:DNS:8053"}, true, "127.0.0.1:9004", sshutil.SSHPORT)
+	sshClient, err := wnssh.InitSSHClient([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, []string{"BOTH_PHASES:KBS:9004", "KUBERNETES_PHASE:KUBEAPI:26443", "KUBERNETES_PHASE:DNS:8053"}, true, "127.0.0.1:9004", sshutil.SSHPORT)
 	if err != nil {
 		log.Fatalf("InitSshClient %v", err)
 	}
@@ -45,7 +45,7 @@ func WN() bool {
 		log.Fatalf("failed ci.Start: %s", err)
 	}
 
-	success := test.HttpClient(fmt.Sprintf("http://127.0.0.1:%s", inPort))
+	success := test.HTTPClient(fmt.Sprintf("http://127.0.0.1:%s", inPort))
 
 	////////// CAA StopVM
 	ci.DisconnectPP("sid")

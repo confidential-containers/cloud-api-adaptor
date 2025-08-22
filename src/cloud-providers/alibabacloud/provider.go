@@ -94,7 +94,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	logger.Printf("alibabacloud config: %#v", config.Redact())
 
 	var c openapi.Config
-	if len(config.AccessKeyId) == 0 || len(config.SecretKey) == 0 {
+	if len(config.AccessKeyID) == 0 || len(config.SecretKey) == 0 {
 		logger.Printf("ALIBABACLOUD_ACCESS_KEY_ID and ALIBABACLOUD_ACCESS_KEY_SECRET not provided, try using ACK RRSA (ALIBABA_CLOUD_ROLE_ARN, ALIBABA_CLOUD_OIDC_PROVIDER_ARN, ALIBABA_CLOUD_OIDC_TOKEN_FILE) to get credential...")
 		cred, err := credentials.NewCredential(nil)
 		if err != nil {
@@ -114,7 +114,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	} else {
 		logger.Printf("Use ALIBABACLOUD_ACCESS_KEY_ID and ALIBABACLOUD_ACCESS_KEY_SECRET as credential")
 		c = openapi.Config{
-			AccessKeyId:     tea.String(config.AccessKeyId),
+			AccessKeyId:     tea.String(config.AccessKeyID),
 			AccessKeySecret: tea.String(config.SecretKey),
 			RegionId:        tea.String(config.Region),
 		}
@@ -141,21 +141,21 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		return nil, fmt.Errorf("failed to update instance type spec list: %v", err)
 	}
 
-	if err = provider.updateVpcId(); err != nil {
+	if err = provider.updateVpcID(); err != nil {
 		return nil, fmt.Errorf("failed to get vpc id: %v", err)
 	}
 
 	return provider, nil
 }
 
-func (p *alibabaCloudProvider) getIPs(instanceId string, ecsClient ecsClient) ([]netip.Addr, error) {
+func (p *alibabaCloudProvider) getIPs(instanceID string, ecsClient ecsClient) ([]netip.Addr, error) {
 	var podNodeIPs []netip.Addr
 
 	// describe instnace to get the private IP address
 	var privateIPs []*string
 	err := p.waitUntilTimeout(time.Duration(time.Second*15), func() (bool, error) {
 		req := &ecs.DescribeInstanceAttributeRequest{
-			InstanceId: tea.String(instanceId),
+			InstanceId: tea.String(instanceID),
 		}
 		resp, err := p.ecsClient.DescribeInstanceAttribute(req)
 		if err == nil {
@@ -175,10 +175,10 @@ func (p *alibabaCloudProvider) getIPs(instanceId string, ecsClient ecsClient) ([
 			return false, nil
 		}
 
-		return false, fmt.Errorf("failed to describe instance %s: %v", instanceId, err)
+		return false, fmt.Errorf("failed to describe instance %s: %v", instanceID, err)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to wait for instance %s to be ready: %v", instanceId, err)
+		return nil, fmt.Errorf("failed to wait for instance %s to be ready: %v", instanceID, err)
 	}
 
 	// Use the VPC private IP address as the pod node IP
@@ -225,7 +225,7 @@ func (p *alibabaCloudProvider) CreateInstance(ctx context.Context, podName, sand
 
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the ECS Image for the PodVM image", spec.Image)
-		p.serviceConfig.ImageId = spec.Image
+		p.serviceConfig.ImageID = spec.Image
 	}
 
 	securityGroupIds := []*string{}
@@ -237,10 +237,10 @@ func (p *alibabaCloudProvider) CreateInstance(ctx context.Context, podName, sand
 		RegionId:         tea.String(p.serviceConfig.Region),
 		MinAmount:        tea.Int32(1),
 		Amount:           tea.Int32(1),
-		ImageId:          tea.String(p.serviceConfig.ImageId),
+		ImageId:          tea.String(p.serviceConfig.ImageID),
 		InstanceType:     tea.String(instanceType),
 		SecurityGroupIds: securityGroupIds,
-		VSwitchId:        tea.String(p.serviceConfig.VswitchId),
+		VSwitchId:        tea.String(p.serviceConfig.VswitchID),
 		UserData:         tea.String(b64EncData),
 		Tag:              tags,
 		InstanceName:     tea.String(instanceName),
@@ -265,12 +265,12 @@ func (p *alibabaCloudProvider) CreateInstance(ctx context.Context, podName, sand
 
 	// Add block device mappings to the instance to set the root volume size
 	if p.serviceConfig.SystemDiskSize > 0 {
-		req.ImageId = tea.String(p.serviceConfig.ImageId)
+		req.ImageId = tea.String(p.serviceConfig.ImageID)
 		req.SystemDisk = &ecs.RunInstancesRequestSystemDisk{
 			Size:     tea.String(strconv.Itoa(p.serviceConfig.SystemDiskSize)),
 			Category: tea.String("cloud_essd"),
 		}
-		logger.Printf("Setting the SystemDisk size to %d GiB with ImageId %s", p.serviceConfig.SystemDiskSize, p.serviceConfig.ImageId)
+		logger.Printf("Setting the SystemDisk size to %d GiB with ImageId %s", p.serviceConfig.SystemDiskSize, p.serviceConfig.ImageID)
 	}
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
@@ -329,22 +329,22 @@ func (p *alibabaCloudProvider) CreateInstance(ctx context.Context, podName, sand
 	// we will create another NIC and create an Internet access
 	if spec.MultiNic {
 		logger.Println("External network connectivity is enabled, trying to setup another NIC with Internet Access.")
-		nIfaceId, err := p.createAddonNICforInstance(instanceID)
+		nIfaceID, err := p.createAddonNICforInstance(instanceID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create NIC: %w", err)
 		}
 
 		if p.serviceConfig.UsePublicIP {
-			eipId, _, err := p.createEipInstance()
+			eipID, _, err := p.createEipInstance()
 			if err != nil {
 				return nil, fmt.Errorf("failed to create EIP instance: %w", err)
 			}
 
-			p.eips[instanceID] = eipId
+			p.eips[instanceID] = eipID
 
-			err = p.bindEipToNic(eipId, nIfaceId)
+			err = p.bindEipToNic(eipID, nIfaceID)
 			if err != nil {
-				return nil, fmt.Errorf("failed to bind Eip %s to NIC %s: %w", *eipId, *nIfaceId, err)
+				return nil, fmt.Errorf("failed to bind Eip %s to NIC %s: %w", *eipID, *nIfaceID, err)
 			}
 		}
 
@@ -405,16 +405,16 @@ func (p *alibabaCloudProvider) Teardown() error {
 }
 
 func (p *alibabaCloudProvider) ConfigVerifier() error {
-	ImageId := p.serviceConfig.ImageId
-	if len(ImageId) == 0 {
+	imageID := p.serviceConfig.ImageID
+	if len(imageID) == 0 {
 		return fmt.Errorf("ImageId is empty")
 	}
 	return nil
 }
 
-func (p *alibabaCloudProvider) updateVpcId() error {
+func (p *alibabaCloudProvider) updateVpcID() error {
 	request := &vpc.DescribeVSwitchAttributesRequest{
-		VSwitchId: tea.String(p.serviceConfig.VswitchId),
+		VSwitchId: tea.String(p.serviceConfig.VswitchID),
 		RegionId:  tea.String(p.serviceConfig.Region),
 	}
 
@@ -423,7 +423,7 @@ func (p *alibabaCloudProvider) updateVpcId() error {
 		return fmt.Errorf("failed to describe the vswitch attribute: %v", err)
 	}
 
-	p.serviceConfig.VpcId = *response.Body.VpcId
+	p.serviceConfig.VpcID = *response.Body.VpcId
 	return nil
 }
 
@@ -556,12 +556,12 @@ func (p *alibabaCloudProvider) waitUntilTimeout(timeout time.Duration, judgement
 
 // Create a NIC and attach it to the instance
 // Note that the NIC's SecurityGroupId will be the first on of the ECS Instances
-func (p *alibabaCloudProvider) createAddonNICforInstance(instanceID string) (nIfaceId *string, err error) {
+func (p *alibabaCloudProvider) createAddonNICforInstance(instanceID string) (nIfaceID *string, err error) {
 	networkInterfaceName := fmt.Sprintf("peerpod-nic-%s", instanceID)
 	description := ""
 	createNetworkInterfaceRequest := &ecs.CreateNetworkInterfaceRequest{
 		RegionId:             tea.String(p.serviceConfig.Region),
-		VSwitchId:            tea.String(p.serviceConfig.VswitchId),
+		VSwitchId:            tea.String(p.serviceConfig.VswitchID),
 		SecurityGroupId:      tea.String(p.serviceConfig.SecurityGroupIds[0]),
 		NetworkInterfaceName: tea.String(networkInterfaceName),
 		Description:          tea.String(description),
@@ -584,7 +584,7 @@ func (p *alibabaCloudProvider) createAddonNICforInstance(instanceID string) (nIf
 			continue
 		}
 
-		nIfaceId = nic.Body.NetworkInterfaceId
+		nIfaceID = nic.Body.NetworkInterfaceId
 		break
 	}
 
@@ -609,7 +609,7 @@ func (p *alibabaCloudProvider) createAddonNICforInstance(instanceID string) (nIf
 	// The instance is already created successfully, so we directly attach the NIC to it!
 	attachNetworkInterfaceRequest := &ecs.AttachNetworkInterfaceRequest{
 		InstanceId:         tea.String(instanceID),
-		NetworkInterfaceId: nIfaceId,
+		NetworkInterfaceId: nIfaceID,
 		RegionId:           tea.String(p.serviceConfig.Region),
 	}
 
@@ -617,7 +617,7 @@ func (p *alibabaCloudProvider) createAddonNICforInstance(instanceID string) (nIf
 	if err != nil {
 		_, nicDelErr := p.ecsClient.DeleteNetworkInterface(&ecs.DeleteNetworkInterfaceRequest{
 			RegionId:           tea.String(p.serviceConfig.Region),
-			NetworkInterfaceId: nIfaceId,
+			NetworkInterfaceId: nIfaceID,
 		})
 		if nicDelErr != nil {
 			logger.Printf("failed to delete the network interface: %v", nicDelErr)
@@ -629,7 +629,7 @@ func (p *alibabaCloudProvider) createAddonNICforInstance(instanceID string) (nIf
 	err = p.waitUntilTimeout(time.Duration(time.Minute*1), func() (bool, error) {
 		request := &ecs.DescribeNetworkInterfaceAttributeRequest{
 			RegionId:           tea.String(p.serviceConfig.Region),
-			NetworkInterfaceId: nIfaceId,
+			NetworkInterfaceId: nIfaceID,
 		}
 		response, err := p.ecsClient.DescribeNetworkInterfaceAttribute(request)
 		if err != nil {
@@ -647,7 +647,7 @@ func (p *alibabaCloudProvider) createAddonNICforInstance(instanceID string) (nIf
 
 	modifyNetworkInterfaceAttributeRequest := ecs.ModifyNetworkInterfaceAttributeRequest{
 		RegionId:           tea.String(p.serviceConfig.Region),
-		NetworkInterfaceId: nIfaceId,
+		NetworkInterfaceId: nIfaceID,
 		DeleteOnRelease:    tea.Bool(true),
 	}
 	_, err = p.ecsClient.ModifyNetworkInterfaceAttribute(&modifyNetworkInterfaceAttributeRequest)
@@ -655,9 +655,9 @@ func (p *alibabaCloudProvider) createAddonNICforInstance(instanceID string) (nIf
 		return nil, fmt.Errorf("failed to modify the network interface attribute: %v", err)
 	}
 
-	logger.Printf("created a network interface %s and attached it to the instance %s", *nIfaceId, instanceID)
+	logger.Printf("created a network interface %s and attached it to the instance %s", *nIfaceID, instanceID)
 
-	return nIfaceId, nil
+	return nIfaceID, nil
 }
 
 func (p *alibabaCloudProvider) createEipInstance() (*string, *string, error) {
@@ -700,11 +700,11 @@ func (p *alibabaCloudProvider) createEipInstance() (*string, *string, error) {
 	return res.Body.AllocationId, res.Body.EipAddress, nil
 }
 
-func (p *alibabaCloudProvider) deleteEipInstance(eipId *string) error {
-	logger.Printf("Unbinding EIP %s...", *eipId)
+func (p *alibabaCloudProvider) deleteEipInstance(eipID *string) error {
+	logger.Printf("Unbinding EIP %s...", *eipID)
 	unbindReq := vpc.UnassociateEipAddressRequest{
 		RegionId:     tea.String(p.serviceConfig.Region),
-		AllocationId: eipId,
+		AllocationId: eipID,
 	}
 
 	_, err := p.vpcClient.UnassociateEipAddress(&unbindReq)
@@ -715,7 +715,7 @@ func (p *alibabaCloudProvider) deleteEipInstance(eipId *string) error {
 	err = p.waitUntilTimeout(time.Duration(time.Second*30), func() (bool, error) {
 		request := &vpc.DescribeEipAddressesRequest{
 			RegionId:     tea.String(p.serviceConfig.Region),
-			AllocationId: eipId,
+			AllocationId: eipID,
 		}
 		response, err := p.vpcClient.DescribeEipAddresses(request)
 		if err != nil {
@@ -738,10 +738,10 @@ func (p *alibabaCloudProvider) deleteEipInstance(eipId *string) error {
 
 	deleteReq := vpc.ReleaseEipAddressRequest{
 		RegionId:     tea.String(p.serviceConfig.Region),
-		AllocationId: eipId,
+		AllocationId: eipID,
 	}
 
-	logger.Printf("Deleting EIP %s...", *eipId)
+	logger.Printf("Deleting EIP %s...", *eipID)
 	_, err = p.vpcClient.ReleaseEipAddress(&deleteReq)
 	if err != nil {
 		return fmt.Errorf("failed to delete EIP: %v", err)
@@ -750,7 +750,7 @@ func (p *alibabaCloudProvider) deleteEipInstance(eipId *string) error {
 	err = p.waitUntilTimeout(time.Duration(time.Second*30), func() (bool, error) {
 		request := &vpc.DescribeEipAddressesRequest{
 			RegionId:     tea.String(p.serviceConfig.Region),
-			AllocationId: eipId,
+			AllocationId: eipID,
 		}
 		response, err := p.vpcClient.DescribeEipAddresses(request)
 		if err != nil {
@@ -767,16 +767,16 @@ func (p *alibabaCloudProvider) deleteEipInstance(eipId *string) error {
 		return fmt.Errorf("failed to delete EIP: %v", err)
 	}
 
-	logger.Printf("Eip %s deleted", *eipId)
+	logger.Printf("Eip %s deleted", *eipID)
 	return nil
 }
 
-func (p *alibabaCloudProvider) bindEipToNic(eipId *string, nicId *string) error {
-	logger.Printf("Binding EIP %s to NIC %s...\n", *eipId, *nicId)
+func (p *alibabaCloudProvider) bindEipToNic(eipID *string, nicID *string) error {
+	logger.Printf("Binding EIP %s to NIC %s...\n", *eipID, *nicID)
 	req := vpc.AssociateEipAddressRequest{
 		RegionId:     tea.String(p.serviceConfig.Region),
-		AllocationId: eipId,
-		InstanceId:   nicId,
+		AllocationId: eipID,
+		InstanceId:   nicID,
 		InstanceType: tea.String("NetworkInterface"),
 	}
 
@@ -788,7 +788,7 @@ func (p *alibabaCloudProvider) bindEipToNic(eipId *string, nicId *string) error 
 	err = p.waitUntilTimeout(time.Duration(time.Minute*1), func() (bool, error) {
 		request := &vpc.DescribeEipAddressesRequest{
 			RegionId:     tea.String(p.serviceConfig.Region),
-			AllocationId: eipId,
+			AllocationId: eipID,
 		}
 		response, err := p.vpcClient.DescribeEipAddresses(request)
 		if err != nil {
@@ -806,9 +806,9 @@ func (p *alibabaCloudProvider) bindEipToNic(eipId *string, nicId *string) error 
 		return false, nil
 	})
 	if err != nil {
-		return fmt.Errorf("failed to bind EIP %s to NIC %s: %v", *eipId, *nicId, err)
+		return fmt.Errorf("failed to bind EIP %s to NIC %s: %v", *eipID, *nicID, err)
 	}
 
-	logger.Printf("Bound EIP %s to NIC %s successfully", *eipId, *nicId)
+	logger.Printf("Bound EIP %s to NIC %s successfully", *eipID, *nicID)
 	return nil
 }

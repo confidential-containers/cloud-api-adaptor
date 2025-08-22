@@ -25,21 +25,21 @@ const DefaultCPU = 2
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
-	conn                    *libvirt.Connect // Libvirt connection
-	containerRuntime        string           // Name of the container runtime
-	network                 string           // Network name
-	ssh_key_file            string           // SSH key file used to connect to Libvirt
-	storage                 string           // Storage pool name
-	uri                     string           // Libvirt URI
-	wd                      string           // libvirt's directory path on this repository
-	volumeName              string           // Podvm volume name
-	clusterName             string           // Cluster name
-	tunnelType              string           // Tunnel Type
-	vxlanPort               string           // VXLAN port number
-	secure_comms            string           // Activate CAA SECURE_COMMS
-	secure_comms_no_trustee string           // Deactivate Trustee mode in SECURE_COMMS
-	secure_comms_kbs_addr   string           // KBS URL
-	initdata                string           // InitData
+	conn                 *libvirt.Connect // Libvirt connection
+	containerRuntime     string           // Name of the container runtime
+	network              string           // Network name
+	sshKeyFile           string           // SSH key file used to connect to Libvirt
+	storage              string           // Storage pool name
+	uri                  string           // Libvirt URI
+	wd                   string           // libvirt's directory path on this repository
+	volumeName           string           // Podvm volume name
+	clusterName          string           // Cluster name
+	tunnelType           string           // Tunnel Type
+	vxlanPort            string           // VXLAN port number
+	secureComms          string           // Activate CAA SECURE_COMMS
+	secureCommsNoTrustee string           // Deactivate Trustee mode in SECURE_COMMS
+	secureCommsKBSAddr   string           // KBS URL
+	initdata             string           // InitData
 }
 
 // LibvirtInstallOverlay implements the InstallOverlay interface
@@ -57,9 +57,9 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		network = properties["libvirt_network"]
 	}
 
-	ssh_key_file := ""
+	sshKeyFile := ""
 	if properties["libvirt_ssh_key_file"] != "" {
-		ssh_key_file = properties["libvirt_ssh_key_file"]
+		sshKeyFile = properties["libvirt_ssh_key_file"]
 	}
 
 	storage := "default"
@@ -72,16 +72,16 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		uri = properties["libvirt_uri"]
 	}
 
-	vol_name := "podvm-base.qcow2"
+	volName := "podvm-base.qcow2"
 	if properties["libvirt_vol_name"] != "" {
-		vol_name = properties["libvirt_vol_name"]
+		volName = properties["libvirt_vol_name"]
 	}
 
-	conn_uri := "qemu:///system"
+	connURI := "qemu:///system"
 	if properties["libvirt_conn_uri"] != "" {
-		conn_uri = properties["libvirt_conn_uri"]
+		connURI = properties["libvirt_conn_uri"]
 	}
-	conn, err := libvirt.NewConnect(conn_uri)
+	conn, err := libvirt.NewConnect(connURI)
 	if err != nil {
 		return nil, err
 	}
@@ -101,19 +101,19 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		vxlanPort = properties["vxlan_port"]
 	}
 
-	secure_comms := "false"
+	secureComms := "false"
 	if properties["SECURE_COMMS"] != "" {
-		secure_comms = properties["SECURE_COMMS"]
+		secureComms = properties["SECURE_COMMS"]
 	}
 
-	secure_comms_kbs_addr := ""
+	secureCommsKbsAddr := ""
 	if properties["SECURE_COMMS_KBS_ADDR"] != "" {
-		secure_comms_kbs_addr = properties["SECURE_COMMS_KBS_ADDR"]
+		secureCommsKbsAddr = properties["SECURE_COMMS_KBS_ADDR"]
 	}
 
-	secure_comms_no_trustee := "false"
+	secureCommsNoTrustee := "false"
 	if properties["SECURE_COMMS_NO_TRUSTEE"] != "" {
-		secure_comms_no_trustee = properties["SECURE_COMMS_NO_TRUSTEE"]
+		secureCommsNoTrustee = properties["SECURE_COMMS_NO_TRUSTEE"]
 	}
 
 	initdata := ""
@@ -123,21 +123,21 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
-		conn:                    conn,
-		containerRuntime:        properties["container_runtime"],
-		network:                 network,
-		ssh_key_file:            ssh_key_file,
-		storage:                 storage,
-		uri:                     uri,
-		wd:                      wd,
-		volumeName:              vol_name,
-		clusterName:             clusterName,
-		tunnelType:              tunnelType,
-		vxlanPort:               vxlanPort,
-		secure_comms:            secure_comms,
-		secure_comms_kbs_addr:   secure_comms_kbs_addr,
-		secure_comms_no_trustee: secure_comms_no_trustee,
-		initdata:                initdata,
+		conn:                 conn,
+		containerRuntime:     properties["container_runtime"],
+		network:              network,
+		sshKeyFile:           sshKeyFile,
+		storage:              storage,
+		uri:                  uri,
+		wd:                   wd,
+		volumeName:           volName,
+		clusterName:          clusterName,
+		tunnelType:           tunnelType,
+		vxlanPort:            vxlanPort,
+		secureComms:          secureComms,
+		secureCommsKBSAddr:   secureCommsKbsAddr,
+		secureCommsNoTrustee: secureCommsNoTrustee,
+		initdata:             initdata,
 	}, nil
 }
 
@@ -179,11 +179,11 @@ func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config)
 	)
 
 	if _, err := l.conn.LookupNetworkByName(l.network); err != nil {
-		return fmt.Errorf("Network '%s' not found. It should be created beforehand", l.network)
+		return fmt.Errorf("network '%s' not found. It should be created beforehand", l.network)
 	}
 
 	if sPool, err = l.conn.LookupStoragePoolByName(l.storage); err != nil {
-		return fmt.Errorf("Storage pool '%s' not found. It should be created beforehand", l.storage)
+		return fmt.Errorf("storage pool '%s' not found. It should be created beforehand", l.storage)
 	}
 
 	// Create two volumes to test the multiple podvm image scenario.
@@ -245,14 +245,14 @@ func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Con
 		"CONTAINER_RUNTIME":       l.containerRuntime,
 		"network":                 l.network,
 		"podvm_volume":            l.volumeName,
-		"ssh_key_file":            l.ssh_key_file,
+		"ssh_key_file":            l.sshKeyFile,
 		"storage":                 l.storage,
 		"uri":                     l.uri,
 		"tunnel_type":             l.tunnelType,
 		"vxlan_port":              l.vxlanPort,
-		"SECURE_COMMS":            l.secure_comms,
-		"SECURE_COMMS_KBS_ADDR":   l.secure_comms_kbs_addr,
-		"SECURE_COMMS_NO_TRUSTEE": l.secure_comms_no_trustee,
+		"SECURE_COMMS":            l.secureComms,
+		"SECURE_COMMS_KBS_ADDR":   l.secureCommsKBSAddr,
+		"SECURE_COMMS_NO_TRUSTEE": l.secureCommsNoTrustee,
 		"INITDATA":                l.initdata,
 	}
 }
@@ -329,7 +329,7 @@ func (l *LibvirtProvisioner) UploadPodvm(imagePath string, ctx context.Context, 
 func (l *LibvirtProvisioner) GetStoragePool() (*libvirt.StoragePool, error) {
 	sp, err := l.conn.LookupStoragePoolByName(l.storage)
 	if err != nil {
-		return nil, fmt.Errorf("Storage pool '%s' not found. It should be created beforehand", l.storage)
+		return nil, fmt.Errorf("storage pool '%s' not found. It should be created beforehand", l.storage)
 	}
 
 	return sp, nil

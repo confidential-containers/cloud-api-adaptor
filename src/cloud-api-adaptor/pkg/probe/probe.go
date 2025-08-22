@@ -15,7 +15,7 @@ var podsReadizProbesDone bool
 var checker Checker
 var startTime time.Time
 
-const DEFAULT_CC_RUNTIMECLASS_NAME string = "kata-remote"
+const DefaultCCRuntimeClassName string = "kata-remote"
 
 func StartupHandler(w http.ResponseWriter, r *http.Request) {
 	opened, err := checker.IsSocketOpen()

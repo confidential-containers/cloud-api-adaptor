@@ -34,7 +34,7 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NamespacedHttpServer(port uint16, nsPath string) *http.Server {
+func NamespacedHTTPServer(port uint16, nsPath string) *http.Server {
 	tcpListener, err := listen(nsPath, port)
 	if err != nil {
 		log.Printf("failed to listen to namespace %s port %d, err: %v", nsPath, port, err)

@@ -20,7 +20,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/confidential-containers/cloud-api-adaptor/src/webhook/pkg/mutating_webhook"
+	mutating_webhook "github.com/confidential-containers/cloud-api-adaptor/src/webhook/pkg/mutating-webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.

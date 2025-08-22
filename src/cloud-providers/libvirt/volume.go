@@ -19,7 +19,7 @@ import (
 )
 
 // ErrVolumeNotFound is returned when a domain is not found
-var ErrVolumeNotFound = errors.New("Domain not found")
+var ErrVolumeNotFound = errors.New("domain not found")
 
 var waitSleepInterval = 1 * time.Second
 
@@ -118,24 +118,24 @@ func uploadVolume(libvirtClient *libvirtClient, volumeDef libvirtxml.StorageVolu
 
 	volumeDefXML, err := xml.Marshal(volumeDef)
 	if err != nil {
-		return "", fmt.Errorf("Error serializing libvirt volume: %s", err)
+		return "", fmt.Errorf("error serializing libvirt volume: %s", err)
 	}
 	// create the volume
 	volume, err := libvirtClient.pool.StorageVolCreateXML(string(volumeDefXML), 0)
 	if err != nil {
-		return "", fmt.Errorf("Error creating libvirt volume for device %s: %s", volumeDef.Name, err)
+		return "", fmt.Errorf("error creating libvirt volume for device %s: %s", volumeDef.Name, err)
 	}
 	defer freeVolume(volume, &err)
 
 	// upload ISO file
 	err = img.importImage(newCopier(libvirtClient.connection, volume, volumeDef.Capacity.Value), volumeDef)
 	if err != nil {
-		return "", fmt.Errorf("Error while uploading volume %s: %s", img.string(), err)
+		return "", fmt.Errorf("error while uploading volume %s: %s", img.string(), err)
 	}
 
 	volumeKey, err = volume.GetKey()
 	if err != nil {
-		return "", fmt.Errorf("Error retrieving volume key: %s", err)
+		return "", fmt.Errorf("error retrieving volume key: %s", err)
 	}
 	logger.Printf("Volume ID: %s", volumeKey)
 	return volumeKey, nil
@@ -189,14 +189,14 @@ func createVolume(volName string, volSize uint64, baseVolName string, libvirtCli
 	baseVolume, err := getVolume(libvirtClient, baseVolName)
 
 	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s", baseVolName)
+		return fmt.Errorf("can't retrieve volume %s", baseVolName)
 	}
 	defer freeVolume(baseVolume, &err)
 
 	var baseVolumeInfo *libvirt.StorageVolInfo
 	baseVolumeInfo, err = baseVolume.GetInfo()
 	if err != nil {
-		return fmt.Errorf("Can't retrieve volume info %s", baseVolName)
+		return fmt.Errorf("can't retrieve volume info %s", baseVolName)
 	}
 
 	if baseVolumeInfo.Capacity > volSize {
@@ -207,13 +207,13 @@ func createVolume(volName string, volSize uint64, baseVolName string, libvirtCli
 
 	backingStoreDef, err := newDefBackingStoreFromLibvirt(baseVolume)
 	if err != nil {
-		return fmt.Errorf("Could not retrieve backing store %s", baseVolName)
+		return fmt.Errorf("could not retrieve backing store %s", baseVolName)
 	}
 	volumeDef.BackingStore = &backingStoreDef
 
 	volumeDefXML, err := xml.Marshal(volumeDef)
 	if err != nil {
-		return fmt.Errorf("Error serializing libvirt volume: %s", err)
+		return fmt.Errorf("error serializing libvirt volume: %s", err)
 	}
 
 	// create the volume
@@ -228,14 +228,14 @@ func createVolume(volName string, volSize uint64, baseVolName string, libvirtCli
 
 	volume, err := libvirtClient.pool.StorageVolCreateXML(string(volumeDefXML), 0)
 	if err != nil {
-		return fmt.Errorf("Error creating libvirt volume: %s", err)
+		return fmt.Errorf("error creating libvirt volume: %s", err)
 	}
 	defer freeVolume(volume, &err)
 
 	// we use the key as the id
 	key, err := volume.GetKey()
 	if err != nil {
-		return fmt.Errorf("Error retrieving volume key: %s", err)
+		return fmt.Errorf("error retrieving volume key: %s", err)
 	}
 
 	logger.Printf("Uploaded volume key %s", key)
@@ -307,7 +307,7 @@ func deleteVolume(libvirtClient *libvirtClient, name string) (err error) {
 
 	volume, err := getVolume(libvirtClient, name)
 	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s", name)
+		return fmt.Errorf("can't retrieve volume %s", name)
 	}
 	defer freeVolume(volume, &err)
 
@@ -315,7 +315,7 @@ func deleteVolume(libvirtClient *libvirtClient, name string) (err error) {
 	// not longer in use.
 	volPool, err := volume.LookupPoolByVolume()
 	if err != nil {
-		return fmt.Errorf("Error retrieving pool for volume: %s", err)
+		return fmt.Errorf("error retrieving pool for volume: %s", err)
 	}
 	defer func() {
 		newErr := volPool.Free()
@@ -333,7 +333,7 @@ func deleteVolume(libvirtClient *libvirtClient, name string) (err error) {
 
 	err = volume.Delete(0)
 	if err != nil {
-		return fmt.Errorf("Can't delete volume %s: %s", name, err)
+		return fmt.Errorf("can't delete volume %s: %s", name, err)
 	}
 
 	return nil

@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	FEATURE_SETUP_FAILED          contextValueString = "WithSetupFailed"
-	WAIT_NGINX_DEPLOYMENT_TIMEOUT                    = time.Second * 900
+	featureSetupFailed         contextValueString = "WithSetupFailed"
+	waitNGINXDeploymentTimeout                    = time.Second * 900
 )
 
 type (
@@ -109,7 +109,7 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 
 	nginxImageFeature := features.New("Nginx image deployment test").
 		WithSetup("Create nginx deployment", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			ctx = context.WithValue(ctx, FEATURE_SETUP_FAILED, false)
+			ctx = context.WithValue(ctx, featureSetupFailed, false)
 			client, err := cfg.NewClient()
 			if err != nil {
 				t.Fatal(err)
@@ -122,12 +122,12 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 			if !t.Failed() {
 				t.Log("nginx deployment is available now")
 			} else {
-				ctx = context.WithValue(ctx, FEATURE_SETUP_FAILED, true)
+				ctx = context.WithValue(ctx, featureSetupFailed, true)
 			}
 			return ctx
 		}).
 		Assess("Access for nginx deployment test", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			if ctx.Value(FEATURE_SETUP_FAILED).(bool) {
+			if ctx.Value(featureSetupFailed).(bool) {
 				// Test setup failed, so skip this assess
 				t.Skip()
 				return ctx
@@ -184,7 +184,7 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 		}
 		t.Logf("Current deployment available replicas: %d", deployObj.Status.AvailableReplicas)
 		return deployObj.Status.AvailableReplicas == rc
-	}), wait.WithTimeout(WAIT_NGINX_DEPLOYMENT_TIMEOUT), wait.WithInterval(10*time.Second)); err != nil {
+	}), wait.WithTimeout(waitNGINXDeploymentTimeout), wait.WithInterval(10*time.Second)); err != nil {
 		var podlist v1.PodList
 		t.Errorf("%v", err)
 		if err := client.Resources(deployment.ObjectMeta.Namespace).List(ctx, &podlist); err != nil {
@@ -192,10 +192,10 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 			return
 		}
 		for _, pod := range podlist.Items {
-			if pod.ObjectMeta.Labels["app"] == "nginx" {
+			if pod.Labels["app"] == "nginx" {
 				// Added logs for debugging nightly tests
 				t.Log("===================")
-				t.Logf("Debug info for pod: %v", pod.ObjectMeta.Name)
+				t.Logf("Debug info for pod: %v", pod.Name)
 				yamlData, err := yaml.Marshal(pod.Status)
 				if err != nil {
 					t.Logf("Error marshaling pod.Status to YAML: %v", err.Error())

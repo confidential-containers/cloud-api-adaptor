@@ -74,7 +74,7 @@ func (r *PeerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	if pp.ObjectMeta.GetDeletionTimestamp() == nil { // TODO: consider filter events
+	if pp.GetDeletionTimestamp() == nil { // TODO: consider filter events
 		// Create or Update events without DeletionTimestamp
 		// Check if existing old PeerPod owned by current Pod,
 		// and delete it to clean the dangling VM.
@@ -141,7 +141,7 @@ func (r *PeerPodReconciler) cloudConfigsGetter() error {
 	}
 
 	var cmErr error
-	if cmErr = r.Client.Get(context.TODO(), types.NamespacedName{Name: ppConfigMap, Namespace: ns}, &peerpodscm); cmErr == nil {
+	if cmErr = r.Get(context.TODO(), types.NamespacedName{Name: ppConfigMap, Namespace: ns}, &peerpodscm); cmErr == nil {
 		// set all configs as env vars to make sure all the required vars for auth are set
 		for k, v := range peerpodscm.Data {
 			os.Setenv(k, v)
@@ -149,7 +149,7 @@ func (r *PeerPodReconciler) cloudConfigsGetter() error {
 	}
 
 	var secretErr error
-	if secretErr = r.Client.Get(context.TODO(), types.NamespacedName{Name: ppSecret, Namespace: ns}, &peerpodssecret); secretErr == nil {
+	if secretErr = r.Get(context.TODO(), types.NamespacedName{Name: ppSecret, Namespace: ns}, &peerpodssecret); secretErr == nil {
 		for k, v := range peerpodssecret.Data {
 			os.Setenv(k, string(v))
 		}

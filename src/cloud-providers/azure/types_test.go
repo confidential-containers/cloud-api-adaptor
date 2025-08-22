@@ -18,8 +18,8 @@ func TestAzureMasking(t *testing.T) {
 	region := "a region"
 
 	cloudCfg := Config{
-		ClientId:     toBeRedacted["client id"],
-		TenantId:     toBeRedacted["tenant id"],
+		ClientID:     toBeRedacted["client id"],
+		TenantID:     toBeRedacted["tenant id"],
 		ClientSecret: toBeRedacted["client secret"],
 		Region:       region,
 	}

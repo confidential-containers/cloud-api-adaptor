@@ -33,7 +33,7 @@ type cloudService struct {
 	cond         *sync.Cond
 	mutex        sync.Mutex
 	ppService    *k8sops.PeerPodService
-	sshClient    *wnssh.SshClient
+	sshClient    *wnssh.SSHClient
 	serverConfig *ServerConfig
 }
 
@@ -50,5 +50,5 @@ type sandbox struct {
 	instanceID    string
 	netNSPath     string
 	spec          provider.InstanceTypeSpec
-	sshClientInst *wnssh.SshClientInstance
+	sshClientInst *wnssh.SSHClientInstance
 }

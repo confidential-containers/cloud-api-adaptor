@@ -15,17 +15,17 @@ import (
 )
 
 func PP() {
-	test.HttpServer("7131")
+	test.HTTPServer("7131")
 
 	// Forwarder Initialization
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
 	ppSecrets := ppssh.NewPpSecrets(ppssh.GetSecret(getKey))
-	ppSecrets.AddKey(ppssh.WN_PUBLIC_KEY)
-	ppSecrets.AddKey(ppssh.PP_PRIVATE_KEY)
+	ppSecrets.AddKey(ppssh.WNPublicKey)
+	ppSecrets.AddKey(ppssh.PPPrivateKey)
 
-	sshServer := ppssh.NewSshServer([]string{"BOTH_PHASES:KBS:7000", "KUBERNETES_PHASE:KUBEAPI:16443", "KUBERNETES_PHASE:DNS:9053"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7131"}, ppSecrets, sshutil.SSHPORT)
+	sshServer := ppssh.NewSSHServer([]string{"BOTH_PHASES:KBS:7000", "KUBERNETES_PHASE:KUBEAPI:16443", "KUBERNETES_PHASE:DNS:9053"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7131"}, ppSecrets, sshutil.SSHPORT)
 	_ = sshServer.Start(ctx)
 	time.Sleep(1 * time.Minute)
 	cancel()

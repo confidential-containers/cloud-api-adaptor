@@ -150,7 +150,7 @@ func createVPC() error {
 		log.Infof("Created VPC with ID %s in ResourceGroupID %s.", IBMCloudProps.VpcID, IBMCloudProps.ResourceGroupID)
 
 		if len(IBMCloudProps.VpcID) <= 0 {
-			return errors.New("VpcID is empty, unknown error happened when create VPC.")
+			return errors.New("VpcID is empty, unknown error happened when create VPC")
 		}
 	}
 
@@ -270,7 +270,7 @@ func createSubnet() error {
 	} else {
 		cidrBlock := getCidrBlock(IBMCloudProps.Region, IBMCloudProps.Zone)
 		if cidrBlock == "" {
-			return errors.New("Can not calculate cidrBlock from Region and Zone.")
+			return errors.New("can not calculate cidrBlock from Region and Zone")
 		}
 		options := &vpcv1.CreateSubnetOptions{}
 		options.SetSubnetPrototype(&vpcv1.SubnetPrototype{
@@ -296,7 +296,7 @@ func createSubnet() error {
 	}
 
 	if len(IBMCloudProps.SubnetID) <= 0 {
-		return errors.New("SubnetID is empty, unknown error happened when create Subnet.")
+		return errors.New("SubnetID is empty, unknown error happened when create Subnet")
 	}
 
 	gateway, _ := getSubnetPublicGateway(IBMCloudProps.SubnetID)
@@ -311,7 +311,7 @@ func createSubnet() error {
 	}
 
 	if len(IBMCloudProps.PublicGatewayID) <= 0 {
-		return errors.New("PublicGatewayID is empty, unknown error happened when create PublicGateway in Subnet.")
+		return errors.New("PublicGatewayID is empty, unknown error happened when create PublicGateway in Subnet")
 	}
 
 	return nil
@@ -406,7 +406,7 @@ func deleteSubnet() error {
 }
 
 func createVpcImpl() error {
-	err := createSshKey()
+	err := createSSHKey()
 	if err != nil {
 		return err
 	}
@@ -421,7 +421,7 @@ func createVpcImpl() error {
 }
 
 func deleteVpcImpl() error {
-	err := deleteSshKey()
+	err := deleteSSHKey()
 	if err != nil {
 		return err
 	}
@@ -433,65 +433,65 @@ func deleteVpcImpl() error {
 	return deleteVPC()
 }
 
-func createSshKey() error {
-	key, err := findSshKey(IBMCloudProps.SshKeyName)
+func createSSHKey() error {
+	key, err := findSSHKey(IBMCloudProps.SSHKeyName)
 	if err != nil {
 		return err
 	}
 	if key != nil {
-		IBMCloudProps.SshKeyID = *key.ID
-		log.Infof("SSH Key %s with ID %s exists already, we can just use it.", IBMCloudProps.SshKeyName, IBMCloudProps.SshKeyID)
+		IBMCloudProps.SSHKeyID = *key.ID
+		log.Infof("SSH Key %s with ID %s exists already, we can just use it.", IBMCloudProps.SSHKeyName, IBMCloudProps.SSHKeyID)
 		return nil
 	}
 
 	options := &vpcv1.CreateKeyOptions{}
-	options.SetName(IBMCloudProps.SshKeyName)
-	options.SetPublicKey(IBMCloudProps.SshKeyContent)
+	options.SetName(IBMCloudProps.SSHKeyName)
+	options.SetPublicKey(IBMCloudProps.SSHKeyContent)
 	key, _, err = IBMCloudProps.VPC.CreateKey(options)
 
 	if err != nil {
 		return err
 	}
 
-	IBMCloudProps.SshKeyID = *key.ID
-	log.Infof("SSH Key %s with ID %s is created.", IBMCloudProps.SshKeyName, IBMCloudProps.SshKeyID)
+	IBMCloudProps.SSHKeyID = *key.ID
+	log.Infof("SSH Key %s with ID %s is created.", IBMCloudProps.SSHKeyName, IBMCloudProps.SSHKeyID)
 	return nil
 }
 
-func deleteSshKey() error {
-	key, err := findSshKey(IBMCloudProps.SshKeyName)
+func deleteSSHKey() error {
+	key, err := findSSHKey(IBMCloudProps.SSHKeyName)
 	if err != nil {
 		return err
 	}
 	if key == nil {
-		log.Infof("SSH Key %s does not exist.", IBMCloudProps.SshKeyName)
+		log.Infof("SSH Key %s does not exist.", IBMCloudProps.SSHKeyName)
 		return nil
 	}
 
-	IBMCloudProps.SshKeyID = *key.ID
+	IBMCloudProps.SSHKeyID = *key.ID
 
 	deleteKeyOptions := &vpcv1.DeleteKeyOptions{}
-	deleteKeyOptions.SetID(IBMCloudProps.SshKeyID)
+	deleteKeyOptions.SetID(IBMCloudProps.SSHKeyID)
 	_, err = IBMCloudProps.VPC.DeleteKey(deleteKeyOptions)
 	if err != nil {
 		return err
 	}
 	waitMinutes := 5
-	log.Infof("Waiting for SSH key  %s to be removed...", IBMCloudProps.SshKeyID)
+	log.Infof("Waiting for SSH key  %s to be removed...", IBMCloudProps.SSHKeyID)
 	for i := 0; i <= waitMinutes; i++ {
-		foundSsh, err := findSshKey(IBMCloudProps.SshKeyID)
-		if foundSsh == nil {
-			log.Infof("SSH Key %s with ID %s is deleted.", IBMCloudProps.SshKeyName, IBMCloudProps.SshKeyID)
+		foundSSH, err := findSSHKey(IBMCloudProps.SSHKeyID)
+		if foundSSH == nil {
+			log.Infof("SSH Key %s with ID %s is deleted.", IBMCloudProps.SSHKeyName, IBMCloudProps.SSHKeyID)
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		log.Infof("Waiting for SSH %s to be removed.", *foundSsh.Name)
+		log.Infof("Waiting for SSH %s to be removed.", *foundSSH.Name)
 		log.Infof("Waited %d minutes...", i)
 		time.Sleep(60 * time.Second)
 	}
-	return errors.New("Failed to Delete SSH Key")
+	return errors.New("failed to Delete SSH Key")
 }
 
 func isClusterReady(clrName string) (bool, error) {
@@ -579,7 +579,7 @@ func findSubnet(subnetName string) (*vpcv1.Subnet, error) {
 	return nil, nil
 }
 
-func findSshKey(keyName string) (*vpcv1.Key, error) {
+func findSSHKey(keyName string) (*vpcv1.Key, error) {
 	listKeysOptions := &vpcv1.ListKeysOptions{}
 
 	pager, err := IBMCloudProps.VPC.NewKeysPager(listKeysOptions)
@@ -701,7 +701,7 @@ func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Co
 	}
 
 	if !clusterReady {
-		return fmt.Errorf("Cluster %s was created but not ready in %d minutes.", IBMCloudProps.ClusterName, waitMinutes)
+		return fmt.Errorf("cluster %s was created but not ready in %d minutes", IBMCloudProps.ClusterName, waitMinutes)
 	}
 
 	home, _ := os.UserHomeDir()
@@ -759,7 +759,7 @@ func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Co
 	}
 
 	if !clusterRemoved {
-		return fmt.Errorf("Cluster %s was not removed completely in %d minutes.", IBMCloudProps.ClusterName, waitMinutes)
+		return fmt.Errorf("cluster %s was not removed completely in %d minutes", IBMCloudProps.ClusterName, waitMinutes)
 	}
 	return nil
 }
@@ -814,7 +814,7 @@ func getSha256sum(imagePath string) (string, error) {
 func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("UploadPodvm()")
 
-	if len(IBMCloudProps.ApiKey) <= 0 {
+	if len(IBMCloudProps.APIKey) <= 0 {
 		return errors.New("APIKEY must be set to upload podvm image")
 	}
 
@@ -826,7 +826,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	conf := aws.NewConfig().
 		WithEndpoint(IBMCloudProps.CosServiceURL).
 		WithCredentials(ibmiam.NewStaticCredentials(aws.NewConfig(),
-			IBMCloudProps.IamServiceURL, IBMCloudProps.CosApiKey, IBMCloudProps.CosInstanceID)).
+			IBMCloudProps.IamServiceURL, IBMCloudProps.CosAPIKey, IBMCloudProps.CosInstanceID)).
 		WithS3ForcePathStyle(true)
 
 	sess := cosession.Must(cosession.NewSession(conf))
@@ -883,13 +883,13 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 		}
 	}
 
-	hide_progress := os.Getenv("HIDE_UPLOADER_PROGRESS")
+	hideProgress := os.Getenv("HIDE_UPLOADER_PROGRESS")
 
 	reader := &utils.CustomReader{
 		Fp:           file,
 		Size:         fileInfo.Size(),
 		SignMap:      map[int64]struct{}{},
-		HideProgress: hide_progress,
+		HideProgress: hideProgress,
 	}
 
 	uploader := s3manager.NewUploader(sess, func(u *s3manager.Uploader) {
@@ -962,7 +962,7 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"CLOUD_PROVIDER":                       IBMCloudProps.IBMCloudProvider,
 		"IBMCLOUD_VPC_ENDPOINT":                IBMCloudProps.VpcServiceURL,
 		"IBMCLOUD_RESOURCE_GROUP_ID":           IBMCloudProps.ResourceGroupID,
-		"IBMCLOUD_SSH_KEY_ID":                  IBMCloudProps.SshKeyID,
+		"IBMCLOUD_SSH_KEY_ID":                  IBMCloudProps.SSHKeyID,
 		"IBMCLOUD_PODVM_IMAGE_ID":              IBMCloudProps.PodvmImageID,
 		"IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME": IBMCloudProps.InstanceProfile,
 		"IBMCLOUD_ZONE":                        IBMCloudProps.Zone,
@@ -970,7 +970,7 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"IBMCLOUD_VPC_SG_ID":                   IBMCloudProps.SecurityGroupID,
 		"IBMCLOUD_VPC_ID":                      IBMCloudProps.VpcID,
 		"CRI_RUNTIME_ENDPOINT":                 "/run/cri-runtime/containerd.sock",
-		"IBMCLOUD_API_KEY":                     IBMCloudProps.ApiKey,
+		"IBMCLOUD_API_KEY":                     IBMCloudProps.APIKey,
 		"IBMCLOUD_IAM_PROFILE_ID":              IBMCloudProps.IamProfileID,
 		"IBMCLOUD_IAM_ENDPOINT":                IBMCloudProps.IamServiceURL,
 		"IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST": getProfileList(),

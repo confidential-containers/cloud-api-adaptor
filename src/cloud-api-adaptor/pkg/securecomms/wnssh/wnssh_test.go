@@ -17,16 +17,16 @@ func TestSshProxyReverseKBS(t *testing.T) {
 	kubemgr.InitKubeMgrMock()
 
 	s9001 := test.KBSServer("9001")
-	s8053 := test.HttpServer("8053")
-	s26443 := test.HttpServer("26443")
-	s7121 := test.HttpServer("7121")
+	s8053 := test.HTTPServer("8053")
+	s26443 := test.HTTPServer("26443")
+	s7121 := test.HTTPServer("7121")
 	if s9001 == nil || s8053 == nil || s26443 == nil || s7121 == nil {
 		t.Error("Failed - could not create server")
 	}
 	test.CreatePKCS8Secret(t)
 
 	// CAA Initialization
-	sshClient, err := InitSshClient([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, []string{"BOTH_PHASES:KBS:9001", "KUBERNETES_PHASE:KUBEAPI:26443", "KUBERNETES_PHASE:DNS:8053"}, true, "127.0.0.1:9001", sshport)
+	sshClient, err := InitSSHClient([]string{"KUBERNETES_PHASE:KATAAGENT:0"}, []string{"BOTH_PHASES:KBS:9001", "KUBERNETES_PHASE:KUBEAPI:26443", "KUBERNETES_PHASE:DNS:8053"}, true, "127.0.0.1:9001", sshport)
 	if err != nil {
 		log.Fatalf("InitSshClient %v", err)
 	}
@@ -50,10 +50,10 @@ func TestSshProxyReverseKBS(t *testing.T) {
 	ctx2, cancel2 := context.WithCancel(context.Background())
 
 	ppSecrets := ppssh.NewPpSecrets(ppssh.GetSecret(gkc.GetKey))
-	ppSecrets.AddKey(ppssh.WN_PUBLIC_KEY)
-	ppSecrets.AddKey(ppssh.PP_PRIVATE_KEY)
+	ppSecrets.AddKey(ppssh.WNPublicKey)
+	ppSecrets.AddKey(ppssh.PPPrivateKey)
 
-	sshServer := ppssh.NewSshServer([]string{"BOTH_PHASES:KBS:7030", "KUBERNETES_PHASE:KUBEAPI:16443", "KUBERNETES_PHASE:DNS:9053"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7121"}, ppSecrets, sshport)
+	sshServer := ppssh.NewSSHServer([]string{"BOTH_PHASES:KBS:7030", "KUBERNETES_PHASE:KUBEAPI:16443", "KUBERNETES_PHASE:DNS:9053"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7121"}, ppSecrets, sshport)
 	_ = sshServer.Start(ctx2)
 
 	// Forwarder Initialization
@@ -62,7 +62,7 @@ func TestSshProxyReverseKBS(t *testing.T) {
 		log.Fatalf("failed ci.Start: %s", err)
 	}
 
-	success := test.HttpClient(fmt.Sprintf("http://127.0.0.1:%s", inPort))
+	success := test.HTTPClient(fmt.Sprintf("http://127.0.0.1:%s", inPort))
 	if !success {
 		t.Error("Expected success")
 	}

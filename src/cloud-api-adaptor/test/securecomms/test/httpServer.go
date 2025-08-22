@@ -17,7 +17,7 @@ func (p myport) getRoot(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func HttpServer(port string) *http.Server {
+func HTTPServer(port string) *http.Server {
 	p := myport(port)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", p.getRoot)

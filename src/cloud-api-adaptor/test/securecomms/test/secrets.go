@@ -33,7 +33,7 @@ func CreatePKCS8Secret(t *testing.T) {
 	)
 	secrets := kubemgr.KubeMgr.Client.CoreV1().Secrets(kubemgr.KubeMgr.CocoNamespace)
 	s := corev1.Secret{}
-	s.Name = sshutil.KBS_CLIENT_SECRET
+	s.Name = sshutil.KBSClientSecret
 	s.Namespace = kubemgr.KubeMgr.CocoNamespace
 	s.Data = map[string][]byte{}
 	s.Data["privateKey"] = kbscPrivatePem
