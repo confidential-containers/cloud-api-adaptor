@@ -415,14 +415,14 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
     echo "INITDATA=\"$INITDATA\"" >> ~/peerpods-cluster.properties
     ```
 
-    Alternatively, you can configure the Trustee for a specific peer pod, by including the `io.katacontainers.config.runtime.cc_init_data` annotation on the pod. For example:
+    Alternatively, you can configure the Trustee for a specific peer pod, by including the `io.katacontainers.config.hypervisor.cc_init_data` annotation on the pod. For example:
     ```
     apiVersion: v1
     kind: Pod
     metadata:
       name: mypod
       annotations:
-        io.katacontainers.config.runtime.cc_init_data: $INITDATA
+        io.katacontainers.config.hypervisor.cc_init_data: $INITDATA
     spec:
       runtimeClassName: kata-remote
       ...
