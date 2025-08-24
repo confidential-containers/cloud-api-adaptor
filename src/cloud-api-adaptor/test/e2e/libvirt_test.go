@@ -274,3 +274,9 @@ func TestLibvirtPodVMwithNoAnnotations(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodVMwithNoAnnotations(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(libvirt.DefaultCPU, libvirt.DefaultMemory))
 }
+
+// Test with init container
+func TestLibvirtPodWithInitContainer(t *testing.T) {
+	assert := LibvirtAssert{}
+	DoTestPodWithInitContainer(t, testEnv, assert)
+}
