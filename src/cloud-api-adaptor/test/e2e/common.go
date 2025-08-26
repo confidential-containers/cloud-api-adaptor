@@ -31,6 +31,7 @@ import (
 
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
+const INITDATA_ANNOTATION = "io.katacontainers.config.hypervisor.cc_init_data"
 
 var testInitdata string = `algorithm = "sha384"
 version = "0.1.0"
@@ -255,7 +256,7 @@ func WithInitdata(kbsEndpoint string) PodOption {
 		if p.ObjectMeta.Annotations == nil {
 			p.ObjectMeta.Annotations = make(map[string]string)
 		}
-		key := "io.katacontainers.config.runtime.cc_init_data"
+		key := INITDATA_ANNOTATION
 		value, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
 		if err != nil {
 			log.Fatalf("failed to build initdata %s", err)
@@ -386,7 +387,7 @@ func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint st
 		return fromError(err)
 	}
 	annotationData := map[string]string{
-		"io.katacontainers.config.runtime.cc_init_data": initdata,
+		INITDATA_ANNOTATION: initdata,
 	}
 	busyboxImage, err := utils.GetImage("busybox")
 	if err != nil {

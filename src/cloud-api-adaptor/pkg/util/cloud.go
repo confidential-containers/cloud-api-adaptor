@@ -92,7 +92,7 @@ func GetPodvmResourcesFromAnnotation(annotations map[string]string) (int64, int6
 // Method to get initdata from annotation. Initdata is delivered as raw
 // string by kata runtime, so we want to compress and base64 it again.
 func GetInitdataFromAnnotation(annotations map[string]string) (string, error) {
-	str := annotations["io.katacontainers.config.runtime.cc_init_data"]
+	str := annotations["io.katacontainers.config.hypervisor.cc_init_data"]
 	if str == "" {
 		return "", nil
 	}

@@ -222,7 +222,7 @@ func TestInitDataMeasurement(t *testing.T) {
 	cmd := []string{"sh", "-c", shCmd}
 
 	annotations := map[string]string{
-		"io.katacontainers.config.runtime.cc_init_data": annotation,
+		INITDATA_ANNOTATION: annotation,
 	}
 	job := NewJob(E2eNamespace, name, 0, image, WithJobCommand(cmd), WithJobAnnotations(annotations))
 	NewTestCase(t, testEnv, "InitDataMeasurement", assert, "InitData measured correctly").WithJob(job).WithExpectedPodLogString(msStr).Run()
