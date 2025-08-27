@@ -65,6 +65,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.BoolVar(&azurecfg.UsePublicIP, "use-public-ip", false, "Assign public IP to the PoD VM and use to connect to kata-agent")
 	flags.IntVar(&azurecfg.RootVolumeSize, "root-volume-size", 0, "Root volume size in GB. Default is 0, which implies the default image disk size")
 	flags.BoolVar(&azurecfg.EnableSftp, "enable-sftp", false, "Enable SFTP-based user-data transfer")
+	flags.BoolVar(&azurecfg.SSHInsecureIgnoreHostKey, "ssh-insecure-ignore-host-key", false, "Skip SSH host key verification (insecure, for debugging only)")
 	// VM Pool configuration
 	flags.StringVar(&azurecfg.VMPoolType, "vm-pool-type", "disabled", "VM pool type: disabled, global, podregex, instancetypes")
 	flags.StringVar(&azurecfg.VMPoolPodRegex, "vm-pool-pod-regex", "", "Regex pattern for pod names (for podregex mode)")

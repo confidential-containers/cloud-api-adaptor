@@ -5,17 +5,12 @@ package azure
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/netip"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -59,9 +54,22 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	}
 
 	// Initialize SSH keys for authentication
-	if err := initializeSSHKeys(config); err != nil {
+	sshConfig := &util.SSHConfig{
+		PublicKey:      config.SSHPubKey,
+		PrivateKey:     config.SSHPrivKey,
+		PublicKeyPath:  config.SSHPubKeyPath,
+		PrivateKeyPath: config.SSHPrivKeyPath,
+		Username:       config.SSHUserName,
+		EnableSFTP:     config.EnableSftp,
+	}
+	
+	if err := util.InitializeSSHKeys(sshConfig); err != nil {
 		return nil, fmt.Errorf("failed to initialize SSH keys: %w", err)
 	}
+	
+	// Update config with initialized keys
+	config.SSHPubKey = sshConfig.PublicKey
+	config.SSHPrivKey = sshConfig.PrivateKey
 
 	provider := &azureProvider{
 		azureClient:   azureClient,
@@ -534,25 +542,61 @@ func (p *azureProvider) sendConfigFile(ctx context.Context, data string, ip neti
 		return fmt.Errorf("failed to parse private key: %w", err)
 	}
 
-	// Dynamically fetch the server host key
-	hostKey, err := p.getServerHostKey(ctx, server)
-	if err != nil {
-		return fmt.Errorf("failed to fetch the server host key : %w", err)
+	var sshConfig *ssh.ClientConfig
+
+	if p.serviceConfig.SSHInsecureIgnoreHostKey {
+		// Skip host key verification (for debugging only)
+		logger.Printf("WARNING: Using insecure SSH connection (ignoring host key) to %s", server)
+		sshConfig = &ssh.ClientConfig{
+			User: p.serviceConfig.SSHUserName,
+			Auth: []ssh.AuthMethod{
+				ssh.PublicKeys(signer),
+			},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			Timeout:         10 * time.Second,
+		}
+	} else {
+		// Dynamically fetch the server host key (secure method)
+		logger.Printf("Fetching SSH host key from %s", server)
+		hostKey, err := p.getServerHostKey(ctx, server)
+		if err != nil {
+			return fmt.Errorf("failed to fetch the server host key from %s: %w", server, err)
+		}
+		logger.Printf("Successfully retrieved SSH host key from %s", server)
+
+		sshConfig = &ssh.ClientConfig{
+			User: p.serviceConfig.SSHUserName,
+			Auth: []ssh.AuthMethod{
+				ssh.PublicKeys(signer),
+			},
+			HostKeyCallback: ssh.FixedHostKey(hostKey),
+			Timeout:         10 * time.Second, // Increased timeout
+		}
 	}
 
-	sshConfig := &ssh.ClientConfig{
-		User: p.serviceConfig.SSHUserName,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		HostKeyCallback: ssh.FixedHostKey(hostKey),
-		Timeout:         5 * time.Second,
-	}
+	logger.Printf("SSH Config - User: %s, Timeout: %v, Auth methods: %d",
+		sshConfig.User, sshConfig.Timeout, len(sshConfig.Auth))
 
 	logger.Printf("Trying to establish SSH connection to %s", server)
-	sshClient, err := ssh.Dial("tcp", server, sshConfig)
+	var sshClient *ssh.Client
+
+	// Add retry logic for SSH connection
+	err = retry.Do(
+		func() error {
+			sshClient, err = ssh.Dial("tcp", server, sshConfig)
+			if err != nil {
+				logger.Printf("SSH connection attempt failed: %v, retrying...", err)
+				return err
+			}
+			return nil
+		},
+		retry.Context(ctx),
+		retry.Attempts(5), // Maximum 5 attempts
+		retry.Delay(3*time.Second),
+		retry.MaxDelay(10*time.Second),
+	)
 	if err != nil {
-		return fmt.Errorf("failed to establish ssh connection: %w", err)
+		return fmt.Errorf("failed to establish ssh connection after retries: %w", err)
 	}
 
 	logger.Printf("SSH connection to %s established successfully", server)
@@ -618,138 +662,16 @@ func (p *azureProvider) getServerHostKey(ctx context.Context, addr string) (ssh.
 		Timeout: 5 * time.Second,
 	}
 
-	_, _, _, _ = ssh.NewClientConn(conn, addr, conf)
+	_, _, _, connErr := ssh.NewClientConn(conn, addr, conf)
 	if hostKey == nil {
-		return nil, fmt.Errorf("SSH handshake failed: %w", err)
+		if connErr != nil {
+			return nil, fmt.Errorf("SSH handshake failed to retrieve host key: %w", connErr)
+		}
+		return nil, fmt.Errorf("SSH handshake completed but no host key received")
 	}
 	return hostKey, nil
 }
 
-// initializeSSHKeys sets up SSH keys for authentication
-// If SSH keys are provided, use them. Otherwise auto-generate for SFTP.
-func initializeSSHKeys(config *Config) error {
-	// Try to read SSH keys from file paths
-	if config.SSHPubKeyPath != "" {
-		// Read public key from file
-		pubKeyData, err := os.ReadFile(config.SSHPubKeyPath)
-		if err != nil {
-			logger.Printf("Could not read SSH public key from %s: %v", config.SSHPubKeyPath, err)
-		} else {
-			pubKeyContent := strings.TrimSpace(string(pubKeyData))
-			// Validate SSH public key format
-			if err := validateSSHPublicKey(pubKeyContent); err != nil {
-				return fmt.Errorf("invalid SSH public key from file %s: %w", config.SSHPubKeyPath, err)
-			}
-
-			config.SSHPubKey = pubKeyContent
-			logger.Printf("Using SSH public key from file: %s", config.SSHPubKeyPath)
-
-			// If SFTP is enabled, try to read private key
-			if config.EnableSftp {
-				if config.SSHPrivKeyPath != "" {
-					privKeyData, err := os.ReadFile(config.SSHPrivKeyPath)
-					if err != nil {
-						logger.Printf("Could not read SSH private key from %s: %v", config.SSHPrivKeyPath, err)
-						logger.Printf("Public key provided but private key missing for SFTP, auto-generating new key pair")
-					} else {
-						privKeyContent := strings.TrimSpace(string(privKeyData))
-						// Validate SSH private key format
-						if err := validateSSHPrivateKey(privKeyContent); err != nil {
-							return fmt.Errorf("invalid SSH private key from file %s: %w", config.SSHPrivKeyPath, err)
-						}
-						config.SSHPrivKey = privKeyContent
-						logger.Printf("Using SSH key pair from files for SFTP")
-						return nil
-					}
-				}
-			} else {
-				logger.Printf("Using SSH public key from file")
-				return nil
-			}
-		}
-	}
-
-	// Auto-generate keys if none were successfully loaded from files
-	if config.SSHPubKey == "" {
-		if config.EnableSftp {
-			logger.Printf("Auto-generating SSH key pair for SFTP")
-		} else {
-			logger.Printf("Auto-generating SSH key pair for Azure VM creation")
-		}
-
-		pubKeyString, privKeyString, err := generateSSHKeyPair()
-		if err != nil {
-			return fmt.Errorf("failed to generate SSH key pair: %w", err)
-		}
-
-		if pubKeyString == "" || privKeyString == "" {
-			return fmt.Errorf("generated SSH key pair is empty")
-		}
-
-		config.SSHPubKey = pubKeyString
-		if config.EnableSftp {
-			config.SSHPrivKey = privKeyString
-		}
-		// Note: Private key not stored for non-SFTP mode as it's not needed
-	}
-
-	return nil
-}
-
-// validateSSHPublicKey validates that the provided string is a valid SSH public key
-func validateSSHPublicKey(pubKey string) error {
-	pubKey = strings.TrimSpace(pubKey)
-	if pubKey == "" {
-		return fmt.Errorf("public key is empty")
-	}
-
-	// Try to parse the public key
-	_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(pubKey))
-	if err != nil {
-		return fmt.Errorf("failed to parse SSH public key: %w", err)
-	}
-
-	return nil
-}
-
-// validateSSHPrivateKey validates that the provided string is a valid SSH private key
-func validateSSHPrivateKey(privKey string) error {
-	privKey = strings.TrimSpace(privKey)
-	if privKey == "" {
-		return fmt.Errorf("private key is empty")
-	}
-
-	// Try to parse the private key
-	_, err := ssh.ParsePrivateKey([]byte(privKey))
-	if err != nil {
-		return fmt.Errorf("failed to parse SSH private key: %w", err)
-	}
-
-	return nil
-}
-
-func generateSSHKeyPair() (string, string, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate private key: %w", err)
-	}
-
-	privateKeyPEM := pem.EncodeToMemory(
-		&pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
-		},
-	)
-
-	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate public key: %w", err)
-	}
-
-	publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
-
-	return string(publicKeyBytes), string(privateKeyPEM), nil
-}
 
 // getVMIPsFromNetworkProfile extracts IP addresses from VM's network profile
 func (p *azureProvider) getVMIPsFromNetworkProfile(nicClient *armnetwork.InterfacesClient, publicIPClient *armnetwork.PublicIPAddressesClient, nicRefs []*armcompute.NetworkInterfaceReference, rgName string) ([]netip.Addr, error) {

@@ -53,7 +53,8 @@ type Config struct {
 	EnableSecureBoot bool
 	UsePublicIP      bool
 	RootVolumeSize   int
-	EnableSftp       bool
+	EnableSftp                bool
+	SSHInsecureIgnoreHostKey  bool // For debugging: skip host key verification
 	// New VM Pool configuration
 	VMPoolType          string
 	VMPoolPodRegex      string

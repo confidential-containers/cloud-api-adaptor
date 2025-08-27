@@ -85,6 +85,7 @@ azure() {
     [[ "${USE_PUBLIC_IP}" == "true" ]] && optionals+="-use-public-ip "
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} " # Specify root volume size for pod vm
     [[ "${ENABLE_SFTP}" == "true" ]] && optionals+="-enable-sftp "
+    [[ "${SSH_INSECURE_IGNORE_HOST_KEY}" == "true" ]] && optionals+="-ssh-insecure-ignore-host-key "
     [[ "${VM_POOL_TYPE}" ]] && optionals+="-vm-pool-type ${VM_POOL_TYPE} "
     [[ "${VM_POOL_POD_REGEX}" ]] && optionals+="-vm-pool-pod-regex ${VM_POOL_POD_REGEX} "
     [[ "${VM_POOL_INSTANCE_TYPES}" ]] && optionals+="-vm-pool-instance-types ${VM_POOL_INSTANCE_TYPES} "
