@@ -20,6 +20,19 @@ type Provider interface {
 	ConfigVerifier() error
 }
 
+// PoolProvider represents a provider that supports VM pool functionality.
+// This is an optional interface that providers can implement to support VM pools.
+// It does NOT embed Provider to avoid circular dependencies.
+type PoolProvider interface {
+	// DeallocateFromPool returns a VM back to the pool instead of deleting it.
+	// This method should mark the VM as available for reuse without terminating it.
+	// Returns an error if the VM is not in a pool or if the deallocation fails.
+	DeallocateFromPool(instanceID string) error
+
+	// SupportsVMPools returns true if the provider supports VM pool functionality.
+	SupportsVMPools() bool
+}
+
 // keyValueFlag represents a flag of key-value pairs
 type KeyValueFlag map[string]string
 
@@ -58,6 +71,16 @@ type Instance struct {
 	ID   string
 	Name string
 	IPs  []netip.Addr
+
+	// Pool-specific metadata for pooled instances
+	PoolMetadata *PoolMetadata
+}
+
+// PoolMetadata contains information for instances allocated from VM pools
+// A non-nil PoolMetadata pointer indicates the instance is pooled
+type PoolMetadata struct {
+	AllocationID string
+	PoolType     string
 }
 
 type InstanceTypeSpec struct {

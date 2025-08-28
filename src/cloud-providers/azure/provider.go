@@ -62,11 +62,11 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		Username:       config.SSHUserName,
 		EnableSFTP:     config.EnableSftp,
 	}
-	
+
 	if err := util.InitializeSSHKeys(sshConfig); err != nil {
 		return nil, fmt.Errorf("failed to initialize SSH keys: %w", err)
 	}
-	
+
 	// Update config with initialized keys
 	config.SSHPubKey = sshConfig.PublicKey
 	config.SSHPrivKey = sshConfig.PrivateKey
@@ -357,6 +357,19 @@ func (p *azureProvider) ConfigVerifier() error {
 	}
 
 	return nil
+}
+
+// DeallocateFromPool implements the PoolProvider interface
+func (p *azureProvider) DeallocateFromPool(instanceID string) error {
+	if p.vmPool == nil {
+		return fmt.Errorf("VM pool is not initialized")
+	}
+	return p.DeallocateFromVMPool(instanceID)
+}
+
+// SupportsVMPools implements the PoolProvider interface
+func (p *azureProvider) SupportsVMPools() bool {
+	return p.vmPool != nil
 }
 
 // Add SelectInstanceType method to select an instance type based on the memory and vcpu requirements
@@ -671,7 +684,6 @@ func (p *azureProvider) getServerHostKey(ctx context.Context, addr string) (ssh.
 	}
 	return hostKey, nil
 }
-
 
 // getVMIPsFromNetworkProfile extracts IP addresses from VM's network profile
 func (p *azureProvider) getVMIPsFromNetworkProfile(nicClient *armnetwork.InterfacesClient, publicIPClient *armnetwork.PublicIPAddressesClient, nicRefs []*armcompute.NetworkInterfaceReference, rgName string) ([]netip.Addr, error) {

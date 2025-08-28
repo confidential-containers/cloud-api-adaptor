@@ -338,6 +338,12 @@ func (p *azureProvider) AllocateFromVMPool(ctx context.Context, podName, sandbox
 		}
 	}
 
+	// Set pool metadata for the returned instance
+	vm.PoolMetadata = &provider.PoolMetadata{
+		AllocationID: allocationID,
+		PoolType:     string(p.vmPool.config.Type),
+	}
+
 	// Log current pool status
 	total, available, inUse := p.vmPool.GetPoolStatus()
 	logger.Printf("Pool status after allocation: total=%d, available=%d, inUse=%d", total, available, inUse)

@@ -91,6 +91,13 @@ func (s *PeerPodService) getPod(podname string, podns string) (*v1.Pod, error) {
 	return pod, nil
 }
 
+// newPooledPeerPod creates a new pooled PeerPod object
+func (s *PeerPodService) newPooledPeerPod(pod *v1.Pod, instanceId, allocationID, poolType string) *peerPodV1alpha1.PeerPod {
+	pp := s.newPeerPod(pod, instanceId)
+	pp.SetPoolMetadata(allocationID, poolType)
+	return pp
+}
+
 // make the pod an owner of a PeerPod
 func (s *PeerPodService) OwnPeerPod(podname string, podns string, instanceID string) error {
 	pod, err := s.getPod(podname, podns)
@@ -107,6 +114,34 @@ func (s *PeerPodService) OwnPeerPod(podname string, podns string, instanceID str
 	defer s.mutex.Unlock()
 	s.podToPP[string(pod.UID)] = string(pp.Name)
 	logger.Printf("%s is now owning a PeerPod object", podname)
+	return nil
+}
+
+// OwnPooledPeerPod creates a pooled PeerPod for the pod
+func (s *PeerPodService) OwnPooledPeerPod(podname string, podns string, instanceID, allocationID, poolType string) error {
+	pod, err := s.getPod(podname, podns)
+	if err != nil {
+		return err
+	}
+	pp := s.newPooledPeerPod(pod, instanceID, allocationID, poolType)
+
+	result := peerPodV1alpha1.PeerPod{}
+	err = s.uclient.Post().Namespace(pod.Namespace).Resource("peerPods").Body(pp).Do(context.TODO()).Into(&result)
+	if err != nil {
+		return err
+	}
+
+	// Set pool allocation timestamp
+	result.SetPoolAllocated()
+	err = s.uclient.Put().Namespace(pod.Namespace).Resource("peerPods").Name(result.Name).SubResource("status").Body(&result).Do(context.TODO()).Into(&result)
+	if err != nil {
+		logger.Printf("Warning: failed to update pool allocation status: %v", err)
+	}
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.podToPP[string(pod.UID)] = string(pp.Name)
+	logger.Printf("%s is now owning a pooled PeerPod object (allocationID: %s, poolType: %s)", podname, allocationID, poolType)
 	return nil
 }
 

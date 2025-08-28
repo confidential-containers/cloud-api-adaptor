@@ -43,12 +43,28 @@ spec:
                 type: string
               instanceID:
                 type: string
+              poolAllocationID:
+                description: |-
+                  Pool-specific fields for VM pool management
+                  A non-empty PoolAllocationID indicates this is a pooled VM
+                type: string
+              poolType:
+                type: string
             type: object
           status:
             description: PeerPodStatus defines the observed state of PeerPod
             properties:
-              cleand:
+              allocatedAt:
+                format: date-time
+                type: string
+              cleaned:
                 type: boolean
+              poolAvailable:
+                description: Pool-specific status fields
+                type: boolean
+              returnedAt:
+                format: date-time
+                type: string
             type: object
         type: object
     served: true

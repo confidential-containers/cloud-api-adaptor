@@ -391,8 +391,17 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	}
 
 	if s.ppService != nil {
-		if err := s.ppService.OwnPeerPod(sandbox.podName, sandbox.podNamespace, instance.ID); err != nil {
-			logger.Printf("failed to create PeerPod: %v", err)
+		if instance.PoolMetadata != nil {
+			// Create pooled PeerPod
+			if err := s.ppService.OwnPooledPeerPod(sandbox.podName, sandbox.podNamespace, instance.ID,
+				instance.PoolMetadata.AllocationID, instance.PoolMetadata.PoolType); err != nil {
+				logger.Printf("failed to create pooled PeerPod: %v", err)
+			}
+		} else {
+			// Create regular PeerPod
+			if err := s.ppService.OwnPeerPod(sandbox.podName, sandbox.podNamespace, instance.ID); err != nil {
+				logger.Printf("failed to create PeerPod: %v", err)
+			}
 		}
 	}
 

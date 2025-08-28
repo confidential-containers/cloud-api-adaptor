@@ -98,28 +98,69 @@ func (r *PeerPodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if controllerutil.ContainsFinalizer(&pp, ppFinalizer) {
-		logger.Info("deleting instance", "InstanceID", pp.Spec.InstanceID, "CloudProvider", pp.Spec.CloudProvider)
-		provider := r.Providers[pp.Spec.CloudProvider]
-		if provider == nil {
+		// Get or create provider instance
+		providerInstance := r.Providers[pp.Spec.CloudProvider]
+		if providerInstance == nil {
 			p, err := GetProvider(pp.Spec.CloudProvider)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 			r.Providers[pp.Spec.CloudProvider] = p
-			provider = p
-		}
-		if err := provider.DeleteInstance(ctx, pp.Spec.InstanceID); err != nil {
-			return ctrl.Result{}, err
+			providerInstance = p
 		}
 
+		// Handle pooled vs non-pooled VMs differently
+		if pp.IsPooledVM() {
+			logger.Info("returning pooled VM to pool",
+				"InstanceID", pp.Spec.InstanceID,
+				"CloudProvider", pp.Spec.CloudProvider,
+				"PoolType", pp.GetPoolType(),
+				"AllocationID", pp.GetPoolAllocationID())
+
+			// Check if provider supports VM pools
+			if poolProvider, ok := providerInstance.(provider.PoolProvider); ok && poolProvider.SupportsVMPools() {
+				if err := poolProvider.DeallocateFromPool(pp.Spec.InstanceID); err != nil {
+					logger.Error(err, "failed to return VM to pool, falling back to deletion",
+						"InstanceID", pp.Spec.InstanceID)
+					// Fallback to deletion if pool deallocation fails
+					if err := providerInstance.DeleteInstance(ctx, pp.Spec.InstanceID); err != nil {
+						return ctrl.Result{}, err
+					}
+					logger.Info("VM deleted as fallback", "InstanceID", pp.Spec.InstanceID)
+				} else {
+					// Update status to indicate VM was returned to pool
+					pp.SetPoolReturned()
+					if err := r.Status().Update(ctx, &pp); err != nil {
+						logger.Error(err, "failed to update pool status", "InstanceID", pp.Spec.InstanceID)
+					}
+					logger.Info("VM successfully returned to pool",
+						"InstanceID", pp.Spec.InstanceID,
+						"AllocationID", pp.GetPoolAllocationID())
+				}
+			} else {
+				// This should never happen - pooled PeerPod but provider doesn't support pools
+				logger.Error(fmt.Errorf("inconsistent pool state"), "pooled PeerPod but provider doesn't support pools",
+					"InstanceID", pp.Spec.InstanceID, "CloudProvider", pp.Spec.CloudProvider)
+				return ctrl.Result{}, fmt.Errorf("inconsistent pool state for instance %s", pp.Spec.InstanceID)
+			}
+		} else {
+			// Non-pooled VM: delete as before
+			logger.Info("deleting non-pooled VM",
+				"InstanceID", pp.Spec.InstanceID,
+				"CloudProvider", pp.Spec.CloudProvider)
+			if err := providerInstance.DeleteInstance(ctx, pp.Spec.InstanceID); err != nil {
+				return ctrl.Result{}, err
+			}
+			logger.Info("VM deleted", "InstanceID", pp.Spec.InstanceID)
+		}
+
+		// Remove finalizer in all cases to allow PeerPod deletion
 		controllerutil.RemoveFinalizer(&pp, ppFinalizer)
 		if err := r.Update(ctx, &pp); err != nil {
 			if !apierrors.IsNotFound(err) { // object exist but fail to update, try again
 				return ctrl.Result{}, err
 			}
 		}
-
-		logger.Info("instance deleted", "InstanceID", pp.Spec.InstanceID, "CloudProvider", pp.Spec.CloudProvider)
 	}
 
 	return ctrl.Result{}, nil
