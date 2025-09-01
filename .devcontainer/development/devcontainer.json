@@ -1,0 +1,18 @@
+// Create a Pod VM image with mkosi
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/alpine
+{
+	"name": "General development container",
+	"image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+	"postCreateCommand": "bash .devcontainer/development/scripts/postCreateCommand.sh",
+	"capAdd": [
+		"CAP_AUDIT_WRITE"
+	],
+	"features": {
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+		"ghcr.io/devcontainers/features/go:1": {}
+	},
+	"containerEnv": {
+		"CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}"
+	}
+}
