@@ -62,7 +62,9 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
+    --mount=type=secret,id=AWS_SESSION_TOKEN \
     export AWS_ACCESS_KEY_ID=$(cat /run/secrets/AWS_ACCESS_KEY_ID) && \
     export AWS_SECRET_ACCESS_KEY=$(cat /run/secrets/AWS_SECRET_ACCESS_KEY) && \
+    export AWS_SESSION_TOKEN=$(cat /run/secrets/AWS_SESSION_TOKEN 2>/dev/null || echo "") && \
     cd cloud-api-adaptor/src/cloud-api-adaptor/aws/image && \
     BINARIES= PAUSE_BUNDLE= CLOUD_PROVIDER=aws PODVM_DISTRO=$PODVM_DISTRO make image

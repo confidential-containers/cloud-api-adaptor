@@ -39,6 +39,7 @@ func (i *instanceTypes) Set(value string) error {
 type Config struct {
 	AccessKeyId          string
 	SecretKey            string
+	SessionToken         string
 	Region               string
 	LoginProfile         string
 	LaunchTemplateName   string
@@ -58,5 +59,5 @@ type Config struct {
 }
 
 func (c Config) Redact() Config {
-	return *util.RedactStruct(&c, "AccessKeyId", "SecretKey").(*Config)
+	return *util.RedactStruct(&c, "AccessKeyId", "SecretKey", "SessionToken").(*Config)
 }
