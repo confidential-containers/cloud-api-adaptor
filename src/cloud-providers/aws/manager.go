@@ -21,6 +21,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 	flags.StringVar(&awscfg.AccessKeyId, "aws-access-key-id", "", "Access Key ID, defaults to `AWS_ACCESS_KEY_ID`")
 	flags.StringVar(&awscfg.SecretKey, "aws-secret-key", "", "Secret Key, defaults to `AWS_SECRET_ACCESS_KEY`")
+	flags.StringVar(&awscfg.SessionToken, "aws-session-token", "", "Session Token, defaults to `AWS_SESSION_TOKEN`")
 	flags.StringVar(&awscfg.Region, "aws-region", "", "Region")
 	flags.StringVar(&awscfg.LoginProfile, "aws-profile", "", "AWS Login Profile")
 	flags.StringVar(&awscfg.LaunchTemplateName, "aws-lt-name", "kata", "AWS Launch Template Name")
@@ -45,6 +46,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 func (_ *Manager) LoadEnv() {
 	provider.DefaultToEnv(&awscfg.AccessKeyId, "AWS_ACCESS_KEY_ID", "")
 	provider.DefaultToEnv(&awscfg.SecretKey, "AWS_SECRET_ACCESS_KEY", "")
+	provider.DefaultToEnv(&awscfg.SessionToken, "AWS_SESSION_TOKEN", "")
 	provider.DefaultToEnv(&awscfg.InstanceType, "PODVM_INSTANCE_TYPE", "m6a.large")
 }
 
