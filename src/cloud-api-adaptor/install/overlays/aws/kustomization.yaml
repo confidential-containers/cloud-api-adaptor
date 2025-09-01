@@ -55,6 +55,7 @@ secretGenerator:
   # This file should look like this (w/o quotes!):
   # AWS_ACCESS_KEY_ID=...
   # AWS_SECRET_ACCESS_KEY=...
+  # AWS_SESSION_TOKEN=... (optional, for temporary credentials)
   envs:
     - aws-cred.env
 ##TLS_SETTINGS
