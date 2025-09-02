@@ -25,6 +25,7 @@ configMapGenerator:
   - POWERVS_IMAGE_ID="" #set
   - POWERVS_ZONE="" #set
   - CRI_RUNTIME_ENDPOINT="/run/cri-runtime/containerd.sock"
+  #- CA_PUBLIC_KEY_PATH="" # Uncomment and set the path of the CA public key 
   #- POWERVS_MEMORY="" # Uncomment and set if you want to use a specific amount of memory
   #- POWERVS_PROCESSORS="" # Uncomment and set if you want to use a specific number of CPUs
   #- POWERVS_PROCESSOR_TYPE="" # Uncomment and set if you want to use a specific processor type
@@ -56,6 +57,11 @@ secretGenerator:
   envs:
   - cloud-credentials.env
 
+# - name: peer-pods-ca-key
+#   namespace: confidential-containers-system
+#   files:
+#   - <path_to_ca.pub>
+
 ##TLS_SETTINGS
 #- name: certs-for-tls
 #  namespace: confidential-containers-system
@@ -69,3 +75,4 @@ patchesStrategicMerge:
 ##TLS_SETTINGS
   #- tls_certs_volume_mount.yaml # set (for tls)
 ##TLS_SETTINGS
+  #- ca_public_key_volume_mount.yaml # set for ENABLE_SFTP=true

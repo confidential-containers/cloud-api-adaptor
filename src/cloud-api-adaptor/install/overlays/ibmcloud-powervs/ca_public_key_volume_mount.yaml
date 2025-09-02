@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cloud-api-adaptor-daemonset
+  namespace: confidential-containers-system
+  labels:
+    app: cloud-api-adaptor
+spec:
+  template:
+    spec:
+      containers:
+      - name: cloud-api-adaptor-con
+        volumeMounts:
+        - mountPath: /etc/certificates
+          name: ssh-key
+      volumes:
+      - name: ssh-key
+        secret:
+          secretName: peer-pods-ca-key
+
+# to apply this uncomment the patchesStrategicMerge of this file in kustomization.yaml

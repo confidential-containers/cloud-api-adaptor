@@ -33,7 +33,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.BoolVar(&ibmcloudPowerVSConfig.UsePublicIP, "use-public-ip", false, "Use Public IP for connecting to the agent-protocol-forwarder inside the Pod VM")
 	flags.BoolVar(&ibmcloudPowerVSConfig.EnableSftp, "enable-sftp", false, "When set to true, transfers the user-data via SFTP")
 	flags.StringVar(&ibmcloudPowerVSConfig.CloudUserName, "cloud-user-name", "", "name of the cloud user")
-
+	flags.StringVar(&ibmcloudPowerVSConfig.CAPublicKeyPath, "ca-public-key-path", "", "file path of the CA public key")
 }
 
 func (_ *Manager) LoadEnv() {

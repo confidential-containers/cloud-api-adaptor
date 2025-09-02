@@ -4,6 +4,7 @@
 package ibmcloud_powervs
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -14,6 +15,7 @@ import (
 	"log"
 	"net"
 	"net/netip"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -340,6 +342,7 @@ func (p *ibmcloudPowerVSProvider) getIPFromDHCPServer(ctx context.Context, insta
 }
 
 func (p *ibmcloudPowerVSProvider) sendConfigFile(ctx context.Context, data string, ip netip.Addr) error {
+	var sshCon *ssh.Client
 	server := ip.String() + ":" + sshPort
 
 	signer, err := ssh.ParsePrivateKey([]byte(p.serviceConfig.privKey))
@@ -347,10 +350,9 @@ func (p *ibmcloudPowerVSProvider) sendConfigFile(ctx context.Context, data strin
 		return fmt.Errorf("failed to parse private key: %w", err)
 	}
 
-	// Dynamically fetch the server host key
-	hostKey, err := p.getServerHostKey(ctx, server)
+	caPubKey, err := loadCA(p.serviceConfig.CAPublicKeyPath)
 	if err != nil {
-		return fmt.Errorf("failed to fetch the server host key : %w", err)
+		return fmt.Errorf("failed to load the CA public key : %w", err)
 	}
 
 	sshConfig := &ssh.ClientConfig{
@@ -358,20 +360,35 @@ func (p *ibmcloudPowerVSProvider) sendConfigFile(ctx context.Context, data strin
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
-		HostKeyCallback: ssh.FixedHostKey(hostKey),
+		HostKeyCallback: VerifyHostKeyWithCA(caPubKey),
 		Timeout:         5 * time.Second,
 	}
 
-	logger.Printf("Trying to establish SSH connection to %s", server)
-	sshClient, err := ssh.Dial("tcp", server, sshConfig)
+	ctx, cancel := context.WithTimeout(ctx, 240*time.Second)
+	defer cancel()
+
+	err = retry.Do(
+		func() error {
+			logger.Printf("Trying to establish SSH connection to %s", server)
+			sshCon, err = ssh.Dial("tcp", server, sshConfig)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.Context(ctx),
+		retry.Attempts(0),
+		retry.MaxDelay(10*time.Second),
+	)
+
 	if err != nil {
-		return fmt.Errorf("failed to establish ssh connection: %w", err)
+		return fmt.Errorf("failed to establish SSH connection: %w", err)
 	}
 
 	logger.Printf("SSH connection to %s established successfully", server)
-	defer sshClient.Close()
+	defer sshCon.Close()
 
-	sftpClient, err := sftp.NewClient(sshClient)
+	sftpClient, err := sftp.NewClient(sshCon)
 	if err != nil {
 		return fmt.Errorf("failed to create sftp client: %w", err)
 	}
@@ -391,51 +408,33 @@ func (p *ibmcloudPowerVSProvider) sendConfigFile(ctx context.Context, data strin
 	return nil
 }
 
-// getServerHostKey will establish an initial unsecure connection to the VM
-// to fetch the server host key to be used further for authentication to
-// create an SSH connection.
-func (p *ibmcloudPowerVSProvider) getServerHostKey(ctx context.Context, addr string) (ssh.PublicKey, error) {
-	var (
-		conn    net.Conn
-		err     error
-		hostKey ssh.PublicKey
-	)
-	ctx, cancel := context.WithTimeout(ctx, 240*time.Second)
-	defer cancel()
+func VerifyHostKeyWithCA(caPubKey ssh.PublicKey) ssh.HostKeyCallback {
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		logger.Println("Verifying if host key is singed by a trusted CA")
+		cert, ok := key.(*ssh.Certificate)
+		if !ok {
+			return fmt.Errorf("host presented non-certificate key")
+		}
 
-	err = retry.Do(
-		func() error {
-			logger.Printf("Trying to establish TCP connection to %s", addr)
-			conn, err = net.Dial("tcp", addr)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-		retry.Context(ctx),
-		retry.Attempts(0),
-		retry.MaxDelay(10*time.Second),
-	)
+		if bytes.Equal(cert.Key.Marshal(), caPubKey.Marshal()) {
+			return fmt.Errorf("host key not signed by trusted CA")
+		}
 
+		logger.Println("Host key is signed by a trusted CA")
+		return nil
+	}
+}
+
+func loadCA(caPublicKeyPath string) (ssh.PublicKey, error) {
+	caBytes, err := os.ReadFile(caPublicKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to establish TCP connection: %w", err)
+		return nil, fmt.Errorf("failed to read CA public key: %v", err)
 	}
-	defer conn.Close()
-
-	conf := &ssh.ClientConfig{
-		User: p.serviceConfig.CloudUserName,
-		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			hostKey = key
-			return nil
-		},
-		Timeout: 5 * time.Second,
+	caPubKey, _, _, _, err := ssh.ParseAuthorizedKey(caBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CA public key: %v", err)
 	}
-
-	_, _, _, _ = ssh.NewClientConn(conn, addr, conf)
-	if hostKey == nil {
-		return nil, fmt.Errorf("SSH handshake failed: %w", err)
-	}
-	return hostKey, nil
+	return caPubKey, nil
 }
 
 func generateSSHKeyPair() (string, string, error) {

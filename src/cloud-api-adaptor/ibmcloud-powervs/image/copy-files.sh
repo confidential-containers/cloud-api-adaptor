@@ -4,6 +4,8 @@
 
 REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/../..
 PODVM_DIR=${REPO_ROOT}/podvm
+SSH_CONFIG_FILE="/etc/ssh/sshd_config"
+SSH_HOST_KEY_NAME=${SSH_HOST_KEY_NAME:-}
 
 sudo mkdir -p /etc/containers
 sudo cp "${PODVM_DIR}"/files/etc/agent-config.toml /etc/agent-config.toml
@@ -33,8 +35,17 @@ fi
 
 if [ "${ENABLE_SFTP}" = "true" ]; then
     sudo cp -a "${PODVM_DIR}"/files/etc/systemd-addons/* /etc/systemd/system/
-    systemctl disable process-user-data
-    systemctl enable process-user-data.path
+    sudo systemctl disable process-user-data
+    sudo systemctl enable process-user-data.path
+
+    # Add the generated SSH host keys and edit the sshd_config file
+    sudo cp -a "${PODVM_DIR}"/files/etc/ssh-host-keys/* /etc/ssh/
+
+    echo "HostKey /etc/ssh/${SSH_HOST_KEY_NAME}" >> "${SSH_CONFIG_FILE}"
+    echo "HostCertificate /etc/ssh/${SSH_HOST_KEY_NAME}-cert.pub" >> "${SSH_CONFIG_FILE}"
+
+    # Restrict the permissions of private key
+    chmod 600 /etc/ssh/${SSH_HOST_KEY_NAME}
 fi
 
 sudo mkdir -p /usr/local/bin
