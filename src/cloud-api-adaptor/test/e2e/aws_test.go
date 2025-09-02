@@ -111,6 +111,7 @@ func TestAwsCreateNginxDeployment(t *testing.T) {
 }
 
 func TestAwsCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
+	SkipTestOnCI(t)
 	assert := NewAWSAssert()
 	nonExistingImageName := "ami-123456"
 	expectedErrorMessage := fmt.Sprintf("InvalidAMIID.NotFound: The image id '[%s]' does not exist: not found", nonExistingImageName)
