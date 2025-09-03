@@ -4,11 +4,18 @@
 package ibmcloud_powervs
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"log"
+	"net"
 	"net/netip"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -19,9 +26,15 @@ import (
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 )
 
-const maxInstanceNameLen = 47
+const (
+	maxInstanceNameLen = 47
+	sshPort            = "22"
+	remoteFile         = "/media/cidata/user-data"
+)
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/ibmcloud-powervs] ", log.LstdFlags|log.Lmsgprefix)
 
@@ -39,6 +52,19 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		return nil, err
 	}
 
+	if config.EnableSftp {
+		pubKeyString, privKeyString, err := generateSSHKeyPair()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create SSH key pair: %w", err)
+		}
+
+		if pubKeyString == "" || privKeyString == "" {
+			return nil, fmt.Errorf("generated SSH key pair is empty")
+		}
+
+		config.pubKey, config.privKey = pubKeyString, privKeyString
+	}
+
 	return &ibmcloudPowerVSProvider{
 		powervsService: *powervs,
 		serviceConfig:  config,
@@ -46,7 +72,6 @@ func NewProvider(config *Config) (provider.Provider, error) {
 }
 
 func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
-
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
 	userData, err := cloudConfig.Generate()
@@ -103,7 +128,18 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 		Processors: core.Float64Ptr(processors),
 		ProcType:   core.StringPtr(p.serviceConfig.ProcessorType),
 		SysType:    systemType,
-		UserData:   base64.StdEncoding.EncodeToString([]byte(userData)),
+	}
+
+	if p.serviceConfig.EnableSftp {
+		sshKeyUserData := fmt.Sprintf(`#cloud-config
+users:
+  - name: %s
+    ssh-authorized-keys:
+      - %s
+`, p.serviceConfig.CloudUserName, strings.TrimSpace(p.serviceConfig.pubKey))
+		body.UserData = base64.StdEncoding.EncodeToString([]byte(sshKeyUserData))
+	} else {
+		body.UserData = base64.StdEncoding.EncodeToString([]byte(userData))
 	}
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
@@ -156,6 +192,13 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 	ips, err := p.getVMIPs(ctx, instanceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get IPs for the instance : %v", err)
+	}
+
+	if p.serviceConfig.EnableSftp {
+		err = p.sendConfigFile(ctx, userData, ips[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to send user data using ssh connection: %w", err)
+		}
 	}
 
 	return &provider.Instance{
@@ -296,4 +339,123 @@ func (p *ibmcloudPowerVSProvider) getIPFromDHCPServer(ctx context.Context, insta
 	}
 
 	return ip, nil
+}
+
+func (p *ibmcloudPowerVSProvider) sendConfigFile(ctx context.Context, data string, ip netip.Addr) error {
+	var sshCon *ssh.Client
+	server := ip.String() + ":" + sshPort
+
+	signer, err := ssh.ParsePrivateKey([]byte(p.serviceConfig.privKey))
+	if err != nil {
+		return fmt.Errorf("failed to parse private key: %w", err)
+	}
+
+	caPubKey, err := loadCA(p.serviceConfig.CAPublicKeyPath)
+	if err != nil {
+		return fmt.Errorf("failed to load the CA public key : %w", err)
+	}
+
+	sshConfig := &ssh.ClientConfig{
+		User: p.serviceConfig.CloudUserName,
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		},
+		HostKeyCallback: VerifyHostKeyWithCA(caPubKey),
+		Timeout:         5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 240*time.Second)
+	defer cancel()
+
+	err = retry.Do(
+		func() error {
+			logger.Printf("Trying to establish SSH connection to %s", server)
+			sshCon, err = ssh.Dial("tcp", server, sshConfig)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.Context(ctx),
+		retry.Attempts(0),
+		retry.MaxDelay(10*time.Second),
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to establish SSH connection: %w", err)
+	}
+
+	logger.Printf("SSH connection to %s established successfully", server)
+	defer sshCon.Close()
+
+	sftpClient, err := sftp.NewClient(sshCon)
+	if err != nil {
+		return fmt.Errorf("failed to create sftp client: %w", err)
+	}
+	defer sftpClient.Close()
+
+	file, err := sftpClient.Create(remoteFile)
+	if err != nil {
+		return fmt.Errorf("failed to create remote file %q: %w", remoteFile, err)
+	}
+	defer file.Close()
+
+	if _, err := file.Write([]byte(data)); err != nil {
+		return fmt.Errorf("failed to write data to remote file: %w", err)
+	}
+
+	logger.Printf("Successfully transferred user data to remote file %s\n", remoteFile)
+	return nil
+}
+
+func VerifyHostKeyWithCA(caPubKey ssh.PublicKey) ssh.HostKeyCallback {
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		logger.Println("Verifying if host key is singed by a trusted CA")
+		cert, ok := key.(*ssh.Certificate)
+		if !ok {
+			return fmt.Errorf("host presented non-certificate key")
+		}
+
+		if bytes.Equal(cert.Key.Marshal(), caPubKey.Marshal()) {
+			return fmt.Errorf("host key not signed by trusted CA")
+		}
+
+		logger.Println("Host key is signed by a trusted CA")
+		return nil
+	}
+}
+
+func loadCA(caPublicKeyPath string) (ssh.PublicKey, error) {
+	caBytes, err := os.ReadFile(caPublicKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA public key: %v", err)
+	}
+	caPubKey, _, _, _, err := ssh.ParseAuthorizedKey(caBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CA public key: %v", err)
+	}
+	return caPubKey, nil
+}
+
+func generateSSHKeyPair() (string, string, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate private key: %w", err)
+	}
+
+	privateKeyPEM := pem.EncodeToMemory(
+		&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+		},
+	)
+
+	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate public key: %w", err)
+	}
+
+	publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
+
+	return string(publicKeyBytes), string(privateKeyPEM), nil
 }

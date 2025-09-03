@@ -6,6 +6,8 @@ SKOPEO_SRC =
 SKOPEO_BIN = /usr/bin/skopeo
 
 export FORWARDER_PORT ?=
+export ENABLE_SFTP ?=
+export SSH_HOST_KEY_NAME ?=
 
 ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
 include $(ROOT_DIR)podvm/Makefile.inc

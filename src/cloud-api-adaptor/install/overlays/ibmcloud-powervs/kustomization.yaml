@@ -25,6 +25,7 @@ configMapGenerator:
   - POWERVS_IMAGE_ID="" #set
   - POWERVS_ZONE="" #set
   - CRI_RUNTIME_ENDPOINT="/run/cri-runtime/containerd.sock"
+  #- CA_PUBLIC_KEY_PATH="" # Uncomment and set the path of the CA public key 
   #- POWERVS_MEMORY="" # Uncomment and set if you want to use a specific amount of memory
   #- POWERVS_PROCESSORS="" # Uncomment and set if you want to use a specific number of CPUs
   #- POWERVS_PROCESSOR_TYPE="" # Uncomment and set if you want to use a specific processor type
@@ -34,6 +35,8 @@ configMapGenerator:
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
   #- PROXY_TIMEOUT="" # Uncomment and set if you want to pass a specific timeout. Defaults to 5m
   #- USE_PUBLIC_IP="true" # Uncomment if you want to use public ip for podvm
+  #- ENABLE_SFTP="true" # Uncomment if you want to send user-data via SFTP
+  #- CLOUD_USER_NAME="" # Uncomment and set the cloud user name
   #- FORWARDER_PORT="" # Uncomment and set if you want to use a specific port for agent-protocol-forwarder. Defaults to 15150
   #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
   #- REMOTE_HYPERVISOR_ENDPOINT="/run/peerpod/hypervisor.sock" # Path to Kata remote hypervisor socket. Default is /run/peerpod/hypervisor.sock
@@ -54,6 +57,11 @@ secretGenerator:
   envs:
   - cloud-credentials.env
 
+# - name: peer-pods-ca-key
+#   namespace: confidential-containers-system
+#   files:
+#   - <path_to_ca.pub>
+
 ##TLS_SETTINGS
 #- name: certs-for-tls
 #  namespace: confidential-containers-system
@@ -67,3 +75,4 @@ patchesStrategicMerge:
 ##TLS_SETTINGS
   #- tls_certs_volume_mount.yaml # set (for tls)
 ##TLS_SETTINGS
+  #- ca_public_key_volume_mount.yaml # set for ENABLE_SFTP=true
