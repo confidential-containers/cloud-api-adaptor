@@ -974,7 +974,7 @@ func (b *S3Bucket) uploadLargeFileWithCli(filepath string) error {
 	s3uri := "s3://" + b.Name + "/" + key
 
 	// TODO: region!
-	cmd := exec.Command("aws", "s3", "cp", filepath, s3uri)
+	cmd := exec.Command("aws", "s3", "cp", "--no-progress", filepath, s3uri)
 	out, err := cmd.CombinedOutput()
 	fmt.Printf("%s\n", out)
 	if err != nil {
