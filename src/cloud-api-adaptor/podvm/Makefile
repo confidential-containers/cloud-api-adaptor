@@ -41,35 +41,36 @@ setopts:
 ifeq ($(PODVM_DISTRO),ubuntu)
 	@echo defined
 	$(eval OPTS := -var se_boot=${SE_BOOT})
-ifneq ($(ARCH),x86_64)
-	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
-ifndef QEMU_BINARY
-	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
-endif
+    ifneq ($(ARCH),x86_64)
+		$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
+        ifndef QEMU_BINARY
+			$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
+        endif
 # UEFI for aarch64 on ubuntu
-ifeq ($(ARCH),aarch64)
-	$(eval OPTS += -var is_uefi=true -var os_arch="aarch64")
-	$(eval OPTS += -var uefi_firmware="/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
-endif
-endif
-else ifeq ($(PODVM_DISTRO),alinux)
-	@echo defined
-	$(eval OPTS := -var disk_size=22323)
-else ifeq ($(PODVM_DISTRO),rhel)
-	@echo defined
-	$(eval OPTS := -var disk_size=11144)
-ifeq ($(ARCH),s390x)
-	$(eval OPTS += -var se_boot=${SE_BOOT})
-	$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
-	$(eval OPTS += -var cpu_type=max)
-	$(eval OPTS += -var os_arch=s390x)
-ifndef QEMU_BINARY
-	$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
-endif
+        ifeq ($(ARCH),aarch64)
+			$(eval OPTS += -var is_uefi=true -var os_arch="aarch64")
+			$(eval OPTS += -var uefi_firmware="/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
+        endif
+    endif
+    else ifeq ($(PODVM_DISTRO),alinux)
+		@echo defined
+		$(eval OPTS := -var disk_size=22323)
+    else ifeq ($(PODVM_DISTRO),rhel)
+		@echo defined
+		$(eval OPTS := -var disk_size=11144)
+    ifeq ($(ARCH),s390x)
+		$(eval OPTS += -var se_boot=${SE_BOOT})
+		$(eval OPTS += -var machine_type=${QEMU_MACHINE_TYPE_${ARCH}})
+		$(eval OPTS += -var cpu_type=max)
+		$(eval OPTS += -var os_arch=s390x)
+    ifndef QEMU_BINARY
+		$(eval OPTS += -var qemu_binary=qemu-system-${ARCH})
+    endif
 endif
 else
 	$(error PODVM_DISTRO is invalid or not defined)
 endif
+
 
 ifdef QEMU_BINARY
 	$(eval OPTS += -var qemu_binary=${QEMU_BINARY} )
@@ -78,9 +79,9 @@ endif
 # UEFI for x86_64
 ifeq ($(UEFI),true)
 	$(eval OPTS += -var is_uefi=true -var os_arch="x86_64" )
-ifdef UEFI_FIRMWARE_LOCATION
-	$(eval OPTS += -var uefi_firmware=${UEFI_FIRMWARE_LOCATION} )
-endif
+    ifdef UEFI_FIRMWARE_LOCATION
+		$(eval OPTS += -var uefi_firmware=${UEFI_FIRMWARE_LOCATION} )
+    endif
 endif
 
 $(IMAGE_FILE): $(BINARIES) $(FILES) setopts
