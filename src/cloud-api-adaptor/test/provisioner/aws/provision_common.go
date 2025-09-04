@@ -36,7 +36,6 @@ const (
 	EksCniAddonVersion = "v1.12.5-eksbuild.2"
 	EksVersion         = "1.26"
 	AwsCredentialsFile = "aws-cred.env"
-	ResourcesBaseName  = "caa-e2e-test"
 )
 
 var AWSProps = &AWSProvisioner{}
@@ -50,6 +49,7 @@ type S3Bucket struct {
 
 // AMIImage represents an AMI image
 type AMIImage struct {
+	BaseName        string
 	Client          *ec2.Client
 	Description     string // Image description
 	DiskDescription string // Disk description
@@ -140,6 +140,11 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 	}
 
 	ec2Client := ec2.NewFromConfig(cfg)
+
+	if properties["resources_basename"] == "" {
+		properties["resources_basename"] = "caa-e2e-test-" + strconv.FormatInt(time.Now().Unix(), 10)
+	}
+
 	vpc := NewVpc(ec2Client, properties)
 
 	if properties["cluster_type"] == "" ||
@@ -287,6 +292,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"subnet_id":            a.Vpc.SubnetId,
 		"ssh_kp_name":          a.SshKpName,
 		"region":               a.AwsConfig.Region,
+		"resources_basename":   a.Vpc.BaseName,
 		"access_key_id":        credentials.AccessKeyID,
 		"secret_access_key":    credentials.SecretAccessKey,
 		"session_token":        credentials.SessionToken,
@@ -358,7 +364,7 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 	}
 
 	return &Vpc{
-		BaseName:          ResourcesBaseName,
+		BaseName:          properties["resources_basename"],
 		CidrBlock:         cidrBlock,
 		Client:            client,
 		ID:                properties["aws_vpc_id"],
@@ -828,6 +834,7 @@ func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketNa
 
 func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
 	return &AMIImage{
+		BaseName:        properties["resources_basename"],
 		Client:          client,
 		Description:     "Peer Pod VM image",
 		DiskDescription: "Peer Pod VM disk",
@@ -851,7 +858,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 				S3Key:    aws.String(bucket.Key),
 			},
 		},
-		TagSpecifications: defaultTagSpecifications(ResourcesBaseName+"-snap", ec2types.ResourceTypeImportSnapshotTask),
+		TagSpecifications: defaultTagSpecifications(i.BaseName+"-snap", ec2types.ResourceTypeImportSnapshotTask),
 	})
 	if err != nil {
 		return err
@@ -882,7 +889,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 		Tags: []ec2types.Tag{
 			{
 				Key:   aws.String("Name"),
-				Value: aws.String(ResourcesBaseName + "-snap"),
+				Value: aws.String(i.BaseName + "-snap"),
 			},
 		},
 	}); err != nil {
@@ -913,7 +920,7 @@ func (i *AMIImage) registerImage(imageName string) error {
 		EnaSupport:         aws.Bool(true),
 		RootDeviceName:     aws.String(i.RootDeviceName),
 		VirtualizationType: aws.String("hvm"),
-		TagSpecifications:  defaultTagSpecifications(ResourcesBaseName+"-img", ec2types.ResourceTypeImage),
+		TagSpecifications:  defaultTagSpecifications(i.BaseName+"-img", ec2types.ResourceTypeImage),
 	})
 	if err != nil {
 		return err
