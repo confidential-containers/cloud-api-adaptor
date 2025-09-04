@@ -123,3 +123,27 @@ roleRef:
   kind: Role
   name: pp-secrets
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cm-editor
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["delete", "create", "patch", "update", "get", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cm-editor
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: confidential-containers-system
+roleRef:
+  kind: ClusterRole
+  name: cm-editor
+  apiGroup: rbac.authorization.k8s.io
+---
+

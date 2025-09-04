@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cloud-api-adaptor-daemonset
+  namespace: confidential-containers-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: cloud-api-adaptor-con
+        volumeMounts:
+        - mountPath: /etc/ssh-allowlist
+          name: ssh-host-key-allowlist
+          readOnly: true
+      volumes:
+      - name: ssh-host-key-allowlist
+        secret:
+          secretName: ssh-host-key-allowlist
+          optional: true
+
+# to apply this uncomment the patchesStrategicMerge of this file in kustomization.yaml
