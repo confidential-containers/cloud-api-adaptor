@@ -248,12 +248,32 @@ docker() {
 
 }
 
+byom() {
+    test_vars VM_POOL_IPS
+
+    [[ "${VM_POOL_IPS}" ]] && optionals+="-vm-pool-ips ${VM_POOL_IPS} "
+    [[ "${SSH_USERNAME}" ]] && optionals+="-ssh-username ${SSH_USERNAME} "
+    [[ "${SSH_PUB_KEY_PATH}" ]] && optionals+="-ssh-pub-key ${SSH_PUB_KEY_PATH} "
+    [[ "${SSH_PRIV_KEY_PATH}" ]] && optionals+="-ssh-priv-key ${SSH_PRIV_KEY_PATH} "
+    [[ "${SSH_TIMEOUT}" ]] && optionals+="-ssh-timeout ${SSH_TIMEOUT} "
+    [[ "${SSH_HOST_KEY_ALLOWLIST_DIR}" ]] && optionals+="-ssh-host-key-allowlist-dir ${SSH_HOST_KEY_ALLOWLIST_DIR} "
+    [[ "${POOL_NAMESPACE}" ]] && optionals+="-pool-namespace ${POOL_NAMESPACE} "
+    [[ "${POOL_CONFIGMAP_NAME}" ]] && optionals+="-pool-configmap-name ${POOL_CONFIGMAP_NAME} "
+
+    set -x
+    exec cloud-api-adaptor byom \
+        -pods-dir "${PEER_PODS_DIR}" \
+        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
+        ${optionals}
+
+}
+
 help_msg() {
     cat <<EOF
 Usage:
-	CLOUD_PROVIDER=alibabacloud|aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker $0
+	CLOUD_PROVIDER=alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker $0
 or
-	$0 alibabacloud|aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker
+	$0 alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt|vsphere|docker
 
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
@@ -266,6 +286,8 @@ elif [[ "$CLOUD_PROVIDER" == "azure" ]]; then
     azure
 elif [[ "$CLOUD_PROVIDER" == "alibabacloud" ]]; then
     alibabacloud
+elif [[ "$CLOUD_PROVIDER" == "byom" ]]; then
+    byom
 elif [[ "$CLOUD_PROVIDER" == "gcp" ]]; then
     gcp
 elif [[ "$CLOUD_PROVIDER" == "ibmcloud" ]]; then
