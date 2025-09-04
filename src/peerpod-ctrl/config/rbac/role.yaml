@@ -7,6 +7,16 @@ rules:
 - apiGroups:
   - ""
   resourceNames:
+  - byom-ip-pool-state
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resourceNames:
   - peer-pods-cm
   - peer-pods-secret
   resources:

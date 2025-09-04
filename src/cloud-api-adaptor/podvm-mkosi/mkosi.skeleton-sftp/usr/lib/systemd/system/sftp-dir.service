@@ -1,0 +1,15 @@
+[Unit]
+Description=Prepare sftp subdirectory /media/cidata
+Requires=media-cidata.mount
+After=media-cidata.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/chown -R peerpod:peerpod /media/cidata
+ExecStart=/usr/bin/chmod 750 /media/cidata
+
+[Install]
+# This ensures the service is started when the system reaches the multi-user state,
+# just like the mount unit it depends on.
+WantedBy=multi-user.target

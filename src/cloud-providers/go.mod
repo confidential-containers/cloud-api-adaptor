@@ -52,6 +52,8 @@ require (
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
+	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
@@ -130,6 +132,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/sftp v1.13.9
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.mongodb.org/mongo-driver v1.17.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
@@ -152,7 +155,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
-	k8s.io/api v0.26.0 // indirect
+	k8s.io/api v0.26.0
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
