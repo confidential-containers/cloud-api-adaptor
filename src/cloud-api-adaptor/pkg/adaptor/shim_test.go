@@ -525,6 +525,21 @@ func (s *agentService) SetPolicy(ctx context.Context, req *agent.SetPolicyReques
 	return &emptypb.Empty{}, nil
 }
 
+func (s *agentService) AddSwapPath(ctx context.Context, req *agent.AddSwapPathRequest) (*emptypb.Empty, error) {
+	log.Printf("agent call: %T %#v", req, req)
+	return &emptypb.Empty{}, nil
+}
+
+func (s *agentService) MemAgentMemcgSet(ctx context.Context, req *agent.MemAgentMemcgConfig) (*emptypb.Empty, error) {
+	log.Printf("agent call: %T %#v", req, req)
+	return &emptypb.Empty{}, nil
+}
+
+func (s *agentService) MemAgentCompactSet(ctx context.Context, req *agent.MemAgentCompactConfig) (*emptypb.Empty, error) {
+	log.Printf("agent call: %T %#v", req, req)
+	return &emptypb.Empty{}, nil
+}
+
 type healthService struct{}
 
 func (s *healthService) Check(ctx context.Context, req *agent.CheckRequest) (*agent.HealthCheckResponse, error) {
