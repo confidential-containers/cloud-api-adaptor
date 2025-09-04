@@ -151,6 +151,7 @@ jobs:
           disablecvm="true"
           cluster_type="${{ inputs.cluster_type }}"
           ssh_kp_name="caa-e2e-test"
+          resources_basename="ci-caa-${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           EOF
           # For debugging
           echo "::group::aws.properties"
@@ -203,6 +204,8 @@ jobs:
         # didn't run, let's try to delete any resources created.
       - name: Force AWS clean-up
         if: failure() && steps.runTests.outcome == 'failure'
+        env:
+          res_basename: "ci-caa-${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
         working-directory: ./
         run: |
           ./hack/ci-e2e-aws-cleanup.sh
