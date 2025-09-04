@@ -21,7 +21,7 @@ require (
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250722070015-acae4480ac84
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250904051845-bdd98ec623bf
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
@@ -73,10 +73,7 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.16.0
 )
 
-require (
-	github.com/fenglyu/go-dmidecode v0.0.0-20220417074508-03f52eb45fe9
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250904051845-bdd98ec623bf
-)
+require github.com/fenglyu/go-dmidecode v0.0.0-20220417074508-03f52eb45fe9
 
 require (
 	cloud.google.com/go v0.120.0 // indirect
