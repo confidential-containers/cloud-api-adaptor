@@ -138,7 +138,7 @@ func TestCreatePeerPodWithPVC(t *testing.T) {
 		csiContainerName := "ibm-vpc-block-podvm-node-driver"
 		csiImageName := "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v5.2.0"
 
-		myPVC := NewPVC(nameSpace, pvcName, storageClassName, storageSize, corev1.ReadWriteOnce)
+		myPVC := NewPVC(nameSpace, pvcName, storageSize, corev1.ReadWriteOnce, WithStorageClass(storageClassName))
 		myPodwithPVC := NewPodWithPVCFromIBMVPCBlockDriver(nameSpace, podName, containerName, imageName, csiContainerName, csiImageName, WithPVCBinding(mountPath, pvcName))
 		DoTestCreatePeerPodWithPVCAndCSIWrapper(t, testEnv, assert, myPVC, myPodwithPVC, mountPath)
 	} else {
