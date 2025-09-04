@@ -141,6 +141,16 @@ func encodePolicyFile(policyFilePath string) string {
 
 type PodOption func(*corev1.Pod)
 
+func GetContainerReference(pod *corev1.Pod, containerName string) *corev1.Container {
+	for i := range pod.Spec.Containers {
+		if pod.Spec.Containers[i].Name == containerName {
+			return &pod.Spec.Containers[i]
+		}
+	}
+	log.Error(fmt.Sprintf("Failed getting container reference for container %s", containerName))
+	return nil
+}
+
 func WithRestartPolicy(restartPolicy corev1.RestartPolicy) PodOption {
 	return func(p *corev1.Pod) {
 		p.Spec.RestartPolicy = restartPolicy
@@ -236,18 +246,26 @@ func WithConfigMapBinding(mountPath string, configMapName string) PodOption {
 	}
 }
 
-func WithSecretBinding(mountPath string, secretName string) PodOption {
+func WithSecretBinding(t *testing.T, mountPath string, secretName string, containerName string) PodOption {
 	return func(p *corev1.Pod) {
-		p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "secret-volume", MountPath: mountPath})
-		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "secret-volume", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: secretName}}})
+		if c := GetContainerReference(p, containerName); c != nil {
+			c.VolumeMounts = append(c.VolumeMounts, corev1.VolumeMount{Name: "secret-volume-" + containerName, MountPath: mountPath})
+		} else {
+			t.Fatalf("container %q not found in pod spec", containerName)
+		}
+		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "secret-volume-" + containerName, VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: secretName}}})
 	}
 }
 
-func WithPVCBinding(mountPath string, pvcName string) PodOption {
+func WithPVCBinding(t *testing.T, mountPath string, pvcName string, containerName string) PodOption {
 	propagationHostToContainer := corev1.MountPropagationHostToContainer
 	return func(p *corev1.Pod) {
-		p.Spec.Containers[2].VolumeMounts = append(p.Spec.Containers[2].VolumeMounts, corev1.VolumeMount{Name: "pvc-volume", MountPath: mountPath, MountPropagation: &propagationHostToContainer})
-		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "pvc-volume", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: pvcName}}})
+		if c := GetContainerReference(p, containerName); c != nil {
+			c.VolumeMounts = append(c.VolumeMounts, corev1.VolumeMount{Name: "pvc-volume-" + containerName, MountPath: mountPath, MountPropagation: &propagationHostToContainer})
+		} else {
+			t.Fatalf("container %q not found in pod spec", containerName)
+		}
+		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "pvc-volume-" + containerName, VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: pvcName}}})
 	}
 }
 
@@ -291,6 +309,21 @@ func WithInitContainers(initContainers []corev1.Container) PodOption {
 	}
 }
 
+type PVCOption func(*corev1.PersistentVolumeClaim)
+
+// Option to add StorageClass
+func WithStorageClass(sc string) PVCOption {
+	return func(pvc *corev1.PersistentVolumeClaim) {
+		pvc.Spec.StorageClassName = &sc
+	}
+}
+
+// Option to add Persistent volume
+func WithPersistentVolume(pvName string) PVCOption {
+	return func(pvc *corev1.PersistentVolumeClaim) {
+		pvc.Spec.VolumeName = pvName
+	}
+}
 func NewPod(namespace string, podName string, containerName string, imageName string, options ...PodOption) *corev1.Pod {
 	runtimeClassName := "kata-remote"
 	annotationData := map[string]string{}
@@ -478,14 +511,14 @@ func NewJob(namespace, name string, backoffLimit int32, image string, options ..
 }
 
 // NewPVC returns a new pvc object.
-func NewPVC(namespace, name, storageClassName, diskSize string, accessModel corev1.PersistentVolumeAccessMode) *corev1.PersistentVolumeClaim {
-	return &corev1.PersistentVolumeClaim{
+func NewPVC(namespace, name, diskSize string, accessModel corev1.PersistentVolumeAccessMode, opts ...PVCOption) *corev1.PersistentVolumeClaim {
+
+	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			StorageClassName: &storageClassName,
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				accessModel,
 			},
@@ -496,6 +529,10 @@ func NewPVC(namespace, name, storageClassName, diskSize string, accessModel core
 			},
 		},
 	}
+	for _, opt := range opts {
+		opt(pvc)
+	}
+	return pvc
 }
 
 func NewService(namespace, serviceName string, servicePorts []corev1.ServicePort, labels map[string]string) *corev1.Service {
@@ -532,6 +569,12 @@ func WaitForClusterIP(t *testing.T, client klient.Client, svc *v1.Service) strin
 	}
 
 	return clusterIP
+}
+
+func WaitForPVCBound(client klient.Client, pvc *v1.PersistentVolumeClaim, timeout time.Duration) error {
+	return wait.For(conditions.New(client.Resources()).ResourceMatch(pvc, func(object k8s.Object) bool {
+		return object.(*v1.PersistentVolumeClaim).Status.Phase == v1.ClaimBound
+	}), wait.WithTimeout(timeout))
 }
 
 func CreateSealedSecretValue(resourceURI string) string {

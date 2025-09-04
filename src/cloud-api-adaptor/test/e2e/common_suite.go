@@ -95,7 +95,7 @@ func DoTestCreatePodWithSecret(t *testing.T, e env.Environment, assert CloudAsse
 	password := "password"
 	passwordPath := podKubeSecretsDir + passwordFileName
 	secretData := map[string][]byte{passwordFileName: []byte(password), usernameFileName: []byte(username)}
-	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithSecretBinding(podKubeSecretsDir, secretName), WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithSecretBinding(t, podKubeSecretsDir, secretName, containerName), WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
 	secret := NewSecret(E2eNamespace, secretName, secretData, v1.SecretTypeOpaque)
 
 	testCommands := []TestCommand{
@@ -458,7 +458,7 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 	clientSecret := NewSecret(E2eNamespace, clientSecretName, clientSecretData, v1.SecretTypeOpaque)
 	clientPod := NewExtraPod(
 		E2eNamespace, clientPodName, clientContainerName, clientImageName,
-		WithSecretBinding(clientSecretDir, clientSecretName),
+		WithSecretBinding(t, clientSecretDir, clientSecretName, clientContainerName),
 		WithRestartPolicy(v1.RestartPolicyNever),
 		WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}),
 	)
@@ -496,7 +496,7 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 	labels := map[string]string{
 		"app": "mtls-server",
 	}
-	serverPod := NewPod(E2eNamespace, serverPodName, serverContainerName, serverImageName, WithSecureContainerPort(443), WithSecretBinding(serverSecretDir, serverSecretName), WithLabel(labels), WithConfigMapBinding(podKubeConfigmapDir, configMapName))
+	serverPod := NewPod(E2eNamespace, serverPodName, serverContainerName, serverImageName, WithSecureContainerPort(443), WithSecretBinding(t, serverSecretDir, serverSecretName, serverContainerName), WithLabel(labels), WithConfigMapBinding(podKubeConfigmapDir, configMapName))
 	configMap := NewConfigMap(E2eNamespace, configMapName, configMapData)
 
 	serviceUrl := fmt.Sprintf("https://%s", serviceName)

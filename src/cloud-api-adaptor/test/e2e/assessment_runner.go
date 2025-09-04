@@ -25,6 +25,7 @@ import (
 
 const WAIT_POD_RUNNING_TIMEOUT = time.Second * 600
 const WAIT_JOB_RUNNING_TIMEOUT = time.Second * 600
+const WAIT_PVC_RUNNING_TIMEOUT = time.Second * 30
 
 // TestCommand is a list of commands to execute inside the pod container,
 // each with a function to test if the command outputs the value the test
@@ -197,6 +198,9 @@ func (tc *TestCase) Run() {
 			if tc.pvc != nil {
 				if err = client.Resources().Create(ctx, tc.pvc); err != nil {
 					t.Fatal(err)
+				}
+				if err = WaitForPVCBound(client, tc.pvc, WAIT_PVC_RUNNING_TIMEOUT); err != nil {
+					t.Log(err)
 				}
 			}
 
