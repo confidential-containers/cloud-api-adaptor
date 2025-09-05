@@ -56,7 +56,7 @@ debug_common() {
 
     for worker in $(kubectl get node -o name -l node.kubernetes.io/worker 2>/dev/null); do
         echo "::group::journalctl -t kata ($worker)"
-        kubectl debug --image quay.io/prometheus/busybox -q -i \
+        kubectl debug --profile=general --image quay.io/prometheus/busybox -q -i \
             "$worker" -- chroot /host journalctl -x -t kata --no-pager
         echo "::endgroup::"
     done
