@@ -130,12 +130,12 @@ deploy-cert-manager: ## Deploy cert-manager for webhook.
 	# Deploy cert-manager
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.15.3/cert-manager.yaml
 	# Wait for service to be up
-	kubectl wait --timeout=180s -n cert-manager endpoints/cert-manager --for=jsonpath='{.subsets[0].addresses[0].ip}'
-	kubectl wait --timeout=180s -n cert-manager endpoints/cert-manager-webhook --for=jsonpath='{.subsets[0].addresses[0].ip}'
+	kubectl wait --timeout=360s -n cert-manager endpoints/cert-manager --for=jsonpath='{.subsets[0].addresses[0].ip}'
+	kubectl wait --timeout=360s -n cert-manager endpoints/cert-manager-webhook --for=jsonpath='{.subsets[0].addresses[0].ip}'
 	# Wait for few seconds for the cert-manager API to be ready
 	# otherwise you'll hit the error "x509: certificate signed by unknown authority"
 	# Best is to use cmctl - https://cert-manager.io/docs/installation/kubectl/#2-optional-wait-for-cert-manager-webhook-to-be-ready
-	./cmctl check api --wait=2m
+	./cmctl check api --wait=5m
 	rm -f ./cmctl
 
 .PHONY: delete-cert-manager
