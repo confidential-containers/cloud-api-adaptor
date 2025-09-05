@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	peerPodV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl/api/v1alpha1"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/byom"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -132,4 +133,33 @@ func (s *PeerPodService) ReleasePeerPod(podname string, podns string, instanceID
 	delete(s.podToPP, string(pod.UID))
 	logger.Printf("%s's owned PeerPod object can now be deleted", podname)
 	return nil
+}
+
+// GetBYOMAllocatedIPs retrieves allocated IPs from existing PeerPod CRs for BYOM provider
+// This is used as a fallback when ConfigMap state recovery fails
+func (s *PeerPodService) GetBYOMAllocatedIPs(ctx context.Context) ([]byom.PeerPodIPInfo, error) {
+	// List all PeerPod CRs across all namespaces
+	result := peerPodV1alpha1.PeerPodList{}
+	err := s.uclient.Get().Resource("peerPods").Do(ctx).Into(&result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list PeerPod CRs: %w", err)
+	}
+
+	var allocatedIPs []byom.PeerPodIPInfo
+	for _, pp := range result.Items {
+		// Filter for BYOM provider and ensure instanceID (IP) is present
+		if pp.Spec.CloudProvider == "byom" && pp.Spec.InstanceID != "" {
+			allocatedIPs = append(allocatedIPs, byom.PeerPodIPInfo{
+				Name:        pp.Name,
+				Namespace:   pp.Namespace,
+				UID:         string(pp.UID),
+				AllocatedIP: pp.Spec.InstanceID, // IP is stored in instanceID for BYOM
+				AllocatedAt: pp.CreationTimestamp,
+				// AllocationID is not available in PeerPod CR, left empty for recovery scenarios
+			})
+		}
+	}
+
+	logger.Printf("Found %d BYOM PeerPods with allocated IPs", len(allocatedIPs))
+	return allocatedIPs, nil
 }

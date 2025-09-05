@@ -330,3 +330,12 @@ func (m *agentMock) Version(ctx context.Context, req *pb.CheckRequest) (*pb.Vers
 func (m *agentMock) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
+func (m *agentMock) AddSwapPath(ctx context.Context, req *pb.AddSwapPathRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+func (m *agentMock) MemAgentMemcgSet(ctx context.Context, req *pb.MemAgentMemcgConfig) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+func (m *agentMock) MemAgentCompactSet(ctx context.Context, req *pb.MemAgentCompactConfig) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
