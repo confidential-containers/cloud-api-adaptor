@@ -101,20 +101,21 @@ type OnPremCluster struct {
 
 // AWSProvisioner implements the CloudProvision interface.
 type AWSProvisioner struct {
-	AwsConfig  aws.Config
-	iamClient  *iam.Client
-	Cluster    Cluster
-	Disablecvm string
-	ec2Client  *ec2.Client
-	s3Client   *s3.Client
-	Bucket     *S3Bucket
-	PauseImage string
-	Image      *AMIImage
-	Vpc        *Vpc
-	PublicIP   string
-	TunnelType string
-	VxlanPort  string
-	SshKpName  string
+	AwsConfig        aws.Config
+	iamClient        *iam.Client
+	containerRuntime string // Name of the container runtime
+	Cluster          Cluster
+	Disablecvm       string
+	ec2Client        *ec2.Client
+	s3Client         *s3.Client
+	Bucket           *S3Bucket
+	PauseImage       string
+	Image            *AMIImage
+	Vpc              *Vpc
+	PublicIP         string
+	TunnelType       string
+	VxlanPort        string
+	SshKpName        string
 }
 
 // AwsInstallOverlay implements the InstallOverlay interface
@@ -163,15 +164,16 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 			Name:   "peer-pods-tests",
 			Key:    "", // To be defined when the file is uploaded
 		},
-		Cluster:    cluster,
-		Image:      NewAMIImage(ec2Client, properties),
-		Disablecvm: properties["disablecvm"],
-		PauseImage: properties["pause_image"],
-		Vpc:        vpc,
-		PublicIP:   properties["use_public_ip"],
-		TunnelType: properties["tunnel_type"],
-		VxlanPort:  properties["vxlan_port"],
-		SshKpName:  properties["ssh_kp_name"],
+		containerRuntime: properties["container_runtime"],
+		Cluster:          cluster,
+		Image:            NewAMIImage(ec2Client, properties),
+		Disablecvm:       properties["disablecvm"],
+		PauseImage:       properties["pause_image"],
+		Vpc:              vpc,
+		PublicIP:         properties["use_public_ip"],
+		TunnelType:       properties["tunnel_type"],
+		VxlanPort:        properties["vxlan_port"],
+		SshKpName:        properties["ssh_kp_name"],
 	}
 
 	return AWSProps, nil
@@ -234,16 +236,16 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 	var err error
 	vpc := a.Vpc
 
-	if vpc.SecurityGroupId != "" {
-		log.Infof("Delete security group: %s", vpc.SecurityGroupId)
-		if err = vpc.deleteSecurityGroup(); err != nil {
+	if vpc.SubnetId != "" {
+		log.Infof("Delete subnet: %s", vpc.SubnetId)
+		if err = vpc.deleteSubnet(); err != nil {
 			return err
 		}
 	}
 
-	if vpc.SubnetId != "" {
-		log.Infof("Delete subnet: %s", vpc.SubnetId)
-		if err = vpc.deleteSubnet(); err != nil {
+	if vpc.SecurityGroupId != "" {
+		log.Infof("Delete security group: %s", vpc.SecurityGroupId)
+		if err = vpc.deleteSecurityGroup(); err != nil {
 			return err
 		}
 	}
@@ -275,6 +277,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 	credentials, _ := a.AwsConfig.Credentials.Retrieve(context.TODO())
 
 	return map[string]string{
+		"CONTAINER_RUNTIME":    a.containerRuntime,
 		"disablecvm":           a.Disablecvm,
 		"pause_image":          a.PauseImage,
 		"podvm_launchtemplate": "",
@@ -650,6 +653,13 @@ func (v *Vpc) deleteSubnet() error {
 			&ec2.TerminateInstancesInput{
 				InstanceIds: instanceIds,
 			}); err != nil {
+			return err
+		}
+		// Wait them to terminate
+		waiter := ec2.NewInstanceTerminatedWaiter(v.Client)
+		if err = waiter.Wait(context.TODO(), &ec2.DescribeInstancesInput{
+			InstanceIds: instanceIds,
+		}, time.Minute*5); err != nil {
 			return err
 		}
 	}
