@@ -13,7 +13,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-
 func TestConfigMapVMPoolManagerRecoverState(t *testing.T) {
 	cleanup := setupTestEnvironment(t)
 	defer cleanup()
@@ -105,7 +104,7 @@ func TestConfigMapVMPoolManagerRecoverState(t *testing.T) {
 func TestConfigMapVMPoolManagerRecoverFromPeerPodCRs(t *testing.T) {
 	cleanup := setupTestEnvironment(t)
 	defer cleanup()
-	
+
 	config := &GlobalVMPoolConfig{
 		Namespace:        "test-namespace",
 		ConfigMapName:    "test-configmap",
@@ -158,7 +157,7 @@ func TestConfigMapVMPoolManagerRecoverFromPeerPodCRs(t *testing.T) {
 func TestConfigMapVMPoolManagerRecoverEmptyState(t *testing.T) {
 	cleanup := setupTestEnvironment(t)
 	defer cleanup()
-	
+
 	config := &GlobalVMPoolConfig{
 		Namespace:        "test-namespace",
 		ConfigMapName:    "test-configmap",
@@ -204,7 +203,7 @@ func TestConfigMapVMPoolManagerRecoverEmptyState(t *testing.T) {
 func TestConfigMapVMPoolManagerValidateAndRepairState(t *testing.T) {
 	cleanup := setupTestEnvironment(t)
 	defer cleanup()
-	
+
 	config := &GlobalVMPoolConfig{
 		Namespace:        "test-namespace",
 		ConfigMapName:    "test-configmap",

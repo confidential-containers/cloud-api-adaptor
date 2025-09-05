@@ -109,6 +109,3 @@ func TestIPAllocationState(t *testing.T) {
 		t.Errorf("Expected allocated IP '192.168.1.10', got %s", allocation.IP)
 	}
 }
-
-
-

@@ -24,7 +24,7 @@ func setupTestEnvironment(t *testing.T) func() {
 	// Set test node name
 	originalNodeName := os.Getenv("NODE_NAME")
 	os.Setenv("NODE_NAME", "test-node")
-	
+
 	// Return cleanup function
 	return func() {
 		if originalNodeName != "" {
@@ -96,7 +96,7 @@ func TestNewConfigMapVMPoolManagerEmptyIPs(t *testing.T) {
 func TestConfigMapVMPoolManagerAllocateIP(t *testing.T) {
 	cleanup := setupTestEnvironment(t)
 	defer cleanup()
-	
+
 	config := &GlobalVMPoolConfig{
 		Namespace:        "test-namespace",
 		ConfigMapName:    "test-configmap",
@@ -237,7 +237,7 @@ func TestConfigMapVMPoolManagerDeallocateIP(t *testing.T) {
 func TestConfigMapVMPoolManagerGetAllocatedIP(t *testing.T) {
 	cleanup := setupTestEnvironment(t)
 	defer cleanup()
-	
+
 	config := &GlobalVMPoolConfig{
 		Namespace:        "test-namespace",
 		ConfigMapName:    "test-configmap",
@@ -288,7 +288,7 @@ func TestConfigMapVMPoolManagerGetAllocatedIP(t *testing.T) {
 func TestConfigMapVMPoolManagerListAllocatedIPs(t *testing.T) {
 	cleanup := setupTestEnvironment(t)
 	defer cleanup()
-	
+
 	config := &GlobalVMPoolConfig{
 		Namespace:        "test-namespace",
 		ConfigMapName:    "test-configmap",
@@ -424,7 +424,7 @@ func TestConfigMapVMPoolManagerErrorHandling(t *testing.T) {
 func TestConfigMapVMPoolManagerDoubleAllocation(t *testing.T) {
 	cleanup := setupTestEnvironment(t)
 	defer cleanup()
-	
+
 	config := &GlobalVMPoolConfig{
 		Namespace:        "test-namespace",
 		ConfigMapName:    "test-configmap",

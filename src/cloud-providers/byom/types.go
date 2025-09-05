@@ -137,4 +137,3 @@ type PeerPodIPInfo struct {
 	AllocatedIP  string      // IP address from CR.spec.instanceID
 	AllocatedAt  metav1.Time // PeerPod creation timestamp
 }
-

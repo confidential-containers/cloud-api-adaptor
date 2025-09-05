@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -24,7 +25,7 @@ func (cm *ConfigMapVMPoolManager) RecoverState(ctx context.Context) error {
 	logger.Printf("CAA running on node: %s", currentNode)
 
 	// Try to recover from ConfigMap first
-	state, version, err := cm.getCurrentState(ctx)
+	state, resourceVersion, err := cm.getCurrentState(ctx)
 	if err == nil && state != nil {
 		// ConfigMap exists and is valid
 		total := len(state.AllocatedIPs) + len(state.AvailableIPs)
@@ -32,7 +33,8 @@ func (cm *ConfigMapVMPoolManager) RecoverState(ctx context.Context) error {
 			total, len(state.AllocatedIPs), len(state.AvailableIPs))
 
 		// Release allocations for current node (they're now invalid due to CAA restart)
-		if err := cm.releaseNodeAllocations(ctx, state, currentNode, version); err != nil {
+		// TODO: Add VM cleanup function when provider integration is available
+		if err := cm.releaseNodeAllocations(ctx, state, currentNode, resourceVersion, nil); err != nil {
 			logger.Printf("Warning: failed to release node allocations: %v", err)
 			// Continue with validation even if release fails
 		}
@@ -123,25 +125,26 @@ func (cm *ConfigMapVMPoolManager) validateAndRepairState(ctx context.Context, st
 			Version:      state.Version + 1,
 		}
 
-		return cm.updateState(ctx, repairedState, state.Version)
+		return cm.updateState(ctx, repairedState, "")
 	}
 
 	logger.Printf("State validation completed successfully")
 	return nil
 }
 
-// releaseNodeAllocations releases all IP allocations for a specific node
-func (cm *ConfigMapVMPoolManager) releaseNodeAllocations(ctx context.Context, state *IPAllocationState, nodeName string, version int64) error {
+// releaseNodeAllocations releases all IP allocations for a specific node with VM cleanup support
+func (cm *ConfigMapVMPoolManager) releaseNodeAllocations(ctx context.Context, state *IPAllocationState, nodeName string, resourceVersion string, vmCleanupFunc func(netip.Addr) error) error {
 	nodeAllocations := []string{}
 	cleanedAllocations := make(map[string]IPAllocation)
+	vmCleanupResults := make(map[string]error) // Track cleanup success/failure
 
 	// Separate current node's allocations from others
 	for allocID, allocation := range state.AllocatedIPs {
 		if allocation.NodeName == nodeName {
 			// This IP was allocated on the restarting node - release it
 			nodeAllocations = append(nodeAllocations, allocation.IP)
-			logger.Printf("Releasing IP %s allocated to pod %s/%s on node %s due to CAA restart", 
-				allocation.IP, allocation.PodNamespace, allocation.PodName, nodeName)
+			logger.Printf("Found IP %s to release from node %s (pod %s/%s)",
+				allocation.IP, nodeName, allocation.PodNamespace, allocation.PodName)
 		} else {
 			// Keep allocations from other nodes
 			cleanedAllocations[allocID] = allocation
@@ -153,20 +156,83 @@ func (cm *ConfigMapVMPoolManager) releaseNodeAllocations(ctx context.Context, st
 		return nil
 	}
 
-	// Add released IPs back to available pool
-	updatedAvailable := append(state.AvailableIPs, nodeAllocations...)
+	// Send reboot files to all VMs FIRST (critical for VM state consistency)
+	if vmCleanupFunc != nil {
+		logger.Printf("Sending reboot files to %d VMs before releasing IPs", len(nodeAllocations))
+
+		for _, ipStr := range nodeAllocations {
+			if ip, err := netip.ParseAddr(ipStr); err == nil {
+				cleanupErr := vmCleanupFunc(ip)
+				vmCleanupResults[ipStr] = cleanupErr
+
+				if cleanupErr != nil {
+					logger.Printf("Warning: failed to send reboot file to VM %s: %v", ip.String(), cleanupErr)
+				} else {
+					logger.Printf("Successfully sent reboot file to VM %s", ip.String())
+				}
+			}
+		}
+
+		// Wait for VMs to process reboot (allow VM state to settle)
+		waitDuration := 5 * time.Second // TODO: Make this configurable via byom config
+		logger.Printf("Waiting %v for VMs to process reboot files", waitDuration)
+
+		select {
+		case <-time.After(waitDuration):
+			// Continue after wait
+		case <-ctx.Done():
+			return fmt.Errorf("context cancelled during VM cleanup wait: %w", ctx.Err())
+		}
+	}
+
+	// Only release IPs for VMs that successfully received reboot files
+	successfullyCleanedIPs := []string{}
+	failedCleanupIPs := []string{}
+
+	for _, ipStr := range nodeAllocations {
+		if vmCleanupFunc == nil {
+			// If no cleanup function provided, release all IPs (backward compatibility)
+			successfullyCleanedIPs = append(successfullyCleanedIPs, ipStr)
+		} else if cleanupErr := vmCleanupResults[ipStr]; cleanupErr != nil {
+			failedCleanupIPs = append(failedCleanupIPs, ipStr)
+			logger.Printf("NOT releasing IP %s due to failed VM cleanup: %v", ipStr, cleanupErr)
+		} else {
+			successfullyCleanedIPs = append(successfullyCleanedIPs, ipStr)
+		}
+	}
+
+	// Update state - only release successfully cleaned IPs
+	updatedAvailable := append(state.AvailableIPs, successfullyCleanedIPs...)
+
+	// Keep failed cleanup IPs as allocated to prevent reuse
+	for allocID, allocation := range state.AllocatedIPs {
+		if allocation.NodeName == nodeName {
+			found := false
+			for _, failedIP := range failedCleanupIPs {
+				if allocation.IP == failedIP {
+					cleanedAllocations[allocID] = allocation // Keep as allocated
+					found = true
+					break
+				}
+			}
+			if !found {
+				// This IP was successfully cleaned, so it's being released
+			}
+		}
+	}
 
 	newState := &IPAllocationState{
 		AllocatedIPs: cleanedAllocations,
 		AvailableIPs: updatedAvailable,
 		LastUpdated:  metav1.Now(),
-		Version:      version + 1,
+		Version:      state.Version + 1,
 	}
 
-	logger.Printf("Released %d IP allocations for node %s", len(nodeAllocations), nodeName)
-	return cm.updateState(ctx, newState, version)
-}
+	logger.Printf("Released %d IPs, kept %d IPs allocated due to cleanup failures for node %s",
+		len(successfullyCleanedIPs), len(failedCleanupIPs), nodeName)
 
+	return cm.updateState(ctx, newState, resourceVersion)
+}
 
 // initializeEmptyState creates an empty state with all IPs available
 func (cm *ConfigMapVMPoolManager) initializeEmptyState() *IPAllocationState {
@@ -182,7 +248,7 @@ func (cm *ConfigMapVMPoolManager) initializeEmptyState() *IPAllocationState {
 func (cm *ConfigMapVMPoolManager) initializeAndSaveEmptyState(ctx context.Context) error {
 	emptyState := cm.initializeEmptyState()
 
-	if err := cm.updateState(ctx, emptyState, 0); err != nil {
+	if err := cm.updateState(ctx, emptyState, ""); err != nil {
 		return fmt.Errorf("failed to initialize empty state: %w", err)
 	}
 

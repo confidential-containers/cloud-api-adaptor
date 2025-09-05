@@ -5,6 +5,8 @@ package byom
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net/netip"
@@ -15,6 +17,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 )
@@ -22,9 +25,9 @@ import (
 const (
 	stateDataKey = "allocation-state"
 	// Node identity detection paths
-	nodeNameEnvVar    = "NODE_NAME"
-	nodeNameFile      = "/etc/podinfo/nodename"
-	hostnameFile      = "/etc/hostname"
+	nodeNameEnvVar = "NODE_NAME"
+	nodeNameFile   = "/etc/podinfo/nodename"
+	hostnameFile   = "/etc/hostname"
 )
 
 // ConfigMapVMPoolManager implements GlobalVMPoolManager using Kubernetes ConfigMap
@@ -72,7 +75,7 @@ func getCurrentNodeName() (string, error) {
 		logger.Printf("Node name detected from environment: %s", nodeName)
 		return nodeName, nil
 	}
-	
+
 	// Strategy 2: Try downward API volume mount
 	if data, err := os.ReadFile(nodeNameFile); err == nil {
 		nodeName := strings.TrimSpace(string(data))
@@ -81,7 +84,7 @@ func getCurrentNodeName() (string, error) {
 			return nodeName, nil
 		}
 	}
-	
+
 	// Strategy 3: Fallback to hostname (less reliable but better than nothing)
 	if data, err := os.ReadFile(hostnameFile); err == nil {
 		nodeName := strings.TrimSpace(string(data))
@@ -90,8 +93,8 @@ func getCurrentNodeName() (string, error) {
 			return nodeName, nil
 		}
 	}
-	
-	return "", fmt.Errorf("unable to determine node name: tried env var %s, file %s, and %s", 
+
+	return "", fmt.Errorf("unable to determine node name: tried env var %s, file %s, and %s",
 		nodeNameEnvVar, nodeNameFile, hostnameFile)
 }
 
@@ -102,8 +105,27 @@ func (cm *ConfigMapVMPoolManager) marshalStateForConfigMap(state *IPAllocationSt
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal state with formatting: %w", err)
 	}
-	
+
 	return string(formattedJSON), nil
+}
+
+// selectIPIndex uses hash-based distribution to select an IP index from available IPs
+// This reduces conflicts when multiple CAA instances try to allocate simultaneously
+func (cm *ConfigMapVMPoolManager) selectIPIndex(availableIPs []string, allocationID string) int {
+	if len(availableIPs) <= 1 {
+		return 0
+	}
+
+	// Use MD5 hash of allocation ID for deterministic but distributed selection
+	// Different allocation IDs will consistently map to different indices
+	hash := md5.Sum([]byte(allocationID))
+	seed := binary.BigEndian.Uint32(hash[:4])
+
+	selectedIndex := int(seed) % len(availableIPs)
+	logger.Printf("Hash-based IP selection: allocationID=%s, hash=%x, index=%d/%d",
+		allocationID, hash[:4], selectedIndex, len(availableIPs))
+
+	return selectedIndex
 }
 
 // AllocateIP allocates an IP from the global pool
@@ -131,23 +153,24 @@ func (cm *ConfigMapVMPoolManager) AllocateIP(ctx context.Context, allocationID s
 	return allocatedIP, nil
 }
 
-// doAllocateIP performs the actual allocation with optimistic locking
+// doAllocateIP performs the actual allocation with optimistic locking and smart IP selection
 func (cm *ConfigMapVMPoolManager) doAllocateIP(ctx context.Context, allocationID string, podName, podNamespace string) (netip.Addr, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	// Get current state
-	state, version, err := cm.getCurrentState(ctx)
+	// Get current state with ResourceVersion for optimistic locking
+	state, resourceVersion, err := cm.getCurrentState(ctx)
 	if err != nil {
 		return netip.Addr{}, fmt.Errorf("failed to get current state: %w", err)
 	}
 
-	// Check if already allocated
+	// Check if already allocated (idempotent operation)
 	if allocation, exists := state.AllocatedIPs[allocationID]; exists {
 		ip, parseErr := netip.ParseAddr(allocation.IP)
 		if parseErr != nil {
 			return netip.Addr{}, fmt.Errorf("invalid allocated IP %s: %w", allocation.IP, parseErr)
 		}
+		logger.Printf("IP %s already allocated to allocation ID %s", allocation.IP, allocationID)
 		return ip, nil
 	}
 
@@ -156,9 +179,16 @@ func (cm *ConfigMapVMPoolManager) doAllocateIP(ctx context.Context, allocationID
 		return netip.Addr{}, fmt.Errorf("no available IPs in pool")
 	}
 
-	// Allocate first available IP
-	ipStr := state.AvailableIPs[0]
-	state.AvailableIPs = state.AvailableIPs[1:]
+	// Smart IP selection: use hash-based distribution to reduce conflicts
+	selectedIndex := cm.selectIPIndex(state.AvailableIPs, allocationID)
+	ipStr := state.AvailableIPs[selectedIndex]
+	logger.Printf("Selected IP %s (index %d of %d) for allocation %s",
+		ipStr, selectedIndex, len(state.AvailableIPs), allocationID)
+
+	// Remove selected IP from available pool
+	state.AvailableIPs = append(
+		state.AvailableIPs[:selectedIndex],
+		state.AvailableIPs[selectedIndex+1:]...)
 
 	// Get current node name
 	nodeName, err := getCurrentNodeName()
@@ -177,10 +207,14 @@ func (cm *ConfigMapVMPoolManager) doAllocateIP(ctx context.Context, allocationID
 	}
 
 	state.LastUpdated = metav1.Now()
-	state.Version = version + 1
+	state.Version = state.Version + 1
 
-	// Update ConfigMap atomically
-	if err := cm.updateState(ctx, state, version); err != nil {
+	// Update ConfigMap with ResourceVersion check for conflict detection
+	if err := cm.updateState(ctx, state, resourceVersion); err != nil {
+		if errors.IsConflict(err) {
+			logger.Printf("Conflict detected for allocation %s, will retry with fresh state", allocationID)
+			return netip.Addr{}, err // RetryOnConflict will retry this
+		}
 		return netip.Addr{}, fmt.Errorf("failed to update state: %w", err)
 	}
 
@@ -189,6 +223,8 @@ func (cm *ConfigMapVMPoolManager) doAllocateIP(ctx context.Context, allocationID
 		return netip.Addr{}, fmt.Errorf("failed to parse allocated IP %s: %w", ipStr, err)
 	}
 
+	logger.Printf("Successfully allocated IP %s to allocation %s on node %s",
+		ipStr, allocationID, nodeName)
 	return ip, nil
 }
 
@@ -209,13 +245,13 @@ func (cm *ConfigMapVMPoolManager) DeallocateIP(ctx context.Context, allocationID
 	return nil
 }
 
-// doDeallocateIP performs the actual deallocation
+// doDeallocateIP performs the actual deallocation with optimistic locking
 func (cm *ConfigMapVMPoolManager) doDeallocateIP(ctx context.Context, allocationID string) error {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	// Get current state
-	state, version, err := cm.getCurrentState(ctx)
+	// Get current state with ResourceVersion
+	state, resourceVersion, err := cm.getCurrentState(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get current state: %w", err)
 	}
@@ -231,10 +267,19 @@ func (cm *ConfigMapVMPoolManager) doDeallocateIP(ctx context.Context, allocation
 	delete(state.AllocatedIPs, allocationID)
 
 	state.LastUpdated = metav1.Now()
-	state.Version = version + 1
+	state.Version = state.Version + 1
 
-	// Update ConfigMap atomically
-	return cm.updateState(ctx, state, version)
+	// Update ConfigMap atomically with conflict detection
+	if err := cm.updateState(ctx, state, resourceVersion); err != nil {
+		if errors.IsConflict(err) {
+			logger.Printf("Conflict detected for deallocation %s, will retry", allocationID)
+			return err // RetryOnConflict will retry this
+		}
+		return fmt.Errorf("failed to update state: %w", err)
+	}
+
+	logger.Printf("Successfully deallocated IP %s for allocation %s", allocation.IP, allocationID)
+	return nil
 }
 
 // DeallocateByIP returns an IP to the pool by IP address
@@ -322,57 +367,49 @@ func (cm *ConfigMapVMPoolManager) ListAllocatedIPs(ctx context.Context) (map[str
 	return result, nil
 }
 
-// getCurrentState retrieves the current allocation state from ConfigMap
-func (cm *ConfigMapVMPoolManager) getCurrentState(ctx context.Context) (*IPAllocationState, int64, error) {
+// getCurrentState retrieves the current allocation state from ConfigMap with ResourceVersion
+func (cm *ConfigMapVMPoolManager) getCurrentState(ctx context.Context) (*IPAllocationState, string, error) {
 	configMap, err := cm.client.CoreV1().ConfigMaps(cm.config.Namespace).Get(
 		ctx, cm.config.ConfigMapName, metav1.GetOptions{})
 
 	if errors.IsNotFound(err) {
 		// Initialize empty state
-		return cm.initializeEmptyState(), 0, nil
+		return cm.initializeEmptyState(), "", nil
 	}
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get ConfigMap: %w", err)
+		return nil, "", fmt.Errorf("failed to get ConfigMap: %w", err)
 	}
 
 	stateData, exists := configMap.Data[stateDataKey]
 	if !exists {
 		// Initialize empty state
-		return cm.initializeEmptyState(), 0, nil
+		return cm.initializeEmptyState(), "", nil
 	}
 
 	var state IPAllocationState
 	if err := json.Unmarshal([]byte(stateData), &state); err != nil {
-		return nil, 0, fmt.Errorf("failed to unmarshal state data: %w", err)
+		return nil, "", fmt.Errorf("failed to unmarshal state data: %w", err)
 	}
 
-	// Use ConfigMap resource version for optimistic locking
-	resourceVersion := configMap.ResourceVersion
-	version := int64(0)
-	if resourceVersion != "" {
-		// In real implementation, convert resource version to int64
-		// For simplicity, using state version
-		version = state.Version
-	}
-
-	return &state, version, nil
+	// Return ResourceVersion for true optimistic locking
+	return &state, configMap.ResourceVersion, nil
 }
 
-// updateState updates the allocation state in ConfigMap
-func (cm *ConfigMapVMPoolManager) updateState(ctx context.Context, state *IPAllocationState, _ int64) error {
+// updateState updates the allocation state in ConfigMap with proper optimistic locking
+func (cm *ConfigMapVMPoolManager) updateState(ctx context.Context, state *IPAllocationState, expectedResourceVersion string) error {
 	// Use formatted JSON for better readability
 	formattedState, err := cm.marshalStateForConfigMap(state)
 	if err != nil {
 		return fmt.Errorf("failed to marshal state data: %w", err)
 	}
 
-	// Try to get existing ConfigMap
+	// Get current ConfigMap to check ResourceVersion
 	configMap, err := cm.client.CoreV1().ConfigMaps(cm.config.Namespace).Get(
 		ctx, cm.config.ConfigMapName, metav1.GetOptions{})
 
 	if errors.IsNotFound(err) {
-		// Create new ConfigMap
+		// Create new ConfigMap - first time initialization
 		newConfigMap := &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cm.config.ConfigMapName,
@@ -391,6 +428,7 @@ func (cm *ConfigMapVMPoolManager) updateState(ctx context.Context, state *IPAllo
 		if err != nil {
 			return fmt.Errorf("failed to create ConfigMap: %w", err)
 		}
+		logger.Printf("Created new ConfigMap %s with initial state", cm.config.ConfigMapName)
 		return nil
 	}
 
@@ -398,13 +436,27 @@ func (cm *ConfigMapVMPoolManager) updateState(ctx context.Context, state *IPAllo
 		return fmt.Errorf("failed to get ConfigMap for update: %w", err)
 	}
 
-	// Update existing ConfigMap
+	// Check for conflicts
+	if expectedResourceVersion != "" && configMap.ResourceVersion != expectedResourceVersion {
+		logger.Printf("ResourceVersion conflict: expected %s, got %s",
+			expectedResourceVersion, configMap.ResourceVersion)
+		return errors.NewConflict(
+			schema.GroupResource{Resource: "configmaps"},
+			cm.config.ConfigMapName,
+			fmt.Errorf("ResourceVersion conflict: expected %s, got %s",
+				expectedResourceVersion, configMap.ResourceVersion))
+	}
+
+	// Update existing ConfigMap with conflict detection
 	configMap.Data[stateDataKey] = formattedState
 
 	_, err = cm.client.CoreV1().ConfigMaps(cm.config.Namespace).Update(ctx, configMap, metav1.UpdateOptions{})
 	if err != nil {
+		// This will return 409 Conflict if another process updated it
 		return fmt.Errorf("failed to update ConfigMap: %w", err)
 	}
 
+	logger.Printf("Successfully updated ConfigMap %s with new state (version %d)",
+		cm.config.ConfigMapName, state.Version)
 	return nil
 }
