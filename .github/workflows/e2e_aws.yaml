@@ -195,6 +195,7 @@ jobs:
       - name: Debug tests failure
         if: failure() && steps.runTests.outcome == 'failure'
         working-directory: ./
+        timeout-minutes: 5
         run: |
           ./hack/ci-e2e-debug-fail.sh
         # Avoid running with `set -e` as command fails should be allowed
