@@ -83,6 +83,11 @@ jobs:
         run: |
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
+      - name: Remove unnecessary directories to free up space
+        working-directory: ./
+        run: |
+          sudo ./hack/ci-helper.sh clean-up-runner
+
       - name: Read properties from versions.yaml
         run: |
           sudo snap install yq
@@ -95,6 +100,7 @@ jobs:
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
 
       - uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1.2.4
         with:
@@ -102,9 +108,12 @@ jobs:
 
       - name: Extract qcow2 from ${{ inputs.podvm_image }}
         if: ${{ !inputs.oras }}
+        env:
+          PODVM_IMAGE: "${{ inputs.podvm_image }}"
         run: |
-           qcow2=$(echo "${{ inputs.podvm_image }}" | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
-           ./hack/download-image.sh "${{ inputs.podvm_image }}" . -o "${qcow2}"
+           # shellcheck disable=SC2001 
+           qcow2=$(echo "${PODVM_IMAGE}" | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
+           ./hack/download-image.sh "${PODVM_IMAGE}" . -o "${qcow2}" --clean-up
            echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
            # Clean up docker images to make space
            docker system prune -a -f
