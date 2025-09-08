@@ -46,8 +46,6 @@ permissions: {}
 jobs:
   test-docker:
     runs-on: ubuntu-22.04
-    # TODO: remove this when the job gets stable
-    continue-on-error: true
     steps:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
