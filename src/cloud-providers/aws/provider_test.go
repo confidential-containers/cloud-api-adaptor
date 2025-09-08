@@ -167,7 +167,21 @@ func (m mockEC2Client) DescribeAddresses(ctx context.Context,
 	params *ec2.DescribeAddressesInput,
 	optFns ...func(*ec2.Options)) (*ec2.DescribeAddressesOutput, error) {
 
-	return nil, nil
+	// Return a mock Elastic IP address
+	mockAssociationId := "eipassoc-12345678"
+	mockAllocationId := "eipalloc-12345678"
+	mockPublicIp := "192.168.100.1"
+
+	return &ec2.DescribeAddressesOutput{
+		Addresses: []types.Address{
+			{
+				AssociationId: &mockAssociationId,
+				AllocationId:  &mockAllocationId,
+				PublicIp:      &mockPublicIp,
+				InstanceId:    aws.String("i-1234567890abcdef0"),
+			},
+		},
+	}, nil
 }
 
 // Create a mock for EC2 DisassociateAddress method
