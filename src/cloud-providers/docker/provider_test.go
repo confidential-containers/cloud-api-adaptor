@@ -5,18 +5,67 @@ package docker
 
 import (
 	"context"
+	"net/netip"
 	"reflect"
 	"testing"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
-	"github.com/docker/docker/client"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
+
+// Mock Docker client for testing
+type mockDockerClient struct{}
+
+// Return a new mock Docker client
+func newMockDockerClient() *mockDockerClient {
+	return &mockDockerClient{}
+}
+
+// Create a mock Docker ContainerCreate method
+func (m mockDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *v1.Platform, containerName string) (container.CreateResponse, error) {
+	return container.CreateResponse{
+		ID: "mock-container-id-12345",
+	}, nil
+}
+
+// Create a mock Docker ContainerStart method
+func (m mockDockerClient) ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error {
+	return nil
+}
+
+// Create a mock Docker ContainerInspect method
+func (m mockDockerClient) ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error) {
+	return container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			ID: containerID,
+		},
+		NetworkSettings: &container.NetworkSettings{
+			Networks: map[string]*network.EndpointSettings{
+				"bridge": {
+					IPAddress: "172.17.0.2",
+				},
+			},
+		},
+	}, nil
+}
+
+// Create a mock Docker ContainerRemove method
+func (m mockDockerClient) ContainerRemove(ctx context.Context, containerID string, options container.RemoveOptions) error {
+	return nil
+}
+
+// Create a mock Docker Close method
+func (m mockDockerClient) Close() error {
+	return nil
+}
 
 func Test_dockerProvider_CreateInstance(t *testing.T) {
 	type fields struct {
-		Client *client.Client
+		Client *mockDockerClient
 	}
 
 	testAPFConfigJson := `{
@@ -71,7 +120,7 @@ func Test_dockerProvider_CreateInstance(t *testing.T) {
 		{
 			name: "Test CreateInstance",
 			fields: fields{
-				Client: &client.Client{},
+				Client: newMockDockerClient(),
 			},
 			args: args{
 				ctx:       context.Background(),
@@ -79,16 +128,23 @@ func Test_dockerProvider_CreateInstance(t *testing.T) {
 				sandboxID: "test",
 				spec:      provider.InstanceTypeSpec{},
 			},
-			want:    &provider.Instance{},
+			want: &provider.Instance{
+				ID:   "mock-container-id-12345",
+				Name: "podvm-test-test",
+				IPs:  []netip.Addr{netip.MustParseAddr("172.17.0.2")},
+			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tempDir := t.TempDir()
+
 			p := &dockerProvider{
-				Client:  tt.fields.Client,
-				DataDir: tempDir,
+				Client:           tt.fields.Client,
+				DataDir:          tempDir,
+				PodVMDockerImage: "quay.io/confidential-containers/podvm-docker-image",
+				NetworkName:      "bridge",
 			}
 			got, err := p.CreateInstance(tt.args.ctx, tt.args.podName, tt.args.sandboxID, cloudConfig, tt.args.spec)
 			if (err != nil) != tt.wantErr {
