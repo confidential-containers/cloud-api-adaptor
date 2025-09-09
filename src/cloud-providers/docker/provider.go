@@ -20,7 +20,7 @@ import (
 var logger = log.New(log.Writer(), "[adaptor/cloud/docker] ", log.LstdFlags|log.Lmsgprefix)
 
 type dockerProvider struct {
-	Client           *client.Client
+	Client           dockerClient
 	DataDir          string
 	PodVMDockerImage string
 	NetworkName      string

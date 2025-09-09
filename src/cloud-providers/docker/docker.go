@@ -14,8 +14,8 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // The default podvm docker image to use
@@ -24,9 +24,18 @@ const defaultPodVMDockerImage = "quay.io/confidential-containers/podvm-docker-im
 // Default docker network name to connect to
 const defaultDockerNetworkName = "bridge"
 
+// dockerClient defines the interface for Docker operations
+type dockerClient interface {
+	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *v1.Platform, containerName string) (container.CreateResponse, error)
+	ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error
+	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
+	ContainerRemove(ctx context.Context, containerID string, options container.RemoveOptions) error
+	Close() error
+}
+
 // Method to create and start a container
 // Returns the container ID and the IP address of the container
-func createContainer(ctx context.Context, client *client.Client,
+func createContainer(ctx context.Context, client dockerClient,
 	instanceName string, volumeBinding []string,
 	podvmImage string, networkName string) (string, string, error) {
 
@@ -82,7 +91,7 @@ func createContainer(ctx context.Context, client *client.Client,
 }
 
 // Method to delete container given container id
-func deleteContainer(ctx context.Context, client *client.Client, containerID string) error {
+func deleteContainer(ctx context.Context, client dockerClient, containerID string) error {
 	return client.ContainerRemove(ctx, containerID, container.RemoveOptions{
 		Force: true,
 	})
