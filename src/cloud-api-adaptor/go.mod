@@ -22,7 +22,7 @@ require (
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250722070015-acae4480ac84
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/stretchr/testify v1.10.0
-	github.com/vishvananda/netlink v1.2.1-beta.2
+	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
 	github.com/vmware/govmomi v0.33.1 // indirect
 	golang.org/x/sys v0.34.0
