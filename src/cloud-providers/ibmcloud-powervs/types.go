@@ -15,8 +15,13 @@ type Config struct {
 	Memory            float64
 	Processors        float64
 	ProcessorType     string
+	CAPublicKeyPath   string
 	SystemType        string
 	UsePublicIP       bool
+	EnableSftp        bool
+	pubKey            string
+	privKey           string
+	CloudUserName     string
 }
 
 func (c Config) Redact() Config {
