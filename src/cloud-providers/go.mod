@@ -29,7 +29,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/vmware/govmomi v0.33.1
 	golang.org/x/crypto v0.39.0
-	golang.org/x/oauth2 v0.29.0
+	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.229.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v2 v2.4.0
