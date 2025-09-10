@@ -5,6 +5,8 @@ package alibabacloud
 
 import (
 	"flag"
+	"os"
+	"strings"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
@@ -39,7 +41,47 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 func (_ *Manager) LoadEnv() {
 	provider.DefaultToEnv(&alibabacloudcfg.AccessKeyId, "ALIBABACLOUD_ACCESS_KEY_ID", "")
 	provider.DefaultToEnv(&alibabacloudcfg.SecretKey, "ALIBABACLOUD_ACCESS_KEY_SECRET", "")
+	provider.DefaultToEnv(&alibabacloudcfg.Region, "REGION", "cn-beijing")
+	provider.DefaultToEnv(&alibabacloudcfg.ImageId, "IMAGEID", "")
 	provider.DefaultToEnv(&alibabacloudcfg.InstanceType, "PODVM_INSTANCE_TYPE", "ecs.g8i.xlarge")
+	provider.DefaultToEnv(&alibabacloudcfg.VswitchId, "VSWITCH_ID", "")
+	if len(alibabacloudcfg.SecurityGroupIds) == 0 {
+		envVal := os.Getenv("SECURITY_GROUP_IDS")
+		var val []string
+		if envVal == "" {
+			val = []string{"cn-beijing"}
+		} else {
+			val = strings.Split(envVal, ",")
+		}
+
+		alibabacloudcfg.SecurityGroupIds = val
+	}
+	if len(alibabacloudcfg.Tags) == 0 {
+		envVal := os.Getenv("TAGS")
+		val := make(map[string]string)
+		if envVal != "" {
+			pairs := strings.Split(envVal, ",")
+			for _, p := range pairs {
+				p = strings.TrimSpace(p)
+				if p == "" {
+					continue
+				}
+				kv := strings.SplitN(p, "=", 2)
+				if len(kv) != 2 {
+					continue
+				}
+				k := strings.TrimSpace(kv[0])
+				v := strings.TrimSpace(kv[1])
+				if k == "" {
+					continue
+				}
+				val[k] = v
+			}
+		}
+
+		alibabacloudcfg.Tags = val
+	}
+	provider.DefaultToEnv(&alibabacloudcfg.KeyName, "KEYNAME", "")
 }
 
 func (_ *Manager) NewProvider() (provider.Provider, error) {
