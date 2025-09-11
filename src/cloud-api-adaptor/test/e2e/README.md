@@ -54,6 +54,39 @@ you should export an unanchored regular expression in the `RUN_TESTS` variable t
 $ RUN_TESTS=CreateSimplePod TEST_PROVISION=yes TEST_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
+## Running tests by category
+
+The E2E tests are organized into categories using the naming convention `Test<Category><Provider><TestCaseName>`. This allows you to run specific types of tests across all providers or for specific providers.
+
+### Test Categories
+
+- **Basic** (37 tests) - Core pod operations like creation, deletion, ConfigMaps, Secrets, Jobs, and Deployments
+- **Net** (14 tests) - Network functionality including external IP access, service communication, and mTLS
+- **Sec** (13 tests) - Security features such as authenticated images, device annotations, and access control
+- **Conf** (10 tests) - Confidential computing features including image decryption, attestation, and KBS integration
+- **Res** (32 tests) - Resource management including CPU/memory limits, annotations, and logging
+- **Img** (6 tests) - Image handling including large images and alternate images
+- **Store** (2 tests) - Storage functionality such as Persistent Volume Claims (PVC)
+
+### Category-based filtering examples
+
+```bash
+# Run all basic tests for libvirt provider
+$ RUN_TESTS='^TestBasic' CLOUD_PROVIDER=libvirt make test-e2e
+
+# Run all networking tests for azure provider
+$ RUN_TESTS='^TestNet' CLOUD_PROVIDER=azure make test-e2e
+
+# Run all confidential computing tests for libvirt provider
+$ RUN_TESTS='^TestConf' CLOUD_PROVIDER=libvirt make test-e2e
+
+# Run all security tests for aws provider
+$ RUN_TESTS='^TestSec' CLOUD_PROVIDER=aws make test-e2e
+
+# Run all resource management tests for azure provider
+$ RUN_TESTS='^TestRes' CLOUD_PROVIDER=azure make test-e2e
+```
+
 ## Attestation and KBS specific
 
 We need artifacts from the trustee repo when doing the attestation tests.
