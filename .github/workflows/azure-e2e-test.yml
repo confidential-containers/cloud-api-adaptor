@@ -172,8 +172,8 @@ jobs:
     strategy:
       matrix:
         parameters:
-          - id: "tdx"
-            machine_type: "Standard_DC2es_v5"
+          # - id: "tdx"
+          #   machine_type: "Standard_DC2es_v5"
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
     permissions:
@@ -262,9 +262,9 @@ jobs:
     strategy:
       matrix:
         parameters:
-          - id: "tdx"
-            machine_type: "Standard_DC2es_v5"
-            jitter: 0
+          # - id: "tdx"
+          #   machine_type: "Standard_DC2es_v5"
+          #   jitter: 0
           - id: "snp"
             machine_type: "Standard_DC2as_v5"
             jitter: 10
