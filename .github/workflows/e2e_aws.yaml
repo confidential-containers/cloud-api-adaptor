@@ -34,19 +34,21 @@ on:
         required: false
         type: string
     secrets:
-      AWS_ACCESS_KEY_ID:
-        required: true
-      AWS_SECRET_ACCESS_KEY:
+      AWS_IAM_ROLE_ARN:
         required: true
 
 env:
   CLOUD_PROVIDER: aws
   DEBIAN_FRONTEND: noninteractive
 
-permissions: {}
+permissions:
+  # Required by aws-actions/configure-aws-credentials
+  id-token: write
+  # Required by aws-actions/configure-aws-credentials
+  contents: read
 
 jobs:
-  # Check the org/repository has AWS secrets (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY). On absence of
+  # Check the org/repository has AWS secrets (AWS_IAM_ROLE_ARN). On absence of
   # secrets it should skip the execution of the test job.
   aws-credentials:
     runs-on: ubuntu-22.04
@@ -56,7 +58,7 @@ jobs:
       - name: Check secrets
         id: check_secrets
         run: |
-         if [[ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" && -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]]; then
+         if [[ -n "${{ secrets.AWS_IAM_ROLE_ARN }}" ]]; then
            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
          else
            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
@@ -137,6 +139,7 @@ jobs:
         run: |
           cat <<EOF>>aws.properties
           CAA_IMAGE="${{ inputs.caa_image }}"
+          container_runtime="${{ inputs.container_runtime }}"
           disablecvm="true"
           cluster_type="${{ inputs.cluster_type }}"
           ssh_kp_name="caa-e2e-test"
@@ -146,12 +149,11 @@ jobs:
           cat aws.properties
           echo "::endgroup::"
 
-        # Note: aws cli is already installed on github's runner image.
-      - name: Config aws CLI
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }} --profile default
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile default
-          aws configure set region us-east-1 --profile default
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.2.1
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
       - name: Create on-prem cluster
         if: inputs.cluster_type == 'onprem'
@@ -164,6 +166,9 @@ jobs:
           echo "::endgroup::"
           export CONTAINER_RUNTIME=${{ inputs.container_runtime }}
           echo "::group::Create cluster with $CONTAINER_RUNTIME"
+          # Use less space as possible so the Git runner doesn't run out of
+          # disk space.
+          export CLUSTER_DISK_SIZE=15
           ./libvirt/kcli_cluster.sh create
           echo "KUBECONFIG=$HOME/.kcli/clusters/peer-pods/auth/kubeconfig" >> "$GITHUB_ENV"
           echo "::endgroup::"
@@ -180,3 +185,21 @@ jobs:
           export TEST_E2E_TIMEOUT="90m"
 
           make test-e2e
+
+      - name: Debug tests failure
+        if: failure() && steps.runTests.outcome == 'failure'
+        working-directory: ./
+        run: |
+          ./hack/ci-e2e-debug-fail.sh
+        # Avoid running with `set -e` as command fails should be allowed
+        shell: bash {0}
+
+        # In case the tests execution failed and deprovision code from e2e
+        # didn't run, let's try to delete any resources created.
+      - name: Force AWS clean-up
+        if: failure() && steps.runTests.outcome == 'failure'
+        working-directory: ./
+        run: |
+          ./hack/ci-e2e-aws-cleanup.sh
+        # Avoid running with `set -e` as command fails should be allowed
+        shell: bash {0}

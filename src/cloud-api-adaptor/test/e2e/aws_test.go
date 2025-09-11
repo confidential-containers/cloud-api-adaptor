@@ -74,6 +74,10 @@ func TestAwsCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testin
 }
 
 func TestAwsCreatePeerPodWithLargeImage(t *testing.T) {
+	// This test running on default Github runner makes the disk full
+	// (`System.IO.IOException: No space left on device`) to the point
+	// the job gets aborted.
+	SkipTestOnCI(t)
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodWithLargeImage(t, testEnv, assert)
@@ -107,6 +111,7 @@ func TestAwsCreateNginxDeployment(t *testing.T) {
 }
 
 func TestAwsCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
+	SkipTestOnCI(t)
 	assert := NewAWSAssert()
 	nonExistingImageName := "ami-123456"
 	expectedErrorMessage := fmt.Sprintf("InvalidAMIID.NotFound: The image id '[%s]' does not exist: not found", nonExistingImageName)
