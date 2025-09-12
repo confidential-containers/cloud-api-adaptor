@@ -4,7 +4,6 @@
 ```
 oci.guest-components.reference to desired tag found here (non sha) : [ghcr.io/confidential-containers/guest-components](https://github.com/orgs/confidential-containers/packages?repo_name=guest-components)
 
-
 ## mkosi build debug podvm
 
 ```console
@@ -34,7 +33,6 @@ az login
 
 ## Create uplosi config
 
-
 ```console
 SHARING_NAME_PREFIX="$(echo $AZURE_COMMUNITY_GALLERY_NAME | cut -d'-' -f1)"
 cat <<EOF> uplosi.conf
@@ -45,7 +43,6 @@ name = "$AZURE_PODVM_IMAGE_DEF_NAME"
 [variant.default]
 provider = "azure"
 
-
 [base.azure]
 subscriptionID = "$AZURE_SUBSCRIPTION_ID"
 location = "westeurope"
@@ -53,10 +50,8 @@ resourceGroup = "$AZURE_RESOURCE_GROUP"
 sharedImageGallery = "$AZURE_PODVM_GALLERY_NAME"
 sharingNamePrefix = "$SHARING_NAME_PREFIX"
 
-
 EOF
 ```
-
 
 ## Run uplosi
 

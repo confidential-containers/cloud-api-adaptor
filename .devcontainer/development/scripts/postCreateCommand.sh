@@ -5,9 +5,7 @@ mkdir -p  ~/.local/scripts/
 cp "${CONTAINER_WORKSPACE_FOLDER}/.devcontainer/development/scripts/general_greeting.sh" ~/.local/scripts/ || exit
 echo "source ~/.local/scripts/general_greeting.sh" >> ~/.bashrc
 
-
 YQ_VERSION=$(awk -F'= *' '/^YQ_VERSION/ {print $2}' ${CONTAINER_WORKSPACE_FOLDER}/src/cloud-api-adaptor/Makefile.defaults)
-
 
 # Detect raw values
 RAW_ARCH=$(uname -m)
