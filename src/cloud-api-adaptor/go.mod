@@ -1,6 +1,8 @@
 module github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor
 
-go 1.23.0
+go 1.24.6
+
+toolchain go1.24.7
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.2
@@ -19,7 +21,7 @@ require (
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250722070015-acae4480ac84
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250904051845-bdd98ec623bf
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
@@ -61,9 +63,9 @@ require (
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611
 	google.golang.org/api v0.229.0
 	google.golang.org/protobuf v1.36.6
-	k8s.io/api v0.29.0
+	k8s.io/api v0.30.0
 	k8s.io/apimachinery v0.30.0
-	k8s.io/client-go v0.29.0
+	k8s.io/client-go v0.30.0
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/e2e-framework v0.1.0
 	sigs.k8s.io/kustomize v2.0.3+incompatible
@@ -135,7 +137,7 @@ require (
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
+	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -177,6 +179,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kdomanski/iso9660 v0.4.0 // indirect
 	github.com/klauspost/compress v1.17.4 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -202,6 +205,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/sftp v1.13.9 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
