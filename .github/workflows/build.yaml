@@ -32,7 +32,7 @@ jobs:
         working-directory: src/cloud-api-adaptor
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
       - name: Read properties from versions.yaml
         run: |
           go_version="$(yq '.tools.golang' versions.yaml)"
@@ -86,7 +86,7 @@ jobs:
         working-directory: src/${{ matrix.controller }}
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
 
       - name: Read properties from versions.yaml
         run: |
@@ -131,7 +131,7 @@ jobs:
         working-directory: src/${{ matrix.controller }}
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
 
       - name: Read properties from versions.yaml
         run: |
@@ -178,7 +178,7 @@ jobs:
         working-directory: src/webhook
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
 
       - name: Read properties from versions.yaml
         run: |
@@ -228,7 +228,7 @@ jobs:
         working-directory: src/cloud-providers
     steps:
       - name: Checkout the pull request code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
 
       - name: Read properties from versions.yaml
         run: |
