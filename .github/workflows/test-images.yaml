@@ -21,7 +21,7 @@ jobs:
     outputs:
       matrix: ${{ env.MATRIX }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
       - id: set-matrix
         run: echo "MATRIX=$(find test/e2e/fixtures/Dockerfile.* | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_ENV"
   build:
@@ -38,7 +38,7 @@ jobs:
       packages: write
     steps:
     - name: Checkout Code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
