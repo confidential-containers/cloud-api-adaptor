@@ -46,7 +46,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
 
     - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
       name: 'Az CLI login'
@@ -91,7 +91,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
 
     - name: Extract go version number
       run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
@@ -179,7 +179,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
 
     - name: Extract version numbers
       run: |
