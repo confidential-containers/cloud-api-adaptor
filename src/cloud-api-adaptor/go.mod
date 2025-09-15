@@ -73,7 +73,10 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.16.0
 )
 
-require github.com/fenglyu/go-dmidecode v0.0.0-20220417074508-03f52eb45fe9
+require (
+	github.com/distribution/reference v0.6.0
+	github.com/fenglyu/go-dmidecode v0.0.0-20220417074508-03f52eb45fe9
+)
 
 require (
 	cloud.google.com/go v0.120.0 // indirect
@@ -131,7 +134,6 @@ require (
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/digitalocean/go-smbios v0.0.0-20180907143718-390a4f403a8e // indirect
-	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-units v0.5.0 // indirect
