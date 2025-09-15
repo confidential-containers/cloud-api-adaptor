@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout the code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
           ref: "${{ inputs.git_ref }}"
@@ -53,7 +53,7 @@ jobs:
           echo "release_tags=${release_tags:-${commit}}" >> tags.txt
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: image-tags
           retention-days: 1
@@ -85,7 +85,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout the code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
           ref: "${{ inputs.git_ref }}"
@@ -97,13 +97,13 @@ jobs:
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/go.sum"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Install build dependencies
         if: ${{ startsWith(matrix.type, 'dev-') }}
@@ -113,7 +113,7 @@ jobs:
 
       - name: Login to quay Container Registry
         if: ${{ startsWith(inputs.registry, 'quay.io') }}
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ vars.QUAY_USERNAME }}
@@ -121,7 +121,7 @@ jobs:
 
       - name: Login to Github Container Registry
         if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ github.repository_owner }}
@@ -129,7 +129,7 @@ jobs:
 
       - name: Build and push dev image
         if: ${{ startsWith(matrix.type, 'dev-') }}
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         with:
           # We are not interested in timeout but this field is required
           # so setting to 4x the time it usually take to complete.
@@ -142,7 +142,7 @@ jobs:
 
       - name: Build and push release image
         if: ${{ startsWith(matrix.type, 'release-') }}
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         with:
           # We are not interested in timeout but this field is required
           # so setting to 4x the time it usually take to complete.
@@ -154,7 +154,7 @@ jobs:
             cd src/cloud-api-adaptor && ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: tags-architectures-${{matrix.type}}
           retention-days: 1
@@ -167,30 +167,30 @@ jobs:
     needs: [build_push_job]
     steps:
       - name: Checkout the code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
           ref: "${{ inputs.git_ref }}"
 
       - name: Download release tags.txt
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: image-tags
           path: src/cloud-api-adaptor
 
       - name: Download release commits file
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           pattern: tags-architectures-*
           merge-multiple: true
           path: src/cloud-api-adaptor/
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Login to quay Container Registry
         if: ${{ startsWith(inputs.registry, 'quay.io') }}
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ vars.QUAY_USERNAME }}
@@ -198,7 +198,7 @@ jobs:
 
       - name: Login to Github Container Registry
         if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ github.repository_owner }}
