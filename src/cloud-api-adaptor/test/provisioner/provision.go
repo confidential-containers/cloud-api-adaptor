@@ -36,6 +36,12 @@ type CloudProvisioner interface {
 	UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error
 }
 
+// PodVMInstanceHandler defines optional VM instance creation capability
+type PodVMInstanceHandler interface {
+	CreatePodVMInstance(ctx context.Context, cfg *envconf.Config) error
+	DeletePodVMInstance(ctx context.Context, cfg *envconf.Config) error
+}
+
 type NewProvisionerFunc func(properties map[string]string) (CloudProvisioner, error)
 
 // KbsInstallOverlay implements the InstallOverlay interface

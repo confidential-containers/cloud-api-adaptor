@@ -89,6 +89,17 @@ func main() {
 			}
 		}
 
+		// Check if provisioner supports PodVM instance creation and VM_POOL_IPS is empty
+		if vmHandler, ok := provisioner.(pv.PodVMInstanceHandler); ok {
+			currentProps := provisioner.GetProperties(context.TODO(), cfg)
+			if currentProps["VM_POOL_IPS"] == "" {
+				log.Info("Creating PodVM instances...")
+				if err := vmHandler.CreatePodVMInstance(context.TODO(), cfg); err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
+
 		if shouldDeployKbs {
 			log.Info("Deploying kbs")
 
@@ -130,6 +141,14 @@ func main() {
 		log.Info("Deleting VPC...")
 		if err := provisioner.DeleteVPC(context.TODO(), cfg); err != nil {
 			log.Fatal(err)
+		}
+
+		// Clean up auto-created VM instances before deleting cluster
+		if vmHandler, ok := provisioner.(pv.PodVMInstanceHandler); ok {
+			log.Info("Deleting PodVM instances...")
+			if err := vmHandler.DeletePodVMInstance(context.TODO(), cfg); err != nil {
+				log.Warnf("Failed to delete PodVM instances: %v", err)
+			}
 		}
 	}
 

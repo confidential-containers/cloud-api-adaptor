@@ -173,6 +173,17 @@ func TestMain(m *testing.M) {
 			}
 		}
 
+		// Check if provisioner supports PodVM instance creation and VM_POOL_IPS is empty
+		if vmHandler, ok := provisioner.(pv.PodVMInstanceHandler); ok {
+			currentProps := provisioner.GetProperties(ctx, cfg)
+			if currentProps["VM_POOL_IPS"] == "" {
+				log.Info("Creating PodVM instances...")
+				if err = vmHandler.CreatePodVMInstance(ctx, cfg); err != nil {
+					return ctx, err
+				}
+			}
+		}
+
 		if shouldInstallCAA {
 			log.Info("Install Cloud API Adaptor")
 			relativeInstallDirectory := "../../install"
@@ -224,6 +235,14 @@ func TestMain(m *testing.M) {
 		if shouldDeployKbs {
 			if err = keyBrokerService.Delete(ctx, cfg); err != nil {
 				return ctx, err
+			}
+		}
+
+		// Clean up auto-created VM instances before deleting cluster
+		if vmHandler, ok := provisioner.(pv.PodVMInstanceHandler); ok {
+			log.Info("Deleting PodVM instances...")
+			if err = vmHandler.DeletePodVMInstance(ctx, cfg); err != nil {
+				log.Warnf("Failed to delete PodVM instances: %v", err)
 			}
 		}
 
