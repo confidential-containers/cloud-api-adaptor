@@ -233,15 +233,39 @@ func processCloudConfig(cfg *Config, cc *CloudConfig) error {
 	return nil
 }
 
+func generateDummyInitdata(cfg *Config) error {
+	dummyToml := `algorithm = "sha256"
+version = "0.1.0"
+
+[data]
+"aa.toml" = '''
+'''`
+
+	encoded, err := initdata.Encode(dummyToml)
+	if err != nil {
+		return fmt.Errorf("failed to encode dummy initdata: %w", err)
+	}
+
+	if err := writeFile(cfg.initdataPath, []byte(encoded)); err != nil {
+		return fmt.Errorf("failed to write dummy initdata: %w", err)
+	}
+
+	logger.Printf("Generated dummy initdata at %s\n", cfg.initdataPath)
+	return nil
+}
+
 func extractInitdataAndHash(cfg *Config) error {
 	path := cfg.initdataPath
 	_, err := os.Stat(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			logger.Printf("File %s not found, skipped initdata processing.\n", path)
-			return nil
+			logger.Printf("File %s not found, generating dummy initdata.\n", path)
+			if err := generateDummyInitdata(cfg); err != nil {
+				return fmt.Errorf("failed to generate dummy initdata: %w", err)
+			}
+		} else {
+			return fmt.Errorf("Error stat initdata file: %w", err)
 		}
-		return fmt.Errorf("Error stat initdata file: %w", err)
 	}
 
 	fileReader, err := os.Open(path)
