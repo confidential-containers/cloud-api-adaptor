@@ -590,18 +590,49 @@ func TestExtractInitdataAndHash(t *testing.T) {
 }
 
 func TestWithoutInitdata(t *testing.T) {
+	tempDir, _ := os.MkdirTemp("", "tmp_dummy_initdata_root")
+	defer os.RemoveAll(tempDir)
+
+	var initdataPath = filepath.Join(tempDir, "initdata")
+	var aaPath = filepath.Join(tempDir, "aa.toml")
+	var digestPath = filepath.Join(tempDir, "initdata.digest")
+	var initdDataFilesList = []string{aaPath}
+
 	cfg := Config{
-		fetchTimeout:  0,
-		digestPath:    "",
-		initdataPath:  "/does/not/exist",
-		parentPath:    "",
+		fetchTimeout:  180,
+		digestPath:    digestPath,
+		initdataPath:  initdataPath,
+		parentPath:    tempDir,
 		writeFiles:    nil,
-		initdataFiles: []string{},
+		initdataFiles: initdDataFilesList,
 	}
 
 	err := extractInitdataAndHash(&cfg)
 	if err != nil {
 		t.Fatalf("extractInitdataAndHash returned err: %v", err)
+	}
+
+	// Verify dummy initdata file was created
+	if _, err := os.Stat(initdataPath); os.IsNotExist(err) {
+		t.Fatalf("dummy initdata file was not created")
+	}
+
+	// Verify aa.toml was created with empty content
+	bytes, err := os.ReadFile(aaPath)
+	if err != nil {
+		t.Fatalf("failed to read aa.toml: %v", err)
+	}
+	if string(bytes) != "" {
+		t.Fatalf("aa.toml should be empty but got: %s", string(bytes))
+	}
+
+	// Verify digest was created
+	digestBytes, err := os.ReadFile(digestPath)
+	if err != nil {
+		t.Fatalf("failed to read digest file: %v", err)
+	}
+	if len(digestBytes) == 0 {
+		t.Fatalf("digest file should not be empty")
 	}
 }
 
