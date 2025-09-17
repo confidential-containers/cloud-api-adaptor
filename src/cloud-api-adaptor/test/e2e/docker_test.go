@@ -13,45 +13,45 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-func TestDockerCreateSimplePod(t *testing.T) {
+func TestBasicDockerCreateSimplePod(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
-func TestDockerCreatePodWithConfigMap(t *testing.T) {
+func TestBasicDockerCreatePodWithConfigMap(t *testing.T) {
 	SkipTestOnCI(t)
 	assert := DockerAssert{}
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
 
-func TestDockerCreatePodWithSecret(t *testing.T) {
+func TestBasicDockerCreatePodWithSecret(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestCreatePodWithSecret(t, testEnv, assert)
 }
 
-func TestDockerCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
+func TestNetDockerCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 	SkipTestOnCI(t)
 	assert := DockerAssert{}
 	DoTestCreatePeerPodContainerWithExternalIPAccess(t, testEnv, assert)
 
 }
 
-func TestDockerCreatePeerPodWithJob(t *testing.T) {
+func TestBasicDockerCreatePeerPodWithJob(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestCreatePeerPodWithJob(t, testEnv, assert)
 }
 
-func TestDockerCreatePeerPodAndCheckUserLogs(t *testing.T) {
+func TestResDockerCreatePeerPodAndCheckUserLogs(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestCreatePeerPodAndCheckUserLogs(t, testEnv, assert)
 }
 
-func TestDockerCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
+func TestResDockerCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestCreatePeerPodAndCheckWorkDirLogs(t, testEnv, assert)
 }
 
-func TestDockerCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
+func TestResDockerCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
 	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/1831
 	SkipTestOnCI(t)
@@ -59,19 +59,19 @@ func TestDockerCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t, testEnv, assert)
 }
 
-func TestDockerCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T) {
+func TestResDockerCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t, testEnv, assert)
 }
 
-func TestDockerCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T) {
+func TestResDockerCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
 	// See https://github.com/confidential-containers/cloud-api-adaptor/issues/1831
 	assert := DockerAssert{}
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, testEnv, assert)
 }
 
-func TestDockerCreateNginxDeployment(t *testing.T) {
+func TestBasicDockerCreateNginxDeployment(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestNginxDeployment(t, testEnv, assert)
 }
@@ -84,22 +84,22 @@ func TestDockerCreatePeerPodWithLargeImage(t *testing.T) {
 }
 */
 
-func TestDockerDeletePod(t *testing.T) {
+func TestBasicDockerDeletePod(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestDeleteSimplePod(t, testEnv, assert)
 }
 
-func TestDockerPodToServiceCommunication(t *testing.T) {
+func TestNetDockerPodToServiceCommunication(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestPodToServiceCommunication(t, testEnv, assert)
 }
 
-func TestDockerPodsMTLSCommunication(t *testing.T) {
+func TestNetDockerPodsMTLSCommunication(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
 
-func TestDockerKbsKeyRelease(t *testing.T) {
+func TestConfDockerKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
@@ -127,7 +127,7 @@ func TestDockerKbsKeyRelease(t *testing.T) {
 	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
-func TestDockerCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
+func TestSecDockerCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
 	assert := DockerAssert{}
 	if os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
 		DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t, testEnv, assert)
@@ -136,7 +136,7 @@ func TestDockerCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.
 	}
 }
 
-func TestDockerCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t *testing.T) {
+func TestSecDockerCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t *testing.T) {
 	assert := DockerAssert{}
 	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
 		DoTestCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t, testEnv, assert)
@@ -145,7 +145,7 @@ func TestDockerCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAc
 	}
 }
 
-func TestDockerCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *testing.T) {
+func TestSecDockerCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *testing.T) {
 	assert := DockerAssert{}
 	if os.Getenv("REGISTRY_CREDENTIAL_ENCODED") != "" && os.Getenv("AUTHENTICATED_REGISTRY_IMAGE") != "" {
 		DoTestCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t, testEnv, assert)
@@ -154,28 +154,28 @@ func TestDockerCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *te
 	}
 }
 
-func TestDockerCreateWithCpuLimit(t *testing.T) {
+func TestResDockerCreateWithCpuLimit(t *testing.T) {
 	// This test is covered as part of unit test and hence skipping to optimise CI time
 	SkipTestOnCI(t)
 	assert := DockerAssert{}
 	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "", "", "200m", "")
 }
 
-func TestDockerCreateWithMemLimit(t *testing.T) {
+func TestResDockerCreateWithMemLimit(t *testing.T) {
 	// This test is covered as part of unit test and hence skipping to optimise CI time
 	SkipTestOnCI(t)
 	assert := DockerAssert{}
 	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "", "", "", "200Mi")
 }
 
-func TestDockerCreateWithCpuAndMemLimit(t *testing.T) {
+func TestResDockerCreateWithCpuAndMemLimit(t *testing.T) {
 	// This test is covered as part of unit test and hence skipping to optimise CI time
 	SkipTestOnCI(t)
 	assert := DockerAssert{}
 	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "", "", "200m", "200Mi")
 }
 
-func TestDockerCreateWithCpuAndMemRequestLimit(t *testing.T) {
+func TestResDockerCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "200Mi")
 }
