@@ -1,0 +1,25 @@
+# SSH daemon configuration for SFTP-only access
+# SSH service enabled for connectivity testing, login disabled
+
+HostKey /run/ssh/ssh_host_rsa_key
+HostKey /run/ssh/ssh_host_ecdsa_key
+HostKey /run/ssh/ssh_host_ed25519_key
+
+# Disable all forms of login
+PermitRootLogin no
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+UsePAM yes
+PubkeyAuthentication yes
+
+# Only allow SFTP subsystem, no shell access
+Subsystem sftp internal-sftp
+
+# Restrict peerpod user to SFTP only with chroot
+Match User peerpod
+    ForceCommand internal-sftp
+    ChrootDirectory /media
+    PermitTunnel no
+    AllowAgentForwarding no
+    AllowTcpForwarding no
+    X11Forwarding no

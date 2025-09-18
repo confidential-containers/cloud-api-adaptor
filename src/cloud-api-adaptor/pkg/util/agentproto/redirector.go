@@ -284,6 +284,22 @@ func (s *redirector) GetMetrics(ctx context.Context, req *pb.GetMetricsRequest) 
 	return s.agentClient.GetMetrics(ctx, req)
 }
 
+func (s *redirector) MemAgentMemcgSet(ctx context.Context, req *pb.MemAgentMemcgConfig) (res *emptypb.Empty, err error) {
+
+	if err := s.Connect(ctx); err != nil {
+		return nil, err
+	}
+	return s.agentClient.MemAgentMemcgSet(ctx, req)
+}
+
+func (s *redirector) MemAgentCompactSet(ctx context.Context, req *pb.MemAgentCompactConfig) (res *emptypb.Empty, err error) {
+
+	if err := s.Connect(ctx); err != nil {
+		return nil, err
+	}
+	return s.agentClient.MemAgentCompactSet(ctx, req)
+}
+
 func (s *redirector) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (res *emptypb.Empty, err error) {
 
 	if err := s.Connect(ctx); err != nil {
@@ -362,6 +378,14 @@ func (s *redirector) AddSwap(ctx context.Context, req *pb.AddSwapRequest) (res *
 		return nil, err
 	}
 	return s.agentClient.AddSwap(ctx, req)
+}
+
+func (s *redirector) AddSwapPath(ctx context.Context, req *pb.AddSwapPathRequest) (res *emptypb.Empty, err error) {
+
+	if err := s.Connect(ctx); err != nil {
+		return nil, err
+	}
+	return s.agentClient.AddSwapPath(ctx, req)
 }
 
 func (s *redirector) GetVolumeStats(ctx context.Context, req *pb.VolumeStatsRequest) (res *pb.VolumeStatsResponse, err error) {
