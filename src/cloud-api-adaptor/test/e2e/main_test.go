@@ -215,16 +215,6 @@ func TestMain(m *testing.M) {
 			return ctx, err
 		}
 
-		if shouldProvisionCluster {
-			if err = provisioner.DeleteCluster(ctx, cfg); err != nil {
-				return ctx, err
-			}
-
-			if err = provisioner.DeleteVPC(ctx, cfg); err != nil {
-				log.Warnf("Failed to delete vpc resources, err: %s.", err)
-				return ctx, nil
-			}
-		}
 		if shouldInstallCAA {
 			log.Info("Delete the Cloud API Adaptor installation")
 			if err = cloudAPIAdaptor.Delete(ctx, cfg); err != nil {
@@ -235,6 +225,17 @@ func TestMain(m *testing.M) {
 		if shouldDeployKbs {
 			if err = keyBrokerService.Delete(ctx, cfg); err != nil {
 				return ctx, err
+			}
+		}
+
+		if shouldProvisionCluster {
+			if err = provisioner.DeleteCluster(ctx, cfg); err != nil {
+				return ctx, err
+			}
+
+			if err = provisioner.DeleteVPC(ctx, cfg); err != nil {
+				log.Warnf("Failed to delete vpc resources, err: %s.", err)
+				return ctx, nil
 			}
 		}
 
