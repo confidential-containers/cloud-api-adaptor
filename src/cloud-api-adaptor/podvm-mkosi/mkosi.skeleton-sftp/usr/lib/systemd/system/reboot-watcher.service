@@ -1,0 +1,12 @@
+[Unit]
+Description=Reboot system when triggered by reboot file
+After=network.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl reboot
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
