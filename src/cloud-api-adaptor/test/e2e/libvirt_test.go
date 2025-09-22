@@ -252,7 +252,7 @@ func TestLibvirtCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *t
 
 func TestLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := LibvirtAssert{}
-	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "1200Mi")
+	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "1792Mi")
 }
 
 func TestLibvirtPodVMwithAnnotationsCPUMemory(t *testing.T) {
