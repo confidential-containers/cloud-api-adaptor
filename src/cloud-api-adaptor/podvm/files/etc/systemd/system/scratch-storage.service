@@ -4,11 +4,11 @@ After=systemd-repart.service process-user-data.service
 # It must complete before the kata-agent starts
 Before=kata-agent.service
 DefaultDependencies=no
+ConditionPathExists=/run/peerpod/scratch-space.marker
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ConditionPathExists=/run/peerpod/scratch-space.marker
 ExecStart=/usr/local/bin/setup-scratch-storage
 
 [Install]
