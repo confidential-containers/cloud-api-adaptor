@@ -92,6 +92,7 @@ resource "azurerm_shared_image" "podvm_image" {
     offer     = "coco-caa"
     sku       = "coco-caa"
   }
-  hyper_v_generation        = "V2"
-  confidential_vm_supported = true
+  hyper_v_generation                = "V2"
+  confidential_vm_supported         = true
+  disk_controller_type_nvme_enabled = true
 }
