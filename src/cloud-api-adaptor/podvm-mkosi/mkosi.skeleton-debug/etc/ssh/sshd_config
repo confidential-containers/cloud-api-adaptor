@@ -2,3 +2,4 @@ PermitRootLogin yes
 HostKey /run/ssh/ssh_host_rsa_key
 HostKey /run/ssh/ssh_host_ecdsa_key
 HostKey /run/ssh/ssh_host_ed25519_key
+Subsystem       sftp    /usr/libexec/openssh/sftp-server

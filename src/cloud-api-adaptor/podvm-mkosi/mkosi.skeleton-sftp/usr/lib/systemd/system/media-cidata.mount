@@ -1,0 +1,13 @@
+[Unit]
+Description=Create tmpfs directory /media/cidata
+DefaultDependencies=no
+Before=systemd-repart.service
+
+[Mount]
+What=tmpfs
+Where=/media/cidata
+Type=tmpfs
+Options=mode=0755,uid=root,gid=root
+
+[Install]
+WantedBy=multi-user.target

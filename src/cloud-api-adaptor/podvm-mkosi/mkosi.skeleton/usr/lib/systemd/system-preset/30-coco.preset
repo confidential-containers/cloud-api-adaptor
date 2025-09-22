@@ -1,10 +1,9 @@
 enable attestation-protocol-forwarder.service
-enable attestation-agent.service
+enable attestation-agent.path
 enable api-server-rest.path
 enable confidential-data-hub.path
 enable kata-agent.path
 enable netns@.service
-enable process-user-data.service
 enable setup-nat-for-imds.service
 
 enable gen-issue.service

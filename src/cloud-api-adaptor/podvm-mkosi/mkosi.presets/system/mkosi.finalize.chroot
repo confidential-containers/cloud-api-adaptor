@@ -14,14 +14,15 @@ if [[ "${ARCHITECTURE}" == "s390x" ]]; then
 fi
 
 # Conditional SFTP support: enable process-user-data.path only if ENABLE_SFTP is set
+
+ENABLE_SFTP=${ENABLE_SFTP:-false}
+
 if [[ "${ENABLE_SFTP}" == "true" ]]; then
 	echo "Enabling SFTP user-data processing service (ENABLE_SFTP=true)"
 	systemctl enable process-user-data.path
 	systemctl disable process-user-data.service
-	systemctl enable media-cidata.mount	
-	systemctl enable reboot-watcher.path
-	systemctl enable sftp-dir.service
 	# Create peerpod user for SFTP access
+	mkdir -p /home/peerpod
 	useradd -r -s /sbin/nologin -d /home/peerpod peerpod
 	# Ensure proper permissions for SSH key
 	chown -R peerpod:peerpod /home/peerpod
@@ -32,7 +33,4 @@ else
 	systemctl disable process-user-data.path
 	systemctl enable process-user-data.service
 	# These units doesn't exist in regular and debug profiles
-	systemctl disable media-cidata.mount || true
-	systemctl disable reboot-watcher.path || true
-	systemctl disable sftp-dir.service || true
 fi
