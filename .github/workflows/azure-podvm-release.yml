@@ -1,0 +1,36 @@
+name: azure-podvm-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: x.y.z
+
+permissions: {}
+
+jobs:
+  build-podvm-image:
+    strategy:
+      matrix:
+        parameters:
+        - variant: production
+        - variant: debug
+    uses: ./.github/workflows/azure-podvm-image-build.yml
+    permissions:
+      id-token: write      # for OIDC to Azure
+      contents: read       # to fetch the code
+      packages: write      # to push measurements to OCI
+      attestations: write  # to create the attestation
+    with:
+      git-ref: "v${{ github.event.inputs.version }}"
+      image-version: ${{ github.event.inputs.version }}
+      image-variant: ${{ matrix.parameters.variant }}
+      image-gallery: ${{ vars.AZURE_RELEASE_PODVM_GALLERY_NAME }}
+      image-definition: ${{ matrix.parameters.variant == 'production' && vars.AZURE_RELEASE_PODVM_IMAGE_DEF_NAME || vars.AZURE_RELEASE_PODVM_IMAGE_DEF_NAME_DEBUG }}
+      community-gallery-name: ${{ vars.AZURE_RELEASE_COMMUNITY_GALLERY_NAME }}
+      resource-group: ${{ vars.AZURE_RELEASE_RESOURCE_GROUP }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

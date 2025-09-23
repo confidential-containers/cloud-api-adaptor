@@ -6,6 +6,20 @@ on:
       image-version:
         type: string
         required: true
+      image-variant:
+        type: string
+        default: production
+      image-gallery:
+        type: string
+      image-definition:
+        type: string
+      community-gallery-name:
+        type: string
+      resource-group:
+        type: string
+      git-ref:
+        type: string
+        default: 'main'
     secrets:
       AZURE_CLIENT_ID:
         required: true
@@ -23,20 +37,17 @@ on:
       image-version:
         type: string
         description: x.y.z
+        required: true
+      image-variant:
+        type: string
+        default: production
+        description: image variant
       git-ref:
         type: string
         default: 'main'
         description: tag, branch, sha
 
 permissions: {}
-
-env:
-  AZURE_PODVM_IMAGE_DEF_NAME: "${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
-  AZURE_PODVM_IMAGE_VERSION: "${{ inputs.image-version }}"
-  PODVM_IMAGE_NAME: "peerpod-image-${{ github.run_id }}-${{ github.run_attempt }}"
-  UPLOSI_VERSION: "0.3.0"
-  UPLOSI_SHA256: "687bcab7398ab0fda65a3809492e8cd4d6a25aad1573927be5ec75ac1c4cbc35"
-  IMAGE_ID: "/CommunityGalleries/${{ vars.AZURE_COMMUNITY_GALLERY_NAME }}/Images/${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}/Versions/${{ inputs.image-version }}"
 
 jobs:
   build-podvm-image:
@@ -56,7 +67,7 @@ jobs:
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         path: cloud-api-adaptor
-        ref: "${{ inputs.git-ref || 'main' }}"
+        ref: ${{ inputs.git-ref }}
 
     - name: Install build dependencies
       run: |
@@ -69,6 +80,9 @@ jobs:
         echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' ../versions.yaml)" >> "$GITHUB_ENV"
 
     - name: Install uplosi
+      env:
+        UPLOSI_VERSION: "0.3.0"
+        UPLOSI_SHA256: "687bcab7398ab0fda65a3809492e8cd4d6a25aad1573927be5ec75ac1c4cbc35"
       run: |
         wget -q "https://github.com/edgelesssys/uplosi/releases/download/v${UPLOSI_VERSION}/uplosi_${UPLOSI_VERSION}_linux_amd64.tar.gz"
         sha256sum -c <(echo "$UPLOSI_SHA256"  "uplosi_${UPLOSI_VERSION}_linux_amd64.tar.gz")
@@ -83,7 +97,12 @@ jobs:
         make binaries
 
     - name: Build image
+      if: inputs.image-variant == 'production'
       run: make image
+
+    - name: Build debug image
+      if: inputs.image-variant != 'production'
+      run: make image-debug
 
     - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
       name: 'Az CLI login'
@@ -94,19 +113,27 @@ jobs:
 
     - name: upload image
       id: upload-image
+      env:
+        SUBSCRIPTION_ID: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        IMAGE_VERSION: "${{ inputs.image-version }}"
+        RESOURCE_GROUP: "${{ inputs.resource-group || vars.AZURE_RESOURCE_GROUP }}"
+        IMAGE_GALLERY: "${{ inputs.image-gallery || vars.AZURE_PODVM_GALLERY_NAME }}"
+        IMAGE_DEFINITION: "${{ inputs.image-definition || vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
+        COMMUNITY_GALLERY_NAME: "${{ inputs.community-gallery-name || vars.AZURE_COMMUNITY_GALLERY_NAME }}"
       run: |
-        SHARING_NAME_PREFIX="$(echo ${{ vars.AZURE_COMMUNITY_GALLERY_NAME }} | cut -d'-' -f1)"
+        IMAGE_ID="/CommunityGalleries/${IMAGE_GALLERY}/Images/${IMAGE_DEFINITION}/Versions/${IMAGE_VERSION}"
+        SHARING_NAME_PREFIX="$(echo "$COMMUNITY_GALLERY_NAME" | cut -d'-' -f1)"
         cat <<EOF> uplosi.conf
         [base]
-        imageVersion = "$AZURE_PODVM_IMAGE_VERSION"
-        name = "$AZURE_PODVM_IMAGE_DEF_NAME"
+        imageVersion = "$IMAGE_VERSION"
+        name         = "$IMAGE_DEFINITION"
 
         [base.azure]
-        subscriptionID = "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-        location = "eastus"
-        resourceGroup = "${{ vars.AZURE_RESOURCE_GROUP }}"
-        sharedImageGallery = "${{ vars.AZURE_PODVM_GALLERY_NAME }}"
-        sharingNamePrefix = "$SHARING_NAME_PREFIX"
+        subscriptionID     = "$SUBSCRIPTION_ID"
+        location           = "eastus"
+        resourceGroup      = "$RESOURCE_GROUP"
+        sharedImageGallery = "$IMAGE_GALLERY"
+        sharingNamePrefix  = "$SHARING_NAME_PREFIX"
 
         [variant.default]
         provider = "azure"
@@ -144,6 +171,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish measurements
+      if: inputs.image-variant == 'production'
       id: publish-measurements
       env:
         OCI_NAME: ghcr.io/${{ github.repository }}/measurements/azure/podvm
@@ -155,6 +183,7 @@ jobs:
         echo "oci-digest=${OCI_DIGEST}" >> "$GITHUB_OUTPUT"
 
     - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+      if: inputs.image-variant == 'production'
       with:
         subject-name: ${{ steps.publish-measurements.outputs.oci-name }}
         subject-digest: ${{ steps.publish-measurements.outputs.oci-digest }}
