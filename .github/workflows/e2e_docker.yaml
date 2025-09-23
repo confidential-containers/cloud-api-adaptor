@@ -45,6 +45,7 @@ permissions: {}
 
 jobs:
   test-docker:
+    name: "Docker e2e tests: (${{ inputs.container_runtime }})"
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Code
