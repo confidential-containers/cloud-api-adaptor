@@ -69,7 +69,7 @@ permissions: {}
 
 jobs:
   build-image:
-    name: Build mkosi image
+    name: Build mkosi image for ${{ inputs.arch }}
     runs-on: ${{ inputs.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
     permissions:
       contents: read
