@@ -55,3 +55,27 @@ variable "gh_repo" {
   description = "GitHub repository that has permissions to run workloads on Azure. The value should be in the format `orgName/repoName`"
   default     = "confidential-containers/cloud-api-adaptor"
 }
+
+variable "release_rg" {
+  type        = string
+  default     = "coco-images"
+  description = "Resource group for release podvm images"
+}
+
+variable "release_image_gallery" {
+  type        = string
+  description = "Image gallery for release podvm images"
+  default     = "cocoimages"
+}
+
+variable "release_image_definition" {
+  type        = string
+  description = "Image definition for release podvm images"
+  default     = "peerpod-podvm-fedora"
+}
+
+variable "release_image_definition_debug" {
+  type        = string
+  description = "Image definition for release podvm images"
+  default     = "peerpod-podvm-fedora-debug"
+}
