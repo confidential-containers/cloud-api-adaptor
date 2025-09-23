@@ -1,9 +1,9 @@
 # (C) Copyright Confidential Containers Contributors 2023.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Daily run the e2e tests for libvirt.
+# Daily run the e2e tests.
 ---
-name: daily e2e tests for libvirt
+name: daily e2e tests
 
 on:
   schedule:
