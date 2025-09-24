@@ -161,8 +161,8 @@ if [ -z "$KATACTL" ]; then
 	KATA_REG=$(yq -e '.oci.kata-containers.registry' ${SCRIPTDIR}/../../versions.yaml)
 	echo "::debug:: Pulling kata-ctl from ${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
 	oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
-	tar -xJvf kata-static-agent-ctl.tar.xz ./opt/kata/bin/kata-agent-ctl --transform='s/opt\/kata\/bin\/kata-agent-ctl/kata-agent-ctl/'
-	rm kata-static-agent-ctl.tar.xz
+	tar --ztsd -xvf kata-static-agent-ctl.tar.zst ./opt/kata/bin/kata-agent-ctl --transform='s/opt\/kata\/bin\/kata-agent-ctl/kata-agent-ctl/'
+	rm kata-static-agent-ctl.tar.zst
 	KATACTL=$(realpath kata-agent-ctl)
 	chmod +x "$KATACTL"
 fi

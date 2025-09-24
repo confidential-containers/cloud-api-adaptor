@@ -172,7 +172,7 @@ $(PROCESS_USER_DATA): always
 
 $(KATA_AGENT): $(FORCE_TARGET)
 	$(call pull_agent_artifact)
-	tar xvJpf kata-static-agent.tar.xz
+	tar --zstd -xvpf kata-static-agent.tar.zst
 	install -D --compare "./usr/bin/kata-agent" "$@"
 
 # Skopeo package packages are available in RHEL/CentOS 8 or later and Ubuntu 20.10 or later

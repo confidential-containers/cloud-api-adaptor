@@ -100,7 +100,7 @@ jobs:
       - name: Install kata-agent-ctl
         run: |
           oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
-          tar xf kata-static-agent-ctl.tar.xz
+          tar --zstd -xf kata-static-agent-ctl.tar.zst
           cp opt/kata/bin/kata-agent-ctl /usr/local/bin
 
       - name: Download qcow2 artifact

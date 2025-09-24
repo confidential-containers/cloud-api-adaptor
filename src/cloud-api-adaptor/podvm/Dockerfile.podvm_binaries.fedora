@@ -22,7 +22,7 @@ RUN dnf -y group install development-tools && \
     dnf install -y yum-utils gnupg git perl-core pkg-config libseccomp-devel gpgme-devel \
     device-mapper-devel unzip libassuan-devel \
     perl-FindBin openssl-devel tpm2-tss-devel \
-    clang which xz jq && \
+    clang which xz zstd jq && \
     dnf clean all
 
 ADD https://dl.google.com/go/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
