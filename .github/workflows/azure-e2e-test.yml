@@ -244,8 +244,41 @@ jobs:
         AZURE_SUBNET_ID="$subnet_id"
         EOF
 
-    - name: Checkout KBS Repository
+    - name: Configure KBS
       run: test/utils/checkout_kbs.sh
+
+    - name: Populate RVPS reference-values.json
+      env:
+        OCI_NAME: "ghcr.io/${{ github.repository }}/measurements/azure/podvm"
+        AZURE_IMAGE_ID: "${{ inputs.podvm-image-id }}"
+        TEE_KEY: "az${{ matrix.parameters.id }}vtpm"
+        GH_REPO: "${{ github.repository }}"
+        GIT_SHA: "${{ github.sha }}"
+        GH_TOKEN: "${{ github.token }}"
+      run: |
+        # resolve the measurement tag to digest, assert proper provenance, pull measurements.json
+        image_version="$(basename "$AZURE_IMAGE_ID")"
+        oci_digest="$(oras resolve "${OCI_NAME}:${image_version}")"
+        oci_registry="${OCI_NAME}@${oci_digest}"
+        gh attestation verify -R "$GH_REPO" "oci://${oci_registry}" --source-digest "$GIT_SHA"
+        oras pull "$oci_registry"
+
+        # convert measurements.json to reference-values.json
+        expiry="$(date -u -d '+1 year' '+%Y-%m-%dT%H:%M:%SZ')"
+        jq --arg tee_key "$TEE_KEY" --arg expiry "$expiry" '
+          .measurements.sha256
+          | to_entries
+          | map({
+              name: ($tee_key + ".tpm." + .key),
+              expired: $expiry,
+              "hash-value": [
+                {
+                  alg: "sha256",
+                  value: (.value | ltrimstr("0x") | ascii_downcase)
+                }
+              ]
+            })
+        ' measurements.json > ./test/trustee/kbs/config/kubernetes/base/reference-values.json
 
     - name: Run e2e test
       env:
