@@ -49,7 +49,7 @@ git:
     reference: v1.5.0
   kbs:
     url: https://github.com/confidential-containers/trustee
-    reference: beb4ce9346bc7f9a7ff0f686eb868472767ad8fb
+    reference: ea56c1bfa7e912f39e270ffe738b19ac8113af3d
 # If a tag is given it will attempt to pull the oci image by tag. if a
 # reference is specified the corresponding tag will be constructed using
 # the reference and suffixes like architecture or tee.
@@ -59,7 +59,7 @@ oci:
     tag: 3.9
   kata-containers:
     registry: ghcr.io/kata-containers/cached-artefacts
-    reference: 3.19.1
+    reference: 3.21.0
   guest-components:
     registry: ghcr.io/confidential-containers/guest-components
-    reference: 1a521e14b8c0a039ae7ae98f520fcb5020d95dec
+    reference: 608b48205009e091d3843b8f7d21934f2cea6792
