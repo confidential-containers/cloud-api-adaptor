@@ -105,7 +105,8 @@ func TestWorkerNode(t *testing.T) {
 			require.Equal(t, mockTunnelType, config.TunnelType, "hostInterface=%q", hostInterface)
 
 			require.Equal(t, len(config.Routes), 2, "hostInterface=%q", hostInterface)
-			require.Equal(t, config.Routes[0].Dst.String(), "0.0.0.0/0", "hostInterface=%q", hostInterface)
+			dstRoute := fmt.Sprintf("%s/%d", config.Routes[0].Dst.Addr().Unmap().String(), config.Routes[0].Dst.Bits())
+			require.Equal(t, dstRoute, "0.0.0.0/0", "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[0].GW.String(), "172.16.0.1", "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[0].Dev, "eth0", "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[1].Dst.String(), "172.16.0.0/24", "hostInterface=%q", hostInterface)
