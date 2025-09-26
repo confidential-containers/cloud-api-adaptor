@@ -34,19 +34,17 @@ on:
         required: false
         type: string
     secrets:
-      AWS_ACCESS_KEY_ID:
+      AWS_IAM_ROLE_ARN:
         required: true
-      AWS_SECRET_ACCESS_KEY:
-        required: true
+
+permissions: {}
 
 env:
   CLOUD_PROVIDER: aws
   DEBIAN_FRONTEND: noninteractive
 
-permissions: {}
-
 jobs:
-  # Check the org/repository has AWS secrets (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY). On absence of
+  # Check the org/repository has AWS secrets (AWS_IAM_ROLE_ARN). On absence of
   # secrets it should skip the execution of the test job.
   aws-credentials:
     runs-on: ubuntu-22.04
@@ -56,7 +54,7 @@ jobs:
       - name: Check secrets
         id: check_secrets
         run: |
-         if [[ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" && -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]]; then
+         if [[ -n "${{ secrets.AWS_IAM_ROLE_ARN }}" ]]; then
            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
          else
            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
@@ -69,6 +67,9 @@ jobs:
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
+    permissions:
+      id-token: write # Required by aws-actions/configure-aws-credentials
+      contents: read  # Required by aws-actions/configure-aws-credentials
     steps:
       - name: Checkout Code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -82,6 +83,11 @@ jobs:
         run: |
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
+      - name: Remove unnecessary directories to free up space
+        working-directory: ./
+        run: |
+          sudo ./hack/ci-helper.sh clean-up-runner
+
       - name: Read properties from versions.yaml
         run: |
           sudo snap install yq
@@ -94,6 +100,7 @@ jobs:
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
 
       - uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1.2.4
         with:
@@ -101,9 +108,11 @@ jobs:
 
       - name: Extract qcow2 from ${{ inputs.podvm_image }}
         if: ${{ !inputs.oras }}
+        env:
+          PODVM_IMAGE: "${{ inputs.podvm_image }}"
         run: |
-           qcow2=$(echo "${{ inputs.podvm_image }}" | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
-           ./hack/download-image.sh "${{ inputs.podvm_image }}" . -o "${qcow2}"
+           qcow2=$(echo "${PODVM_IMAGE}" | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
+           ./hack/download-image.sh "${PODVM_IMAGE}" . -o "${qcow2}" --clean-up
            echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
            # Clean up docker images to make space
            docker system prune -a -f
@@ -137,6 +146,7 @@ jobs:
         run: |
           cat <<EOF>>aws.properties
           CAA_IMAGE="${{ inputs.caa_image }}"
+          container_runtime="${{ inputs.container_runtime }}"
           disablecvm="true"
           cluster_type="${{ inputs.cluster_type }}"
           ssh_kp_name="caa-e2e-test"
@@ -146,12 +156,11 @@ jobs:
           cat aws.properties
           echo "::endgroup::"
 
-        # Note: aws cli is already installed on github's runner image.
-      - name: Config aws CLI
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }} --profile default
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile default
-          aws configure set region us-east-1 --profile default
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
       - name: Create on-prem cluster
         if: inputs.cluster_type == 'onprem'
@@ -180,3 +189,21 @@ jobs:
           export TEST_E2E_TIMEOUT="90m"
 
           make test-e2e
+
+      - name: Debug tests failure
+        if: failure() && steps.runTests.outcome == 'failure'
+        working-directory: ./
+        run: |
+          ./hack/ci-e2e-debug-fail.sh
+        # Avoid running with `set -e` as command fails should be allowed
+        shell: bash {0}
+
+        # In case the tests execution failed and deprovision code from e2e
+        # didn't run, let's try to delete any resources created.
+      - name: Force AWS clean-up
+        if: failure() && steps.runTests.outcome == 'failure'
+        working-directory: ./
+        run: |
+          ./hack/ci-e2e-aws-cleanup.sh
+        # Avoid running with `set -e` as command fails should be allowed
+        shell: bash {0}
