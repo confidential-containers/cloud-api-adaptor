@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2025 IBM Corporation
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -38,15 +39,37 @@ function rebase_atop_of_the_latest_target_branch() {
 	fi
 }
 
+# Remove unnecessary directories on the github runner to relieve disk space issues
+function clean_up_runner() {
+	rm -rf /usr/local/.ghcup
+	rm -rf /opt/hostedtoolcache/CodeQL
+	rm -rf /usr/local/lib/android
+	rm -rf /usr/share/dotnet
+	rm -rf /opt/ghc
+	rm -rf /usr/local/share/boost
+	rm -rf "$AGENT_TOOLSDIRECTORY"
+	rm -rf /usr/lib/jvm
+	rm -rf /usr/share/swift
+	rm -rf /usr/local/share/powershell
+	rm -rf /usr/local/julia*
+	rm -rf /opt/az
+	rm -rf /usr/local/share/chromium
+	rm -rf /opt/microsoft
+	rm -rf /opt/google
+	rm -rf /usr/lib/firefox
+}
+
+
 function main() {
-    action="${1:-}"
+	action="${1:-}"
 
 	 add_git_config_info
 
-    case "${action}" in
-	rebase-atop-of-the-latest-target-branch) rebase_atop_of_the_latest_target_branch;;
-        *) >&2 echo "Invalid argument"; exit 2 ;;
-    esac
+	case "${action}" in
+		clean-up-runner) clean_up_runner;;
+		rebase-atop-of-the-latest-target-branch) rebase_atop_of_the_latest_target_branch;;
+		*) >&2 echo "Invalid argument"; exit 2 ;;
+	esac
 }
 
 main "$@"

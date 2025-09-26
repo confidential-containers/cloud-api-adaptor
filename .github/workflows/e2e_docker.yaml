@@ -60,6 +60,11 @@ jobs:
         run: |
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
+      - name: Remove unnecessary directories to free up space
+        working-directory: ./
+        run: |
+          sudo ./hack/ci-helper.sh clean-up-runner
+
       - name: Login to quay Container Registry
         if: ${{ startsWith(inputs.podvm_image, 'quay.io') }}
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
