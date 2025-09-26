@@ -10,22 +10,22 @@ import (
 	"testing"
 )
 
-func TestDeletePodGCP(t *testing.T) {
+func TestBasicGcpDeletePod(t *testing.T) {
 	assert := GCPCloudAssert{}
 	DoTestDeleteSimplePod(t, testEnv, assert)
 }
 
-func TestCreateSimplePodGCP(t *testing.T) {
+func TestBasicGcpCreateSimplePod(t *testing.T) {
 	assert := GCPCloudAssert{}
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
-func TestCreatePodWithConfigMapGCP(t *testing.T) {
+func TestBasicGcpCreatePodWithConfigMap(t *testing.T) {
 	assert := GCPCloudAssert{}
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
 
-func TestCreatePodWithSecretGCP(t *testing.T) {
+func TestBasicGcpCreatePodWithSecret(t *testing.T) {
 	assert := GCPCloudAssert{}
 	DoTestCreatePodWithSecret(t, testEnv, assert)
 }

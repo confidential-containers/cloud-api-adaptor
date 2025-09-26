@@ -13,27 +13,27 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-func TestLibvirtCreateSimplePod(t *testing.T) {
+func TestBasicLibvirtCreateSimplePod(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
-func TestLibvirtCreateSimplePodWithSecureCommsIsValid(t *testing.T) {
+func TestBasicLibvirtCreateSimplePodWithSecureCommsIsValid(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestLibvirtCreateSimplePodWithSecureCommsIsValid(t, testEnv, assert)
 }
 
-func TestLibvirtCreatePodWithConfigMap(t *testing.T) {
+func TestBasicLibvirtCreatePodWithConfigMap(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
 
-func TestLibvirtCreatePodWithSecret(t *testing.T) {
+func TestBasicLibvirtCreatePodWithSecret(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestCreatePodWithSecret(t, testEnv, assert)
 }
 
-func TestLibvirtCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
+func TestNetLibvirtCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 	SkipTestOnCI(t)
 	if isTestOnCrio() {
 		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
@@ -43,19 +43,19 @@ func TestLibvirtCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 
 }
 
-func TestLibvirtCreatePeerPodContainerWithValidAlternateImage(t *testing.T) {
+func TestImgLibvirtCreatePeerPodContainerWithValidAlternateImage(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodContainerWithValidAlternateImage(t, testEnv, assert, libvirt.AlternateVolumeName)
 }
 
-func TestLibvirtCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
+func TestImgLibvirtCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
 	assert := LibvirtAssert{}
 	nonExistingImageName := "non-existing-image"
 	expectedErrorMessage := "Error in creating volume: Can't retrieve volume " + nonExistingImageName
 	DoTestCreatePeerPodContainerWithInvalidAlternateImage(t, testEnv, assert, nonExistingImageName, expectedErrorMessage)
 }
 
-func TestLibvirtCreatePeerPodWithJob(t *testing.T) {
+func TestBasicLibvirtCreatePeerPodWithJob(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodWithJob(t, testEnv, assert)
 }
@@ -97,23 +97,23 @@ func TestLibvirtCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *te
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, testEnv, assert)
 }
 
-func TestLibvirtCreateNginxDeployment(t *testing.T) {
+func TestBasicLibvirtCreateNginxDeployment(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestNginxDeployment(t, testEnv, assert)
 }
 
-func TestLibvirtCreatePeerPodWithLargeImage(t *testing.T) {
+func TestImgLibvirtCreatePeerPodWithLargeImage(t *testing.T) {
 	SkipTestOnCI(t)
 	assert := LibvirtAssert{}
 	DoTestCreatePeerPodWithLargeImage(t, testEnv, assert)
 }
 
-func TestLibvirtDeletePod(t *testing.T) {
+func TestBasicLibvirtDeletePod(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestDeleteSimplePod(t, testEnv, assert)
 }
 
-func TestLibvirtPodToServiceCommunication(t *testing.T) {
+func TestNetLibvirtPodToServiceCommunication(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
 	if isTestOnCrio() {
 		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
@@ -122,7 +122,7 @@ func TestLibvirtPodToServiceCommunication(t *testing.T) {
 	DoTestPodToServiceCommunication(t, testEnv, assert)
 }
 
-func TestLibvirtPodsMTLSCommunication(t *testing.T) {
+func TestNetLibvirtPodsMTLSCommunication(t *testing.T) {
 	// This test is causing issues on CI with instability, so skip until we can resolve this.
 	if isTestOnCrio() {
 		t.Skip("Fails with CRI-O (confidential-containers/cloud-api-adaptor#2100)")
@@ -131,7 +131,7 @@ func TestLibvirtPodsMTLSCommunication(t *testing.T) {
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
 
-func TestLibvirtImageDecryption(t *testing.T) {
+func TestConfLibvirtImageDecryption(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
@@ -144,7 +144,7 @@ func TestLibvirtImageDecryption(t *testing.T) {
 	DoTestImageDecryption(t, testEnv, assert, keyBrokerService)
 }
 
-func TestLibvirtSealedSecret(t *testing.T) {
+func TestConfLibvirtSealedSecret(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
@@ -167,7 +167,7 @@ func TestLibvirtSealedSecret(t *testing.T) {
 	DoTestSealedSecret(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
-func TestLibvirtKbsKeyRelease(t *testing.T) {
+func TestConfLibvirtKbsKeyRelease(t *testing.T) {
 	if !isTestWithKbs() {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
@@ -213,12 +213,12 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 	}
 }
 
-func TestLibvirtRestrictivePolicyBlocksExec(t *testing.T) {
+func TestSecLibvirtRestrictivePolicyBlocksExec(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestRestrictivePolicyBlocksExec(t, testEnv, assert)
 }
 
-func TestLibvirtPermissivePolicyAllowsExec(t *testing.T) {
+func TestSecLibvirtPermissivePolicyAllowsExec(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPermissivePolicyAllowsExec(t, testEnv, assert)
 }
@@ -250,27 +250,27 @@ func TestLibvirtCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *t
 	}
 }
 
-func TestLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
+func TestResLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "1792Mi")
 }
 
-func TestLibvirtPodVMwithAnnotationsCPUMemory(t *testing.T) {
+func TestResLibvirtPodVMwithAnnotationsCPUMemory(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodVMwithAnnotationsCPUMemory(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(2, 12288))
 }
 
-func TestLibvirtPodVMwithAnnotationCPU(t *testing.T) {
+func TestResLibvirtPodVMwithAnnotationCPU(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodVMwithAnnotationCPU(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(4, libvirt.DefaultMemory))
 }
 
-func TestLibvirtPodVMwithAnnotationMemory(t *testing.T) {
+func TestResLibvirtPodVMwithAnnotationMemory(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodVMwithAnnotationMemory(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(libvirt.DefaultCPU, 7168))
 }
 
-func TestLibvirtPodVMwithNoAnnotations(t *testing.T) {
+func TestResLibvirtPodVMwithNoAnnotations(t *testing.T) {
 	assert := LibvirtAssert{}
 	DoTestPodVMwithNoAnnotations(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(libvirt.DefaultCPU, libvirt.DefaultMemory))
 }
