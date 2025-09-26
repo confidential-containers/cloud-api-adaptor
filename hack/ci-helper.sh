@@ -47,7 +47,7 @@ function clean_up_runner() {
 	rm -rf /usr/share/dotnet
 	rm -rf /opt/ghc
 	rm -rf /usr/local/share/boost
-	rm -rf "$AGENT_TOOLSDIRECTORY"
+	[[ -n "${AGENT_TOOLSDIRECTORY:-}" ]] && rm -rf "${AGENT_TOOLSDIRECTORY}"
 	rm -rf /usr/lib/jvm
 	rm -rf /usr/share/swift
 	rm -rf /usr/local/share/powershell
