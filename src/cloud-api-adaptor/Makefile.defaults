@@ -1,6 +1,8 @@
 ROOT_PATH := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 VERSIONS_SRC := $(ROOT_PATH)/versions.yaml
 YQ_COMMAND ?= yq
+QUERY_RETRY_COUNT ?= 2
+QUERY_RETRY_DELAY ?= 3
 
 ifeq (, $(shell command -v $(YQ_COMMAND) 2> /dev/null))
 $(error "$(YQ_COMMAND) not found, consider doing snap install yq")
@@ -68,8 +70,15 @@ $(error "yq major version should be $(MINIMUM_YQ_MAJOR_VERSION), is: $(INSTALLED
 endif
 VERSIONS_HASH := $(firstword $(shell sha256sum $(VERSIONS_SRC)))
 
+# Retry mechanism to make the function rubust against sporadic failure on s390x runners
+# See https://github.com/confidential-containers/cloud-api-adaptor/issues/2600 for details
 define query
-$(or $(shell $(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
+$(or $(shell for i in $$(seq 1 $(QUERY_RETRY_COUNT)); do \
+	result=$$($(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC) 2>/dev/null); \
+	[ -n "$$result" ] && echo "$$result" && break; \
+	[ $$i -le $(QUERY_RETRY_COUNT) ] && echo "Retry $$i/$(QUERY_RETRY_COUNT) for key '$(1)'..." >&2 && sleep $(QUERY_RETRY_DELAY); \
+done), \
+	$(shell for i in 1 2 3; do echo "DEBUG INFO [$$i]:" >&2; which yq >&2; yq --version >&2; ls -l versions.yaml >&2; cat versions.yaml >&2; if [ $$i -lt 3 ]; then sleep 3; fi; done) \
 	$(error $(1) is not set, and could not be automatically set from $(VERSIONS_SRC)))
 endef
 
