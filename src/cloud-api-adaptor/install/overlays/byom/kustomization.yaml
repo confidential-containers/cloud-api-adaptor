@@ -1,0 +1,80 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../yamls
+
+images:
+- name: cloud-api-adaptor
+  newName: quay.io/confidential-containers/cloud-api-adaptor # change image if needed
+  newTag: latest
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="byom"
+  - ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN="false" # flag to enable/disable dynamically load cloud provider external plugin feature
+  - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
+  - VM_POOL_IPS="vm1_ip,..." # set - comma-separated list of IP addresses for pre-created VMs (required)
+  #- SSH_USERNAME="peerpod" # set - SSH username for VM access
+  #- SSH_PUB_KEY_PATH="/root/.ssh/id_rsa.pub" # set - SSH public key file path
+  #- SSH_PRIV_KEY_PATH="/root/.ssh/id_rsa" # set - SSH private key file path
+  # If you change the SSH_PUB_KEY_PATH or SSH_PRIV_KEY_PATH, make sure to also update the volumeMounts and volumes in the yamls/caa-pod.yaml
+  #- SSH_TIMEOUT="30" # Uncomment and set SSH connection timeout in seconds. Default is 30
+  #- SSH_HOST_KEY_ALLOWLIST_DIR="/etc/ssh-allowlist" # Uncomment and set directory containing allowed SSH host key files (enables allowlist mode if set)
+  #- POOL_NAMESPACE="" # Uncomment and set namespace for ConfigMap storage (default: auto-detect from running pod)
+  #- POOL_CONFIGMAP_NAME="" # Uncomment and set ConfigMap name for state storage (default: byom-ip-pool-state). If you change this, make sure to also update the rbac rules in ../rbac/peer-pod.yaml
+  #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
+  #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
+  #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
+  #- FORWARDER_PORT="" # Uncomment and set if you want to use a specific port for agent-protocol-forwarder. Defaults to 15150
+  #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
+  #- REMOTE_HYPERVISOR_ENDPOINT="/run/peerpod/hypervisor.sock" # Path to Kata remote hypervisor socket. Default is /run/peerpod/hypervisor.sock
+  #- PEER_PODS_DIR="/run/peerpod/pods" # Path to peer pods directory. Default is /run/peerpod/pods
+##TLS_SETTINGS
+  #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
+  #- CERT_FILE="/etc/certificates/client.crt" # for TLS
+  #- CERT_KEY="/etc/certificates/client.key" # for TLS
+  #- TLS_SKIP_VERIFY="" # for testing only
+##TLS_SETTINGS
+
+secretGenerator:
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  literals:
+  - DUMMY_SECRET="dummy" # BYOM provider doesn't require cloud credentials
+- name: ssh-key-secret
+  namespace: confidential-containers-system
+  files: # key generation example: ssh-keygen -f ./id_rsa -N ""
+  #- id_rsa # set - path to private key
+  #- id_rsa.pub # set - path to public key
+- name: ssh-host-key-allowlist
+  namespace: confidential-containers-system
+  files: # SSH host public key files (*.pub)
+  # Extract all key types in proper format
+  #ssh-keyscan -t rsa vm1_ip | sed 's/^[^ ]* //' > vm1_rsa.pub
+  #ssh-keyscan -t ecdsa vm1_ip | sed 's/^[^ ]* //' > vm1_ecdsa.pub
+  #ssh-keyscan -t ed25519 vm1_ip | sed 's/^[^ ]* //' > vm1_ed25519.pub
+  #- vm1_rsa.pub
+  #- vm1_ecdsa.pub
+  #- vm1_ed25519.pub
+##TLS_SETTINGS
+#- name: certs-for-tls
+#  namespace: confidential-containers-system
+#  files:
+#  - <path_to_ca.crt> # set - relative path to ca.crt, located either in the same folder as the kustomization.yaml file or within a subfolder
+#  - <path_to_client.crt> # set - relative path to client.crt, located either in the same folder as the kustomization.yaml file or within a subfolder
+#  - <path_to_client.key> # set - relative path to client.key, located either in the same folder as the kustomization.yaml file or within a subfolder
+##TLS_SETTINGS
+
+patchesStrategicMerge:
+##TLS_SETTINGS
+  #- tls_certs_volume_mount.yaml # set (for tls)
+##TLS_SETTINGS
+##SSH_HOST_KEY_ALLOWLIST
+  #- ssh_host_key_allowlist_volume_mount.yaml # set (for SSH host key allowlist)
+##SSH_HOST_KEY_ALLOWLIST

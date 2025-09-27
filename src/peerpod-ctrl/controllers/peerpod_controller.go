@@ -49,6 +49,8 @@ const (
 
 //+kubebuilder:rbac:groups="",resourceNames=peer-pods-cm;peer-pods-secret,resources=configmaps;secrets,verbs=get
 
+//+kubebuilder:rbac:groups="",resourceNames=byom-ip-pool-state,resources=configmaps,verbs=get;update;patch
+
 //+kubebuilder:rbac:groups=confidentialcontainers.org,resources=peerpods,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=confidentialcontainers.org,resources=peerpods/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=confidentialcontainers.org,resources=peerpods/finalizers,verbs=update
