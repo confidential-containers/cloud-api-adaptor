@@ -70,6 +70,7 @@ VERSIONS_HASH := $(firstword $(shell sha256sum $(VERSIONS_SRC)))
 
 define query
 $(or $(shell $(YQ_COMMAND) '.$(1) | select(. != null)' $(VERSIONS_SRC)), \
+	$(shell for i in 1 2 3; do echo "DEBUG INFO [$$i]:" >&2; which yq >&2; yq --version >&2; ls -l versions.yaml >&2; cat versions.yaml >&2; if [ $$i -lt 3 ]; then sleep 3; fi; done) \
 	$(error $(1) is not set, and could not be automatically set from $(VERSIONS_SRC)))
 endef
 
