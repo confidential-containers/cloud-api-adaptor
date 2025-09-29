@@ -72,6 +72,16 @@ delete_amis() {
       aws ec2 delete-snapshot --snapshot-id "$snap"
     done
   done
+
+  # Delete the vmimport role if it exists
+  local vmimport_role="${res_basename}-vmimport"
+  if aws iam get-role --role-name "$vmimport_role" >/dev/null 2>&1; then
+    echo "Deleting vmimport role: $vmimport_role"
+    # First delete the role policy
+    aws iam delete-role-policy --role-name "$vmimport_role" --policy-name "vmimport" 2>/dev/null || true
+    # Then delete the role
+    aws iam delete-role --role-name "$vmimport_role" 2>/dev/null || true
+  fi
 }
 
 main() {
