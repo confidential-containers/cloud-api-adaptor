@@ -12,108 +12,108 @@ import (
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/aws"
 )
 
-func TestAwsCreateSimplePod(t *testing.T) {
+func TestBasicAwsCreateSimplePod(t *testing.T) {
 	assert := NewAWSAssert()
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
-func TestAwsCreatePodWithConfigMap(t *testing.T) {
+func TestBasicAwsCreatePodWithConfigMap(t *testing.T) {
 	assert := NewAWSAssert()
 
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
 }
 
-func TestAwsCreatePodWithSecret(t *testing.T) {
+func TestBasicAwsCreatePodWithSecret(t *testing.T) {
 	t.Skip("Test not passing")
 	assert := NewAWSAssert()
 
 	DoTestCreatePodWithSecret(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
+func TestNetAwsCreatePeerPodContainerWithExternalIPAccess(t *testing.T) {
 	t.Skip("Test not passing")
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodContainerWithExternalIPAccess(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodWithJob(t *testing.T) {
+func TestBasicAwsCreatePeerPodWithJob(t *testing.T) {
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodWithJob(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodAndCheckUserLogs(t *testing.T) {
+func TestResAwsCreatePeerPodAndCheckUserLogs(t *testing.T) {
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodAndCheckUserLogs(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
+func TestResAwsCreatePeerPodAndCheckWorkDirLogs(t *testing.T) {
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodAndCheckWorkDirLogs(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
+func TestResAwsCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t *testing.T) {
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageOnly(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T) {
+func TestResAwsCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t *testing.T) {
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithDeploymentOnly(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T) {
+func TestResAwsCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t *testing.T) {
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodAndCheckEnvVariableLogsWithImageAndDeployment(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodWithLargeImage(t *testing.T) {
+func TestImgAwsCreatePeerPodWithLargeImage(t *testing.T) {
 	assert := NewAWSAssert()
 
 	DoTestCreatePeerPodWithLargeImage(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodWithPVC(t *testing.T) {
+func TestStoreAwsCreatePeerPodWithPVC(t *testing.T) {
 	t.Skip("To be implemented")
 }
 
-func TestAwsCreatePeerPodWithAuthenticatedImagewithValidCredentials(t *testing.T) {
+func TestSecAwsCreatePeerPodWithAuthenticatedImageValidCredentials(t *testing.T) {
 	t.Skip("To be implemented")
 }
 
-func TestAwsCreatePeerPodWithAuthenticatedImageWithInvalidCredentials(t *testing.T) {
+func TestSecAwsCreatePeerPodWithAuthenticatedImageInvalidCredentials(t *testing.T) {
 	t.Skip("To be implemented")
 }
 
-func TestAwsCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
+func TestSecAwsCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T) {
 	t.Skip("To be implemented")
 }
 
-func TestAwsDeletePod(t *testing.T) {
+func TestBasicAwsDeletePod(t *testing.T) {
 	assert := NewAWSAssert()
 	DoTestDeleteSimplePod(t, testEnv, assert)
 }
 
-func TestAwsCreateNginxDeployment(t *testing.T) {
+func TestBasicAwsCreateNginxDeployment(t *testing.T) {
 	t.Skip("Test not passing")
 	assert := NewAWSAssert()
 	DoTestNginxDeployment(t, testEnv, assert)
 }
 
-func TestAwsCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
+func TestImgAwsCreatePeerPodContainerWithInvalidAlternateImage(t *testing.T) {
 	assert := NewAWSAssert()
 	nonExistingImageName := "ami-123456"
 	expectedErrorMessage := fmt.Sprintf("InvalidAMIID.NotFound: The image id '[%s]' does not exist: not found", nonExistingImageName)
 	DoTestCreatePeerPodContainerWithInvalidAlternateImage(t, testEnv, assert, nonExistingImageName, expectedErrorMessage)
 }
 
-func TestAwsPodWithInitContainer(t *testing.T) {
+func TestBasicAwsPodWithInitContainer(t *testing.T) {
 	assert := NewAWSAssert()
 	DoTestPodWithInitContainer(t, testEnv, assert)
 }
