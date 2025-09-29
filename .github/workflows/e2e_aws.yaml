@@ -47,26 +47,35 @@ jobs:
   # Check the org/repository has AWS secrets (AWS_IAM_ROLE_ARN). On absence of
   # secrets it should skip the execution of the test job.
   aws-credentials:
+    name: Check AWS credentials
     runs-on: ubuntu-22.04
     outputs:
       has_secrets: ${{ steps.check_secrets.outputs.has_secrets }}
     steps:
       - name: Check secrets
         id: check_secrets
+        env:
+          AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
         run: |
-         if [[ -n "${{ secrets.AWS_IAM_ROLE_ARN }}" ]]; then
+         if [[ -n "${AWS_IAM_ROLE_ARN}" ]]; then
            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
          else
            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
          fi
 
   test-aws:
+    name: "AWS e2e tests: (${{ inputs.cluster_type }}, ${{ inputs.container_runtime }})"
     needs: aws-credentials
     if: needs.aws-credentials.outputs.has_secrets == 'true'
     runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
+    env:
+        CAA_IMAGE: "${{ inputs.caa_image }}"
+        CLUSTER_TYPE: "${{ inputs.cluster_type }}"
+        CONTAINER_RUNTIME: "${{ inputs.container_runtime }}"
+        PODVM_IMAGE: "${{ inputs.podvm_image }}"
     permissions:
       id-token: write # Required by aws-actions/configure-aws-credentials
       contents: read  # Required by aws-actions/configure-aws-credentials
@@ -75,6 +84,7 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
+          persist-credentials: true
           ref: ${{ inputs.git_ref }}
 
       - name: Rebase the code
@@ -108,8 +118,6 @@ jobs:
 
       - name: Extract qcow2 from ${{ inputs.podvm_image }}
         if: ${{ !inputs.oras }}
-        env:
-          PODVM_IMAGE: "${{ inputs.podvm_image }}"
         run: |
            # shellcheck disable=SC2001 
            qcow2=$(echo "${PODVM_IMAGE}" | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
@@ -122,7 +130,7 @@ jobs:
       - name: Use oras to get qcow2 from ${{ inputs.podvm_image }}
         if: ${{ inputs.oras }}
         run: |
-          oras pull ${{ inputs.podvm_image }}
+          oras pull "${PODVM_IMAGE}"
           tar xvJpf podvm.tar.xz
           qcow2=$(find ./*.qcow2)
           echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
@@ -137,7 +145,7 @@ jobs:
       - name: Update kustomization configuration
         run: |
           cd "install/overlays/aws"
-          kustomize edit set image "cloud-api-adaptor=${{ inputs.caa_image }}"
+          kustomize edit set image "cloud-api-adaptor=${CAA_IMAGE}"
           # Print for debugging
           echo "::group::aws kustomization"
           cat kustomization.yaml
@@ -146,10 +154,10 @@ jobs:
       - name: Config aws
         run: |
           cat <<EOF>>aws.properties
-          CAA_IMAGE="${{ inputs.caa_image }}"
-          container_runtime="${{ inputs.container_runtime }}"
+          CAA_IMAGE="${CAA_IMAGE}"
+          container_runtime="${CONTAINER_RUNTIME}"
           disablecvm="true"
-          cluster_type="${{ inputs.cluster_type }}"
+          cluster_type="${CLUSTER_TYPE}"
           ssh_kp_name="caa-e2e-test"
           resources_basename="ci-caa-${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           EOF
@@ -173,7 +181,6 @@ jobs:
           # Add the kcli install directory to PATH for later steps
           echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
           echo "::endgroup::"
-          export CONTAINER_RUNTIME=${{ inputs.container_runtime }}
           echo "::group::Create cluster with $CONTAINER_RUNTIME"
           ./libvirt/kcli_cluster.sh create
           echo "KUBECONFIG=$HOME/.kcli/clusters/peer-pods/auth/kubeconfig" >> "$GITHUB_ENV"
@@ -187,7 +194,7 @@ jobs:
           export TEST_PROVISION="yes"
           export TEST_TEARDOWN="yes"
           export TEST_PROVISION_FILE="$PWD/aws.properties"
-          export TEST_PODVM_IMAGE="${{ env.PODVM_QCOW2 }}"
+          export TEST_PODVM_IMAGE="${PODVM_QCOW2}"
           export TEST_E2E_TIMEOUT="90m"
 
           make test-e2e
