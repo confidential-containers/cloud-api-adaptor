@@ -171,6 +171,7 @@ jobs:
         with:
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-duration-seconds: 5400
 
       - name: Create on-prem cluster
         if: inputs.cluster_type == 'onprem'
