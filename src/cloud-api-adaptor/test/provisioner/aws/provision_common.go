@@ -57,6 +57,7 @@ type AMIImage struct {
 	EBSSnapshotId   string // EBS disk snapshot ID
 	ID              string // AMI image ID
 	RootDeviceName  string // Root device name
+	VmImportRole    string // vmimport role name
 }
 
 // Vpc represents an AWS VPC
@@ -268,6 +269,30 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 		}
 	}
 
+	// Delete the vmimport role if it exists
+	_, err = a.iamClient.GetRole(context.TODO(), &iam.GetRoleInput{
+		RoleName: aws.String(a.Image.VmImportRole),
+	})
+	if err == nil {
+		log.Infof("Delete VM import role: %s", a.Image.VmImportRole)
+		// First delete the role policy
+		_, err = a.iamClient.DeleteRolePolicy(context.TODO(), &iam.DeleteRolePolicyInput{
+			RoleName:   aws.String(a.Image.VmImportRole),
+			PolicyName: aws.String("vmimport"),
+		})
+		if err != nil {
+			log.Errorf("Failed to delete VM import role policy: %s", err)
+		}
+
+		// Then delete the role
+		_, err = a.iamClient.DeleteRole(context.TODO(), &iam.DeleteRoleInput{
+			RoleName: aws.String(a.Image.VmImportRole),
+		})
+		if err != nil {
+			log.Errorf("Failed to delete VM import role: %s", err)
+		}
+	}
+
 	if a.Bucket.Key != "" {
 		log.Infof("Delete key %s from bucket: %s", a.Bucket.Key, a.Bucket.Name)
 		if err = a.Bucket.deleteKey(); err != nil {
@@ -329,8 +354,8 @@ func (a *AWSProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg 
 	}
 
 	// Create the vmimport role
-	log.Infof("Create vmimport service role")
-	if err = createVmimportServiceRole(ctx, a.iamClient, a.Bucket.Name); err != nil {
+	log.Infof("Create vmimport service role: %s", a.Image.VmImportRole)
+	if err = createVmimportServiceRole(ctx, a.iamClient, a.Bucket.Name, a.Image.VmImportRole); err != nil {
 		return err
 	}
 
@@ -773,9 +798,7 @@ func (b *S3Bucket) createBucket() error {
 // createVmimportServiceRole Creates the vmimport service role as required to use the VM snaphot import feature.
 //
 //	For further details see https://docs.aws.amazon.com/vm-import/latest/userguide/required-permissions.html
-func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketName string) error {
-	const roleName = "vmimport"
-
+func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketName string, roleName string) error {
 	_, err := client.GetRole(context.TODO(), &iam.GetRoleInput{
 		RoleName: aws.String(roleName),
 	})
@@ -842,6 +865,7 @@ func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
 		EBSSnapshotId:   "", // To be defined when the snapshot is created
 		ID:              properties["podvm_aws_ami_id"],
 		RootDeviceName:  "/dev/xvda",
+		VmImportRole:    properties["resources_basename"] + "-vmimport",
 	}
 }
 
@@ -858,6 +882,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 				S3Key:    aws.String(bucket.Key),
 			},
 		},
+		RoleName:          aws.String(i.VmImportRole),
 		TagSpecifications: defaultTagSpecifications(i.BaseName+"-snap", ec2types.ResourceTypeImportSnapshotTask),
 	})
 	if err != nil {
