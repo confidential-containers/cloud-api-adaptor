@@ -215,6 +215,7 @@ jobs:
   aws:
     name: aws
     if: |
+      github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch'
     needs: [podvm, image, prep_install]
     strategy:
