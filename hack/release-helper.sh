@@ -59,6 +59,11 @@ update_provider_overlays() {
 
     pushd src/cloud-api-adaptor/install/overlays/ || exit
     for provider in *; do
+        if [ "${provider}" == "alibabacloud" ] ; then
+            # The alibabacloud image is managed in a separate mirror
+            continue
+        fi
+
         pushd "${provider}" || exit
 
         # libvirt uses the dev built image
