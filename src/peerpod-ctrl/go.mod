@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.5
 
 require (
-	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.15.0
+	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.16.0
 	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.37.0
 	k8s.io/api v0.26.0

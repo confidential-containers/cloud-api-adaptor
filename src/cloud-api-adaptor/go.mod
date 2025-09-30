@@ -49,8 +49,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/eks v1.66.0
 	github.com/aws/aws-sdk-go-v2/service/iam v1.42.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.80.2
-	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.15.0
-	github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl v0.15.0
+	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.16.0
+	github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl v0.16.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/golang-jwt/jwt/v5 v5.3.0
