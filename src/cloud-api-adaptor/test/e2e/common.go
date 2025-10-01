@@ -269,13 +269,13 @@ func WithPVCBinding(t *testing.T, mountPath string, pvcName string, containerNam
 	}
 }
 
-func WithInitdata(kbsEndpoint string) PodOption {
+func WithInitdata(kbsEndpoint, initdata string) PodOption {
 	return func(p *corev1.Pod) {
 		if p.ObjectMeta.Annotations == nil {
 			p.ObjectMeta.Annotations = make(map[string]string)
 		}
 		key := INITDATA_ANNOTATION
-		value, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
+		value, err := buildInitdataAnnotation(kbsEndpoint, initdata)
 		if err != nil {
 			log.Fatalf("failed to build initdata %s", err)
 		}
@@ -406,27 +406,13 @@ func NewPodWithInitContainer(namespace string, podName string) PodOrError {
 	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithInitContainers(initContainer)))
 }
 
-func NewBusyboxPodWithName(namespace, podName string) PodOrError {
+func NewBusyboxPodWithName(namespace, podName string, options ...PodOption) PodOrError {
 	busyboxImage, err := utils.GetImage("busybox")
 	if err != nil {
 		return fromError(err)
 	}
-	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"})))
-}
-
-func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string, testInitdataVal string) PodOrError {
-	initdata, err := buildInitdataAnnotation(kbsEndpoint, testInitdataVal)
-	if err != nil {
-		return fromError(err)
-	}
-	annotationData := map[string]string{
-		INITDATA_ANNOTATION: initdata,
-	}
-	busyboxImage, err := utils.GetImage("busybox")
-	if err != nil {
-		return fromError(err)
-	}
-	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData)))
+	options = append(options, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, options...))
 }
 
 func NewPodWithPolicy(namespace, podName, policyFilePath string) PodOrError {
