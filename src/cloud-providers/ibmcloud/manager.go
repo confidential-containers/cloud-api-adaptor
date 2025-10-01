@@ -36,6 +36,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&ibmcloudVPCConfig.KeyID, "key-id", "", "SSH Key ID")
 	flags.StringVar(&ibmcloudVPCConfig.VpcID, "vpc-id", "", "VPC ID")
 	flags.BoolVar(&ibmcloudVPCConfig.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
+	flags.Var(&ibmcloudVPCConfig.Tags, "tags", "List of tags to attach to the Pod VMs, comma separated")
 
 }
 

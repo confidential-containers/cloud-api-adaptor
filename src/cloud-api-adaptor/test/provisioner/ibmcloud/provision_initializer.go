@@ -53,6 +53,7 @@ type IBMCloudProperties struct {
 	Zone              string
 	TunnelType        string
 	VxlanPort         string
+	Tags              string
 
 	WorkerCount   int
 	IsSelfManaged bool
@@ -99,6 +100,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		VpcID:             properties["VPC_ID"],
 		TunnelType:        properties["TUNNEL_TYPE"],
 		VxlanPort:         properties["VXLAN_PORT"],
+		Tags:              properties["TAGS"],
 	}
 
 	if len(IBMCloudProps.IBMCloudProvider) <= 0 {
