@@ -22,7 +22,7 @@ configMapGenerator:
   - GCP_ZONE="" # set e.g. "us-west1-a"
   - GCP_MACHINE_TYPE="e2-medium" # replace if needed. caa defaults to e2-medium
   - GCP_NETWORK="global/networks/default" # replace if needed.
-  - GCP_CONFIDENTIAL_TYPE="" # Needs to be set when DisableCVM=false. i.e: TDX, SEV or SEV_SNP. Check if the machine type is compatible.
+  - GCP_CONFIDENTIAL_TYPE="" # Needs to be set when DisableCVM=false. i.e: TDX or SEV_SNP. Check if the machine type is compatible.
   #- DISABLECVM="true" # Uncomment it if you want a generic VM
   #- PEERPODS_LIMIT_PER_NODE="10" # Max number of peer pods that can be created per node. Default is 10
   #- REMOTE_HYPERVISOR_ENDPOINT="/run/peerpod/hypervisor.sock" # Path to Kata remote hypervisor socket. Default is /run/peerpod/hypervisor.sock
