@@ -27,3 +27,21 @@ func NodeLabels(ctx context.Context, name string) (map[string]string, error) {
 	return node.Labels, nil
 
 }
+
+func ConfigMap(ctx context.Context, name string, namespace string) (map[string]string, error) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get k8s rest config: %w", err)
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create k8s clientset: %w", err)
+	}
+
+	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return cm.Data, nil
+}
