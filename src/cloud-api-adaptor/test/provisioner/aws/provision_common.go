@@ -50,6 +50,7 @@ type S3Bucket struct {
 
 // AMIImage represents an AMI image
 type AMIImage struct {
+	BaseName        string
 	Client          *ec2.Client
 	Description     string // Image description
 	DiskDescription string // Disk description
@@ -57,6 +58,7 @@ type AMIImage struct {
 	EBSSnapshotId   string // EBS disk snapshot ID
 	ID              string // AMI image ID
 	RootDeviceName  string // Root device name
+	VmImportRole    string // vmimport role name
 }
 
 // Vpc represents an AWS VPC
@@ -140,6 +142,11 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 	}
 
 	ec2Client := ec2.NewFromConfig(cfg)
+
+	if properties["resources_basename"] == "" {
+		properties["resources_basename"] = ResourcesBaseName + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	}
+
 	vpc := NewVpc(ec2Client, properties)
 
 	if properties["cluster_type"] == "" ||
@@ -287,6 +294,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"subnet_id":            a.Vpc.SubnetId,
 		"ssh_kp_name":          a.SshKpName,
 		"region":               a.AwsConfig.Region,
+		"resources_basename":   a.Vpc.BaseName,
 		"access_key_id":        credentials.AccessKeyID,
 		"secret_access_key":    credentials.SecretAccessKey,
 		"session_token":        credentials.SessionToken,
@@ -323,8 +331,8 @@ func (a *AWSProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg 
 	}
 
 	// Create the vmimport role
-	log.Infof("Create vmimport service role")
-	if err = createVmimportServiceRole(ctx, a.iamClient, a.Bucket.Name); err != nil {
+	log.Infof("Create vmimport service role: %s", a.Image.VmImportRole)
+	if err = createVmimportServiceRole(ctx, a.iamClient, a.Bucket.Name, a.Image.VmImportRole); err != nil {
 		return err
 	}
 
@@ -358,7 +366,7 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 	}
 
 	return &Vpc{
-		BaseName:          ResourcesBaseName,
+		BaseName:          properties["resources_basename"],
 		CidrBlock:         cidrBlock,
 		Client:            client,
 		ID:                properties["aws_vpc_id"],
@@ -767,9 +775,7 @@ func (b *S3Bucket) createBucket() error {
 // createVmimportServiceRole Creates the vmimport service role as required to use the VM snaphot import feature.
 //
 //	For further details see https://docs.aws.amazon.com/vm-import/latest/userguide/required-permissions.html
-func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketName string) error {
-	const roleName = "vmimport"
-
+func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketName string, roleName string) error {
 	_, err := client.GetRole(context.TODO(), &iam.GetRoleInput{
 		RoleName: aws.String(roleName),
 	})
@@ -828,6 +834,7 @@ func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketNa
 
 func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
 	return &AMIImage{
+		BaseName:        properties["resources_basename"],
 		Client:          client,
 		Description:     "Peer Pod VM image",
 		DiskDescription: "Peer Pod VM disk",
@@ -835,6 +842,7 @@ func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
 		EBSSnapshotId:   "", // To be defined when the snapshot is created
 		ID:              properties["podvm_aws_ami_id"],
 		RootDeviceName:  "/dev/xvda",
+		VmImportRole:    ResourcesBaseName + "-vmimport",
 	}
 }
 
@@ -851,7 +859,8 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 				S3Key:    aws.String(bucket.Key),
 			},
 		},
-		TagSpecifications: defaultTagSpecifications(ResourcesBaseName+"-snap", ec2types.ResourceTypeImportSnapshotTask),
+		RoleName:          aws.String(i.VmImportRole),
+		TagSpecifications: defaultTagSpecifications(i.BaseName+"-snap", ec2types.ResourceTypeImportSnapshotTask),
 	})
 	if err != nil {
 		return err
@@ -882,7 +891,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 		Tags: []ec2types.Tag{
 			{
 				Key:   aws.String("Name"),
-				Value: aws.String(ResourcesBaseName + "-snap"),
+				Value: aws.String(i.BaseName + "-snap"),
 			},
 		},
 	}); err != nil {
@@ -913,7 +922,7 @@ func (i *AMIImage) registerImage(imageName string) error {
 		EnaSupport:         aws.Bool(true),
 		RootDeviceName:     aws.String(i.RootDeviceName),
 		VirtualizationType: aws.String("hvm"),
-		TagSpecifications:  defaultTagSpecifications(ResourcesBaseName+"-img", ec2types.ResourceTypeImage),
+		TagSpecifications:  defaultTagSpecifications(i.BaseName+"-img", ec2types.ResourceTypeImage),
 	})
 	if err != nil {
 		return err
@@ -974,7 +983,7 @@ func (b *S3Bucket) uploadLargeFileWithCli(filepath string) error {
 	s3uri := "s3://" + b.Name + "/" + key
 
 	// TODO: region!
-	cmd := exec.Command("aws", "s3", "cp", filepath, s3uri)
+	cmd := exec.Command("aws", "s3", "cp", "--no-progress", filepath, s3uri)
 	out, err := cmd.CombinedOutput()
 	fmt.Printf("%s\n", out)
 	if err != nil {
