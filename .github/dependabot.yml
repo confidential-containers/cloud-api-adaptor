@@ -26,6 +26,9 @@ updates:
       k8s:
         patterns:
           - "*k8s.io*"
+      protobuf:
+        patterns:
+          - "google.golang.org/protobuf"
       x/crypto:
         patterns:
           - golang.org/x/crypto
