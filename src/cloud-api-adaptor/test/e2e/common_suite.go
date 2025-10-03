@@ -826,6 +826,11 @@ func DoTestSignatureVerificationAcceptsSignedImage(t *testing.T, e env.Environme
 		t.Fatalf("SetUpSignaturePolicyAndPublicKey failed with: %v", err)
 	}
 
+	err = kbs.PrintSignaturePolicyAndPublicKey()
+	if err != nil {
+		t.Fatalf("PrintSignaturePolicyAndPublicKey failed with: %v", err)
+	}
+
 	kbsEndpoint, err := kbs.GetCachedKbsEndpoint()
 	if err != nil {
 		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
@@ -858,6 +863,11 @@ func DoTestSignatureVerificationRejectsUnsignedImage(t *testing.T, e env.Environ
 		t.Fatalf("SetUpSignaturePolicyAndPublicKey failed with: %v", err)
 	}
 
+	err = kbs.PrintSignaturePolicyAndPublicKey()
+	if err != nil {
+		t.Fatalf("PrintSignaturePolicyAndPublicKey failed with: %v", err)
+	}
+
 	kbsEndpoint, err := kbs.GetCachedKbsEndpoint()
 	if err != nil {
 		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
@@ -881,5 +891,5 @@ func DoTestSignatureVerificationRejectsUnsignedImage(t *testing.T, e env.Environ
 	pod := NewPod(E2eNamespace, "signed-image", "signed-image", signed_image, WithInitdata(kbsEndpoint, initdata))
 	//TODO review this message
 	expectedErrorMessage := "Image policy rejected: Denied by policy"
-	NewTestCase(t, e, "SignedImageSucceeds", assert, "Failed to create PodVm from unsigned image").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
+	NewTestCase(t, e, "SignedImageSucceeds", assert, "Failed to create podvm from unsigned image").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
 }

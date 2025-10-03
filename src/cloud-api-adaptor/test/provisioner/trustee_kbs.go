@@ -650,6 +650,22 @@ func (p *KeyBrokerService) SetResource(resourcePath string, data []byte) error {
 	return p.setSecretKey(resourcePath, policyFilePath)
 }
 
+// TODO return rather than print later
+func (p *KeyBrokerService) PrintGetResource(resourcePath string) error {
+
+	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
+	log.Info("get key resource: ", resourcePath)
+	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--auth-private-key", privateKey, "get-resource", "--path", resourcePath)
+	cmd.Dir = trusteeRepoPath
+	cmd.Env = os.Environ()
+	stdoutStderr, err := cmd.CombinedOutput()
+	log.Tracef("%v, status: %v, output: %s", cmd, err, stdoutStderr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *KeyBrokerService) setImagePolicy(policy string) error {
 	return p.SetResource(ImagePolicyPath, []byte(policy))
 }
@@ -735,4 +751,17 @@ func (p *KeyBrokerService) SetUpSignaturePolicyAndPublicKey() error {
 		return fmt.Errorf("enableKbsCustomizedResourcePolicy failed with: %v", err)
 	}
 	return nil
+}
+
+func (p *KeyBrokerService) PrintSignaturePolicyAndPublicKey() error {
+	err := p.PrintGetResource(ImagePolicyPath)
+
+	if err != nil {
+		return fmt.Errorf("getImagePolicy failed with: %v", err)
+	}
+
+	err = p.PrintGetResource(CosignPublicKeyPath)
+	if err != nil {
+		return fmt.Errorf("getCosignPublicKey failed with: %v", err)
+	}
 }
