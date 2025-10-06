@@ -140,13 +140,13 @@ DNS.2   = 127.0.0.1
 	return keyContent, certContent, nil
 }
 
-func getHardwarePlatform() (string, error) {
+func GetHardwarePlatform() (string, error) {
 	out, err := exec.Command("uname", "-m").Output()
 	return strings.TrimSuffix(string(out), "\n"), err
 }
 
 func getOverlaysPath() (string, error) {
-	platform, err := getHardwarePlatform()
+	platform, err := GetHardwarePlatform()
 	if err != nil {
 		return "", err
 	}
@@ -438,7 +438,7 @@ func NewHTTPSKbsInstallOverlay(installDir string, cfg *envconf.Config) (InstallO
 		fmt.Println("Error generating certificate and key:", err)
 	}
 
-	platform, err := getHardwarePlatform()
+	platform, err := GetHardwarePlatform()
 	if err != nil {
 		return nil, err
 	}
@@ -610,17 +610,8 @@ func (p *KeyBrokerService) setSecretKey(resource string, path string) error {
 }
 
 func (p *KeyBrokerService) SetSecret(resourcePath string, secret []byte) error {
-	tempDir, _ := os.MkdirTemp("", "kbs_resource_files")
 
-	defer os.RemoveAll(tempDir)
-
-	secretFilePath := filepath.Join(tempDir, path.Base(resourcePath))
-	err := os.WriteFile(secretFilePath, secret, 0o644)
-	if err != nil {
-		return err
-	}
-
-	return p.setSecretKey(resourcePath, secretFilePath)
+	return p.SetResource(resourcePath, secret)
 }
 
 func (p *KeyBrokerService) SetImageDecryptionKey(keyID string, key []byte) error {
@@ -637,6 +628,20 @@ func (p *KeyBrokerService) SetImageDecryptionKey(keyID string, key []byte) error
 		return err
 	}
 	return p.setSecretKey(keyID, path.Name())
+}
+
+func (p *KeyBrokerService) SetResource(resourcePath string, data []byte) error {
+	tempDir, _ := os.MkdirTemp("", "kbs_resource_files")
+
+	defer os.RemoveAll(tempDir)
+
+	policyFilePath := filepath.Join(tempDir, path.Base(resourcePath))
+	err := os.WriteFile(policyFilePath, data, 0o644)
+	if err != nil {
+		return err
+	}
+
+	return p.setSecretKey(resourcePath, policyFilePath)
 }
 
 func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
