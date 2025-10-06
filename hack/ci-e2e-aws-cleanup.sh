@@ -84,6 +84,26 @@ delete_amis() {
   fi
 }
 
+delete_s3_buckets() {
+  local tag_bucket="${res_basename}-bucket"
+
+  # List all buckets and find ones that match our naming pattern
+  read -r -a buckets <<< "$(aws s3api list-buckets --query "Buckets[?contains(Name, '${tag_bucket}')].Name" --output text)"
+
+  if [ ${#buckets[@]} -eq 0 ]; then
+    echo "There aren't S3 buckets to delete."
+    return
+  fi
+
+  for bucket in "${buckets[@]}"; do
+    echo "Deleting S3 bucket: $bucket"
+    # First, delete all objects in the bucket
+    aws s3 rm "s3://$bucket" --recursive 2>/dev/null || true
+    # Then delete the bucket
+    aws s3api delete-bucket --bucket "$bucket" 2>/dev/null || true
+  done
+}
+
 main() {
   TEST_PROVISION_FILE="$(pwd)/aws.properties"
   export TEST_PROVISION_FILE
@@ -97,6 +117,7 @@ main() {
 
   delete_vpcs
   delete_amis
+  delete_s3_buckets
 }
 
 main
