@@ -819,3 +819,73 @@ func DoTestPodVMwithAnnotationMemory(t *testing.T, e env.Environment, assert Clo
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 	NewTestCase(t, e, "PodVMwithAnnotationMemory", assert, "PodVM with Annotation Memory is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
 }
+
+func DoTestSignatureVerificationAcceptsSignedImage(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+	err := kbs.SetUpSignaturePolicyAndPublicKey()
+	if err != nil {
+		t.Fatalf("SetUpSignaturePolicyAndPublicKey failed with: %v", err)
+	}
+
+	kbsEndpoint, err := kbs.GetCachedKbsEndpoint()
+	if err != nil {
+		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+	}
+
+	initdata_image_section := fmt.Sprintf("[image]\n\nimage_security_policy_uri = \"kbs:///%s\"", pv.ImagePolicyPath)
+
+	initdata_with_image := strings.Replace(testInitdata, "\"cdh.toml\"  = '''", "\"cdh.toml\"  = '''\n\n"+initdata_image_section, 1)
+
+	initdata, err := buildInitdataAnnotation(kbsEndpoint, initdata_with_image)
+	if err != nil {
+		t.Fatalf("buildInitdataAnnotation failed with: %v", err)
+	}
+
+	signed_image := "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed"
+	platform, err := pv.GetHardwarePlatform()
+	if err != nil {
+		t.Fatalf("getHardwarePlatform failed with: %v", err)
+	}
+	if platform != "x86_64" {
+		signed_image = signed_image + "-" + platform
+	}
+
+	pod := NewPod(E2eNamespace, "signed-image", "signed-image", signed_image, WithInitdata(kbsEndpoint, initdata))
+
+	NewTestCase(t, e, "SignedImageSucceeds", assert, "PodVM is created").WithPod(pod).Run()
+}
+
+// TODO refactor we previous
+func DoTestSignatureVerificationRejectsUnsignedImage(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+	err := kbs.SetUpSignaturePolicyAndPublicKey()
+	if err != nil {
+		t.Fatalf("SetUpSignaturePolicyAndPublicKey failed with: %v", err)
+	}
+
+	kbsEndpoint, err := kbs.GetCachedKbsEndpoint()
+	if err != nil {
+		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+	}
+
+	initdata_image_section := fmt.Sprintf("[image]\n\nimage_security_policy_uri = \"kbs:///%s\"", pv.ImagePolicyPath)
+
+	initdata_with_image := strings.Replace(testInitdata, "\"cdh.toml\"  = '''", "\"cdh.toml\"  = '''\n\n"+initdata_image_section, 1)
+
+	initdata, err := buildInitdataAnnotation(kbsEndpoint, initdata_with_image)
+	if err != nil {
+		t.Fatalf("buildInitdataAnnotation failed with: %v", err)
+	}
+
+	signed_image := "ghcr.io/confidential-containers/test-container-image-rs:unsigned"
+	platform, err := pv.GetHardwarePlatform()
+	if err != nil {
+		t.Fatalf("getHardwarePlatform failed with: %v", err)
+	}
+	if platform != "x86_64" {
+		signed_image = signed_image + "-" + platform
+	}
+
+	pod := NewPod(E2eNamespace, "signed-image", "signed-image", signed_image, WithInitdata(kbsEndpoint, initdata))
+	//TODO review this message
+	expectedErrorMessage := "Image policy rejected: Denied by policy"
+	NewTestCase(t, e, "SignedImageSucceeds", assert, "Failed to create PodVm from unsigned image").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
+}
