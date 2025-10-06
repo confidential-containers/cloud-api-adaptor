@@ -23,6 +23,7 @@ import (
 	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -167,7 +168,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		s3Client:  s3.NewFromConfig(cfg),
 		Bucket: &S3Bucket{
 			Client: s3.NewFromConfig(cfg),
-			Name:   "peer-pods-tests",
+			Name:   properties["resources_basename"] + "-bucket",
 			Key:    "", // To be defined when the file is uploaded
 		},
 		containerRuntime: properties["container_runtime"],
@@ -298,6 +299,12 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 		if err = a.Bucket.deleteKey(); err != nil {
 			return err
 		}
+	}
+
+	// Delete the S3 bucket
+	log.Infof("Delete S3 bucket: %s", a.Bucket.Name)
+	if err = a.Bucket.deleteBucket(); err != nil {
+		log.Errorf("Failed to delete S3 bucket: %s", err)
 	}
 
 	return nil
@@ -753,18 +760,32 @@ func (v *Vpc) deleteVpc() error {
 	return nil
 }
 
+// bucketExists checks if the S3 bucket exists
+func (b *S3Bucket) bucketExists() (bool, error) {
+	listBucketsResult, err := b.Client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
+	if err != nil {
+		return false, err
+	}
+
+	// Check if our bucket exists in the list
+	for _, bucket := range listBucketsResult.Buckets {
+		if *bucket.Name == b.Name {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // createBucket Creates the S3 bucket
 func (b *S3Bucket) createBucket() error {
-	buckets, err := b.Client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
+	exists, err := b.bucketExists()
 	if err != nil {
 		return err
 	}
 
-	for _, bucket := range buckets.Buckets {
-		if *bucket.Name == b.Name {
-			// Bucket exists
-			return nil
-		}
+	if exists {
+		return nil
 	}
 
 	_, err = b.Client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
@@ -789,6 +810,56 @@ func (b *S3Bucket) createBucket() error {
 		Bucket: &b.Name,
 		Policy: &policy,
 	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// deleteBucket deletes the S3 bucket and all its contents
+func (b *S3Bucket) deleteBucket() error {
+	exists, err := b.bucketExists()
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	// List all objects in the bucket
+	listResult, err := b.Client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+		Bucket: &b.Name,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Delete all objects if any exist
+	if len(listResult.Contents) > 0 {
+		var objectsToDelete []s3types.ObjectIdentifier
+		for _, obj := range listResult.Contents {
+			objectsToDelete = append(objectsToDelete, s3types.ObjectIdentifier{
+				Key: obj.Key,
+			})
+		}
+
+		_, err = b.Client.DeleteObjects(context.TODO(), &s3.DeleteObjectsInput{
+			Bucket: &b.Name,
+			Delete: &s3types.Delete{
+				Objects: objectsToDelete,
+			},
+		})
+		if err != nil {
+			log.Warnf("Failed to delete objects from bucket %s: %v", b.Name, err)
+		}
+	}
+
+	// Delete the bucket
+	_, err = b.Client.DeleteBucket(context.TODO(), &s3.DeleteBucketInput{
+		Bucket: &b.Name,
+	})
+	if err != nil {
 		return err
 	}
 
