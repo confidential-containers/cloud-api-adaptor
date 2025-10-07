@@ -209,6 +209,10 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 		}
 	}
 
+	if p.serviceConfig.DedicatedHostID != "" {
+		prototype.PlacementTarget = &vpcv1.InstancePlacementTargetPrototypeDedicatedHostGroupIdentityDedicatedHostGroupIdentityByID{ID: &p.serviceConfig.DedicatedHostID}
+	}
+
 	return prototype
 }
 
