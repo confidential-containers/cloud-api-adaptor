@@ -169,6 +169,7 @@ ibmcloud() {
         -primary-security-group-id "${IBMCLOUD_VPC_SG_ID}" \
         -vpc-id "${IBMCLOUD_VPC_ID}" \
         -dedicated-host-id "${IBMCLOUD_DEDICATED_HOST_ID}" \
+        -dedicated-host-group-id "${IBMCLOUD_DEDICATED_HOST_GROUP_ID}" \
         ${optionals}
 
 }

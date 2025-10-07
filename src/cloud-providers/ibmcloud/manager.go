@@ -37,6 +37,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&ibmcloudVPCConfig.VpcID, "vpc-id", "", "VPC ID")
 	flags.BoolVar(&ibmcloudVPCConfig.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
 	flags.StringVar(&ibmcloudVPCConfig.DedicatedHostID, "dedicated-host-id", "", "Dedicated Host ID")
+	flags.StringVar(&ibmcloudVPCConfig.DedicatedHostGroupID, "dedicated-host-group-id", "", "Dedicated Host Group ID")
 
 }
 
@@ -55,6 +56,7 @@ func (_ *Manager) LoadEnv() {
 	provider.DefaultToEnv(&ibmcloudVPCConfig.KeyID, "IBMCLOUD_SSH_KEY_ID", "")
 	provider.DefaultToEnv(&ibmcloudVPCConfig.VpcID, "IBMCLOUD_VPC_ID", "")
 	provider.DefaultToEnv(&ibmcloudVPCConfig.DedicatedHostID, "IBMCLOUD_DEDICATED_HOST_ID", "")
+	provider.DefaultToEnv(&ibmcloudVPCConfig.DedicatedHostGroupID, "IBMCLOUD_DEDICATED_HOST_GROUP_ID", "")
 
 	var instanceProfilesStr string
 	provider.DefaultToEnv(&instanceProfilesStr, "IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST", "")

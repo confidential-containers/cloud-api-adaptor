@@ -209,6 +209,11 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 		}
 	}
 
+	if p.serviceConfig.DedicatedHostGroupID != "" {
+		prototype.PlacementTarget = &vpcv1.InstancePlacementTargetPrototypeDedicatedHostGroupIdentityDedicatedHostGroupIdentityByID{ID: &p.serviceConfig.DedicatedHostGroupID}
+	}
+
+	// When both dedicated host id and group id provided the (more specific) dedicated host id will be used as the placement target
 	if p.serviceConfig.DedicatedHostID != "" {
 		prototype.PlacementTarget = &vpcv1.InstancePlacementTargetPrototypeDedicatedHostGroupIdentityDedicatedHostGroupIdentityByID{ID: &p.serviceConfig.DedicatedHostID}
 	}
@@ -281,9 +286,8 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
-	vpcInstance, resp, err := p.vpc.CreateInstanceWithContext(ctx, &vpcv1.CreateInstanceOptions{InstancePrototype: prototype})
+	vpcInstance, err := p.createInstanceWithFallback(ctx, prototype)
 	if err != nil {
-		logger.Printf("failed to create an instance : %v and the response is %s", err, resp)
 		return nil, err
 	}
 
@@ -320,6 +324,44 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	}
 
 	return instance, nil
+}
+
+func (p *ibmcloudVPCProvider) createInstanceWithFallback(ctx context.Context, prototype *vpcv1.InstancePrototype) (*vpcv1.Instance, error) {
+
+	dedicatedHostID := p.serviceConfig.DedicatedHostID
+	dedicatedHostGroupID := p.serviceConfig.DedicatedHostGroupID
+
+	inst, resp, err := p.vpc.CreateInstanceWithContext(ctx, &vpcv1.CreateInstanceOptions{
+		InstancePrototype: prototype,
+	})
+	if err == nil {
+		return inst, nil
+	}
+
+	// Fallback if both IDs exist
+	if dedicatedHostID != "" && dedicatedHostGroupID != "" {
+		logger.Printf("creation failed on dedicated host %q: %v; retrying on dedicated host group %q", dedicatedHostID, err, dedicatedHostGroupID)
+
+		prototype.PlacementTarget =
+			&vpcv1.InstancePlacementTargetPrototypeDedicatedHostGroupIdentityDedicatedHostGroupIdentityByID{
+				ID: &dedicatedHostGroupID,
+			}
+
+		inst2, resp2, err2 := p.vpc.CreateInstanceWithContext(ctx, &vpcv1.CreateInstanceOptions{
+			InstancePrototype: prototype,
+		})
+		if err2 == nil {
+			return inst2, nil
+		}
+
+		// Return both errors for context.
+		return nil, errors.Join(
+			fmt.Errorf("instance creation on dedicated host %q failed: %w and the response is %s", dedicatedHostID, err, resp),
+			fmt.Errorf("fallback instance creation on dedicated host group %q failed: %w and the response is %s", dedicatedHostGroupID, err2, resp2),
+		)
+	}
+
+	return nil, fmt.Errorf("failed to create an instance: %w and the response is %s", err, resp)
 }
 
 // Select an instance profile based on the memory and vcpu requirements
@@ -455,5 +497,6 @@ func (p *ibmcloudVPCProvider) ConfigVerifier() error {
 	if len(images) == 0 {
 		return fmt.Errorf("image-id is empty")
 	}
+
 	return nil
 }

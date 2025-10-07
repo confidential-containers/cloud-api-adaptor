@@ -79,6 +79,7 @@ type Config struct {
 	InstanceProfileSpecList  []provider.InstanceTypeSpec
 	DisableCVM               bool
 	DedicatedHostID          string
+	DedicatedHostGroupID     string
 }
 
 func (c Config) Redact() Config {
