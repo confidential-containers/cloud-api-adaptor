@@ -168,6 +168,7 @@ ibmcloud() {
         -primary-subnet-id "${IBMCLOUD_VPC_SUBNET_ID}" \
         -primary-security-group-id "${IBMCLOUD_VPC_SG_ID}" \
         -vpc-id "${IBMCLOUD_VPC_ID}" \
+        -cluster-id "${IBMCLOUD_CLUSTER_ID}" \
         ${optionals}
 
 }
