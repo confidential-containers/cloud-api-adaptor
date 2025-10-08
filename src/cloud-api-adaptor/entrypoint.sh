@@ -252,6 +252,7 @@ byom() {
     test_vars VM_POOL_IPS
 
     [[ "${VM_POOL_IPS}" ]] && optionals+="-vm-pool-ips ${VM_POOL_IPS} "
+    [[ "${MAX_RANGE_IPS}" ]] && optionals+="-max-range-ips ${MAX_RANGE_IPS} "
     [[ "${SSH_USERNAME}" ]] && optionals+="-ssh-username ${SSH_USERNAME} "
     [[ "${SSH_PUB_KEY_PATH}" ]] && optionals+="-ssh-pub-key ${SSH_PUB_KEY_PATH} "
     [[ "${SSH_PRIV_KEY_PATH}" ]] && optionals+="-ssh-priv-key ${SSH_PRIV_KEY_PATH} "

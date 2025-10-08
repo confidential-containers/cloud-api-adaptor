@@ -11,7 +11,10 @@ import (
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
 
-var byomcfg Config
+var (
+	byomcfg     Config
+	maxRangeIPs int // Maximum IPs in an IP range
+)
 
 type Manager struct{}
 
@@ -21,6 +24,7 @@ func init() {
 
 func (m *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.Var(&byomcfg.VMPoolIPs, "vm-pool-ips", "Comma-separated list of IP addresses for pre-created VMs")
+	flags.IntVar(&maxRangeIPs, "max-range-ips", 100, "Maximum number of IPs allowed in a range")
 	flags.StringVar(&byomcfg.SSHUserName, "ssh-username", "peerpod", "SSH username for VM access")
 	flags.StringVar(&byomcfg.SSHPubKeyPath, "ssh-pub-key", "/root/.ssh/id_rsa.pub", "SSH public key file path")
 	flags.StringVar(&byomcfg.SSHPrivKeyPath, "ssh-priv-key", "/root/.ssh/id_rsa", "SSH private key file path")
