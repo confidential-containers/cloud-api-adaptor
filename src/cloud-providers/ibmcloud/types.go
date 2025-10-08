@@ -78,6 +78,8 @@ type Config struct {
 	InstanceProfiles         instanceProfiles
 	InstanceProfileSpecList  []provider.InstanceTypeSpec
 	DisableCVM               bool
+
+	clusterID string // only for internal use
 }
 
 func (c Config) Redact() Config {

@@ -23,6 +23,9 @@ import (
 const (
 	maxRetries    = 10
 	queryInterval = 2
+
+	clusterInfoCMName      = "cluster-info"
+	clusterInfoCMNamespace = "kube-system"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/ibmcloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -116,6 +119,9 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		}
 	}
 
+	clusterID := getClusterInfo()
+	config.clusterID = clusterID
+
 	provider := &ibmcloudVPCProvider{
 		vpc:           vpcV1,
 		serviceConfig: config,
@@ -132,6 +138,17 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	logger.Printf("ibmcloud-vpc config: %#v", config.Redact())
 
 	return provider, nil
+}
+
+func getClusterInfo() (clusterID string) {
+	cm, err := util.ConfigMap(context.TODO(), clusterInfoCMName, clusterInfoCMNamespace)
+	if err != nil {
+		logger.Printf("warning, could not get %s config map in %s namespace\ndue to: %v\n", clusterInfoCMName, clusterInfoCMNamespace, err)
+		return
+	}
+
+	clusterID = cm["cluster_id"]
+	return
 }
 
 func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourceGroupID string, securityGroupID string, e error) {
