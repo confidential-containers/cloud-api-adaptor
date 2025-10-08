@@ -81,6 +81,7 @@ func TestIPAllocationState(t *testing.T) {
 
 func TestVMPoolIPsValidation(t *testing.T) {
 	var ips vmPoolIPs
+	maxRangeIPs = 10
 
 	// Test valid IPv4 addresses
 	err := ips.Set("192.168.1.1,10.0.0.1,172.16.0.1")
@@ -113,6 +114,40 @@ func TestVMPoolIPsValidation(t *testing.T) {
 	err = ips.Set("999.999.999.999")
 	if err == nil {
 		t.Error("Malformed IP address should be rejected")
+	}
+
+	// Test max range of IPs with maxRangeIPs=10
+	err = ips.Set("10.1.1.1,192.168.1.1-192.168.1.11,10.1.1.4")
+	if err != nil {
+		t.Errorf("Valid IP range should be accepted: %v", err)
+	}
+	if len(ips) != 12 {
+		t.Errorf("Expected 12 IPs, got %d", len(ips))
+	}
+
+	// Test IP ranges
+	err = ips.Set("192.168.1.1-192.168.1.4,10.0.0.1")
+	if err != nil {
+		t.Errorf("Valid IP range should be accepted: %v", err)
+	}
+	if len(ips) != 5 {
+		t.Errorf("Expected 5 IPs, got %d", len(ips))
+	}
+
+	// Test deduplication of IPs
+	err = ips.Set("192.168.1.1-192.168.1.4,192.168.1.1")
+	if err != nil {
+		t.Errorf("Valid IP range should be accepted: %v", err)
+	}
+	if len(ips) != 4 {
+		t.Errorf("Expected 4 IPs, got %d", len(ips))
+	}
+
+	// Test IP range validation
+	err1 := ips.Set("192.168.1.4-192.168.1.2")
+	err2 := ips.Set("192.168.1.1-192.168.1.1")
+	if err1 == nil || err2 == nil {
+		t.Error("Invalid IP range with start IP <= end IP")
 	}
 
 	// Test empty strings are skipped

@@ -6,7 +6,7 @@ The BYOM (Bring Your Own Machine) provider allows you to use pre-created VMs as 
 
 ### Basic Settings
 
-- **VM_POOL_IPS**: Comma-separated list of pre-created VM IP addresses
+- **VM_POOL_IPS**: Comma-separated list of pre-created VM IP addresses or IP ranges, or a combination of both. Each range can include up to 100 IPs by default. This limit can be customized by setting `MAX_RANGE_IPS`
 - **SSH_USERNAME**: SSH username for VM access. Default is "peerpod" for VM image built using the mkosi `sftp` profile
 
 ### Create SSH key pair

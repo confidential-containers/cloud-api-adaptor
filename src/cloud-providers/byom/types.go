@@ -6,6 +6,7 @@ package byom
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/netip"
 	"strings"
 	"time"
@@ -29,25 +30,60 @@ func (v *vmPoolIPs) Set(value string) error {
 		return nil
 	}
 
-	ips := strings.Split(value, ",")
-	validIPs := make([]string, 0, len(ips))
+	entries := strings.Split(value, ",")
+	var allIPs []string
+	validIPs := make(map[string]struct{})
+	uniqueIPs := make([]string, 0, len(allIPs))
 
-	// Validate each IP address
-	for _, ip := range ips {
-		ip = strings.TrimSpace(ip)
-		if ip == "" {
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
 			continue // Skip empty strings
 		}
 
-		// Validate IP address format
-		if _, err := netip.ParseAddr(ip); err != nil {
-			return fmt.Errorf("invalid IP address %q: %w", ip, err)
-		}
+		// Handle range of IPs
+		if start, end, found := strings.Cut(entry, "-"); found {
+			startIP, err1 := netip.ParseAddr(start)
+			endIP, err2 := netip.ParseAddr(end)
+			if err1 != nil || err2 != nil {
+				return fmt.Errorf("invalid IP range %q: %v, %v", entry, err1, err2)
+			}
 
-		validIPs = append(validIPs, ip)
+			if startIP.Compare(endIP) >= 0 {
+				return fmt.Errorf("invalid IP range (startIP <= endIP): %s", entry)
+			}
+
+			count := 0
+			for ip := startIP; ; ip = ip.Next() {
+				count++
+				if count > maxRangeIPs {
+					log.Printf("IP range %s exceeds maximum limit range, using only the first %d IPs for VM pool", entry, maxRangeIPs)
+					break
+				}
+				allIPs = append(allIPs, ip.String())
+				if ip == endIP {
+					break
+				}
+			}
+		} else {
+			// Validate single IP entries
+			ip, err := netip.ParseAddr(entry)
+			if err != nil {
+				return fmt.Errorf("invalid IP address %q: %w", entry, err)
+			}
+			allIPs = append(allIPs, ip.String())
+		}
 	}
 
-	*v = validIPs
+	// Handle deduplication of IPs
+	for _, ip := range allIPs {
+		if _, exists := validIPs[ip]; !exists {
+			validIPs[ip] = struct{}{}
+			uniqueIPs = append(uniqueIPs, ip)
+		}
+	}
+
+	*v = uniqueIPs
 	return nil
 }
 

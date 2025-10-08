@@ -20,6 +20,7 @@ configMapGenerator:
   - ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN="false" # flag to enable/disable dynamically load cloud provider external plugin feature
   - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
   - VM_POOL_IPS="vm1_ip,..." # set - comma-separated list of IP addresses for pre-created VMs (required)
+  #- MAX_RANGE_IPS="" # Uncomment and set maximum number of IPs allowed in a range. Defaults to 100 
   #- SSH_USERNAME="peerpod" # set - SSH username for VM access
   #- SSH_PUB_KEY_PATH="/root/.ssh/id_rsa.pub" # set - SSH public key file path
   #- SSH_PRIV_KEY_PATH="/root/.ssh/id_rsa" # set - SSH private key file path
