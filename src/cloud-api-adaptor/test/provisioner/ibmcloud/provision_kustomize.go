@@ -63,6 +63,8 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "INITDATA":
 		return true
+	case "CLUSTER_ID":
+		return true
 	default:
 		return false
 	}
