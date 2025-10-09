@@ -29,7 +29,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&azurecfg.Size, "instance-size", "Standard_DC2as_v5", "Instance size")
 	flags.StringVar(&azurecfg.ImageId, "imageid", "", "Image Id")
 	flags.StringVar(&azurecfg.SubscriptionId, "subscriptionid", "", "Subscription ID")
-	flags.StringVar(&azurecfg.SSHKeyPath, "ssh-key-path", "$HOME/.ssh/id_rsa.pub", "Path to SSH public key")
+	flags.StringVar(&azurecfg.SSHKeyPath, "ssh-key-path", "", "Path to SSH public key")
 	flags.StringVar(&azurecfg.SSHUserName, "ssh-username", "peerpod", "SSH User Name")
 	flags.BoolVar(&azurecfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
 	// Add a List parameter to indicate different types of instance sizes to be used for the Pod VMs

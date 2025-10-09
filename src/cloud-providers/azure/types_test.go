@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func TestAzureMasking(t *testing.T) {
@@ -38,4 +40,20 @@ func TestAzureMasking(t *testing.T) {
 
 	checkLine("%v")
 	checkLine("%s")
+}
+
+func TestGenerateSSHKeyPair(t *testing.T) {
+	publicKeyBytes, err := generateSSHPublicKey()
+	if err != nil {
+		t.Fatalf("Failed to generate SSH key pair: %v", err)
+	}
+
+	if len(publicKeyBytes) == 0 {
+		t.Error("Generated public key bytes are empty")
+	}
+
+	_, _, _, _, err = ssh.ParseAuthorizedKey(publicKeyBytes)
+	if err != nil {
+		t.Errorf("Failed to parse generated public key: %v", err)
+	}
 }
