@@ -5,6 +5,8 @@ package azure
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -22,6 +24,7 @@ import (
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
+	"golang.org/x/crypto/ssh"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/azure] ", log.LstdFlags|log.Lmsgprefix)
@@ -72,6 +75,37 @@ func parseIP(addr string) (*netip.Addr, error) {
 		return nil, fmt.Errorf("parse pod vm IP %q: %w", addr, err)
 	}
 	return &ip, nil
+}
+
+// generateSSHPublicKey generates a new RSA SSH key pair,
+// but doesn't save anything in the filesystem
+func generateSSHPublicKey() ([]byte, error) {
+	logger.Printf("Generating a new in-memory SSH public key")
+
+	// Generate RSA private key
+	bitSize := 4096
+	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate RSA private key: %w", err)
+	}
+
+	// Validate the private key
+	err = privateKey.Validate()
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate private key: %w", err)
+	}
+
+	// Generate public key
+	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate public key: %w", err)
+	}
+
+	// Marshal public key in authorized_keys format
+	publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
+
+	logger.Printf("Successfully generated a new in-memory SSH public key")
+	return publicKeyBytes, nil
 }
 
 func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachine) ([]netip.Addr, error) {
@@ -218,10 +252,11 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	diskName := fmt.Sprintf("%s-disk", instanceName)
 	nicName := fmt.Sprintf("%s-net", instanceName)
 
-	// require ssh key for authentication on linux
 	sshPublicKeyPath := os.ExpandEnv(p.serviceConfig.SSHKeyPath)
 	var sshBytes []byte
-	if _, err := os.Stat(sshPublicKeyPath); err == nil {
+	if sshPublicKeyPath != "" {
+		// SSH key path provided, read the key
+		logger.Printf("Using existing SSH public key from %s", sshPublicKeyPath)
 		sshBytes, err = os.ReadFile(sshPublicKeyPath)
 		if err != nil {
 			err = fmt.Errorf("reading ssh public key file: %w", err)
@@ -229,9 +264,14 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 			return nil, err
 		}
 	} else {
-		err = fmt.Errorf("ssh public key: %w", err)
-		logger.Printf("%v", err)
-		return nil, err
+		// SSH key path is empty, generate a new key automatically in memory
+		logger.Printf("SSH public key path is empty, generating new public key")
+		sshBytes, err = generateSSHPublicKey()
+		if err != nil {
+			err = fmt.Errorf("failed to generate SSH public key: %w", err)
+			logger.Printf("%v", err)
+			return nil, err
+		}
 	}
 
 	imageId := p.serviceConfig.ImageId
@@ -307,9 +347,12 @@ func (p *azureProvider) ConfigVerifier() error {
 		return fmt.Errorf("ImageId is empty")
 	}
 
-	// Verify it's an SSH key file with the right permissions
-	if err := provider.VerifySSHKeyFile(p.serviceConfig.SSHKeyPath); err != nil {
-		return fmt.Errorf("SSH key is invalid: %s", err)
+	// If defined, verify it's an SSH key file with the right permissions
+	// If empty, it means the SSH key is generated in memory
+	if p.serviceConfig.SSHKeyPath != "" {
+		if err := provider.VerifySSHKeyFile(p.serviceConfig.SSHKeyPath); err != nil {
+			return fmt.Errorf("SSH key is invalid: %s", err)
+		}
 	}
 	return nil
 }
