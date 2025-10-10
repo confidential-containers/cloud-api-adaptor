@@ -8,9 +8,10 @@
 
 script_dir=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 
+readonly res_basename="ci-caa-${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
 
 delete_vpcs() {
-  local tag_vpc="caa-e2e-test-vpc"
+  local tag_vpc="${res_basename}-vpc"
   read -r -a vpcs <<< "$(aws  ec2 describe-vpcs --filters Name=tag:Name,Values=$tag_vpc --query 'Vpcs[*].VpcId' --output text)"
 
   if [ ${#vpcs[@]} -eq 0 ]; then
@@ -28,13 +29,13 @@ delete_vpcs() {
     done
 
     # Find related security groups
-    read -r -a sgs <<< "$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$vpc" "Name=tag:Name,Values=caa-e2e-test-sg" --query 'SecurityGroups[*].GroupId' --output text)"
+    read -r -a sgs <<< "$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$vpc" "Name=tag:Name,Values=${res_basename}-sg" --query 'SecurityGroups[*].GroupId' --output text)"
     for sg in "${sgs[@]}"; do
       echo "aws_vpc_sg_id=\"$sg\"" >> "$TEST_PROVISION_FILE"
     done
 
     # Find related route tables and internet gateways
-    read -r -a rtbs <<< "$(aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$vpc" "Name=tag:Name,Values=caa-e2e-test-rtb" --query 'RouteTables[*].RouteTableId' --output text)"
+    read -r -a rtbs <<< "$(aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$vpc" "Name=tag:Name,Values=${res_basename}-rtb" --query 'RouteTables[*].RouteTableId' --output text)"
     for rtb in "${rtbs[@]}"; do
       echo "aws_vpc_rt_id=\"$rtb\"" >> "$TEST_PROVISION_FILE"
       read -r -a igws <<< "$(aws ec2 describe-route-tables --filter "Name=route-table-id,Values=$rtb" --query 'RouteTables[0].Routes[*].GatewayId' --output text)"
@@ -49,7 +50,7 @@ delete_vpcs() {
 }
 
 delete_amis() {
-  local tag_ami="caa-e2e-test-img"
+  local tag_ami="${res_basename}-img"
 
   read -r -a amis <<< "$(aws ec2 describe-images --owners self --filters "Name=tag:Name,Values=$tag_ami" --query 'Images[*].ImageId' --output text)"
 
@@ -68,6 +69,36 @@ delete_amis() {
       aws ec2 delete-snapshot --snapshot-id "$snap"
     done
   done
+
+  # Delete the vmimport role if it exists
+  local vmimport_role="${res_basename}-vmimport"
+  if aws iam get-role --role-name "$vmimport_role" >/dev/null 2>&1; then
+    echo "Deleting vmimport role: $vmimport_role"
+    # First delete the role policy
+    aws iam delete-role-policy --role-name "$vmimport_role" --policy-name "vmimport" 2>/dev/null || true
+    # Then delete the role
+    aws iam delete-role --role-name "$vmimport_role" 2>/dev/null || true
+  fi
+}
+
+delete_s3_buckets() {
+  local tag_bucket="${res_basename}-bucket"
+
+  # List all buckets and find ones that match our naming pattern
+  read -r -a buckets <<< "$(aws s3api list-buckets --query "Buckets[?contains(Name, '${tag_bucket}')].Name" --output text)"
+
+  if [ ${#buckets[@]} -eq 0 ]; then
+    echo "There aren't S3 buckets to delete."
+    return
+  fi
+
+  for bucket in "${buckets[@]}"; do
+    echo "Deleting S3 bucket: $bucket"
+    # First, delete all objects in the bucket
+    aws s3 rm "s3://$bucket" --recursive 2>/dev/null || true
+    # Then delete the bucket
+    aws s3api delete-bucket --bucket "$bucket" 2>/dev/null || true
+  done
 }
 
 main() {
@@ -83,6 +114,7 @@ main() {
 
   delete_vpcs
   delete_amis
+  delete_s3_buckets
 }
 
 main

@@ -23,6 +23,7 @@ import (
 	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +37,6 @@ const (
 	EksCniAddonVersion = "v1.12.5-eksbuild.2"
 	EksVersion         = "1.26"
 	AwsCredentialsFile = "aws-cred.env"
-	ResourcesBaseName  = "caa-e2e-test"
 )
 
 var AWSProps = &AWSProvisioner{}
@@ -50,6 +50,7 @@ type S3Bucket struct {
 
 // AMIImage represents an AMI image
 type AMIImage struct {
+	BaseName        string
 	Client          *ec2.Client
 	Description     string // Image description
 	DiskDescription string // Disk description
@@ -57,6 +58,7 @@ type AMIImage struct {
 	EBSSnapshotId   string // EBS disk snapshot ID
 	ID              string // AMI image ID
 	RootDeviceName  string // Root device name
+	VmImportRole    string // vmimport role name
 }
 
 // Vpc represents an AWS VPC
@@ -140,6 +142,11 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 	}
 
 	ec2Client := ec2.NewFromConfig(cfg)
+
+	if properties["resources_basename"] == "" {
+		properties["resources_basename"] = "caa-e2e-test-" + strconv.FormatInt(time.Now().Unix(), 10)
+	}
+
 	vpc := NewVpc(ec2Client, properties)
 
 	if properties["cluster_type"] == "" ||
@@ -161,7 +168,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		s3Client:  s3.NewFromConfig(cfg),
 		Bucket: &S3Bucket{
 			Client: s3.NewFromConfig(cfg),
-			Name:   "peer-pods-tests",
+			Name:   properties["resources_basename"] + "-bucket",
 			Key:    "", // To be defined when the file is uploaded
 		},
 		containerRuntime: properties["container_runtime"],
@@ -263,11 +270,41 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 		}
 	}
 
+	// Delete the vmimport role if it exists
+	_, err = a.iamClient.GetRole(context.TODO(), &iam.GetRoleInput{
+		RoleName: aws.String(a.Image.VmImportRole),
+	})
+	if err == nil {
+		log.Infof("Delete VM import role: %s", a.Image.VmImportRole)
+		// First delete the role policy
+		_, err = a.iamClient.DeleteRolePolicy(context.TODO(), &iam.DeleteRolePolicyInput{
+			RoleName:   aws.String(a.Image.VmImportRole),
+			PolicyName: aws.String("vmimport"),
+		})
+		if err != nil {
+			log.Errorf("Failed to delete VM import role policy: %s", err)
+		}
+
+		// Then delete the role
+		_, err = a.iamClient.DeleteRole(context.TODO(), &iam.DeleteRoleInput{
+			RoleName: aws.String(a.Image.VmImportRole),
+		})
+		if err != nil {
+			log.Errorf("Failed to delete VM import role: %s", err)
+		}
+	}
+
 	if a.Bucket.Key != "" {
 		log.Infof("Delete key %s from bucket: %s", a.Bucket.Key, a.Bucket.Name)
 		if err = a.Bucket.deleteKey(); err != nil {
 			return err
 		}
+	}
+
+	// Delete the S3 bucket
+	log.Infof("Delete S3 bucket: %s", a.Bucket.Name)
+	if err = a.Bucket.deleteBucket(); err != nil {
+		log.Errorf("Failed to delete S3 bucket: %s", err)
 	}
 
 	return nil
@@ -287,6 +324,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"subnet_id":            a.Vpc.SubnetId,
 		"ssh_kp_name":          a.SshKpName,
 		"region":               a.AwsConfig.Region,
+		"resources_basename":   a.Vpc.BaseName,
 		"access_key_id":        credentials.AccessKeyID,
 		"secret_access_key":    credentials.SecretAccessKey,
 		"session_token":        credentials.SessionToken,
@@ -323,8 +361,8 @@ func (a *AWSProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg 
 	}
 
 	// Create the vmimport role
-	log.Infof("Create vmimport service role")
-	if err = createVmimportServiceRole(ctx, a.iamClient, a.Bucket.Name); err != nil {
+	log.Infof("Create vmimport service role: %s", a.Image.VmImportRole)
+	if err = createVmimportServiceRole(ctx, a.iamClient, a.Bucket.Name, a.Image.VmImportRole); err != nil {
 		return err
 	}
 
@@ -358,7 +396,7 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 	}
 
 	return &Vpc{
-		BaseName:          ResourcesBaseName,
+		BaseName:          properties["resources_basename"],
 		CidrBlock:         cidrBlock,
 		Client:            client,
 		ID:                properties["aws_vpc_id"],
@@ -722,18 +760,32 @@ func (v *Vpc) deleteVpc() error {
 	return nil
 }
 
+// bucketExists checks if the S3 bucket exists
+func (b *S3Bucket) bucketExists() (bool, error) {
+	listBucketsResult, err := b.Client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
+	if err != nil {
+		return false, err
+	}
+
+	// Check if our bucket exists in the list
+	for _, bucket := range listBucketsResult.Buckets {
+		if *bucket.Name == b.Name {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // createBucket Creates the S3 bucket
 func (b *S3Bucket) createBucket() error {
-	buckets, err := b.Client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
+	exists, err := b.bucketExists()
 	if err != nil {
 		return err
 	}
 
-	for _, bucket := range buckets.Buckets {
-		if *bucket.Name == b.Name {
-			// Bucket exists
-			return nil
-		}
+	if exists {
+		return nil
 	}
 
 	_, err = b.Client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
@@ -764,12 +816,60 @@ func (b *S3Bucket) createBucket() error {
 	return nil
 }
 
+// deleteBucket deletes the S3 bucket and all its contents
+func (b *S3Bucket) deleteBucket() error {
+	exists, err := b.bucketExists()
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	// List all objects in the bucket
+	listResult, err := b.Client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+		Bucket: &b.Name,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Delete all objects if any exist
+	if len(listResult.Contents) > 0 {
+		var objectsToDelete []s3types.ObjectIdentifier
+		for _, obj := range listResult.Contents {
+			objectsToDelete = append(objectsToDelete, s3types.ObjectIdentifier{
+				Key: obj.Key,
+			})
+		}
+
+		_, err = b.Client.DeleteObjects(context.TODO(), &s3.DeleteObjectsInput{
+			Bucket: &b.Name,
+			Delete: &s3types.Delete{
+				Objects: objectsToDelete,
+			},
+		})
+		if err != nil {
+			log.Warnf("Failed to delete objects from bucket %s: %v", b.Name, err)
+		}
+	}
+
+	// Delete the bucket
+	_, err = b.Client.DeleteBucket(context.TODO(), &s3.DeleteBucketInput{
+		Bucket: &b.Name,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // createVmimportServiceRole Creates the vmimport service role as required to use the VM snaphot import feature.
 //
 //	For further details see https://docs.aws.amazon.com/vm-import/latest/userguide/required-permissions.html
-func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketName string) error {
-	const roleName = "vmimport"
-
+func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketName string, roleName string) error {
 	_, err := client.GetRole(context.TODO(), &iam.GetRoleInput{
 		RoleName: aws.String(roleName),
 	})
@@ -828,6 +928,7 @@ func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketNa
 
 func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
 	return &AMIImage{
+		BaseName:        properties["resources_basename"],
 		Client:          client,
 		Description:     "Peer Pod VM image",
 		DiskDescription: "Peer Pod VM disk",
@@ -835,6 +936,7 @@ func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
 		EBSSnapshotId:   "", // To be defined when the snapshot is created
 		ID:              properties["podvm_aws_ami_id"],
 		RootDeviceName:  "/dev/xvda",
+		VmImportRole:    properties["resources_basename"] + "-vmimport",
 	}
 }
 
@@ -851,7 +953,8 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 				S3Key:    aws.String(bucket.Key),
 			},
 		},
-		TagSpecifications: defaultTagSpecifications(ResourcesBaseName+"-snap", ec2types.ResourceTypeImportSnapshotTask),
+		RoleName:          aws.String(i.VmImportRole),
+		TagSpecifications: defaultTagSpecifications(i.BaseName+"-snap", ec2types.ResourceTypeImportSnapshotTask),
 	})
 	if err != nil {
 		return err
@@ -882,7 +985,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 		Tags: []ec2types.Tag{
 			{
 				Key:   aws.String("Name"),
-				Value: aws.String(ResourcesBaseName + "-snap"),
+				Value: aws.String(i.BaseName + "-snap"),
 			},
 		},
 	}); err != nil {
@@ -913,7 +1016,7 @@ func (i *AMIImage) registerImage(imageName string) error {
 		EnaSupport:         aws.Bool(true),
 		RootDeviceName:     aws.String(i.RootDeviceName),
 		VirtualizationType: aws.String("hvm"),
-		TagSpecifications:  defaultTagSpecifications(ResourcesBaseName+"-img", ec2types.ResourceTypeImage),
+		TagSpecifications:  defaultTagSpecifications(i.BaseName+"-img", ec2types.ResourceTypeImage),
 	})
 	if err != nil {
 		return err
@@ -974,7 +1077,7 @@ func (b *S3Bucket) uploadLargeFileWithCli(filepath string) error {
 	s3uri := "s3://" + b.Name + "/" + key
 
 	// TODO: region!
-	cmd := exec.Command("aws", "s3", "cp", filepath, s3uri)
+	cmd := exec.Command("aws", "s3", "cp", "--no-progress", filepath, s3uri)
 	out, err := cmd.CombinedOutput()
 	fmt.Printf("%s\n", out)
 	if err != nil {
