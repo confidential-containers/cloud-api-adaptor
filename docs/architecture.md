@@ -29,7 +29,7 @@ executed with the following features:
 - Memory encrypted and isolated
 - Secure key management
 
-Many TEEs such as SEV, TDX and Secure Execution use virtual machines as the trusted boundary of the hardware, and in
+Many TEEs such as SNP, TDX and Secure Execution use virtual machines as the trusted boundary of the hardware, and in
 order to be compatible with existing Kubernetes deployments, we put the TEE boundary around the Pod Sandbox, not the
 whole Kubernetes node, so Kubernetes' orchestration can still work without modification, so we have some different
 options of how to lay out this infrastructure.
