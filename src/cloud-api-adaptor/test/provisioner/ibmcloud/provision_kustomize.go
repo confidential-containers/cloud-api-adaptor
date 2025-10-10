@@ -63,6 +63,8 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "INITDATA":
 		return true
+	case "TAGS":
+		return true
 	default:
 		return false
 	}
