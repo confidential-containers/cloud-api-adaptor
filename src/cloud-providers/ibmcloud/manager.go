@@ -53,18 +53,6 @@ func (_ *Manager) LoadEnv() {
 	provider.DefaultToEnv(&ibmcloudVPCConfig.PrimarySecurityGroupID, "IBMCLOUD_VPC_SG_ID", "")
 	provider.DefaultToEnv(&ibmcloudVPCConfig.KeyID, "IBMCLOUD_SSH_KEY_ID", "")
 	provider.DefaultToEnv(&ibmcloudVPCConfig.VpcID, "IBMCLOUD_VPC_ID", "")
-
-	var instanceProfilesStr string
-	provider.DefaultToEnv(&instanceProfilesStr, "IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST", "")
-	if instanceProfilesStr != "" {
-		_ = ibmcloudVPCConfig.InstanceProfiles.Set(instanceProfilesStr)
-	}
-
-	var imageIDsStr string
-	provider.DefaultToEnv(&imageIDsStr, "IBMCLOUD_PODVM_IMAGE_ID", "")
-	if imageIDsStr != "" {
-		_ = ibmcloudVPCConfig.Images.Set(imageIDsStr)
-	}
 }
 
 func (_ *Manager) NewProvider() (provider.Provider, error) {
