@@ -29,22 +29,53 @@ func (v *vmPoolIPs) Set(value string) error {
 		return nil
 	}
 
-	ips := strings.Split(value, ",")
-	validIPs := make([]string, 0, len(ips))
+	entries := strings.Split(value, ",")
+	var validIPs []string
+	existingIPs := make(map[string]struct{})
 
-	// Validate each IP address
-	for _, ip := range ips {
-		ip = strings.TrimSpace(ip)
-		if ip == "" {
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
 			continue // Skip empty strings
 		}
 
-		// Validate IP address format
-		if _, err := netip.ParseAddr(ip); err != nil {
-			return fmt.Errorf("invalid IP address %q: %w", ip, err)
-		}
+		// Handle range of IPs
+		if start, end, found := strings.Cut(entry, "-"); found {
+			startIP, err1 := netip.ParseAddr(start)
+			endIP, err2 := netip.ParseAddr(end)
+			if err1 != nil || err2 != nil {
+				return fmt.Errorf("invalid IP range %q: %v, %v", entry, err1, err2)
+			}
 
-		validIPs = append(validIPs, ip)
+			if endIP.Less(startIP) {
+				return fmt.Errorf("invalid IP range (startIP > endIP): %s", entry)
+			}
+
+			for ip := startIP; ; ip = ip.Next() {
+				// Handle deduplication of IPs
+				ipStr := ip.String()
+				if _, exists := existingIPs[ipStr]; !exists {
+					existingIPs[ipStr] = struct{}{}
+					validIPs = append(validIPs, ipStr)
+				}
+				if ip == endIP {
+					break
+				}
+			}
+		} else {
+			// Validate single IP entries
+			ip, err := netip.ParseAddr(entry)
+			if err != nil {
+				return fmt.Errorf("invalid IP address %q: %w", entry, err)
+			}
+
+			// Handle deduplication of IPs
+			ipStr := ip.String()
+			if _, exists := existingIPs[ipStr]; !exists {
+				existingIPs[ipStr] = struct{}{}
+				validIPs = append(validIPs, ip.String())
+			}
+		}
 	}
 
 	*v = validIPs

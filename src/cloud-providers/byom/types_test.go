@@ -115,6 +115,30 @@ func TestVMPoolIPsValidation(t *testing.T) {
 		t.Error("Malformed IP address should be rejected")
 	}
 
+	// Test IP ranges
+	err = ips.Set("192.168.1.1-192.168.1.4,10.0.0.1")
+	if err != nil {
+		t.Errorf("Valid IP range should be accepted: %v", err)
+	}
+	if len(ips) != 5 {
+		t.Errorf("Expected 5 IPs, got %d", len(ips))
+	}
+
+	// Test deduplication of IPs
+	err = ips.Set("192.168.1.1-192.168.1.4,192.168.1.1")
+	if err != nil {
+		t.Errorf("Valid IP range should be accepted: %v", err)
+	}
+	if len(ips) != 4 {
+		t.Errorf("Expected 4 IPs, got %d", len(ips))
+	}
+
+	// Test IP range validation
+	err = ips.Set("192.168.1.4-192.168.1.2")
+	if err == nil {
+		t.Error("Invalid IP range with start IP > end IP")
+	}
+
 	// Test empty strings are skipped
 	err = ips.Set("192.168.1.1, ,10.0.0.1,  ")
 	if err != nil {
