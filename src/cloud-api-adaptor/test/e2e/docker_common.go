@@ -25,7 +25,7 @@ func (c DockerAssert) DefaultTimeout() time.Duration {
 	return 1 * time.Minute
 }
 
-func (l DockerAssert) HasPodVM(t *testing.T, id string) {
+func (l DockerAssert) HasPodVM(t *testing.T, podvmName string) {
 	conn, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		t.Fatal(err)
@@ -38,7 +38,7 @@ func (l DockerAssert) HasPodVM(t *testing.T, id string) {
 	}
 
 	for _, container := range containers {
-		if strings.Contains(container.Names[0], id) {
+		if strings.Contains(container.Names[0], podvmName) {
 			return
 		}
 	}

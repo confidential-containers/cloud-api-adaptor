@@ -292,8 +292,8 @@ func (c IBMCloudAssert) DefaultTimeout() time.Duration {
 	return 1 * time.Minute
 }
 
-func (c IBMCloudAssert) HasPodVM(t *testing.T, id string) {
-	log.Infof("PodVM name: %s", id)
+func (c IBMCloudAssert) HasPodVM(t *testing.T, podvmName string) {
+	log.Infof("PodVM name: %s", podvmName)
 	options := &vpcv1.ListInstancesOptions{}
 	instances, _, err := c.VPC.ListInstances(options)
 
@@ -304,9 +304,7 @@ func (c IBMCloudAssert) HasPodVM(t *testing.T, id string) {
 	for i, instance := range instances.Instances {
 		name := *instance.Name
 		log.Debugf("Instance number: %d, Instance id: %s, Instance name: %s", i, *instance.ID, name)
-		// TODO: PodVM name is podvm-POD_NAME-SANDBOX_ID, where SANDBOX_ID is truncated
-		// in the 8th word. Ideally we should match the exact name, not just podvm-POD_NAME.
-		if strings.HasPrefix(name, strings.Join([]string{"podvm", id, ""}, "-")) {
+		if name == podvmName {
 			return
 		}
 	}

@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -20,7 +19,7 @@ type AzureCloudAssert struct{}
 var assert = &AzureCloudAssert{}
 
 // findVM is a helper function to find a VM by its prefix name in a resource group.
-func findVM(resourceGroupName, prefixName string) (*armcompute.VirtualMachine, error) {
+func findVM(resourceGroupName, podvmName string) (*armcompute.VirtualMachine, error) {
 	pager := pv.AzureProps.ManagedVmClient.NewListPager(resourceGroupName, nil)
 
 	for pager.More() {
@@ -31,7 +30,7 @@ func findVM(resourceGroupName, prefixName string) (*armcompute.VirtualMachine, e
 		}
 
 		for _, vm := range page.Value {
-			if strings.HasPrefix(*vm.Name, prefixName) {
+			if *vm.Name == podvmName {
 				// VM found
 				return vm, nil
 			}
@@ -41,8 +40,8 @@ func findVM(resourceGroupName, prefixName string) (*armcompute.VirtualMachine, e
 	return nil, nil
 }
 
-func checkVMExistence(resourceGroupName, prefixName string) bool {
-	vm, err := findVM(resourceGroupName, prefixName)
+func checkVMExistence(resourceGroupName, podvmName string) bool {
+	vm, err := findVM(resourceGroupName, podvmName)
 	if err != nil {
 		return false
 	}
@@ -53,13 +52,12 @@ func (c AzureCloudAssert) DefaultTimeout() time.Duration {
 	return 2 * time.Minute
 }
 
-func (c AzureCloudAssert) HasPodVM(t *testing.T, id string) {
-	pod_vm_prefix := "podvm-" + id
+func (c AzureCloudAssert) HasPodVM(t *testing.T, podvmName string) {
 	rg := pv.AzureProps.ResourceGroupName
-	if checkVMExistence(rg, pod_vm_prefix) {
-		t.Logf("VM %s found in resource group", id)
+	if checkVMExistence(rg, podvmName) {
+		t.Logf("VM %s found in resource group", podvmName)
 	} else {
-		t.Logf("Virtual machine %s not found in resource group %s", id, rg)
+		t.Logf("Virtual machine %s not found in resource group %s", podvmName, rg)
 		t.Error("PodVM was not created")
 	}
 }

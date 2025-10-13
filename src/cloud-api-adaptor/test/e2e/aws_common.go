@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -30,12 +29,9 @@ func (aa AWSAssert) DefaultTimeout() time.Duration {
 	return 1 * time.Minute
 }
 
-func (aa AWSAssert) HasPodVM(t *testing.T, id string) {
-	// The `id` parameter is not the instance ID but rather the pod's name, so
-	// it will need to scan all running pods on the subnet to find one that
-	// starts with the prefix.
-	podvmPrefix := "podvm-" + id
+func (aa AWSAssert) HasPodVM(t *testing.T, podvmName string) {
 
+	// validating if podvm exists with provided podvmName
 	describeInstances, err := aa.Vpc.Client.DescribeInstances(context.TODO(),
 		&ec2.DescribeInstancesInput{
 			Filters: []ec2types.Filter{
@@ -46,7 +42,7 @@ func (aa AWSAssert) HasPodVM(t *testing.T, id string) {
 			},
 		})
 	if err != nil {
-		t.Errorf("Podvm name=%s not found: %v", id, err)
+		t.Errorf("Podvm name=%s not found: %v", podvmName, err)
 	}
 
 	found := false
@@ -57,8 +53,7 @@ func (aa AWSAssert) HasPodVM(t *testing.T, id string) {
 			// so let's ignore them.
 			if instance.State.Code != aws.Int32(48) {
 				for _, tag := range instance.Tags {
-					if *tag.Key == "Name" &&
-						strings.HasPrefix(*tag.Value, podvmPrefix) {
+					if *tag.Key == "Name" && *tag.Value == podvmName {
 						found = true
 					}
 				}
@@ -67,7 +62,7 @@ func (aa AWSAssert) HasPodVM(t *testing.T, id string) {
 	}
 
 	if !found {
-		t.Errorf("Podvm name=%s not found", id)
+		t.Errorf("Podvm name=%s not found", podvmName)
 	}
 }
 

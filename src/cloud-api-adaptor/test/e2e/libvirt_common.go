@@ -16,45 +16,45 @@ import (
 
 // LibvirtAssert implements the CloudAssert interface for Libvirt.
 type LibvirtAssert struct {
-	// TODO: create the connection once on the initializer.
-	//conn libvirt.Connect
+	conn libvirt.Connect
+}
+
+func NewLibvirtAssert() (*LibvirtAssert, error) {
+	return NewLibvirtAssertWithURI("qemu:///system")
+}
+
+func NewLibvirtAssertWithURI(uri string) (*LibvirtAssert, error) {
+	conn, err := libvirt.NewConnect(uri)
+	if err != nil {
+		return nil, err
+	}
+	return &LibvirtAssert{conn: *conn}, nil
 }
 
 func (c LibvirtAssert) DefaultTimeout() time.Duration {
 	return 1 * time.Minute
 }
 
-func (l LibvirtAssert) HasPodVM(t *testing.T, id string) {
-	conn, err := libvirt.NewConnect("qemu:///system")
-	if err != nil {
-		t.Fatal(err)
-	}
+func (l LibvirtAssert) HasPodVM(t *testing.T, podvmName string) {
 
-	domains, err := conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, dom := range domains {
-		name, _ := dom.GetName()
-		// TODO: PodVM name is podvm-POD_NAME-SANDBOX_ID, where SANDBOX_ID is truncated
-		// in the 8th word. Ideally we should match the exact name, not just podvm-POD_NAME.
-		if strings.HasPrefix(name, strings.Join([]string{"podvm", id, ""}, "-")) {
+	// Wait for the PodVM to be created for 30 seconds
+	dom, err := l.conn.LookupDomainByName(podvmName)
+	for range 10 {
+		if err == nil {
 			return
 		}
+		dom, err = l.conn.LookupDomainByName(podvmName)
+		time.Sleep(3 * time.Second)
 	}
 
-	// It didn't find the PodVM if it reached here.
-	t.Error("PodVM was not created")
+	if dom == nil {
+		t.Error("PodVM was not created")
+	}
 }
 
 func (l LibvirtAssert) GetInstanceType(t *testing.T, podName string) (string, error) {
 	// Get Instance Type of PodVM
-	conn, err := libvirt.NewConnect("qemu:///system")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	domains, err := conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
+	domains, err := l.conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -326,6 +326,26 @@ func VerifyCaaPodLogContains(ctx context.Context, t *testing.T, client klient.Cl
 	return nil
 }
 
+func getPodvmName(ctx context.Context, client klient.Client, pod *v1.Pod) (string, error) {
+
+	for range 10 {
+		podLogString, err := getCaaPodLogForPod(ctx, nil, client, pod)
+		if err != nil {
+			log.Info("getPodvmName: failed to getCaaPodLogForPod, retrying: ", err)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+
+		re := regexp.MustCompile(fmt.Sprintf(`create a sandbox ([a-f0-9]{64}) for pod %s in namespace %s`, pod.Name, pod.Namespace))
+		matches := re.FindAllStringSubmatch(podLogString, -1)
+		if len(matches) > 0 {
+			id := matches[len(matches)-1][1]
+			return strings.Join([]string{"podvm", pod.Name, id[:8]}, "-"), nil
+		}
+	}
+	return "", fmt.Errorf("Failed to get the podvm name from CAA logs after multiple retries")
+}
+
 func VerifyNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) error {
 	nodeName, err := GetNodeNameFromPod(ctx, client, pod)
 	if err != nil {
