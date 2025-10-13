@@ -364,8 +364,11 @@ func (tc *TestCase) Run() {
 					if err != nil {
 						t.Errorf("request and limit for podvm extended resource are not set to 1: %v", err)
 					}
-
-					tc.assert.HasPodVM(t, tc.pod.Name)
+					podvmName, err := getPodvmName(ctx, client, tc.pod)
+					if err != nil {
+						t.Errorf("getPodvmName failed: %v", err)
+					}
+					tc.assert.HasPodVM(t, podvmName)
 				}
 
 				if tc.isNydusSnapshotter {
@@ -399,7 +402,12 @@ func (tc *TestCase) Run() {
 							}
 
 						}
-						tc.assert.HasPodVM(t, extraPod.pod.Name)
+
+						podvmName, err := getPodvmName(ctx, client, extraPod.pod)
+						if err != nil {
+							t.Errorf("getPodvmName failed: %v", err)
+						}
+						tc.assert.HasPodVM(t, podvmName)
 					}
 
 					if tc.isNydusSnapshotter {

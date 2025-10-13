@@ -18,9 +18,9 @@ func (c ByomAssert) DefaultTimeout() time.Duration {
 	return 30 * time.Second
 }
 
-func (b ByomAssert) HasPodVM(t *testing.T, id string) {
+func (b ByomAssert) HasPodVM(t *testing.T, podvmName string) {
 	// Since BYOM uses pre-created VMs, just log and return
-	t.Logf("BYOM: Using pre-created VM for pod %s", id)
+	t.Logf("BYOM: Using pre-created VM for pod %s", podvmName)
 }
 
 func (b ByomAssert) GetInstanceType(t *testing.T, podName string) (string, error) {

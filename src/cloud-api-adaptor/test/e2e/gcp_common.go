@@ -26,7 +26,7 @@ func (c GCPCloudAssert) DefaultTimeout() time.Duration {
 	return 2 * time.Minute
 }
 
-func gcpFindVM(prefixName string) (*computepb.Instance, error) {
+func gcpFindVM(podvmName string) (*computepb.Instance, error) {
 	ctx := context.Background()
 	instancesClient, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
@@ -34,7 +34,7 @@ func gcpFindVM(prefixName string) (*computepb.Instance, error) {
 	}
 	defer instancesClient.Close()
 
-	filter := fmt.Sprintf("name eq ^%s.*", prefixName)
+	filter := fmt.Sprintf("name eq ^%s.*", podvmName)
 	req := &computepb.ListInstancesRequest{
 		Project: pv.GCPProps.GkeCluster.ProjectID,
 		Zone:    pv.GCPProps.GkeCluster.Zone,
@@ -51,13 +51,13 @@ func gcpFindVM(prefixName string) (*computepb.Instance, error) {
 	return instance, nil
 }
 
-func (c GCPCloudAssert) HasPodVM(t *testing.T, id string) {
-	pod_vm_prefix := "podvm-" + id
-	vm, err := gcpFindVM(pod_vm_prefix)
+func (c GCPCloudAssert) HasPodVM(t *testing.T, podvmName string) {
+
+	vm, err := gcpFindVM(podvmName)
 	if vm != nil {
-		t.Logf("Vitural machine %s found.", id)
+		t.Logf("Vitural machine %s found.", podvmName)
 	} else {
-		t.Logf("Virtual machine %s not found: %s", id, err)
+		t.Logf("Virtual machine %s not found: %s", podvmName, err)
 		t.Error("PodVM was not created")
 	}
 }
