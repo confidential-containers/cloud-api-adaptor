@@ -45,7 +45,9 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	logger.Printf("azure config %+v", config.Redact())
 
 	// Clean the config.SSHKeyPath to avoid bad paths
-	config.SSHKeyPath = filepath.Clean(config.SSHKeyPath)
+	if config.SSHKeyPath != "" {
+		config.SSHKeyPath = filepath.Clean(config.SSHKeyPath)
+	}
 
 	azureClient, err := NewAzureClient(*config)
 	if err != nil {
