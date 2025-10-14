@@ -61,8 +61,6 @@ jobs:
   test:
     runs-on: ${{ inputs.runner }}
     name: "Libvirt e2e tests: (${{ inputs.runner }}, ${{ inputs.container_runtime }}, secure_comms: ${{ inputs.secure_comms }}, mkosi: ${{ inputs.oras }}"
-    # TODO: remove this when the crio job gets stable
-    continue-on-error: ${{ inputs.container_runtime == 'crio' && true || false }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
