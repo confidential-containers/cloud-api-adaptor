@@ -23,12 +23,10 @@ type AzureProperties struct {
 	ResourceGroupName   string
 	ClusterName         string
 	Location            string
-	SSHKeyID            string
 	SubnetName          string
 	VnetName            string
 	SubnetID            string
 	ImageID             string
-	SshUserName         string
 	ManagedIdentityName string
 	IsCIManaged         bool
 	CaaImage            string
@@ -62,10 +60,8 @@ func initAzureProperties(properties map[string]string) error {
 		ResourceGroupName:       properties["RESOURCE_GROUP_NAME"],
 		ClusterName:             properties["CLUSTER_NAME"],
 		Location:                properties["LOCATION"],
-		SSHKeyID:                properties["SSH_KEY_ID"],
 		ImageID:                 properties["AZURE_IMAGE_ID"],
 		SubnetID:                properties["AZURE_SUBNET_ID"],
-		SshUserName:             properties["SSH_USERNAME"],
 		ManagedIdentityName:     properties["MANAGED_IDENTITY_NAME"],
 		CaaImage:                properties["CAA_IMAGE"],
 		InstanceSize:            properties["AZURE_INSTANCE_SIZE"],

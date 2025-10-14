@@ -122,7 +122,6 @@ jobs:
           AZURE_CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
           RESOURCE_GROUP_NAME="${{ vars.AZURE_RESOURCE_GROUP }}"
           CLUSTER_NAME="${{ env.CLUSTER_NAME }}"
-          SSH_KEY_ID="id_rsa.pub"
           LOCATION="$AZURE_LOCATION"
           AZURE_IMAGE_ID="$AZURE_IMAGE_ID"
           IS_CI_MANAGED_CLUSTER="true"
@@ -135,9 +134,6 @@ jobs:
         cat "$TEST_PROVISION_FILE"
         # assert that no variable is unset
         ! grep -E '=x$|=""$' "$TEST_PROVISION_FILE"
-
-    - name: Create public ssh key
-      run: ssh-keygen -t rsa -b 4096 -f install/overlays/azure/id_rsa -N "" -C dev@coco.io
 
     - name: Save the configuration created here
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

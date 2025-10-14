@@ -354,8 +354,6 @@ func getPropertiesImpl() map[string]string {
 		"AZURE_RESOURCE_GROUP":  AzureProps.ResourceGroupName,
 		"CLUSTER_NAME":          AzureProps.ClusterName,
 		"AZURE_REGION":          AzureProps.Location,
-		"SSH_KEY_ID":            AzureProps.SSHKeyID,
-		"SSH_USERNAME":          AzureProps.SshUserName,
 		"AZURE_IMAGE_ID":        AzureProps.ImageID,
 		"AZURE_SUBNET_ID":       AzureProps.SubnetID,
 		"AZURE_INSTANCE_SIZE":   AzureProps.InstanceSize,
@@ -381,7 +379,7 @@ func (p *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Contex
 
 func isAzureKustomizeConfigMapKey(key string) bool {
 	switch key {
-	case "CLOUD_PROVIDER", "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID", "SSH_USERNAME", "INITDATA", "TAGS", "TUNNEL_TYPE", "VXLAN_PORT":
+	case "CLOUD_PROVIDER", "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID", "INITDATA", "TAGS", "TUNNEL_TYPE", "VXLAN_PORT":
 		return true
 	default:
 		return false
@@ -453,12 +451,6 @@ func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, p
 		// secretGenerator
 		if isAzureKustomizeSecretKey(k) {
 			if err = lio.Overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret", k, v); err != nil {
-				return err
-			}
-		}
-		// ssh key id
-		if k == "SSH_KEY_ID" {
-			if err = lio.Overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret", v); err != nil {
 				return err
 			}
 		}
