@@ -29,15 +29,9 @@ updates:
       protobuf:
         patterns:
           - "google.golang.org/protobuf"
-      x/crypto:
+      x/extensions:
         patterns:
-          - golang.org/x/crypto
-      x/net:
-        patterns:
-          - golang.org/x/net
-      x/sys:
-        patterns:
-          - golang.org/x/sys
+          - golang.org/x/*
     schedule:
       interval: "weekly"
       day: "saturday"
