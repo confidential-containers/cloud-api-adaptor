@@ -5,7 +5,7 @@ go 1.24.6
 toolchain go1.24.7
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.2
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.11.0
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20230120122421-afb48116b8f1
 	github.com/IBM-Cloud/power-go-client v1.11.0 // indirect
@@ -23,7 +23,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250923185900-c2b06504916c
 	github.com/opencontainers/runtime-spec v1.2.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
 	github.com/vmware/govmomi v0.33.1 // indirect
