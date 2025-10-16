@@ -48,6 +48,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: "${{ inputs.git_ref }}"
+          persist-credentials: false
       - name: Read properties from versions.yaml
         run: |
           go_version="$(yq '.tools.golang' src/cloud-api-adaptor/versions.yaml)"

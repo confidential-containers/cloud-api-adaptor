@@ -69,6 +69,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.git_ref }}
+          persist-credentials: false
 
       - name: Rebase the code
         if: github.event_name == 'pull_request_target'
