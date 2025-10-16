@@ -64,6 +64,7 @@ type TestCase struct {
 	expectedCaaPodLogStrings    []string
 	expectedPodLogString        string
 	expectedPodEventErrorString string
+	expectedPodvmConsoleLog     string
 	podState                    v1.PodPhase
 	imagePullTimer              bool
 	saImagePullSecret           string
@@ -130,6 +131,11 @@ func (tc *TestCase) WithExpectedInstanceType(expectedInstanceType string) *TestC
 func (pod *ExtraPod) WithTestCommands(TestCommands []TestCommand) *ExtraPod {
 	pod.testCommands = TestCommands
 	return pod
+}
+
+func (tc *TestCase) WithExpectedPodvmConsoleLog(expectedPodvmConsoleLog string) *TestCase {
+	tc.expectedPodvmConsoleLog = expectedPodvmConsoleLog
+	return tc
 }
 
 func (tc *TestCase) WithExpectedCaaPodLogStrings(expectedCaaPodLogStrings ...string) *TestCase {
@@ -308,6 +314,14 @@ func (tc *TestCase) Run() {
 			}
 
 			if tc.pod != nil {
+				if tc.expectedPodvmConsoleLog != "" {
+					podvmName, err := getPodvmName(ctx, client, tc.pod)
+					if err != nil {
+						t.Errorf("getPodvmName failed: %v", err)
+					}
+					tc.assert.VerifyPodvmConsole(t, podvmName, tc.expectedPodvmConsoleLog)
+				}
+
 				if tc.imagePullTimer {
 					err := VerifyImagePullTimer(ctx, t, client, tc.pod)
 					if err != nil {

@@ -74,3 +74,10 @@ func (c GCPCloudAssert) GetInstanceType(t *testing.T, podName string) (string, e
 
 	return vm.GetMachineType(), nil
 }
+
+func (l GCPCloudAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedString string) {
+	// Verify PodVM console output with provided expectedString
+	// This is not implemented for GCP as of now.
+	// So skipping this test.
+	t.Log("Warning: console verification is not added for GCP")
+}
