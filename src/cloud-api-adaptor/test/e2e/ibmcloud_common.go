@@ -386,3 +386,75 @@ func (c *IBMRollingUpdateAssert) VerifyOldVmDeleted(t *testing.T) {
 		}
 	}
 }
+
+func (c IBMCloudAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedString string) {
+
+	// vpcClient := c.VPC
+
+	// // Find the instance by name
+	// listOpts := &vpcv1.ListInstancesOptions{}
+	// instanceList, _, err := vpcClient.ListInstances(listOpts)
+	// require.NoError(t, err, "Failed to list instances from IBM Cloud VPC")
+
+	// var instanceID string
+	// for _, inst := range instanceList.Instances {
+	// 	if inst.Name != nil && *inst.Name == podvmName {
+	// 		instanceID = *inst.ID
+	// 		break
+	// 	}
+	// }
+
+	// // Create console access token
+	// opts := &vpcv1.CreateInstanceConsoleAccessTokenOptions{
+	// 	InstanceID:  core.StringPtr(instanceID),
+	// 	ConsoleType: core.StringPtr("serial"),
+	// }
+	// tokenResp, _, err := c.VPC.CreateInstanceConsoleAccessToken(opts)
+	// require.NoError(t, err, "Failed to create console access token")
+	// accessToken := *tokenResp.AccessToken
+	// href := *tokenResp.Href // WebSocket URL to connect to console
+
+	// t.Logf("Console access token: %s\nWebsocket URL: %s", accessToken, href)
+
+	// // Connect to websocket
+	// u, err := url.Parse(href)
+	// require.NoError(t, err, "Invalid console websocket URL")
+	// q := u.Query()
+	// q.Set("access_token", accessToken)
+	// u.RawQuery = q.Encode()
+	// t.Logf("Full WS URL: %s", u.String())
+
+	// wsDialer := websocket.Dialer{
+	// 	HandshakeTimeout: 10 * time.Second,
+	// }
+	// wsConn, _, err := wsDialer.Dial(u.String(), nil)
+	// require.NoError(t, err, "WebSocket dial failed")
+	// defer wsConn.Close()
+
+	// // Read console output frames for some time and error
+	// timeout := time.After(3 * time.Minute)
+	// for {
+	// 	select {
+	// 	case <-timeout:
+	// 		// Not erroring out here as i am not sure in implementation part
+	// 		t.Logf("Expected string %q not found on console of instance %s", expectedString, instanceID)
+	// 	default:
+	// 		_, message, err := wsConn.ReadMessage()
+	// 		if err != nil {
+	// 			t.Logf("WebSocket read error: %v", err)
+	// 			time.Sleep(20 * time.Second)
+	// 			continue
+	// 		}
+	// 		msgStr := string(message)
+	// 		t.Logf("Console output chunk: %s", msgStr)
+	// 		if strings.Contains(msgStr, expectedString) {
+	// 			t.Logf("Found expected string %s on console of instance %s", expectedString, instanceID)
+	// 		}
+	// 	}
+	// }
+
+	// Verify PodVM console output with provided expectedString
+	// This is not implemented for Docker as of now.
+	// So skipping this test.
+	t.Log("Warning: console verification is not added for Docker")
+}
