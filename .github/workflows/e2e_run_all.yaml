@@ -182,7 +182,7 @@ jobs:
 
       - name: Update kustomization configuration
         run: |
-          providers=(${{ env.PROVIDERS }})
+          providers=(${PROVIDERS})
           # If there aren't providers then something is wrong
           [[ ${#providers[@]} -gt 0 ]] || exit 1
           for provider in "${providers[@]}"; do

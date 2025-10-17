@@ -79,6 +79,11 @@ jobs:
     outputs:
       qcow2_oras_image: ${{ steps.publish_oras_qcow2.outputs.image }}:${{ steps.publish_oras_qcow2.outputs.tag }}
       docker_oci_image: ${{ steps.build_docker_oci.outputs.image }}
+    env:
+      REGISTRY: ${{ inputs.registry }}
+      ARCH: ${{ inputs.arch }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      DEBUG: ${{ inputs.debug }}
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -162,17 +167,17 @@ jobs:
           cd oras
           cp ../build/podvm-*.qcow2 .
           tar cJf podvm.tar.xz podvm-*.qcow2
-          image=${{ inputs.registry }}/podvm-generic-fedora
-          if [ "${{inputs.debug}}" = "true" ]; then
+          image=${REGISTRY}/podvm-generic-fedora
+          if [ "${DEBUG}" = "true" ]; then
             image=${image}-debug
           fi
-          image=${image}-${{ inputs.arch }}
+          image=${image}-${ARCH}
           tag=$(git rev-parse --short HEAD)
           oras push "${image}:${tag}" podvm.tar.xz
 
           # If the input has a different image-tag then also push it with that tag
-          if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
-            oras push "${image}:${{ inputs.image_tag }}" podvm.tar.xz
+          if [ -n "${IMAGE_TAG}" ] && [ "${IMAGE_TAG}" != "${tag}" ];then
+            oras push "${image}:${IMAGE_TAG}" podvm.tar.xz
           fi
 
           # add image and digest to output for attestation
@@ -204,6 +209,4 @@ jobs:
           PODVM_TAG=${tag} make push-image-container
           arch=$(uname -m)
           arch=${arch/x86_64/amd64}
-          echo "image=${{ inputs.registry }}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
-        env:
-          REGISTRY: ${{ inputs.registry }}
+          echo "image=${REGISTRY}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"

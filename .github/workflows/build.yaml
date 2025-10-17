@@ -53,11 +53,9 @@ jobs:
       - name: Build
         run: |
           # Build the binaries
-          if [ ${{ matrix.type }} == "release" ]; then
-            RELEASE_BUILD=true make build
-          else
-            RELEASE_BUILD=false make build
-          fi
+          make build
+        env:
+          RELEASE_BUILD: ${{ matrix.type == 'release' && true || false }}
       - name: Test
         if: matrix.type == 'dev'
         run: |

@@ -63,6 +63,11 @@ jobs:
     name: "Libvirt e2e tests: (${{ inputs.runner }}, ${{ inputs.container_runtime }}, secure_comms: ${{ inputs.secure_comms }}, mkosi: ${{ inputs.oras }}"
     # TODO: remove this when secure_comms is stable again (issue #2635)
     continue-on-error: ${{ inputs.secure_comms != 'none' && true || false }}
+    env:
+      PODVM_IMAGE: ${{ inputs.podvm_image }}
+      CAA_IMAGE: ${{ inputs.caa_image }}
+      CONTAINER_RUNTIME: ${{ inputs.container_runtime }}
+      SECURE_COMMS: ${{ inputs.secure_comms }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -110,8 +115,8 @@ jobs:
       - name: Extract qcow2 from ${{ inputs.podvm_image }}
         if: ${{ !inputs.oras }}
         run: |
-           qcow2=$(echo ${{ inputs.podvm_image }} | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
-           ./hack/download-image.sh ${{ inputs.podvm_image }} . -o "${qcow2}" --clean-up
+           qcow2=$(echo "${PODVM_IMAGE}" | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
+           ./hack/download-image.sh "${PODVM_IMAGE}" . -o "${qcow2}" --clean-up
            echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
            # Clean up docker images to make space
            docker system prune -a -f
@@ -120,7 +125,7 @@ jobs:
       - name: Use oras to get qcow2 from ${{ inputs.podvm_image }}
         if: ${{ inputs.oras }}
         run: |
-          oras pull ${{ inputs.podvm_image }}
+          oras pull "${PODVM_IMAGE}"
           tar xvJpf podvm.tar.xz
           qcow2=$(find ./*.qcow2)
           echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
@@ -128,9 +133,9 @@ jobs:
 
       - name: Config Libvirt
         run: |
-          export TEST_E2E_SECURE_COMMS="${{ inputs.secure_comms }}"
+          export TEST_E2E_SECURE_COMMS="${SECURE_COMMS}"
           ./libvirt/config_libvirt.sh
-          echo "container_runtime=\"${{ inputs.container_runtime }}\"" >> libvirt.properties
+          echo "container_runtime=\"${CONTAINER_RUNTIME}\"" >> libvirt.properties
           # For debugging
           cat libvirt.properties
           # Add the kcli install directory to PATH for later steps
@@ -166,7 +171,7 @@ jobs:
       - name: Update kustomization configuration
         run: |
           cd "install/overlays/libvirt"
-          kustomize edit set image "cloud-api-adaptor=${{ inputs.caa_image }}"
+          kustomize edit set image "cloud-api-adaptor=${CAA_IMAGE}"
           # Print for debugging
           echo "::group::libvirt kustomization"
           cat kustomization.yaml
@@ -186,14 +191,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export CLOUD_PROVIDER=libvirt
-          export CONTAINER_RUNTIME="${{ inputs.container_runtime }}"
           export DEPLOY_KBS=true
           export TEST_PROVISION="yes"
           export TEST_TEARDOWN="no"
           export TEST_PROVISION_FILE="$PWD/libvirt.properties"
-          export TEST_PODVM_IMAGE="${{ env.PODVM_QCOW2 }}"
+          export TEST_PODVM_IMAGE="${PODVM_QCOW2}"
           export TEST_E2E_TIMEOUT="75m"
-          export TEST_E2E_SECURE_COMMS="${{ inputs.secure_comms }}"
+          export TEST_E2E_SECURE_COMMS="${SECURE_COMMS}"
 
           make test-e2e
 

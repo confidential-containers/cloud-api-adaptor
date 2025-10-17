@@ -48,10 +48,13 @@ jobs:
         run: |
           # Matches expected logic in ./hack/build.sh
           commit=$(git rev-parse HEAD)
-          dev_tags=${{ inputs.dev_tags }}
-          release_tags=${{ inputs.release_tags }}
+          dev_tags=${DEV_TAGS}
+          release_tags=${RELEASE_TAGS}
           echo "dev_tags=${dev_tags:-latest,dev-${commit}}" > tags.txt
           echo "release_tags=${release_tags:-${commit}}" >> tags.txt
+        env:
+          DEV_TAGS: ${{ inputs.dev_tags }}
+          RELEASE_TAGS: ${{ inputs.release_tags }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

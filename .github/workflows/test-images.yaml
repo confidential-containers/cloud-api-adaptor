@@ -57,8 +57,10 @@ jobs:
       id: docker-tag
       shell: bash
       run: |
-        file_name=$(basename "${{matrix.targets}}")
+        file_name=$(basename "${MATRIX_TARGETS}")
         echo "DOCKER_TAG=${file_name##*.}" >> "$GITHUB_ENV"
+      env:
+        MATRIX_TARGETS: ${{matrix.targets}}
     - name: Build and push
       uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
       with:

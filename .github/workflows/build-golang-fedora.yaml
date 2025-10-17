@@ -46,33 +46,33 @@ jobs:
       - name: Container tags from input and repository state
         id: tags
         run: |
-          if [[ -n "${{ inputs.registry }}" ]]; then
-            if [[ "${{ inputs.registry }}" != "ghcr.io" && "${{ inputs.registry }}" != "quay.io" ]]; then
-              echo "Invalid registry '${{ inputs.registry }}'. Must be either 'ghcr.io' or 'quay.io'"
+          if [[ -n "${REGISTRY}" ]]; then
+            if [[ "${REGISTRY}" != "ghcr.io" && "${REGISTRY}" != "quay.io" ]]; then
+              echo "Invalid registry '${REGISTRY}'. Must be either 'ghcr.io' or 'quay.io'"
               exit 1
             fi
-            registry="${{ inputs.registry }}"
+            registry="${REGISTRY}"
           else
             registry="quay.io"
           fi
           echo "registry=${registry}" | tee "$GITHUB_OUTPUT"
 
-          if [[ -n "${{ inputs.image_repository }}" ]]; then
-            repository="${{ inputs.image_repository }}"
+          if [[ -n "${IMAGE_REPOSITORY}" ]]; then
+            repository="${IMAGE_REPOSITORY}"
           else
             repository="confidential-containers"
           fi
           echo "repository=${repository}" | tee -a "$GITHUB_OUTPUT"
 
-          if [[ -n "${{ inputs.image_name }}" ]]; then
-            name="${{ inputs.image_name }}"
+          if [[ -n "${IMAGE_NAME}" ]]; then
+            name="${IMAGE_NAME}"
           else
             name="golang-fedora"
           fi
           echo "name=${name}" | tee -a "$GITHUB_OUTPUT"
 
-          if [[ -n "${{ inputs.image_tag }}" ]]; then
-            tag="${{ inputs.image_tag }}"
+          if [[ -n "${IMAGE_TAG}" ]]; then
+            tag="${IMAGE_TAG}"
           else
             goVersion=$(grep GO_VERSION= hack/Dockerfile.golang | cut -d= -f2)
             if [[ -z "${goVersion}" ]]; then
@@ -89,7 +89,12 @@ jobs:
           echo "tag=${tag}" | tee -a "$GITHUB_OUTPUT"
 
           echo "fullImageName=${registry}/${repository}/${name}:${tag}" | tee -a "$GITHUB_OUTPUT"
-          echo "fullImageNameGitSha=${registry}/${repository}/${name}:${tag}-${{ github.sha }}" | tee -a "$GITHUB_OUTPUT"
+          echo "fullImageNameGitSha=${registry}/${repository}/${name}:${tag}-${GITHUB_SHA}" | tee -a "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ inputs.registry }}
+          IMAGE_REPOSITORY: ${{ inputs.image_repository }}
+          IMAGE_NAME: ${{ inputs.image_name }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0

@@ -69,12 +69,15 @@ jobs:
       - name: Determine tags
         id: tags
         run: |
-          tags="${{ inputs.image_tags }}"
+          tags="${IMAGE_TAGS}"
           tags_new=""
           for t in ${tags/,/ }; do
-          tags_new+="${{ inputs.registry }}/peerpod-ctrl:${t},"
+          tags_new+="${REGISTRY}/peerpod-ctrl:${t},"
           done
           echo "tags=${tags_new}" >> "$GITHUB_OUTPUT"
+        env:
+          IMAGE_TAGS: ${{ inputs.image_tags }}
+          REGISTRY: ${{ inputs.registry }}
       - name: Build and push
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
