@@ -483,12 +483,12 @@ func getCaaPodLogForPod(ctx context.Context, t *testing.T, client klient.Client,
 	date_matcher := "[0-9]{4}/[0-9]{2}/[0-9]{2}"
 	time_matcher := "([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
 	pod_matcher := regexp.MustCompile(date_matcher + " " + time_matcher + ` \[adaptor\/cloud\] create a sandbox [0-9|a-f]* for pod ` + pod.Name)
-	index := pod_matcher.FindStringIndex(podLogString)[0]
-	if index < 0 {
+	matches := pod_matcher.FindStringIndex(podLogString)
+	if matches == nil {
 		return "", fmt.Errorf("GetCaaPodLog: couldn't find pod log matcher: %s in CAA log %s", pod_matcher, podLogString)
-	} else {
-		podLogString = podLogString[index:]
 	}
+
+	podLogString = podLogString[matches[0]:]
 
 	return podLogString, nil
 }
