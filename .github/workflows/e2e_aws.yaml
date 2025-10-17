@@ -76,6 +76,7 @@ jobs:
         CLUSTER_TYPE: "${{ inputs.cluster_type }}"
         CONTAINER_RUNTIME: "${{ inputs.container_runtime }}"
         PODVM_IMAGE: "${{ inputs.podvm_image }}"
+        RESOURCES_BASENAME: "ci-caa-${{ github.run_id }}-${{ github.run_attempt }}"
     permissions:
       id-token: write # Required by aws-actions/configure-aws-credentials
       contents: read  # Required by aws-actions/configure-aws-credentials
@@ -159,7 +160,7 @@ jobs:
           disablecvm="true"
           cluster_type="${CLUSTER_TYPE}"
           ssh_kp_name="caa-e2e-test"
-          resources_basename="ci-caa-${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
+          resources_basename="${RESOURCES_BASENAME}"
           EOF
           # For debugging
           echo "::group::aws.properties"
@@ -213,8 +214,6 @@ jobs:
         # didn't run, let's try to delete any resources created.
       - name: Force AWS clean-up
         if: failure() && steps.runTests.outcome == 'failure'
-        env:
-          res_basename: "ci-caa-${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
         working-directory: ./
         run: |
           ./hack/ci-e2e-aws-cleanup.sh
