@@ -4,12 +4,14 @@ permissions: {}
 
 env:
   CLUSTER_NAME_TEMPLATE: "{0}-e2e-test-${{ github.run_id }}-${{ github.run_attempt }}"
-  TEST_PROVISION_PATH_TEMPLATE: "${{ github.workspace }}/provision_azure${{ github.run_id }}_{0}.properties"
   CLOUD_PROVIDER: "azure"
   BUILTIN_CLOUD_PROVIDERS: "azure"
   TEST_E2E_CREATE_RG: "no"
   ACR_URL: "${{ vars.AZURE_ACR_URL }}"
-  TEST_TAGS: "owner=github-actions,run=${{ github.run_id }}-${{ github.run_attempt }}"
+  MI_NAME: "${{ vars.AZURE_MANAGED_IDENTITY_NAME }}"
+  RG_NAME: "${{ vars.AZURE_RESOURCE_GROUP }}"
+  RUN: "${{ github.run_id }}-${{ github.run_attempt }}"
+  TEST_PROVISION_FILE: "${{ github.workspace }}/test_provision.properties"
 
 on:
   workflow_call:
@@ -30,13 +32,9 @@ on:
       podvm-image-id:
         type: string
         description: prebuilt podvm image
-      caa-image:
-        type: string
-        description: prebuilt caa image
 
 jobs:
   build-caa-container-image:
-    if: github.event.inputs.caa-image == ''
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -47,6 +45,8 @@ jobs:
       id-token: write
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
 
     - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
       name: 'Az CLI login'
@@ -92,8 +92,13 @@ jobs:
             jitter: 10
     permissions:
       id-token: write
+    env:
+      LOCATION: "${{ matrix.parameters.location }}"
+
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
 
     - name: Extract go version number
       run: echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
@@ -104,32 +109,30 @@ jobs:
         go-version: "${{ env.GO_VERSION }}"
         cache-dependency-path: "**/go.sum"
 
-    - name: Set Provisioner Environment Variables
-      run: |
-          echo "TEST_PROVISION_FILE=${{ format(env.TEST_PROVISION_PATH_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
-          echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
-
     - name: Create provisioner file
       env:
-        AZURE_IMAGE_ID: ${{ inputs.podvm-image-id }}
-        CAA_IMAGE: "${{ github.event.inputs.caa-image || needs.build-caa-container-image.outputs.caa-image }}"
-        AZURE_INSTANCE_SIZE: ${{ matrix.parameters.machine_type }}
-        AZURE_LOCATION: ${{ matrix.parameters.location }}
+        CAA_IMAGE: "${{ needs.build-caa-container-image.outputs.caa-image }}"
+        CLIENT_ID: "${{ secrets.AZURE_CLIENT_ID }}"
+        CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
+        IMAGE_ID: "${{ inputs.podvm-image-id }}"
+        INSTANCE_SIZE: "${{ matrix.parameters.machine_type }}"
+        MI_NAME: "${{ vars.AZURE_MANAGED_IDENTITY_NAME }}"
+        SUBSCRIPTION_ID: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        TEST_TAGS: "owner=github-actions,run=${{ env.RUN }}"
       run: |
-        echo "Provisioner file for ${{ matrix.parameters.id }}"
         cat << EOF > "$TEST_PROVISION_FILE"
-          AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          AZURE_CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
-          RESOURCE_GROUP_NAME="${{ vars.AZURE_RESOURCE_GROUP }}"
-          CLUSTER_NAME="${{ env.CLUSTER_NAME }}"
-          LOCATION="$AZURE_LOCATION"
-          AZURE_IMAGE_ID="$AZURE_IMAGE_ID"
+          AZURE_CLIENT_ID="$CLIENT_ID"
+          AZURE_IMAGE_ID="$IMAGE_ID"
+          AZURE_INSTANCE_SIZE="$INSTANCE_SIZE"
+          AZURE_SUBSCRIPTION_ID="$SUBSCRIPTION_ID"
+          CAA_IMAGE="$CAA_IMAGE"
+          CLUSTER_NAME="$CLUSTER_NAME"
+          FEDERATED_CREDENTIAL_NAME="$CLUSTER_NAME"
           IS_CI_MANAGED_CLUSTER="true"
-          MANAGED_IDENTITY_NAME="${{ vars.AZURE_MANAGED_IDENTITY_NAME}}"
-          CAA_IMAGE="${CAA_IMAGE}"
-          AZURE_INSTANCE_SIZE="${AZURE_INSTANCE_SIZE}"
-          TAGS="${{ env.TEST_TAGS }}"
-          FEDERATED_CREDENTIAL_NAME="${{ env.CLUSTER_NAME }}"
+          LOCATION="$LOCATION"
+          MANAGED_IDENTITY_NAME="$MI_NAME"
+          RESOURCE_GROUP_NAME="$RG_NAME"
+          TAGS="$TEST_TAGS"
         EOF
         cat "$TEST_PROVISION_FILE"
         # assert that no variable is unset
@@ -138,9 +141,7 @@ jobs:
     - name: Save the configuration created here
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
-        path: |
-          src/cloud-api-adaptor/install/overlays/azure/id_rsa.pub
-          ${{ env.TEST_PROVISION_FILE }}
+        path: ${{ env.TEST_PROVISION_FILE }}
         name: e2e-configuration-${{ matrix.parameters.id }}
 
     - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
@@ -154,7 +155,6 @@ jobs:
     - name: Run provisioner
       working-directory: src/cloud-api-adaptor/test/tools
       run: |
-        echo "Creating cluster for ${{ matrix.parameters.id }} machine"
         sleep ${{ matrix.parameters.jitter }}
         make caa-provisioner-cli
         ./caa-provisioner-cli -action=createcluster
@@ -179,8 +179,14 @@ jobs:
             location: "northeurope"
     permissions:
       id-token: write
+    env:
+      TEE: "${{ matrix.parameters.id }}"
+      LOCATION: "${{ matrix.parameters.location }}"
+
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
 
     - name: Extract version numbers
       run: |
@@ -208,11 +214,6 @@ jobs:
         curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
           sudo bash -s /usr/local/bin
 
-    - name: Set Provisioner Environment Variables
-      run: |
-          echo "TEST_PROVISION_FILE=${{ format(env.TEST_PROVISION_PATH_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
-          echo "CLUSTER_NAME=${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" >> "$GITHUB_ENV"
-
     - name: Restore the configuration created before
       uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
       with:
@@ -227,34 +228,33 @@ jobs:
 
     - name: Create peerpod subnet
       env:
-        AZURE_LOCATION: ${{ matrix.parameters.location }}
+        CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
       run: |
-        NODE_RG="$(az aks show -g ${{ vars.AZURE_RESOURCE_GROUP }} -n "$CLUSTER_NAME" --query nodeResourceGroup -o tsv)"
-        VNET_NAME="$(az network vnet list -g "$NODE_RG" --query '[].name' -o tsv)"
-        NODE_CIDR="$(az network vnet show -n "$VNET_NAME" -g "$NODE_RG" --query "subnets[?name == 'aks-subnet'].addressPrefix" -o tsv)"
-        MASK="${NODE_CIDR#*/}"
-        PEERPOD_CIDR="$(sipcalc "$NODE_CIDR" -n 2 | grep ^Network | grep -v current | cut -d' ' -f2)/${MASK}"
-        az network public-ip create -g "$NODE_RG" -n peerpod
-        az network nat gateway create -g "$NODE_RG" -l "$AZURE_LOCATION" --public-ip-addresses peerpod -n peerpod
-        az network vnet subnet create -g "$NODE_RG" --vnet-name "$VNET_NAME" --nat-gateway peerpod --address-prefixes "$PEERPOD_CIDR" -n peerpod
-        SUBNET_ID="$(az network vnet subnet show -g "$NODE_RG" --vnet-name "$VNET_NAME" -n peerpod --query id -o tsv)"
-        echo "AZURE_SUBNET_ID=\"${SUBNET_ID}\"" >> "$TEST_PROVISION_FILE"
+        node_rg="$(az aks show -g "$RG_NAME" -n "$CLUSTER_NAME" --query nodeResourceGroup -o tsv)"
+        vnet_name="$(az network vnet list -g "$node_rg" --query '[].name' -o tsv)"
+        node_cidr="$(az network vnet show -n "$vnet_name" -g "$node_rg" --query "subnets[?name == 'aks-subnet'].addressPrefix" -o tsv)"
+        mask="${node_cidr#*/}"
+        peerpod_cidr="$(sipcalc "$node_cidr" -n 2 | grep ^Network | grep -v current | cut -d' ' -f2)/${mask}"
+        az network public-ip create -g "$node_rg" -n peerpod
+        az network nat gateway create -g "$node_rg" -l "$LOCATION" --public-ip-addresses peerpod -n peerpod
+        az network vnet subnet create -g "$node_rg" --vnet-name "$vnet_name" --nat-gateway peerpod --address-prefixes "$peerpod_cidr" -n peerpod
+        subnet_id="$(az network vnet subnet show -g "$node_rg" --vnet-name "$vnet_name" -n peerpod --query id -o tsv)"
+
+        cat << EOF >> "$TEST_PROVISION_FILE"
+        AZURE_SUBNET_ID="$subnet_id"
+        EOF
 
     - name: Checkout KBS Repository
-      run: |
-        test/utils/checkout_kbs.sh
+      run: test/utils/checkout_kbs.sh
 
     - name: Run e2e test
       env:
         TEST_PROVISION: "no"
         DEPLOY_KBS: "yes"
         CUSTOM_PCCS_URL: "https://global.acccache.azure.net/sgx/certification/v4"
+        CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
       run: |
-        # Since we install the cluster in parallel, we need to get the credentials here.
-        echo "running e2e test for ${{ matrix.parameters.id }} machine"
-        az aks get-credentials \
-          --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
-          --name "${CLUSTER_NAME}"
+        az aks get-credentials --resource-group "$RG_NAME" --name "$CLUSTER_NAME"
         make test-e2e RUN_TESTS="^Test\(CreateSimplePodAzure\|RemoteAttestation\|InitDataMeasurement\)$"
 
   cleanup:
@@ -266,15 +266,14 @@ jobs:
       matrix:
         parameters:
           - id: "tdx"
-            machine_type: "Standard_DC2es_v6"
-            location: "eastus"
             jitter: 0
           - id: "snp"
-            machine_type: "Standard_DC2as_v5"
-            location: "northeurope"
             jitter: 10
     permissions:
       id-token: write
+    env:
+      JITTER: ${{ matrix.parameters.jitter }}
+
     steps:
     - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
       name: 'Az CLI login'
@@ -286,16 +285,15 @@ jobs:
     - name: Delete coco namespace
       # We want to delete the coco namespace because CAA might still spawn resources
       # which prevents deletion of the AKS cluster
+      env:
+        CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
       run: |
-        az aks get-credentials \
-          --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
-          --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" || true
+        az aks get-credentials --resource-group "$RG_NAME" --name "$CLUSTER_NAME" || true
         namespace="confidential-containers-system"
         kubectl patch namespace "$namespace" -p '{"metadata":{"finalizers": null }}' || true
         kubectl delete namespace "$namespace" || true
 
     - name: Remove container image
-      if: github.event.inputs.caa-image == ''
       run: |
         # Delete the CAA container image built for this run.
         suffix=".azurecr.io"
@@ -311,10 +309,10 @@ jobs:
       run: |
         vms=$(az resource list \
           --tag owner=github-actions \
-          --tag run="${{ github.run_id }}-${{ github.run_attempt }}" \
+          --tag run="$RUN" \
           -o tsv --query "[?type == 'Microsoft.Compute/virtualMachines'].name")
         for vm in $vms; do
-          az vm delete -n "$vm" -g "${{ vars.AZURE_RESOURCE_GROUP }}" --yes || true
+          az vm delete -n "$vm" -g "$RG_NAME" --yes || true
         done
 
     - name: Remove dangling NICs
@@ -323,27 +321,31 @@ jobs:
       run: |
         nics=$(az resource list \
           --tag owner=github-actions \
-          --tag run="${{ github.run_id }}-${{ github.run_attempt }}" \
+          --tag run="$RUN" \
           -o tsv --query "[?type == 'Microsoft.Network/networkInterfaces'].name")
         sleep 180
         for nic in $nics; do
-          az network nic delete -n "$nic" -g "${{ vars.AZURE_RESOURCE_GROUP }}" || true
+          az network nic delete -n "$nic" -g "$RG_NAME" || true
         done
 
     - name: Remove AKS cluster
+      env:
+        CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
       run: |
         # Delete the cluster even if it has been deleted already or does not exists.
         az aks delete \
-          --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" \
-          --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+          --name "$CLUSTER_NAME" \
+          --resource-group "$RG_NAME" \
           --no-wait \
           --yes || true
 
     - name: Remove federated credential
+      env:
+        CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
       run: |
-        sleep ${{ matrix.parameters.jitter }}
+        sleep "$JITTER"
         az identity federated-credential delete \
-          --identity-name "${{ vars.AZURE_MANAGED_IDENTITY_NAME }}" \
-          --name "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}" \
-          --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+          --identity-name "$MI_NAME" \
+          --name "$CLUSTER_NAME" \
+          --resource-group "$RG_NAME" \
           --yes || true
