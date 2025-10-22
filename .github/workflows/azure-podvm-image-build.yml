@@ -68,6 +68,7 @@ jobs:
       with:
         path: cloud-api-adaptor
         ref: ${{ inputs.git-ref }}
+        persist-credentials: false
 
     - name: Install build dependencies
       run: |

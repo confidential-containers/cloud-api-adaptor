@@ -47,12 +47,17 @@ jobs:
   test-docker:
     name: "Docker e2e tests: (${{ inputs.container_runtime }})"
     runs-on: ubuntu-22.04
+    env:
+      PODVM_IMAGE: ${{ inputs.podvm_image }}
+      CAA_IMAGE: ${{ inputs.caa_image }}
+      CONTAINER_RUNTIME: ${{ inputs.container_runtime }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
           ref: ${{ inputs.git_ref }}
+          persist-credentials: false
 
       - name: Rebase the code
         if: github.event_name == 'pull_request_target'
@@ -102,7 +107,7 @@ jobs:
       - name: Update kustomization configuration
         run: |
           cd "install/overlays/docker"
-          kustomize edit set image "cloud-api-adaptor=${{ inputs.caa_image }}"
+          kustomize edit set image "cloud-api-adaptor=${CAA_IMAGE}"
           # Print for debugging
           echo "::group::docker kustomization"
           cat kustomization.yaml
@@ -111,10 +116,10 @@ jobs:
       - name: Config docker
         run: |
           cat <<- EOF > docker.properties
-          DOCKER_PODVM_IMAGE="${{ inputs.podvm_image }}"
+          DOCKER_PODVM_IMAGE="${PODVM_IMAGE}"
           DOCKER_HOST="unix:///var/run/docker.sock"
           DOCKER_NETWORK_NAME="kind"
-          CONTAINER_RUNTIME="${{ inputs.container_runtime }}"
+          CONTAINER_RUNTIME="${CONTAINER_RUNTIME}"
           DOCKER_API_VERSION="1.44"
           EOF
           # For debugging
@@ -124,12 +129,12 @@ jobs:
         id: runTests
         run: |
           export CLOUD_PROVIDER=docker
-          export CONTAINER_RUNTIME="${{ inputs.container_runtime }}"
+          export CONTAINER_RUNTIME="${CONTAINER_RUNTIME}"
           export DEPLOY_KBS=false
           export TEST_PROVISION=yes
           export TEST_TEARDOWN=no
           export TEST_PROVISION_FILE="$PWD/docker.properties"
-          export TEST_PODVM_IMAGE="${{ inputs.podvm_image }}"
+          export TEST_PODVM_IMAGE="${PODVM_IMAGE}"
           export TEST_E2E_TIMEOUT="50m"
 
           make test-e2e

@@ -42,6 +42,7 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
           ref: "${{ inputs.git_ref }}"
       - name: Read properties from versions.yaml
         run: |
@@ -71,19 +72,22 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push image
         run: |
-          tags="${{ inputs.image_tags }}"
+          tags="${IMAGE_TAGS}"
           latest=0
           for t in ${tags/,/ }; do
             if [ "$t" = "latest" ]; then
               latest=1
             else
               echo "::group::Build and push tag ${t}"
-              make docker-load docker-push IMG="${{ inputs.registry }}/peer-pods-webhook:${t}"
+              make docker-load docker-push IMG="${REGISTRY}/peer-pods-webhook:${t}"
               echo "::endgroup::"
             fi
           done
           if [ $latest -eq 1 ]; then
             echo "::group::Push latest"
-            make docker-push IMG=${{ inputs.registry }}/peer-pods-webhook:latest
+            make docker-push IMG=${REGISTRY}/peer-pods-webhook:latest
             echo "::endgroup::"
           fi
+        env:
+          IMAGE_TAGS: ${{ inputs.image_tags }}
+          REGISTRY: ${{ inputs.registry }}
