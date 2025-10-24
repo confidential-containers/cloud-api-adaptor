@@ -23,6 +23,9 @@ updates:
       aws-sdk-go-v2:
         patterns:
           - "*aws-sdk-go-v2*"
+      azcore:
+        patterns:
+          - "github.com/Azure/azure-sdk-for-go/sdk/azcore"
       k8s:
         patterns:
           - "*k8s.io*"
