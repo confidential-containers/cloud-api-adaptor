@@ -386,3 +386,10 @@ func (c *IBMRollingUpdateAssert) VerifyOldVmDeleted(t *testing.T) {
 		}
 	}
 }
+
+func (c *IBMRollingUpdateAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedString string) {
+	// Verify PodVM console output with provided expectedString
+	// This is not implemented for IBM as of now.
+	// So skipping this test.
+	t.Skip("Skipping this test as console verification is not added for IBM")
+}
