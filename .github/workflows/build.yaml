@@ -68,7 +68,7 @@ jobs:
           < tests_report.txt "$(go env GOPATH)/bin/go-junit-report" -set-exit-code > tests_report_junit.xml
         shell: bash
       - name: Upload tests report
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: matrix.type == 'dev'
         with:
           name: tests_report_junit-${{ matrix.runner }}_${{ env.GO_VERSION }}
