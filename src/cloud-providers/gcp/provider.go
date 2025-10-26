@@ -124,11 +124,35 @@ func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, 
 	}
 	defer client.Close()
 
-	parts := strings.Split(image, "/")
-	imageName := parts[len(parts)-1]
+	var projectID string
+	var imageName string
+
+	// Parse project ID from full path if present
+	// Supported formats:
+	// - /projects/PROJECT-ID/global/images/IMAGE-NAME
+	// - projects/PROJECT-ID/global/images/IMAGE-NAME
+	// - https://www.googleapis.com/compute/v1/projects/PROJECT-ID/global/images/IMAGE-NAME
+	if strings.HasPrefix(image, "/projects/") || strings.HasPrefix(image, "projects/") || strings.HasPrefix(image, "https://") {
+		parts := strings.Split(image, "/")
+		// Look for pattern: .../images/IMAGE-NAME
+		for i := len(parts) - 2; i >= 0; i-- {
+			if parts[i] == "images" && i >= 2 {
+				projectID = parts[i-2]
+				imageName = parts[len(parts)-1]
+				break
+			}
+		}
+	}
+
+	// Fallback to ConfigMap project and image name
+	if projectID == "" {
+		projectID = p.serviceConfig.ProjectId
+		parts := strings.Split(image, "/")
+		imageName = parts[len(parts)-1]
+	}
 
 	req := &computepb.GetImageRequest{
-		Project: p.serviceConfig.ProjectId,
+		Project: projectID,
 		Image:   imageName,
 	}
 
