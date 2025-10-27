@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: cloud-api-adaptor
+  name: cloud-api-adaptor-daemonset
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: cloud-api-adaptor
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: cloud-api-adaptor
+    spec:
+      serviceAccountName: cloud-api-adaptor
+      containers:
+      - command:
+        - /usr/local/bin/entrypoint.sh
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        envFrom:
+        - secretRef:
+            name: {{ include "peerpods.secretName" . }}
+        - configMapRef:
+            name: peer-pods-cm
+        image: {{ .Values.image.name | default "quay.io/confidential-containers/cloud-api-adaptor" }}:{{ .Values.image.tag | default "latest" }}
+        imagePullPolicy: Always
+        name: cloud-api-adaptor-con
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            - SYS_ADMIN
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 8000
+          failureThreshold: 30
+          periodSeconds: 20
+          initialDelaySeconds: 20
+        volumeMounts:
+        - mountPath: /root/.ssh/
+          name: ssh
+          readOnly: true
+        - mountPath: /run/peerpod
+          name: pods-dir
+        - mountPath: /run/netns
+          mountPropagation: HostToContainer
+          name: netns
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+        - mountPath: /lib/modules
+          name: lib-modules
+          readOnly: true
+        # # setting for cloud provider external plugin
+        # - mountPath: /cloud-providers
+        #   name: provider-dir
+        # # setting for cloud provider external plugin
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        node.kubernetes.io/worker: ""
+      volumes:
+      - name: ssh
+        secret:
+          defaultMode: 384
+          optional: true
+          secretName: ssh-key-secret
+      - hostPath:
+          path: /run/peerpod
+        name: pods-dir
+      - hostPath:
+          path: /run/netns
+        name: netns
+      - hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+        name: xtables-lock
+      - hostPath:
+          path: /lib/modules
+          type: ""
+        name: lib-modules
+      # # setting for cloud provider external plugin
+      # - hostPath:
+      #     path: /opt/cloud-api-adaptor/plugins
+      #     type: Directory
+      #   name: provider-dir
+      # # setting for cloud provider external plugin
