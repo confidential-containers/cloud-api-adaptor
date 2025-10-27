@@ -30,7 +30,7 @@ tools:
   bats: 1.10.0
   iptables-wrapper: v0.0.0-20240819165702-06cad2ec6cb5
   golang: 1.24.7
-  kcli: 99.0.202507200957
+  kcli: 99.0.202510241005
   mkosi: v22
   protoc: 3.16.0
   packer: v1.9.4
