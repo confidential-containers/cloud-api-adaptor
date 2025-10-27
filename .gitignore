@@ -39,3 +39,4 @@ src/cloud-api-adaptor/*.qcow2
 
 # Secrets
 install/overlays/gcp/GCP_CREDENTIALS
+install/charts/peerpods/values-secrets.yaml
