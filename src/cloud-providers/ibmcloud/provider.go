@@ -301,9 +301,9 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 
 		time.Sleep(time.Duration(queryInterval) * time.Second)
 
-		result, resp, err := p.vpc.GetInstanceWithContext(ctx, &vpcv1.GetInstanceOptions{ID: &instanceID})
+		result, response, err := p.vpc.GetInstanceWithContext(ctx, &vpcv1.GetInstanceOptions{ID: &instanceID})
 		if err != nil {
-			logger.Printf("failed to get an instance : %v and the response is %s", err, resp)
+			logger.Printf("failed to get an instance : %v and the response is %s", err, response)
 			return nil, err
 		}
 		vpcInstance = result
