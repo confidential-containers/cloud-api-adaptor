@@ -5,7 +5,7 @@ go 1.24.6
 toolchain go1.24.7
 
 require (
-	github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor v0.16.0
+	github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor v0.0.0-00010101000000-000000000000
 	github.com/container-storage-interface/spec v1.8.0
 	github.com/containerd/ttrpc v1.2.7
 	github.com/gofrs/uuid v4.4.0+incompatible

@@ -46,11 +46,6 @@ require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/IBM/ibm-cos-sdk-go v1.9.4
 	github.com/avast/retry-go/v4 v4.6.1
-	github.com/aws/aws-sdk-go-v2/service/eks v1.74.2
-	github.com/aws/aws-sdk-go-v2/service/iam v1.47.7
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.88.4
-	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.16.0
-	github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl v0.16.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -74,6 +69,8 @@ require (
 )
 
 require (
+	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.0.0-00010101000000-000000000000
+	github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl v0.0.0-00010101000000-000000000000
 	github.com/distribution/reference v0.6.0
 	github.com/fenglyu/go-dmidecode v0.0.0-20220417074508-03f52eb45fe9
 )
@@ -193,6 +190,7 @@ require (
 	github.com/moby/sys/symlink v0.2.0 // indirect
 	github.com/moby/sys/user v0.4.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
+	github.com/moby/term v0.5.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
@@ -237,6 +235,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gotest.tools/v3 v3.5.2 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	sigs.k8s.io/controller-runtime v0.14.1 // indirect
