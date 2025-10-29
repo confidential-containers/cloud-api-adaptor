@@ -6,7 +6,7 @@ networking:
 nodes:
   - role: control-plane
     # Instructions to build - https://github.com/cri-o/cri-o/blob/main/tutorials/crio-in-kind.md#build-node-image
-    image: quay.io/confidential-containers/kind-crio:v1.29.4
+    image: quay.io/wainersm/kind-crio:v1.34
     extraMounts:
       # The config.json file contains the registry secrets that you might
       # need to pull images from a private registry or docker registry to avoid
@@ -23,7 +23,7 @@ nodes:
         nodeRegistration:
           criSocket: unix:///var/run/crio/crio.sock
   - role: worker
-    image: quay.io/confidential-containers/kind-crio:v1.29.4
+    image: quay.io/wainersm/kind-crio:v1.34
     extraMounts:
       - hostPath: /var/run/docker.sock
         containerPath: /var/run/docker.sock
