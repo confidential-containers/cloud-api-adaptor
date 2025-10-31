@@ -1,0 +1,65 @@
+# Default values for peerpods (CAA) chart
+
+# Namespace where peerpods resources will be deployed
+namespace: confidential-containers-system
+
+# CAA (Cloud API Adaptor) version to fetch CRDs and controllers from
+caaVersion: v0.8.0
+
+# Cloud provider: libvirt, aws, azure, gcp, ibmcloud, vsphere
+provider: libvirt
+
+# Confidential VM settings
+confidential:
+  # Enable confidential containers (CVM)
+  # Sometimes, for development you might want to disable it and use a non CVM.
+  # Do not disable in production.
+  enabled: true
+
+# Maximum number of peer pods allowed to run simultaneously
+# This limit prevents resource exhaustion on the cloud provider
+# Set to "0" for unlimited (not recommended for production)
+limit: "10"
+
+# Provider-specific configurations (populates peer-pods-cm ConfigMap)
+# Non-sensitive cloud provider settings
+providerConfigs:
+  # Common configuration for all providers
+  all:
+    PROXY_TIMEOUT: "30m"
+    VXLAN_PORT: "9000"
+
+  # Specific provider configuration
+  libvirt:
+    LIBVIRT_URI: "qemu+ssh://root@192.168.122.1/system?no_verify=1"
+    LIBVIRT_NET: "default"
+    LIBVIRT_POOL: "default"
+
+  aws:
+    PODVM_AMI_ID: ""
+    PODVM_INSTANCE_TYPE: "t3.small"
+    AWS_REGION: "us-east-1"
+    AWS_VPC_ID: ""
+    AWS_SUBNET_ID: ""
+    AWS_SG_IDS: ""
+
+  azure:
+    AZURE_REGION: "eastus"
+    AZURE_SUBSCRIPTION_ID: ""
+    AZURE_INSTANCE_SIZE: "Standard_D8as_v5"
+    AZURE_RESOURCE_GROUP: ""
+    AZURE_SUBNET_ID: ""
+    AZURE_NSG_ID: ""
+    AZURE_IMAGE_ID: ""
+
+  gcp:
+    GCP_PROJECT_ID: ""
+    GCP_ZONE: "us-central1-a"
+
+  ibmcloud:
+    IBMCLOUD_REGION: ""
+
+  vsphere:
+    VSPHERE_SERVER: ""
+    VSPHERE_DATACENTER: ""
+    VSPHERE_DATASTORE: ""

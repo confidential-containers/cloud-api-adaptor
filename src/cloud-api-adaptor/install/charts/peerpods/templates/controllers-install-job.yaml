@@ -1,0 +1,54 @@
+# TODO: This pre-install hook should be avoided!
+#
+# Using Helm pre-install hook to fetch and install resources from CAA GitHub
+# repository using kustomize, mirroring what `kubectl apply -k` would do.
+#
+# This approach is used temporarily to avoid duplicating YAML files while we
+# determine the best long-term solution with the CAA project.
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-peerpods-install
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: peerpods
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: installer
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: peerpods
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: installer
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Release.Name }}-peerpods-installer
+      containers:
+      - name: install-controllers
+        image: registry.k8s.io/kustomize/kustomize:v5.0.0
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+
+          echo "Installing PeerPod controller (CRD + RBAC + Deployment)..."
+          kubectl kustomize github.com/confidential-containers/cloud-api-adaptor//peerpod-ctrl/config/default?ref={{ .Values.caaVersion }} | kubectl apply -f -
+
+          echo "All PeerPods components installed successfully"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
