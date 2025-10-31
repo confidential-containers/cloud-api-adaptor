@@ -15,14 +15,21 @@ import (
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 
+	"github.com/IBM/platform-services-go-sdk/globaltaggingv1"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const (
 	maxRetries    = 10
 	queryInterval = 2
+
+	clusterInfoCMName      = "cluster-info"
+	clusterInfoCMNamespace = "kube-system"
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/ibmcloud] ", log.LstdFlags|log.Lmsgprefix)
@@ -38,8 +45,13 @@ type vpcV1 interface {
 	GetImageWithContext(ctx context.Context, getImageOptions *vpcv1.GetImageOptions) (*vpcv1.Image, *core.DetailedResponse, error)
 }
 
+type globalTaggingV1 interface {
+	AttachTagWithContext(ctx context.Context, attachTagOptions *globaltaggingv1.AttachTagOptions) (*globaltaggingv1.TagResults, *core.DetailedResponse, error)
+}
+
 type ibmcloudVPCProvider struct {
 	vpc           vpcV1
+	globalTagging globalTaggingV1
 	serviceConfig *Config
 }
 
@@ -60,6 +72,14 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		}
 	} else {
 		return nil, fmt.Errorf("either an IAM API Key or Profile ID needs to be set")
+	}
+
+	if config.ClusterID == "" {
+		clusterID, err := getClusterID()
+		if err != nil {
+			return nil, fmt.Errorf("could not automatically find cluster ID: %w", err)
+		}
+		config.ClusterID = clusterID
 	}
 
 	nodeName, ok := os.LookupEnv("NODE_NAME")
@@ -116,8 +136,17 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		}
 	}
 
+	gTaggingV1, err := globaltaggingv1.NewGlobalTaggingV1(
+		&globaltaggingv1.GlobalTaggingV1Options{
+			Authenticator: authenticator,
+		})
+	if err != nil {
+		return nil, err
+	}
+
 	provider := &ibmcloudVPCProvider{
 		vpc:           vpcV1,
+		globalTagging: gTaggingV1,
 		serviceConfig: config,
 	}
 
@@ -132,6 +161,29 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	logger.Printf("ibmcloud-vpc config: %#v", config.Redact())
 
 	return provider, nil
+}
+
+func getClusterID() (string, error) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to get k8s rest config: %w", err)
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return "", fmt.Errorf("failed to create k8s clientset: %w", err)
+	}
+
+	cm, err := clientset.CoreV1().ConfigMaps(clusterInfoCMNamespace).Get(context.Background(), clusterInfoCMName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("could not get %s config map in %s namespace: %w", clusterInfoCMName, clusterInfoCMNamespace, err)
+	}
+
+	clusterID, ok := cm.Data["cluster_id"]
+	if !ok {
+		return "", fmt.Errorf("could not find cluster_id key in %s config map in %s namespace", clusterInfoCMName, clusterInfoCMNamespace)
+	}
+
+	return clusterID, nil
 }
 
 func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourceGroupID string, securityGroupID string, e error) {
@@ -155,6 +207,22 @@ func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourc
 	vpcID = *subnet.VPC.ID
 	resourceGroupID = *subnet.ResourceGroup.ID
 	return
+}
+
+func (p *ibmcloudVPCProvider) getAttachTagOptions(vpcInstanceCRN *string) (*globaltaggingv1.AttachTagOptions, error) {
+	if vpcInstanceCRN == nil {
+		return nil, fmt.Errorf("missing vpc instance crn, can't create attach tag options")
+	}
+
+	tagNames := append([]string{"coco-pod-vm:" + p.serviceConfig.ClusterID}, p.serviceConfig.Tags...)
+
+	options := &globaltaggingv1.AttachTagOptions{
+		Resources: []globaltaggingv1.Resource{{ResourceID: vpcInstanceCRN}},
+	}
+	options.SetTagType("user")
+	options.SetTagNames(tagNames)
+
+	return options, nil
 }
 
 func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageId string) *vpcv1.InstancePrototype {
@@ -301,9 +369,9 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 
 		time.Sleep(time.Duration(queryInterval) * time.Second)
 
-		result, resp, err := p.vpc.GetInstanceWithContext(ctx, &vpcv1.GetInstanceOptions{ID: &instanceID})
+		result, response, err := p.vpc.GetInstanceWithContext(ctx, &vpcv1.GetInstanceOptions{ID: &instanceID})
 		if err != nil {
-			logger.Printf("failed to get an instance : %v and the response is %s", err, resp)
+			logger.Printf("failed to get an instance : %v and the response is %s", err, response)
 			return nil, err
 		}
 		vpcInstance = result
@@ -314,6 +382,19 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		Name: instanceName,
 		IPs:  ips,
 	}
+
+	options, err := p.getAttachTagOptions(vpcInstance.CRN)
+	if err != nil {
+		logger.Printf("failed to get attach tag options: %v", err)
+		return nil, err
+	} else {
+		_, resp, err = p.globalTagging.AttachTagWithContext(ctx, options)
+		if err != nil {
+			logger.Printf("failed to attach tags: %v and the response is %s", err, resp)
+			return nil, err
+		}
+	}
+	logger.Printf("successfully attached tags: %v to instance: %v", options.TagNames, *vpcInstance.CRN)
 
 	return instance, nil
 }
