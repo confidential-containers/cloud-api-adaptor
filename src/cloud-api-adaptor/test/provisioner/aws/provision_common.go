@@ -319,7 +319,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"pause_image":          a.PauseImage,
 		"podvm_launchtemplate": "",
 		"podvm_ami":            a.Image.ID,
-		"podvm_instance_type":  "t3.small",
+		"podvm_instance_type":  "t2.medium",
 		"sg_ids":               a.Vpc.SecurityGroupId, // TODO: what other SG needed?
 		"subnet_id":            a.Vpc.SubnetId,
 		"ssh_kp_name":          a.SshKpName,
