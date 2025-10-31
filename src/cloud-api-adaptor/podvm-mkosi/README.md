@@ -74,6 +74,31 @@ Notice that building a debug image will overwrite any previous existing debug or
 For using SSH, create a file `resources/authorized_keys` with your SSH public key. Ensure the permissions
 are set to `0400` for the `authorized_keys` file. SSH access is only possible for the `root` user.
 
+## SFTP image
+
+There is an SFTP variant of the image that provides SSH/SFTP access to the podvm for debugging purposes.
+This variant requires creating a file `resources/authorized_keys` with your SSH public key before building.
+Ensure the permissions are set to `0400` for the `authorized_keys` file.
+
+```sh
+make sftp # this will rebuild the builder, the binaries and the OS image
+```
+
+```sh
+make image-sftp # this will only rebuild the OS image
+```
+
+For Ubuntu SFTP images:
+```sh
+PODVM_DISTRO=ubuntu make sftp
+```
+
+```sh
+PODVM_DISTRO=ubuntu make image-sftp
+```
+
+Notice that building an SFTP image will overwrite any previous existing debug or production image.
+
 ## Testing the image
 
 To verify the podvm image is bootable and responsive before deploying to
