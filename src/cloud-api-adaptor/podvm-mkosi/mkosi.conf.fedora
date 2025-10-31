@@ -1,0 +1,10 @@
+[Content]
+Environment=SOURCE_DATE_EPOCH=0
+RemoveFiles=/var/log
+RemoveFiles=/var/cache
+
+[Output]
+OutputDirectory=build
+
+[Distribution]
+Distribution=fedora
