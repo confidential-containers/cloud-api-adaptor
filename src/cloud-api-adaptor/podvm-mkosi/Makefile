@@ -35,12 +35,22 @@ sftp:binaries image-sftp
 .PHONY: container
 container: binaries image-container
 
+ifeq ($(PODVM_DISTRO),ubuntu)
+DISTRO_IMAGE := ubuntu:24.04
+DISTRO_RELEASE := 24.04
+PKG_INSTALL := apt-get update && apt-get install -y
+else
+DISTRO_IMAGE := fedora:41
+DISTRO_RELEASE := 41
+PKG_INSTALL := dnf install -y
+endif
+
 define run_mkosi_in_container
 	docker run --rm --privileged \
 		-v "$(shell pwd)":/workspace \
 		-w /workspace \
-		fedora:41 \
-		bash -c "dnf install -y bubblewrap coreutils git python3; mkdir -p /build; git clone -b $(MKOSI_VERSION) https://github.com/systemd/mkosi /build/mkosi; export PATH="/build/mkosi/bin:$$PATH"; mkosi --tools-tree=default --tools-tree-release=41 $(1)"
+		$(DISTRO_IMAGE) \
+		bash -c "$(PKG_INSTALL) bubblewrap coreutils git python3; mkdir -p /build; git clone -b $(MKOSI_VERSION) https://github.com/systemd/mkosi /build/mkosi; export PATH="/build/mkosi/bin:$$PATH"; mkosi --tools-tree=default --tools-tree-release=$(DISTRO_RELEASE) $(1)"
 endef
 
 binaries:
@@ -72,7 +82,7 @@ endif
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		$(if $(filter $(PUSH),true),,-o type=local,dest="./resources/binaries-tree") \
 		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm_binaries.fedora ../../
+		-f ../podvm/Dockerfile.podvm_binaries.$(PODVM_DISTRO) ../../
 
 PHONY: insecure-builder
 insecure-builder:
@@ -94,7 +104,7 @@ else ifeq ($(ARCH),s390x)
 else
 	mkdir -p build
 	docker buildx build \
-		-f Dockerfile.mkosi \
+		-f Dockerfile.mkosi$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=production \
 		--build-arg IMAGE_VERSION \
@@ -121,7 +131,7 @@ else
 
 	mkdir -p build
 	docker buildx build \
-		-f Dockerfile.mkosi \
+		-f Dockerfile.mkosi$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=debug \
 		--build-arg IMAGE_VERSION \
@@ -147,7 +157,7 @@ else ifeq ($(ARCH),s390x)
 else
 	mkdir -p build
 	docker buildx build \
-		-f Dockerfile.mkosi \
+		-f Dockerfile.mkosi$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=sftp \
 		--build-arg IMAGE_VERSION \
@@ -166,7 +176,7 @@ image-container:
 	docker buildx build \
 		-t $(PODVM_CONTAINER_NAME):$(PODVM_TAG) \
 		-t $(PODVM_CONTAINER_NAME):latest \
-		-f Dockerfile.podvm_docker_provider .
+		-f Dockerfile.podvm_docker_provider$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) .
 
 PHONY: push-image
 push-image:
