@@ -83,6 +83,27 @@ Capture the VM IP
 virsh domifaddr podvm-test
 ```
 
+## Set up and use an existing VM for pool
+
+1. Prerequisites
+Ensure the following tools are installed and available in your environment:
+- yq 
+- Golang
+- Docker
+
+2. Save your public SSH key at a known path. The BYOM provider will use this key for verification, and you will need it later when running the setup script.
+
+3. Clone the CAA repository
+```
+git clone https://github.com/confidential-containers/cloud-api-adaptor.git
+cd cloud-api-adaptor/src/cloud-api-adaptor
+```
+4. Execute the setup script
+> You can build your own image with `make podvm-byom-binaries-image`, or skip this step to use a published image.
+```
+SSH_PUBLIC_KEY_PATH=<path-to-public-key> ./hack/setup-podvm-byom.sh
+```
+
 ## Deployment Configuration
 
 You must run the following command from `src/cloud-api-adaptor/install/overlays/byom` as the base directory.

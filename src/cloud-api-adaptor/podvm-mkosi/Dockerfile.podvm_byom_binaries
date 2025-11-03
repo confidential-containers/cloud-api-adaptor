@@ -1,0 +1,30 @@
+# Copyright Confidential Containers Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Packages prequisites for podvm-byom image
+#
+# Override it via build-args for different platforms
+
+ARG BINARIES_IMG="quay.io/confidential-containers/podvm-binaries-ubuntu-amd64"
+
+FROM ${BINARIES_IMG} AS podvm_binaries
+
+FROM ubuntu:24.04 as builder
+
+COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/podvm-binaries.tar.gz
+RUN mkdir /src/files && tar xvf /src/podvm-binaries.tar.gz -C /src/files
+
+# Copy the pause_bundle to podvm/files folder
+COPY --from=podvm_binaries /pause-bundle.tar.gz /src/pause-bundle.tar.gz
+RUN tar xvf /src/pause-bundle.tar.gz -C /src/files
+
+COPY . /src
+
+COPY podvm-mkosi/mkosi.skeleton-sftp/usr/lib/systemd/system /src/files/etc/systemd/system
+COPY podvm/qcow2/copy-files.sh /src/files/copy-files.sh
+
+RUN tar czvf /podvm-byom.tar.gz -C /src/files .
+
+FROM scratch
+COPY --from=builder /podvm-byom.tar.gz /

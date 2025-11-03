@@ -161,6 +161,7 @@ PODVM_TAG ?= $(VERSIONS_HASH)
 
 PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(PODVM_TAG)
 PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
+PODVM_BYOM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-byom-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
 PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
 
 PUSH ?= false
@@ -170,6 +171,7 @@ DOCKER_OPTS := $(if $(filter $(PUSH),true),--push,--load) $(EXTRA_DOCKER_OPTS)
 DOCKERFILE_SUFFIX := $(if $(filter $(PODVM_DISTRO),ubuntu alinux),,.$(PODVM_DISTRO))
 BUILDER_DOCKERFILE := Dockerfile.podvm_builder$(DOCKERFILE_SUFFIX)
 BINARIES_DOCKERFILE := Dockerfile.podvm_binaries$(DOCKERFILE_SUFFIX)
+BYOM_BINARIES_DOCKERFILE := Dockerfile.podvm_byom_binaries$(DOCKERFILE_SUFFIX)
 PODVM_DOCKERFILE := Dockerfile.podvm$(DOCKERFILE_SUFFIX)
 
 podvm-builder:
@@ -233,3 +235,8 @@ endif
 	$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 	$(DOCKER_OPTS) .
 	rm -rf .git
+
+podvm-byom-binaries-image:
+	docker buildx build -t $(PODVM_BYOM_BINARIES_IMAGE) -f podvm-mkosi/$(BYOM_BINARIES_DOCKERFILE) \
+	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
+	$(DOCKER_OPTS) .
