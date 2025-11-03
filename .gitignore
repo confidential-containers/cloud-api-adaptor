@@ -8,6 +8,7 @@ src/cloud-api-adaptor/umoci
 src/cloud-api-adaptor/skopeo
 src/csi-wrapper/build
 src/csi-wrapper/vendor
+src/cloud-providers/bin
 
 # Binaries
 src/cloud-api-adaptor/agent-protocol-forwarder

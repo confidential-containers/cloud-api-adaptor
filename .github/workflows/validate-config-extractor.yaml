@@ -1,0 +1,82 @@
+# (C) Copyright Confidential Containers Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Validate config-extractor tool
+---
+name: validate-config-extractor
+
+on:
+  pull_request:
+    paths:
+      - 'src/cloud-providers/**/manager.go'
+      - 'src/cloud-providers/util.go'
+      - 'src/cloud-providers/cmd/config-extractor/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  test-extractor:
+    name: Test config-extractor tool
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src/cloud-providers
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Read properties from versions.yaml
+        run: |
+          go_version="$(yq '.tools.golang' ../cloud-api-adaptor/versions.yaml)"
+          [ -n "$go_version" ]
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
+
+      - name: Build config-extractor
+        run: make config-extractor
+
+      - name: Test all providers parse successfully
+        run: |
+          # Find all directories with manager.go (excluding cmd and util)
+          for provider_dir in */; do
+            provider=$(basename "$provider_dir")
+
+            # Skip non-provider directories
+            if [[ "$provider" == "cmd" || "$provider" == "util" || "$provider" == "bin" ]]; then
+              continue
+            fi
+
+            # Check if manager.go exists
+            if [[ ! -f "${provider}/manager.go" ]]; then
+              echo "Error: ${provider}/manager.go not found"
+              echo "This could indicate a refactoring issue or incomplete provider implementation"
+              exit 1
+            fi
+
+            echo "::group::Testing provider: $provider"
+            ./bin/config-extractor -o json "$provider" > /tmp/"$provider".json
+
+            # Verify output is valid JSON
+            if ! jq empty /tmp/"$provider".json 2>/dev/null; then
+              echo "Invalid JSON output for $provider"
+              exit 1
+            fi
+
+            # Verify at least some flags were extracted
+            flag_count=$(jq '.flags | length' /tmp/"$provider".json)
+            echo "✓ $provider: parsed successfully ($flag_count flags found)"
+            echo "::endgroup::"
+          done
+        shell: bash

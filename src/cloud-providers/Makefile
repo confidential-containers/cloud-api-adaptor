@@ -1,4 +1,4 @@
-.PHONY: all build test clean
+.PHONY: all build test clean config-extractor
 
 all: build test clean
 
@@ -14,3 +14,9 @@ clean:
 	@echo "→ Cleaning build cache and test artifacts..."
 	go clean -cache -testcache -modcache
 	@rm -f cover.out
+	@rm -rf bin/
+
+config-extractor: ## Build config-extractor dev tool
+	@echo "→ Building config-extractor..."
+	@mkdir -p bin
+	go build -o bin/config-extractor ./cmd/config-extractor
