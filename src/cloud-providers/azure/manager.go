@@ -18,37 +18,36 @@ func init() {
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
-	flags.StringVar(&azurecfg.ClientId, "clientid", "", "Client Id, defaults to `AZURE_CLIENT_ID`")
-	flags.StringVar(&azurecfg.ClientSecret, "secret", "", "Client Secret, defaults to `AZURE_CLIENT_SECRET`")
-	flags.StringVar(&azurecfg.TenantId, "tenantid", "", "Tenant Id, defaults to `AZURE_TENANT_ID`")
-	flags.StringVar(&azurecfg.ResourceGroupName, "resourcegroup", "", "Resource Group")
-	flags.StringVar(&azurecfg.Zone, "zone", "", "Zone")
-	flags.StringVar(&azurecfg.Region, "region", "", "Region")
-	flags.StringVar(&azurecfg.SubnetId, "subnetid", "", "Network Subnet Id")
-	flags.StringVar(&azurecfg.SecurityGroupId, "securitygroupid", "", "Security Group Id")
-	flags.StringVar(&azurecfg.Size, "instance-size", "Standard_DC2as_v5", "Instance size")
-	flags.StringVar(&azurecfg.ImageId, "imageid", "", "Image Id")
-	flags.StringVar(&azurecfg.SubscriptionId, "subscriptionid", "", "Subscription ID")
-	flags.StringVar(&azurecfg.SSHKeyPath, "ssh-key-path", "", "Path to SSH public key")
-	flags.StringVar(&azurecfg.SSHUserName, "ssh-username", "peerpod", "SSH User Name")
-	flags.BoolVar(&azurecfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
-	// Add a List parameter to indicate different types of instance sizes to be used for the Pod VMs
-	flags.Var(&azurecfg.InstanceSizes, "instance-sizes", "Instance sizes to be used for the Pod VMs, comma separated")
-	// Add a key value list parameter to indicate custom tags to be used for the Pod VMs
-	flags.Var(&azurecfg.Tags, "tags", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
-	flags.BoolVar(&azurecfg.EnableSecureBoot, "enable-secure-boot", false, "Enable secure boot for the VMs")
-	flags.BoolVar(&azurecfg.UsePublicIP, "use-public-ip", false, "Assign public IP to the PoD VM and use to connect to kata-agent")
-	flags.IntVar(&azurecfg.RootVolumeSize, "root-volume-size", 0, "Root volume size in GB. Default is 0, which implies the default image disk size")
+	reg := provider.NewFlagRegistrar(flags)
+
+	// Flags with environment variable support
+	reg.StringWithEnv(&azurecfg.ClientId, "clientid", "", "AZURE_CLIENT_ID", "Client Id")
+	reg.StringWithEnv(&azurecfg.ClientSecret, "secret", "", "AZURE_CLIENT_SECRET", "Client Secret")
+	reg.StringWithEnv(&azurecfg.TenantId, "tenantid", "", "AZURE_TENANT_ID", "Tenant Id")
+	reg.StringWithEnv(&azurecfg.SubscriptionId, "subscriptionid", "", "AZURE_SUBSCRIPTION_ID", "Subscription ID")
+	reg.StringWithEnv(&azurecfg.Region, "region", "", "AZURE_REGION", "Region")
+	reg.StringWithEnv(&azurecfg.ResourceGroupName, "resourcegroup", "", "AZURE_RESOURCE_GROUP", "Resource Group")
+	reg.StringWithEnv(&azurecfg.Size, "instance-size", "Standard_DC2as_v5", "AZURE_INSTANCE_SIZE", "Instance size")
+
+	// Flags without environment variable support (pass empty string for envVarName)
+	reg.StringWithEnv(&azurecfg.Zone, "zone", "", "", "Zone")
+	reg.StringWithEnv(&azurecfg.SubnetId, "subnetid", "", "AZURE_SUBNET_ID", "Network Subnet Id")
+	reg.StringWithEnv(&azurecfg.SecurityGroupId, "securitygroupid", "", "AZURE_NSG_ID", "Security Group Id")
+	reg.StringWithEnv(&azurecfg.ImageId, "imageid", "", "AZURE_IMAGE_ID", "Image Id")
+	reg.StringWithEnv(&azurecfg.SSHKeyPath, "ssh-key-path", "", "", "Path to SSH public key")
+	reg.StringWithEnv(&azurecfg.SSHUserName, "ssh-username", "peerpod", "SSH_USERNAME", "SSH User Name")
+	reg.BoolWithEnv(&azurecfg.DisableCVM, "disable-cvm", false, "DISABLECVM", "Use non-CVMs for peer pods")
+	reg.BoolWithEnv(&azurecfg.EnableSecureBoot, "enable-secure-boot", false, "ENABLE_SECURE_BOOT", "Enable secure boot for the VMs")
+	reg.BoolWithEnv(&azurecfg.UsePublicIP, "use-public-ip", false, "USE_PUBLIC_IP", "Assign public IP to the PoD VM and use to connect to kata-agent")
+	reg.IntWithEnv(&azurecfg.RootVolumeSize, "root-volume-size", 0, "ROOT_VOLUME_SIZE", "Root volume size in GB. Default is 0, which implies the default image disk size")
+
+	// Custom flag types (comma-separated lists)
+	reg.CustomTypeWithEnv(&azurecfg.InstanceSizes, "instance-sizes", "", "AZURE_INSTANCE_SIZES", "Instance sizes to be used for the Pod VMs, comma separated")
+	reg.CustomTypeWithEnv(&azurecfg.Tags, "tags", "", "TAGS", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
 }
 
 func (_ *Manager) LoadEnv() {
-	provider.DefaultToEnv(&azurecfg.ClientId, "AZURE_CLIENT_ID", "")
-	provider.DefaultToEnv(&azurecfg.ClientSecret, "AZURE_CLIENT_SECRET", "")
-	provider.DefaultToEnv(&azurecfg.TenantId, "AZURE_TENANT_ID", "")
-	provider.DefaultToEnv(&azurecfg.SubscriptionId, "AZURE_SUBSCRIPTION_ID", "")
-	provider.DefaultToEnv(&azurecfg.Region, "AZURE_REGION", "")
-	provider.DefaultToEnv(&azurecfg.ResourceGroupName, "AZURE_RESOURCE_GROUP", "")
-	provider.DefaultToEnv(&azurecfg.Size, "AZURE_INSTANCE_SIZE", "Standard_DC2as_v5")
+	// No longer needed - environment variables are handled in ParseCmd
 }
 
 func (_ *Manager) NewProvider() (provider.Provider, error) {
