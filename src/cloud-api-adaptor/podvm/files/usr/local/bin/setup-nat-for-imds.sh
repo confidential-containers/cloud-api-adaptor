@@ -41,14 +41,14 @@ function setup_proxy_arp() {
 
 # Wait for namespace and network to be available
 echo "Waiting for net namespace podns and route to $IMDS_IP..."
-SECONDS=0
+counter=0
 while :; do
 	if ip netns exec podns ip route get "$IMDS_IP"; then
 		echo "Namespace podns is ready, proceeding..."
 		break
 	fi
-	if (( SECONDS > 60 )); then
-		echo "Namespace podns is not ready after ${SECONDS}s"
+	if (( counter > 60 )); then
+		echo "Namespace podns is not ready after ${counter}s"
 		echo "ip netns list:"
 		ip netns list || true
 		echo "ip netns exec:"
@@ -56,6 +56,7 @@ while :; do
 		exit 1
 	fi
 	sleep 1
+	((counter++))
 done
 
 # Execute functions
