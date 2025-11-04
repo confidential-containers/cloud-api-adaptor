@@ -15,6 +15,7 @@ type Config struct {
 	ImageName        string
 	MachineType      string
 	Network          string
+	Subnetwork       string
 	DiskType         string
 	DisableCVM       bool
 	ConfidentialType string
