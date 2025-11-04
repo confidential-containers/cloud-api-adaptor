@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 
@@ -166,7 +167,19 @@ func (r *PeerPodReconciler) cloudConfigsGetter() error {
 
 func GetProvider(cloudName string) (provider.Provider, error) {
 	if cloud := provider.Get(cloudName); cloud != nil {
-		cloud.LoadEnv()
+		// Load cloud provider configuration from environment variables.
+		//
+		// cloudConfigsGetter() has already populated os.Environ() with values from
+		// the peer-pods-cm ConfigMap and peer-pods-secret Secret (e.g., AZURE_CLIENT_ID,
+		// AWS_ACCESS_KEY_ID, etc.).
+		//
+		// ParseCmd() reads these environment variables and populates the provider's
+		// configuration struct. We pass a dummy FlagSet because peerpod-ctrl doesn't
+		// use command-line flags - it only needs environment variable loading, which
+		// happens as a side effect of ParseCmd() during flag registration.
+		dummyFlags := flag.NewFlagSet(cloudName, flag.ContinueOnError)
+		cloud.ParseCmd(dummyFlags)
+
 		provider, err := cloud.NewProvider()
 		if err != nil {
 			return nil, err
