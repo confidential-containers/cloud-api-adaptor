@@ -7,3 +7,5 @@ self-hosted-runner:
   # Labels of self-hosted runner that linter should ignore
   labels:
     - S390X
+    - ubuntu-24.04-ppc64le
+    - ubuntu-24.04-s390x
