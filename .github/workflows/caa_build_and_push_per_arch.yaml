@@ -64,23 +64,18 @@ jobs:
   build_push_job:
     name: build and push
     needs: [upload_tags]
-    runs-on: ${{ matrix.type == 'dev-s390x' && 's390x' || 'ubuntu-22.04' }}
+    runs-on: ${{ matrix.types.runner }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - type: dev-amd64
-            arches: "linux/amd64"
-          - type: dev-s390x
-            arches: "linux/s390x"
-          - type: dev-ppc64le
-            arches: "linux/ppc64le"
-          - type: release-amd64
-            arches: "linux/amd64"
-          - type: release-s390x
-            arches: "linux/s390x"
-          - type: release-ppc64le
-            arches: "linux/ppc64le"
+        types: [
+          { type: dev-amd64,       arch: linux/amd64,   runner: ubuntu-24.04 },
+          { type: dev-s390x,       arch: linux/s390x,   runner: ubuntu-24.04-s390x },
+          { type: dev-ppc64le,     arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
+          { type: release-amd64,   arch: linux/amd64,   runner: ubuntu-24.04 },
+          { type: release-s390x,   arch: linux/s390x,   runner: ubuntu-24.04-s390x },
+          { type: release-ppc64le, arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
+        ]
     permissions:
       contents: read
       packages: write
@@ -108,7 +103,7 @@ jobs:
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Install build dependencies
-        if: ${{ startsWith(matrix.type, 'dev-') }}
+        if: ${{ startsWith(matrix.types.type, 'dev-') }}
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libvirt-dev
@@ -130,7 +125,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push dev image
-        if: ${{ startsWith(matrix.type, 'dev-') }}
+        if: ${{ startsWith(matrix.types.type, 'dev-') }}
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         with:
           # We are not interested in timeout but this field is required
@@ -140,10 +135,10 @@ jobs:
           max_attempts: 3
           command: |
             echo "Build and push dev image with libvirt"
-            cd src/cloud-api-adaptor && ARCHES=${{matrix.arches}} RELEASE_BUILD=false DEV_TAGS=${{ inputs.dev_tags}} make image-with-arch registry=${{ inputs.registry }}
+            cd src/cloud-api-adaptor && ARCHES=${{matrix.types.arch}} RELEASE_BUILD=false DEV_TAGS=${{ inputs.dev_tags}} make image-with-arch registry=${{ inputs.registry }}
 
       - name: Build and push release image
-        if: ${{ startsWith(matrix.type, 'release-') }}
+        if: ${{ startsWith(matrix.types.type, 'release-') }}
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
         with:
           # We are not interested in timeout but this field is required
@@ -153,12 +148,12 @@ jobs:
           max_attempts: 3
           command: |
             echo "Build and push release image without libvirt"
-            cd src/cloud-api-adaptor && ARCHES=${{matrix.arches}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
+            cd src/cloud-api-adaptor && ARCHES=${{matrix.types.arch}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: tags-architectures-${{matrix.type}}
+          name: tags-architectures-${{matrix.types.type}}
           retention-days: 1
           path: |
             src/cloud-api-adaptor/tags-architectures-*
