@@ -18,23 +18,27 @@ func init() {
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+	reg := provider.NewFlagRegistrar(flags)
 
-	flags.StringVar(&gcpcfg.GcpCredentials, "gcp-credentials", "", "Google Application Credentials, defaults to `GCP_CREDENTIALS`")
-	flags.StringVar(&gcpcfg.ProjectId, "gcp-project-id", "", "GCP Project ID")
-	flags.StringVar(&gcpcfg.Zone, "zone", "", "Zone")
-	flags.StringVar(&gcpcfg.ImageName, "image-name", "", "Pod VM image name")
-	flags.StringVar(&gcpcfg.MachineType, "machine-type", "e2-medium", "Pod VM instance type")
-	flags.StringVar(&gcpcfg.Network, "network", "", "Network ID to be used for the Pod VMs")
-	flags.StringVar(&gcpcfg.Subnetwork, "subnetwork", "", "Subnetwork ID to be used for the Pod VMs (required for custom subnet mode networks)")
-	flags.StringVar(&gcpcfg.DiskType, "disk-type", "pd-standard", "Any GCP disk type (pd-standard, pd-ssd, pd-balanced or pd-extreme)")
-	flags.BoolVar(&gcpcfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
-	flags.StringVar(&gcpcfg.ConfidentialType, "confidential-type", "", "Used when DisableCVM=false. i.e: TDX or SEV_SNP. Check if the machine type is compatible.")
-	flags.IntVar(&gcpcfg.RootVolumeSize, "root-volume-size", 10, "Root volume size (in GiB) for the Pod VMs")
-	flags.Var(&gcpcfg.Tags, "tags", "List of tags to be added to the Pod VMs. Tags must already exist in the GCP project. Format: key1=value1,key2=value2")
+	// Flags with environment variable support
+	reg.StringWithEnv(&gcpcfg.GcpCredentials, "gcp-credentials", "", "GCP_CREDENTIALS", "Google Application Credentials")
+	reg.StringWithEnv(&gcpcfg.ProjectId, "gcp-project-id", "", "GCP_PROJECT_ID", "GCP Project ID")
+	reg.StringWithEnv(&gcpcfg.Zone, "zone", "", "GCP_ZONE", "Zone")
+	reg.StringWithEnv(&gcpcfg.ImageName, "image-name", "", "PODVM_IMAGE_NAME", "Pod VM image name")
+	reg.StringWithEnv(&gcpcfg.MachineType, "machine-type", "e2-medium", "GCP_MACHINE_TYPE", "Pod VM instance type")
+	reg.StringWithEnv(&gcpcfg.Network, "network", "", "GCP_NETWORK", "Network ID to be used for the Pod VMs")
+	reg.StringWithEnv(&gcpcfg.Subnetwork, "subnetwork", "", "GCP_SUBNETWORK", "Subnetwork ID to be used for the Pod VMs (required for custom subnet mode networks)")
+	reg.StringWithEnv(&gcpcfg.DiskType, "disk-type", "pd-standard", "GCP_DISK_TYPE", "Any GCP disk type (pd-standard, pd-ssd, pd-balanced or pd-extreme)")
+	reg.BoolWithEnv(&gcpcfg.DisableCVM, "disable-cvm", false, "DISABLECVM", "Use non-CVMs for peer pods")
+	reg.StringWithEnv(&gcpcfg.ConfidentialType, "confidential-type", "", "GCP_CONFIDENTIAL_TYPE", "Used when DisableCVM=false. i.e: TDX, SEV or SEV_SNP. Check if the machine type is compatible.")
+	reg.IntWithEnv(&gcpcfg.RootVolumeSize, "root-volume-size", 10, "ROOT_VOLUME_SIZE", "Root volume size (in GiB) for the Pod VMs")
+
+	// Custom flag types (comma-separated lists)
+	reg.CustomTypeWithEnv(&gcpcfg.Tags, "tags", "", "TAGS", "List of tags to be added to the Pod VMs. Tags must already exist in the GCP project. Format: key1=value1,key2=value2")
 }
 
 func (_ *Manager) LoadEnv() {
-	provider.DefaultToEnv(&gcpcfg.GcpCredentials, "GCP_CREDENTIALS", "")
+	// No longer needed - environment variables are handled in ParseCmd
 }
 
 func (_ *Manager) NewProvider() (provider.Provider, error) {
