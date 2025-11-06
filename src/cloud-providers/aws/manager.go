@@ -18,36 +18,34 @@ func init() {
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+	reg := provider.NewFlagRegistrar(flags)
 
-	flags.StringVar(&awscfg.AccessKeyId, "aws-access-key-id", "", "Access Key ID, defaults to `AWS_ACCESS_KEY_ID`")
-	flags.StringVar(&awscfg.SecretKey, "aws-secret-key", "", "Secret Key, defaults to `AWS_SECRET_ACCESS_KEY`")
-	flags.StringVar(&awscfg.SessionToken, "aws-session-token", "", "Session Token, defaults to `AWS_SESSION_TOKEN`")
-	flags.StringVar(&awscfg.Region, "aws-region", "", "Region")
-	flags.StringVar(&awscfg.LoginProfile, "aws-profile", "", "AWS Login Profile")
-	flags.StringVar(&awscfg.LaunchTemplateName, "aws-lt-name", "kata", "AWS Launch Template Name")
-	flags.BoolVar(&awscfg.UseLaunchTemplate, "use-lt", false, "Use EC2 Launch Template for the Pod VMs")
-	flags.StringVar(&awscfg.ImageId, "imageid", "", "Pod VM ami id")
-	flags.StringVar(&awscfg.InstanceType, "instance-type", "m6a.large", "Pod VM instance type")
-	flags.Var(&awscfg.SecurityGroupIds, "securitygroupids", "Security Group Ids to be used for the Pod VM, comma separated")
-	flags.StringVar(&awscfg.KeyName, "keyname", "", "SSH Keypair name to be used with the Pod VM")
-	flags.StringVar(&awscfg.SubnetId, "subnetid", "", "Subnet ID to be used for the Pod VMs")
-	// Add a List parameter to indicate differet type of instance types to be used for the Pod VMs
-	flags.Var(&awscfg.InstanceTypes, "instance-types", "Instance types to be used for the Pod VMs, comma separated")
-	// Add a key value list parameter to indicate custom tags to be used for the Pod VMs
-	flags.Var(&awscfg.Tags, "tags", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
-	flags.BoolVar(&awscfg.UsePublicIP, "use-public-ip", false, "Use Public IP for connecting to the kata-agent inside the Pod VM")
-	// Add a parameter to indicate the root volume size for the Pod VMs
-	// Default is 30GiBs for free tier. Hence use it as default
-	flags.IntVar(&awscfg.RootVolumeSize, "root-volume-size", 30, "Root volume size (in GiB) for the Pod VMs")
-	flags.BoolVar(&awscfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
+	// Flags with environment variable support
+	reg.StringWithEnv(&awscfg.AccessKeyId, "aws-access-key-id", "", "AWS_ACCESS_KEY_ID", "Access Key ID")
+	reg.StringWithEnv(&awscfg.SecretKey, "aws-secret-key", "", "AWS_SECRET_ACCESS_KEY", "Secret Key")
+	reg.StringWithEnv(&awscfg.SessionToken, "aws-session-token", "", "AWS_SESSION_TOKEN", "Session Token")
+	reg.StringWithEnv(&awscfg.InstanceType, "instance-type", "m6a.large", "PODVM_INSTANCE_TYPE", "Pod VM instance type")
+	reg.StringWithEnv(&awscfg.Region, "aws-region", "", "AWS_REGION", "Region")
+	reg.StringWithEnv(&awscfg.LaunchTemplateName, "aws-lt-name", "kata", "PODVM_LAUNCHTEMPLATE_NAME", "AWS Launch Template Name")
+	reg.BoolWithEnv(&awscfg.UseLaunchTemplate, "use-lt", false, "USE_PODVM_LAUNCHTEMPLATE", "Use EC2 Launch Template for the Pod VMs")
+	reg.StringWithEnv(&awscfg.ImageId, "imageid", "", "PODVM_AMI_ID", "Pod VM ami id")
+	reg.StringWithEnv(&awscfg.KeyName, "keyname", "", "SSH_KP_NAME", "SSH Keypair name to be used with the Pod VM")
+	reg.StringWithEnv(&awscfg.SubnetId, "subnetid", "", "AWS_SUBNET_ID", "Subnet ID to be used for the Pod VMs")
+	reg.BoolWithEnv(&awscfg.UsePublicIP, "use-public-ip", false, "USE_PUBLIC_IP", "Use Public IP for connecting to the kata-agent inside the Pod VM")
+	reg.IntWithEnv(&awscfg.RootVolumeSize, "root-volume-size", 30, "ROOT_VOLUME_SIZE", "Root volume size (in GiB) for the Pod VMs")
+	reg.BoolWithEnv(&awscfg.DisableCVM, "disable-cvm", false, "DISABLECVM", "Use non-CVMs for peer pods")
 
+	// Flags without environment variable support (pass empty string for envVarName)
+	reg.StringWithEnv(&awscfg.LoginProfile, "aws-profile", "", "", "AWS Login Profile")
+
+	// Custom flag types (comma-separated lists)
+	reg.CustomTypeWithEnv(&awscfg.SecurityGroupIds, "securitygroupids", "", "AWS_SG_IDS", "Security Group Ids to be used for the Pod VM, comma separated")
+	reg.CustomTypeWithEnv(&awscfg.InstanceTypes, "instance-types", "", "PODVM_INSTANCE_TYPES", "Instance types to be used for the Pod VMs, comma separated")
+	reg.CustomTypeWithEnv(&awscfg.Tags, "tags", "", "TAGS", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
 }
 
 func (_ *Manager) LoadEnv() {
-	provider.DefaultToEnv(&awscfg.AccessKeyId, "AWS_ACCESS_KEY_ID", "")
-	provider.DefaultToEnv(&awscfg.SecretKey, "AWS_SECRET_ACCESS_KEY", "")
-	provider.DefaultToEnv(&awscfg.SessionToken, "AWS_SESSION_TOKEN", "")
-	provider.DefaultToEnv(&awscfg.InstanceType, "PODVM_INSTANCE_TYPE", "m6a.large")
+	// No longer needed - environment variables are handled in ParseCmd
 }
 
 func (_ *Manager) NewProvider() (provider.Provider, error) {
