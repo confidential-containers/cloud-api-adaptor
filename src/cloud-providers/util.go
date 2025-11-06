@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
@@ -198,6 +199,21 @@ func (r *FlagRegistrar) IntWithEnv(field *int, flagName string, hardcodedDefault
 	}
 
 	r.flags.IntVar(field, flagName, *field, usage)
+}
+
+// UintWithEnv registers a uint flag with environment variable support.
+func (r *FlagRegistrar) UintWithEnv(field *uint, flagName string, hardcodedDefault uint, envVarName, usage string) {
+	*field = hardcodedDefault
+
+	if envVarName != "" {
+		if envValue, exists := os.LookupEnv(envVarName); exists {
+			if uintVal, err := strconv.ParseUint(envValue, 10, 32); err == nil {
+				*field = uint(uintVal)
+			}
+		}
+	}
+
+	r.flags.UintVar(field, flagName, *field, usage)
 }
 
 // BoolWithEnv registers a bool flag with environment variable support.
