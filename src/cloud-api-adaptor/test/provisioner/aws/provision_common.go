@@ -12,15 +12,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go-v2/service/eks"
-	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -34,8 +31,7 @@ import (
 )
 
 const (
-	EksCniAddonVersion = "v1.12.5-eksbuild.2"
-	EksVersion         = "1.26"
+	EksVersion         = "1.34"
 	AwsCredentialsFile = "aws-cred.env"
 )
 
@@ -84,17 +80,13 @@ type Cluster interface {
 
 // EKSCluster represents an EKS cluster
 type EKSCluster struct {
-	AwsConfig       aws.Config
-	Client          *eks.Client
-	ClusterRoleName string
-	IamClient       *iam.Client
-	Name            string
-	NodeGroupName   string
-	NodesRoleName   string
-	NumWorkers      int32
-	SshKpName       string
-	Version         string
-	Vpc             *Vpc
+	AwsConfig     aws.Config
+	Name          string
+	NodeGroupName string
+	NumWorkers    int32
+	SshKpName     string
+	Version       string
+	Vpc           *Vpc
 }
 
 // OnPremCluster represents an existing and running cluster
@@ -1200,45 +1192,6 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 	return nil
 }
 
-// createRoleAndAttachPolicy creates a new role (if not exist) with the trust
-// policy. Then It can attach policies and will return the role ARN.
-func createRoleAndAttachPolicy(client *iam.Client, roleName string, trustPolicy string, policyArns []string) (string, error) {
-	var (
-		err     error
-		roleArn string
-	)
-
-	getRoleOutput, err := client.GetRole(context.TODO(), &iam.GetRoleInput{
-		RoleName: aws.String(roleName),
-	})
-
-	if err == nil {
-		roleArn = *getRoleOutput.Role.Arn
-	} else {
-		createRoleOutput, err := client.CreateRole(context.TODO(),
-			&iam.CreateRoleInput{
-				AssumeRolePolicyDocument: aws.String(trustPolicy),
-				RoleName:                 aws.String(roleName),
-			})
-		if err != nil {
-			return "", err
-		}
-		roleArn = *createRoleOutput.Role.Arn
-	}
-
-	for _, policyArn := range policyArns {
-		if _, err = client.AttachRolePolicy(context.TODO(),
-			&iam.AttachRolePolicyInput{
-				PolicyArn: aws.String(policyArn),
-				RoleName:  aws.String(roleName),
-			}); err != nil {
-			return roleArn, err
-		}
-	}
-
-	return roleArn, nil
-}
-
 // NewEKSCluster instantiates a new EKS Cluster struct.
 // It requires a AWS configuration with access and authentication information, a
 // VPC already instantiated and with a public subnet, and an EC2 SSH key-pair used
@@ -1246,38 +1199,21 @@ func createRoleAndAttachPolicy(client *iam.Client, roleName string, trustPolicy 
 func NewEKSCluster(cfg aws.Config, vpc *Vpc, SshKpName string) *EKSCluster {
 	name := "peer-pods-test-k8s"
 	return &EKSCluster{
-		AwsConfig:       cfg,
-		Client:          eks.NewFromConfig(cfg),
-		IamClient:       iam.NewFromConfig(cfg),
-		ClusterRoleName: "CaaEksClusterRole",
-		Name:            name,
-		NodeGroupName:   name + "-nodegrp",
-		NodesRoleName:   "CaaEksNodesRole",
-		NumWorkers:      1,
-		SshKpName:       SshKpName,
-		Version:         EksVersion,
-		Vpc:             vpc,
+		AwsConfig:     cfg,
+		Name:          name,
+		NodeGroupName: name,
+		NumWorkers:    1,
+		SshKpName:     SshKpName,
+		Version:       EksVersion,
+		Vpc:           vpc,
 	}
 }
 
-// CreateCluster creates a new EKS cluster.
-// It will create needed roles, the cluster itself, nodes group and finally
-// install add-ons.
-// EKS should be created with at least two subnets so a secundary will be created If
-// it does not exist on the VPC already.
+// CreateCluster creates a new EKS cluster using eksctl.
+// EKS should be created with at least two subnets so a secondary will be
+// created if it does not exist on the VPC already.
 func (e *EKSCluster) CreateCluster() error {
-	var (
-		err          error
-		roleArn      string
-		NodesRoleArn string
-	)
-	activationTimeout := time.Minute * 15
-	addonTimeout := time.Minute * 5
-	nodesTimeout := time.Minute * 10
-
-	if roleArn, err = e.CreateEKSClusterRole(); err != nil {
-		return err
-	}
+	var err error
 
 	if e.Vpc.SecondarySubnetId == "" {
 		log.Info("Create a secondary subnet for EKS")
@@ -1287,71 +1223,31 @@ func (e *EKSCluster) CreateCluster() error {
 		log.Infof("Secondary subnet Id: %s", e.Vpc.SecondarySubnetId)
 	}
 
-	log.Infof("Creating the EKS cluster: %s ...", e.Name)
-	_, err = e.Client.CreateCluster(context.TODO(),
-		&eks.CreateClusterInput{
-			Name:    aws.String(e.Name),
-			Version: aws.String(e.Version),
-			ResourcesVpcConfig: &ekstypes.VpcConfigRequest{
-				SubnetIds: []string{e.Vpc.SubnetId, e.Vpc.SecondarySubnetId},
-			},
-			RoleArn: aws.String(roleArn),
-		})
-	if err != nil {
-		return err
+	log.Infof("Creating the EKS cluster: %s", e.Name)
+
+	cmdArgs := []string{
+		"create", "cluster",
+		"--name", e.Name,
+		"--version", e.Version,
+		"--region", e.AwsConfig.Region,
+		"--kubeconfig", e.Name + "-kubeconfig",
+		"--vpc-private-subnets", e.Vpc.SubnetId + "," + e.Vpc.SecondarySubnetId,
+		"--nodegroup-name", e.NodeGroupName,
+		"--nodes", strconv.FormatInt(int64(e.NumWorkers), 10),
+		"--nodes-min", strconv.FormatInt(int64(e.NumWorkers), 10),
+		"--nodes-max", strconv.FormatInt(int64(e.NumWorkers), 10),
+		"--node-type", "t3.medium",
+		"--ssh-access",
+		"--ssh-public-key", e.SshKpName,
+		"--node-private-networking",
+		"--with-oidc",
 	}
 
-	log.Infof("Cluster created. Waiting to be actived (timeout=%s)...",
-		activationTimeout)
-	clusterWaiter := eks.NewClusterActiveWaiter(e.Client)
-	if err = clusterWaiter.Wait(context.TODO(), &eks.DescribeClusterInput{
-		Name: aws.String(e.Name),
-	}, activationTimeout); err != nil {
-		return err
-	}
-
-	log.Info("Creating the managed nodes group...")
-	if NodesRoleArn, err = e.CreateEKSNodesRole(); err != nil {
-		return err
-	}
-	if _, err = e.Client.CreateNodegroup(context.TODO(),
-		&eks.CreateNodegroupInput{
-			ClusterName:   aws.String(e.Name),
-			NodeRole:      aws.String(NodesRoleArn),
-			NodegroupName: aws.String(e.NodeGroupName),
-			// Let's simplify and create the nodes only on the public subnet so that it
-			// doesn't need to configure Amazon ECR for pulling container images.
-			Subnets:       []string{e.Vpc.SubnetId},
-			AmiType:       ekstypes.AMITypesAl2X8664,
-			CapacityType:  ekstypes.CapacityTypesOnDemand,
-			InstanceTypes: []string{"t3.medium"},
-			RemoteAccess: &ekstypes.RemoteAccessConfig{
-				Ec2SshKey: aws.String(e.SshKpName),
-			},
-			ScalingConfig: &ekstypes.NodegroupScalingConfig{
-				DesiredSize: aws.Int32(e.NumWorkers),
-				MaxSize:     aws.Int32(e.NumWorkers),
-				MinSize:     aws.Int32(e.NumWorkers),
-			},
-			Version: aws.String(e.Version),
-			// Fail to create the node group due to https://github.com/aws/aws-sdk-go-v2/issues/2267
-			//Labels:  map[string]string{"node.kubernetes.io/worker": ""},
-		}); err != nil {
-		return err
-	}
-
-	log.Infof("Nodes group created. Waiting to be ready (timeout=%s)...",
-		nodesTimeout)
-	nodesWaiter := eks.NewNodegroupActiveWaiter(e.Client)
-	if err = nodesWaiter.Wait(context.TODO(), &eks.DescribeNodegroupInput{
-		ClusterName:   aws.String(e.Name),
-		NodegroupName: aws.String(e.NodeGroupName),
-	}, nodesTimeout); err != nil {
-		return err
-	}
-
-	if err = e.CreateCniAddon(addonTimeout); err != nil {
-		return err
+	cmd := exec.Command("eksctl", cmdArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err = cmd.Run(); err != nil {
+		return fmt.Errorf("failed to create EKS cluster: %w", err)
 	}
 
 	// TODO: This block copy most of the `AddNodeRoleWorkerLabel()` code. We
@@ -1392,124 +1288,8 @@ func (e *EKSCluster) DeleteCluster() error {
 	return nil
 }
 
-// CreateEKSClusterRole creates (if not exist) the needed role for EKS
-// creation.
-func (e *EKSCluster) CreateEKSClusterRole() (string, error) {
-	trustPolicy := `{
-		"Version": "2012-10-17",
-		"Statement": [
-			{
-			"Effect": "Allow",
-			"Principal": {
-			  "Service": "eks.amazonaws.com"
-			},
-			"Action": "sts:AssumeRole"
-			}
-		]
-	  }`
-
-	return createRoleAndAttachPolicy(e.IamClient, e.ClusterRoleName, trustPolicy,
-		[]string{"arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"})
-}
-
-// CreateEKSNodesRole creates (if not exist) the needed role for the managed
-// nodes creation.
-func (e *EKSCluster) CreateEKSNodesRole() (string, error) {
-	trustPolicy := `{
-		"Version": "2012-10-17",
-		"Statement": [
-		  {
-			"Effect": "Allow",
-			"Principal": {
-			  "Service": "ec2.amazonaws.com"
-			},
-			"Action": "sts:AssumeRole"
-		  }
-		]
-	  }`
-
-	return createRoleAndAttachPolicy(e.IamClient, e.NodesRoleName,
-		trustPolicy, []string{
-			"arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
-			"arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
-			"arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy", // Needed by the CNI add-on
-		})
-}
-
-// CreateCniAddon applies the AWS CNI addon
-func (e *EKSCluster) CreateCniAddon(addonTimeout time.Duration) error {
-	cniAddonName := "vpc-cni"
-
-	log.Info("Creating the CNI add-on...")
-	if _, err := e.Client.CreateAddon(context.TODO(), &eks.CreateAddonInput{
-		AddonName:        aws.String(cniAddonName),
-		ClusterName:      aws.String(e.Name),
-		AddonVersion:     aws.String(EksCniAddonVersion),
-		ResolveConflicts: ekstypes.ResolveConflictsNone,
-	}); err != nil {
-		return err
-	}
-
-	log.Infof("CNI add-on installed. Waiting to be activated (timeout=%s)...",
-		addonTimeout)
-	addonWaiter := eks.NewAddonActiveWaiter(e.Client)
-	if err := addonWaiter.Wait(context.TODO(),
-		&eks.DescribeAddonInput{
-			AddonName:   aws.String(cniAddonName),
-			ClusterName: aws.String(e.Name),
-		}, addonTimeout); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// GetKubeconfig returns a kubeconfig for the EKS cluster
+// GetKubeconfigFile returns a kubeconfig for the EKS cluster
 func (e *EKSCluster) GetKubeconfigFile() (string, error) {
-	desc, err := e.Client.DescribeCluster(context.TODO(),
-		&eks.DescribeClusterInput{
-			Name: aws.String(e.Name),
-		})
-	if err != nil {
-		return "", err
-	}
-	cluster := desc.Cluster
-	credentials, _ := e.AwsConfig.Credentials.Retrieve(context.TODO())
-
-	kubecfgTemplate := `
-apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority-data: {{.Cert}}
-    server: {{.ClusterEndpoint}}
-  name: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-contexts:
-- context:
-    cluster: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-    user: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-  name: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-current-context: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-kind: Config
-preferences: {}
-users:
-- name: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-  user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1beta1
-      command: aws
-      args:
-        - --region
-        - {{.Region}}
-        - eks
-        - get-token
-        - --cluster-name
-        - {{.ClusterName}}`
-
-	t, err := template.New("kubecfg").Parse(kubecfgTemplate)
-	if err != nil {
-		return "", err
-	}
-
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -1520,19 +1300,20 @@ users:
 		return "", err
 	}
 	targetFile := filepath.Join(targetDir, "config")
-	kubecfgFile, err := os.Create(targetFile)
-	if err != nil {
-		return "", err
+
+	// Use eksctl to write kubeconfig
+	cmdArgs := []string{
+		"utils", "write-kubeconfig",
+		"--cluster", e.Name,
+		"--region", e.AwsConfig.Region,
+		"--kubeconfig", targetFile,
 	}
 
-	if err = t.Execute(kubecfgFile, map[string]string{
-		"Account":         credentials.AccessKeyID,
-		"Cert":            *cluster.CertificateAuthority.Data,
-		"ClusterEndpoint": *cluster.Endpoint,
-		"ClusterName":     *cluster.Name,
-		"Region":          e.AwsConfig.Region,
-	}); err != nil {
-		return "", err
+	cmd := exec.Command("eksctl", cmdArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err = cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to write kubeconfig: %w", err)
 	}
 
 	return targetFile, nil

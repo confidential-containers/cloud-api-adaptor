@@ -67,7 +67,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/service/eks v1.76.3
 	github.com/aws/aws-sdk-go-v2/service/iam v1.53.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.93.2
 	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.0.0-00010101000000-000000000000
