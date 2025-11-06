@@ -5,8 +5,6 @@ package alibabacloud
 
 import (
 	"flag"
-	"os"
-	"strings"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
@@ -20,68 +18,31 @@ func init() {
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
-	flags.StringVar(&alibabacloudcfg.AccessKeyId, "alibabacloud-access-key-id", "", "Access Key ID, defaults to `ALIBABACLOUD_ACCESS_KEY_ID`")
-	flags.StringVar(&alibabacloudcfg.SecretKey, "alibabacloud-secret-access-key", "", "Secret Key, defaults to `ALIBABACLOUD_SECRET_ACCESS_KEY`")
-	flags.StringVar(&alibabacloudcfg.Region, "region", "", "Region")
-	flags.StringVar(&alibabacloudcfg.ImageId, "imageid", "", "Pod VM image id")
-	flags.StringVar(&alibabacloudcfg.InstanceType, "instance-type", "ecs.g8i.xlarge", "Pod VM instance type")
-	flags.Var(&alibabacloudcfg.SecurityGroupIds, "security-group-ids", "Security Group Ids to be used for the Pod VM, comma separated")
-	flags.StringVar(&alibabacloudcfg.KeyName, "keyname", "", "SSH Keypair name to be used with the Pod VM")
-	flags.StringVar(&alibabacloudcfg.VpcId, "vpc-id", "", "VPC ID to be used for the Pod VMs")
-	flags.StringVar(&alibabacloudcfg.VswitchId, "vswitch-id", "", "vSwitch ID to be used for the Pod VMs")
-	// Add a key value list parameter to indicate custom tags to be used for the Pod VMs
-	flags.Var(&alibabacloudcfg.Tags, "tags", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
-	flags.BoolVar(&alibabacloudcfg.UsePublicIP, "use-public-ip", false, "Use Public IP for connecting to the kata-agent inside the Pod VM")
-	// Add a parameter to indicate the root volume size for the Pod VMs
-	// Default is 40GiBs for free tier. Hence use it as default
-	flags.IntVar(&alibabacloudcfg.SystemDiskSize, "system-disk-size", 40, "System Disk size (in GiB) for the Pod VMs")
-	flags.BoolVar(&alibabacloudcfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
+	reg := provider.NewFlagRegistrar(flags)
+
+	// Flags with environment variable support
+	reg.StringWithEnv(&alibabacloudcfg.AccessKeyId, "alibabacloud-access-key-id", "", "ALIBABACLOUD_ACCESS_KEY_ID", "Access Key ID")
+	reg.StringWithEnv(&alibabacloudcfg.SecretKey, "alibabacloud-secret-access-key", "", "ALIBABACLOUD_ACCESS_KEY_SECRET", "Secret Key")
+	reg.StringWithEnv(&alibabacloudcfg.Region, "region", "cn-beijing", "REGION", "Region")
+	reg.StringWithEnv(&alibabacloudcfg.ImageId, "imageid", "", "IMAGEID", "Pod VM image id")
+	reg.StringWithEnv(&alibabacloudcfg.InstanceType, "instance-type", "ecs.g8i.xlarge", "PODVM_INSTANCE_TYPE", "Pod VM instance type")
+	reg.StringWithEnv(&alibabacloudcfg.VswitchId, "vswitch-id", "", "VSWITCH_ID", "vSwitch ID to be used for the Pod VMs")
+	reg.StringWithEnv(&alibabacloudcfg.KeyName, "keyname", "", "KEYNAME", "SSH Keypair name to be used with the Pod VM")
+
+	reg.BoolWithEnv(&alibabacloudcfg.UsePublicIP, "use-public-ip", false, "USE_PUBLIC_IP", "Use Public IP for connecting to the kata-agent inside the Pod VM")
+	reg.IntWithEnv(&alibabacloudcfg.SystemDiskSize, "system-disk-size", 40, "SYSTEM_DISK_SIZE", "System Disk size (in GiB) for the Pod VMs")
+	reg.BoolWithEnv(&alibabacloudcfg.DisableCVM, "disable-cvm", false, "DISABLECVM", "Use non-CVMs for peer pods")
+
+	// Flags without environment variable support (pass empty string for envVarName)
+	reg.StringWithEnv(&alibabacloudcfg.VpcId, "vpc-id", "", "", "VPC ID to be used for the Pod VMs")
+
+	// Custom flag types (comma-separated lists)
+	reg.CustomTypeWithEnv(&alibabacloudcfg.SecurityGroupIds, "security-group-ids", "cn-beijing", "SECURITY_GROUP_IDS", "Security Group Ids to be used for the Pod VM, comma separated")
+	reg.CustomTypeWithEnv(&alibabacloudcfg.Tags, "tags", "", "TAGS", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
 }
 
 func (_ *Manager) LoadEnv() {
-	provider.DefaultToEnv(&alibabacloudcfg.AccessKeyId, "ALIBABACLOUD_ACCESS_KEY_ID", "")
-	provider.DefaultToEnv(&alibabacloudcfg.SecretKey, "ALIBABACLOUD_ACCESS_KEY_SECRET", "")
-	provider.DefaultToEnv(&alibabacloudcfg.Region, "REGION", "cn-beijing")
-	provider.DefaultToEnv(&alibabacloudcfg.ImageId, "IMAGEID", "")
-	provider.DefaultToEnv(&alibabacloudcfg.InstanceType, "PODVM_INSTANCE_TYPE", "ecs.g8i.xlarge")
-	provider.DefaultToEnv(&alibabacloudcfg.VswitchId, "VSWITCH_ID", "")
-	if len(alibabacloudcfg.SecurityGroupIds) == 0 {
-		envVal := os.Getenv("SECURITY_GROUP_IDS")
-		var val []string
-		if envVal == "" {
-			val = []string{"cn-beijing"}
-		} else {
-			val = strings.Split(envVal, ",")
-		}
-
-		alibabacloudcfg.SecurityGroupIds = val
-	}
-	if len(alibabacloudcfg.Tags) == 0 {
-		envVal := os.Getenv("TAGS")
-		val := make(map[string]string)
-		if envVal != "" {
-			pairs := strings.Split(envVal, ",")
-			for _, p := range pairs {
-				p = strings.TrimSpace(p)
-				if p == "" {
-					continue
-				}
-				kv := strings.SplitN(p, "=", 2)
-				if len(kv) != 2 {
-					continue
-				}
-				k := strings.TrimSpace(kv[0])
-				v := strings.TrimSpace(kv[1])
-				if k == "" {
-					continue
-				}
-				val[k] = v
-			}
-		}
-
-		alibabacloudcfg.Tags = val
-	}
-	provider.DefaultToEnv(&alibabacloudcfg.KeyName, "KEYNAME", "")
+	// No longer needed - environment variables are handled in ParseCmd
 }
 
 func (_ *Manager) NewProvider() (provider.Provider, error) {
