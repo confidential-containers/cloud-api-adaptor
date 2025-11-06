@@ -23,7 +23,8 @@ configMapGenerator:
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
-  #- PODVM_LAUNCHTEMPLATE_NAME="" # Uncomment and set if you want to use launch template
+  #- USE_PODVM_LAUNCHTEMPLATE="true" # Uncomment and set to true to enable launch template
+  #- PODVM_LAUNCHTEMPLATE_NAME="" # Uncomment and set launch template name (defaults to "kata")
   # Comment out all the following variables if using launch template
   - PODVM_AMI_ID="" #set
   #- PODVM_INSTANCE_TYPE="m6a.large" # caa defaults to m6a.large
