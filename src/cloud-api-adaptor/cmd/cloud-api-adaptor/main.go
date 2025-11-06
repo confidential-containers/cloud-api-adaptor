@@ -158,6 +158,9 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		}
 	}
 
+	// DEPRECATED: LoadEnv() is now a no-op for all providers.
+	// Environment variables are loaded during ParseCmd() via FlagRegistrar.
+	// This call will be removed in a future release.
 	cloud.LoadEnv()
 
 	workerNode, err := podnetwork.NewWorkerNode(&cfg.networkConfig)
