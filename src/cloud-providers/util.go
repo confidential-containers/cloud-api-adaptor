@@ -216,6 +216,21 @@ func (r *FlagRegistrar) UintWithEnv(field *uint, flagName string, hardcodedDefau
 	r.flags.UintVar(field, flagName, *field, usage)
 }
 
+// Float64WithEnv registers a float64 flag with environment variable support.
+func (r *FlagRegistrar) Float64WithEnv(field *float64, flagName string, hardcodedDefault float64, envVarName, usage string) {
+	*field = hardcodedDefault
+
+	if envVarName != "" {
+		if envValue, exists := os.LookupEnv(envVarName); exists {
+			if floatVal, err := strconv.ParseFloat(envValue, 64); err == nil {
+				*field = floatVal
+			}
+		}
+	}
+
+	r.flags.Float64Var(field, flagName, *field, usage)
+}
+
 // BoolWithEnv registers a bool flag with environment variable support.
 // Accepts: "1" or "true" (case-insensitive) for true, anything else for false.
 func (r *FlagRegistrar) BoolWithEnv(field *bool, flagName string, hardcodedDefault bool, envVarName, usage string) {

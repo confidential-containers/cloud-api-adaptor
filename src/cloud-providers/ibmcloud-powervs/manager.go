@@ -5,7 +5,6 @@ package ibmcloud_powervs
 
 import (
 	"flag"
-	"strconv"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
@@ -19,43 +18,24 @@ func init() {
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+	reg := provider.NewFlagRegistrar(flags)
 
-	flags.StringVar(&ibmcloudPowerVSConfig.ApiKey, "api-key", "", "IBM Cloud API key, defaults to `IBMCLOUD_API_KEY`")
-	flags.StringVar(&ibmcloudPowerVSConfig.Zone, "zone", "", "PowerVS zone name")
-	flags.StringVar(&ibmcloudPowerVSConfig.ServiceInstanceID, "service-instance-id", "", "ID of the PowerVS Service Instance")
-	flags.StringVar(&ibmcloudPowerVSConfig.NetworkID, "network-id", "", "ID of the network instance")
-	flags.StringVar(&ibmcloudPowerVSConfig.ImageId, "image-id", "", "ID of the boot image")
-	flags.StringVar(&ibmcloudPowerVSConfig.SSHKey, "ssh-key", "", "Name of the SSH Key")
-	flags.Float64Var(&ibmcloudPowerVSConfig.Memory, "memory", 2, "Amount of memory in GB")
-	flags.Float64Var(&ibmcloudPowerVSConfig.Processors, "cpu", 0.5, "Number of processors allocated")
-	flags.StringVar(&ibmcloudPowerVSConfig.ProcessorType, "proc-type", "shared", "Name of the processor type")
-	flags.StringVar(&ibmcloudPowerVSConfig.SystemType, "sys-type", "s922", "Name of the system type")
-	flags.BoolVar(&ibmcloudPowerVSConfig.UsePublicIP, "use-public-ip", false, "Use Public IP for connecting to the agent-protocol-forwarder inside the Pod VM")
-
+	// Flags with environment variable support
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.ApiKey, "api-key", "", "IBMCLOUD_API_KEY", "IBM Cloud API key")
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.Zone, "zone", "", "POWERVS_ZONE", "PowerVS zone name")
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.ServiceInstanceID, "service-instance-id", "", "POWERVS_SERVICE_INSTANCE_ID", "ID of the PowerVS Service Instance")
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.NetworkID, "network-id", "", "POWERVS_NETWORK_ID", "ID of the network instance")
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.ImageId, "image-id", "", "POWERVS_IMAGE_ID", "ID of the boot image")
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.SSHKey, "ssh-key", "", "POWERVS_SSH_KEY_NAME", "Name of the SSH Key")
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.ProcessorType, "proc-type", "shared", "POWERVS_PROCESSOR_TYPE", "Name of the processor type")
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.SystemType, "sys-type", "s922", "POWERVS_SYSTEM_TYPE", "Name of the system type")
+	reg.Float64WithEnv(&ibmcloudPowerVSConfig.Memory, "memory", 2, "POWERVS_MEMORY", "Amount of memory in GB")
+	reg.Float64WithEnv(&ibmcloudPowerVSConfig.Processors, "cpu", 0.5, "POWERVS_PROCESSORS", "Number of processors allocated")
+	reg.BoolWithEnv(&ibmcloudPowerVSConfig.UsePublicIP, "use-public-ip", false, "USE_PUBLIC_IP", "Use Public IP for connecting to the agent-protocol-forwarder inside the Pod VM")
 }
 
 func (_ *Manager) LoadEnv() {
-	// overwrite config set by cmd parameters in oci image with env might come from orchastration platform
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ApiKey, "IBMCLOUD_API_KEY", "")
-
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.Zone, "POWERVS_ZONE", "")
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ServiceInstanceID, "POWERVS_SERVICE_INSTANCE_ID", "")
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.NetworkID, "POWERVS_NETWORK_ID", "")
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ImageId, "POWERVS_IMAGE_ID", "")
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.SSHKey, "POWERVS_SSH_KEY_NAME", "")
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.ProcessorType, "POWERVS_PROCESSOR_TYPE", "")
-	provider.DefaultToEnv(&ibmcloudPowerVSConfig.SystemType, "POWERVS_SYSTEM_TYPE", "")
-
-	var memoryStr, processorsStr string
-	provider.DefaultToEnv(&memoryStr, "POWERVS_MEMORY", "")
-	if memoryStr != "" {
-		ibmcloudPowerVSConfig.Memory, _ = strconv.ParseFloat(memoryStr, 64)
-	}
-
-	provider.DefaultToEnv(&processorsStr, "POWERVS_PROCESSORS", "")
-	if processorsStr != "" {
-		ibmcloudPowerVSConfig.Processors, _ = strconv.ParseFloat(processorsStr, 64)
-	}
+	// No longer needed - environment variables are handled in ParseCmd
 }
 
 func (_ *Manager) NewProvider() (provider.Provider, error) {
