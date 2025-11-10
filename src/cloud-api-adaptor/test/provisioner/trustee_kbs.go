@@ -19,6 +19,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +27,11 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
+)
+
+const (
+	ImagePolicyPath     = "default/security-policy/test"
+	CosignPublicKeyPath = "default/cosign-public-key/test"
 )
 
 var trusteeRepoPath string
@@ -140,13 +146,13 @@ DNS.2   = 127.0.0.1
 	return keyContent, certContent, nil
 }
 
-func getHardwarePlatform() (string, error) {
+func GetHardwarePlatform() (string, error) {
 	out, err := exec.Command("uname", "-m").Output()
 	return strings.TrimSuffix(string(out), "\n"), err
 }
 
 func getOverlaysPath() (string, error) {
-	platform, err := getHardwarePlatform()
+	platform, err := GetHardwarePlatform()
 	if err != nil {
 		return "", err
 	}
@@ -438,7 +444,7 @@ func NewHTTPSKbsInstallOverlay(installDir string, cfg *envconf.Config) (InstallO
 		fmt.Println("Error generating certificate and key:", err)
 	}
 
-	platform, err := getHardwarePlatform()
+	platform, err := GetHardwarePlatform()
 	if err != nil {
 		return nil, err
 	}
@@ -644,6 +650,14 @@ func (p *KeyBrokerService) SetResource(resourcePath string, data []byte) error {
 	return p.setSecretKey(resourcePath, policyFilePath)
 }
 
+func (p *KeyBrokerService) setImagePolicy(policy string) error {
+	return p.SetResource(ImagePolicyPath, []byte(policy))
+}
+
+func (p *KeyBrokerService) setCosignPublicKey(publicKey string) error {
+	return p.SetResource(CosignPublicKeyPath, []byte(publicKey))
+}
+
 func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
 	log.Info("Customize the overlay yaml file")
 	if err := p.installOverlay.Edit(ctx, cfg, props); err != nil {
@@ -673,6 +687,52 @@ func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) erro
 	log.Info("Uninstall the cloud-api-adaptor")
 	if err = tmpoverlay.Delete(ctx, cfg); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (p *KeyBrokerService) SetUpSignaturePolicyAndPublicKey() error {
+	image_policy := fmt.Sprintf(`
+{
+    "default": [
+        {
+        "type": "reject"
+        }
+    ],
+    "transports": {
+        "docker": {
+            "ghcr.io/confidential-containers/test-container-image-rs": [
+                {
+                    "type": "sigstoreSigned",
+                    "keyPath": "kbs:///%s"
+                }
+            ],
+            "quay.io/prometheus": [
+                {
+                    "type": "insecureAcceptAnything"
+                }
+            ]
+        }
+    }
+}`, CosignPublicKeyPath)
+	err := p.setImagePolicy(image_policy)
+
+	if err != nil {
+		return fmt.Errorf("setImagePolicy failed with: %v", err)
+	}
+
+	public_key, err := utils.GetURLContent("https://raw.githubusercontent.com/confidential-containers/guest-components/075b9a9ee77227d9d92b6f3649ef69de5e72d204/image-rs/test_data/signature/cosign/cosign1.pub")
+	if err != nil {
+		return fmt.Errorf("getURLContent failed with: %v", err)
+	}
+	err = p.setCosignPublicKey(public_key)
+	if err != nil {
+		return fmt.Errorf("setCosignPublicKey failed with: %v", err)
+	}
+
+	err = p.EnableKbsCustomizedResourcePolicy("allow_all.rego")
+	if err != nil {
+		return fmt.Errorf("enableKbsCustomizedResourcePolicy failed with: %v", err)
 	}
 	return nil
 }

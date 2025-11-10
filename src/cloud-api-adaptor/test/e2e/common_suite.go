@@ -819,3 +819,27 @@ func DoTestPodVMwithAnnotationMemory(t *testing.T, e env.Environment, assert Clo
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 	NewTestCase(t, e, "PodVMwithAnnotationMemory", assert, "PodVM with Annotation Memory is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
 }
+
+func DoTestSignatureVerificationAcceptsSignedImage(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+	signed_image := "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed"
+
+	pod, err := CreatePodWithSignaturePolicy("unsigned-image", signed_image, kbs)
+	if err != nil {
+		t.Fatalf("CreatePodWithSignaturePolicy failed with: %v", err)
+	}
+
+	NewTestCase(t, e, "SignedImageSucceeds", assert, "PodVM is created").WithPod(pod).Run()
+}
+
+func DoTestSignatureVerificationRejectsUnsignedImage(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+	unsigned_image := "ghcr.io/confidential-containers/test-container-image-rs:unsigned"
+
+	pod, err := CreatePodWithSignaturePolicy("unsigned-image", unsigned_image, kbs)
+	if err != nil {
+		t.Fatalf("CreatePodWithSignaturePolicy failed with: %v", err)
+	}
+
+	//TODO review this message
+	expectedErrorMessage := "Image policy rejected: Denied by policy"
+	NewTestCase(t, e, "SignedImageSucceeds", assert, "Failed to create PodVm from unsigned image").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
+}

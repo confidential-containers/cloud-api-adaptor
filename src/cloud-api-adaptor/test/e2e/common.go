@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
+	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
@@ -593,4 +594,35 @@ type CloudAssert interface {
 type RollingUpdateAssert interface {
 	CachePodVmIDs(t *testing.T, deploymentName string) // Cache Pod VM IDs before rolling update
 	VerifyOldVmDeleted(t *testing.T)                   // Verify old Pod VMs have been deleted
+}
+
+func CreatePodWithSignaturePolicy(podName, image string, kbs *pv.KeyBrokerService) (*corev1.Pod, error) {
+	err := kbs.SetUpSignaturePolicyAndPublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("SetUpSignaturePolicyAndPublicKey failed with: %v", err)
+	}
+
+	kbsEndpoint, err := kbs.GetCachedKbsEndpoint()
+	if err != nil {
+		return nil, fmt.Errorf("GetCachedKbsEndpoint failed with: %v", err)
+	}
+
+	initdata_image_section := fmt.Sprintf("[image]\n\nimage_security_policy_uri = \"kbs:///%s\"", pv.ImagePolicyPath)
+
+	initdata_with_image := strings.Replace(testInitdata, "\"cdh.toml\"  = '''", "\"cdh.toml\"  = '''\n\n"+initdata_image_section, 1)
+
+	initdata, err := buildInitdataAnnotation(kbsEndpoint, initdata_with_image)
+	if err != nil {
+		return nil, fmt.Errorf("buildInitdataAnnotation failed with: %v", err)
+	}
+
+	platform, err := pv.GetHardwarePlatform()
+	if err != nil {
+		return nil, fmt.Errorf("getHardwarePlatform failed with: %v", err)
+	}
+	if platform != "x86_64" {
+		image = image + "-" + platform
+	}
+
+	return NewPod(E2eNamespace, podName, podName, image, WithInitdata(kbsEndpoint, initdata)), nil
 }
