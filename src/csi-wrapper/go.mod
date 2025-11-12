@@ -1,8 +1,8 @@
 module github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper
 
-go 1.24.6
+go 1.24.9
 
-toolchain go1.24.7
+toolchain go1.24.10
 
 require (
 	github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor v0.0.0-00010101000000-000000000000
@@ -11,7 +11,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang/glog v1.2.4
 	github.com/golang/protobuf v1.5.4
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20250923185900-c2b06504916c
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20251117210945-650ada7bcc8e
 	golang.org/x/net v0.46.0
 	google.golang.org/grpc v1.72.0
 	k8s.io/apimachinery v0.33.0
@@ -49,7 +49,7 @@ require (
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250414145226-207652e42e2e // indirect
