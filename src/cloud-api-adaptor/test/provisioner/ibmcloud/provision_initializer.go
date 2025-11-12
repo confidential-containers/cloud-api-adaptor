@@ -54,6 +54,7 @@ type IBMCloudProperties struct {
 	TunnelType        string
 	VxlanPort         string
 	ClusterID         string
+	Tags              string
 
 	WorkerCount   int
 	IsSelfManaged bool
@@ -101,6 +102,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		TunnelType:        properties["TUNNEL_TYPE"],
 		VxlanPort:         properties["VXLAN_PORT"],
 		ClusterID:         properties["CLUSTER_ID"],
+		Tags:              properties["TAGS"],
 	}
 
 	if len(IBMCloudProps.IBMCloudProvider) <= 0 {
