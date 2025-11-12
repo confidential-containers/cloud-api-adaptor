@@ -134,6 +134,7 @@ gcp() {
     [[ "${GCP_ZONE}" ]] && optionals+="-zone ${GCP_ZONE} "                                         # if not set retrieved from IMDS
     [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-machine-type ${GCP_MACHINE_TYPE} "                 # default e2-medium
     [[ "${GCP_NETWORK}" ]] && optionals+="-network ${GCP_NETWORK} "                                # defaults to 'default'
+    [[ "${GCP_SUBNETWORK}" ]] && optionals+="-subnetwork ${GCP_SUBNETWORK} "                       # required for custom network
     [[ "${GCP_DISK_TYPE}" ]] && optionals+="-disk-type ${GCP_DISK_TYPE} "                          # defaults to 'pd-standard'
     [[ "${GCP_CONFIDENTIAL_TYPE}" ]] && optionals+="-confidential-type ${GCP_CONFIDENTIAL_TYPE} "  # if not set raise exception only when disablecvm = false
     [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} "             # Specify root volume size for pod vm

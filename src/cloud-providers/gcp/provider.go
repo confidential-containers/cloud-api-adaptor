@@ -222,6 +222,45 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		imageSizeGB = int64(p.serviceConfig.RootVolumeSize)
 	}
 
+	// Format subnetwork: support both short names and full paths
+	// GCP accepts formats:
+	// - "projects/<project>/regions/<region>/subnetworks/<subnetwork>" (full path)
+	// - "regions/<region>/subnetworks/<subnetwork>" (partial path)
+	// - "<subnetwork>" (short name, will be formatted as full path)
+	// Extract region from zone (e.g., "us-central1-a" -> "us-central1")
+	var subnetworkValue *string
+	if p.serviceConfig.Subnetwork != "" {
+		subnetworkName := p.serviceConfig.Subnetwork
+		if hasAnyPrefix(subnetworkName, "projects/", "/projects", "regions/", "https") {
+			subnetworkValue = proto.String(subnetworkName)
+		} else {
+			// Extract region from zone (format: "region-zone" e.g., "us-central1-a")
+			zoneParts := strings.Split(p.serviceConfig.Zone, "-")
+			if len(zoneParts) >= 2 {
+				region := strings.Join(zoneParts[:len(zoneParts)-1], "-")
+				formattedSubnetwork := fmt.Sprintf("projects/%s/regions/%s/subnetworks/%s", p.serviceConfig.ProjectId, region, subnetworkName)
+				subnetworkValue = proto.String(formattedSubnetwork)
+			} else {
+				// Fallback: assume zone format is invalid, try to use as-is
+				subnetworkValue = proto.String(subnetworkName)
+			}
+		}
+	}
+
+	networkInterface := &computepb.NetworkInterface{
+		Network: proto.String(p.serviceConfig.Network),
+		AccessConfigs: []*computepb.AccessConfig{
+			{
+				Name:        proto.String("External NAT"),
+				NetworkTier: proto.String("STANDARD"),
+			},
+		},
+		StackType: proto.String("IPV4_Only"),
+	}
+	if subnetworkValue != nil {
+		networkInterface.Subnetwork = subnetworkValue
+	}
+
 	instanceResource := &computepb.Instance{
 		Name: proto.String(instanceName),
 		Disks: []*computepb.AttachedDisk{
@@ -248,19 +287,8 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 				},
 			},
 		},
-		MachineType: proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, p.serviceConfig.MachineType)),
-		NetworkInterfaces: []*computepb.NetworkInterface{
-			{
-				Network: proto.String(p.serviceConfig.Network),
-				AccessConfigs: []*computepb.AccessConfig{
-					{
-						Name:        proto.String("External NAT"),
-						NetworkTier: proto.String("STANDARD"),
-					},
-				},
-				StackType: proto.String("IPV4_Only"),
-			},
-		},
+		MachineType:       proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, p.serviceConfig.MachineType)),
+		NetworkInterfaces: []*computepb.NetworkInterface{networkInterface},
 	}
 
 	if !p.serviceConfig.DisableCVM {

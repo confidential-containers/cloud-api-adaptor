@@ -25,6 +25,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&gcpcfg.ImageName, "image-name", "", "Pod VM image name")
 	flags.StringVar(&gcpcfg.MachineType, "machine-type", "e2-medium", "Pod VM instance type")
 	flags.StringVar(&gcpcfg.Network, "network", "", "Network ID to be used for the Pod VMs")
+	flags.StringVar(&gcpcfg.Subnetwork, "subnetwork", "", "Subnetwork ID to be used for the Pod VMs (required for custom subnet mode networks)")
 	flags.StringVar(&gcpcfg.DiskType, "disk-type", "pd-standard", "Any GCP disk type (pd-standard, pd-ssd, pd-balanced or pd-extreme)")
 	flags.BoolVar(&gcpcfg.DisableCVM, "disable-cvm", false, "Use non-CVMs for peer pods")
 	flags.StringVar(&gcpcfg.ConfidentialType, "confidential-type", "", "Used when DisableCVM=false. i.e: TDX or SEV_SNP. Check if the machine type is compatible.")
