@@ -59,6 +59,17 @@ func toList(value, sep string) []string {
 	return strings.Split(value, sep)
 }
 
+type tags []string
+
+func (i *tags) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *tags) Set(value string) error {
+	*i = append(*i, toList(value, ",")...)
+	return nil
+}
+
 type Config struct {
 	ApiKey                   string
 	IAMProfileID             string
@@ -79,6 +90,7 @@ type Config struct {
 	InstanceProfileSpecList  []provider.InstanceTypeSpec
 	DisableCVM               bool
 	ClusterID                string
+	Tags                     tags
 }
 
 func (c Config) Redact() Config {

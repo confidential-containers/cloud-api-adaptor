@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/IBM/go-sdk-core/v5/core"
+	"github.com/IBM/platform-services-go-sdk/globaltaggingv1"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +30,8 @@ func (v *mockVPC) CreateInstanceWithContext(ctx context.Context, opt *vpcv1.Crea
 	v.prototype = opt.InstancePrototype
 
 	instance := &vpcv1.Instance{
-		ID: ptr("123"),
+		ID:  ptr("123"),
+		CRN: ptr("crn-123"),
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfaceInstanceContextReference{
 			ID: ptr("111"),
 			PrimaryIP: &vpcv1.ReservedIPReference{
@@ -47,7 +49,8 @@ func (v *mockVPC) CreateInstanceWithContext(ctx context.Context, opt *vpcv1.Crea
 func (v *mockVPC) GetInstanceWithContext(ctx context.Context, opt *vpcv1.GetInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error) {
 
 	instance := &vpcv1.Instance{
-		ID: ptr("123"),
+		ID:  ptr("123"),
+		CRN: ptr("crn-123"),
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfaceInstanceContextReference{
 			ID: ptr("111"),
 			PrimaryIP: &vpcv1.ReservedIPReference{
@@ -130,9 +133,23 @@ func (v *mockVPC) DeleteInstanceWithContext(context.Context, *vpcv1.DeleteInstan
 	return res, nil
 }
 
+type mockTagging struct{}
+
+func (t *mockTagging) AttachTagWithContext(ctx context.Context, attachTagOptions *globaltaggingv1.AttachTagOptions) (*globaltaggingv1.TagResults, *core.DetailedResponse, error) {
+	tagRes := globaltaggingv1.TagResults{
+		Results: []globaltaggingv1.TagResultsItem{{ResourceID: ptr("123")}},
+	}
+
+	res := &core.DetailedResponse{
+		StatusCode: http.StatusOK,
+	}
+
+	return &tagRes, res, nil
+}
 func TestCreateInstance(t *testing.T) {
 
 	vpc := &mockVPC{}
+	globalTagging := &mockTagging{}
 
 	images := make(Images, 0)
 	err := images.Set("valid-image-id")
@@ -140,7 +157,8 @@ func TestCreateInstance(t *testing.T) {
 		t.Errorf("Images.Set() error %v", err)
 	}
 	mockProvider := &ibmcloudVPCProvider{
-		vpc: vpc,
+		vpc:           vpc,
+		globalTagging: globalTagging,
 		serviceConfig: &Config{
 			ProfileName: "bx2-2x8",
 			Images:      images,
@@ -171,6 +189,7 @@ func TestDeleteInstance(t *testing.T) {
 	provider := &ibmcloudVPCProvider{
 		vpc:           &mockVPC{},
 		serviceConfig: &Config{},
+		globalTagging: &mockTagging{},
 	}
 
 	err := provider.DeleteInstance(context.Background(), "123")
@@ -196,6 +215,7 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 			provider: &ibmcloudVPCProvider{
 				vpc:           &mockVPC{},
 				serviceConfig: &Config{},
+				globalTagging: &mockTagging{},
 			},
 			args: args{
 				instanceType: "bx2-2x8",
@@ -212,6 +232,7 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 			provider: &ibmcloudVPCProvider{
 				vpc:           &mockVPC{},
 				serviceConfig: &Config{},
+				globalTagging: &mockTagging{},
 			},
 			args: args{
 				instanceType: "mycustominstance",
@@ -274,6 +295,7 @@ func TestGetImageDetails(t *testing.T) {
 				serviceConfig: &Config{
 					Images: validImageList,
 				},
+				globalTagging: &mockTagging{},
 			},
 			instanceSpec: provider.InstanceTypeSpec{
 				Arch: "s390x",
@@ -291,6 +313,7 @@ func TestGetImageDetails(t *testing.T) {
 				serviceConfig: &Config{
 					Images: emptyImageList,
 				},
+				globalTagging: &mockTagging{},
 			},
 			instanceSpec: provider.InstanceTypeSpec{
 				Arch: "s390x",
@@ -308,6 +331,7 @@ func TestGetImageDetails(t *testing.T) {
 				serviceConfig: &Config{
 					Images: invalidImageList,
 				},
+				globalTagging: &mockTagging{},
 			},
 			instanceSpec: provider.InstanceTypeSpec{
 				Arch: "s390x",
@@ -325,6 +349,7 @@ func TestGetImageDetails(t *testing.T) {
 				serviceConfig: &Config{
 					Images: validImageList,
 				},
+				globalTagging: &mockTagging{},
 			},
 			instanceSpec: provider.InstanceTypeSpec{
 				Arch: "amd64",
@@ -342,6 +367,7 @@ func TestGetImageDetails(t *testing.T) {
 					Images:                  validImageList,
 					InstanceProfileSpecList: []provider.InstanceTypeSpec{{InstanceType: "bz2-2x8", Arch: "s390x"}},
 				},
+				globalTagging: &mockTagging{},
 			},
 			instanceSpec:    provider.InstanceTypeSpec{},
 			expectListErr:   false,
@@ -358,6 +384,7 @@ func TestGetImageDetails(t *testing.T) {
 					Images:                  validImageList,
 					InstanceProfileSpecList: []provider.InstanceTypeSpec{{InstanceType: "bx2-2x8", Arch: "amd64"}},
 				},
+				globalTagging: &mockTagging{},
 			},
 			instanceSpec:    provider.InstanceTypeSpec{},
 			expectListErr:   false,
@@ -411,6 +438,7 @@ func TestConfigVerifier(t *testing.T) {
 				serviceConfig: &Config{
 					Images: validImageList,
 				},
+				globalTagging: &mockTagging{},
 			},
 			wantErr: false,
 		},
@@ -422,6 +450,7 @@ func TestConfigVerifier(t *testing.T) {
 				serviceConfig: &Config{
 					Images: emptyImageList,
 				},
+				globalTagging: &mockTagging{},
 			},
 			wantErr: true,
 		},
