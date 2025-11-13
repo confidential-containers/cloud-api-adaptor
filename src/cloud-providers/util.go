@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"golang.org/x/crypto/ssh"
@@ -244,6 +245,21 @@ func (r *FlagRegistrar) BoolWithEnv(field *bool, flagName string, hardcodedDefau
 	}
 
 	r.flags.BoolVar(field, flagName, *field, usage)
+}
+
+// DurationWithEnv registers a duration flag with environment variable support.
+func (r *FlagRegistrar) DurationWithEnv(field *time.Duration, flagName string, hardcodedDefault time.Duration, envVarName, usage string) {
+	*field = hardcodedDefault
+
+	if envVarName != "" {
+		if envValue, exists := os.LookupEnv(envVarName); exists {
+			if duration, err := time.ParseDuration(envValue); err == nil {
+				*field = duration
+			}
+		}
+	}
+
+	r.flags.DurationVar(field, flagName, *field, usage)
 }
 
 // CustomTypeWithEnv registers a custom flag type (like comma-separated lists or key-value maps) with environment variable support.
