@@ -20,36 +20,12 @@ CLOUD_PROVIDER=${1:-$CLOUD_PROVIDER}
 ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN=${ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN:-false}
 
 CRI_RUNTIME_ENDPOINT=${CRI_RUNTIME_ENDPOINT:-/run/cri-runtime.sock}
-REMOTE_HYPERVISOR_ENDPOINT=${REMOTE_HYPERVISOR_ENDPOINT:-/run/peerpod/hypervisor.sock}
-PEER_PODS_DIR=${PODS_DIR:-/run/peerpod/pods}
 
 optionals+=""
 
-# Ensure you add a space before the closing quote (") when updating the optionals
-# example:
-# following is the correct method: optionals+="-option val "
-# following is the incorrect method: optionals+="-option val"
-
-[[ "${PAUSE_IMAGE}" ]] && optionals+="-pause-image ${PAUSE_IMAGE} "
-[[ "${TUNNEL_TYPE}" ]] && optionals+="-tunnel-type ${TUNNEL_TYPE} "
-[[ "${VXLAN_PORT}" ]] && optionals+="-vxlan-port ${VXLAN_PORT} "
-[[ "${CACERT_FILE}" ]] && optionals+="-ca-cert-file ${CACERT_FILE} "
-[[ "${CERT_FILE}" ]] && [[ "${CERT_KEY}" ]] && optionals+="-cert-file ${CERT_FILE} -cert-key ${CERT_KEY} "
-[[ "${TLS_SKIP_VERIFY}" ]] && optionals+="-tls-skip-verify "
-[[ "${PROXY_TIMEOUT}" ]] && optionals+="-proxy-timeout ${PROXY_TIMEOUT} "
-[[ "${INITDATA}" ]] && optionals+="-initdata ${INITDATA} "
-[[ "${FORWARDER_PORT}" ]] && optionals+="-forwarder-port ${FORWARDER_PORT} "
-[[ "${CLOUD_CONFIG_VERIFY}" == "true" ]] && optionals+="-cloud-config-verify "
-[[ "${SECURE_COMMS}" == "true" ]] && optionals+="-secure-comms "
-[[ "${SECURE_COMMS_NO_TRUSTEE}" == "true" ]] && optionals+="-secure-comms-no-trustee "
-[[ "${SECURE_COMMS_INBOUNDS}" ]] && optionals+="-secure-comms-inbounds ${SECURE_COMMS_INBOUNDS} "
-[[ "${SECURE_COMMS_OUTBOUNDS}" ]] && optionals+="-secure-comms-outbounds ${SECURE_COMMS_OUTBOUNDS} "
-[[ "${SECURE_COMMS_PP_INBOUNDS}" ]] && optionals+="-secure-comms-pp-inbounds ${SECURE_COMMS_PP_INBOUNDS} "
-[[ "${SECURE_COMMS_PP_OUTBOUNDS}" ]] && optionals+="-secure-comms-pp-outbounds ${SECURE_COMMS_PP_OUTBOUNDS} "
-[[ "${SECURE_COMMS_KBS_ADDR}" ]] && optionals+="-secure-comms-kbs ${SECURE_COMMS_KBS_ADDR} "
-[[ "${PEERPODS_LIMIT_PER_NODE}" ]] && optionals+="-peerpods-limit-per-node ${PEERPODS_LIMIT_PER_NODE} "
-[[ "${DISABLECVM}" == "true" ]] && optionals+="-disable-cvm "
-[[ "${ENABLE_SCRATCH_SPACE}" == "true" ]] && optionals+="-enable-scratch-space "
+# Note: Most common flags (PAUSE_IMAGE, TUNNEL_TYPE, VXLAN_PORT, etc.) are now
+# handled directly by Go code via FlagRegistrar in main.go and no longer need
+# env-to-arg conversion here.
 
 test_vars() {
     for i in "$@"; do
@@ -73,10 +49,7 @@ aws() {
     [[ "${POD_SUBNET_CIDRS}" ]] && optionals+="-pod-subnet-cidrs ${POD_SUBNET_CIDRS} "
 
     set -x
-    exec cloud-api-adaptor aws \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        ${optionals}
+    exec cloud-api-adaptor aws ${optionals}
 
 }
 
@@ -84,10 +57,7 @@ azure() {
     test_vars AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_SUBNET_ID AZURE_IMAGE_ID
 
     set -x
-    exec cloud-api-adaptor azure \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        ${optionals}
+    exec cloud-api-adaptor azure ${optionals}
 }
 
 alibabacloud() {
@@ -100,10 +70,7 @@ alibabacloud() {
     [[ "${EXTERNAL_NETWORK_VIA_PODVM}" ]] && optionals+=" -ext-network-via-podvm"
 
     set -x
-    exec cloud-api-adaptor alibabacloud \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        ${optionals}
+    exec cloud-api-adaptor alibabacloud ${optionals}
 }
 
 gcp() {
@@ -114,20 +81,14 @@ gcp() {
     export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-creds.json
 
     set -x
-    exec cloud-api-adaptor gcp \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        ${optionals}
+    exec cloud-api-adaptor gcp ${optionals}
 }
 
 ibmcloud() {
     one_of IBMCLOUD_API_KEY IBMCLOUD_IAM_PROFILE_ID
 
     set -x
-    exec cloud-api-adaptor ibmcloud \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        ${optionals}
+    exec cloud-api-adaptor ibmcloud ${optionals}
 
 }
 
@@ -135,10 +96,7 @@ ibmcloud_powervs() {
     test_vars IBMCLOUD_API_KEY
 
     set -x
-    exec cloud-api-adaptor ibmcloud-powervs \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        ${optionals}
+    exec cloud-api-adaptor ibmcloud-powervs ${optionals}
 
 }
 
@@ -146,11 +104,7 @@ libvirt() {
     test_vars LIBVIRT_URI
 
     set -x
-    exec cloud-api-adaptor libvirt \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        -data-dir /opt/data-dir \
-        ${optionals}
+    exec cloud-api-adaptor libvirt -data-dir /opt/data-dir ${optionals}
 
 }
 
@@ -158,19 +112,13 @@ vsphere() {
     test_vars GOVC_USERNAME GOVC_PASSWORD GOVC_URL GOVC_DATACENTER
 
     set -x
-    exec cloud-api-adaptor vsphere \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        ${optionals}
+    exec cloud-api-adaptor vsphere ${optionals}
 
 }
 
 docker() {
     set -x
-    exec cloud-api-adaptor docker \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        ${optionals}
+    exec cloud-api-adaptor docker ${optionals}
 
 }
 
@@ -178,10 +126,7 @@ byom() {
     test_vars VM_POOL_IPS
 
     set -x
-    exec cloud-api-adaptor byom \
-        -pods-dir "${PEER_PODS_DIR}" \
-        -socket "${REMOTE_HYPERVISOR_ENDPOINT}" \
-        ${optionals}
+    exec cloud-api-adaptor byom ${optionals}
 
 }
 
