@@ -109,9 +109,11 @@ func (m *Manager) ParseCmd(flags *flag.FlagSet) {
  m.libvirtManager.ParseCmd(flags)
 }
 
+// DEPRECATED: LoadEnv() is deprecated and will be removed in a future release.
+// Environment variables are now loaded during ParseCmd() via FlagRegistrar.
+// For compatibility, this method must still exist but should be a no-op.
 func (m *Manager) LoadEnv() {
-
- m.libvirtManager.LoadEnv()
+ // No longer needed - environment variables are handled in ParseCmd
 }
 
 func (m *Manager) NewProvider() (providers.Provider, error) {
