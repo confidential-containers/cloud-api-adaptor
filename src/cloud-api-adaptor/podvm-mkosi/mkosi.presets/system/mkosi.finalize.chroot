@@ -34,3 +34,14 @@ else
 	systemctl enable process-user-data.service
 	# These units doesn't exist in regular and debug profiles
 fi
+
+# Ensure the Unified Kernel Image is also available under the generic BOOTX64.EFI
+# path that many firmware implementations probe first (e.g. GCE SEV VMs).
+shopt -s nullglob
+UKI_IMAGES=(/efi/EFI/Linux/*.efi)
+if (( ${#UKI_IMAGES[@]} > 0 )); then
+	echo "Copying ${UKI_IMAGES[-1]} to /efi/EFI/BOOT/BOOTX64.EFI for firmware fallback"
+	install -d /efi/EFI/BOOT
+	cp "${UKI_IMAGES[-1]}" /efi/EFI/BOOT/BOOTX64.EFI
+fi
+shopt -u nullglob
