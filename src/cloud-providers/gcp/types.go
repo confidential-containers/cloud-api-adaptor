@@ -21,6 +21,7 @@ type Config struct {
 	ConfidentialType string
 	RootVolumeSize   int
 	Tags             provider.KeyValueFlag
+	UsePublicIP      bool
 }
 
 func (c Config) Redact() Config {
