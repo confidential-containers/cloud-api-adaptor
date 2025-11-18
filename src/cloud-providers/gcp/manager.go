@@ -18,7 +18,6 @@ func init() {
 }
 
 func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
-
 	flags.StringVar(&gcpcfg.GcpCredentials, "gcp-credentials", "", "Google Application Credentials, defaults to `GCP_CREDENTIALS`")
 	flags.StringVar(&gcpcfg.ProjectId, "gcp-project-id", "", "GCP Project ID")
 	flags.StringVar(&gcpcfg.Zone, "zone", "", "Zone")
@@ -31,6 +30,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	flags.StringVar(&gcpcfg.ConfidentialType, "confidential-type", "", "Used when DisableCVM=false. i.e: TDX or SEV_SNP. Check if the machine type is compatible.")
 	flags.IntVar(&gcpcfg.RootVolumeSize, "root-volume-size", 10, "Root volume size (in GiB) for the Pod VMs")
 	flags.Var(&gcpcfg.Tags, "tags", "List of tags to be added to the Pod VMs. Tags must already exist in the GCP project. Format: key1=value1,key2=value2")
+	flags.BoolVar(&gcpcfg.UsePublicIP, "use-public-ip", false, "Use Public IP for connecting to the kata-agent inside the Pod VM")
 }
 
 func (_ *Manager) LoadEnv() {
