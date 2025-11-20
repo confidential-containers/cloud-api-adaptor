@@ -4,11 +4,11 @@
 package wrapper
 
 import (
+	"context"
 	"encoding/json"
 	"sync"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/utils"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
