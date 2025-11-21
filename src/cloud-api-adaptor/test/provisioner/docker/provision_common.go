@@ -133,7 +133,7 @@ func (l *DockerProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) 
 }
 
 func (l *DockerProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
-	return map[string]string{
+	allProps := map[string]string{
 		"DOCKER_HOST":         DockerProps.DockerHost,
 		"DOCKER_API_VERSION":  DockerProps.ApiVer,
 		"CLUSTER_NAME":        DockerProps.ClusterName,
@@ -145,6 +145,16 @@ func (l *DockerProvisioner) GetProperties(ctx context.Context, cfg *envconf.Conf
 		"TUNNEL_TYPE":         DockerProps.TunnelType,
 		"VXLAN_PORT":          DockerProps.VxlanPort,
 	}
+
+	// Filter out empty values to avoid overriding defaults
+	props := make(map[string]string)
+	for k, v := range allProps {
+		if v != "" {
+			props[k] = v
+		}
+	}
+
+	return props
 }
 
 func (l *DockerProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
