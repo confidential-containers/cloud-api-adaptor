@@ -106,4 +106,12 @@ if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
     subscription-manager unregister
 fi
 
+if [[ "${CLOUD_PROVIDER}" == "aws" ]]; then
+    case "${PODVM_DISTRO}" in
+        ubuntu)
+            DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes linux-modules-extra-"$(uname -r)"
+            ;;
+    esac
+fi
+
 exit 0
