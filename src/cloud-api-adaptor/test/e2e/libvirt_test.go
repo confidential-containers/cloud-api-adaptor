@@ -288,3 +288,21 @@ func TestLibvirtPodWithInitContainer(t *testing.T) {
 	assert := getLibvirtAssert(t)
 	DoTestPodWithInitContainer(t, testEnv, assert)
 }
+
+func TestLibvirtSignatureVerificationAcceptsSignedImage(t *testing.T) {
+	if !isTestWithKbs() {
+		t.Skip("Skipping kbs related test as kbs is not deployed")
+	}
+
+	assert := LibvirtAssert{}
+	DoTestSignatureVerificationAcceptsSignedImage(t, testEnv, assert, keyBrokerService)
+}
+
+func TestLibvirtSignatureVerificationRejectsUnsignedImage(t *testing.T) {
+	if !isTestWithKbs() {
+		t.Skip("Skipping kbs related test as kbs is not deployed")
+	}
+
+	assert := LibvirtAssert{}
+	DoTestSignatureVerificationRejectsUnsignedImage(t, testEnv, assert, keyBrokerService)
+}
