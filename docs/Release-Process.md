@@ -31,26 +31,21 @@ the kata-containers release version.
         ```
         in the [cloud-api-adaptor](../src/cloud-api-adaptor/) directory and [csi-wrapper](../src/csi-wrapper/) directory.
 1. The CoCo operator updates to use references to the other component releases and then releases itself
+    - In order to have the correct version of the kata-containers payload in our peer pods releases, we need to
+    wait for this CoCo operator release before we can start the peer pods release process. After this operator payload
+    pinning is done, we should pick the matching operator release/commit containing this and update the
+    `git.coco-operator.reference` and `git.coco-operator.config` values in [versions.yaml](../src/cloud-api-adaptor/versions.yaml).
 1. cloud-api-adaptor releases with the following phases detailed below:
-    - Pre-release testing
+    - Pre-release testing (optional)
     - Cutting the release
     - Post release tasks
 
-### Pre-release testing
+### Pre-release testing (optional)
 
 In the pre-release/release candidate testing phase
 
 During the pre-release/release candidate phase we should verify that the kata-containers, guest-components
 and trustee versions were updated when their components released as listed above.
-
-Currently, the [CoCo operator](https://github.com/confidential-containers/operator/) only bumps the kata-containers
-payload to the Kata Containers' release version, during it's release.
-Therefore in order to have the correct version of the kata-containers payload in our peer pods releases, we need to
-wait for this CoCo operator release before we can start the peer pods release process. After this operator payload
-pinning is done, we should pick the matching operator release/commit containing this and update the
-`git.coco-operator.reference` and `git.coco-operator.config` values in [versions.yaml](../src/cloud-api-adaptor/versions.yaml)
-and create a commit for this. In order to save review cycles, this change can go in with the go module updates in
-the next section in the same PR.
 
 #### Tags and update go submodules
 
@@ -63,20 +58,8 @@ the correct order.
 > The Go module proxy caches the hash of the first tag and will refuse any update.
 > If you mess up, you need to restart the tagging with the next patch version.
 
-The process should go something like:
-- Determine the pre-release version: `v<version>-alpha.1` (e.g. `v0.8.0-alpha.1` for the confidential containers `0.8.0` release candidate).
-- Update the [peerpod-ctrl go module](../src/peerpod-ctrl/go.mod) to use the release candidate version version of `cloud-providers`
-- Update the [cloud-api-adaptor go module](../src/cloud-api-adaptor/go.mod) to use the release candidate version version of `cloud-providers` and `peerpod-ctrl`
-- Update the [csi-wrapper go module](../src/csi-wrapper/go.mod) to use the the release candidate version version of `cloud-api-adaptor`
-
-Please keep the local replace references for `cloud-providers`, `peerpod-ctrl` and `cloud-api-adaptor`
-and run `make tidy` under the [cloud-api-adaptor](../) to update packages for each go modules.
-
-- Create and merge the PR with the operator version and go module commits to update the `main` branch. When this change
-is merged, it triggers the [project images publish workflow](../.github/workflows/publish_images_on_push.yaml) to
-create a new container image in
-[`quay.io/confidential-containers/cloud-api-adaptor`](https://quay.io/repository/confidential-containers/cloud-api-adaptor?tab=tags)
-to use in testing.
+However we use local replace references for `cloud-providers`, `peerpod-ctrl` and `cloud-api-adaptor`, so
+don't bump the go modules ourselves.
 
 - Create git tags for all go modules. You can use the [release-helper.sh](../hack/release-helper.sh) script with the `go-tag` command
 to generate all the git commands needed.
@@ -147,18 +130,8 @@ RELEASE_TAG="6d7d2a3fe8243809b3c3a710792c8498292e2fc3"
 ./hack/release-helper.sh caa-image-tag ${RELEASE_TAG}
 ```
 
-Include those changes within a commit and add the following changes as a second commit:
-
-We then repeat the steps performed during the release candidate phase, but this time use the
-release tags of the project dependencies e.g. `v0.8.0` without an `-alpha.x` suffix.
-
-- Determine the release version: `v0.8.0`
-- Update the [peerpod-ctrl go module](../src/peerpod-ctrl/go.mod) to use the release version version of `cloud-providers`
-- Update the [cloud-api-adaptor go module](../src/cloud-api-adaptor/go.mod) to use the release version version of `cloud-providers` and `peerpod-ctrl`
-- Update the [csi-wrapper go module](../src/csi-wrapper/go.mod) to use the the release version version of `cloud-api-adaptor`
-- Run `make tidy` under the [cloud-api-adaptor](../) to update packages for each go modules.
-- Merge the 2 commits PR with this update to update the `main` branch
-    > **Note:** as the `main` branch is locked, this might require an admin to unlock, or bypass the merge restriction.
+Include those changes within a new PR to the `main` branch
+    > **Note:** If the `main` branch is locked, this might require an admin to unlock, or bypass the merge restriction.
 
 - Make sure to update the local `main` branch after the PR is merged.
 
