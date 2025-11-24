@@ -7,7 +7,7 @@ resources:
 images:
 - name: cloud-api-adaptor
   newName: 192.168.122.1:5000/cloud-api-adaptor # change image if needed
-  newTag: e205a788d6d3ad619bd8b0896c6a847b05c0f745
+  newTag: latest
 
 generatorOptions:
   disableNameSuffixHash: true
