@@ -84,7 +84,9 @@ jobs:
 
       - name: Read properties from versions.yaml
         run: |
-          sudo snap install yq
+          # yq may be pre-installed on self-hosted runners
+          command -v yq || sudo snap install yq
+          yq --version | grep -qE 'v4\.[0-9]+' || { echo "yq version is not 4.x, please install yq 4.x"; exit 1; }
           go_version="$(yq '.tools.golang' versions.yaml)"
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
