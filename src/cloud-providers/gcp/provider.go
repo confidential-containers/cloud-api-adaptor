@@ -63,19 +63,55 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	return provider, nil
 }
 
-func getIPs(instance *computepb.Instance) ([]netip.Addr, error) {
-	var podNodeIPs []netip.Addr
-	for _, nic := range instance.GetNetworkInterfaces() {
-		for _, access := range nic.GetAccessConfigs() {
-			ipStr := access.GetNatIP()
-			ip, err := netip.ParseAddr(ipStr)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse pod node IP %q: %w", ipStr, err)
-			}
-			podNodeIPs = append(podNodeIPs, ip)
-			logger.Printf("Found pod node IP: %s", ip.String())
-		}
+func parseIPString(ipStr string) (netip.Addr, error) {
+	ip, err := netip.ParseAddr(ipStr)
+	if err != nil {
+		return netip.Addr{}, fmt.Errorf("failed to parse pod node IP %q: %w", ipStr, err)
 	}
+
+	return ip, nil
+}
+
+func getNatIPs(nic *computepb.NetworkInterface) ([]netip.Addr, error) {
+	var natIPs []netip.Addr
+
+	for _, access := range nic.GetAccessConfigs() {
+		ip, err := parseIPString(access.GetNatIP())
+		if err != nil {
+			return nil, err
+		}
+
+		natIPs = append(natIPs, ip)
+	}
+
+	return natIPs, nil
+}
+
+func getIPs(intfcs []*computepb.NetworkInterface, usePublicIPs bool) ([]netip.Addr, error) {
+	var podNodeIPs []netip.Addr
+
+	for _, nic := range intfcs {
+		var ips []netip.Addr
+
+		if usePublicIPs {
+			var err error
+
+			ips, err = getNatIPs(nic)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			ip, err := parseIPString(nic.GetNetworkIP())
+			if err != nil {
+				return nil, err
+			}
+
+			ips = []netip.Addr{ip}
+		}
+
+		podNodeIPs = append(podNodeIPs, ips...)
+	}
+
 	return podNodeIPs, nil
 }
 
@@ -371,11 +407,13 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		logger.Printf("Created tag binding for %s on %s successfully", tagValue, parent)
 	}
 
-	ips, err := getIPs(instance)
+	ips, err := getIPs(instance.GetNetworkInterfaces(), p.serviceConfig.UsePublicIP)
 	if err != nil {
 		logger.Printf("failed to get IPs for the instance: %v", err)
 		return nil, err
 	}
+
+	logger.Printf("Found pod node IP(s): %v", ips)
 
 	return &provider.Instance{
 		ID:   instance.GetName(),
