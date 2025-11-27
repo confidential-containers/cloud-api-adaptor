@@ -27,7 +27,7 @@ configMapGenerator:
   - IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST="" #optional, comma separated list
   - IBMCLOUD_ZONE="" #set
   - IBMCLOUD_VPC_SUBNET_ID="" #set
-  - IBMCLOUD_VPC_SG_ID="" #set
+  - IBMCLOUD_SECURITY_GROUP_IDS="" #optional, comma separated list of additional security group IDs (cluster security group is automatically added)
   - IBMCLOUD_VPC_ID="" #set
   - CRI_RUNTIME_ENDPOINT="/run/cri-runtime/containerd.sock"
   - DISABLECVM="true" # Set to false to enable confidential VM
