@@ -49,7 +49,7 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "IBMCLOUD_VPC_SUBNET_ID":
 		return true
-	case "IBMCLOUD_VPC_SG_ID":
+	case "IBMCLOUD_SECURITY_GROUP_IDS":
 		return true
 	case "IBMCLOUD_VPC_ID":
 		return true

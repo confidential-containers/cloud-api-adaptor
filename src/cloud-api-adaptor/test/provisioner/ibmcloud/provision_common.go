@@ -154,16 +154,6 @@ func createVPC() error {
 		}
 	}
 
-	sgoptions := &vpcv1.GetVPCDefaultSecurityGroupOptions{}
-	sgoptions.SetID(IBMCloudProps.VpcID)
-	defaultSG, _, err := IBMCloudProps.VPC.GetVPCDefaultSecurityGroup(sgoptions)
-	if err != nil {
-		return err
-	}
-
-	IBMCloudProps.SecurityGroupID = *defaultSG.ID
-	log.Infof("Got VPC default SecurityGroupID %s.", IBMCloudProps.SecurityGroupID)
-
 	return nil
 }
 
@@ -964,7 +954,7 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME": IBMCloudProps.InstanceProfile,
 		"IBMCLOUD_ZONE":                        IBMCloudProps.Zone,
 		"IBMCLOUD_VPC_SUBNET_ID":               IBMCloudProps.SubnetID,
-		"IBMCLOUD_VPC_SG_ID":                   IBMCloudProps.SecurityGroupID,
+		"IBMCLOUD_SECURITY_GROUP_IDS":          IBMCloudProps.SecurityGroupIDs,
 		"IBMCLOUD_VPC_ID":                      IBMCloudProps.VpcID,
 		"CRI_RUNTIME_ENDPOINT":                 "/run/cri-runtime/containerd.sock",
 		"IBMCLOUD_API_KEY":                     IBMCloudProps.ApiKey,
@@ -980,19 +970,4 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"IBMCLOUD_DEDICATED_HOST_IDS":          IBMCloudProps.DedicatedHostIDs,
 		"IBMCLOUD_DEDICATED_HOST_GROUP_IDS":    IBMCloudProps.DedicatedHostGroupIDs,
 	}
-}
-
-func (p *IBMCloudProvisioner) GetVPCDefaultSecurityGroupID(vpcID string) (string, error) {
-	if len(IBMCloudProps.SecurityGroupID) > 0 {
-		return IBMCloudProps.SecurityGroupID, nil
-	}
-
-	options := &vpcv1.GetVPCDefaultSecurityGroupOptions{}
-	options.SetID(vpcID)
-	defaultSG, _, err := IBMCloudProps.VPC.GetVPCDefaultSecurityGroup(options)
-	if err != nil {
-		return "", err
-	}
-
-	return *defaultSG.ID, nil
 }

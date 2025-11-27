@@ -70,6 +70,17 @@ func (i *tags) Set(value string) error {
 	return nil
 }
 
+type securityGroupIds []string
+
+func (i *securityGroupIds) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *securityGroupIds) Set(value string) error {
+	*i = append(*i, toList(value, ",")...)
+	return nil
+}
+
 type dedicatedHostIDs []string
 
 func (i *dedicatedHostIDs) String() string {
@@ -103,7 +114,7 @@ type Config struct {
 	ZoneName                 string
 	Images                   Images
 	PrimarySubnetID          string
-	PrimarySecurityGroupID   string
+	SecurityGroupIds         securityGroupIds
 	SecondarySubnetID        string
 	SecondarySecurityGroupID string
 	KeyID                    string

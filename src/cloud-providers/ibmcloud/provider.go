@@ -182,13 +182,11 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		return nil, err
 	}
 
-	if config.PrimarySecurityGroupID == "" {
-		sgID, err := fetchClusterSG(clusterV2, config.ClusterID)
-		if err != nil {
-			return nil, err
-		}
-		config.PrimarySecurityGroupID = sgID
+	sgID, err := fetchClusterSG(clusterV2, config.ClusterID)
+	if err != nil {
+		return nil, err
 	}
+	config.SecurityGroupIds = append(config.SecurityGroupIds, sgID)
 
 	provider := &ibmcloudVPCProvider{
 		vpc:           vpcV1,
@@ -337,6 +335,13 @@ func (p *ibmcloudVPCProvider) getAttachTagOptions(vpcInstanceCRN *string) (*glob
 
 func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageId string) *vpcv1.InstancePrototype {
 
+	securityGroups := make([]vpcv1.SecurityGroupIdentityIntf, 0, len(p.serviceConfig.SecurityGroupIds))
+	for i := range p.serviceConfig.SecurityGroupIds {
+		securityGroups = append(securityGroups, &vpcv1.SecurityGroupIdentityByID{
+			ID: &p.serviceConfig.SecurityGroupIds[i],
+		})
+	}
+
 	prototype := &vpcv1.InstancePrototype{
 		Name:     &instanceName,
 		Image:    &vpcv1.ImageIdentity{ID: &imageId},
@@ -346,10 +351,8 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 		Keys:     []vpcv1.KeyIdentityIntf{},
 		VPC:      &vpcv1.VPCIdentity{ID: &p.serviceConfig.VpcID},
 		PrimaryNetworkInterface: &vpcv1.NetworkInterfacePrototype{
-			Subnet: &vpcv1.SubnetIdentity{ID: &p.serviceConfig.PrimarySubnetID},
-			SecurityGroups: []vpcv1.SecurityGroupIdentityIntf{
-				&vpcv1.SecurityGroupIdentityByID{ID: &p.serviceConfig.PrimarySecurityGroupID},
-			},
+			Subnet:         &vpcv1.SubnetIdentity{ID: &p.serviceConfig.PrimarySubnetID},
+			SecurityGroups: securityGroups,
 		},
 		MetadataService: &vpcv1.InstanceMetadataServicePrototype{
 			Enabled:  core.BoolPtr(true),
