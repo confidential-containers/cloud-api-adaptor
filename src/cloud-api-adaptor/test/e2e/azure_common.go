@@ -83,3 +83,10 @@ func (c AzureCloudAssert) GetInstanceType(t *testing.T, podName string) (string,
 	}
 
 }
+
+func (c AzureCloudAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedString string) {
+	// Verify PodVM console output with provided expectedString
+	// This is not implemented for Azure as of now.
+	// So skipping this test.
+	t.Log("Warning: console verification is not added for Azure")
+}

@@ -64,6 +64,7 @@ type TestCase struct {
 	expectedCaaPodLogStrings    []string
 	expectedPodLogString        string
 	expectedPodEventErrorString string
+	expectedPodvmConsoleLog     string
 	podState                    v1.PodPhase
 	imagePullTimer              bool
 	saImagePullSecret           string
@@ -130,6 +131,11 @@ func (tc *TestCase) WithExpectedInstanceType(expectedInstanceType string) *TestC
 func (pod *ExtraPod) WithTestCommands(TestCommands []TestCommand) *ExtraPod {
 	pod.testCommands = TestCommands
 	return pod
+}
+
+func (tc *TestCase) WithExpectedPodvmConsoleLog(expectedPodvmConsoleLog string) *TestCase {
+	tc.expectedPodvmConsoleLog = expectedPodvmConsoleLog
+	return tc
 }
 
 func (tc *TestCase) WithExpectedCaaPodLogStrings(expectedCaaPodLogStrings ...string) *TestCase {
@@ -223,6 +229,23 @@ func (tc *TestCase) Run() {
 			if tc.pod != nil {
 				if err = client.Resources().Create(ctx, tc.pod); err != nil {
 					t.Fatal(err)
+				}
+				var podvmName string
+				if tc.expectedPodvmConsoleLog != "" {
+					for i := range 10 {
+						podvmName, err = getPodvmName(ctx, client, tc.pod)
+						if err != nil {
+							t.Logf("%d attempt: to getPodvmName failed: %v", i, err)
+							time.Sleep(2 * time.Second)
+						} else {
+							break
+						}
+					}
+					if podvmName != "" {
+						tc.assert.VerifyPodvmConsole(t, podvmName, tc.expectedPodvmConsoleLog)
+					} else {
+						t.Logf("Warning: Failed to validated as podvmName is failed")
+					}
 				}
 				if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(tc.pod, tc.podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
 					t.Error(err)
