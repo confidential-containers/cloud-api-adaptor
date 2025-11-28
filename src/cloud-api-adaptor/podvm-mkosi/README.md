@@ -51,6 +51,14 @@ If you want to use the image with libvirt, run the following to convert to qcow2
 qemu-img convert -f raw -O qcow2 build/system.raw build/system.qcow2
 ```
 
+#### Firmware expectations on GCE
+
+When the pod VM runs on Google Cloud's SEV-capable `n2d-*` instances the
+virtual firmware only probes `\EFI\BOOT\BOOTX64.EFI`.  The mkosi finalize
+step copies the generated Unified Kernel Image from `\EFI\Linux\*.efi` to
+that fallback path automatically, ensuring the VM boots without any manual
+intervention.
+
 ## Debug image
 
 There is a debug variant of the image that provides a specific configuration to debug things within
