@@ -19,6 +19,7 @@ src/cloud-api-adaptor/cluster-provisioner
 src/cloud-api-adaptor/confidential-data-hub
 src/cloud-api-adaptor/kata-agent
 src/cloud-api-adaptor/process-user-data
+src/cloud-providers/cmd/config-extractor/config-extractor
 
 # The code files under cmd are not ignored
 !src/cloud-api-adaptor/cmd/*
