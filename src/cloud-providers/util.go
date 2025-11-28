@@ -178,7 +178,7 @@ func (r *FlagRegistrar) StringWithEnv(field *string, flagName, hardcodedDefault,
 	*field = hardcodedDefault
 
 	if envVarName != "" {
-		if envValue, exists := os.LookupEnv(envVarName); exists {
+		if envValue, exists := os.LookupEnv(envVarName); exists && envValue != "" {
 			*field = envValue
 		}
 	}
@@ -191,7 +191,7 @@ func (r *FlagRegistrar) IntWithEnv(field *int, flagName string, hardcodedDefault
 	*field = hardcodedDefault
 
 	if envVarName != "" {
-		if envValue, exists := os.LookupEnv(envVarName); exists {
+		if envValue, exists := os.LookupEnv(envVarName); exists && envValue != "" {
 			var intVal int
 			if n, err := fmt.Sscanf(envValue, "%d", &intVal); err == nil && n == 1 {
 				*field = intVal
@@ -207,7 +207,7 @@ func (r *FlagRegistrar) UintWithEnv(field *uint, flagName string, hardcodedDefau
 	*field = hardcodedDefault
 
 	if envVarName != "" {
-		if envValue, exists := os.LookupEnv(envVarName); exists {
+		if envValue, exists := os.LookupEnv(envVarName); exists && envValue != "" {
 			if uintVal, err := strconv.ParseUint(envValue, 10, 32); err == nil {
 				*field = uint(uintVal)
 			}
@@ -222,7 +222,7 @@ func (r *FlagRegistrar) Float64WithEnv(field *float64, flagName string, hardcode
 	*field = hardcodedDefault
 
 	if envVarName != "" {
-		if envValue, exists := os.LookupEnv(envVarName); exists {
+		if envValue, exists := os.LookupEnv(envVarName); exists && envValue != "" {
 			if floatVal, err := strconv.ParseFloat(envValue, 64); err == nil {
 				*field = floatVal
 			}
@@ -238,7 +238,7 @@ func (r *FlagRegistrar) BoolWithEnv(field *bool, flagName string, hardcodedDefau
 	*field = hardcodedDefault
 
 	if envVarName != "" {
-		if envValue, exists := os.LookupEnv(envVarName); exists {
+		if envValue, exists := os.LookupEnv(envVarName); exists && envValue != "" {
 			lowerValue := strings.ToLower(envValue)
 			*field = (lowerValue == "1" || lowerValue == "true")
 		}
@@ -252,7 +252,7 @@ func (r *FlagRegistrar) DurationWithEnv(field *time.Duration, flagName string, h
 	*field = hardcodedDefault
 
 	if envVarName != "" {
-		if envValue, exists := os.LookupEnv(envVarName); exists {
+		if envValue, exists := os.LookupEnv(envVarName); exists && envValue != "" {
 			if duration, err := time.ParseDuration(envValue); err == nil {
 				*field = duration
 			}
@@ -267,7 +267,7 @@ func (r *FlagRegistrar) DurationWithEnv(field *time.Duration, flagName string, h
 func (r *FlagRegistrar) CustomTypeWithEnv(field flag.Value, flagName, hardcodedDefault, envVarName, usage string) {
 	// Check environment variable first
 	if envVarName != "" {
-		if envValue, exists := os.LookupEnv(envVarName); exists {
+		if envValue, exists := os.LookupEnv(envVarName); exists && envValue != "" {
 			_ = field.Set(envValue)
 			r.flags.Var(field, flagName, usage)
 			return
