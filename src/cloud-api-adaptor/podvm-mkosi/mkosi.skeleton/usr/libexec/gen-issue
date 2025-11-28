@@ -7,18 +7,28 @@
 # and prints it together with helpful information
 # to the serial consol on startup.
 
-set -euo pipefail
+set -uo pipefail
 
 main() {
   mkdir -p /run/issue.d
-  /usr/bin/fastfetch \
-	--config /etc/fastfetch/config.jsonc \
-    > /run/issue.d/20-fastfetch.issue
+  
+  # Generate fastfetch output (non-critical, continue on failure)
+  if [ -x /usr/bin/fastfetch ] && [ -f /etc/fastfetch/config.jsonc ]; then
+    /usr/bin/fastfetch \
+      --config /etc/fastfetch/config.jsonc \
+      > /run/issue.d/20-fastfetch.issue 2>&1 || true
+  fi
+  
+  # Read TPM PCR values (non-critical, continue on failure)
   {
     echo "Detected vTPM PCR values:"
-    /usr/bin/tpm2_pcrread sha256:all
+    if [ -x /usr/bin/tpm2_pcrread ]; then
+      /usr/bin/tpm2_pcrread sha256:all 2>&1 || echo "TPM not available or accessible"
+    else
+      echo "tpm2_pcrread not available"
+    fi
     echo
-  } > /run/issue.d/30-pcrs.issue
+  } > /run/issue.d/30-pcrs.issue 2>&1 || true
 }
 
 main

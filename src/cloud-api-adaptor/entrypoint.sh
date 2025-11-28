@@ -76,6 +76,19 @@ alibabacloud() {
 gcp() {
     test_vars GCP_CREDENTIALS GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
 
+    # TODO: The following manual conversions are kept for compatibility but should
+    # ideally be handled by FlagRegistrar in manager.go.
+    [[ "${PODVM_IMAGE_NAME}" ]] && optionals+="-image-name ${PODVM_IMAGE_NAME} "
+    [[ "${GCP_PROJECT_ID}" ]] && optionals+="-gcp-project-id ${GCP_PROJECT_ID} "
+    [[ "${GCP_ZONE}" ]] && optionals+="-zone ${GCP_ZONE} "
+    [[ "${GCP_MACHINE_TYPE}" ]] && optionals+="-machine-type ${GCP_MACHINE_TYPE} "
+    [[ "${GCP_NETWORK}" ]] && optionals+="-network ${GCP_NETWORK} "
+    [[ "${GCP_SUBNETWORK}" ]] && optionals+="-subnetwork ${GCP_SUBNETWORK} "
+    [[ "${GCP_DISK_TYPE}" ]] && optionals+="-disk-type ${GCP_DISK_TYPE} "
+    [[ "${GCP_CONFIDENTIAL_TYPE}" ]] && optionals+="-confidential-type ${GCP_CONFIDENTIAL_TYPE} "
+    [[ "${ROOT_VOLUME_SIZE}" ]] && optionals+="-root-volume-size ${ROOT_VOLUME_SIZE} "
+    [[ "${TAGS}" ]] && optionals+="-tags $(cleanup_spaces "${TAGS}") "
+
     # Avoid using node's metadata service credentials for GCP authentication
     echo "$GCP_CREDENTIALS" > /tmp/gcp-creds.json
     export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-creds.json

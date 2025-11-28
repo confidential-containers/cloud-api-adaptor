@@ -1,4 +1,5 @@
 enable attestation-protocol-forwarder.service
+enable agent-protocol-forwarder.service
 enable attestation-agent.path
 enable api-server-rest.path
 enable confidential-data-hub.path
