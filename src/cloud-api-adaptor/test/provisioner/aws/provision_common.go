@@ -228,7 +228,7 @@ func (a *AWSProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) err
 }
 
 func (aws *AWSProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
-	return nil
+	return aws.Cluster.DeleteCluster()
 }
 
 func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
@@ -1284,8 +1284,28 @@ func (e *EKSCluster) CreateCluster() error {
 	return nil
 }
 
+// DeleteCluster deletes the EKS cluster using eksctl.
 func (e *EKSCluster) DeleteCluster() error {
-	// TODO: implement me!
+	if e.Name == "" {
+		return nil
+	}
+	log.Infof("Deleting the EKS cluster: %s using eksctl...", e.Name)
+
+	cmdArgs := []string{
+		"delete", "cluster",
+		"--name", e.Name,
+		"--region", e.AwsConfig.Region,
+		"--wait",
+		"--timeout", "15m",
+	}
+
+	cmd := exec.Command("eksctl", cmdArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to delete EKS cluster: %w", err)
+	}
+
 	return nil
 }
 
