@@ -66,6 +66,14 @@ func NewProvider(config *Config) (provider.Provider, error) {
 func getIPs(instance *computepb.Instance) ([]netip.Addr, error) {
 	var podNodeIPs []netip.Addr
 	for _, nic := range instance.GetNetworkInterfaces() {
+		if ipStr := nic.GetNetworkIP(); ipStr != "" {
+			ip, err := netip.ParseAddr(ipStr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse pod node internal IP %q: %w", ipStr, err)
+			}
+			podNodeIPs = append(podNodeIPs, ip)
+			logger.Printf("Found pod node internal IP: %s", ip.String())
+		}
 		for _, access := range nic.GetAccessConfigs() {
 			ipStr := access.GetNatIP()
 			ip, err := netip.ParseAddr(ipStr)

@@ -94,6 +94,7 @@ else ifeq ($(ARCH),s390x)
 else
 	mkdir -p build
 	docker buildx build \
+		--platform linux/amd64 \
 		-f Dockerfile.mkosi \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=production \
@@ -121,6 +122,7 @@ else
 
 	mkdir -p build
 	docker buildx build \
+		--platform linux/amd64 \
 		-f Dockerfile.mkosi \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=debug \
@@ -147,6 +149,7 @@ else ifeq ($(ARCH),s390x)
 else
 	mkdir -p build
 	docker buildx build \
+		--platform linux/amd64 \
 		-f Dockerfile.mkosi \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=sftp \
