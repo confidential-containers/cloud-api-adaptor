@@ -135,6 +135,7 @@ Use the properties on the table below for AWS:
 |disablecvm|Set to `true` to disable confidential VM||
 |pause_image|Kubernetes pause image||
 |podvm_aws_ami_id|AWS AMI ID of the podvm||
+|podvm_aws_instance_type|AWS instance type of the podvm|t2.medium|
 |ssh_kp_name|AWS SSH key-pair name ||
 |use_public_ip|Set `true` to instantiate VMs with public IP. If `cluster_type=onprem` then this property is implictly applied||
 |tunnel_type|Tunnel type||

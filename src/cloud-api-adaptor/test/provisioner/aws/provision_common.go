@@ -95,21 +95,22 @@ type OnPremCluster struct {
 
 // AWSProvisioner implements the CloudProvision interface.
 type AWSProvisioner struct {
-	AwsConfig        aws.Config
-	iamClient        *iam.Client
-	containerRuntime string // Name of the container runtime
-	Cluster          Cluster
-	Disablecvm       string
-	ec2Client        *ec2.Client
-	s3Client         *s3.Client
-	Bucket           *S3Bucket
-	PauseImage       string
-	Image            *AMIImage
-	Vpc              *Vpc
-	PublicIP         string
-	TunnelType       string
-	VxlanPort        string
-	SshKpName        string
+	AwsConfig         aws.Config
+	iamClient         *iam.Client
+	containerRuntime  string // Name of the container runtime
+	Cluster           Cluster
+	Disablecvm        string
+	ec2Client         *ec2.Client
+	s3Client          *s3.Client
+	Bucket            *S3Bucket
+	PauseImage        string
+	Image             *AMIImage
+	Vpc               *Vpc
+	PodvmInstanceType string
+	PublicIP          string
+	TunnelType        string
+	VxlanPort         string
+	SshKpName         string
 }
 
 // AwsInstallOverlay implements the InstallOverlay interface
@@ -139,6 +140,10 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		properties["resources_basename"] = "caa-e2e-test-" + strconv.FormatInt(time.Now().Unix(), 10)
 	}
 
+	if properties["podvm_aws_instance_type"] == "" {
+		properties["podvm_aws_instance_type"] = "t2.medium"
+	}
+
 	vpc := NewVpc(ec2Client, properties)
 
 	if properties["cluster_type"] == "" ||
@@ -163,16 +168,17 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 			Name:   properties["resources_basename"] + "-bucket",
 			Key:    "", // To be defined when the file is uploaded
 		},
-		containerRuntime: properties["container_runtime"],
-		Cluster:          cluster,
-		Image:            NewAMIImage(ec2Client, properties),
-		Disablecvm:       properties["disablecvm"],
-		PauseImage:       properties["pause_image"],
-		Vpc:              vpc,
-		PublicIP:         properties["use_public_ip"],
-		TunnelType:       properties["tunnel_type"],
-		VxlanPort:        properties["vxlan_port"],
-		SshKpName:        properties["ssh_kp_name"],
+		containerRuntime:  properties["container_runtime"],
+		Cluster:           cluster,
+		Image:             NewAMIImage(ec2Client, properties),
+		Disablecvm:        properties["disablecvm"],
+		PauseImage:        properties["pause_image"],
+		Vpc:               vpc,
+		PodvmInstanceType: properties["podvm_aws_instance_type"],
+		PublicIP:          properties["use_public_ip"],
+		TunnelType:        properties["tunnel_type"],
+		VxlanPort:         properties["vxlan_port"],
+		SshKpName:         properties["ssh_kp_name"],
 	}
 
 	return AWSProps, nil
@@ -306,23 +312,23 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 	credentials, _ := a.AwsConfig.Credentials.Retrieve(context.TODO())
 
 	return map[string]string{
-		"CONTAINER_RUNTIME":    a.containerRuntime,
-		"disablecvm":           a.Disablecvm,
-		"pause_image":          a.PauseImage,
-		"podvm_launchtemplate": "",
-		"podvm_ami":            a.Image.ID,
-		"podvm_instance_type":  "t2.medium",
-		"sg_ids":               a.Vpc.SecurityGroupId, // TODO: what other SG needed?
-		"subnet_id":            a.Vpc.SubnetId,
-		"ssh_kp_name":          a.SshKpName,
-		"region":               a.AwsConfig.Region,
-		"resources_basename":   a.Vpc.BaseName,
-		"access_key_id":        credentials.AccessKeyID,
-		"secret_access_key":    credentials.SecretAccessKey,
-		"session_token":        credentials.SessionToken,
-		"use_public_ip":        a.PublicIP,
-		"tunnel_type":          a.TunnelType,
-		"vxlan_port":           a.VxlanPort,
+		"CONTAINER_RUNTIME":       a.containerRuntime,
+		"disablecvm":              a.Disablecvm,
+		"pause_image":             a.PauseImage,
+		"podvm_launchtemplate":    "",
+		"podvm_ami":               a.Image.ID,
+		"podvm_aws_instance_type": a.PodvmInstanceType,
+		"sg_ids":                  a.Vpc.SecurityGroupId, // TODO: what other SG needed?
+		"subnet_id":               a.Vpc.SubnetId,
+		"ssh_kp_name":             a.SshKpName,
+		"region":                  a.AwsConfig.Region,
+		"resources_basename":      a.Vpc.BaseName,
+		"access_key_id":           credentials.AccessKeyID,
+		"secret_access_key":       credentials.SecretAccessKey,
+		"session_token":           credentials.SessionToken,
+		"use_public_ip":           a.PublicIP,
+		"tunnel_type":             a.TunnelType,
+		"vxlan_port":              a.VxlanPort,
 	}
 }
 
@@ -1152,18 +1158,18 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 
 	// Mapping the internal properties to ConfigMapGenerator properties.
 	mapProps := map[string]string{
-		"disablecvm":           "DISABLECVM",
-		"pause_image":          "PAUSE_IMAGE",
-		"podvm_launchtemplate": "PODVM_LAUNCHTEMPLATE_NAME",
-		"podvm_ami":            "PODVM_AMI_ID",
-		"podvm_instance_type":  "PODVM_INSTANCE_TYPE",
-		"sg_ids":               "AWS_SG_IDS",
-		"subnet_id":            "AWS_SUBNET_ID",
-		"ssh_kp_name":          "SSH_KP_NAME",
-		"region":               "AWS_REGION",
-		"tunnel_type":          "TUNNEL_TYPE",
-		"vxlan_port":           "VXLAN_PORT",
-		"use_public_ip":        "USE_PUBLIC_IP",
+		"disablecvm":              "DISABLECVM",
+		"pause_image":             "PAUSE_IMAGE",
+		"podvm_launchtemplate":    "PODVM_LAUNCHTEMPLATE_NAME",
+		"podvm_ami":               "PODVM_AMI_ID",
+		"podvm_aws_instance_type": "PODVM_INSTANCE_TYPE",
+		"sg_ids":                  "AWS_SG_IDS",
+		"subnet_id":               "AWS_SUBNET_ID",
+		"ssh_kp_name":             "SSH_KP_NAME",
+		"region":                  "AWS_REGION",
+		"tunnel_type":             "TUNNEL_TYPE",
+		"vxlan_port":              "VXLAN_PORT",
+		"use_public_ip":           "USE_PUBLIC_IP",
 	}
 
 	for k, v := range mapProps {
