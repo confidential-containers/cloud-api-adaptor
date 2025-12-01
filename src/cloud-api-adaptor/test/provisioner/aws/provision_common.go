@@ -1237,6 +1237,7 @@ func (e *EKSCluster) CreateCluster() error {
 		"--nodes-min", strconv.FormatInt(int64(e.NumWorkers), 10),
 		"--nodes-max", strconv.FormatInt(int64(e.NumWorkers), 10),
 		"--node-type", "t3.medium",
+		"--node-ami-family", "Ubuntu2404",
 		"--ssh-access",
 		"--ssh-public-key", e.SshKpName,
 		"--node-private-networking",
