@@ -49,9 +49,14 @@ type globalTaggingV1 interface {
 	AttachTagWithContext(ctx context.Context, attachTagOptions *globaltaggingv1.AttachTagOptions) (*globaltaggingv1.TagResults, *core.DetailedResponse, error)
 }
 
+type clusterV2 interface {
+	GetClusterTypeSecurityGroups(clusterID string) (result []securityGroup, response *core.DetailedResponse, err error)
+}
+
 type ibmcloudVPCProvider struct {
 	vpc           vpcV1
 	globalTagging globalTaggingV1
+	cluster       clusterV2
 	serviceConfig *Config
 }
 
@@ -117,7 +122,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		if config.ZoneName == "" {
 			config.ZoneName = nodeLabels["topology.kubernetes.io/zone"]
 		}
-		vpcID, rgID, sgID, err := fetchVPCDetails(vpcV1, primarySubnetID)
+		vpcID, rgID, err := fetchVPCDetails(vpcV1, primarySubnetID)
 		if err != nil {
 			logger.Printf("warning, unable to automatically populate VPC details\ndue to: %v\n", err)
 		} else {
@@ -129,9 +134,6 @@ func NewProvider(config *Config) (provider.Provider, error) {
 			}
 			if config.ResourceGroupID == "" {
 				config.ResourceGroupID = rgID
-			}
-			if config.PrimarySecurityGroupID == "" {
-				config.PrimarySecurityGroupID = sgID
 			}
 		}
 	}
@@ -175,9 +177,23 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		return nil, err
 	}
 
+	clusterV2, err := NewClusterV2Service(&ClusterOptions{Authenticator: authenticator})
+	if err != nil {
+		return nil, err
+	}
+
+	if config.PrimarySecurityGroupID == "" {
+		sgID, err := fetchClusterSG(clusterV2, config.ClusterID)
+		if err != nil {
+			return nil, err
+		}
+		config.PrimarySecurityGroupID = sgID
+	}
+
 	provider := &ibmcloudVPCProvider{
 		vpc:           vpcV1,
 		globalTagging: gTaggingV1,
+		cluster:       clusterV2,
 		serviceConfig: config,
 	}
 
@@ -217,7 +233,7 @@ func getClusterID() (string, error) {
 	return clusterID, nil
 }
 
-func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourceGroupID string, securityGroupID string, e error) {
+func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourceGroupID string, e error) {
 	subnet, response, err := vpcV1.GetSubnet(&vpcv1.GetSubnetOptions{
 		ID: &subnetID,
 	})
@@ -226,17 +242,27 @@ func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourc
 		return
 	}
 
-	sg, response, err := vpcV1.GetVPCDefaultSecurityGroup(&vpcv1.GetVPCDefaultSecurityGroupOptions{
-		ID: subnet.VPC.ID,
-	})
+	vpcID = *subnet.VPC.ID
+	resourceGroupID = *subnet.ResourceGroup.ID
+	return
+}
+
+func fetchClusterSG(clusterv2 clusterV2, clusterID string) (securityGroupID string, e error) {
+	securityGroups, response, err := clusterv2.GetClusterTypeSecurityGroups(clusterID)
 	if err != nil {
-		e = fmt.Errorf("VPC error with:\n %w\nfurther details:\n %v", err, response)
+		e = fmt.Errorf("cluster error with:\n %w\nfurther details:\n %v", err, response)
 		return
 	}
 
-	securityGroupID = *sg.ID
-	vpcID = *subnet.VPC.ID
-	resourceGroupID = *subnet.ResourceGroup.ID
+	expectedSgName := fmt.Sprintf("kube-%s", clusterID)
+
+	for _, sg := range securityGroups {
+		if sg.Name == expectedSgName {
+			securityGroupID = sg.ID
+			return
+		}
+	}
+	e = fmt.Errorf("could not find default cluster security group %s", expectedSgName)
 	return
 }
 
