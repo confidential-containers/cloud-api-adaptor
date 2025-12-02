@@ -42,6 +42,7 @@ type S3Bucket struct {
 	Client *s3.Client
 	Name   string // Bucket name
 	Key    string // Object key
+	Region string // AWS region
 }
 
 // AMIImage represents an AMI image
@@ -167,6 +168,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 			Client: s3.NewFromConfig(cfg),
 			Name:   properties["resources_basename"] + "-bucket",
 			Key:    "", // To be defined when the file is uploaded
+			Region: cfg.Region,
 		},
 		containerRuntime:  properties["container_runtime"],
 		Cluster:           cluster,
@@ -786,9 +788,18 @@ func (b *S3Bucket) createBucket() error {
 		return nil
 	}
 
-	_, err = b.Client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
+	createBucketInput := &s3.CreateBucketInput{
 		Bucket: &b.Name,
-	})
+	}
+
+	// For regions other than us-east-1, we need to specify a location constraint
+	if b.Region != "" && b.Region != "us-east-1" {
+		createBucketInput.CreateBucketConfiguration = &s3types.CreateBucketConfiguration{
+			LocationConstraint: s3types.BucketLocationConstraint(b.Region),
+		}
+	}
+
+	_, err = b.Client.CreateBucket(context.TODO(), createBucketInput)
 	if err != nil {
 		return err
 	}
