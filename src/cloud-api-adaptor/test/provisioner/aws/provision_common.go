@@ -56,6 +56,7 @@ type AMIImage struct {
 	ID              string // AMI image ID
 	RootDeviceName  string // Root device name
 	VmImportRole    string // vmimport role name
+	BootUefi        bool   // If true, enable UEFI boot mode (required for AMD SEV-SNP)
 }
 
 // Vpc represents an AWS VPC
@@ -936,6 +937,14 @@ func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketNa
 }
 
 func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
+	// If disablecvm is empty or false then it wants confidential VM and
+	// for AMD SEV-SNP it needs to enable UEFI boot.
+	bootUefi := false
+	disablecvm := properties["disablecvm"]
+	if disablecvm == "" || disablecvm == "false" {
+		bootUefi = true
+	}
+
 	return &AMIImage{
 		BaseName:        properties["resources_basename"],
 		Client:          client,
@@ -946,6 +955,7 @@ func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
 		ID:              properties["podvm_aws_ami_id"],
 		RootDeviceName:  "/dev/xvda",
 		VmImportRole:    properties["resources_basename"] + "-vmimport",
+		BootUefi:        bootUefi,
 	}
 }
 
@@ -1011,7 +1021,7 @@ func (i *AMIImage) registerImage(imageName string) error {
 		return fmt.Errorf("EBS Snapshot ID not found\n")
 	}
 
-	result, err := i.Client.RegisterImage(context.TODO(), &ec2.RegisterImageInput{
+	registerInput := &ec2.RegisterImageInput{
 		Name:         aws.String(imageName),
 		Architecture: ec2types.ArchitectureValuesX8664,
 		BlockDeviceMappings: []ec2types.BlockDeviceMapping{{
@@ -1026,7 +1036,14 @@ func (i *AMIImage) registerImage(imageName string) error {
 		RootDeviceName:     aws.String(i.RootDeviceName),
 		VirtualizationType: aws.String("hvm"),
 		TagSpecifications:  defaultTagSpecifications(i.BaseName+"-img", ec2types.ResourceTypeImage),
-	})
+	}
+
+	// If BootUefi is true, enable UEFI boot mode for AMD SEV-SNP
+	if i.BootUefi {
+		registerInput.BootMode = ec2types.BootModeValuesUefi
+	}
+
+	result, err := i.Client.RegisterImage(context.TODO(), registerInput)
 	if err != nil {
 		return err
 	}
