@@ -130,7 +130,7 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 	var LibvirtLog = ""
 
 	start := time.Now()
-	duration := 6 * time.Minute
+	duration := 3 * time.Minute
 
 	for time.Since(start) < duration {
 		n, err := stream.Recv(buf)
@@ -138,7 +138,6 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 			output.Write(buf[:n])
 			if len(output.String()) > len(LibvirtLog) {
 				LibvirtLog = output.String()
-				t.Logf("Libvirt console output so far: \n%s", LibvirtLog)
 			}
 			if strings.Contains(LibvirtLog, expectedString) {
 				t.Logf("Found expected String :%s in \n console :%s", expectedString, LibvirtLog)

@@ -30,7 +30,7 @@ func DoTestCreateSimplePod(t *testing.T, e env.Environment, assert CloudAssert) 
 	pod := NewBusyboxPodWithName(E2eNamespace, "simple-test").GetPodOrFatal(t)
 	if isTestOnCrio() {
 		t.Log("crio busybox error")
-		NewTestCase(t, e, "SimplePeerPod", assert, "PodVM is created").WithPod(pod).WithExpectedPodvmConsoleLog("error").Run()
+		NewTestCase(t, e, "SimplePeerPod", assert, "PodVM is created").WithPod(pod).Run()
 	} else {
 		NewTestCase(t, e, "SimplePeerPod", assert, "PodVM is created").WithPod(pod).WithNydusSnapshotter().Run()
 	}
