@@ -29,7 +29,7 @@ cloudimg:
 tools:
   bats: 1.10.0
   iptables-wrapper: v0.0.0-20240819165702-06cad2ec6cb5
-  golang: 1.24.9
+  golang: 1.24.11
   kcli: 99.0.202507200957
   mkosi: v22
   protoc: 3.16.0
