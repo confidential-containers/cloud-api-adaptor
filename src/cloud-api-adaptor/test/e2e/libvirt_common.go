@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"libvirt.org/go/libvirt"
 )
 
@@ -88,6 +87,7 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 	var dom *libvirt.Domain
 	var err error
 	for range 10 {
+		t.Logf("Checking for PodVM %s", podvmName)
 		dom, err = l.conn.LookupDomainByName(podvmName)
 		if err == nil {
 			break
@@ -105,7 +105,7 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 	}
 
 	if state == libvirt.DOMAIN_SHUTOFF {
-		log.Info("starting podvm")
+		t.Log("starting podvm")
 		err = dom.Create()
 		if err != nil {
 			t.Error("Failed to start domain")
@@ -128,12 +128,17 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 	buf := make([]byte, 4096)
 	var output strings.Builder
 	var LibvirtLog = ""
-	for range [10]int{} {
+
+	start := time.Now()
+	duration := 6 * time.Minute
+
+	for time.Since(start) < duration {
 		n, err := stream.Recv(buf)
 		if n > 0 {
 			output.Write(buf[:n])
 			if len(output.String()) > len(LibvirtLog) {
 				LibvirtLog = output.String()
+				t.Logf("Libvirt console output so far: \n%s", LibvirtLog)
 			}
 			if strings.Contains(LibvirtLog, expectedString) {
 				t.Logf("Found expected String :%s in \n console :%s", expectedString, LibvirtLog)
@@ -148,4 +153,6 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 			time.Sleep(6 * time.Second)
 		}
 	}
+
+	t.Logf("Warning: Timed out waiting for expected String :%s in \n console :%s", expectedString, LibvirtLog)
 }

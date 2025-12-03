@@ -242,6 +242,7 @@ func (tc *TestCase) Run() {
 						}
 					}
 					if podvmName != "" {
+						t.Log("Verifying PodVM console log")
 						tc.assert.VerifyPodvmConsole(t, podvmName, tc.expectedPodvmConsoleLog)
 					} else {
 						t.Logf("Warning: Failed to validated as podvmName is failed")
