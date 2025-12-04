@@ -223,14 +223,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container_runtime:
-          - crio
-        os:
-          - ubuntu
-        provider:
-          - generic
-        arch:
-          - amd64
+        include:
+          - container_runtime: crio
+            cluster_type: onprem
+            os: ubuntu
+            provider: generic
+            arch: amd64
+          - container_runtime: containerd
+            cluster_type: eks
+            os: ubuntu
+            provider: generic
+            arch: amd64
     permissions:
       id-token: write # Required by aws-actions/configure-aws-credentials
       contents: read  # Required by aws-actions/configure-aws-credentials
@@ -238,6 +241,7 @@ jobs:
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}
       container_runtime: ${{ matrix.container_runtime }}
+      cluster_type: ${{ matrix.cluster_type }}
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       oras: false
