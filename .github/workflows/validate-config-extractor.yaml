@@ -1,7 +1,7 @@
 # (C) Copyright Confidential Containers Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Validate config-extractor tool
+# Validate config-extractor tool and check for drift in generated files
 ---
 name: validate-config-extractor
 
@@ -11,6 +11,8 @@ on:
       - 'src/cloud-providers/**/manager.go'
       - 'src/cloud-providers/util.go'
       - 'src/cloud-providers/cmd/config-extractor/**'
+      - 'src/cloud-providers/Makefile'
+      - 'src/cloud-api-adaptor/install/charts/peerpods/providers/**'
   workflow_dispatch:
 
 concurrency:
@@ -76,7 +78,28 @@ jobs:
 
             # Verify at least some flags were extracted
             flag_count=$(jq '.flags | length' /tmp/"$provider".json)
-            echo "✓ $provider: parsed successfully ($flag_count flags found)"
+            echo "[OK] $provider: parsed successfully ($flag_count flags found)"
             echo "::endgroup::"
           done
         shell: bash
+
+      - name: Check for drift in generated chart values
+        run: |
+          echo "Regenerating chart values to check for drift..."
+          make sync-chart-values
+
+          # Check if any files changed
+          if git diff --exit-code ../cloud-api-adaptor/install/charts/peerpods/providers/; then
+            echo "[OK] Generated files are up to date"
+          else
+            echo "::error::Generated chart values are out of sync!"
+            echo ""
+            echo "The provider YAML files in install/charts/peerpods/providers/ do not match"
+            echo "what would be generated from the current manager.go files."
+            echo ""
+            echo "To fix this, run:"
+            echo "  cd src/cloud-providers && make sync-chart-values"
+            echo ""
+            echo "Then commit the updated files."
+            exit 1
+          fi
