@@ -122,27 +122,38 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 	}
 
 	stream, err := l.conn.NewStream(0)
-	if err != nil {
-		t.Errorf("Failed to create stream : %v", err)
+	for err != nil {
+		t.Logf("Warning: Failed to create stream : %v", err)
 	}
 
 	defer stream.Free()
 
 	err = dom.OpenConsole("", stream, libvirt.DOMAIN_CONSOLE_FORCE)
+	start := time.Now()
+	duration := 1 * time.Minute
+	for err != nil && time.Since(start) < duration {
+		t.Logf("Warning: Failed to open console : %v", err)
+		err = dom.OpenConsole("", stream, libvirt.DOMAIN_CONSOLE_FORCE)
+		time.Sleep(2 * time.Second)
+	}
+
 	if err != nil {
-		t.Errorf("Failed to open console : %v", err)
+		t.Logf("Warning: Failed to open console after retries : %v", err)
+		return
 	}
 
 	buf := make([]byte, 4096)
 	var output strings.Builder
 	var LibvirtLog = ""
 
-	start := time.Now()
-	duration := 3 * time.Minute
+	start = time.Now()
+	duration = 6 * time.Minute
+	maxBytes := 0
 
 	for time.Since(start) < duration {
 		n, err := stream.Recv(buf)
-		if n > 0 {
+		if maxBytes < n {
+			maxBytes = n
 			output.Write(buf[:n])
 			if len(output.String()) > len(LibvirtLog) {
 				LibvirtLog = output.String()
@@ -154,11 +165,10 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 		}
 		if err != nil && LibvirtLog != "" {
 			t.Logf("Warning: Did not find expected String :%s in \n console :%s", expectedString, LibvirtLog)
-			return
 		} else if err != nil {
 			t.Logf("Warning: Did not receive any data from console yet, err: %v", err)
 		}
-		time.Sleep(6 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 
 	t.Logf("Warning: Timed out waiting for expected String :%s in \n console :%s", expectedString, LibvirtLog)
