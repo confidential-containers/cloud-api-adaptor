@@ -136,7 +136,6 @@ REGION="$(terraform output --raw region)"
 RESOURCE_GROUP_ID="$(terraform output --raw resource_group_id)"
 ZONE="$(terraform output --raw zone)"
 VPC_SUBNET_ID="$(terraform output --raw subnet_id)"
-VPC_SECURITY_GROUP_ID="$(terraform output --raw security_group_id)"
 VPC_ID="$(terraform output --raw vpc_id)"
 EOF
 
