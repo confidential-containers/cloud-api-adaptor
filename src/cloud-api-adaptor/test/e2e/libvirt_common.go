@@ -86,9 +86,17 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 
 	var dom *libvirt.Domain
 	var err error
+	t.Logf("Looking for PodVM %s", podvmName)
+	domains, err := l.conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
+	for _, dom := range domains {
+		name, _ := dom.GetName()
+		t.Logf("Found PodVM %s", name)
+	}
+
 	for range 10 {
 		t.Logf("Checking for PodVM %s", podvmName)
 		dom, err = l.conn.LookupDomainByName(podvmName)
+		t.Logf("LookupDomainByName returned err: %v", err)
 		if err == nil {
 			break
 		}
@@ -149,8 +157,8 @@ func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedStrin
 			return
 		} else if err != nil {
 			t.Logf("Warning: Did not receive any data from console yet, err: %v", err)
-			time.Sleep(6 * time.Second)
 		}
+		time.Sleep(6 * time.Second)
 	}
 
 	t.Logf("Warning: Timed out waiting for expected String :%s in \n console :%s", expectedString, LibvirtLog)
