@@ -44,7 +44,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	// Custom flag types (comma-separated lists)
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.InstanceProfiles, "profile-list", "", "IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST", "List of instance profile names to be used for the Pod VMs, comma separated")
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Images, "image-id", "", "IBMCLOUD_PODVM_IMAGE_ID", "List of Image IDs, comma separated", provider.Required())
-	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Tags, "tags", "", "IBMCLOUD_TAGS", "List of tags to attach to the Pod VMs, comma separated")
+	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Tags, "tags", "", "TAGS", "List of tags to attach to the Pod VMs, comma separated")
 }
 
 func (_ *Manager) LoadEnv() {
