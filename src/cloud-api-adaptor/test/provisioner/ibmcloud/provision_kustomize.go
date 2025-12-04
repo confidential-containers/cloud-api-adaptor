@@ -63,7 +63,7 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "INITDATA":
 		return true
-	case "CLUSTER_ID":
+	case "IBMCLOUD_CLUSTER_ID":
 		return true
 	case "TAGS":
 		return true
