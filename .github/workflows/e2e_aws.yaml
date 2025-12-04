@@ -154,10 +154,18 @@ jobs:
 
       - name: Config aws
         run: |
+          if [[ "${CLUSTER_TYPE}" = "eks" ]]; then
+            DISABLE_CVM="false"
+            # m6a.large (AMD SEV-SNP) is available in us-east-2
+            echo "aws_region=\"us-east-2\"" >> aws.properties
+            echo "podvm_aws_instance_type=\"m6a.large\"" >> aws.properties
+          else
+            DISABLE_CVM="true"
+          fi
           cat <<EOF>>aws.properties
           CAA_IMAGE="${CAA_IMAGE}"
           container_runtime="${CONTAINER_RUNTIME}"
-          disablecvm="true"
+          disablecvm="${DISABLE_CVM}"
           cluster_type="${CLUSTER_TYPE}"
           ssh_kp_name="caa-e2e-test"
           resources_basename="${RESOURCES_BASENAME}"
@@ -187,6 +195,13 @@ jobs:
           ./libvirt/kcli_cluster.sh create
           echo "KUBECONFIG=$HOME/.kcli/clusters/peer-pods/auth/kubeconfig" >> "$GITHUB_ENV"
           echo "::endgroup::"
+
+      - name: Install eksctl
+        if: inputs.cluster_type == 'eks'
+        run: |
+          curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz"
+          tar -xzf eksctl_Linux_amd64.tar.gz -C /usr/local/bin && rm eksctl_Linux_amd64.tar.gz
+          eksctl version
 
       - name: run tests
         id: runTests
