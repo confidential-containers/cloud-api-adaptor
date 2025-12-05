@@ -21,12 +21,12 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
-	reg.StringWithEnv(&gcpcfg.GcpCredentials, "gcp-credentials", "", "GCP_CREDENTIALS", "Google Application Credentials")
-	reg.StringWithEnv(&gcpcfg.ProjectId, "gcp-project-id", "", "GCP_PROJECT_ID", "GCP Project ID")
-	reg.StringWithEnv(&gcpcfg.Zone, "zone", "", "GCP_ZONE", "Zone")
+	reg.StringWithEnv(&gcpcfg.GcpCredentials, "gcp-credentials", "", "GCP_CREDENTIALS", "Google Application Credentials", provider.Secret())
+	reg.StringWithEnv(&gcpcfg.ProjectId, "gcp-project-id", "", "GCP_PROJECT_ID", "GCP Project ID", provider.Required())
+	reg.StringWithEnv(&gcpcfg.Zone, "zone", "", "GCP_ZONE", "Zone", provider.Required())
 	reg.StringWithEnv(&gcpcfg.ImageName, "image-name", "", "PODVM_IMAGE_NAME", "Pod VM image name")
 	reg.StringWithEnv(&gcpcfg.MachineType, "machine-type", "e2-medium", "GCP_MACHINE_TYPE", "Pod VM instance type")
-	reg.StringWithEnv(&gcpcfg.Network, "network", "", "GCP_NETWORK", "Network ID to be used for the Pod VMs")
+	reg.StringWithEnv(&gcpcfg.Network, "network", "", "GCP_NETWORK", "Network ID to be used for the Pod VMs", provider.Required())
 	reg.StringWithEnv(&gcpcfg.Subnetwork, "subnetwork", "", "GCP_SUBNETWORK", "Subnetwork ID to be used for the Pod VMs (required for custom subnet mode networks)")
 	reg.StringWithEnv(&gcpcfg.DiskType, "disk-type", "pd-standard", "GCP_DISK_TYPE", "Any GCP disk type (pd-standard, pd-ssd, pd-balanced or pd-extreme)")
 	reg.BoolWithEnv(&gcpcfg.DisableCVM, "disable-cvm", false, "DISABLECVM", "Use non-CVMs for peer pods")
