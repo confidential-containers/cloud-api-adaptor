@@ -17,7 +17,7 @@ make config-extractor
 ## Usage
 
 ```bash
-./bin/config-extractor [-o json|table] <provider-name>
+./bin/config-extractor [-o json|table] [-no-secrets|-only-secrets] [-include-shared] <provider-name>
 ```
 
 ### Arguments
@@ -25,6 +25,9 @@ make config-extractor
 - `-o`: Output format (default: `json`)
   - `json`: Outputs flags in JSON format
   - `table`: Outputs flags in a formatted table
+- `-no-secrets`: Exclude secret environment variables from output
+- `-only-secrets`: Include only secret environment variables in output
+- `-include-shared`: Include common flags shared by all providers
 - `<provider-name>`: Name of the provider (e.g., `gcp`, `azure`, `aws`, `ibmcloud`)
 
 ### Examples
@@ -46,16 +49,18 @@ The tool extracts the following information for each flag:
 - Type (string, int, bool, etc.)
 - Default value
 - Environment variable name
+- Required (whether the flag is required)
+- Secret (whether the flag contains sensitive data)
 - Description
 
 ### Example Output (Table)
 
 ```
-FLAG NAME          TYPE    DEFAULT      ENV VAR          DESCRIPTION
----------          ----    -------      -------          -----------
-gcp-credentials    string  ""           GCP_CREDENTIALS  Google Application Credentials
-gcp-project-id     string  ""           -                GCP Project ID
-zone               string  ""           -                Zone
+FLAG NAME          TYPE    DEFAULT      ENV VAR          REQUIRED  SECRET  DESCRIPTION
+---------          ----    -------      -------          --------  ------  -----------
+gcp-credentials    string  ""           GCP_CREDENTIALS  no        yes     Google Application Credentials
+gcp-project-id     string  ""           GCP_PROJECT_ID   yes       no      GCP Project ID
+zone               string  ""           GCP_ZONE         yes       no      Zone
 ...
 ```
 
@@ -71,7 +76,9 @@ zone               string  ""           -                Zone
       "type": "string",
       "default": "",
       "env_var": "GCP_CREDENTIALS",
-      "description": "Google Application Credentials"
+      "description": "Google Application Credentials",
+      "required": false,
+      "secret": true
     },
     ...
   ]
