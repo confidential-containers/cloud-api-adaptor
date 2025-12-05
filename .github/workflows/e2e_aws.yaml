@@ -161,8 +161,10 @@ jobs:
         run: |
           if [[ "${CLUSTER_TYPE}" = "eks" ]]; then
             DISABLE_CVM="false"
+            AWS_REGION="us-east-2"
+            echo "AWS_REGION=${AWS_REGION}" >> "$GITHUB_ENV"
             # m6a.large (AMD SEV-SNP) is available in us-east-2
-            echo "aws_region=\"us-east-2\"" >> aws.properties
+            echo "aws_region=\"${AWS_REGION}\"" >> aws.properties
             echo "podvm_aws_instance_type=\"m6a.large\"" >> aws.properties
           else
             DISABLE_CVM="true"
