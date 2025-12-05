@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: peer-pods-cm
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: peerpods
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  CLOUD_PROVIDER: "{{ .Values.provider }}"
+  DISABLECVM: "{{ not .Values.confidential.enabled }}"
+{{- $config := index .Values.providerConfigs "all" | default dict }}
+{{- range $key, $value := $config }}
+  {{ $key }}: "{{ $value }}"
+{{- end }}
+
+{{- $config := index .Values.providerConfigs .Values.provider | default dict }}
+{{- range $key, $value := $config }}
+  {{ $key }}: "{{ $value }}"
+{{- end }}
