@@ -35,6 +35,7 @@ ENV ARCH=${ARCH}
 ENV UEFI=${UEFI}
 
 ARG SE_BOOT
+ARG SE_VERIFY
 ARG IMAGE_URL
 ARG IMAGE_CHECKSUM
 
@@ -43,6 +44,7 @@ ENV IMAGE_URL=/tmp/rhel.img
 ENV IMAGE_CHECKSUM=${IMAGE_CHECKSUM}
 
 ENV SE_BOOT=${SE_BOOT}
+ENV SE_VERIFY=${SE_VERIFY}
 # workaround to ensure hashicorp packer is called instead
 # of cracklib packer which is installed by default
 ENV PATH="/usr/bin:${PATH}"

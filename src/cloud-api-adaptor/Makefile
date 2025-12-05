@@ -226,6 +226,7 @@ endif
 	--build-arg IMAGE_URL=$(IMAGE_URL) \
 	--build-arg IMAGE_CHECKSUM=$(IMAGE_CHECKSUM) \
 	--build-arg SE_BOOT=$(SE_BOOT) \
+	--build-arg SE_VERIFY=$(SE_VERIFY) \
 	--build-arg PAUSE_REPO=$(PAUSE_REPO) \
 	--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
 	--build-arg PAUSE_BIN=$(PAUSE_BIN) \

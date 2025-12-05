@@ -40,6 +40,6 @@ RUN LIBC=gnu make binaries
 RUN tar czvf /podvm-binaries.tar.gz -C /src/cloud-api-adaptor/podvm/files usr/ etc/
 RUN tar czvf /pause-bundle.tar.gz -C /src/cloud-api-adaptor/podvm/files pause_bundle/
 
-FROM registry.access.redhat.com/ubi9/ubi:9.4
+FROM registry.access.redhat.com/ubi10/ubi:10.1
 COPY --from=podvm_builder /podvm-binaries.tar.gz /
 COPY --from=podvm_builder /pause-bundle.tar.gz /
