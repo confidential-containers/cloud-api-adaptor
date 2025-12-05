@@ -124,7 +124,7 @@ main() {
 
   echo "Build the caa-provisioner-cli tool"
   cd "${script_dir}/../src/cloud-api-adaptor/test/tools" || exit 1
-  make
+  make BUILTIN_CLOUD_PROVIDERS=aws
 
   delete_vpcs
   delete_amis
