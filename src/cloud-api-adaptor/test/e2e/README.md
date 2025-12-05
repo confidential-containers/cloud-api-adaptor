@@ -133,6 +133,7 @@ Use the properties on the table below for AWS:
 |cluster_type|Kubernetes cluster type. Either **onprem** or **eks** (see Notes below) |onprem|
 |container_runtime|Test cluster configured container runtime. Either **containerd** or **crio** |containerd|
 |disablecvm|Set to `true` to disable confidential VM||
+|eks_name|Name an existing EKS (don't provision a new)||
 |pause_image|Kubernetes pause image||
 |podvm_aws_ami_id|AWS AMI ID of the podvm||
 |podvm_aws_instance_type|AWS instance type of the podvm|t2.medium|
