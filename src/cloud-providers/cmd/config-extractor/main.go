@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/tabwriter"
 )
@@ -20,6 +21,8 @@ type FlagInfo struct {
 	Default     string `json:"default"`
 	EnvVar      string `json:"env_var"`
 	Description string `json:"description"`
+	Required    bool   `json:"required"`
+	Secret      bool   `json:"secret"`
 }
 
 type ProviderConfig struct {
@@ -29,10 +32,13 @@ type ProviderConfig struct {
 
 func main() {
 	outputFormat := flag.String("o", "json", "Output format: json or table")
+	noSecrets := flag.Bool("no-secrets", false, "Exclude secret env vars from output")
+	secretsOnly := flag.Bool("only-secrets", false, "Include only secret env vars in output")
+	includeAll := flag.Bool("include-shared", false, "Include common flags (shared by all providers)")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-o json|table] <provider-name>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [-o json|table] [-no-secrets|-only-secrets] [-include-shared] <provider-name>\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -44,13 +50,40 @@ func main() {
 		os.Exit(1)
 	}
 	execDir := filepath.Dir(execPath)
-	managerPath := filepath.Join(execDir, "..", provider, "manager.go")
 
-	config, err := parseManagerFile(managerPath, provider)
+	config := &ProviderConfig{Provider: provider, Flags: []FlagInfo{}}
+
+	// Parse common flags if -include-shared is set
+	if *includeAll {
+		commonPath := filepath.Join(execDir, "..", "..", "cloud-api-adaptor", "cmd", "cloud-api-adaptor", "main.go")
+		commonFlags, err := parseFile(commonPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not parse common flags: %v\n", err)
+		} else {
+			config.Flags = append(config.Flags, commonFlags...)
+		}
+	}
+
+	// Parse provider-specific flags from manager.go
+	managerPath := filepath.Join(execDir, "..", provider, "manager.go")
+	providerFlags, err := parseFile(managerPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	config.Flags = append(config.Flags, providerFlags...)
+
+	// Filter secrets
+	if *noSecrets {
+		config.Flags = filterFlags(config.Flags, func(f FlagInfo) bool { return !f.Secret })
+	} else if *secretsOnly {
+		config.Flags = filterFlags(config.Flags, func(f FlagInfo) bool { return f.Secret })
+	}
+
+	// Sort flags alphabetically by env_var
+	sort.Slice(config.Flags, func(i, j int) bool {
+		return config.Flags[i].EnvVar < config.Flags[j].EnvVar
+	})
 
 	switch *outputFormat {
 	case "json":
@@ -64,46 +97,36 @@ func main() {
 	}
 }
 
-func parseManagerFile(path string, provider string) (*ProviderConfig, error) {
+func parseFile(path string) ([]FlagInfo, error) {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
 
-	config := &ProviderConfig{Provider: provider, Flags: []FlagInfo{}}
-	var unknownMethods []string
+	var flags []FlagInfo
 
-	// Parse ParseCmd function to extract FlagRegistrar method calls
+	// Find all reg.XxxWithEnv calls anywhere in the file
 	ast.Inspect(node, func(n ast.Node) bool {
-		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == "ParseCmd" {
-			for _, stmt := range fn.Body.List {
-				extractFromStatement(stmt, config, &unknownMethods, fset)
+		if call, ok := n.(*ast.CallExpr); ok {
+			if flagInfo, _ := extractFlagRegistrarCall(call, fset); flagInfo != nil {
+				flags = append(flags, *flagInfo)
 			}
 		}
 		return true
 	})
 
-	// Fail hard if we encountered unknown flag registration methods
-	if len(unknownMethods) > 0 {
-		return nil, fmt.Errorf("encountered unknown flag registration method(s):\n%s\n\nThe parser needs to be updated to handle these methods.",
-			strings.Join(unknownMethods, "\n"))
-	}
-
-	return config, nil
+	return flags, nil
 }
 
-func extractFromStatement(stmt ast.Stmt, config *ProviderConfig, unknownMethods *[]string, fset *token.FileSet) {
-	if exprStmt, ok := stmt.(*ast.ExprStmt); ok {
-		if call, ok := exprStmt.X.(*ast.CallExpr); ok {
-			flagInfo, unknown := extractFlagRegistrarCall(call, fset)
-			if flagInfo != nil {
-				config.Flags = append(config.Flags, *flagInfo)
-			} else if unknown != "" {
-				*unknownMethods = append(*unknownMethods, unknown)
-			}
+func filterFlags(flags []FlagInfo, predicate func(FlagInfo) bool) []FlagInfo {
+	var filtered []FlagInfo
+	for _, f := range flags {
+		if predicate(f) {
+			filtered = append(filtered, f)
 		}
 	}
+	return filtered
 }
 
 func extractFlagRegistrarCall(call *ast.CallExpr, fset *token.FileSet) (*FlagInfo, string) {
@@ -130,6 +153,8 @@ func extractFlagRegistrarCall(call *ast.CallExpr, fset *token.FileSet) (*FlagInf
 			flagType = "float64"
 		case "BoolWithEnv":
 			flagType = "bool"
+		case "DurationWithEnv":
+			flagType = "duration"
 		case "CustomTypeWithEnv":
 			flagType = "custom"
 		default:
@@ -169,10 +194,38 @@ func extractFlagRegistrarCall(call *ast.CallExpr, fset *token.FileSet) (*FlagInf
 			flagInfo.Description = strings.Trim(lit.Value, `"`)
 		}
 
+		// Extract FlagOption calls from variadic args (arg[5], arg[6], ...)
+		// These are function calls like Required(), Secret(), provider.Required(), or provider.Secret()
+		flagInfo.Required = false
+		flagInfo.Secret = false
+		for i := 5; i < len(call.Args); i++ {
+			if optCall, ok := call.Args[i].(*ast.CallExpr); ok {
+				optName := getFunctionName(optCall.Fun)
+				switch optName {
+				case "Required":
+					flagInfo.Required = true
+				case "Secret":
+					flagInfo.Secret = true
+				}
+			}
+		}
+
 		return flagInfo, ""
 	}
 
 	return nil, ""
+}
+
+// getFunctionName extracts the function name from a call expression.
+// Handles both simple identifiers (Required) and selector expressions (provider.Required).
+func getFunctionName(fun ast.Expr) string {
+	switch f := fun.(type) {
+	case *ast.Ident:
+		return f.Name
+	case *ast.SelectorExpr:
+		return f.Sel.Name
+	}
+	return ""
 }
 
 func exprToString(expr ast.Expr) string {
@@ -192,8 +245,8 @@ func exprToString(expr ast.Expr) string {
 
 func printTable(config *ProviderConfig) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintf(w, "FLAG NAME\tTYPE\tDEFAULT\tENV VAR\tDESCRIPTION\n")
-	fmt.Fprintf(w, "---------\t----\t-------\t-------\t-----------\n")
+	fmt.Fprintf(w, "FLAG NAME\tTYPE\tDEFAULT\tENV VAR\tREQUIRED\tSECRET\tDESCRIPTION\n")
+	fmt.Fprintf(w, "---------\t----\t-------\t-------\t--------\t------\t-----------\n")
 
 	for _, flag := range config.Flags {
 		envVar := flag.EnvVar
@@ -206,11 +259,23 @@ func printTable(config *ProviderConfig) {
 			defaultVal = `""`
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		required := "no"
+		if flag.Required {
+			required = "yes"
+		}
+
+		secret := "no"
+		if flag.Secret {
+			secret = "yes"
+		}
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			flag.FlagName,
 			flag.Type,
 			defaultVal,
 			envVar,
+			required,
+			secret,
 			flag.Description,
 		)
 	}
