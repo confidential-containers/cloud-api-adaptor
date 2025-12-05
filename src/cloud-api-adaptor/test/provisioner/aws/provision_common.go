@@ -395,6 +395,17 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 		cidrBlock = "10.0.0.0/24"
 	}
 
+	subnetIdValue := properties["aws_vpc_subnet_id"]
+	subnetId := ""
+	secondarySubnetId := ""
+	if subnetIdValue != "" {
+		subnetIds := strings.Split(subnetIdValue, ",")
+		subnetId = strings.TrimSpace(subnetIds[0])
+		if len(subnetIds) > 1 {
+			secondarySubnetId = strings.TrimSpace(subnetIds[1])
+		}
+	}
+
 	return &Vpc{
 		BaseName:          properties["resources_basename"],
 		CidrBlock:         cidrBlock,
@@ -402,7 +413,8 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 		ID:                properties["aws_vpc_id"],
 		Region:            properties["aws_region"],
 		SecurityGroupId:   properties["aws_vpc_sg_id"],
-		SubnetId:          properties["aws_vpc_subnet_id"],
+		SubnetId:          subnetId,
+		SecondarySubnetId: secondarySubnetId,
 		InternetGatewayId: properties["aws_vpc_igw_id"],
 		RouteTableId:      properties["aws_vpc_rt_id"],
 	}
