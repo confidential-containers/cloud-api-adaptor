@@ -34,3 +34,33 @@ else
 	systemctl enable process-user-data.service
 	# These units doesn't exist in regular and debug profiles
 fi
+
+# Disable firewall services (nftables/iptables) if they exist
+echo "Disabling firewall services..."
+systemctl disable nftables.service || true
+systemctl disable iptables.service || true
+systemctl mask nftables.service || true
+systemctl mask iptables.service || true
+
+# Disable setup-nat-for-imds.service for GCP (only needed for Azure/AWS)
+# GCP uses metadata.google.internal which doesn't require NAT setup
+echo "Disabling setup-nat-for-imds.service (not needed for GCP)"
+systemctl disable setup-nat-for-imds.service || true
+
+# Create necessary kata-containers directories
+echo "Creating kata-containers runtime directories..."
+mkdir -p /run/kata-containers/shared/containers
+mkdir -p /run/kata-containers
+chmod 755 /run/kata-containers
+chmod 755 /run/kata-containers/shared
+chmod 755 /run/kata-containers/shared/containers
+
+# Ensure the directories persist across reboots
+cat > /etc/tmpfiles.d/kata-containers.conf << EOF
+# Create kata-containers runtime directories
+d /run/kata-containers 0755 root root -
+d /run/kata-containers/shared 0755 root root -
+d /run/kata-containers/shared/containers 0755 root root -
+EOF
+
+echo "Kata-containers directories configured successfully"
