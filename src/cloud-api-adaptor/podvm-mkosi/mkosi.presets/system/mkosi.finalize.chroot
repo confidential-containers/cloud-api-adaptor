@@ -42,10 +42,9 @@ systemctl disable iptables.service || true
 systemctl mask nftables.service || true
 systemctl mask iptables.service || true
 
-# Disable setup-nat-for-imds.service for GCP (only needed for Azure/AWS)
-# GCP uses metadata.google.internal which doesn't require NAT setup
-echo "Disabling setup-nat-for-imds.service (not needed for GCP)"
-systemctl disable setup-nat-for-imds.service || true
+# Note: setup-nat-for-imds.service is left enabled by default (via 30-coco.preset)
+# It is needed for Azure/AWS IMDS access. On GCP, the service will fail gracefully
+# since GCP uses metadata.google.internal which doesn't require NAT setup.
 
 # Create necessary kata-containers directories
 echo "Creating kata-containers runtime directories..."
