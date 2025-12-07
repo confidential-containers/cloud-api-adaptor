@@ -1,6 +1,7 @@
 [Unit]
 Description=Agent Protocol Forwarder
-After=kata-agent.service
+After=kata-agent.service process-user-data.service
+Wants=process-user-data.service
 DefaultDependencies=no
 
 [Service]
