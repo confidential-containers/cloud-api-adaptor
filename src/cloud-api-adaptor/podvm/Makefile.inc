@@ -34,26 +34,36 @@ VERIFY_PROVENANCE ?= no
 GUEST_COMPONENTS_REPO := confidential-containers/guest-components
 KATA_REPO := kata-containers/kata-containers
 
+ifdef GITHUB_TOKEN
+GH_AUTH_HEADER := -H "Authorization: Bearer $(GITHUB_TOKEN)"
+endif
+GH_API_BASE := https://api.github.com
+GH_CURL := curl --fail --silent --show-error --retry 3 $(GH_AUTH_HEADER)
+
 # probe version if the ref does not appear to be a git commit digest
-ifeq ($(shell echo $(GUEST_COMPONENTS_REF) | grep -E "[0-9a-f]{40}"),)
-	GUEST_COMPONENTS_COMMIT := $(shell curl \
-		--silent \
-		--retry 3 \
-		https://api.github.com/repos/$(GUEST_COMPONENTS_REPO)/commits/v$(GUEST_COMPONENTS_REF) \
-		| jq -e -r .sha)
+ifeq ($(shell echo $(GUEST_COMPONENTS_REF) | grep -E "^[0-9a-f]{40}$$"),)
+GUEST_COMPONENTS_COMMIT := $(shell \
+	$(GH_CURL) \
+	$(GH_API_BASE)/repos/$(GUEST_COMPONENTS_REPO)/commits/v$(GUEST_COMPONENTS_REF) \
+	| jq -r '.sha // empty')
+ifeq ($(GUEST_COMPONENTS_COMMIT),)
+$(error jq failed to extract SHA from ref $(GUEST_COMPONENTS_REF))
+endif
 else
-	GUEST_COMPONENTS_COMMIT := $(GUEST_COMPONENTS_REF)
+GUEST_COMPONENTS_COMMIT := $(GUEST_COMPONENTS_REF)
 endif
 
 # probe version if the ref does not appear to be a git commit digest
-ifeq ($(shell echo $(KATA_REF) | grep -E "[0-9a-f]{40}"),)
-	KATA_COMMIT := $(shell curl \
-		--silent \
-		--retry 3 \
-		https://api.github.com/repos/$(KATA_REPO)/commits/$(KATA_REF) \
-		| jq -e -r .sha)
+ifeq ($(shell echo $(KATA_REF) | grep -E "^[0-9a-f]{40}$$"),)
+KATA_COMMIT := $(shell curl \
+	$(GH_CURL) \
+	$(GH_API_BASE)/repos/$(KATA_REPO)/commits/$(KATA_REF) \
+	| jq -r '.sha // empty')
+ifeq ($(KATA_COMMIT),)
+$(error jq failed to extract SHA from ref $(KATA_REF))
+endif
 else
-	KATA_COMMIT := $(KATA_REF)
+KATA_COMMIT := $(KATA_REF)
 endif
 
 FORCE_TARGET := $(if $(FORCE),force,)
