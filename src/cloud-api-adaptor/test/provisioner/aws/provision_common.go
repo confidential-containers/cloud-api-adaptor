@@ -245,11 +245,17 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 
 	if vpc.SubnetId != "" {
 		log.Infof("Delete subnet: %s", vpc.SubnetId)
-		if err = vpc.deleteSubnet(); err != nil {
+		if err = vpc.deleteSubnet(vpc.SubnetId); err != nil {
 			return err
 		}
 	}
 
+	if vpc.SecondarySubnetId != "" {
+		log.Infof("Delete secondary subnet: %s", vpc.SecondarySubnetId)
+		if err = vpc.deleteSubnet(vpc.SecondarySubnetId); err != nil {
+			return err
+		}
+	}
 	if vpc.SecurityGroupId != "" {
 		log.Infof("Delete security group: %s", vpc.SecurityGroupId)
 		if err = vpc.deleteSecurityGroup(); err != nil {
@@ -668,8 +674,8 @@ func (v *Vpc) deleteSecurityGroup() error {
 
 // deleteSubnet deletes the subnet. Instances running on the subnet will
 // be terminated before.
-func (v *Vpc) deleteSubnet() error {
-	if v.SubnetId == "" {
+func (v *Vpc) deleteSubnet(id string) error {
+	if id == "" {
 		return nil
 	}
 
@@ -681,7 +687,7 @@ func (v *Vpc) deleteSubnet() error {
 			Filters: []ec2types.Filter{
 				{
 					Name:   aws.String("subnet-id"),
-					Values: []string{v.SubnetId},
+					Values: []string{id},
 				},
 			},
 		})
@@ -717,7 +723,7 @@ func (v *Vpc) deleteSubnet() error {
 	// Finally delete the subnet
 	if _, err = v.Client.DeleteSubnet(context.TODO(),
 		&ec2.DeleteSubnetInput{
-			SubnetId: aws.String(v.SubnetId),
+			SubnetId: aws.String(id),
 		}); err != nil {
 		return err
 	}
