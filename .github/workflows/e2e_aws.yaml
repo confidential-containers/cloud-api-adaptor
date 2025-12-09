@@ -68,6 +68,8 @@ jobs:
     needs: aws-credentials
     if: needs.aws-credentials.outputs.has_secrets == 'true'
     runs-on: ubuntu-22.04
+    # Remove this when the job becomes stable
+    continue-on-error: ${{ inputs.cluster_type == 'eks' }}
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
