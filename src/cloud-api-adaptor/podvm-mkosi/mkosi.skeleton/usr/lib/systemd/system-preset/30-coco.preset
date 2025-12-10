@@ -9,3 +9,5 @@ enable setup-nat-for-imds.service
 enable gen-issue.service
 enable image-env.service
 enable scratch-storage.service
+
+enable nvidia-cdi.service
