@@ -1,0 +1,16 @@
+# Default values for peerpods (CAA) chart
+
+# Namespace where peerpods resources will be deployed
+namespace: confidential-containers-system
+
+# CAA (Cloud API Adaptor) version to fetch CRDs and controllers from
+# Defaults to Chart.appVersion if not set
+caaVersion: ""
+
+# Cloud provider: libvirt, aws, azure, gcp, ibmcloud, vsphere
+provider: libvirt
+
+# Maximum number of peer pods allowed to run simultaneously
+# This limit prevents resource exhaustion on the cloud provider
+# Set to "0" for unlimited (not recommended for production)
+limit: "10"
