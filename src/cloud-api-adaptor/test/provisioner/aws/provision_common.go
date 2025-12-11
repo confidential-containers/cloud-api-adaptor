@@ -12,15 +12,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go-v2/service/eks"
-	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -34,8 +31,7 @@ import (
 )
 
 const (
-	EksCniAddonVersion = "v1.12.5-eksbuild.2"
-	EksVersion         = "1.26"
+	EksVersion         = "1.34"
 	AwsCredentialsFile = "aws-cred.env"
 )
 
@@ -46,6 +42,7 @@ type S3Bucket struct {
 	Client *s3.Client
 	Name   string // Bucket name
 	Key    string // Object key
+	Region string // AWS region
 }
 
 // AMIImage represents an AMI image
@@ -59,6 +56,7 @@ type AMIImage struct {
 	ID              string // AMI image ID
 	RootDeviceName  string // Root device name
 	VmImportRole    string // vmimport role name
+	BootUefi        bool   // If true, enable UEFI boot mode (required for AMD SEV-SNP)
 }
 
 // Vpc represents an AWS VPC
@@ -84,17 +82,12 @@ type Cluster interface {
 
 // EKSCluster represents an EKS cluster
 type EKSCluster struct {
-	AwsConfig       aws.Config
-	Client          *eks.Client
-	ClusterRoleName string
-	IamClient       *iam.Client
-	Name            string
-	NodeGroupName   string
-	NodesRoleName   string
-	NumWorkers      int32
-	SshKpName       string
-	Version         string
-	Vpc             *Vpc
+	AwsConfig  aws.Config
+	Name       string
+	NumWorkers int32
+	SshKpName  string
+	Version    string
+	Vpc        *Vpc
 }
 
 // OnPremCluster represents an existing and running cluster
@@ -103,21 +96,22 @@ type OnPremCluster struct {
 
 // AWSProvisioner implements the CloudProvision interface.
 type AWSProvisioner struct {
-	AwsConfig        aws.Config
-	iamClient        *iam.Client
-	containerRuntime string // Name of the container runtime
-	Cluster          Cluster
-	Disablecvm       string
-	ec2Client        *ec2.Client
-	s3Client         *s3.Client
-	Bucket           *S3Bucket
-	PauseImage       string
-	Image            *AMIImage
-	Vpc              *Vpc
-	PublicIP         string
-	TunnelType       string
-	VxlanPort        string
-	SshKpName        string
+	AwsConfig         aws.Config
+	iamClient         *iam.Client
+	containerRuntime  string // Name of the container runtime
+	Cluster           Cluster
+	Disablecvm        string
+	ec2Client         *ec2.Client
+	s3Client          *s3.Client
+	Bucket            *S3Bucket
+	PauseImage        string
+	Image             *AMIImage
+	Vpc               *Vpc
+	PodvmInstanceType string
+	PublicIP          string
+	TunnelType        string
+	VxlanPort         string
+	SshKpName         string
 }
 
 // AwsInstallOverlay implements the InstallOverlay interface
@@ -147,6 +141,10 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		properties["resources_basename"] = "caa-e2e-test-" + strconv.FormatInt(time.Now().Unix(), 10)
 	}
 
+	if properties["podvm_aws_instance_type"] == "" {
+		properties["podvm_aws_instance_type"] = "t2.medium"
+	}
+
 	vpc := NewVpc(ec2Client, properties)
 
 	if properties["cluster_type"] == "" ||
@@ -155,7 +153,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		// The podvm should be created with public IP so CAA can connect
 		properties["use_public_ip"] = "true"
 	} else if properties["cluster_type"] == "eks" {
-		cluster = NewEKSCluster(cfg, vpc, properties["ssh_kp_name"])
+		cluster = NewEKSCluster(cfg, vpc, properties["ssh_kp_name"], properties["eks_name"])
 	} else {
 		return nil, fmt.Errorf("Cluster type '%s' not implemented",
 			properties["cluster_type"])
@@ -170,17 +168,19 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 			Client: s3.NewFromConfig(cfg),
 			Name:   properties["resources_basename"] + "-bucket",
 			Key:    "", // To be defined when the file is uploaded
+			Region: cfg.Region,
 		},
-		containerRuntime: properties["container_runtime"],
-		Cluster:          cluster,
-		Image:            NewAMIImage(ec2Client, properties),
-		Disablecvm:       properties["disablecvm"],
-		PauseImage:       properties["pause_image"],
-		Vpc:              vpc,
-		PublicIP:         properties["use_public_ip"],
-		TunnelType:       properties["tunnel_type"],
-		VxlanPort:        properties["vxlan_port"],
-		SshKpName:        properties["ssh_kp_name"],
+		containerRuntime:  properties["container_runtime"],
+		Cluster:           cluster,
+		Image:             NewAMIImage(ec2Client, properties),
+		Disablecvm:        properties["disablecvm"],
+		PauseImage:        properties["pause_image"],
+		Vpc:               vpc,
+		PodvmInstanceType: properties["podvm_aws_instance_type"],
+		PublicIP:          properties["use_public_ip"],
+		TunnelType:        properties["tunnel_type"],
+		VxlanPort:         properties["vxlan_port"],
+		SshKpName:         properties["ssh_kp_name"],
 	}
 
 	return AWSProps, nil
@@ -236,7 +236,7 @@ func (a *AWSProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) err
 }
 
 func (aws *AWSProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
-	return nil
+	return aws.Cluster.DeleteCluster()
 }
 
 func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
@@ -245,11 +245,17 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 
 	if vpc.SubnetId != "" {
 		log.Infof("Delete subnet: %s", vpc.SubnetId)
-		if err = vpc.deleteSubnet(); err != nil {
+		if err = vpc.deleteSubnet(vpc.SubnetId); err != nil {
 			return err
 		}
 	}
 
+	if vpc.SecondarySubnetId != "" {
+		log.Infof("Delete secondary subnet: %s", vpc.SecondarySubnetId)
+		if err = vpc.deleteSubnet(vpc.SecondarySubnetId); err != nil {
+			return err
+		}
+	}
 	if vpc.SecurityGroupId != "" {
 		log.Infof("Delete security group: %s", vpc.SecurityGroupId)
 		if err = vpc.deleteSecurityGroup(); err != nil {
@@ -314,23 +320,23 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 	credentials, _ := a.AwsConfig.Credentials.Retrieve(context.TODO())
 
 	return map[string]string{
-		"CONTAINER_RUNTIME":    a.containerRuntime,
-		"disablecvm":           a.Disablecvm,
-		"pause_image":          a.PauseImage,
-		"podvm_launchtemplate": "",
-		"podvm_ami":            a.Image.ID,
-		"podvm_instance_type":  "t2.medium",
-		"sg_ids":               a.Vpc.SecurityGroupId, // TODO: what other SG needed?
-		"subnet_id":            a.Vpc.SubnetId,
-		"ssh_kp_name":          a.SshKpName,
-		"region":               a.AwsConfig.Region,
-		"resources_basename":   a.Vpc.BaseName,
-		"access_key_id":        credentials.AccessKeyID,
-		"secret_access_key":    credentials.SecretAccessKey,
-		"session_token":        credentials.SessionToken,
-		"use_public_ip":        a.PublicIP,
-		"tunnel_type":          a.TunnelType,
-		"vxlan_port":           a.VxlanPort,
+		"CONTAINER_RUNTIME":       a.containerRuntime,
+		"disablecvm":              a.Disablecvm,
+		"pause_image":             a.PauseImage,
+		"podvm_launchtemplate":    "",
+		"podvm_ami":               a.Image.ID,
+		"podvm_aws_instance_type": a.PodvmInstanceType,
+		"sg_ids":                  a.Vpc.SecurityGroupId, // TODO: what other SG needed?
+		"subnet_id":               a.Vpc.SubnetId,
+		"ssh_kp_name":             a.SshKpName,
+		"region":                  a.AwsConfig.Region,
+		"resources_basename":      a.Vpc.BaseName,
+		"access_key_id":           credentials.AccessKeyID,
+		"secret_access_key":       credentials.SecretAccessKey,
+		"session_token":           credentials.SessionToken,
+		"use_public_ip":           a.PublicIP,
+		"tunnel_type":             a.TunnelType,
+		"vxlan_port":              a.VxlanPort,
 	}
 }
 
@@ -395,6 +401,17 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 		cidrBlock = "10.0.0.0/24"
 	}
 
+	subnetIdValue := properties["aws_vpc_subnet_id"]
+	subnetId := ""
+	secondarySubnetId := ""
+	if subnetIdValue != "" {
+		subnetIds := strings.Split(subnetIdValue, ",")
+		subnetId = strings.TrimSpace(subnetIds[0])
+		if len(subnetIds) > 1 {
+			secondarySubnetId = strings.TrimSpace(subnetIds[1])
+		}
+	}
+
 	return &Vpc{
 		BaseName:          properties["resources_basename"],
 		CidrBlock:         cidrBlock,
@@ -402,7 +419,8 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 		ID:                properties["aws_vpc_id"],
 		Region:            properties["aws_region"],
 		SecurityGroupId:   properties["aws_vpc_sg_id"],
-		SubnetId:          properties["aws_vpc_subnet_id"],
+		SubnetId:          subnetId,
+		SecondarySubnetId: secondarySubnetId,
 		InternetGatewayId: properties["aws_vpc_igw_id"],
 		RouteTableId:      properties["aws_vpc_rt_id"],
 	}
@@ -656,8 +674,8 @@ func (v *Vpc) deleteSecurityGroup() error {
 
 // deleteSubnet deletes the subnet. Instances running on the subnet will
 // be terminated before.
-func (v *Vpc) deleteSubnet() error {
-	if v.SubnetId == "" {
+func (v *Vpc) deleteSubnet(id string) error {
+	if id == "" {
 		return nil
 	}
 
@@ -669,7 +687,7 @@ func (v *Vpc) deleteSubnet() error {
 			Filters: []ec2types.Filter{
 				{
 					Name:   aws.String("subnet-id"),
-					Values: []string{v.SubnetId},
+					Values: []string{id},
 				},
 			},
 		})
@@ -705,7 +723,7 @@ func (v *Vpc) deleteSubnet() error {
 	// Finally delete the subnet
 	if _, err = v.Client.DeleteSubnet(context.TODO(),
 		&ec2.DeleteSubnetInput{
-			SubnetId: aws.String(v.SubnetId),
+			SubnetId: aws.String(id),
 		}); err != nil {
 		return err
 	}
@@ -788,9 +806,18 @@ func (b *S3Bucket) createBucket() error {
 		return nil
 	}
 
-	_, err = b.Client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
+	createBucketInput := &s3.CreateBucketInput{
 		Bucket: &b.Name,
-	})
+	}
+
+	// For regions other than us-east-1, we need to specify a location constraint
+	if b.Region != "" && b.Region != "us-east-1" {
+		createBucketInput.CreateBucketConfiguration = &s3types.CreateBucketConfiguration{
+			LocationConstraint: s3types.BucketLocationConstraint(b.Region),
+		}
+	}
+
+	_, err = b.Client.CreateBucket(context.TODO(), createBucketInput)
 	if err != nil {
 		return err
 	}
@@ -927,6 +954,14 @@ func createVmimportServiceRole(ctx context.Context, client *iam.Client, bucketNa
 }
 
 func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
+	// If disablecvm is empty or false then it wants confidential VM and
+	// for AMD SEV-SNP it needs to enable UEFI boot.
+	bootUefi := false
+	disablecvm := properties["disablecvm"]
+	if disablecvm == "" || disablecvm == "false" {
+		bootUefi = true
+	}
+
 	return &AMIImage{
 		BaseName:        properties["resources_basename"],
 		Client:          client,
@@ -937,6 +972,7 @@ func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
 		ID:              properties["podvm_aws_ami_id"],
 		RootDeviceName:  "/dev/xvda",
 		VmImportRole:    properties["resources_basename"] + "-vmimport",
+		BootUefi:        bootUefi,
 	}
 }
 
@@ -1002,7 +1038,7 @@ func (i *AMIImage) registerImage(imageName string) error {
 		return fmt.Errorf("EBS Snapshot ID not found\n")
 	}
 
-	result, err := i.Client.RegisterImage(context.TODO(), &ec2.RegisterImageInput{
+	registerInput := &ec2.RegisterImageInput{
 		Name:         aws.String(imageName),
 		Architecture: ec2types.ArchitectureValuesX8664,
 		BlockDeviceMappings: []ec2types.BlockDeviceMapping{{
@@ -1017,7 +1053,14 @@ func (i *AMIImage) registerImage(imageName string) error {
 		RootDeviceName:     aws.String(i.RootDeviceName),
 		VirtualizationType: aws.String("hvm"),
 		TagSpecifications:  defaultTagSpecifications(i.BaseName+"-img", ec2types.ResourceTypeImage),
-	})
+	}
+
+	// If BootUefi is true, enable UEFI boot mode for AMD SEV-SNP
+	if i.BootUefi {
+		registerInput.BootMode = ec2types.BootModeValuesUefi
+	}
+
+	result, err := i.Client.RegisterImage(context.TODO(), registerInput)
 	if err != nil {
 		return err
 	}
@@ -1160,18 +1203,18 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 
 	// Mapping the internal properties to ConfigMapGenerator properties.
 	mapProps := map[string]string{
-		"disablecvm":           "DISABLECVM",
-		"pause_image":          "PAUSE_IMAGE",
-		"podvm_launchtemplate": "PODVM_LAUNCHTEMPLATE_NAME",
-		"podvm_ami":            "PODVM_AMI_ID",
-		"podvm_instance_type":  "PODVM_INSTANCE_TYPE",
-		"sg_ids":               "AWS_SG_IDS",
-		"subnet_id":            "AWS_SUBNET_ID",
-		"ssh_kp_name":          "SSH_KP_NAME",
-		"region":               "AWS_REGION",
-		"tunnel_type":          "TUNNEL_TYPE",
-		"vxlan_port":           "VXLAN_PORT",
-		"use_public_ip":        "USE_PUBLIC_IP",
+		"disablecvm":              "DISABLECVM",
+		"pause_image":             "PAUSE_IMAGE",
+		"podvm_launchtemplate":    "PODVM_LAUNCHTEMPLATE_NAME",
+		"podvm_ami":               "PODVM_AMI_ID",
+		"podvm_aws_instance_type": "PODVM_INSTANCE_TYPE",
+		"sg_ids":                  "AWS_SG_IDS",
+		"subnet_id":               "AWS_SUBNET_ID",
+		"ssh_kp_name":             "SSH_KP_NAME",
+		"region":                  "AWS_REGION",
+		"tunnel_type":             "TUNNEL_TYPE",
+		"vxlan_port":              "VXLAN_PORT",
+		"use_public_ip":           "USE_PUBLIC_IP",
 	}
 
 	for k, v := range mapProps {
@@ -1200,84 +1243,36 @@ func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, prope
 	return nil
 }
 
-// createRoleAndAttachPolicy creates a new role (if not exist) with the trust
-// policy. Then It can attach policies and will return the role ARN.
-func createRoleAndAttachPolicy(client *iam.Client, roleName string, trustPolicy string, policyArns []string) (string, error) {
-	var (
-		err     error
-		roleArn string
-	)
-
-	getRoleOutput, err := client.GetRole(context.TODO(), &iam.GetRoleInput{
-		RoleName: aws.String(roleName),
-	})
-
-	if err == nil {
-		roleArn = *getRoleOutput.Role.Arn
-	} else {
-		createRoleOutput, err := client.CreateRole(context.TODO(),
-			&iam.CreateRoleInput{
-				AssumeRolePolicyDocument: aws.String(trustPolicy),
-				RoleName:                 aws.String(roleName),
-			})
-		if err != nil {
-			return "", err
-		}
-		roleArn = *createRoleOutput.Role.Arn
-	}
-
-	for _, policyArn := range policyArns {
-		if _, err = client.AttachRolePolicy(context.TODO(),
-			&iam.AttachRolePolicyInput{
-				PolicyArn: aws.String(policyArn),
-				RoleName:  aws.String(roleName),
-			}); err != nil {
-			return roleArn, err
-		}
-	}
-
-	return roleArn, nil
-}
-
 // NewEKSCluster instantiates a new EKS Cluster struct.
 // It requires a AWS configuration with access and authentication information, a
 // VPC already instantiated and with a public subnet, and an EC2 SSH key-pair used
 // to access the cluster's worker nodes.
-func NewEKSCluster(cfg aws.Config, vpc *Vpc, SshKpName string) *EKSCluster {
-	name := "peer-pods-test-k8s"
+// If eksName is provided, it will use an existing cluster with that name instead of creating a new one
+// otherwise it will create a cluster and set a default name.
+func NewEKSCluster(cfg aws.Config, vpc *Vpc, SshKpName string, eksName string) *EKSCluster {
+
 	return &EKSCluster{
-		AwsConfig:       cfg,
-		Client:          eks.NewFromConfig(cfg),
-		IamClient:       iam.NewFromConfig(cfg),
-		ClusterRoleName: "CaaEksClusterRole",
-		Name:            name,
-		NodeGroupName:   name + "-nodegrp",
-		NodesRoleName:   "CaaEksNodesRole",
-		NumWorkers:      1,
-		SshKpName:       SshKpName,
-		Version:         EksVersion,
-		Vpc:             vpc,
+		AwsConfig:  cfg,
+		Name:       eksName,
+		NumWorkers: 1,
+		SshKpName:  SshKpName,
+		Version:    EksVersion,
+		Vpc:        vpc,
 	}
 }
 
-// CreateCluster creates a new EKS cluster.
-// It will create needed roles, the cluster itself, nodes group and finally
-// install add-ons.
-// EKS should be created with at least two subnets so a secundary will be created If
-// it does not exist on the VPC already.
+// CreateCluster creates a new EKS cluster using eksctl.
+// EKS should be created with at least two subnets so a secondary will be
+// created if it does not exist on the VPC already.
 func (e *EKSCluster) CreateCluster() error {
-	var (
-		err          error
-		roleArn      string
-		NodesRoleArn string
-	)
-	activationTimeout := time.Minute * 15
-	addonTimeout := time.Minute * 5
-	nodesTimeout := time.Minute * 10
+	var err error
 
-	if roleArn, err = e.CreateEKSClusterRole(); err != nil {
-		return err
+	if e.Name != "" {
+		log.Infof("Using existing EKS cluster: %s", e.Name)
+		return nil
 	}
+
+	e.Name = e.Vpc.BaseName + "-k8s"
 
 	if e.Vpc.SecondarySubnetId == "" {
 		log.Info("Create a secondary subnet for EKS")
@@ -1287,71 +1282,32 @@ func (e *EKSCluster) CreateCluster() error {
 		log.Infof("Secondary subnet Id: %s", e.Vpc.SecondarySubnetId)
 	}
 
-	log.Infof("Creating the EKS cluster: %s ...", e.Name)
-	_, err = e.Client.CreateCluster(context.TODO(),
-		&eks.CreateClusterInput{
-			Name:    aws.String(e.Name),
-			Version: aws.String(e.Version),
-			ResourcesVpcConfig: &ekstypes.VpcConfigRequest{
-				SubnetIds: []string{e.Vpc.SubnetId, e.Vpc.SecondarySubnetId},
-			},
-			RoleArn: aws.String(roleArn),
-		})
-	if err != nil {
-		return err
+	log.Infof("Creating the EKS cluster: %s", e.Name)
+
+	cmdArgs := []string{
+		"create", "cluster",
+		"--name", e.Name,
+		"--version", e.Version,
+		"--region", e.AwsConfig.Region,
+		"--kubeconfig", e.Name + "-kubeconfig",
+		"--vpc-private-subnets", e.Vpc.SubnetId + "," + e.Vpc.SecondarySubnetId,
+		"--nodegroup-name", e.Name,
+		"--nodes", strconv.FormatInt(int64(e.NumWorkers), 10),
+		"--nodes-min", strconv.FormatInt(int64(e.NumWorkers), 10),
+		"--nodes-max", strconv.FormatInt(int64(e.NumWorkers), 10),
+		"--node-type", "t3.medium",
+		"--node-ami-family", "Ubuntu2404",
+		"--ssh-access",
+		"--ssh-public-key", e.SshKpName,
+		"--node-private-networking",
+		"--with-oidc",
 	}
 
-	log.Infof("Cluster created. Waiting to be actived (timeout=%s)...",
-		activationTimeout)
-	clusterWaiter := eks.NewClusterActiveWaiter(e.Client)
-	if err = clusterWaiter.Wait(context.TODO(), &eks.DescribeClusterInput{
-		Name: aws.String(e.Name),
-	}, activationTimeout); err != nil {
-		return err
-	}
-
-	log.Info("Creating the managed nodes group...")
-	if NodesRoleArn, err = e.CreateEKSNodesRole(); err != nil {
-		return err
-	}
-	if _, err = e.Client.CreateNodegroup(context.TODO(),
-		&eks.CreateNodegroupInput{
-			ClusterName:   aws.String(e.Name),
-			NodeRole:      aws.String(NodesRoleArn),
-			NodegroupName: aws.String(e.NodeGroupName),
-			// Let's simplify and create the nodes only on the public subnet so that it
-			// doesn't need to configure Amazon ECR for pulling container images.
-			Subnets:       []string{e.Vpc.SubnetId},
-			AmiType:       ekstypes.AMITypesAl2X8664,
-			CapacityType:  ekstypes.CapacityTypesOnDemand,
-			InstanceTypes: []string{"t3.medium"},
-			RemoteAccess: &ekstypes.RemoteAccessConfig{
-				Ec2SshKey: aws.String(e.SshKpName),
-			},
-			ScalingConfig: &ekstypes.NodegroupScalingConfig{
-				DesiredSize: aws.Int32(e.NumWorkers),
-				MaxSize:     aws.Int32(e.NumWorkers),
-				MinSize:     aws.Int32(e.NumWorkers),
-			},
-			Version: aws.String(e.Version),
-			// Fail to create the node group due to https://github.com/aws/aws-sdk-go-v2/issues/2267
-			//Labels:  map[string]string{"node.kubernetes.io/worker": ""},
-		}); err != nil {
-		return err
-	}
-
-	log.Infof("Nodes group created. Waiting to be ready (timeout=%s)...",
-		nodesTimeout)
-	nodesWaiter := eks.NewNodegroupActiveWaiter(e.Client)
-	if err = nodesWaiter.Wait(context.TODO(), &eks.DescribeNodegroupInput{
-		ClusterName:   aws.String(e.Name),
-		NodegroupName: aws.String(e.NodeGroupName),
-	}, nodesTimeout); err != nil {
-		return err
-	}
-
-	if err = e.CreateCniAddon(addonTimeout); err != nil {
-		return err
+	cmd := exec.Command("eksctl", cmdArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err = cmd.Run(); err != nil {
+		return fmt.Errorf("failed to create EKS cluster: %w", err)
 	}
 
 	// TODO: This block copy most of the `AddNodeRoleWorkerLabel()` code. We
@@ -1387,129 +1343,33 @@ func (e *EKSCluster) CreateCluster() error {
 	return nil
 }
 
+// DeleteCluster deletes the EKS cluster using eksctl.
 func (e *EKSCluster) DeleteCluster() error {
-	// TODO: implement me!
-	return nil
-}
+	if e.Name == "" {
+		return nil
+	}
+	log.Infof("Deleting the EKS cluster: %s using eksctl...", e.Name)
 
-// CreateEKSClusterRole creates (if not exist) the needed role for EKS
-// creation.
-func (e *EKSCluster) CreateEKSClusterRole() (string, error) {
-	trustPolicy := `{
-		"Version": "2012-10-17",
-		"Statement": [
-			{
-			"Effect": "Allow",
-			"Principal": {
-			  "Service": "eks.amazonaws.com"
-			},
-			"Action": "sts:AssumeRole"
-			}
-		]
-	  }`
-
-	return createRoleAndAttachPolicy(e.IamClient, e.ClusterRoleName, trustPolicy,
-		[]string{"arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"})
-}
-
-// CreateEKSNodesRole creates (if not exist) the needed role for the managed
-// nodes creation.
-func (e *EKSCluster) CreateEKSNodesRole() (string, error) {
-	trustPolicy := `{
-		"Version": "2012-10-17",
-		"Statement": [
-		  {
-			"Effect": "Allow",
-			"Principal": {
-			  "Service": "ec2.amazonaws.com"
-			},
-			"Action": "sts:AssumeRole"
-		  }
-		]
-	  }`
-
-	return createRoleAndAttachPolicy(e.IamClient, e.NodesRoleName,
-		trustPolicy, []string{
-			"arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
-			"arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
-			"arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy", // Needed by the CNI add-on
-		})
-}
-
-// CreateCniAddon applies the AWS CNI addon
-func (e *EKSCluster) CreateCniAddon(addonTimeout time.Duration) error {
-	cniAddonName := "vpc-cni"
-
-	log.Info("Creating the CNI add-on...")
-	if _, err := e.Client.CreateAddon(context.TODO(), &eks.CreateAddonInput{
-		AddonName:        aws.String(cniAddonName),
-		ClusterName:      aws.String(e.Name),
-		AddonVersion:     aws.String(EksCniAddonVersion),
-		ResolveConflicts: ekstypes.ResolveConflictsNone,
-	}); err != nil {
-		return err
+	cmdArgs := []string{
+		"delete", "cluster",
+		"--name", e.Name,
+		"--region", e.AwsConfig.Region,
+		"--wait",
+		"--timeout", "15m",
 	}
 
-	log.Infof("CNI add-on installed. Waiting to be activated (timeout=%s)...",
-		addonTimeout)
-	addonWaiter := eks.NewAddonActiveWaiter(e.Client)
-	if err := addonWaiter.Wait(context.TODO(),
-		&eks.DescribeAddonInput{
-			AddonName:   aws.String(cniAddonName),
-			ClusterName: aws.String(e.Name),
-		}, addonTimeout); err != nil {
-		return err
+	cmd := exec.Command("eksctl", cmdArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to delete EKS cluster: %w", err)
 	}
 
 	return nil
 }
 
-// GetKubeconfig returns a kubeconfig for the EKS cluster
+// GetKubeconfigFile returns a kubeconfig for the EKS cluster
 func (e *EKSCluster) GetKubeconfigFile() (string, error) {
-	desc, err := e.Client.DescribeCluster(context.TODO(),
-		&eks.DescribeClusterInput{
-			Name: aws.String(e.Name),
-		})
-	if err != nil {
-		return "", err
-	}
-	cluster := desc.Cluster
-	credentials, _ := e.AwsConfig.Credentials.Retrieve(context.TODO())
-
-	kubecfgTemplate := `
-apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority-data: {{.Cert}}
-    server: {{.ClusterEndpoint}}
-  name: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-contexts:
-- context:
-    cluster: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-    user: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-  name: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-current-context: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-kind: Config
-preferences: {}
-users:
-- name: arn:aws:eks:{{.Region}}:{{.Account}}:cluster/{{.ClusterName}}
-  user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1beta1
-      command: aws
-      args:
-        - --region
-        - {{.Region}}
-        - eks
-        - get-token
-        - --cluster-name
-        - {{.ClusterName}}`
-
-	t, err := template.New("kubecfg").Parse(kubecfgTemplate)
-	if err != nil {
-		return "", err
-	}
-
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -1520,19 +1380,20 @@ users:
 		return "", err
 	}
 	targetFile := filepath.Join(targetDir, "config")
-	kubecfgFile, err := os.Create(targetFile)
-	if err != nil {
-		return "", err
+
+	// Use eksctl to write kubeconfig
+	cmdArgs := []string{
+		"utils", "write-kubeconfig",
+		"--cluster", e.Name,
+		"--region", e.AwsConfig.Region,
+		"--kubeconfig", targetFile,
 	}
 
-	if err = t.Execute(kubecfgFile, map[string]string{
-		"Account":         credentials.AccessKeyID,
-		"Cert":            *cluster.CertificateAuthority.Data,
-		"ClusterEndpoint": *cluster.Endpoint,
-		"ClusterName":     *cluster.Name,
-		"Region":          e.AwsConfig.Region,
-	}); err != nil {
-		return "", err
+	cmd := exec.Command("eksctl", cmdArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err = cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to write kubeconfig: %w", err)
 	}
 
 	return targetFile, nil

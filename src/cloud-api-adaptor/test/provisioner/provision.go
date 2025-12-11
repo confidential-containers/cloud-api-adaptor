@@ -313,7 +313,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 
 	log.Infof("Wait for the %s runtimeclass be created\n", p.runtimeClass.GetName())
 	if err = wait.For(conditions.New(resources).ResourcesFound(&nodev1.RuntimeClassList{Items: []nodev1.RuntimeClass{*p.runtimeClass}}),
-		wait.WithTimeout(time.Second*60)); err != nil {
+		wait.WithTimeout(time.Second*560)); err != nil {
 		return err
 	}
 
