@@ -190,21 +190,36 @@ func TestPodVMwithNoAnnotations(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
-	DoTestPodVMwithNoAnnotations(t, testEnv, assert, GetIBMInstanceProfileType("b", "2x8"))
+	instanceProfile := pv.IBMCloudProps.InstanceProfile
+	if strings.Contains(instanceProfile, "dc-") {
+		DoTestPodVMwithNoAnnotations(t, testEnv, assert, "bx3dc-2x10")
+	} else {
+		DoTestPodVMwithNoAnnotations(t, testEnv, assert, GetIBMInstanceProfileType("b", "2x8"))
+	}
 }
 
 func TestPodVMwithAnnotationsInstanceType(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
-	DoTestPodVMwithAnnotationsInstanceType(t, testEnv, assert, GetIBMInstanceProfileType("c", "2x4"))
+	instanceProfile := pv.IBMCloudProps.InstanceProfile
+	if strings.Contains(instanceProfile, "dc-") {
+		DoTestPodVMwithAnnotationsInstanceType(t, testEnv, assert, "cx3dc-2x5")
+	} else {
+		DoTestPodVMwithAnnotationsInstanceType(t, testEnv, assert, GetIBMInstanceProfileType("c", "2x4"))
+	}
 }
 
 func TestPodVMwithAnnotationsCPUMemory(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
-	DoTestPodVMwithAnnotationsCPUMemory(t, testEnv, assert, GetIBMInstanceProfileType("m", "2x16"))
+	instanceProfile := pv.IBMCloudProps.InstanceProfile
+	if strings.Contains(instanceProfile, "dc-") {
+		DoTestPodVMwithAnnotationsCPUMemory(t, testEnv, assert, "bx3dc-4x20")
+	} else {
+		DoTestPodVMwithAnnotationsCPUMemory(t, testEnv, assert, GetIBMInstanceProfileType("m", "2x16"))
+	}
 }
 
 func TestPodVMwithAnnotationsInvalidInstanceType(t *testing.T) {
