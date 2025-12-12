@@ -330,7 +330,7 @@ func DoTestPodVMwithAnnotationsInvalidInstanceType(t *testing.T, e env.Environme
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 	expectedErrorMessage := `requested instance type ("` + expectedType + `") is not part of supported instance types list`
-	NewTestCase(t, e, "PodVMwithAnnotationsInvalidInstanceType", assert, "Failed to Create PodVM with Annotations Invalid InstanceType").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodFailed).Run()
+	NewTestCase(t, e, "PodVMwithAnnotationsInvalidInstanceType", assert, "Failed to Create PodVM with Annotations Invalid InstanceType").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestPodVMwithAnnotationsLargerMemory(t *testing.T, e env.Environment, assert CloudAssert) {
@@ -343,7 +343,7 @@ func DoTestPodVMwithAnnotationsLargerMemory(t *testing.T, e env.Environment, ass
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 	expectedErrorMessage := "failed to get instance type based on vCPU and memory annotations: no instance type found for the given vcpus (2) and memory (22528)"
-	NewTestCase(t, e, "PodVMwithAnnotationsLargerMemory", assert, "Failed to Create PodVM with Annotations Larger Memory").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodFailed).Run()
+	NewTestCase(t, e, "PodVMwithAnnotationsLargerMemory", assert, "Failed to Create PodVM with Annotations Larger Memory").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestPodVMwithAnnotationsLargerCPU(t *testing.T, e env.Environment, assert CloudAssert) {
@@ -356,7 +356,7 @@ func DoTestPodVMwithAnnotationsLargerCPU(t *testing.T, e env.Environment, assert
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 	expectedErrorMessage := "no instance type found for the given vcpus (5) and memory (12288)"
-	NewTestCase(t, e, "PodVMwithAnnotationsLargerCPU", assert, "Failed to Create PodVM with Annotations Larger CPU").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodFailed).Run()
+	NewTestCase(t, e, "PodVMwithAnnotationsLargerCPU", assert, "Failed to Create PodVM with Annotations Larger CPU").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
 }
 
 func DoTestCreatePeerPodContainerWithValidAlternateImage(t *testing.T, e env.Environment, assert CloudAssert, alternateImageName string) {
