@@ -54,7 +54,7 @@ jobs:
           echo "release_tags=${release_tags:-${commit}}" >> tags.txt
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: image-tags
           retention-days: 1
@@ -153,7 +153,7 @@ jobs:
             cd src/cloud-api-adaptor && ARCHES=${{matrix.types.arch}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: tags-architectures-${{matrix.types.type}}
           retention-days: 1
