@@ -33,8 +33,6 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.StringWithEnv(&ibmcloudVPCConfig.KeyID, "key-id", "", "IBMCLOUD_SSH_KEY_ID", "SSH Key ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.VpcID, "vpc-id", "", "IBMCLOUD_VPC_ID", "VPC ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.ClusterID, "cluster-id", "", "IBMCLOUD_CLUSTER_ID", "Cluster ID")
-	reg.StringWithEnv(&ibmcloudVPCConfig.DedicatedHostID, "dedicated-host-id", "", "IBMCLOUD_DEDICATED_HOST_ID","Dedicated Host ID")
-	reg.StringWithEnv(&ibmcloudVPCConfig.DedicatedHostGroupID, "dedicated-host-group-id", "", "IBMCLOUD_DEDICATED_HOST_GROUP_ID", "Dedicated Host Group ID")
 
 	reg.BoolWithEnv(&ibmcloudVPCConfig.DisableCVM, "disable-cvm", false, "DISABLECVM", "Use non-CVMs for peer pods")
 
@@ -47,6 +45,8 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.InstanceProfiles, "profile-list", "", "IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST", "List of instance profile names to be used for the Pod VMs, comma separated")
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Images, "image-id", "", "IBMCLOUD_PODVM_IMAGE_ID", "List of Image IDs, comma separated")
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Tags, "tags", "", "IBMCLOUD_TAGS", "List of tags to attach to the Pod VMs, comma separated")
+	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.DedicatedHostIDs, "dedicated-host-ids", "", "IBMCLOUD_DEDICATED_HOST_IDS", "List of Dedicated Host IDs, provide one from each Zone")
+	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.DedicatedHostGroupIDs, "dedicated-host-group-ids", "", "IBMCLOUD_DEDICATED_HOST_GROUP_IDS", "List of Dedicated Host Group IDs, provide one from each Zone")
 }
 
 func (_ *Manager) LoadEnv() {

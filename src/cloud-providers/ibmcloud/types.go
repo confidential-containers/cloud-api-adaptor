@@ -70,29 +70,54 @@ func (i *tags) Set(value string) error {
 	return nil
 }
 
+type dedicatedHostIDs []string
+
+func (i *dedicatedHostIDs) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *dedicatedHostIDs) Set(value string) error {
+	*i = append(*i, toList(value, ",")...)
+	return nil
+}
+
+type dedicatedHostGroupIDs []string
+
+func (i *dedicatedHostGroupIDs) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *dedicatedHostGroupIDs) Set(value string) error {
+	*i = append(*i, toList(value, ",")...)
+	return nil
+}
+
 type Config struct {
-	ApiKey                   string
-	IAMProfileID             string
-	CRTokenFileName          string
-	IamServiceURL            string
-	VpcServiceURL            string
-	ResourceGroupID          string
-	ProfileName              string
-	ZoneName                 string
-	Images                   Images
-	PrimarySubnetID          string
-	PrimarySecurityGroupID   string
-	SecondarySubnetID        string
-	SecondarySecurityGroupID string
-	KeyID                    string
-	VpcID                    string
-	InstanceProfiles         instanceProfiles
-	InstanceProfileSpecList  []provider.InstanceTypeSpec
-	DisableCVM               bool
-	ClusterID                string
-	Tags                     tags
-	DedicatedHostID          string
-	DedicatedHostGroupID     string
+	ApiKey                       string
+	IAMProfileID                 string
+	CRTokenFileName              string
+	IamServiceURL                string
+	VpcServiceURL                string
+	ResourceGroupID              string
+	ProfileName                  string
+	ZoneName                     string
+	Images                       Images
+	PrimarySubnetID              string
+	PrimarySecurityGroupID       string
+	SecondarySubnetID            string
+	SecondarySecurityGroupID     string
+	KeyID                        string
+	VpcID                        string
+	InstanceProfiles             instanceProfiles
+	InstanceProfileSpecList      []provider.InstanceTypeSpec
+	DisableCVM                   bool
+	ClusterID                    string
+	Tags                         tags
+	DedicatedHostIDs             dedicatedHostIDs
+	DedicatedHostGroupIDs        dedicatedHostGroupIDs
+	
+	selectedDedicatedHostID      string
+	selectedDedicatedHostGroupID string
 }
 
 func (c Config) Redact() Config {
