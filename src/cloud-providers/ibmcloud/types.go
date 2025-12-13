@@ -93,29 +93,29 @@ func (i *dedicatedHostGroupIDs) Set(value string) error {
 }
 
 type Config struct {
-	ApiKey                       string
-	IAMProfileID                 string
-	CRTokenFileName              string
-	IamServiceURL                string
-	VpcServiceURL                string
-	ResourceGroupID              string
-	ProfileName                  string
-	ZoneName                     string
-	Images                       Images
-	PrimarySubnetID              string
-	PrimarySecurityGroupID       string
-	SecondarySubnetID            string
-	SecondarySecurityGroupID     string
-	KeyID                        string
-	VpcID                        string
-	InstanceProfiles             instanceProfiles
-	InstanceProfileSpecList      []provider.InstanceTypeSpec
-	DisableCVM                   bool
-	ClusterID                    string
-	Tags                         tags
-	DedicatedHostIDs             dedicatedHostIDs
-	DedicatedHostGroupIDs        dedicatedHostGroupIDs
-	
+	ApiKey                   string
+	IAMProfileID             string
+	CRTokenFileName          string
+	IamServiceURL            string
+	VpcServiceURL            string
+	ResourceGroupID          string
+	ProfileName              string
+	ZoneName                 string
+	Images                   Images
+	PrimarySubnetID          string
+	PrimarySecurityGroupID   string
+	SecondarySubnetID        string
+	SecondarySecurityGroupID string
+	KeyID                    string
+	VpcID                    string
+	InstanceProfiles         instanceProfiles
+	InstanceProfileSpecList  []provider.InstanceTypeSpec
+	DisableCVM               bool
+	ClusterID                string
+	Tags                     tags
+	DedicatedHostIDs         dedicatedHostIDs
+	DedicatedHostGroupIDs    dedicatedHostGroupIDs
+
 	selectedDedicatedHostID      string
 	selectedDedicatedHostGroupID string
 }

@@ -143,45 +143,29 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	}
 
 	if len(config.DedicatedHostIDs) > 0 {
-		for _, dhID := range config.DedicatedHostIDs {
-			zone, err := getDedicatedHostZone(vpcV1, dhID)
-			if err != nil {
-				return nil, fmt.Errorf("couldn't get %s Dedicated Host's zone: %w", dhID, err)
-			}
-
-			if zone == config.ZoneName {
-				if config.selectedDedicatedHostID != "" {
-					logger.Printf("warning, multiple dedicated hosts were provided with the same zone, only one will be used, if you want to load balance multiple hosts use a host group")
-					continue
-				}
-				config.selectedDedicatedHostID = dhID
-			}
+		selected, err := pickIDInZone(
+			config.DedicatedHostIDs,
+			config.ZoneName,
+			func(id string) (string, error) { return getDedicatedHostZone(vpcV1, id) },
+			"Dedicated Host",
+		)
+		if err != nil {
+			return nil, err
 		}
-
-		if config.selectedDedicatedHostID == "" {
-			return nil, fmt.Errorf("no dedicated host with zone %s was provided, please provide a dedicated host in the specified zone for High Availability", config.ZoneName)
-		}
+		config.selectedDedicatedHostID = selected
 	}
 
 	if len(config.DedicatedHostGroupIDs) > 0 {
-		for _, dhgID := range config.DedicatedHostGroupIDs {
-			zone, err := getDedicatedHostGroupZone(vpcV1, dhgID)
-			if err != nil {
-				return nil, fmt.Errorf("couldn't get %s Dedicated Host Group's zone: %w", dhgID, err)
-			}
-
-			if zone == config.ZoneName {
-				if config.selectedDedicatedHostGroupID != "" {
-					logger.Printf("warning, multiple dedicated host groups were provided with the same zone, only one will be used")
-					continue
-				}
-				config.selectedDedicatedHostGroupID = dhgID
-			}
+		selected, err := pickIDInZone(
+			config.DedicatedHostGroupIDs,
+			config.ZoneName,
+			func(id string) (string, error) { return getDedicatedHostGroupZone(vpcV1, id) },
+			"Dedicated Host Group",
+		)
+		if err != nil {
+			return nil, err
 		}
-
-		if config.selectedDedicatedHostGroupID == "" {
-			return nil, fmt.Errorf("no dedicated host with zone %s was provided, please provide a dedicated host in the specified zone for High Availability", config.ZoneName)
-		}
+		config.selectedDedicatedHostGroupID = selected
 	}
 
 	gTaggingV1, err := globaltaggingv1.NewGlobalTaggingV1(
@@ -279,6 +263,35 @@ func getDedicatedHostGroupZone(vpcV1 *vpcv1.VpcV1, dedicatedHostGroupID string) 
 	}
 
 	return *dedicatedHostGroup.Zone.Name, nil
+}
+
+// pickIDInZone finds the first ID whose zone equals zoneName.
+// If multiple IDs match the zone, it logs a warning and returns the first.
+// If none match, it returns a descriptive error.
+func pickIDInZone(ids []string, zoneName string, getZone func(string) (string, error), resourceLabel string) (string, error) {
+	var selected string
+
+	for _, id := range ids {
+		zone, err := getZone(id)
+		if err != nil {
+			return "", fmt.Errorf("couldn't get %s %s's zone: %w", id, resourceLabel, err)
+		}
+		if zone == zoneName {
+			if selected != "" && logger != nil {
+				logger.Printf("warning: multiple %ss were provided in zone %s; only one will be used",
+					resourceLabel, zoneName)
+				// Continue to keep the first match as the selected one.
+				continue
+			}
+			selected = id
+		}
+	}
+
+	if selected == "" {
+		return "", fmt.Errorf("no %s in zone %s was provided; please provide a %s in the specified zone for High Availability",
+			resourceLabel, zoneName, resourceLabel)
+	}
+	return selected, nil
 }
 
 func (p *ibmcloudVPCProvider) getAttachTagOptions(vpcInstanceCRN *string) (*globaltaggingv1.AttachTagOptions, error) {
