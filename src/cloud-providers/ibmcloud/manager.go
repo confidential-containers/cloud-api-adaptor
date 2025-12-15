@@ -21,13 +21,13 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
-	reg.StringWithEnv(&ibmcloudVPCConfig.ApiKey, "api-key", "", "IBMCLOUD_API_KEY", "IBM Cloud API key")
-	reg.StringWithEnv(&ibmcloudVPCConfig.IAMProfileID, "iam-profile-id", "", "IBMCLOUD_IAM_PROFILE_ID", "IBM IAM Profile ID")
+	reg.StringWithEnv(&ibmcloudVPCConfig.ApiKey, "api-key", "", "IBMCLOUD_API_KEY", "IBM Cloud API key", provider.Secret())
+	reg.StringWithEnv(&ibmcloudVPCConfig.IAMProfileID, "iam-profile-id", "", "IBMCLOUD_IAM_PROFILE_ID", "IBM IAM Profile ID", provider.Secret())
 	reg.StringWithEnv(&ibmcloudVPCConfig.IamServiceURL, "iam-service-url", "https://iam.cloud.ibm.com/identity/token", "IBMCLOUD_IAM_ENDPOINT", "IBM Cloud IAM Service URL")
 	reg.StringWithEnv(&ibmcloudVPCConfig.VpcServiceURL, "vpc-service-url", "https://jp-tok.iaas.cloud.ibm.com/v1", "IBMCLOUD_VPC_ENDPOINT", "IBM Cloud VPC Service URL")
 	reg.StringWithEnv(&ibmcloudVPCConfig.ResourceGroupID, "resource-group-id", "", "IBMCLOUD_RESOURCE_GROUP_ID", "Resource Group ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.ProfileName, "profile-name", "", "IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME", "Default instance profile name to be used for the Pod VMs")
-	reg.StringWithEnv(&ibmcloudVPCConfig.ZoneName, "zone-name", "", "IBMCLOUD_ZONE", "Zone name")
+	reg.StringWithEnv(&ibmcloudVPCConfig.ZoneName, "zone-name", "", "IBMCLOUD_ZONE", "Zone name", provider.Required())
 	reg.StringWithEnv(&ibmcloudVPCConfig.PrimarySubnetID, "primary-subnet-id", "", "IBMCLOUD_VPC_SUBNET_ID", "Primary subnet ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.PrimarySecurityGroupID, "primary-security-group-id", "", "IBMCLOUD_VPC_SG_ID", "Primary security group ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.KeyID, "key-id", "", "IBMCLOUD_SSH_KEY_ID", "SSH Key ID")
@@ -43,7 +43,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 	// Custom flag types (comma-separated lists)
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.InstanceProfiles, "profile-list", "", "IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST", "List of instance profile names to be used for the Pod VMs, comma separated")
-	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Images, "image-id", "", "IBMCLOUD_PODVM_IMAGE_ID", "List of Image IDs, comma separated")
+	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Images, "image-id", "", "IBMCLOUD_PODVM_IMAGE_ID", "List of Image IDs, comma separated", provider.Required())
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Tags, "tags", "", "IBMCLOUD_TAGS", "List of tags to attach to the Pod VMs, comma separated")
 }
 
