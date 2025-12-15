@@ -21,12 +21,12 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
-	reg.StringWithEnv(&vspherecfg.UserName, "user-name", "", "GOVC_USERNAME", "vCenter Username")
-	reg.StringWithEnv(&vspherecfg.Password, "password", "", "GOVC_PASSWORD", "vCenter Password")
-	reg.StringWithEnv(&vspherecfg.Thumbprint, "thumbprint", "", "GOVC_THUMBPRINT", "SHA1 thumbprint of the vcenter certificate. Enable verification of certificate chain and host name.")
-	reg.StringWithEnv(&vspherecfg.VcenterURL, "vcenter-url", "", "GOVC_URL", "URL of vCenter instance to connect to")
+	reg.StringWithEnv(&vspherecfg.UserName, "user-name", "", "GOVC_USERNAME", "vCenter Username", provider.Secret(), provider.Required())
+	reg.StringWithEnv(&vspherecfg.Password, "password", "", "GOVC_PASSWORD", "vCenter Password", provider.Secret(), provider.Required())
+	reg.StringWithEnv(&vspherecfg.Thumbprint, "thumbprint", "", "GOVC_THUMBPRINT", "SHA1 thumbprint of the vcenter certificate. Enable verification of certificate chain and host name.", provider.Secret())
+	reg.StringWithEnv(&vspherecfg.VcenterURL, "vcenter-url", "", "GOVC_URL", "URL of vCenter instance to connect to", provider.Required())
 	reg.StringWithEnv(&vspherecfg.Template, "template", "podvm-template", "GOVC_TEMPLATE", "vCenter template to deploy")
-	reg.StringWithEnv(&vspherecfg.Datacenter, "data-center", "", "GOVC_DATACENTER", "vCenter destination datacenter name")
+	reg.StringWithEnv(&vspherecfg.Datacenter, "data-center", "", "GOVC_DATACENTER", "vCenter destination datacenter name", provider.Required())
 	reg.StringWithEnv(&vspherecfg.Datastore, "data-store", "", "GOVC_DATASTORE", "vCenter datastore")
 	reg.StringWithEnv(&vspherecfg.Deployfolder, "deploy-folder", "", "GOVC_FOLDER", "vCenter vm destination folder relative to the vm inventory path (your-data-center/vm). \nExample '-deploy-folder peerods' will create or use the existing folder peerpods as the \ndeploy-folder in /datacenter/vm/peerpods")
 	reg.StringWithEnv(&vspherecfg.Cluster, "cluster", "", "GOVC_VCLUSTER", "vCenter destination cluster name ")
