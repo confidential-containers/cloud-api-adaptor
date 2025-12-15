@@ -21,12 +21,12 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
-	reg.StringWithEnv(&alibabacloudcfg.AccessKeyId, "alibabacloud-access-key-id", "", "ALIBABACLOUD_ACCESS_KEY_ID", "Access Key ID")
-	reg.StringWithEnv(&alibabacloudcfg.SecretKey, "alibabacloud-secret-access-key", "", "ALIBABACLOUD_ACCESS_KEY_SECRET", "Secret Key")
+	reg.StringWithEnv(&alibabacloudcfg.AccessKeyId, "alibabacloud-access-key-id", "", "ALIBABACLOUD_ACCESS_KEY_ID", "Access Key ID", provider.Secret())
+	reg.StringWithEnv(&alibabacloudcfg.SecretKey, "alibabacloud-secret-access-key", "", "ALIBABACLOUD_ACCESS_KEY_SECRET", "Secret Key", provider.Secret())
 	reg.StringWithEnv(&alibabacloudcfg.Region, "region", "cn-beijing", "REGION", "Region")
-	reg.StringWithEnv(&alibabacloudcfg.ImageId, "imageid", "", "IMAGEID", "Pod VM image id")
+	reg.StringWithEnv(&alibabacloudcfg.ImageId, "imageid", "", "IMAGEID", "Pod VM image id", provider.Required())
 	reg.StringWithEnv(&alibabacloudcfg.InstanceType, "instance-type", "ecs.g8i.xlarge", "PODVM_INSTANCE_TYPE", "Pod VM instance type")
-	reg.StringWithEnv(&alibabacloudcfg.VswitchId, "vswitch-id", "", "VSWITCH_ID", "vSwitch ID to be used for the Pod VMs")
+	reg.StringWithEnv(&alibabacloudcfg.VswitchId, "vswitch-id", "", "VSWITCH_ID", "vSwitch ID to be used for the Pod VMs", provider.Required())
 	reg.StringWithEnv(&alibabacloudcfg.KeyName, "keyname", "", "KEYNAME", "SSH Keypair name to be used with the Pod VM")
 
 	reg.BoolWithEnv(&alibabacloudcfg.UsePublicIP, "use-public-ip", false, "USE_PUBLIC_IP", "Use Public IP for connecting to the kata-agent inside the Pod VM")
