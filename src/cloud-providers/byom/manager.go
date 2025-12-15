@@ -24,7 +24,7 @@ func (m *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
-	reg.CustomTypeWithEnv(&byomcfg.VMPoolIPs, "vm-pool-ips", "", "VM_POOL_IPS", "Comma-separated list of IP addresses for pre-created VMs")
+	reg.CustomTypeWithEnv(&byomcfg.VMPoolIPs, "vm-pool-ips", "", "VM_POOL_IPS", "Comma-separated list of IP addresses for pre-created VMs", provider.Required())
 	reg.StringWithEnv(&byomcfg.SSHUserName, "ssh-username", "peerpod", "SSH_USERNAME", "SSH username for VM access")
 	reg.StringWithEnv(&byomcfg.SSHPubKeyPath, "ssh-pub-key", "/root/.ssh/id_rsa.pub", "SSH_PUB_KEY_PATH", "SSH public key file path")
 	reg.StringWithEnv(&byomcfg.SSHPrivKeyPath, "ssh-priv-key", "/root/.ssh/id_rsa", "SSH_PRIV_KEY_PATH", "SSH private key file path")
