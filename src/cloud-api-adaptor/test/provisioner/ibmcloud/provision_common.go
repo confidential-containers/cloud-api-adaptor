@@ -980,6 +980,8 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"INITDATA":                             IBMCloudProps.InitData,
 		"CLUSTER_ID":                           IBMCloudProps.ClusterID,
 		"TAGS":                                 IBMCloudProps.Tags,
+		"IBMCLOUD_DEDICATED_HOST_IDS":          IBMCloudProps.DedicatedHostIDs,
+		"IBMCLOUD_DEDICATED_HOST_GROUP_IDS":    IBMCloudProps.DedicatedHostGroupIDs,
 	}
 }
 
