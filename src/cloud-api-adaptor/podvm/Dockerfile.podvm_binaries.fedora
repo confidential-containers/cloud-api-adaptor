@@ -5,7 +5,7 @@
 #
 # Build binaries for mkosi podvm image
 #
-FROM registry.fedoraproject.org/fedora:41 AS builder
+FROM registry.fedoraproject.org/fedora:43 AS builder
 
 ARG ARCH="x86_64"
 ARG GO_ARCH="amd64"
