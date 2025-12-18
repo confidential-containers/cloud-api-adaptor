@@ -51,3 +51,10 @@ func (l DockerAssert) GetInstanceType(t *testing.T, podName string) (string, err
 	// Get Instance Type of PodVM
 	return "", nil
 }
+
+func (l DockerAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedString string) {
+	// Verify PodVM console output with provided expectedString
+	// This is not implemented for Docker as of now.
+	// So skipping this test.
+	t.Log("Warning: console verification is not added for Docker")
+}
