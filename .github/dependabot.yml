@@ -26,6 +26,9 @@ updates:
       azcore:
         patterns:
           - "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+      google-clouds-compute:
+        patterns:
+          - "cloud.google.com/go/compute"
       k8s:
         patterns:
           - "*k8s.io*"
