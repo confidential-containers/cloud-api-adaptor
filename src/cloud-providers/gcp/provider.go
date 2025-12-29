@@ -327,6 +327,12 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		NetworkInterfaces: []*computepb.NetworkInterface{networkInterface},
 	}
 
+	// Check if OnHostMaintenance needs to be set to TERMINATE
+	// This is required for:
+	// 1. Confidential VMs
+	// 2. GPU instances (when spec.GPUs > 0)
+	requiresTerminatePolicy := false
+
 	if !p.serviceConfig.DisableCVM {
 		if p.serviceConfig.ConfidentialType == "" {
 			return nil, fmt.Errorf("ConfidentialType must be set when using Confidential VM.")
@@ -336,6 +342,16 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			ConfidentialInstanceType:  proto.String(p.serviceConfig.ConfidentialType),
 			EnableConfidentialCompute: proto.Bool(true),
 		}
+		requiresTerminatePolicy = true
+	}
+
+	// Check if GPUs are requested via annotation
+	if spec.GPUs > 0 {
+		logger.Printf("GPUs requested (%d), setting OnHostMaintenance to TERMINATE", spec.GPUs)
+		requiresTerminatePolicy = true
+	}
+
+	if requiresTerminatePolicy {
 		instanceResource.Scheduling = &computepb.Scheduling{
 			OnHostMaintenance: proto.String("TERMINATE"),
 		}
