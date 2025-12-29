@@ -230,7 +230,6 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	//Convert userData to base64
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
-	logger.Printf("userDataEnc:  %s", userDataEnc)
 
 	// It's expected that the image from the annotation will follow one of supported formats:
 	// - "projects/<project>/global/images/<imageid>" and "/projects/<project>/global/images/<imageid>",
