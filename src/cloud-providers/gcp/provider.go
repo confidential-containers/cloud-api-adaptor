@@ -247,6 +247,13 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		srcImage = proto.String(spec.Image)
 	}
 
+	// Use machine type from annotation if provided, otherwise use config default
+	machineType := p.serviceConfig.MachineType
+	if spec.InstanceType != "" {
+		logger.Printf("Choosing %s from annotation as the GCP machine type", spec.InstanceType)
+		machineType = spec.InstanceType
+	}
+
 	imageSizeGB, err := p.getImageSizeGB(ctx, *srcImage)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get image size: %w", err)
@@ -322,7 +329,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 				},
 			},
 		},
-		MachineType:       proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, p.serviceConfig.MachineType)),
+		MachineType:       proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, machineType)),
 		NetworkInterfaces: []*computepb.NetworkInterface{networkInterface},
 	}
 
