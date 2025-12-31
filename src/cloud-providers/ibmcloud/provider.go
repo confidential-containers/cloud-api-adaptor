@@ -317,7 +317,7 @@ func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]n
 	return ips, nil
 }
 
-func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (instance *provider.Instance, err error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -354,6 +354,12 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	instanceID := *vpcInstance.ID
 	numInterfaces := len(prototype.NetworkInterfaces)
 
+	// Create partial instance to return on error (allows caller to cleanup)
+	instance = &provider.Instance{
+		ID:   instanceID,
+		Name: instanceName,
+	}
+
 	var ips []netip.Addr
 
 	for retries := 0; retries < maxRetries; retries++ {
@@ -364,7 +370,7 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 			break
 		}
 		if err != errNotReady {
-			return nil, err
+			return instance, err
 		}
 
 		time.Sleep(time.Duration(queryInterval) * time.Second)
@@ -372,25 +378,21 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		result, response, err := p.vpc.GetInstanceWithContext(ctx, &vpcv1.GetInstanceOptions{ID: &instanceID})
 		if err != nil {
 			logger.Printf("failed to get an instance : %v and the response is %s", err, response)
-			return nil, err
+			return instance, err
 		}
 		vpcInstance = result
 	}
 
-	instance := &provider.Instance{
-		ID:   instanceID,
-		Name: instanceName,
-		IPs:  ips,
-	}
+	instance.IPs = ips
 
 	options, err := p.getAttachTagOptions(vpcInstance.CRN)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get attach tag options: %w", err)
+		return instance, fmt.Errorf("failed to get attach tag options: %w", err)
 	}
 
 	_, resp, err = p.globalTagging.AttachTagWithContext(ctx, options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to attach tags: %w and the response is %s", err, resp)
+		return instance, fmt.Errorf("failed to attach tags: %w and the response is %s", err, resp)
 	}
 	logger.Printf("successfully attached tags: %v to instance: %v", options.TagNames, *vpcInstance.CRN)
 

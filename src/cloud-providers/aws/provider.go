@@ -182,7 +182,7 @@ func getIPs(instance types.Instance) ([]netip.Addr, error) {
 	return podNodeIPs, nil
 }
 
-func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (instance *provider.Instance, err error) {
 	// Public IP address
 	var publicIPAddr netip.Addr
 
@@ -316,17 +316,23 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	logger.Printf("Created instance %s (%s) for sandbox %s", instanceName, instanceID, sandboxID)
 
+	// Create partial instance to return on error (allows caller to cleanup)
+	instance = &provider.Instance{
+		ID:   instanceID,
+		Name: instanceName,
+	}
+
 	ips, err := getIPs(result.Instances[0])
 	if err != nil {
 		logger.Printf("Failed to get IPs for instance %s: %v ", instanceID, err)
-		return nil, err
+		return instance, err
 	}
 
 	if p.serviceConfig.UsePublicIP {
 		// Get the public IP address of the instance
 		publicIPAddr, err = p.getPublicIP(ctx, instanceID)
 		if err != nil {
-			return nil, err
+			return instance, err
 		}
 
 		// Replace the first IP address with the public IP address
@@ -336,22 +342,18 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	if spec.MultiNic {
 		nIfaceId, err := p.createAddonNICforInstance(ctx, instanceID)
 		if err != nil {
-			return nil, err
+			return instance, err
 		}
 		// If public IP is set, then create an ElasticIP and associate it with this secondary interface
 		if p.serviceConfig.UsePublicIP {
 			err = p.createElasticIPforInstance(ctx, instanceID, nIfaceId)
 			if err != nil {
-				return nil, err
+				return instance, err
 			}
 		}
 	}
 
-	instance := &provider.Instance{
-		ID:   instanceID,
-		Name: instanceName,
-		IPs:  ips,
-	}
+	instance.IPs = ips
 
 	return instance, nil
 }

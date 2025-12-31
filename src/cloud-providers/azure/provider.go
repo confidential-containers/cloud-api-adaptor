@@ -237,7 +237,7 @@ func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMa
 	return &config
 }
 
-func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (instance *provider.Instance, err error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 
@@ -295,17 +295,21 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		return nil, fmt.Errorf("Creating instance (%v): %s", vm, err)
 	}
 
+	vmID := *vm.ID
+
+	// Create partial instance to return on error (allows caller to cleanup)
+	instance = &provider.Instance{
+		ID:   vmID,
+		Name: instanceName,
+	}
+
 	ips, err := p.getIPs(ctx, vm)
 	if err != nil {
 		logger.Printf("getting IPs for the instance : %v ", err)
-		return nil, err
+		return instance, err
 	}
 
-	instance := &provider.Instance{
-		ID:   *vm.ID,
-		Name: instanceName,
-		IPs:  ips,
-	}
+	instance.IPs = ips
 
 	return instance, nil
 }

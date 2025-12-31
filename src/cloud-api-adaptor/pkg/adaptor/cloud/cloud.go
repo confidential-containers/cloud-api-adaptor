@@ -342,17 +342,34 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	}
 
 	instance, err := s.provider.CreateInstance(ctx, sandbox.podName, string(sid), sandbox.cloudConfig, sandbox.spec)
+
+	// Cleanup instance if it was created but an error occurred (either during creation or later)
+	defer func() {
+		if err != nil && instance != nil && instance.ID != "" {
+			logger.Printf("cleaning up instance %s due to error: %v", instance.ID, err)
+			cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+			defer cancel()
+			if delErr := s.provider.DeleteInstance(cleanupCtx, instance.ID); delErr != nil {
+				logger.Printf("failed to cleanup instance %s: %v", instance.ID, delErr)
+			} else if s.ppService != nil {
+				if relErr := s.ppService.ReleasePeerPod(sandbox.podName, sandbox.podNamespace, instance.ID); relErr != nil {
+					logger.Printf("failed to release PeerPod during cleanup: %v", relErr)
+				}
+			}
+		}
+	}()
+
 	if err != nil {
 		return nil, fmt.Errorf("creating an instance : %w", err)
 	}
 
 	if s.ppService != nil {
-		if err := s.ppService.OwnPeerPod(sandbox.podName, sandbox.podNamespace, instance.ID); err != nil {
-			logger.Printf("failed to create PeerPod: %v", err)
+		if ownErr := s.ppService.OwnPeerPod(sandbox.podName, sandbox.podNamespace, instance.ID); ownErr != nil {
+			logger.Printf("failed to create PeerPod: %v", ownErr)
 		}
 	}
 
-	if err := s.setInstance(sid, instance.ID, instance.Name); err != nil {
+	if err = s.setInstance(sid, instance.ID, instance.Name); err != nil {
 		return nil, fmt.Errorf("setting instance: %w", err)
 	}
 
@@ -389,11 +406,11 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	case <-ctx.Done():
 		// Start VM operation interrupted (calling context canceled)
 		logger.Printf("Error: start instance interrupted (%v). Cleaning up...", ctx.Err())
-		if err := sandbox.agentProxy.Shutdown(); err != nil {
-			logger.Printf("stopping agent proxy: %v", err)
+		if shutdownErr := sandbox.agentProxy.Shutdown(); shutdownErr != nil {
+			logger.Printf("stopping agent proxy: %v", shutdownErr)
 		}
 		return nil, ctx.Err()
-	case err := <-errCh:
+	case err = <-errCh:
 		return nil, err
 	case <-sandbox.agentProxy.Ready():
 	}

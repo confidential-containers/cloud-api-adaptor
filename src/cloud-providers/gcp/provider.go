@@ -200,7 +200,7 @@ func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, 
 	return img.GetDiskSizeGb(), nil
 }
 
-func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
+func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (instance *provider.Instance, err error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
 	logger.Printf("CreateInstance: name: %q", instanceName)
@@ -357,17 +357,23 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	}
 	logger.Printf("created an instance %s for sandbox %s", instanceName, sandboxID)
 
+	// Create partial instance to return on error (allows caller to cleanup)
+	instance = &provider.Instance{
+		ID:   instanceName,
+		Name: instanceName,
+	}
+
 	getReq := &computepb.GetInstanceRequest{
 		Project:  p.serviceConfig.ProjectId,
 		Zone:     p.serviceConfig.Zone,
 		Instance: instanceName,
 	}
 
-	instance, err := p.instancesClient.Get(ctx, getReq)
+	gcpInstance, err := p.instancesClient.Get(ctx, getReq)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get instance: %w, req: %v", err, getReq)
+		return instance, fmt.Errorf("unable to get instance: %w, req: %v", err, getReq)
 	}
-	logger.Printf("instance name %s, id %d", instance.GetName(), instance.GetId())
+	logger.Printf("instance name %s, id %d", gcpInstance.GetName(), gcpInstance.GetId())
 
 	// Binding all the tagValues to the instance that was already created
 	// Specific endpoint is needed for tag bindings because global endpoint
@@ -376,11 +382,11 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		option.WithEndpoint(fmt.Sprintf("%s-cloudresourcemanager.googleapis.com:443", p.serviceConfig.Zone)),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create bind client: %w", err)
+		return instance, fmt.Errorf("failed to create bind client: %w", err)
 	}
 	defer tagBindingsClient.Close()
 
-	parent := fmt.Sprintf("//compute.googleapis.com/projects/%s/zones/%s/instances/%d", p.serviceConfig.ProjectId, p.serviceConfig.Zone, instance.GetId())
+	parent := fmt.Sprintf("//compute.googleapis.com/projects/%s/zones/%s/instances/%d", p.serviceConfig.ProjectId, p.serviceConfig.Zone, gcpInstance.GetId())
 
 	for _, tagValue := range allTagValues {
 		logger.Printf("Creating tag binding for %s on %s", tagValue.Name, parent)
@@ -396,30 +402,28 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 		op, err := tagBindingsClient.CreateTagBinding(ctx, req)
 		if err != nil {
-			return nil, fmt.Errorf("API call to create tag binding failed for %s: %v", tagValue, err)
+			return instance, fmt.Errorf("API call to create tag binding failed for %s: %v", tagValue, err)
 		}
 
 		_, err = op.Wait(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("Long-running operation for tag binding %s failed: %v", tagValue, err)
+			return instance, fmt.Errorf("Long-running operation for tag binding %s failed: %v", tagValue, err)
 		}
 
 		logger.Printf("Created tag binding for %s on %s successfully", tagValue, parent)
 	}
 
-	ips, err := getIPs(instance.GetNetworkInterfaces(), p.serviceConfig.UsePublicIP)
+	ips, err := getIPs(gcpInstance.GetNetworkInterfaces(), p.serviceConfig.UsePublicIP)
 	if err != nil {
 		logger.Printf("failed to get IPs for the instance: %v", err)
-		return nil, err
+		return instance, err
 	}
 
 	logger.Printf("Found pod node IP(s): %v", ips)
 
-	return &provider.Instance{
-		ID:   instance.GetName(),
-		Name: instance.GetName(),
-		IPs:  ips,
-	}, nil
+	instance.IPs = ips
+
+	return instance, nil
 }
 
 func (p *gcpProvider) DeleteInstance(ctx context.Context, instanceID string) error {
