@@ -23,15 +23,28 @@ updates:
       aws-sdk-go-v2:
         patterns:
           - "*aws-sdk-go-v2*"
-      azcore:
+      azure-sdk:
         patterns:
-          - "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+          - "github.com/Azure/azure-sdk-for-go/sdk/*"
+      google-cloud:
+        patterns:
+          - "cloud.google.com/go/*"
+      ibm-sdk:
+        patterns:
+          - "github.com/IBM/*"
+          - "github.com/IBM-Cloud/*"
       k8s:
         patterns:
           - "*k8s.io*"
+      libvirt:
+        patterns:
+          - "libvirt.org/go/*"
       protobuf:
         patterns:
           - "google.golang.org/protobuf"
+      vmware:
+        patterns:
+          - "github.com/vmware/govmomi"
       x/extensions:
         patterns:
           - golang.org/x/*
