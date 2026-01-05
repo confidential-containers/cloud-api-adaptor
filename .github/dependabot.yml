@@ -42,9 +42,6 @@ updates:
       protobuf:
         patterns:
           - "google.golang.org/protobuf"
-      vmware:
-        patterns:
-          - "github.com/vmware/govmomi"
       x/extensions:
         patterns:
           - golang.org/x/*
