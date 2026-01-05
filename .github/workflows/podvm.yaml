@@ -34,12 +34,10 @@ jobs:
         os:
           - ubuntu
         arch: [amd64, s390x]
-        provider: [generic, vsphere]
+        provider: [generic]
         include:
           - os: ubuntu
-        exclude:
-          - provider: vsphere
-            arch: s390x
+
     permissions:
       contents: read
       packages: write

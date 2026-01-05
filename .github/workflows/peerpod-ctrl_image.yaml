@@ -84,4 +84,4 @@ jobs:
           file: src/peerpod-ctrl/Dockerfile
           platforms: linux/amd64, linux/s390x, linux/ppc64le
           build-args: |
-            GOFLAGS=-tags=aws,azure,ibmcloud,ibmcloud_powervs,vsphere,libvirt
+            GOFLAGS=-tags=aws,azure,ibmcloud,ibmcloud_powervs,libvirt
