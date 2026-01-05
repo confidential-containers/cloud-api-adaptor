@@ -156,8 +156,6 @@ jobs:
   # TODO - when the packer approach is removed this can go as well
   prep_install:
     runs-on: ubuntu-24.04
-    outputs:
-      matrix: ${{ steps.matrix.outputs.matrix }}
     env:
       PROVIDERS: "aws docker libvirt"
     steps:
@@ -208,10 +206,6 @@ jobs:
           path: src/cloud-api-adaptor/install/
           retention-days: 7
 
-      - name: Define Test Matrix
-        id: matrix
-        run: |
-          echo "matrix=$(jq -c . < ./libvirt/e2e_matrix_libvirt.json)" >> "$GITHUB_OUTPUT"
   # Run AWS e2e tests if pull request labeled 'test_e2e_aws'
   aws:
     name: aws
@@ -254,7 +248,15 @@ jobs:
     needs: [podvm, image, prep_install]
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.prep_install.outputs.matrix) }}
+      matrix:
+        container_runtime:
+          ["containerd", "crio"]
+        os:
+           - ubuntu
+        provider:
+           - generic
+        arch:
+          - amd64
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
@@ -262,7 +264,6 @@ jobs:
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
-      secure_comms: ${{ matrix.secure_comms }}
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
@@ -299,8 +300,6 @@ jobs:
 
   libvirt_e2e_arch_prep:
     runs-on: ubuntu-24.04
-    outputs:
-      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -315,11 +314,6 @@ jobs:
         run: |
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
-      - name: Define Test Matrix
-        id: matrix
-        run: |
-          echo "matrix=$(jq -c . < ./libvirt/libvirt_e2e_arch_matrix.json)" >> "$GITHUB_OUTPUT"
-
   # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_amd64:
     name: E2E tests on libvirt for the amd64 architecture
@@ -329,9 +323,6 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
     needs: [podvm_mkosi_amd64, libvirt_e2e_arch_prep, caa_image_amd64]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.libvirt_e2e_arch_prep.outputs.matrix) }}
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: ubuntu-24.04
@@ -352,9 +343,6 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
     needs: [podvm_mkosi_s390x, libvirt_e2e_arch_prep, caa_image_s390x]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.libvirt_e2e_arch_prep.outputs.matrix) }}
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: s390x-large
