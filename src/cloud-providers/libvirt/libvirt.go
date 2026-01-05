@@ -130,7 +130,7 @@ func getHostCapabilities(conn *libvirt.Connect) (*libvirtxml.Caps, error) {
 	return caps, nil
 }
 
-func GetDomainCapabilities(conn *libvirt.Connect, emulatorbin string, arch string, machine string, virttype string, flags uint32) (*libvirtxml.DomainCaps, error) {
+func GetDomainCapabilities(conn *libvirt.Connect, emulatorbin string, arch string, machine string, virttype string, flags libvirt.ConnectGetDomainCapabilitiesFlags) (*libvirtxml.DomainCaps, error) {
 	capsXML, err := conn.GetDomainCapabilities(emulatorbin, arch, machine, virttype, flags)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get domain capabilities, cause: %w", err)
