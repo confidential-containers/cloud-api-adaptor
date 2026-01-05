@@ -70,6 +70,17 @@ func (i *tags) Set(value string) error {
 	return nil
 }
 
+type dedicatedHostIDs []string
+
+func (i *dedicatedHostIDs) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *dedicatedHostIDs) Set(value string) error {
+	*i = append(*i, toList(value, ",")...)
+	return nil
+}
+
 type Config struct {
 	ApiKey                   string
 	IAMProfileID             string
@@ -91,6 +102,9 @@ type Config struct {
 	DisableCVM               bool
 	ClusterID                string
 	Tags                     tags
+	DedicatedHostIDs         dedicatedHostIDs
+
+	selectedDedicatedHostID string
 }
 
 func (c Config) Redact() Config {
