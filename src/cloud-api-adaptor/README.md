@@ -27,7 +27,6 @@ Please refer to the instructions mentioned in the following [doc](./install/READ
 * azure
 * ibmcloud
 * libvirt
-* vsphere
 
 ### Adding a new provider
 
