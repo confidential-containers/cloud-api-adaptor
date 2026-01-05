@@ -27,7 +27,6 @@ require (
 	github.com/docker/go-connections v0.5.0
 	github.com/kdomanski/iso9660 v0.4.0
 	github.com/stretchr/testify v1.11.1
-	github.com/vmware/govmomi v0.33.1
 	golang.org/x/crypto v0.45.0
 	golang.org/x/oauth2 v0.32.0
 	google.golang.org/api v0.229.0
