@@ -81,6 +81,17 @@ func (i *dedicatedHostIDs) Set(value string) error {
 	return nil
 }
 
+type dedicatedHostGroupIDs []string
+
+func (i *dedicatedHostGroupIDs) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *dedicatedHostGroupIDs) Set(value string) error {
+	*i = append(*i, toList(value, ",")...)
+	return nil
+}
+
 type Config struct {
 	ApiKey                   string
 	IAMProfileID             string
@@ -103,8 +114,10 @@ type Config struct {
 	ClusterID                string
 	Tags                     tags
 	DedicatedHostIDs         dedicatedHostIDs
+	DedicatedHostGroupIDs    dedicatedHostGroupIDs
 
-	selectedDedicatedHostID string
+	selectedDedicatedHostID      string
+	selectedDedicatedHostGroupID string
 }
 
 func (c Config) Redact() Config {

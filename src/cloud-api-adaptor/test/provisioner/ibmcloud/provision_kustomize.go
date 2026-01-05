@@ -69,6 +69,8 @@ func isKustomizeConfigMapKey(key string) bool {
 		return true
 	case "IBMCLOUD_DEDICATED_HOST_IDS":
 		return true
+	case "IBMCLOUD_DEDICATED_HOST_GROUP_IDS":
+		return true
 	default:
 		return false
 	}
