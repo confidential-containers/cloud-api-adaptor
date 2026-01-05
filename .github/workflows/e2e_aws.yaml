@@ -68,6 +68,8 @@ jobs:
     needs: aws-credentials
     if: needs.aws-credentials.outputs.has_secrets == 'true'
     runs-on: ubuntu-22.04
+    # Remove this when the job becomes stable
+    continue-on-error: ${{ inputs.cluster_type == 'eks' }}
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
@@ -106,6 +108,11 @@ jobs:
           [ -n "$go_version" ]
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
           echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
+
+      - name: Install qemu-img
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-utils
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
         uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
@@ -152,12 +159,29 @@ jobs:
           cat kustomization.yaml
           echo "::endgroup::"
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-duration-seconds: 7200
+
       - name: Config aws
         run: |
+          if [[ "${CLUSTER_TYPE}" = "eks" ]]; then
+            DISABLE_CVM="false"
+            AWS_REGION="us-east-2"
+            echo "AWS_REGION=${AWS_REGION}" >> "$GITHUB_ENV"
+            # m6a.large (AMD SEV-SNP) is available in us-east-2
+            echo "aws_region=\"${AWS_REGION}\"" >> aws.properties
+            echo "podvm_aws_instance_type=\"m6a.large\"" >> aws.properties
+          else
+            DISABLE_CVM="true"
+          fi
           cat <<EOF>>aws.properties
           CAA_IMAGE="${CAA_IMAGE}"
           container_runtime="${CONTAINER_RUNTIME}"
-          disablecvm="true"
+          disablecvm="${DISABLE_CVM}"
           cluster_type="${CLUSTER_TYPE}"
           ssh_kp_name="caa-e2e-test"
           resources_basename="${RESOURCES_BASENAME}"
@@ -166,13 +190,6 @@ jobs:
           echo "::group::aws.properties"
           cat aws.properties
           echo "::endgroup::"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
-        with:
-          aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
-          role-duration-seconds: 7200
 
       - name: Create on-prem cluster
         if: inputs.cluster_type == 'onprem'
@@ -187,6 +204,13 @@ jobs:
           ./libvirt/kcli_cluster.sh create
           echo "KUBECONFIG=$HOME/.kcli/clusters/peer-pods/auth/kubeconfig" >> "$GITHUB_ENV"
           echo "::endgroup::"
+
+      - name: Install eksctl
+        if: inputs.cluster_type == 'eks'
+        run: |
+          curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz"
+          tar -xzf eksctl_Linux_amd64.tar.gz -C /usr/local/bin && rm eksctl_Linux_amd64.tar.gz
+          eksctl version
 
       - name: run tests
         id: runTests
