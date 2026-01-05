@@ -21,34 +21,14 @@ if [[ -n "${ACTIVATION_KEY}" && -n "${ORG_ID}" ]]; then \
 fi
 
 # install required packages
-if [ "$CLOUD_PROVIDER" == "vsphere" ]
-then
-# Add vsphere specific commands to execute on remote
-    case $PODVM_DISTRO in
-    rhel)
-        (! dnf list --installed | grep open-vm-tools > /dev/null 2>&1) && \
-        (! dnf -y install open-vm-tools) && \
-             echo "$PODVM_DISTRO: Error installing package required for cloud provider: $CLOUD_PROVIDER" 1>&2 && exit 1
-        ;;
-    ubuntu)
-        (! dpkg -l | grep open-vm-tools > /dev/null 2>&1) && apt-get update && \
-        (! apt-get -y install open-vm-tools > /dev/null 2>&1) && \
-             echo "$PODVM_DISTRO: Error installing package required for cloud provider: $CLOUD_PROVIDER" 1>&2  && exit 1
-        ;;
-    *)
-        ;;
-    esac
-fi
-
 if [[ "$CLOUD_PROVIDER" == "azure" || "$CLOUD_PROVIDER" == "generic" ]] && [[ "$PODVM_DISTRO" == "ubuntu" ]] && [[ "$ARCH" == "x86_64" ]]; then
     export DEBIAN_FRONTEND=noninteractive
     sudo apt-get update
     sudo apt-get install -y --no-install-recommends libtss2-tctildr0
 fi
 
-# Install iptables for all providers except docker/vsphere.
-if [ "$CLOUD_PROVIDER" != "vsphere" ] && [ "$CLOUD_PROVIDER" != "docker" ]
-then
+# Install iptables for all providers except docker.
+if [[ "$CLOUD_PROVIDER" != "docker" ]]; then
     if [ ! -x "$(command -v iptables)" ]; then
         case $PODVM_DISTRO in
         rhel)

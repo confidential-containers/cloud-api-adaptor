@@ -13,7 +13,7 @@
   ```
 
   You should see "worker" under the "ROLES" column as shown below:
-  
+
   ```sh
   NAME             STATUS   ROLES                         AGE   VERSION
   testk-master-0   Ready    control-plane,master,worker   37h   v1.25.0
@@ -33,7 +33,7 @@
 - Install
 
   ```sh
-  export CLOUD_PROVIDER=<aws|azure|gcp|docker|ibmcloud|ibmcloud-powervs|libvirt|vsphere>
+  export CLOUD_PROVIDER=<aws|azure|gcp|docker|ibmcloud|ibmcloud-powervs|libvirt>
   make deploy
   ```
 
@@ -108,9 +108,9 @@ For example if you want to install `v0.11.0` then run the following commands:
 ## Building custom cloud-api-adaptor image
 
 - Set CLOUD_PROVIDER
-  
+
   ```sh
-  export CLOUD_PROVIDER=<aws|azure|ibmcloud|ibmcloud-powervs|libvirt|vsphere>
+  export CLOUD_PROVIDER=<aws|azure|ibmcloud|ibmcloud-powervs|libvirt>
   ```
 
 - Set container registry and image name

@@ -17,7 +17,7 @@ In order to build locally it requires the source trees and softwares mentioned i
 Finally run the following commands to build the qcow2 image:
 
 ```bash
-$ export CLOUD_PROVIDER=[aws|azure|ibmcloud|libvirt|vsphere|generic]
+$ export CLOUD_PROVIDER=[aws|azure|ibmcloud|libvirt|generic]
 $ make image
 ```
 **NOTE:** "generic" is a best-effort provider agnostic image creation
