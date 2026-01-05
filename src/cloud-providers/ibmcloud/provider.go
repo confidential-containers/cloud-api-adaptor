@@ -154,6 +154,19 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		config.selectedDedicatedHostID = selected
 	}
 
+	if len(config.DedicatedHostGroupIDs) > 0 {
+		selected, err := pickIDInZone(
+			config.DedicatedHostGroupIDs,
+			config.ZoneName,
+			func(id string) (string, error) { return getDedicatedHostGroupZone(vpcV1, id) },
+			"Dedicated Host Group",
+		)
+		if err != nil {
+			return nil, err
+		}
+		config.selectedDedicatedHostGroupID = selected
+	}
+
 	gTaggingV1, err := globaltaggingv1.NewGlobalTaggingV1(
 		&globaltaggingv1.GlobalTaggingV1Options{
 			Authenticator: authenticator,
@@ -237,6 +250,18 @@ func getDedicatedHostZone(vpcV1 *vpcv1.VpcV1, dedicatedHostID string) (string, e
 	}
 
 	return *dedicatedHost.Zone.Name, nil
+}
+
+func getDedicatedHostGroupZone(vpcV1 *vpcv1.VpcV1, dedicatedHostGroupID string) (string, error) {
+	dedicatedHostGroupOptions := vpcv1.GetDedicatedHostGroupOptions{
+		ID: &dedicatedHostGroupID,
+	}
+	dedicatedHostGroup, response, err := vpcV1.GetDedicatedHostGroup(&dedicatedHostGroupOptions)
+	if err != nil {
+		return "", fmt.Errorf("VPC error with:\n %w\nfurther details:\n %v", err, response)
+	}
+
+	return *dedicatedHostGroup.Zone.Name, nil
 }
 
 // pickIDInZone finds the first ID whose zone equals zoneName.
@@ -336,6 +361,11 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 		}
 	}
 
+	// When both dedicated host id and group id provided the (more specific) dedicated host id will be used as the placement target
+	if p.serviceConfig.selectedDedicatedHostGroupID != "" {
+		prototype.PlacementTarget = &vpcv1.InstancePlacementTargetPrototypeDedicatedHostGroupIdentityDedicatedHostGroupIdentityByID{ID: &p.serviceConfig.selectedDedicatedHostGroupID}
+	}
+
 	if p.serviceConfig.selectedDedicatedHostID != "" {
 		prototype.PlacementTarget = &vpcv1.InstancePlacementTargetPrototypeDedicatedHostIdentityDedicatedHostIdentityByID{ID: &p.serviceConfig.selectedDedicatedHostID}
 	}
@@ -408,9 +438,8 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
-	vpcInstance, resp, err := p.vpc.CreateInstanceWithContext(ctx, &vpcv1.CreateInstanceOptions{InstancePrototype: prototype})
+	vpcInstance, err := p.createInstanceWithFallback(ctx, prototype)
 	if err != nil {
-		logger.Printf("failed to create an instance : %v and the response is %s", err, resp)
 		return nil, err
 	}
 
@@ -453,13 +482,51 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		return instance, fmt.Errorf("failed to get attach tag options: %w", err)
 	}
 
-	_, resp, err = p.globalTagging.AttachTagWithContext(ctx, options)
+	_, resp, err := p.globalTagging.AttachTagWithContext(ctx, options)
 	if err != nil {
 		return instance, fmt.Errorf("failed to attach tags: %w and the response is %s", err, resp)
 	}
 	logger.Printf("successfully attached tags: %v to instance: %v", options.TagNames, *vpcInstance.CRN)
 
 	return instance, nil
+}
+
+func (p *ibmcloudVPCProvider) createInstanceWithFallback(ctx context.Context, prototype *vpcv1.InstancePrototype) (*vpcv1.Instance, error) {
+
+	dedicatedHostID := p.serviceConfig.selectedDedicatedHostID
+	dedicatedHostGroupID := p.serviceConfig.selectedDedicatedHostGroupID
+
+	inst, resp, err := p.vpc.CreateInstanceWithContext(ctx, &vpcv1.CreateInstanceOptions{
+		InstancePrototype: prototype,
+	})
+	if err == nil {
+		return inst, nil
+	}
+
+	// Fallback if both IDs exist
+	if dedicatedHostID != "" && dedicatedHostGroupID != "" {
+		logger.Printf("warning, creation failed on dedicated host %q: %v; retrying on dedicated host group %q", dedicatedHostID, err, dedicatedHostGroupID)
+
+		prototype.PlacementTarget =
+			&vpcv1.InstancePlacementTargetPrototypeDedicatedHostGroupIdentityDedicatedHostGroupIdentityByID{
+				ID: &dedicatedHostGroupID,
+			}
+
+		inst2, resp2, err2 := p.vpc.CreateInstanceWithContext(ctx, &vpcv1.CreateInstanceOptions{
+			InstancePrototype: prototype,
+		})
+		if err2 == nil {
+			return inst2, nil
+		}
+
+		// Return both errors for context.
+		return nil, errors.Join(
+			fmt.Errorf("instance creation on dedicated host %q failed: %w and the response is %s", dedicatedHostID, err, resp),
+			fmt.Errorf("fallback instance creation on dedicated host group %q failed: %w and the response is %s", dedicatedHostGroupID, err2, resp2),
+		)
+	}
+
+	return nil, fmt.Errorf("failed to create an instance: %w and the response is %s", err, resp)
 }
 
 // Select an instance profile based on the memory and vcpu requirements

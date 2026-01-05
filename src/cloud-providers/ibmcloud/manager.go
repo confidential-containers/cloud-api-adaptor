@@ -46,6 +46,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Images, "image-id", "", "IBMCLOUD_PODVM_IMAGE_ID", "List of Image IDs, comma separated", provider.Required())
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.Tags, "tags", "", "TAGS", "List of tags to attach to the Pod VMs, comma separated")
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.DedicatedHostIDs, "dedicated-host-ids", "", "IBMCLOUD_DEDICATED_HOST_IDS", "List of Dedicated Host IDs, provide one from each Zone")
+	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.DedicatedHostGroupIDs, "dedicated-host-group-ids", "", "IBMCLOUD_DEDICATED_HOST_GROUP_IDS", "List of Dedicated Host Group IDs, provide one from each Zone")
 }
 
 func (_ *Manager) LoadEnv() {

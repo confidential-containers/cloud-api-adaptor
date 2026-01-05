@@ -38,6 +38,14 @@ providerConfigs:
     # (default: "")
     # IBMCLOUD_CLUSTER_ID: ""
 
+    # List of Dedicated Host Group IDs, provide one from each Zone
+    # (default: "")
+    # IBMCLOUD_DEDICATED_HOST_GROUP_IDS: ""
+
+    # List of Dedicated Host IDs, provide one from each Zone
+    # (default: "")
+    # IBMCLOUD_DEDICATED_HOST_IDS: ""
+
     # IBM Cloud IAM Service URL
     # (default: "https://iam.cloud.ibm.com/identity/token")
     # IBMCLOUD_IAM_ENDPOINT: "https://iam.cloud.ibm.com/identity/token"
