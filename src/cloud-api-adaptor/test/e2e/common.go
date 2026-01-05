@@ -4,6 +4,7 @@
 package e2e
 
 import (
+	"bytes"
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -23,6 +24,8 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 
+	"text/template"
+
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -33,31 +36,7 @@ const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
 const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
 const INITDATA_ANNOTATION = "io.katacontainers.config.hypervisor.cc_init_data"
 
-var testInitdata string = `algorithm = "sha384"
-version = "0.1.0"
-
-[data]
-"aa.toml" = '''
-[token_configs]
-[token_configs.coco_as]
-url = '%s'
-
-[token_configs.kbs]
-url = '%s'
-cert = """%s"""
-'''
-
-"cdh.toml"  = '''
-socket = 'unix:///run/confidential-containers/cdh.sock'
-
-[kbc]
-name = 'cc_kbc'
-url = '%s'
-kbs_cert = """%s"""
-'''
-
-"policy.rego" = '''
-package agent_policy
+const POLICY = `package agent_policy
 
 import future.keywords.in
 import future.keywords.every
@@ -86,17 +65,74 @@ default UpdateInterfaceRequest := true
 default UpdateRoutesRequest := true
 default WaitProcessRequest := true
 default WriteStreamRequest := true
+`
+
+type initdataParams struct {
+	CoCoASURL string
+	KBSURL    string
+	KBSCert   string
+	Policy    string
+}
+
+var testInitdataTmpl string = `algorithm = "sha384"
+version = "0.1.0"
+
+[data]
+"aa.toml" = '''
+[token_configs]
+[token_configs.coco_as]
+url = '{{ .CoCoASURL }}'
+
+[token_configs.kbs]
+url = '{{ .KBSURL }}'
+{{- if .KBSCert }}
+cert = """{{ .KBSCert }}"""
+{{- end }}
 '''
+
+"cdh.toml"  = '''
+socket = 'unix:///run/confidential-containers/cdh.sock'
+
+[kbc]
+name = 'cc_kbc'
+url = '{{ .KBSURL }}'
+{{- if .KBSCert }}
+kbs_cert = """{{ .KBSCert }}"""
+{{- end }}
+'''
+{{ if .Policy }}
+
+"policy.rego" = '''{{ .Policy }}'''
+{{- end }}
 `
 
 // Build gzipped and base64 encoded string
-func buildInitdataAnnotation(kbsEndpoint string, testInitdataVal string) (string, error) {
-	content, err := os.ReadFile("../trustee/kbs/config/kubernetes/base/https-cert.pem")
-	if err != nil {
-		return "", err
+func buildInitdataAnnotation(kbsEndpoint string) (string, error) {
+	params := initdataParams{
+		CoCoASURL: kbsEndpoint,
+		KBSURL:    kbsEndpoint,
+		Policy:    POLICY,
 	}
-	certContent := string(content)
-	initdataToml := fmt.Sprintf(testInitdataVal, kbsEndpoint, kbsEndpoint, certContent, kbsEndpoint, certContent)
+
+	if strings.HasPrefix(kbsEndpoint, "https") {
+		content, err := os.ReadFile("../trustee/kbs/config/kubernetes/base/https-cert.pem")
+		if err != nil {
+			return "", err
+		}
+		params.KBSCert = string(content)
+	}
+
+	tmpl, err := template.New("initdata").Parse(testInitdataTmpl)
+	if err != nil {
+		return "", fmt.Errorf("parse template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, params); err != nil {
+		return "", fmt.Errorf("execute template: %w", err)
+	}
+
+	initdataToml := buf.String()
 	return initdata.Encode(initdataToml)
 }
 
@@ -275,7 +311,7 @@ func WithInitdata(kbsEndpoint string) PodOption {
 			p.ObjectMeta.Annotations = make(map[string]string)
 		}
 		key := INITDATA_ANNOTATION
-		value, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
+		value, err := buildInitdataAnnotation(kbsEndpoint)
 		if err != nil {
 			log.Fatalf("failed to build initdata %s", err)
 		}
@@ -414,8 +450,8 @@ func NewBusyboxPodWithName(namespace, podName string) PodOrError {
 	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"})))
 }
 
-func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string, testInitdataVal string) PodOrError {
-	initdata, err := buildInitdataAnnotation(kbsEndpoint, testInitdataVal)
+func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string) PodOrError {
+	initdata, err := buildInitdataAnnotation(kbsEndpoint)
 	if err != nil {
 		return fromError(err)
 	}
