@@ -189,7 +189,7 @@ func TestAzureImageDecryption(t *testing.T) {
 // the az tpm attester requires the digest to be sha256 and is hence truncated
 func TestInitDataMeasurement(t *testing.T) {
 	kbsEndpoint := "http://some.endpoint"
-	annotation, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
+	annotation, err := buildInitdataAnnotation(kbsEndpoint)
 	if err != nil {
 		log.Fatalf("failed to build initdata %s", err)
 	}
