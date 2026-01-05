@@ -248,6 +248,7 @@ jobs:
       run: test/utils/checkout_kbs.sh
 
     - name: Run e2e test
+      id: runTests
       env:
         TEST_PROVISION: "no"
         DEPLOY_KBS: "yes"
@@ -256,6 +257,17 @@ jobs:
       run: |
         az aks get-credentials --resource-group "$RG_NAME" --name "$CLUSTER_NAME"
         make test-e2e RUN_TESTS="^Test\(CreateSimplePodAzure\|RemoteAttestation\|InitDataMeasurement\)$"
+
+    - name: Debug on failure
+      if: failure() && steps.runTests.outcome == 'failure'
+      timeout-minutes: 15
+      working-directory: ./
+      env:
+        CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
+      run: |
+        az aks get-credentials --resource-group "$RG_NAME" --name "$CLUSTER_NAME" || true
+        ./hack/ci-e2e-debug-fail.sh
+      shell: bash {0}
 
   cleanup:
     runs-on: ubuntu-24.04
