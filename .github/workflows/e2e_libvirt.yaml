@@ -28,11 +28,6 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
         required: false
         type: string
-      secure_comms:
-        default: 'none'
-        description: SecureComms configuration. Defaults to none.
-        required: false
-        type: string
       oras:
         description: Whether the podvm_image is oras published
         default: false
@@ -60,9 +55,7 @@ permissions: {}
 jobs:
   test:
     runs-on: ${{ inputs.runner }}
-    name: "Libvirt e2e tests: (${{ inputs.runner }}, ${{ inputs.container_runtime }}, secure_comms: ${{ inputs.secure_comms }}, mkosi: ${{ inputs.oras }}"
-    # TODO: remove this when secure_comms is stable again (issue #2635)
-    continue-on-error: ${{ inputs.secure_comms != 'none' && true || false }}
+    name: "Libvirt e2e tests: (${{ inputs.runner }}, ${{ inputs.container_runtime }}, mkosi: ${{ inputs.oras }}"
     steps:
       - name: Checkout Code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -130,7 +123,6 @@ jobs:
 
       - name: Config Libvirt
         run: |
-          export TEST_E2E_SECURE_COMMS="${{ inputs.secure_comms }}"
           ./libvirt/config_libvirt.sh
           echo "container_runtime=\"${{ inputs.container_runtime }}\"" >> libvirt.properties
           # For debugging
@@ -195,7 +187,6 @@ jobs:
           export TEST_PROVISION_FILE="$PWD/libvirt.properties"
           export TEST_PODVM_IMAGE="${{ env.PODVM_QCOW2 }}"
           export TEST_E2E_TIMEOUT="75m"
-          export TEST_E2E_SECURE_COMMS="${{ inputs.secure_comms }}"
 
           make test-e2e
 
