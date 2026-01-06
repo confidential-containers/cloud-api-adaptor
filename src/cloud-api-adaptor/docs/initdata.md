@@ -187,7 +187,6 @@ data:
   LIBVIRT_POOL: default
   LIBVIRT_URI: qemu+ssh://root@192.168.122.1/system?no_verify=1
   LIBVIRT_VOL_NAME: podvm-base.qcow2
-  SECURE_COMMS: "false"
 kind: ConfigMap
 ```
 

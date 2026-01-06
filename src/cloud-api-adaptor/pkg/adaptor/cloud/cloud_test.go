@@ -18,10 +18,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/kubemgr"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/ppssh"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/securecomms/test"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
@@ -123,84 +120,12 @@ func TestCloudService(t *testing.T) {
 	}
 
 	cfg := &ServerConfig{
-		SecureComms:   false,
 		PodsDir:       dir,
 		ForwarderPort: forwarder.DefaultListenPort,
 	}
 
 	// false, "", "", "", "", "", dir, forwarder.DefaultListenPort, ""
-	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, cfg, "")
-
-	assert.NotNil(t, s)
-
-	sandboxID := "123"
-	sandboxNS := "default"
-	sandboxName := "mypod"
-
-	req := &pb.CreateVMRequest{
-		Id: sandboxID,
-		Annotations: map[string]string{
-			cri.SandboxNamespace: sandboxNS,
-			cri.SandboxName:      sandboxName,
-		},
-	}
-
-	res1, err := s.CreateVM(ctx, req)
-
-	assert.NoError(t, err)
-	assert.NotNil(t, res1)
-	assert.Contains(t, res1.AgentSocketPath, dir)
-
-	res2, err := s.StartVM(ctx, &pb.StartVMRequest{Id: sandboxID})
-
-	assert.NoError(t, err)
-	assert.NotNil(t, res2)
-
-	res3, err := s.StopVM(ctx, &pb.StopVMRequest{Id: sandboxID})
-
-	assert.NoError(t, err)
-	assert.NotNil(t, res3)
-}
-
-func TestCloudServiceWithSecureComms(t *testing.T) {
-	sshport := "6001"
-	kubemgr.InitKubeMgrMock()
-	test.CreatePKCS8Secret(t)
-	test.KBSServer("9009")
-	s9009 := test.HttpServer(forwarder.DefaultListenPort)
-	if s9009 == nil {
-		t.Error("Failed - could not create server")
-	}
-
-	// create a podvm
-	gkc := test.NewGetKeyClient("9019")
-	ctx2, cancel := context.WithCancel(context.Background())
-
-	ppSecrets := ppssh.NewPpSecrets(ppssh.GetSecret(gkc.GetKey))
-	ppSecrets.AddKey(ppssh.WN_PUBLIC_KEY)
-	ppSecrets.AddKey(ppssh.PP_PRIVATE_KEY)
-
-	sshServer := ppssh.NewSshServer([]string{"BOTH_PHASES:KBS:9019"}, []string{"KUBERNETES_PHASE:KATAAGENT:127.0.0.1:7111"}, ppSecrets, sshport)
-	_ = sshServer.Start(ctx2)
-	defer func() {
-		cancel()
-	}()
-	ctx := context.Background()
-	dir := t.TempDir()
-
-	proxyFactory := &mockProxyFactory{
-		podsDir: dir,
-	}
-
-	cfg := &ServerConfig{
-		SecureComms:           true,
-		SecureCommsTrustee:    true,
-		PodsDir:               dir,
-		ForwarderPort:         forwarder.DefaultListenPort,
-		SecureCommsKbsAddress: "127.0.0.1:9009",
-	}
-
-	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, cfg, sshport)
+	s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, cfg)
 
 	assert.NotNil(t, s)
 

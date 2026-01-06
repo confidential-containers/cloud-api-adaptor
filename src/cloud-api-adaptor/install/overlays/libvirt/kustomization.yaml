@@ -23,7 +23,6 @@ configMapGenerator:
   - LIBVIRT_NET="default" # set
   - LIBVIRT_POOL="default" # set
   - DISABLECVM="true" # set as false to enable confidential VM
-  - SECURE_COMMS="false" # set as true to enable Secure Comms
   - INITDATA="" # set default initdata for podvm
   - LIBVIRT_EFI_FIRMWARE="/usr/share/OVMF/OVMF_CODE_4M.fd" # Edit to change the EFI firmware path, or comment to unset, if not using EFI.
   #- LIBVIRT_LAUNCH_SECURITY="" #s390-pv

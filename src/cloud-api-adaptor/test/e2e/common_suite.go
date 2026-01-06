@@ -35,14 +35,6 @@ func DoTestCreateSimplePod(t *testing.T, e env.Environment, assert CloudAssert) 
 	}
 }
 
-func DoTestLibvirtCreateSimplePodWithSecureCommsIsValid(t *testing.T, e env.Environment, assert CloudAssert) {
-	if os.Getenv("SECURE_COMMS") != "true" {
-		t.Skip("Skip - SecureComms is configured to be inactive - no need to test")
-	}
-	pod := NewBusyboxPodWithName(E2eNamespace, "simple-test-with-security-comms-is-active").GetPodOrFatal(t)
-	NewTestCase(t, e, "SimplePeerPodWithSecureComms", assert, "PodVM is created with secure comms").WithPod(pod).WithExpectedCaaPodLogStrings("Using PP SecureComms").Run()
-}
-
 func DoTestDeleteSimplePod(t *testing.T, e env.Environment, assert CloudAssert) {
 	pod := NewBusyboxPodWithName(E2eNamespace, "deletion-test").GetPodOrFatal(t)
 	duration := assert.DefaultTimeout()
