@@ -25,21 +25,18 @@ const DefaultCPU = 2
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
-	conn                    *libvirt.Connect // Libvirt connection
-	containerRuntime        string           // Name of the container runtime
-	network                 string           // Network name
-	ssh_key_file            string           // SSH key file used to connect to Libvirt
-	storage                 string           // Storage pool name
-	uri                     string           // Libvirt URI
-	wd                      string           // libvirt's directory path on this repository
-	volumeName              string           // Podvm volume name
-	clusterName             string           // Cluster name
-	tunnelType              string           // Tunnel Type
-	vxlanPort               string           // VXLAN port number
-	secure_comms            string           // Activate CAA SECURE_COMMS
-	secure_comms_no_trustee string           // Deactivate Trustee mode in SECURE_COMMS
-	secure_comms_kbs_addr   string           // KBS URL
-	initdata                string           // InitData
+	conn             *libvirt.Connect // Libvirt connection
+	containerRuntime string           // Name of the container runtime
+	network          string           // Network name
+	ssh_key_file     string           // SSH key file used to connect to Libvirt
+	storage          string           // Storage pool name
+	uri              string           // Libvirt URI
+	wd               string           // libvirt's directory path on this repository
+	volumeName       string           // Podvm volume name
+	clusterName      string           // Cluster name
+	tunnelType       string           // Tunnel Type
+	vxlanPort        string           // VXLAN port number
+	initdata         string           // InitData
 }
 
 // LibvirtInstallOverlay implements the InstallOverlay interface
@@ -101,21 +98,6 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		vxlanPort = properties["vxlan_port"]
 	}
 
-	secure_comms := "false"
-	if properties["SECURE_COMMS"] != "" {
-		secure_comms = properties["SECURE_COMMS"]
-	}
-
-	secure_comms_kbs_addr := ""
-	if properties["SECURE_COMMS_KBS_ADDR"] != "" {
-		secure_comms_kbs_addr = properties["SECURE_COMMS_KBS_ADDR"]
-	}
-
-	secure_comms_no_trustee := "false"
-	if properties["SECURE_COMMS_NO_TRUSTEE"] != "" {
-		secure_comms_no_trustee = properties["SECURE_COMMS_NO_TRUSTEE"]
-	}
-
 	initdata := ""
 	if properties["INITDATA"] != "" {
 		initdata = properties["INITDATA"]
@@ -123,21 +105,18 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
-		conn:                    conn,
-		containerRuntime:        properties["container_runtime"],
-		network:                 network,
-		ssh_key_file:            ssh_key_file,
-		storage:                 storage,
-		uri:                     uri,
-		wd:                      wd,
-		volumeName:              vol_name,
-		clusterName:             clusterName,
-		tunnelType:              tunnelType,
-		vxlanPort:               vxlanPort,
-		secure_comms:            secure_comms,
-		secure_comms_kbs_addr:   secure_comms_kbs_addr,
-		secure_comms_no_trustee: secure_comms_no_trustee,
-		initdata:                initdata,
+		conn:             conn,
+		containerRuntime: properties["container_runtime"],
+		network:          network,
+		ssh_key_file:     ssh_key_file,
+		storage:          storage,
+		uri:              uri,
+		wd:               wd,
+		volumeName:       vol_name,
+		clusterName:      clusterName,
+		tunnelType:       tunnelType,
+		vxlanPort:        vxlanPort,
+		initdata:         initdata,
 	}, nil
 }
 
@@ -242,18 +221,15 @@ func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config)
 
 func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
-		"CONTAINER_RUNTIME":       l.containerRuntime,
-		"network":                 l.network,
-		"podvm_volume":            l.volumeName,
-		"ssh_key_file":            l.ssh_key_file,
-		"storage":                 l.storage,
-		"uri":                     l.uri,
-		"tunnel_type":             l.tunnelType,
-		"vxlan_port":              l.vxlanPort,
-		"SECURE_COMMS":            l.secure_comms,
-		"SECURE_COMMS_KBS_ADDR":   l.secure_comms_kbs_addr,
-		"SECURE_COMMS_NO_TRUSTEE": l.secure_comms_no_trustee,
-		"INITDATA":                l.initdata,
+		"CONTAINER_RUNTIME": l.containerRuntime,
+		"network":           l.network,
+		"podvm_volume":      l.volumeName,
+		"ssh_key_file":      l.ssh_key_file,
+		"storage":           l.storage,
+		"uri":               l.uri,
+		"tunnel_type":       l.tunnelType,
+		"vxlan_port":        l.vxlanPort,
+		"INITDATA":          l.initdata,
 	}
 }
 
@@ -360,17 +336,14 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 
 	// Mapping the internal properties to ConfigMapGenerator properties and their default values.
 	mapProps := map[string][2]string{
-		"network":                 {"default", "LIBVIRT_NET"},
-		"storage":                 {"default", "LIBVIRT_POOL"},
-		"pause_image":             {"", "PAUSE_IMAGE"},
-		"podvm_volume":            {"", "LIBVIRT_VOL_NAME"},
-		"uri":                     {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
-		"tunnel_type":             {"", "TUNNEL_TYPE"},
-		"vxlan_port":              {"", "VXLAN_PORT"},
-		"INITDATA":                {"", "INITDATA"},
-		"SECURE_COMMS":            {"", "SECURE_COMMS"},
-		"SECURE_COMMS_NO_TRUSTEE": {"", "SECURE_COMMS_NO_TRUSTEE"},
-		"SECURE_COMMS_KBS_ADDR":   {"", "SECURE_COMMS_KBS_ADDR"},
+		"network":      {"default", "LIBVIRT_NET"},
+		"storage":      {"default", "LIBVIRT_POOL"},
+		"pause_image":  {"", "PAUSE_IMAGE"},
+		"podvm_volume": {"", "LIBVIRT_VOL_NAME"},
+		"uri":          {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
+		"tunnel_type":  {"", "TUNNEL_TYPE"},
+		"vxlan_port":   {"", "VXLAN_PORT"},
+		"INITDATA":     {"", "INITDATA"},
 	}
 
 	for k, v := range mapProps {

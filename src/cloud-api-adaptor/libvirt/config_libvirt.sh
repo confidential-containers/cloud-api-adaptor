@@ -99,9 +99,6 @@ installK8sclis() {
     fi
 }
 
-TEST_E2E_SECURE_COMMS=${TEST_E2E_SECURE_COMMS:-none}
-echo "SECURE_COMMS is ${TEST_E2E_SECURE_COMMS}"
-
 echo "Installing Go..."
 installGolang
 echo "Installing Libvirt..."
@@ -128,22 +125,6 @@ rm -f libvirt.properties
 echo "libvirt_uri=\"qemu+ssh://${USER}@${IP}/system?no_verify=1\"" >> libvirt.properties
 echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
 echo "CLUSTER_NAME=\"peer-pods\"" >> libvirt.properties
-
-# switch to the appropriate e2e test and add configs to libvirt.properties as needed
-case ${TEST_E2E_SECURE_COMMS} in
-
-  withoutKbs)
-    echo "processing withoutKbs"
-    echo "SECURE_COMMS=\"true\"" >> libvirt.properties
-    echo "SECURE_COMMS_NO_TRUSTEE=\"true\"" >> libvirt.properties
-    echo "INITDATA=\"\"" >> libvirt.properties
-    ;;
-
-  *)
-    echo "processing none"
-    echo "SECURE_COMMS=\"false\"" >> libvirt.properties
-    ;;
-esac
 
 if [[ "${OS_DISTRO}" == "ubuntu" ]] && [[ "${CI:-}" != "true" ]]; then
     # Reload shell so that pipx install PATH is available

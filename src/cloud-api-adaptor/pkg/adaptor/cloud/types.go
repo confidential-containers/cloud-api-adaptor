@@ -14,8 +14,6 @@ import (
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
-
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/wnssh"
 )
 
 type Service interface {
@@ -33,22 +31,20 @@ type cloudService struct {
 	cond         *sync.Cond
 	mutex        sync.Mutex
 	ppService    *k8sops.PeerPodService
-	sshClient    *wnssh.SshClient
 	serverConfig *ServerConfig
 }
 
 type sandboxID string
 
 type sandbox struct {
-	agentProxy    proxy.AgentProxy
-	podNetwork    *tunneler.Config
-	cloudConfig   *cloudinit.CloudConfig
-	id            sandboxID
-	podName       string
-	podNamespace  string
-	instanceName  string
-	instanceID    string
-	netNSPath     string
-	spec          provider.InstanceTypeSpec
-	sshClientInst *wnssh.SshClientInstance
+	agentProxy   proxy.AgentProxy
+	podNetwork   *tunneler.Config
+	cloudConfig  *cloudinit.CloudConfig
+	id           sandboxID
+	podName      string
+	podNamespace string
+	instanceName string
+	instanceID   string
+	netNSPath    string
+	spec         provider.InstanceTypeSpec
 }

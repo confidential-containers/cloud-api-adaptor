@@ -19,7 +19,6 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/securecomms/kubemgr"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 
@@ -83,15 +82,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	}
 
 	var (
-		disableTLS             bool
-		tlsConfig              tlsutil.TLSConfig
-		secureComms            bool
-		secureCommsNoTrustee   bool
-		secureCommsInbounds    string
-		secureCommsOutbounds   string
-		secureCommsPpInbounds  string
-		secureCommsPpOutbounds string
-		secureCommsKbsAddr     string
+		disableTLS bool
+		tlsConfig  tlsutil.TLSConfig
 	)
 
 	cmd.Parse(programName, os.Args[1:], func(flags *flag.FlagSet) {
@@ -120,13 +112,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		reg.BoolWithEnv(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "CLOUD_CONFIG_VERIFY", "Enable cloud config verify - should use it for production")
 		reg.IntWithEnv(&cfg.serverConfig.PeerPodsLimitPerNode, "peerpods-limit-per-node", 10, "PEERPODS_LIMIT_PER_NODE", "peer pods limit per node (default=10)")
 		reg.BoolWithEnv(&cfg.serverConfig.EnableScratchSpace, "enable-scratch-space", false, "ENABLE_SCRATCH_SPACE", "Enable encrypted scratch space for pod VMs")
-		reg.BoolWithEnv(&secureComms, "secure-comms", false, "SECURE_COMMS", "Use SSH to secure communication between cluster and peer pods")
-		reg.BoolWithEnv(&secureCommsNoTrustee, "secure-comms-no-trustee", false, "SECURE_COMMS_NO_TRUSTEE", "Deliver the keys to peer pods using userdata instead of Trustee")
-		reg.StringWithEnv(&secureCommsInbounds, "secure-comms-inbounds", "", "SECURE_COMMS_INBOUNDS", "WN Inbound tags for secure communication tunnels")
-		reg.StringWithEnv(&secureCommsOutbounds, "secure-comms-outbounds", "", "SECURE_COMMS_OUTBOUNDS", "WN Outbound tags for secure communication tunnels")
-		reg.StringWithEnv(&secureCommsPpInbounds, "secure-comms-pp-inbounds", "", "SECURE_COMMS_PP_INBOUNDS", "PP Inbound tags for secure communication tunnels")
-		reg.StringWithEnv(&secureCommsPpOutbounds, "secure-comms-pp-outbounds", "", "SECURE_COMMS_PP_OUTBOUNDS", "PP Outbound tags for secure communication tunnels")
-		reg.StringWithEnv(&secureCommsKbsAddr, "secure-comms-kbs", "kbs-service.trustee-operator-system:8080", "SECURE_COMMS_KBS_ADDR", "Address of a Trustee Service for Secure-Comms")
 
 		// Flags without environment variable support
 		flags.BoolVar(&disableTLS, "disable-tls", false, "Disable TLS encryption - use it only for testing")
@@ -142,23 +127,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 	fmt.Printf("%s: starting Cloud API Adaptor daemon for %q\n", programName, cloudName)
 
-	if secureComms {
-		err := kubemgr.InitKubeMgrInVivo()
-		if err != nil {
-			return nil, fmt.Errorf("secure comms failed to initialize KubeMgr: %w", err)
-		}
-
-		cfg.serverConfig.SecureComms = true
-		cfg.serverConfig.SecureCommsTrustee = !secureCommsNoTrustee
-		cfg.serverConfig.SecureCommsInbounds = secureCommsInbounds
-		cfg.serverConfig.SecureCommsOutbounds = secureCommsOutbounds
-		cfg.serverConfig.SecureCommsPpInbounds = secureCommsPpInbounds
-		cfg.serverConfig.SecureCommsPpOutbounds = secureCommsPpOutbounds
-		cfg.serverConfig.SecureCommsKbsAddress = secureCommsKbsAddr
-	} else {
-		if !disableTLS {
-			cfg.serverConfig.TLSConfig = &tlsConfig
-		}
+	if !disableTLS {
+		cfg.serverConfig.TLSConfig = &tlsConfig
 	}
 
 	// DEPRECATED: LoadEnv() is now a no-op for all providers.
