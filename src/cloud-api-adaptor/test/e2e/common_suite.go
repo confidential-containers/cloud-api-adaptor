@@ -573,7 +573,7 @@ func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, 
 	podName := "nginx-encrypted"
 	// encrypted images need this for the time being
 	annotations := map[string]string{"io.containerd.cri.runtime-handler": "kata-remote"}
-	pod := NewPod(E2eNamespace, podName, podName, image, WithAnnotations(annotations), WithInitdata(kbsEndpoint))
+	pod := NewPod(E2eNamespace, podName, podName, image, WithAnnotations(annotations), WithInitdata(kbsEndpoint, testInitdata))
 	duration := 3 * time.Minute
 	NewTestCase(t, e, "TestImageDecryption", assert, "Encrypted image layers have been decrypted").WithPod(pod).WithDeleteAssertion(&duration).Run()
 }
@@ -586,7 +586,7 @@ func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbs
 	env := []v1.EnvVar{{Name: key, Value: value}}
 	cmd := []string{"watch", "-n", "120", "-t", "--", "printenv MY_SECRET"}
 
-	pod := NewPod(E2eNamespace, podName, podName, imageName, WithEnvironmentVariables(env), WithInitdata(kbsEndpoint), WithCommand(cmd))
+	pod := NewPod(E2eNamespace, podName, podName, imageName, WithEnvironmentVariables(env), WithInitdata(kbsEndpoint, testInitdata), WithCommand(cmd))
 
 	NewTestCase(t, e, "TestSealedSecret", assert, "Unsealed secret has been set to ENV").WithPod(pod).WithExpectedPodLogString(expectedSecret).Run()
 }
@@ -595,7 +595,7 @@ func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbs
 // as test cases might be run in parallel
 func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
 	t.Log("Do test https kbs key release")
-	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-key-release", kbsEndpoint, testInitdata).GetPodOrFatal(t)
+	pod := NewBusyboxPodWithName(E2eNamespace, "kbs-key-release", WithInitdata(kbsEndpoint, testInitdata)).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + resourcePath},
@@ -619,7 +619,7 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kb
 // as test cases might be run in parallel
 func DoTestKbsKeyReleaseForFailure(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint, resourcePath, expectedSecret string) {
 	t.Log("Do test kbs key release failure case")
-	pod := NewBusyboxPodWithNameWithInitdata(E2eNamespace, "kbs-failure", kbsEndpoint, testInitdata).GetPodOrFatal(t)
+	pod := NewBusyboxPodWithName(E2eNamespace, "kbs-failure", WithInitdata(kbsEndpoint, testInitdata)).GetPodOrFatal(t)
 	testCommands := []TestCommand{
 		{
 			Command:       []string{"wget", "-q", "-O-", "http://127.0.0.1:8006/cdh/resource/" + resourcePath},
@@ -818,4 +818,28 @@ func DoTestPodVMwithAnnotationMemory(t *testing.T, e env.Environment, assert Clo
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 	NewTestCase(t, e, "PodVMwithAnnotationMemory", assert, "PodVM with Annotation Memory is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
+}
+
+func DoTestSignatureVerificationAcceptsSignedImage(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+	signed_image := "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed"
+
+	pod, err := CreatePodWithSignaturePolicy("unsigned-image", signed_image, kbs)
+	if err != nil {
+		t.Fatalf("CreatePodWithSignaturePolicy failed with: %v", err)
+	}
+
+	NewTestCase(t, e, "SignedImageSucceeds", assert, "PodVM is created").WithPod(pod).Run()
+}
+
+func DoTestSignatureVerificationRejectsUnsignedImage(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+	unsigned_image := "ghcr.io/confidential-containers/test-container-image-rs:unsigned"
+
+	pod, err := CreatePodWithSignaturePolicy("unsigned-image", unsigned_image, kbs)
+	if err != nil {
+		t.Fatalf("CreatePodWithSignaturePolicy failed with: %v", err)
+	}
+
+	//TODO review this message
+	expectedErrorMessage := "Image policy rejected: Denied by policy"
+	NewTestCase(t, e, "SignedImageSucceeds", assert, "Failed to create PodVm from unsigned image").WithPod(pod).WithExpectedPodEventError(expectedErrorMessage).WithCustomPodState(v1.PodPending).Run()
 }

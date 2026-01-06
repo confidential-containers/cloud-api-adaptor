@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
+	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
@@ -269,13 +270,13 @@ func WithPVCBinding(t *testing.T, mountPath string, pvcName string, containerNam
 	}
 }
 
-func WithInitdata(kbsEndpoint string) PodOption {
+func WithInitdata(kbsEndpoint, initdata string) PodOption {
 	return func(p *corev1.Pod) {
 		if p.ObjectMeta.Annotations == nil {
 			p.ObjectMeta.Annotations = make(map[string]string)
 		}
 		key := INITDATA_ANNOTATION
-		value, err := buildInitdataAnnotation(kbsEndpoint, testInitdata)
+		value, err := buildInitdataAnnotation(kbsEndpoint, initdata)
 		if err != nil {
 			log.Fatalf("failed to build initdata %s", err)
 		}
@@ -406,27 +407,13 @@ func NewPodWithInitContainer(namespace string, podName string) PodOrError {
 	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithInitContainers(initContainer)))
 }
 
-func NewBusyboxPodWithName(namespace, podName string) PodOrError {
+func NewBusyboxPodWithName(namespace, podName string, options ...PodOption) PodOrError {
 	busyboxImage, err := utils.GetImage("busybox")
 	if err != nil {
 		return fromError(err)
 	}
-	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"})))
-}
-
-func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint string, testInitdataVal string) PodOrError {
-	initdata, err := buildInitdataAnnotation(kbsEndpoint, testInitdataVal)
-	if err != nil {
-		return fromError(err)
-	}
-	annotationData := map[string]string{
-		INITDATA_ANNOTATION: initdata,
-	}
-	busyboxImage, err := utils.GetImage("busybox")
-	if err != nil {
-		return fromError(err)
-	}
-	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData)))
+	options = append(options, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}))
+	return fromPod(NewPod(namespace, podName, "busybox", busyboxImage, options...))
 }
 
 func NewPodWithPolicy(namespace, podName, policyFilePath string) PodOrError {
@@ -607,4 +594,35 @@ type CloudAssert interface {
 type RollingUpdateAssert interface {
 	CachePodVmIDs(t *testing.T, deploymentName string) // Cache Pod VM IDs before rolling update
 	VerifyOldVmDeleted(t *testing.T)                   // Verify old Pod VMs have been deleted
+}
+
+func CreatePodWithSignaturePolicy(podName, image string, kbs *pv.KeyBrokerService) (*corev1.Pod, error) {
+	err := kbs.SetUpSignaturePolicyAndPublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("SetUpSignaturePolicyAndPublicKey failed with: %v", err)
+	}
+
+	kbsEndpoint, err := kbs.GetCachedKbsEndpoint()
+	if err != nil {
+		return nil, fmt.Errorf("GetCachedKbsEndpoint failed with: %v", err)
+	}
+
+	initdata_image_section := fmt.Sprintf("[image]\n\nimage_security_policy_uri = \"kbs:///%s\"", pv.ImagePolicyPath)
+
+	initdata_with_image := strings.Replace(testInitdata, "\"cdh.toml\"  = '''", "\"cdh.toml\"  = '''\n\n"+initdata_image_section, 1)
+
+	initdata, err := buildInitdataAnnotation(kbsEndpoint, initdata_with_image)
+	if err != nil {
+		return nil, fmt.Errorf("buildInitdataAnnotation failed with: %v", err)
+	}
+
+	platform, err := pv.GetHardwarePlatform()
+	if err != nil {
+		return nil, fmt.Errorf("getHardwarePlatform failed with: %v", err)
+	}
+	if platform != "x86_64" {
+		image = image + "-" + platform
+	}
+
+	return NewPod(E2eNamespace, podName, podName, image, WithInitdata(kbsEndpoint, initdata)), nil
 }
