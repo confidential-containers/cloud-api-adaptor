@@ -19,7 +19,7 @@ permissions: {}
 
 jobs:
   caa:
-    uses: ./.github/workflows/caa_build_and_push_per_arch.yaml
+    uses: ./.github/workflows/caa_build_and_push_all_arches.yaml
     with:
       git_ref: ${{ github.sha }}
     permissions:
