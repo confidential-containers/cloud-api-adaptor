@@ -9,14 +9,12 @@ on:
         required: false
         type: string
       dev_tags:
-        default: ''
-        description: 'Comma-separated list of tags for the dev built image (e.g. latest,ci-dev). By default uses the values from hack/build.sh'
-        required: false
+        description: 'Comma-separated list of tags for the dev built image (e.g. latest,<sha>-dev)'
+        required: true
         type: string
       release_tags:
-        default: ''
-        description: 'Likewise but for the release built image'
-        required: false
+        description: 'Comma-separated list of tags for the release built image (e.g. <sha>)'
+        required: true
         type: string
       git_ref:
         default: 'main'
@@ -46,12 +44,8 @@ jobs:
 
       - name: Create tags.txt
         run: |
-          # Matches expected logic in ./hack/build.sh
-          commit=$(git rev-parse HEAD)
-          dev_tags=${{ inputs.dev_tags }}
-          release_tags=${{ inputs.release_tags }}
-          echo "dev_tags=${dev_tags:-latest,dev-${commit}}" > tags.txt
-          echo "release_tags=${release_tags:-${commit}}" >> tags.txt
+          echo "dev_tags=${{ inputs.dev_tags }}" > tags.txt
+          echo "release_tags=${{ inputs.release_tags }}" >> tags.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
