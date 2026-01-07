@@ -72,8 +72,8 @@ update_provider_charts() {
     for provider in libvirt docker; do
         provider_file="${chart_dir}/providers/${provider}.yaml"
         if [ -f "${provider_file}" ]; then
-            sed "${sed_inplace[@]}" "s/^\(  tag:\).*/\1 \"dev-${image_tag}\"/" "${provider_file}"
-            echo "Updated ${provider_file} -> dev-${image_tag}"
+            sed "${sed_inplace[@]}" "s/^\(  tag:\).*/\1 \"${image_tag}-dev\"/" "${provider_file}"
+            echo "Updated ${provider_file} -> ${image_tag}-dev"
         fi
     done
 
