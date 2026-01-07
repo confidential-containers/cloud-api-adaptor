@@ -528,7 +528,7 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 	kbsDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: namespace}}
 	fmt.Printf("Wait for the %s deployment be available\n", deploymentName)
 	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(kbsDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
-		wait.WithTimeout(time.Minute*2)); err != nil {
+		wait.WithTimeout(time.Minute*5)); err != nil {
 		return "", err
 	}
 
