@@ -200,6 +200,11 @@ func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, 
 	return img.GetDiskSizeGb(), nil
 }
 
+// Select a machine type based on the memory, vcpu, and GPU requirements
+func (p *gcpProvider) selectMachineType(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
+	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.MachineTypeSpecList, p.serviceConfig.MachineTypes, p.serviceConfig.MachineType)
+}
+
 func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (instance *provider.Instance, err error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
@@ -247,11 +252,10 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		srcImage = proto.String(spec.Image)
 	}
 
-	// Use machine type from annotation if provided, otherwise use config default
-	machineType := p.serviceConfig.MachineType
-	if spec.InstanceType != "" {
-		logger.Printf("Choosing %s from annotation as the GCP machine type", spec.InstanceType)
-		machineType = spec.InstanceType
+	// Select and validate machine type
+	machineType, err := p.selectMachineType(ctx, spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to select machine type: %w", err)
 	}
 
 	imageSizeGB, err := p.getImageSizeGB(ctx, *srcImage)
