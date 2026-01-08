@@ -200,6 +200,11 @@ func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, 
 	return img.GetDiskSizeGb(), nil
 }
 
+// Select a machine type based on the memory, vcpu, and GPU requirements
+func (p *gcpProvider) selectMachineType(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
+	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.MachineTypeSpecList, p.serviceConfig.MachineTypes, p.serviceConfig.MachineType)
+}
+
 func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	instanceName := util.GenerateInstanceName(podName, sandboxID, maxInstanceNameLen)
@@ -230,7 +235,6 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	//Convert userData to base64
 	userDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
-	logger.Printf("userDataEnc:  %s", userDataEnc)
 
 	// It's expected that the image from the annotation will follow one of supported formats:
 	// - "projects/<project>/global/images/<imageid>" and "/projects/<project>/global/images/<imageid>",
@@ -246,6 +250,12 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the GCP image for the PodVM image", spec.Image)
 		srcImage = proto.String(spec.Image)
+	}
+
+	// Select and validate machine type
+	machineType, err := p.selectMachineType(ctx, spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to select machine type: %w", err)
 	}
 
 	imageSizeGB, err := p.getImageSizeGB(ctx, *srcImage)
@@ -323,9 +333,15 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 				},
 			},
 		},
-		MachineType:       proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, p.serviceConfig.MachineType)),
+		MachineType:       proto.String(fmt.Sprintf("zones/%s/machineTypes/%s", p.serviceConfig.Zone, machineType)),
 		NetworkInterfaces: []*computepb.NetworkInterface{networkInterface},
 	}
+
+	// Check if OnHostMaintenance needs to be set to TERMINATE
+	// This is required for:
+	// 1. Confidential VMs
+	// 2. GPU instances (when spec.GPUs > 0)
+	requiresTerminatePolicy := false
 
 	if !p.serviceConfig.DisableCVM {
 		if p.serviceConfig.ConfidentialType == "" {
@@ -336,6 +352,16 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			ConfidentialInstanceType:  proto.String(p.serviceConfig.ConfidentialType),
 			EnableConfidentialCompute: proto.Bool(true),
 		}
+		requiresTerminatePolicy = true
+	}
+
+	// Check if GPUs are requested via annotation
+	if spec.GPUs > 0 {
+		logger.Printf("GPUs requested (%d), setting OnHostMaintenance to TERMINATE", spec.GPUs)
+		requiresTerminatePolicy = true
+	}
+
+	if requiresTerminatePolicy {
 		instanceResource.Scheduling = &computepb.Scheduling{
 			OnHostMaintenance: proto.String("TERMINATE"),
 		}

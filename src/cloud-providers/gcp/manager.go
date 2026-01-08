@@ -36,6 +36,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 	// Custom flag types (comma-separated lists)
 	reg.CustomTypeWithEnv(&gcpcfg.Tags, "tags", "", "TAGS", "List of tags to be added to the Pod VMs. Tags must already exist in the GCP project. Format: key1=value1,key2=value2")
+	reg.CustomTypeWithEnv(&gcpcfg.MachineTypes, "machine-types", "", "GCP_INSTANCE_TYPES", "Machine types to be used for the Pod VMs, comma separated")
 }
 
 func (_ *Manager) LoadEnv() {
