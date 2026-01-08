@@ -273,6 +273,10 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 // Deploy installs Peer Pods on the cluster.
 func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
 	if os.Getenv("INSTALL_METHOD") == "helm" {
+		// Install cert-manager (required for webhook)
+		if err := p.installCertManager(ctx, cfg); err != nil {
+			return err
+		}
 		log.Info("Install the cloud-api-adaptor using helm")
 		chart, err := GetInstallChart(p.cloudProvider, p.installDir)
 		if err != nil {
@@ -391,16 +395,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		return err
 	}
 
-	log.Info("Installing cert-manager")
-	cmd = exec.Command("make", "-C", "../webhook", "deploy-cert-manager")
-	// Run the deployment from the root src dir
-	cmd.Dir = p.rootSrcDir
-	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
-	stdoutStderr, err = cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
-	if err != nil {
-		log.Infof("Error  in install cert-manager: %s: %s", err, stdoutStderr)
-
+	if err := p.installCertManager(ctx, cfg); err != nil {
 		return err
 	}
 
@@ -483,4 +478,20 @@ func GetCAANamespace() string {
 		namespace = "confidential-containers-system"
 	}
 	return namespace
+}
+
+// installCertManager installs cert-manager which is required for the webhook
+func (p *CloudAPIAdaptor) installCertManager(ctx context.Context, cfg *envconf.Config) error {
+	log.Info("Installing cert-manager")
+	cmd := exec.Command("make", "-C", "../webhook", "deploy-cert-manager")
+	// Run the deployment from the root src dir
+	cmd.Dir = p.rootSrcDir
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
+	stdoutStderr, err := cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		log.Infof("Error in install cert-manager: %s: %s", err, stdoutStderr)
+		return err
+	}
+	return nil
 }
