@@ -54,10 +54,6 @@ func TestMain(m *testing.M) {
 		log.Fatal("CLOUD_PROVIDER should be exported in the environment")
 	}
 
-	if os.Getenv("INSTALL_METHOD") == "helm" {
-		log.Fatal("INSTALL_METHOD=helm is not implemented yet.")
-	}
-
 	// Create an empty test environment. At this point the client cannot connect to the cluster
 	// unless it is running with an in-cluster configuration.
 	testEnv = env.New()

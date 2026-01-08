@@ -61,6 +61,7 @@ type CloudAPIAdaptor struct {
 	controllerDeployment *appsv1.Deployment   // Represents the controller manager deployment
 	namespace            string               // The CoCo namespace
 	installOverlay       InstallOverlay       // Pointer to the kustomize overlay
+	installDir           string               // The install directory path
 	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
 	rootSrcDir           string               // The root src directory of cloud-api-adaptor
 }
@@ -83,6 +84,20 @@ type InstallOverlay interface {
 	// Edit changes overlay files
 	Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
 }
+
+// InstallChart defines common operations to an install chart (install/charts/*)
+type InstallChart interface {
+	// Install installs the chart. Equivalent to the `helm install` command
+	Install(ctx context.Context, cfg *envconf.Config) error
+	// Uninstall uninstalls the chart. Equivalent to the `helm uninstall` command
+	Uninstall(ctx context.Context, cfg *envconf.Config) error
+	// Configure changes chart values
+	Configure(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
+}
+
+type NewInstallChartFunc func(installDir, provider string) (InstallChart, error)
+
+var NewInstallChartFunctions = make(map[string]NewInstallChartFunc)
 
 // Waiting timeout for bringing up the pod
 const PodWaitTimeout = time.Second * 30
@@ -111,6 +126,7 @@ func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, e
 		controllerDeployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-controller-manager", Namespace: namespace}},
 		namespace:            namespace,
 		installOverlay:       overlay,
+		installDir:           installDir,
 		runtimeClass:         &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata-remote", Namespace: ""}},
 		rootSrcDir:           filepath.Dir(installDir),
 	}, nil
@@ -151,8 +167,30 @@ func GetInstallOverlay(provider string, installDir string) (InstallOverlay, erro
 	return overlayFunc(installDir, provider)
 }
 
+// GetInstallChart returns the InstallChart implementation for the provider
+func GetInstallChart(provider string, installDir string) (InstallChart, error) {
+	chartFunc, ok := NewInstallChartFunctions[provider]
+	if !ok {
+		return nil, fmt.Errorf("Not implemented install chart for %s\n", provider)
+	}
+
+	return chartFunc(installDir, provider)
+}
+
 // Deletes the peer pods installation including the controller manager.
 func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error {
+	if os.Getenv("INSTALL_METHOD") == "helm" {
+		log.Info("Uninstall the cloud-api-adaptor using helm")
+		chart, err := GetInstallChart(p.cloudProvider, p.installDir)
+		if err != nil {
+			return err
+		}
+		if err = chart.Uninstall(ctx, cfg); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	client, err := cfg.NewClient()
 	if err != nil {
 		return err
@@ -234,6 +272,21 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 
 // Deploy installs Peer Pods on the cluster.
 func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
+	if os.Getenv("INSTALL_METHOD") == "helm" {
+		log.Info("Install the cloud-api-adaptor using helm")
+		chart, err := GetInstallChart(p.cloudProvider, p.installDir)
+		if err != nil {
+			return err
+		}
+		if err := chart.Configure(ctx, cfg, props); err != nil {
+			return err
+		}
+		if err := chart.Install(ctx, cfg); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	client, err := cfg.NewClient()
 	if err != nil {
 		return err
