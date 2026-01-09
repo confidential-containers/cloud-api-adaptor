@@ -134,6 +134,7 @@ Use the properties on the table below for AWS:
 |container_runtime|Test cluster configured container runtime. Either **containerd** or **crio** |containerd|
 |disablecvm|Set to `true` to disable confidential VM||
 |pause_image|Kubernetes pause image||
+|peerpods_secret_name|Name of the Kubernetes secret for AWS credentials. When set, Helm will use reference mode (`secrets.mode=reference`) instead of direct injection. If empty, credentials are passed directly via Helm values||
 |podvm_aws_ami_id|AWS AMI ID of the podvm||
 |ssh_kp_name|AWS SSH key-pair name ||
 |use_public_ip|Set `true` to instantiate VMs with public IP. If `cluster_type=onprem` then this property is implictly applied||
