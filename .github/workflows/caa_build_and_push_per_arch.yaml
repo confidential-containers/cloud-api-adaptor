@@ -72,9 +72,11 @@ jobs:
           { type: dev-amd64,       arch: linux/amd64,   runner: ubuntu-24.04 },
           { type: dev-s390x,       arch: linux/s390x,   runner: ubuntu-24.04-s390x },
           { type: dev-ppc64le,     arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
+          { type: dev-arm64,       arch: linux/arm64,   runner: ubuntu-24.04-arm },
           { type: release-amd64,   arch: linux/amd64,   runner: ubuntu-24.04 },
           { type: release-s390x,   arch: linux/s390x,   runner: ubuntu-24.04-s390x },
           { type: release-ppc64le, arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
+          { type: release-arm64,   arch: linux/arm64,   runner: ubuntu-24.04-arm },
         ]
     permissions:
       contents: read

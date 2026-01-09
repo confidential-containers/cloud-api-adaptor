@@ -9,8 +9,8 @@
 # If ARCH is equal to HOST, exit
 [[ $ARCH = $(uname -m) ]] && exit 0
 
-# Only gnu is available for s390x
-libc=$([[ $ARCH =~ s390x ]] && echo "gnu" || echo "musl")
+# Only gnu is available for s390x and aarch64
+libc=$([[ $ARCH =~ s390x || $ARCH =~ aarch64 ]] && echo "gnu" || echo "musl")
 rustTarget="$ARCH-unknown-linux-$libc"
 
 rustup target add "$rustTarget"

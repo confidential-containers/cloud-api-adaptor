@@ -33,7 +33,7 @@ jobs:
       matrix:
         os:
           - ubuntu
-        arch: [amd64, s390x]
+        arch: [amd64, s390x, arm64]
         provider: [generic]
         include:
           - os: ubuntu
