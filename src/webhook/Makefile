@@ -1,6 +1,9 @@
 ARCH        ?= $(subst x86_64,amd64,$(shell uname -m))
 OS          ?= $(shell uname | tr '[:upper:]' '[:lower:]')
 
+# cert-manager version from versions.yaml (fallback to v1.15.3 if yq unavailable)
+CERT_MANAGER_VERSION ?= $(or $(shell yq '.tools.cert-manager' ../cloud-api-adaptor/versions.yaml 2>/dev/null),v1.15.3)
+
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/confidential-containers/peer-pods-webhook:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
@@ -128,7 +131,7 @@ deploy-cert-manager: ## Deploy cert-manager for webhook.
 	curl -fsSL -o cmctl https://github.com/cert-manager/cmctl/releases/latest/download/cmctl_${OS}_${ARCH}
 	chmod +x cmctl
 	# Deploy cert-manager
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.15.3/cert-manager.yaml
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
 	# Wait for service to be up
 	kubectl wait --timeout=360s -n cert-manager endpoints/cert-manager --for=jsonpath='{.subsets[0].addresses[0].ip}'
 	kubectl wait --timeout=360s -n cert-manager endpoints/cert-manager-webhook --for=jsonpath='{.subsets[0].addresses[0].ip}'
@@ -140,7 +143,7 @@ deploy-cert-manager: ## Deploy cert-manager for webhook.
 
 .PHONY: delete-cert-manager
 delete-cert-manager: ## Delete cert-manager
-	kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/v1.15.3/cert-manager.yaml
+	kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
 
 ##@ Build Dependencies
 
