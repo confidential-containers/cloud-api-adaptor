@@ -27,7 +27,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.StringWithEnv(&ibmcloudVPCConfig.VpcServiceURL, "vpc-service-url", "", "IBMCLOUD_VPC_ENDPOINT", "IBM Cloud VPC Service URL")
 	reg.StringWithEnv(&ibmcloudVPCConfig.ResourceGroupID, "resource-group-id", "", "IBMCLOUD_RESOURCE_GROUP_ID", "Resource Group ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.ProfileName, "profile-name", "", "IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME", "Default instance profile name to be used for the Pod VMs")
-	reg.StringWithEnv(&ibmcloudVPCConfig.ZoneName, "zone-name", "", "IBMCLOUD_ZONE", "Zone name", provider.Required())
+	reg.StringWithEnv(&ibmcloudVPCConfig.ZoneName, "zone-name", "", "IBMCLOUD_ZONE", "Zone name")
 	reg.StringWithEnv(&ibmcloudVPCConfig.PrimarySubnetID, "primary-subnet-id", "", "IBMCLOUD_VPC_SUBNET_ID", "Primary subnet ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.PrimarySecurityGroupID, "primary-security-group-id", "", "IBMCLOUD_VPC_SG_ID", "Primary security group ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.KeyID, "key-id", "", "IBMCLOUD_SSH_KEY_ID", "SSH Key ID")
