@@ -62,6 +62,8 @@ type IBMCloudProperties struct {
 
 	VPC        *vpcv1.VpcV1
 	ClusterAPI containerv2.Clusters
+
+	ContainerRuntime string
 }
 
 var IBMCloudProps = &IBMCloudProperties{}
@@ -103,6 +105,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		VxlanPort:         properties["VXLAN_PORT"],
 		ClusterID:         properties["CLUSTER_ID"],
 		Tags:              properties["TAGS"],
+		ContainerRuntime:  properties["CONTAINER_RUNTIME"],
 	}
 
 	if len(IBMCloudProps.IBMCloudProvider) <= 0 {
