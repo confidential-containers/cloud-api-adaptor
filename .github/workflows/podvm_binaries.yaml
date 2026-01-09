@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu]
-        arch: [amd64, s390x]
+        arch: [amd64, s390x, arm64]
         include:
           - os: ubuntu
     permissions:
