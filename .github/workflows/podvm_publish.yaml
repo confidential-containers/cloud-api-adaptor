@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, s390x]
+        arch: [amd64, s390x, arm64]
     with:
       git_ref: ${{ github.sha }}
       image_tag: ${{ github.sha }}
