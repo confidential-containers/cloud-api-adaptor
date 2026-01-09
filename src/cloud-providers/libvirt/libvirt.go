@@ -250,7 +250,8 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 			Value: cfg.mem, Unit: "MiB",
 		},
 		VCPU: &libvirtxml.DomainVCPU{
-			Value: cfg.cpu,
+			Value:  cfg.cpu,
+			CPUSet: vm.cpuset,
 		},
 		Clock: &libvirtxml.DomainClock{
 			Offset: "utc",
@@ -309,7 +310,7 @@ func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfi
 		Name:        cfg.name,
 		Description: "This Virtual Machine is the peer-pod VM",
 		Memory:      &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "MiB", DumpCore: "on"},
-		VCPU:        &libvirtxml.DomainVCPU{Value: cfg.cpu},
+		VCPU:        &libvirtxml.DomainVCPU{Value: cfg.cpu, CPUSet: vm.cpuset},
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{Arch: "x86_64", Type: typeHardwareVirtualMachine},
 		},
@@ -459,7 +460,7 @@ func createDomainXMLaarch64(client *libvirtClient, cfg *domainConfig, vm *vmConf
 			Firmware: "efi",
 		},
 		Memory: &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "MiB"},
-		VCPU:   &libvirtxml.DomainVCPU{Value: cfg.cpu},
+		VCPU:   &libvirtxml.DomainVCPU{Value: cfg.cpu, CPUSet: vm.cpuset},
 		CPU:    &libvirtxml.DomainCPU{Mode: "host-passthrough"},
 		Devices: &libvirtxml.DomainDeviceList{
 			Disks: []libvirtxml.DomainDisk{
