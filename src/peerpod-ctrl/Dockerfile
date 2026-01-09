@@ -6,7 +6,7 @@ ARG CGO_ENABLED=1
 ARG GOFLAGS
 
 WORKDIR /work
-RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-devel && dnf clean all; fi
+RUN if [ "$CGO_ENABLED" = 1 ] ; then dnf install -y libvirt-devel binutils-gold && dnf clean all; fi
 # Copy the Go Modules manifests
 COPY peerpod-ctrl/go.mod peerpod-ctrl/go.mod
 COPY peerpod-ctrl/go.sum peerpod-ctrl/go.sum

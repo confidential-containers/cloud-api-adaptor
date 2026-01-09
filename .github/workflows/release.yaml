@@ -90,7 +90,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, s390x]
+        arch: [amd64, s390x, arm64]
     with:
       image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}

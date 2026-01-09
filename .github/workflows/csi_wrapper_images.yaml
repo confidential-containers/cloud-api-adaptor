@@ -90,7 +90,7 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           push: true
           context: src
-          platforms: linux/amd64, linux/s390x, linux/ppc64le
+          platforms: linux/amd64, linux/s390x, linux/ppc64le, linux/arm64
           file: src/csi-wrapper/Dockerfile.csi_wrappers
           build-args: |
             "BINARY=${{matrix.binary}}"
