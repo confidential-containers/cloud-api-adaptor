@@ -11,6 +11,8 @@
             "**/podvm-mkosi/**",
             "**/podvm/**"
         ]
+    },
+    "gomod": {
+        "enabled": false
     }
-    
 }
