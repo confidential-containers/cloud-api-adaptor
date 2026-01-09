@@ -38,6 +38,11 @@ on:
         description: Name of the container runtime. Either containerd or crio.
         required: false
         type: string
+      install_method:
+        default: 'kustomize'
+        description: Installation method. Either kustomize or helm.
+        required: false
+        type: string
     secrets:
       REGISTRY_CREDENTIAL_ENCODED:
         required: true
@@ -55,7 +60,7 @@ permissions: {}
 jobs:
   test:
     runs-on: ${{ inputs.runner }}
-    name: "Libvirt e2e tests: (${{ inputs.runner }}, ${{ inputs.container_runtime }}, mkosi: ${{ inputs.oras }}"
+    name: "Libvirt e2e tests: (${{ inputs.runner }}, ${{ inputs.container_runtime }}, mkosi: ${{ inputs.oras }}, ${{ inputs.install_method }}"
     steps:
       - name: Checkout Code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -122,9 +127,11 @@ jobs:
         working-directory: src/cloud-api-adaptor/podvm
 
       - name: Config Libvirt
+        env:
+          CONTAINER_RUNTIME: ${{ inputs.container_runtime }}
         run: |
           ./libvirt/config_libvirt.sh
-          echo "container_runtime=\"${{ inputs.container_runtime }}\"" >> libvirt.properties
+          echo "container_runtime=\"${CONTAINER_RUNTIME}\"" >> libvirt.properties
           # For debugging
           cat libvirt.properties
           # Add the kcli install directory to PATH for later steps
@@ -141,14 +148,28 @@ jobs:
           sudo apt install -y ovmf
 
       - name: Install kustomize
+        if: ${{ inputs.install_method == 'kustomize' }}
         run: |
           command -v kustomize >/dev/null || \
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
             sudo bash -s /usr/local/bin
 
+      - name: Install Helm
+        if: ${{ inputs.install_method == 'helm' }}
+        env:
+          HELM_VERSION: v4.0.4
+          HELM_CHECKSUM: 29454bc351f4433e66c00f5d37841627cbbcc02e4c70a6d796529d355237671c
+        run: |
+          curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
+          tar -xzf helm.tar.gz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          rm -rf helm.tar.gz linux-amd64
+          helm version
+
 # For the legacy packer approach we don't want to use the default firmware, so comment it out
       - name: Set blank firmware for packer libvirt tests
-        if: ${{ !inputs.oras }}
+        if: ${{ inputs.install_method == 'kustomize' && !inputs.oras }}
         run: |
           cd "install/overlays/libvirt"
           sed -i 's/\(- LIBVIRT_EFI_FIRMWARE=.*\)/#\1/g' kustomization.yaml
@@ -158,6 +179,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Update kustomization configuration
+        if: ${{ inputs.install_method == 'kustomize' }}
         run: |
           cd "install/overlays/libvirt"
           kustomize edit set image "cloud-api-adaptor=${{ inputs.caa_image }}"
@@ -172,21 +194,144 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Provision cluster (helm only)
+        if: ${{ inputs.install_method == 'helm' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLOUD_PROVIDER: libvirt
+          CONTAINER_RUNTIME: ${{ inputs.container_runtime }}
+          TEST_PROVISION_FILE: ${{ github.workspace }}/src/cloud-api-adaptor/libvirt.properties
+          TEST_PODVM_IMAGE: ${{ env.PODVM_QCOW2 }}
+          TEST_E2E_TIMEOUT: "30m"
+        run: make provision-cluster
+
+      - name: Deploy CAA using Helm chart
+        if: ${{ inputs.install_method == 'helm' }}
+        env:
+          CAA_IMAGE: ${{ inputs.caa_image }}
+        run: |
+          export KUBECONFIG="${HOME}/.kcli/clusters/peer-pods/auth/kubeconfig"
+
+          # Install cert-manager (required for webhook)
+          echo "Installing cert-manager..."
+          make -C ../webhook deploy-cert-manager
+
+          kubectl create namespace confidential-containers-system --dry-run=client -o yaml | kubectl apply -f -
+
+          # Extract image name and tag from caa_image (format: registry/image:tag)
+          IMAGE_FULL="${CAA_IMAGE}"
+          IMAGE_TAG="${IMAGE_FULL##*:}"
+          IMAGE_NAME="${IMAGE_FULL%:*}"
+
+          echo "Deploying with Helm:"
+          echo "  Image: ${IMAGE_NAME}"
+          echo "  Tag: ${IMAGE_TAG}"
+
+          # Build chart dependencies (downloads kata-deploy from OCI registry)
+          echo "Building Helm chart dependencies..."
+          helm dependency build ./install/charts/peerpods
+
+          # TODO: Temporary solution. Providers lack Helm Apply() in test framework.
+          #       Long term: implement HelmInstallOverlay.Apply() similar to other ProviderInstallOverlay implementations.
+          # Read libvirt config from properties file (created by config_libvirt.sh)
+          source libvirt.properties
+
+          # Create SSH key secret for libvirt (keys created by config_libvirt.sh)
+          # TODO: This should use --set-file providerSecrets.libvirt.id_rsa once
+          #       providerSecrets.libvirt is defined in providers/libvirt.yaml
+          kubectl create secret generic ssh-key-secret \
+            --from-file=id_rsa="${HOME}/.ssh/id_rsa" \
+            --from-file=id_rsa.pub="${HOME}/.ssh/id_rsa.pub" \
+            -n confidential-containers-system
+
+          # Install chart with libvirt configuration
+          helm install peerpods ./install/charts/peerpods \
+            -f install/charts/peerpods/providers/libvirt.yaml \
+            --set "image.name=${IMAGE_NAME}" \
+            --set "image.tag=${IMAGE_TAG}" \
+            --set-string "providerConfigs.libvirt.LIBVIRT_URI=${libvirt_uri}" \
+            -n confidential-containers-system \
+            --wait --timeout=10m || {
+              echo "::error::Helm install failed. Collecting debug info..."
+              echo "::group::Pre-install job pods"
+              kubectl get pods -n confidential-containers-system -l app.kubernetes.io/component=installer -o wide
+              echo "::endgroup::"
+              echo "::group::Pre-install job pod describe (shows OOMKilled, exit code, etc)"
+              kubectl describe pods -n confidential-containers-system -l app.kubernetes.io/component=installer || true
+              echo "::endgroup::"
+              echo "::group::Pre-install job describe"
+              kubectl describe job -n confidential-containers-system -l app.kubernetes.io/component=installer || true
+              echo "::endgroup::"
+              echo "::group::Pre-install job logs (current)"
+              kubectl logs -n confidential-containers-system -l app.kubernetes.io/component=installer --tail=500 || true
+              echo "::endgroup::"
+              echo "::group::Pre-install job logs (previous - shows failed run)"
+              kubectl logs -n confidential-containers-system -l app.kubernetes.io/component=installer --previous --tail=500 || true
+              echo "::endgroup::"
+              echo "::group::Pre-install job events"
+              kubectl get events -n confidential-containers-system --sort-by='.lastTimestamp' | tail -50
+              echo "::endgroup::"
+              echo "::group::Webhook namespace check (peer-pods-webhook-system)"
+              kubectl get namespace peer-pods-webhook-system 2>&1 || echo "Namespace does not exist"
+              kubectl get events -n peer-pods-webhook-system --sort-by='.lastTimestamp' 2>&1 | tail -30 || true
+              echo "::endgroup::"
+              exit 1
+            }
+
+          echo "Waiting for CAA daemonset to be ready..."
+          kubectl rollout status daemonset/cloud-api-adaptor-daemonset -n confidential-containers-system --timeout=5m
+
+          echo "Waiting for kata-deploy daemonset to be ready..."
+          kubectl rollout status daemonset/kata-deploy -n confidential-containers-system --timeout=5m
+
+          # kata-deploy labels nodes with katacontainers.io/kata-runtime=true after installing kata.
+          # The kata-remote RuntimeClass has a nodeSelector requiring this label.
+          # We must wait for at least one node to have this label before tests can run.
+          echo "Waiting for node to be labeled with katacontainers.io/kata-runtime=true..."
+          timeout 120 bash -c '
+            until kubectl get nodes -l katacontainers.io/kata-runtime=true --no-headers 2>/dev/null | grep -q .; do
+              echo "  Waiting for kata-runtime node label..."
+              sleep 5
+            done
+          '
+          echo "Node labeled successfully:"
+          kubectl get nodes -l katacontainers.io/kata-runtime=true
+
+          echo "::group::Helm deployment info"
+          helm list -n confidential-containers-system
+          kubectl get daemonset -n confidential-containers-system
+          kubectl get pods -n confidential-containers-system -l app=cloud-api-adaptor
+          echo "::endgroup::"
+
       - name: run tests
         id: runTests
         env:
           AUTHENTICATED_REGISTRY_IMAGE: ${{ vars.AUTHENTICATED_REGISTRY_IMAGE }}
           REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INSTALL_METHOD: ${{ inputs.install_method }}
+          CLOUD_PROVIDER: libvirt
+          CONTAINER_RUNTIME: ${{ inputs.container_runtime }}
+          DEPLOY_KBS: "true"
+          TEST_TEARDOWN: "no"
+          TEST_PROVISION_FILE: ${{ github.workspace }}/src/cloud-api-adaptor/libvirt.properties
+          TEST_PODVM_IMAGE: ${{ env.PODVM_QCOW2 }}
+          TEST_E2E_TIMEOUT: "75m"
         run: |
-          export CLOUD_PROVIDER=libvirt
-          export CONTAINER_RUNTIME="${{ inputs.container_runtime }}"
-          export DEPLOY_KBS=true
+          # Default: provision cluster and install CAA
           export TEST_PROVISION="yes"
           export TEST_TEARDOWN="no"
           export TEST_PROVISION_FILE="$PWD/libvirt.properties"
           export TEST_PODVM_IMAGE="${{ env.PODVM_QCOW2 }}"
           export TEST_E2E_TIMEOUT="75m"
+
+          # Skip provisioning and CAA installation if using helm (already done above)
+          # KBS is deployed here (not in provision step) so keys match
+          if [ "${INSTALL_METHOD}" = "helm" ]; then
+            export TEST_PROVISION="no"
+            export TEST_INSTALL_CAA="no"
+            export KUBECONFIG="${HOME}/.kcli/clusters/peer-pods/auth/kubeconfig"
+          fi
 
           make test-e2e
 

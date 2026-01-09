@@ -1,0 +1,43 @@
+# (C) Copyright Confidential Containers Contributors 2024.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Manual trigger for testing Helm installation via e2e_libvirt workflow
+name: Manual Test - Helm Install
+
+on:
+  workflow_dispatch:
+    inputs:
+      caa_image:
+        description: 'CAA image (registry/name:tag)'
+        required: false
+        default: 'quay.io/confidential-containers/cloud-api-adaptor:latest'
+        type: string
+      podvm_image:
+        description: 'PodVM image path or URL'
+        required: false
+        default: 'quay.io/confidential-containers/podvm-generic-ubuntu-amd64:latest'
+        type: string
+      install_method:
+        description: 'Installation method'
+        required: false
+        default: 'helm'
+        type: choice
+        options:
+          - helm
+          - kustomize
+
+permissions: {}
+
+jobs:
+  test-helm:
+    uses: ./.github/workflows/e2e_libvirt.yaml
+    with:
+      runner: ubuntu-24.04
+      caa_image: ${{ inputs.caa_image }}
+      podvm_image: ${{ inputs.podvm_image }}
+      install_method: ${{ inputs.install_method }}
+      git_ref: ${{ github.ref }}
+      oras: false
+      container_runtime: containerd
+    secrets:
+      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}

@@ -1,0 +1,153 @@
+# when owner reference is both object must be on the same namespace, hence,
+# caa should have cluster-wide permissions to support any pod namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-api-adaptor
+  namespace: {{ .Values.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pod-viewer
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pod-viewer
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: {{ .Values.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: pod-viewer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: peerpod-editor
+rules:
+- apiGroups: ["confidentialcontainers.org"]
+  resources: ["peerpods"]
+  verbs: ["create", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: peerpod-editor
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: {{ .Values.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: peerpod-editor
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-viewer
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-viewer
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: {{ .Values.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: node-viewer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-status-patcher
+rules:
+- apiGroups: [""]
+  resources: ["nodes/status"]
+  verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-status-patcher
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: {{ .Values.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: node-status-patcher
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pp-secrets
+  namespace: {{ .Values.namespace }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["delete", "create", "patch", "update", "get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pp-secrets
+  namespace: {{ .Values.namespace }}
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: {{ .Values.namespace }}
+roleRef:
+  kind: Role
+  name: pp-secrets
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cm-editor
+rules:
+# Create is need for initial creation of the ConfigMap. It can't
+# be using resourceNames because it doesn't exist yet.
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resourceNames: ["byom-ip-pool-state"]
+  resources: ["configmaps"]
+  verbs: ["delete", "patch", "update", "get", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cm-editor
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: {{ .Values.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: cm-editor
+  apiGroup: rbac.authorization.k8s.io

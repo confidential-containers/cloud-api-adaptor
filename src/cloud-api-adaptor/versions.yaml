@@ -27,6 +27,7 @@ cloudimg:
         checksum: "sha256:73c7631c6a48b182e80c7c808d7e3adab3f07ad517fcf5d5eff8f3815306e37e"
 
 tools:
+  cert-manager: v1.15.3
   bats: 1.10.0
   iptables-wrapper: v0.0.0-20240819165702-06cad2ec6cb5
   golang: 1.24.11

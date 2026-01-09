@@ -97,6 +97,13 @@ else
 	$(error CLOUD_PROVIDER is not set)
 endif
 
+.PHONY: provision-cluster
+provision-cluster: ## Provision the cluster without running tests or installing CAA.
+ifndef TEST_PROVISION_FILE
+	$(warning TEST_PROVISION_FILE is not set - some providers may require a properties file)
+endif
+	TEST_PROVISION=yes TEST_INSTALL_CAA=no TEST_TEARDOWN=no $(MAKE) test-e2e RUN_TESTS='^$$'
+
 .PHONY: vet
 vet: .git-commit ## Run go vet against code.
 	go vet $(GOFLAGS) $(PACKAGES)

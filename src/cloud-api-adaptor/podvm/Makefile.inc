@@ -55,7 +55,7 @@ endif
 
 # probe version if the ref does not appear to be a git commit digest
 ifeq ($(shell echo $(KATA_REF) | grep -E "^[0-9a-f]{40}$$"),)
-KATA_COMMIT := $(shell curl \
+KATA_COMMIT := $(shell \
 	$(GH_CURL) \
 	$(GH_API_BASE)/repos/$(KATA_REPO)/commits/$(KATA_REF) \
 	| jq -r '.sha // empty')
