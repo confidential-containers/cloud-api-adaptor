@@ -384,7 +384,7 @@ func (p *alibabaCloudProvider) DeleteInstance(ctx context.Context, instanceID st
 			return false, fmt.Errorf("failed to delete an instance %s: %+v", instanceID, err)
 		}
 
-		return false, fmt.Errorf("failed to describe instance %s: %+v", instanceID, err)
+		return true, nil
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete an instance %s", instanceID)
