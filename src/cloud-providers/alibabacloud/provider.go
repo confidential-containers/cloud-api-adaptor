@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
@@ -87,7 +88,8 @@ type alibabaCloudProvider struct {
 	serviceConfig *Config
 
 	// instanceId to instance Resources
-	eips map[string]*string
+	eipsMu sync.Mutex
+	eips   map[string]*string
 }
 
 func NewProvider(config *Config) (provider.Provider, error) {
@@ -346,7 +348,9 @@ func (p *alibabaCloudProvider) CreateInstance(ctx context.Context, podName, sand
 				return instance, fmt.Errorf("failed to create EIP instance: %w", err)
 			}
 
+			p.eipsMu.Lock()
 			p.eips[instanceID] = eipId
+			p.eipsMu.Unlock()
 
 			err = p.bindEipToNic(eipId, nIfaceId)
 			if err != nil {
@@ -391,12 +395,17 @@ func (p *alibabaCloudProvider) DeleteInstance(ctx context.Context, instanceID st
 	}
 
 	logger.Printf("Deleted an instance %s", instanceID)
-	if p.eips[instanceID] != nil {
-		err := p.deleteEipInstance(p.eips[instanceID])
+
+	p.eipsMu.Lock()
+	eipId := p.eips[instanceID]
+	delete(p.eips, instanceID)
+	p.eipsMu.Unlock()
+
+	if eipId != nil {
+		err := p.deleteEipInstance(eipId)
 		if err != nil {
-			logger.Printf("delete EIP %s failed: %v", *p.eips[instanceID], err)
+			logger.Printf("delete EIP %s failed: %v", *eipId, err)
 		}
-		delete(p.eips, instanceID)
 	}
 
 	return nil
