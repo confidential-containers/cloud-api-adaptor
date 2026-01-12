@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euxo pipefail
 
-# Wait for /dev/sda3 to appear
-DEVICE="/dev/sda3"
+# Wait for /dev/sda2 to appear
+DEVICE="/dev/sda2"
 MAX_WAIT=30
 WAITED=0
 
