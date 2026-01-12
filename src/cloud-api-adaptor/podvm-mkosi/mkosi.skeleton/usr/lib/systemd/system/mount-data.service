@@ -1,0 +1,17 @@
+[Unit]
+Description=Mount data partition and setup Kubernetes storage bind mounts
+DefaultDependencies=no
+After=systemd-udev-settle.service local-fs.target
+Before=kubelet.service containerd.service
+ConditionPathExists=!/var/lib/mount-data.done
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
+ExecStart=/usr/local/bin/mount-data.sh
+ExecStart=/usr/bin/touch /var/lib/mount-data.done
+
+[Install]
+WantedBy=multi-user.target

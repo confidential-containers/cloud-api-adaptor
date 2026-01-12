@@ -10,6 +10,7 @@ RUN dnf install -y \
 	git \
 	cpio \
 	systemd-repart \
+	e2fsprogs \
 	kmod \
 	systemd-boot \
 	cryptsetup-libs \

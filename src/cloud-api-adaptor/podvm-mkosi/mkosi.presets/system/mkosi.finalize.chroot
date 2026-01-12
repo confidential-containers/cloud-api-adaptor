@@ -2,6 +2,12 @@
 
 set -euxo pipefail
 
+# Enable kata-storage service to move /run/kata-containers to large disk
+systemctl enable kata-storage.service
+
+# Enable mount-data service to setup Kubernetes storage on /dev/sda3
+systemctl enable mount-data.service
+
 if [[ "${ARCHITECTURE}" == "s390x" ]]; then
 	# enable cloud-init services
         systemctl enable cloud-init-local.service
