@@ -30,6 +30,11 @@ type DockerInstallOverlay struct {
 	Overlay *pv.KustomizeOverlay
 }
 
+// DockerInstallChart implements the InstallChart interface
+type DockerInstallChart struct {
+	Helm *pv.Helm
+}
+
 type DockerProperties struct {
 	DockerHost       string
 	ApiVer           string
@@ -276,4 +281,57 @@ func (lio *DockerInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, 
 
 	return nil
 
+}
+
+func NewDockerInstallChart(installDir, provider string) (pv.InstallChart, error) {
+	chartPath := filepath.Join(installDir, "charts", "peerpods")
+	namespace := pv.GetCAANamespace()
+	releaseName := "peerpods"
+	debug := false
+
+	helm, err := pv.NewHelm(chartPath, namespace, releaseName, provider, debug)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DockerInstallChart{
+		Helm: helm,
+	}, nil
+}
+
+func (d *DockerInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
+	return d.Helm.Install(ctx, cfg)
+}
+
+func (d *DockerInstallChart) Uninstall(ctx context.Context, cfg *envconf.Config) error {
+	return d.Helm.Uninstall(ctx, cfg)
+}
+
+func (d *DockerInstallChart) Configure(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
+	// Handle CAA image - already split into CAA_IMAGE and CAA_IMAGE_TAG
+	if properties["CAA_IMAGE"] != "" {
+		d.Helm.OverrideValues["image.name"] = properties["CAA_IMAGE"]
+	}
+	if properties["CAA_IMAGE_TAG"] != "" {
+		d.Helm.OverrideValues["image.tag"] = properties["CAA_IMAGE_TAG"]
+	}
+
+	// Mapping the internal properties to Helm chart values.
+	mapProps := map[string]string{
+		"DOCKER_HOST":         "DOCKER_HOST",
+		"DOCKER_API_VERSION":  "DOCKER_API_VERSION",
+		"DOCKER_PODVM_IMAGE":  "DOCKER_PODVM_IMAGE",
+		"DOCKER_NETWORK_NAME": "DOCKER_NETWORK_NAME",
+		"TUNNEL_TYPE":         "TUNNEL_TYPE",
+		"VXLAN_PORT":          "VXLAN_PORT",
+		"INITDATA":            "INITDATA",
+	}
+
+	for k, v := range mapProps {
+		if properties[k] != "" {
+			d.Helm.OverrideProviderValues[v] = properties[k]
+		}
+	}
+
+	return nil
 }
