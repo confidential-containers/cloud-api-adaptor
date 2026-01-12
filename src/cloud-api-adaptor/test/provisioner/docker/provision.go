@@ -12,4 +12,5 @@ import (
 func init() {
 	pv.NewProvisionerFunctions["docker"] = NewDockerProvisioner
 	pv.NewInstallOverlayFunctions["docker"] = NewDockerInstallOverlay
+	pv.NewInstallChartFunctions["docker"] = NewDockerInstallChart
 }
