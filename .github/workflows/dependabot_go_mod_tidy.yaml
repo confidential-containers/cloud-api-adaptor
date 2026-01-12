@@ -1,0 +1,50 @@
+name: Automatically run go mod tidy on dependabot PRs
+on:
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  tidy-dependabot-pr:
+    name: Run go mod tidy on dependabot PR
+    runs-on: ubuntu-24.04
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    permissions:
+      contents: write # We need permissions to push new content to the PR
+      pull-requests: write # Permissions to create a new PR and close the original
+
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run go mod tidy
+        run: |
+          ./hack/go-tidy.sh
+
+      - name: Commit and push changes
+        uses: devops-infra/action-commit-push@8a2d9d73c3f506468129be2e4409e60dbed70357 # v1.0.3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          commit_message: "chore: Auto-run go mod tidy after Dependabot update"
+
+      - name: Create new pull request
+        id: create_pr
+        uses: devops-infra/action-pull-request@b2895bff2ff66579f6704d717a1ea75fad919e84 # v1.0.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          body: "**Automated pull request**<br><br>Updating dependabot PR with go mod tidy"
+          title: ${{ github.event.commits[0].message }}
+
+      - name: Close original Pull Request
+        run: gh pr close ${ORIGINAL_PR} --comment "PR replaced with ${REPLACEMENT_PR}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORIGINAL_PR: ${{ github.event.pull_request.number }}
+          REPLACEMENT_PR: ${{ steps.create_pr.outputs.pr_number }}
