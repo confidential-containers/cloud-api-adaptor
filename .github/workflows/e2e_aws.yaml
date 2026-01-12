@@ -33,6 +33,11 @@ on:
         description: Name of the container runtime. Either containerd or crio.
         required: false
         type: string
+      install_method:
+        default: 'kustomize'
+        description: Installation method. Either kustomize or helm.
+        required: false
+        type: string
     secrets:
       AWS_IAM_ROLE_ARN:
         required: true
@@ -64,10 +69,12 @@ jobs:
          fi
 
   test-aws:
-    name: "AWS e2e tests: (${{ inputs.cluster_type }}, ${{ inputs.container_runtime }})"
+    name: "AWS e2e tests: (${{ inputs.cluster_type }}, ${{ inputs.container_runtime }}, ${{ inputs.install_method }})"
     needs: aws-credentials
     if: needs.aws-credentials.outputs.has_secrets == 'true'
     runs-on: ubuntu-22.04
+    # TODO: remove when helm installation gets implemented and stable.
+    continue-on-error: ${{ inputs.install_method == 'helm' }}
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
@@ -75,6 +82,7 @@ jobs:
         CAA_IMAGE: "${{ inputs.caa_image }}"
         CLUSTER_TYPE: "${{ inputs.cluster_type }}"
         CONTAINER_RUNTIME: "${{ inputs.container_runtime }}"
+        INSTALL_METHOD: "${{ inputs.install_method }}"
         PODVM_IMAGE: "${{ inputs.podvm_image }}"
         RESOURCES_BASENAME: "ci-caa-${{ github.run_id }}-${{ github.run_attempt }}"
     permissions:
@@ -144,6 +152,7 @@ jobs:
             sudo bash -s /usr/local/bin
 
       - name: Update kustomization configuration
+        if: ${{ inputs.install_method == 'kustomize' }}
         run: |
           cd "install/overlays/aws"
           kustomize edit set image "cloud-api-adaptor=${CAA_IMAGE}"
@@ -151,6 +160,19 @@ jobs:
           echo "::group::aws kustomization"
           cat kustomization.yaml
           echo "::endgroup::"
+
+      - name: Install Helm
+        if: ${{ inputs.install_method == 'helm' }}
+        env:
+          HELM_VERSION: v4.0.4
+          HELM_CHECKSUM: 29454bc351f4433e66c00f5d37841627cbbcc02e4c70a6d796529d355237671c
+        run: |
+          curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
+          tar -xzf helm.tar.gz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          rm -rf helm.tar.gz linux-amd64
+          helm version
 
       - name: Config aws
         run: |

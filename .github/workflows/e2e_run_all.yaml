@@ -219,6 +219,9 @@ jobs:
       matrix:
         container_runtime:
           - crio
+        install_method:
+          - kustomize
+          - helm
         os:
           - ubuntu
         provider:
@@ -232,6 +235,7 @@ jobs:
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}
       container_runtime: ${{ matrix.container_runtime }}
+      install_method: ${{ matrix.install_method }}
       podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       oras: false
@@ -367,6 +371,9 @@ jobs:
       matrix:
         container_runtime:
           - crio
+        install_method:
+          - kustomize
+          - helm
         os:
           - fedora
         provider:
@@ -377,6 +384,7 @@ jobs:
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
       container_runtime: ${{ matrix.container_runtime }}
+      install_method: ${{ matrix.install_method }}
       podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.docker_oci_image }}
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
