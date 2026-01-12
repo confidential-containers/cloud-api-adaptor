@@ -1,4 +1,4 @@
-name: (Callable) Build and push cloud-api-adaptor image
+name: (Callable) Build and push cloud-api-adaptor multi-arch manifest image for all type/arch combinations
 
 on:
   workflow_call:
@@ -32,130 +32,30 @@ defaults:
 permissions: {}
 
 jobs:
-  upload_tags:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout the code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          ref: "${{ inputs.git_ref }}"
-          persist-credentials: false
-
-      - name: Create tags.txt
-        run: |
-          echo "dev_tags=${{ inputs.dev_tags }}" > tags.txt
-          echo "release_tags=${{ inputs.release_tags }}" >> tags.txt
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: image-tags
-          retention-days: 1
-          path: |
-            src/cloud-api-adaptor/tags.txt
-
   build_push_job:
-    name: build and push
-    needs: [upload_tags]
-    runs-on: ${{ matrix.types.runner }}
+    name: build and push single arch dev and release images
     strategy:
       fail-fast: false
       matrix:
         types: [
-          { type: dev-amd64,       arch: linux/amd64,   runner: ubuntu-24.04 },
-          { type: dev-s390x,       arch: linux/s390x,   runner: ubuntu-24.04-s390x },
-          { type: dev-ppc64le,     arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
-          { type: dev-arm64,       arch: linux/arm64,   runner: ubuntu-24.04-arm },
-          { type: release-amd64,   arch: linux/amd64,   runner: ubuntu-24.04 },
-          { type: release-s390x,   arch: linux/s390x,   runner: ubuntu-24.04-s390x },
-          { type: release-ppc64le, arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
-          { type: release-arm64,   arch: linux/arm64,   runner: ubuntu-24.04-arm },
+          { arch: linux/amd64,   runner: ubuntu-24.04 },
+          { arch: linux/arm64,   runner: ubuntu-24.04-arm },
+          { arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
+          { arch: linux/s390x,   runner: ubuntu-24.04-s390x },
         ]
+    uses: ./.github/workflows/caa_build_and_push.yaml
+    with:
+      dev_arches: ${{ matrix.types.arch }}
+      dev_tags: ${{ inputs.dev_tags }}
+      git_ref: ${{ inputs.git_ref}}
+      registry: ${{ inputs.registry }}
+      release_arches: ${{ matrix.types.arch }}
+      release_tags: ${{ inputs.release_tags }}
+      runner: ${{ matrix.types.runner}}
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
     permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout the code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          ref: "${{ inputs.git_ref }}"
-          persist-credentials: false
-
-      - name: Read properties from versions.yaml
-        run: |
-          go_version="$(yq '.tools.golang' versions.yaml)"
-          [ -n "$go_version" ]
-          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
-
-      - name: Setup Golang version ${{ env.GO_VERSION }}
-        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: "**/go.sum"
-          cache: false
-          # Setup-go doesn't work properly with ppc64le: https://github.com/actions/setup-go/issues/648
-          architecture: ${{ matrix.types.arch == 'linux/ppc64le' && 'ppc64le' || '' }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-
-      - name: Install build dependencies
-        if: ${{ startsWith(matrix.types.type, 'dev-') }}
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y libvirt-dev
-
-      - name: Login to quay Container Registry
-        if: ${{ startsWith(inputs.registry, 'quay.io') }}
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          registry: ${{ inputs.registry }}
-          username: ${{ vars.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
-
-      - name: Login to Github Container Registry
-        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          registry: ${{ inputs.registry }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push dev image
-        if: ${{ startsWith(matrix.types.type, 'dev-') }}
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
-        with:
-          # We are not interested in timeout but this field is required
-          # so setting to 4x the time it usually take to complete.
-          timeout_minutes: 60
-          retry_wait_seconds: 120
-          max_attempts: 3
-          command: |
-            echo "Build and push dev image with libvirt"
-            cd src/cloud-api-adaptor && ARCHES=${{matrix.types.arch}} RELEASE_BUILD=false DEV_TAGS=${{ inputs.dev_tags}} make image-with-arch registry=${{ inputs.registry }}
-
-      - name: Build and push release image
-        if: ${{ startsWith(matrix.types.type, 'release-') }}
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
-        with:
-          # We are not interested in timeout but this field is required
-          # so setting to 4x the time it usually take to complete.
-          timeout_minutes: 60
-          retry_wait_seconds: 120
-          max_attempts: 3
-          command: |
-            echo "Build and push release image without libvirt"
-            cd src/cloud-api-adaptor && ARCHES=${{matrix.types.arch}} RELEASE_BUILD=true RELEASE_TAGS=${{ inputs.release_tags}} make image-with-arch registry=${{ inputs.registry }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: tags-architectures-${{matrix.types.type}}
-          retention-days: 1
-          path: |
-            src/cloud-api-adaptor/tags-architectures-*
+      packages: write  # Needed to push the images to GHCR
 
   manifest_job:
     name: generate images manifest
@@ -169,19 +69,6 @@ jobs:
           ref: "${{ inputs.git_ref }}"
           persist-credentials: false
 
-      - name: Download release tags.txt
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: image-tags
-          path: src/cloud-api-adaptor
-
-      - name: Download release commits file
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          pattern: tags-architectures-*
-          merge-multiple: true
-          path: src/cloud-api-adaptor/
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
@@ -201,8 +88,18 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate image manifest
+      - name: Publish multi-arch dev manifest
+        run: |
+          ./hack/publish.sh publish-multiarch-manifest
         env:
-          registry: ${{ inputs.registry }}
-        run:  |
-          hack/image-manifest.sh
+          IMAGE_REGISTRY: ${{ inputs.registry }}
+          IMAGE_NAME: "cloud-api-adaptor"
+          IMAGE_TAGS: ${{ inputs.dev_tags}}
+
+      - name: Publish multi-arch release manifest
+        run: |
+          ./hack/publish.sh publish-multiarch-manifest
+        env:
+          IMAGE_REGISTRY: ${{ inputs.registry }}
+          IMAGE_NAME: "cloud-api-adaptor"
+          IMAGE_TAGS: ${{ inputs.release_tags}}
