@@ -1,9 +1,9 @@
 {{- if .Values.resourceCtrl.enabled }}
-# Resource controllers: peerpod-ctrl + webhook
+# Webhook installer (peerpod-ctrl now installed via subchart)
 #
 # TODO: This pre-install hook should be avoided!
 #
-# Using Helm pre-install hook to fetch and install resources from CAA GitHub
+# Using Helm pre-install hook to fetch and install webhook from CAA GitHub
 # repository using kustomize, mirroring what `kubectl apply -k` would do.
 #
 # This approach is used temporarily to avoid duplicating YAML files while we
@@ -272,9 +272,6 @@ spec:
         - |
           set -ex
 
-          echo "Installing PeerPod controller (CRD + RBAC + Deployment)..."
-          kubectl apply -k "github.com/confidential-containers/cloud-api-adaptor//src/peerpod-ctrl/config/default?ref={{ .Values.resourceCtrl.gitRef }}"
-
           # Webhook requires cert-manager - check if it's available
           if kubectl get crd certificates.cert-manager.io >/dev/null 2>&1; then
             echo "Installing PeerPods webhook (cert-manager detected)..."
@@ -283,7 +280,7 @@ spec:
             echo "Skipping webhook installation (cert-manager not found)"
           fi
 
-          echo "All resource controllers installed successfully"
+          echo "Webhook installed successfully"
         resources:
           limits:
             cpu: 500m
