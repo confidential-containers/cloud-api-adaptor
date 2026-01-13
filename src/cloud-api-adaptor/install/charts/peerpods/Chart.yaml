@@ -23,3 +23,8 @@ dependencies:
   - name: kata-deploy
     version: "0.0.0-dev"
     repository: "oci://ghcr.io/kata-containers/kata-deploy-charts"
+  - name: peerpodctrl
+    version: "0.1.0"
+    repository: "file://../../../../peerpod-ctrl/chart"
+    alias: resourceCtrl
+    condition: resourceCtrl.enabled
