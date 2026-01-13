@@ -1,0 +1,22 @@
+{{- if .Values.authProxy.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/instance: controller-manager-metrics-service
+    app.kubernetes.io/name: service
+    app.kubernetes.io/part-of: peerpodctrl
+    control-plane: controller-manager
+  name: {{ .Values.namePrefix }}controller-manager-metrics-service
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+{{- end }}
