@@ -1,0 +1,20 @@
+apiVersion: v2
+name: peerpods-webhook
+description: Mutating webhook that modifies pod specs to use peer pods runtime and resources
+type: application
+version: 0.1.0
+appVersion: "v0.17.0"
+
+keywords:
+  - confidential-containers
+  - peerpods
+  - webhook
+
+home: https://github.com/confidential-containers/cloud-api-adaptor
+
+sources:
+  - https://github.com/confidential-containers/cloud-api-adaptor
+
+maintainers:
+  - name: Confidential Containers Community
+    url: https://github.com/confidential-containers
