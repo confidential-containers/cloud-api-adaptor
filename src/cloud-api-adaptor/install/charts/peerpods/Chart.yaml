@@ -28,3 +28,8 @@ dependencies:
     repository: "file://../../../../peerpod-ctrl/chart"
     alias: resourceCtrl
     condition: resourceCtrl.enabled
+  - name: peerpods-webhook
+    version: "0.1.0"
+    repository: "file://../../../../webhook/chart"
+    alias: webhook
+    condition: webhook.enabled
