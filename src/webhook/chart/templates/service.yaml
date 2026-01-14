@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.namePrefix }}webhook-service
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+{{- if .Values.authProxy.enabled }}
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+{{- end }}
+  - name: webhook
+    port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager

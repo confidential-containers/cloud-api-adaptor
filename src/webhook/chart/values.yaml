@@ -1,0 +1,53 @@
+# Namespace where webhook resources will be deployed
+namespace: confidential-containers-system
+
+# Prefix prepended to all resource names
+namePrefix: peer-pods-webhook-
+
+# Webhook deployment configuration
+replicas: 2
+
+# Webhook image
+image:
+  repository: quay.io/confidential-containers/peer-pods-webhook
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Manager container resource limits and requests
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+# Webhook configuration
+webhook:
+  # Runtime class to target for pod mutations
+  targetRuntimeClass: kata-remote
+  # Extended resource name for pod VM
+  podVMExtendedResource: kata.peerpods.io/vm
+  # Webhook failure policy: Fail or Ignore
+  failurePolicy: Fail
+
+# kube-rbac-proxy: Sidecar container that protects the /metrics endpoint with RBAC authentication
+# When enabled, only authenticated clients with proper RBAC permissions can access metrics
+# Set to false to expose metrics without authentication (not recommended for production)
+authProxy:
+  enabled: true
+  image: gcr.io/kubebuilder/kube-rbac-proxy:v0.14.0
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 5m
+      memory: 64Mi
+
+# cert-manager integration for webhook TLS certificates
+# Required because Kubernetes admission webhooks must use TLS/HTTPS
+# cert-manager automates certificate generation, rotation, and trust configuration
+# Without this, you would need to manually create and manage webhook certificates
+certManager:
+  enabled: true

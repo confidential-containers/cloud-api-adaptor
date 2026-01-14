@@ -1,0 +1,22 @@
+# TODO: Investigate if this RBAC is actually needed.
+# It's unclear why these pod permissions exist - the webhook code doesn't seem
+# to call the k8s API to manipulate pods. This might be leftover from scaffolding.
+# Keeping this for parity with kustomize deployment until we can investigate further.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.namePrefix }}manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
