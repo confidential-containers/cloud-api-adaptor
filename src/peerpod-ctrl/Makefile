@@ -252,6 +252,16 @@ verify-manifests: manifests ## Verfiy manifests are up to date
 		echo "generated files are out of date, run make manifests"; exit 1; \
 	fi
 
+##@ Helm
+
+.PHONY: static-helm-check
+static-helm-check: ## Run static checks on helm chart (lint and template rendering)
+	@echo "Linting helm chart..."
+	@helm lint chart/
+	@echo "Rendering helm chart templates..."
+	@helm template test-release chart/ > /dev/null
+	@echo "Static helm checks passed"
+
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
