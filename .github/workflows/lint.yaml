@@ -175,3 +175,44 @@ jobs:
           persist-credentials: false
       - name: Run terraform check
         run: make terraform-check
+
+  helm-charts:
+    name: Helm charts
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read properties from versions.yaml
+        run: |
+          helm_version="$(yq '.tools.helm.version' src/cloud-api-adaptor/versions.yaml)"
+          helm_sha256="$(yq '.tools.helm.sha256' src/cloud-api-adaptor/versions.yaml)"
+          [ -n "$helm_version" ]
+          [ -n "$helm_sha256" ]
+          echo "HELM_VERSION=${helm_version}" >> "$GITHUB_ENV"
+          echo "HELM_CHECKSUM=${helm_sha256}" >> "$GITHUB_ENV"
+
+      - name: Install Helm
+        run: |
+          curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
+          tar -xzf helm.tar.gz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          rm -rf helm.tar.gz linux-amd64
+          helm version
+
+      - name: Static checks for peerpod-ctrl chart
+        working-directory: src/peerpod-ctrl
+        run: make static-helm-check
+
+      - name: Static checks for webhook chart
+        working-directory: src/webhook
+        run: make static-helm-check
+
+      - name: Static checks for peerpods chart
+        working-directory: src/cloud-api-adaptor
+        run: make static-helm-check
