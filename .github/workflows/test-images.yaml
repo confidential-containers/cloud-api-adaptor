@@ -34,7 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         targets: ${{ fromJson(needs.list-dockerfiles.outputs.matrix) }}
-        arch: [amd64, s390x]
+        arch: [amd64, s390x, arm64]
     permissions:
       contents: read
       packages: write
@@ -66,7 +66,7 @@ jobs:
           quay.io/confidential-containers/test-images:${{env.DOCKER_TAG}}
         push: true
         context: src/cloud-api-adaptor/
-        platforms: linux/s390x,linux/amd64
+        platforms: linux/s390x,linux/amd64,linux/arm64
         file: src/cloud-api-adaptor/${{matrix.targets}}
         build-args: |
           "ARCH=${{ matrix.arch }}"
