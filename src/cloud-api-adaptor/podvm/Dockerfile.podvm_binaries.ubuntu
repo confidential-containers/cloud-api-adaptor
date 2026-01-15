@@ -1,0 +1,111 @@
+# syntax=docker/dockerfile:1.5-labs
+# Copyright Confidential Containers Contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build binaries for mkosi podvm image
+#
+FROM ubuntu:24.04 AS builder
+
+ARG ARCH="x86_64"
+ARG GO_ARCH="amd64"
+ARG DISTRO_ARCH="amd64"
+ARG YQ_ARCH="amd64"
+ARG PROTOC_ARCH="x86_64"
+ARG GO_VERSION
+ARG PROTOC_VERSION
+ARG YQ_VERSION
+ARG YQ_CHECKSUM
+ARG ORAS_VERSION
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y build-essential gnupg git perl pkg-config \
+    libseccomp-dev libgpgme-dev libdevmapper-dev unzip libassuan-dev \
+    libssl-dev libtss2-dev clang xz-utils zstd jq curl ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+ADD https://dl.google.com/go/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && rm -f go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
+
+ENV PATH="/usr/local/go/bin:$PATH"
+
+RUN if [ "$(uname -m)" != "s390x" ]; then \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y gh && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*; \
+    else git clone https://github.com/cli/cli.git gh-cli && \
+    cd gh-cli && mkdir -p /usr/local/gh && make install prefix=/usr/local/gh && cd .. && \
+    rm -rf gh-cli; fi
+
+ENV PATH="/usr/local/gh/bin:$PATH"
+
+ADD https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH} /usr/local/bin/yq
+RUN echo "${YQ_CHECKSUM#sha256:} /usr/local/bin/yq" | sha256sum -c
+RUN chmod a+x /usr/local/bin/yq
+
+ADD https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
+RUN unzip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip -d /usr/local && rm -f protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
+
+ADD https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_${DISTRO_ARCH}.tar.gz oras_${ORAS_VERSION}_linux_${DISTRO_ARCH}.tar.gz
+RUN rm -rf /usr/local/bin/oras && tar -C /usr/local/bin -xzf oras_${ORAS_VERSION}_linux_${DISTRO_ARCH}.tar.gz && rm -f oras_${ORAS_VERSION}_linux_${DISTRO_ARCH}.tar.gz
+
+WORKDIR /src
+
+ENV GOPATH=/src
+
+FROM builder AS podvm_binaries_builder
+
+ARG CLOUD_PROVIDER
+ARG PODVM_DISTRO=ubuntu
+ARG GUEST_COMPONENTS_VERSION
+ARG GUEST_COMPONENTS_REPO
+# By default AA will be built with the `all-attesters` feature,
+# which doesn't compile on ubuntu.
+ARG TEE_PLATFORM=none
+# If not provided, uses system architecture
+ARG ARCH
+#This is the name of the policy file under
+#files/etc/kata-opa
+ARG DEFAULT_AGENT_POLICY_FILE=allow-all.rego
+ARG AUTHFILE
+ARG PAUSE_REPO
+ARG PAUSE_VERSION
+ARG PAUSE_BIN
+ARG IMAGE_NAME
+ARG VERIFY_PROVENANCE
+
+ENV AUTHFILE=${AUTHFILE}
+ENV PAUSE_REPO=${PAUSE_REPO}
+ENV PAUSE_VERSION=${PAUSE_VERSION}
+ENV PAUSE_BIN=${PAUSE_BIN}
+ENV CLOUD_PROVIDER=${CLOUD_PROVIDER}
+ENV PODVM_DISTRO=${PODVM_DISTRO}
+ENV GUEST_COMPONENTS_VERSION=${GUEST_COMPONENTS_VERSION}
+ENV GUEST_COMPONENTS_REPO=${GUEST_COMPONENTS_REPO}
+ENV TEE_PLATFORM=${TEE_PLATFORM}
+ENV ARCH=${ARCH}
+ENV DEFAULT_AGENT_POLICY_FILE=${DEFAULT_AGENT_POLICY_FILE}
+ENV IMAGE_NAME=${IMAGE_NAME}
+ENV VERIFY_PROVENANCE=${VERIFY_PROVENANCE}
+
+# Set these as they are required in the Makefile
+ENV IMAGE_URL="none"
+ENV IMAGE_CHECKSUM="none"
+
+COPY . /src
+
+WORKDIR /src/cloud-api-adaptor/podvm
+# Installs add-ons for foreign target, if required
+RUN ./hack/cross-build-extras.sh
+
+RUN LIBC=gnu make binaries
+
+FROM scratch
+COPY --from=podvm_binaries_builder /src/cloud-api-adaptor/podvm/files /

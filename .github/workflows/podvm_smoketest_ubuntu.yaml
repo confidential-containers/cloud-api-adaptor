@@ -1,0 +1,129 @@
+name: Ubuntu podvm smoke test
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build the image
+    runs-on: 'ubuntu-24.04'
+
+    defaults:
+      run:
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      # Required by rootless mkosi on Ubuntu 24.04
+      - name: Un-restrict user namespaces
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            genisoimage \
+            qemu-utils
+          sudo snap install yq
+
+      - name: Read properties from versions.yaml
+        working-directory: src/cloud-api-adaptor
+        run: |
+          {
+            echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)";
+            echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)";
+            echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
+            echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
+          } >> "$GITHUB_ENV"
+
+      - uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1.2.4
+        with:
+          version: ${{ env.ORAS_VERSION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Build binaries
+        run: make binaries
+        env:
+          PODVM_DISTRO: ubuntu
+
+      - name: Disable TLS for agent-protocol-forwarder
+        run: |
+          mkdir -p ./resources/binaries-tree/etc/default
+          echo "TLS_OPTIONS=-disable-tls" > ./resources/binaries-tree/etc/default/agent-protocol-forwarder
+
+      - name: Build Ubuntu image
+        run: make image-debug
+        env:
+          PODVM_DISTRO: ubuntu
+
+      # Upload the image to the artifacts
+      - name: Upload qcow2 artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: podvm-build-ubuntu
+          path: src/cloud-api-adaptor/podvm-mkosi/build/podvm-ubuntu-amd64.qcow2
+
+  test:
+    name: Test the image
+    # We're pinning the runner to 22.04 b/c libvirt struggles with the
+    # OVMF_CODE_4M firmware that is default on 24.04.
+    runs-on: 'ubuntu-22.04'
+    needs: build
+
+    strategy:
+      matrix:
+        test-mode:
+          - name: podvm-mkosi-ubuntu
+            mode: basic
+          - name: podvm-mkosi-with-scratch-space-ubuntu
+            mode: scratch-space
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            genisoimage \
+            qemu-utils\
+            socat \
+            virt-manager
+          sudo snap install yq
+
+      - name: Read properties from versions.yaml
+        working-directory: src/cloud-api-adaptor
+        run: |
+          {
+            echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
+            echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
+          } >> "$GITHUB_ENV"
+
+      - name: Install kata-agent-ctl
+        run: |
+          oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
+          tar --zstd -xf kata-static-agent-ctl.tar.zst
+          cp opt/kata/bin/kata-agent-ctl /usr/local/bin
+
+      - name: Download qcow2 artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: podvm-build-ubuntu
+          path: .
+
+      - name: Run smoke test (${{ matrix.test-mode.name }})
+        env:
+          TEST_MODE: ${{ matrix.test-mode.mode }}
+        run: src/cloud-api-adaptor/podvm/hack/smoke_test.sh -m "$TEST_MODE" podvm-ubuntu-amd64.qcow2
