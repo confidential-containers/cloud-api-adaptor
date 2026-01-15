@@ -28,6 +28,11 @@ on:
         description: Name of the container runtime. Either containerd or crio.
         required: false
         type: string
+      install_method:
+        default: 'kustomize'
+        description: Installation method. Either kustomize or helm.
+        required: false
+        type: string
     secrets:
       QUAY_PASSWORD:
         required: true
@@ -45,8 +50,13 @@ permissions: {}
 
 jobs:
   test-docker:
-    name: "Docker e2e tests: (${{ inputs.container_runtime }})"
+    name: "Docker e2e tests: (${{ inputs.container_runtime }}, ${{ inputs.install_method }})"
     runs-on: ubuntu-22.04
+    # TODO: remove when helm installation gets implemented and stable.
+    continue-on-error: ${{ inputs.install_method == 'helm' }}
+    env:
+      INSTALL_METHOD: "${{ inputs.install_method }}"
+      CAA_IMAGE: "${{ inputs.caa_image }}"
     steps:
       - name: Checkout Code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -101,6 +111,7 @@ jobs:
             sudo bash -s /usr/local/bin
 
       - name: Update kustomization configuration
+        if: ${{ inputs.install_method == 'kustomize' }}
         run: |
           cd "install/overlays/docker"
           kustomize edit set image "cloud-api-adaptor=${{ inputs.caa_image }}"
@@ -108,6 +119,19 @@ jobs:
           echo "::group::docker kustomization"
           cat kustomization.yaml
           echo "::endgroup::"
+
+      - name: Install Helm
+        if: ${{ inputs.install_method == 'helm' }}
+        env:
+          HELM_VERSION: v4.0.4
+          HELM_CHECKSUM: 29454bc351f4433e66c00f5d37841627cbbcc02e4c70a6d796529d355237671c
+        run: |
+          curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
+          tar -xzf helm.tar.gz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          rm -rf helm.tar.gz linux-amd64
+          helm version
 
       - name: Config docker
         run: |
@@ -118,6 +142,15 @@ jobs:
           CONTAINER_RUNTIME="${{ inputs.container_runtime }}"
           DOCKER_API_VERSION="1.44"
           EOF
+
+          # If using helm, split CAA_IMAGE into CAA_IMAGE_NAME and CAA_IMAGE_TAG
+          if [ "${INSTALL_METHOD}" = "helm" ]; then
+            CAA_IMAGE_TAG="${CAA_IMAGE##*:}"
+            CAA_IMAGE_NAME="${CAA_IMAGE%:*}"
+            echo "CAA_IMAGE=\"${CAA_IMAGE_NAME}\"" >> docker.properties
+            echo "CAA_IMAGE_TAG=\"${CAA_IMAGE_TAG}\"" >> docker.properties
+          fi
+
           # For debugging
           cat docker.properties
 
