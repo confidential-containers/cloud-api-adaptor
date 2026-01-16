@@ -36,6 +36,9 @@ tools:
   protoc: 3.16.0
   packer: v1.9.4
   oras: 1.2.0
+  helm:
+    version: v4.0.4
+    sha256: 29454bc351f4433e66c00f5d37841627cbbcc02e4c70a6d796529d355237671c
 # Referenced Git repositories
 git:
   coco-operator:

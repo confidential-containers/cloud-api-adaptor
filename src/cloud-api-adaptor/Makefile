@@ -248,3 +248,19 @@ podvm-byom-binaries-image:
 	docker buildx build -t $(PODVM_BYOM_BINARIES_IMAGE) -f podvm-mkosi/$(BYOM_BINARIES_DOCKERFILE) \
 	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
 	$(DOCKER_OPTS) .
+
+##@ Helm
+
+.PHONY: static-helm-check
+static-helm-check: ## Run static checks on helm chart (lint and template rendering)
+	@echo "Building helm chart dependencies..."
+	@helm dependency build install/charts/peerpods/
+	@echo "Linting and rendering helm chart with all provider configurations..."
+	@for provider in install/charts/peerpods/providers/*.yaml; do \
+		if [ -f "$$provider" ] && [[ ! "$$provider" =~ template$$ ]]; then \
+			echo "  $$(basename $$provider)"; \
+			helm lint install/charts/peerpods/ -f "$$provider" || exit 1; \
+			helm template test-release install/charts/peerpods/ -f "$$provider" > /dev/null || exit 1; \
+		fi \
+	done
+	@echo "Static helm checks passed"

@@ -1,0 +1,18 @@
+# Namespace where peerpodctrl resources will be deployed
+namespace: confidential-containers-system
+
+# Prefix prepended to all resource names
+namePrefix: peerpodctrl-
+
+# PeerPod controller image
+image:
+  repository: quay.io/confidential-containers/peerpod-ctrl
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# kube-rbac-proxy: Sidecar container that protects the /metrics endpoint with RBAC authentication
+# When enabled, only authenticated clients with proper RBAC permissions can access metrics
+# Set to false to expose metrics without authentication (not recommended for production)
+authProxy:
+  enabled: true
+  image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0

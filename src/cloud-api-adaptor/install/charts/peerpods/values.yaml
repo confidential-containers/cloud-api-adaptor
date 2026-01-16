@@ -46,14 +46,18 @@ provider: libvirt
 # Set to "0" for unlimited (not recommended for production)
 limit: "10"
 
-# Resource controllers (peerpod-ctrl + webhook)
-# When enabled, installs peerpod-ctrl and webhook via pre-install hook
-# NOTE: Webhook requires cert-manager to be installed in the cluster
+# peerpod-ctrl subchart configuration
+# Manages lifecycle of peer pod cloud resources and cleans up dangling VMs
+# Configuration options documented in ../../../peerpod-ctrl/chart/values.yaml
 resourceCtrl:
   enabled: true
-  # Git reference for peerpod-ctrl and webhook kustomize configs
-  # Can be a branch (main), tag (src/peerpod-ctrl/v0.16.0), or commit SHA
-  gitRef: "main"
+
+# peerpods-webhook subchart configuration
+# Mutating webhook that modifies pod specs to use peer pods runtime and resources
+# Configuration options documented in ../../../webhook/chart/values.yaml
+# NOTE: Requires cert-manager to be installed in the cluster
+webhook:
+  enabled: true
 
 # kata-deploy subchart configuration
 kata-deploy:
