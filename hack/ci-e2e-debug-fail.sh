@@ -30,9 +30,18 @@ debug_common() {
     kubectl describe pods -n confidential-containers-system
     echo "::endgroup::"
 
+    echo "::group::kata-deploy logs"
+    kubectl logs -l name=kata-deploy --tail=-1 -n confidential-containers-system
+    echo "::endgroup::"
+
     echo "::group::webhook installation logs"
     kubectl get pods -n peer-pods-webhook-system
     kubectl describe pods -n peer-pods-webhook-system
+    echo "::endgroup::"
+
+    echo "::group::peerpodctrl installation logs"
+    pod=$(kubectl get pod -o name -n confidential-containers-system | grep peerpodctrl-controller-manager)
+    [ -n "$pod" ] && kubectl logs "$pod" --tail=-1 -n confidential-containers-system
     echo "::endgroup::"
 
     echo "::group::cloud-api-adaptor logs"
