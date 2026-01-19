@@ -97,7 +97,11 @@ jobs:
           sudo snap install yq
           go_version="$(yq '.tools.golang' versions.yaml)"
           [ -n "$go_version" ]
-          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+          {
+            echo "GO_VERSION=${go_version}"
+            echo "HELM_VERSION=$(yq -e '.tools.helm.version' versions.yaml)"
+            echo "HELM_CHECKSUM=$(yq -e '.tools.helm.sha256' versions.yaml)"
+          } >> "$GITHUB_ENV"
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
         uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
@@ -122,9 +126,6 @@ jobs:
 
       - name: Install Helm
         if: ${{ inputs.install_method == 'helm' }}
-        env:
-          HELM_VERSION: v4.0.4
-          HELM_CHECKSUM: 29454bc351f4433e66c00f5d37841627cbbcc02e4c70a6d796529d355237671c
         run: |
           curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
           echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
