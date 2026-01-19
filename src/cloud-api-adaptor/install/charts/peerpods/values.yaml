@@ -59,6 +59,11 @@ resourceCtrl:
 kata-deploy:
   snapshotter:
     setup: ["nydus"]
+  defaultShim:
+    amd64: remote
+    arm64: remote
+    s390x: remote
+    ppc64le: remote
   shims:
     clh:
       enabled: false
