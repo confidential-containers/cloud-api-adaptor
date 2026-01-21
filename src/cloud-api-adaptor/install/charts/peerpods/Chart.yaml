@@ -2,7 +2,7 @@ apiVersion: v2
 name: peerpods
 description: Cloud API Adaptor (Peerpods) Helm Chart
 type: application
-version: 0.1.0
+version: 0.1.0-dev
 appVersion: "v0.17.0"
 
 keywords:
