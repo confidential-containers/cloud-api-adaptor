@@ -1,0 +1,188 @@
+name: Release PeerPods Helm Chart
+
+on:
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: 'OCI registry path (without oci:// prefix). Leave empty for default (ghcr.io/{repo}/charts)'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      registry:
+        description: 'OCI registry path (without oci:// prefix). Leave empty for default (ghcr.io/{repo}/charts)'
+        required: false
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: Release PeerPods Helm Chart
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read   # Required for checkout
+      packages: write  # Required for pushing to GitHub Container Registry
+
+    defaults:
+      run:
+        working-directory: src/cloud-api-adaptor/install/charts/peerpods
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install yq
+        run: |
+          echo "Installing yq..."
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: Read versions from Chart.yaml and versions.yaml
+        id: read_version
+        working-directory: .
+        run: |
+          VERSION="$(yq '.version' src/cloud-api-adaptor/install/charts/peerpods/Chart.yaml)"
+          APP_VERSION="$(yq '.appVersion' src/cloud-api-adaptor/install/charts/peerpods/Chart.yaml)"
+          HELM_VERSION="$(yq -e '.tools.helm.version' src/cloud-api-adaptor/versions.yaml)"
+          HELM_CHECKSUM="$(yq -e '.tools.helm.sha256' src/cloud-api-adaptor/versions.yaml)"
+
+          # Check version exists
+          if [ -z "${VERSION}" ] || [ "${VERSION}" = "null" ]; then
+            echo "ERROR: Failed to read version from Chart.yaml"
+            exit 1
+          fi
+
+          # Check appVersion exists
+          if [ -z "${APP_VERSION}" ] || [ "${APP_VERSION}" = "null" ]; then
+            echo "ERROR: Failed to read appVersion from Chart.yaml"
+            exit 1
+          fi
+
+          # Validate version format
+          if ! [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "ERROR: Invalid version format: ${VERSION}"
+            echo "Expected format: X.Y.Z or X.Y.Z-suffix (e.g., 1.0.0 or 1.0.0-rc.1)"
+            exit 1
+          fi
+
+          {
+            echo "version=${VERSION}"
+            echo "helm_version=${HELM_VERSION}"
+            echo "helm_checksum=${HELM_CHECKSUM}"
+          } >> "${GITHUB_OUTPUT}"
+          echo "Chart version: ${VERSION}"
+          echo "App version: ${APP_VERSION}"
+          echo "Helm version: ${HELM_VERSION}"
+
+      - name: Set registry
+        id: registry
+        working-directory: .
+        env:
+          INPUT_REGISTRY: ${{ inputs.registry }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ -z "${INPUT_REGISTRY}" ]; then
+            REGISTRY="ghcr.io/${GITHUB_REPOSITORY}/charts"
+          else
+            REGISTRY="${INPUT_REGISTRY}"
+          fi
+          echo "registry=${REGISTRY}" >> "${GITHUB_OUTPUT}"
+          echo "Using registry: ${REGISTRY}"
+
+      - name: Install Helm
+        env:
+          HELM_VERSION: ${{ steps.read_version.outputs.helm_version }}
+          HELM_CHECKSUM: ${{ steps.read_version.outputs.helm_checksum }}
+        run: |
+          curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
+          tar -xzf helm.tar.gz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          rm -rf helm.tar.gz linux-amd64
+          helm version
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Authenticate Helm with GitHub Container Registry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          echo "Authenticating Helm with GHCR..."
+          echo "${GITHUB_TOKEN}" | helm registry login ghcr.io \
+            --username "${GITHUB_ACTOR}" \
+            --password-stdin
+          echo "Helm authenticated with ghcr.io"
+
+      - name: Update Helm dependencies
+        run: |
+          echo "Updating Helm dependencies..."
+          helm dependency update
+          echo "Helm dependencies updated"
+
+      - name: Package Helm chart
+        run: |
+          echo "Packaging Helm chart with dependencies..."
+          mkdir -p .cr-release-packages
+          helm package . --destination .cr-release-packages
+          echo "Helm chart packaged"
+          echo "Package contents:"
+          ls -lh .cr-release-packages/
+          echo ""
+          echo "Verifying package includes dependencies:"
+          tar -tzf .cr-release-packages/peerpods-*.tgz | head -20
+
+      - name: Push Helm chart to OCI registry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.read_version.outputs.version }}
+          REGISTRY: ${{ steps.registry.outputs.registry }}
+        run: |
+          CHART_PACKAGE=".cr-release-packages/peerpods-${VERSION}.tgz"
+          OCI_REGISTRY="oci://${REGISTRY}"
+
+          echo "Pushing chart to ${OCI_REGISTRY}"
+          echo "Chart package: ${CHART_PACKAGE}"
+          echo "Version: ${VERSION}"
+          echo "Full OCI path: ${OCI_REGISTRY}/peerpods:${VERSION}"
+
+          helm push "${CHART_PACKAGE}" "${OCI_REGISTRY}"
+
+          echo "Helm chart pushed to ${OCI_REGISTRY}/peerpods:${VERSION}"
+
+      - name: Release Summary
+        env:
+          VERSION: ${{ steps.read_version.outputs.version }}
+          REGISTRY: ${{ steps.registry.outputs.registry }}
+        run: |
+          cat << EOF
+
+          ================================================================================
+                              RELEASE COMPLETED SUCCESSFULLY
+          ================================================================================
+
+          Chart Version: ${VERSION}
+          OCI Registry: ${REGISTRY}/peerpods:${VERSION}
+
+          Installation Command:
+             helm install peerpods oci://${REGISTRY}/peerpods \\
+               --version ${VERSION} \\
+               --namespace confidential-containers-system \\
+               --create-namespace
+
+          EOF
+        working-directory: .
