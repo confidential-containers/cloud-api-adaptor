@@ -46,6 +46,19 @@ provider: libvirt
 # Set to "0" for unlimited (not recommended for production)
 limit: "10"
 
+# DaemonSet configuration
+daemonset:
+  # Update strategy controls how the CAA DaemonSet performs rolling updates
+  updateStrategy:
+    # maxUnavailable: Maximum number of pods that can be unavailable during update
+    # maxSurge: Maximum number of extra pods that can be created during update
+    #
+    # Default (maxUnavailable: 0, maxSurge: 1) provides zero downtime updates
+    # and works on both small (1 node) and large clusters.
+    # Override with custom values for specific deployment needs.
+    maxUnavailable: 0
+    maxSurge: 1
+
 # peerpod-ctrl subchart configuration
 # Manages lifecycle of peer pod cloud resources and cleans up dangling VMs
 # Configuration options documented in ../../../peerpod-ctrl/chart/values.yaml
