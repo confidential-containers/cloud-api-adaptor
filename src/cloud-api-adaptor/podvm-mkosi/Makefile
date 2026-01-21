@@ -39,8 +39,8 @@ define run_mkosi_in_container
 	docker run --rm --privileged \
 		-v "$(shell pwd)":/workspace \
 		-w /workspace \
-		fedora:41 \
-		bash -c "dnf install -y bubblewrap coreutils git python3; mkdir -p /build; git clone -b $(MKOSI_VERSION) https://github.com/systemd/mkosi /build/mkosi; export PATH="/build/mkosi/bin:$$PATH"; mkosi --tools-tree=default --tools-tree-release=41 $(1)"
+		fedora:43 \
+		bash -c "dnf install -y bubblewrap coreutils git python3; mkdir -p /build; git clone -b $(MKOSI_VERSION) https://github.com/systemd/mkosi /build/mkosi; export PATH="/build/mkosi/bin:$$PATH"; mkosi --tools-tree=default --tools-tree-release=43 $(1)"
 endef
 
 binaries:
