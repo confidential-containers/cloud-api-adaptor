@@ -15,6 +15,12 @@ Before installing this chart, ensure you have:
 - **Helm** v3.x or v4.x installed ([installation guide](https://helm.sh/docs/intro/install/))
 - **Kubernetes cluster** with appropriate access
 - **kubeconfig** configured to access your cluster
+- **cert-manager** installed (required for webhook, enabled by default)
+
+> [!NOTE]
+> The webhook handles proper resource scheduling for peer-pods. Disabling it
+> (`--set webhook.enabled=false`) is only recommended for development or when
+> worker nodes have sufficient resources.
 
 ## Quick Start
 
