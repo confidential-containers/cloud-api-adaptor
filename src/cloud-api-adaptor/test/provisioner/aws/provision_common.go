@@ -107,6 +107,7 @@ type AWSProvisioner struct {
 	iamClient          *iam.Client
 	containerRuntime   string // Name of the container runtime
 	Cluster            Cluster
+	CaaImage           string
 	Disablecvm         string
 	ec2Client          *ec2.Client
 	s3Client           *s3.Client
@@ -179,6 +180,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		},
 		containerRuntime:   properties["container_runtime"],
 		Cluster:            cluster,
+		CaaImage:           properties["CAA_IMAGE"],
 		Image:              NewAMIImage(ec2Client, properties),
 		Disablecvm:         properties["disablecvm"],
 		PauseImage:         properties["pause_image"],
@@ -321,6 +323,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 	credentials, _ := a.AwsConfig.Credentials.Retrieve(context.TODO())
 
 	return map[string]string{
+		"CAA_IMAGE":            a.CaaImage,
 		"CONTAINER_RUNTIME":    a.containerRuntime,
 		"disablecvm":           a.Disablecvm,
 		"pause_image":          a.PauseImage,
