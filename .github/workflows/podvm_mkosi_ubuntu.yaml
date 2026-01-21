@@ -1,0 +1,224 @@
+name: Create Ubuntu Pod VM image with mkosi
+
+on:
+  workflow_dispatch:
+    inputs:
+      registry:
+        default: 'quay.io/confidential-containers'
+        required: false
+        type: string
+      image_tag:
+        default: ''
+        required: false
+        type: string
+      git_ref:
+        description: Git ref to checkout the cloud-api-adaptor repository.
+        required: true
+        type: string
+      arch:
+        description: Which arch we are building the mkosi image for
+        default: 'amd64'
+        required: false
+        type: string
+      debug:
+        description: Whether to build the image in debug mode
+        default: false
+        required: false
+        type: boolean
+
+  workflow_call:
+    inputs:
+      registry:
+        default: 'quay.io/confidential-containers'
+        required: false
+        type: string
+      image_tag:
+        default: ''
+        required: false
+        type: string
+      git_ref:
+        description: Git ref to checkout the cloud-api-adaptor repository.
+        required: true
+        type: string
+      arch:
+        description: Which arch we are building the mkosi image for
+        default: 'amd64'
+        required: false
+        type: string
+      debug:
+        description: Whether to build the image in debug mode
+        default: false
+        required: false
+        type: boolean
+    secrets:
+      QUAY_PASSWORD:
+        required: true
+    outputs:
+      qcow2_oras_image:
+        description: The location of the qcow2 oras container this workflow pushed
+        value: ${{ jobs.build-image.outputs.qcow2_oras_image }}
+      docker_oci_image:
+        description: The location of the docker oci container image this workflow pushed
+        value: ${{ jobs.build-image.outputs.docker_oci_image }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
+permissions: {}
+
+jobs:
+  build-image:
+    name: Build mkosi Ubuntu image for ${{ inputs.arch }}
+    runs-on: ${{ inputs.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
+    permissions:
+      contents: read # Required if we want to run on a fork?
+      packages: write # Required to publish the oras package to ghcr
+      id-token: write # Required to publish the attestation provenance to ghcr
+      attestations: write # Required to publish the attestation provenance to ghcr
+    outputs:
+      qcow2_oras_image: ${{ steps.publish_oras_qcow2.outputs.image }}:${{ steps.publish_oras_qcow2.outputs.tag }}
+      docker_oci_image: ${{ steps.build_docker_oci.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: "${{ inputs.git_ref }}"
+
+      # Required by rootless mkosi
+      - name: Un-restrict user namespaces
+        if: inputs.arch == 'amd64'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Login to quay Container Registry
+        if: ${{ startsWith(inputs.registry, 'quay.io') }}
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: quay.io
+          username: ${{ vars.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Login to the ghcr Container registry
+        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            alien \
+            bubblewrap \
+            dnf \
+            qemu-utils \
+            uidmap
+          sudo snap install yq
+
+      - name: Read properties from versions.yaml
+        run: |
+          echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)" >> "$GITHUB_ENV"
+          echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
+
+      - uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1.2.4
+        with:
+          version: ${{ env.ORAS_VERSION }}
+
+      - name: Build binaries for Ubuntu
+        id: build_binaries
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: make binaries
+        env:
+          ARCH: ${{ inputs.arch }}
+          PODVM_DISTRO: ubuntu
+
+      - name: Build mkosi debug image
+        if: ${{ inputs.debug == 'true' }}
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: make image-debug
+        env:
+          PODVM_DISTRO: ubuntu
+
+      - name: Build mkosi image
+        if: ${{ inputs.debug != 'true' }}
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: make image
+        env:
+          PODVM_DISTRO: ubuntu
+
+      - name: Upload the qcow2 with oras
+        id: publish_oras_qcow2
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: |
+          mkdir oras
+          cd oras
+          cp ../build/podvm-*.qcow2 .
+          tar cJf podvm.tar.xz podvm-*.qcow2
+          image=${REGISTRY}/podvm-generic-ubuntu
+          if [ "${DEBUG}" = "true" ]; then
+            image=${image}-debug
+          fi
+          image=${image}-${ARCH}
+          tag=$(git rev-parse --short HEAD)
+          oras push "${image}:${tag}" podvm.tar.xz
+
+          # If the input has a different image-tag then also push it with that tag
+          if [ -n "$IMAGE_TAG}" ] && [ "${IMAGE_TAG}" != "${tag}" ];then
+            oras push "${image}:${IMAGE_TAG}" podvm.tar.xz
+          fi
+
+          # add image and digest to output for attestation
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+        env:
+          ARCH: ${{ inputs.arch }}
+          DEBUG: ${{ inputs.debug }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          REGISTRY: ${{ inputs.registry }}
+
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        with:
+          subject-name: ${{ steps.publish_oras_qcow2.outputs.image }}
+          subject-digest: ${{ steps.publish_oras_qcow2.outputs.digest }}
+          push-to-registry: true
+
+      - name: Clean up some space for the docker provider build
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: |
+          sudo du --max-depth=2 /home/runner || true
+          sudo du --max-depth=2 /var/lib || true
+          sudo rm -rf ./build
+          sudo rm -rf ./mkosi.cache
+
+      - name: Build and push image for docker provider
+        id: build_docker_oci
+        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        run: |
+          tag=$(git rev-parse --short HEAD)
+          PODVM_TAG=${tag} make image-container
+          PODVM_TAG=${tag} make push-image-container
+          arch=$(uname -m)
+          arch=${arch/x86_64/amd64}
+          echo "image=${REGISTRY}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ inputs.registry }}
+          PODVM_DISTRO: ubuntu
