@@ -22,6 +22,14 @@ Before installing this chart, ensure you have:
 > (`--set webhook.enabled=false`) is only recommended for development or when
 > worker nodes have sufficient resources.
 
+> [!WARNING]
+> The webhook is enabled by default and requires cert-manager for TLS certificates.
+> By default, cert-manager will be installed automatically (`webhook.certManager.install=true`).
+> If cert-manager is already installed in your cluster, set `--set webhook.certManager.install=false`.
+>
+> Disabling the webhook (`--set webhook.enabled=false`) is only recommended for
+> development or when worker nodes have sufficient resources.
+
 ## Quick Start
 
 ### Option A: Development/Testing (secrets.mode: create)

@@ -50,4 +50,11 @@ authProxy:
 # cert-manager automates certificate generation, rotation, and trust configuration
 # Without this, you would need to manually create and manage webhook certificates
 certManager:
+  # Use cert-manager to generate webhook TLS certificates
+  # Creates Certificate and Issuer custom resources
+  # Set to false only if you are providing certificates through another method
   enabled: true
+
+  # Install cert-manager as a chart dependency
+  # Set to false if cert-manager is already installed in your cluster
+  install: true
