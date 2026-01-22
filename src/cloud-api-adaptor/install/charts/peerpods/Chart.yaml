@@ -21,7 +21,7 @@ maintainers:
 
 dependencies:
   - name: kata-deploy
-    version: "0.0.0-dev"
+    version: "3.25.0"
     repository: "oci://ghcr.io/kata-containers/kata-deploy-charts"
   - name: peerpodctrl
     version: "0.1.0"
