@@ -30,90 +30,10 @@ the kata-containers release version.
         go mod tidy
         ```
         in the [cloud-api-adaptor](../src/cloud-api-adaptor/) directory and [csi-wrapper](../src/csi-wrapper/) directory.
-1. The CoCo operator updates to use references to the other component releases and then releases itself
-    - In order to have the correct version of the kata-containers payload in our peer pods releases, we need to
-    wait for this CoCo operator release before we can start the peer pods release process. After this operator payload
-    pinning is done, we should pick the matching operator release/commit containing this and update the
-    `git.coco-operator.reference` and `git.coco-operator.config` values in [versions.yaml](../src/cloud-api-adaptor/versions.yaml).
+    - Update the `dependencies.kata-deploy` version in [`Chart.yaml`](../src/cloud-api-adaptor/install/charts/peerpods/Chart.yaml) to the Kata release version.
 1. cloud-api-adaptor releases with the following phases detailed below:
-    - Pre-release testing (optional)
     - Cutting the release
     - Post release tasks
-
-### Pre-release testing (optional)
-
-In the pre-release/release candidate testing phase
-
-During the pre-release/release candidate phase we should verify that the kata-containers, guest-components
-and trustee versions were updated when their components released as listed above.
-
-#### Tags and update go submodules
-
-We have some go submodules with dependencies in the cloud-api-adaptor repo, so in order to allow
-people to use `go get` on these submodules, we need to ensure we create tags for each of the go modules we have in
-the correct order.
-
-> [!IMPORTANT]\
-> After a tag has been set, it cannot be moved!
-> The Go module proxy caches the hash of the first tag and will refuse any update.
-> If you mess up, you need to restart the tagging with the next patch version.
-
-However we use local replace references for `cloud-providers`, `peerpod-ctrl` and `cloud-api-adaptor`, so
-don't bump the go modules ourselves.
-
-- Create git tags for all go modules. You can use the [release-helper.sh](../hack/release-helper.sh) script with the `go-tag` command
-to generate all the git commands needed.
-> **Note:** `hack/release-helper.sh` `go-tag` has an optional third parameter for the name of the upstream remote,
-which defaults to origin if not supplied
-e.g. To create the tags for the upstream branch with the `v0.8.0-alpha.1` release, run:
-```bash
-./hack/release-helper.sh go-tag v0.8.0-alpha.1 upstream
-
-The input release tag: v0.8.0-alpha.1
-The follow git commands can be used to do release tags.
-*****************************IMPORTANT********************************************
-After a tag has been set, it cannot be moved!
-The Go module proxy caches the hash of the first tag and will refuse any update.
-If you mess up, you need to restart the tagging with the next patch version.
-**********************************************************************************
-git tag src/cloud-api-adaptor/v0.8.0-alpha.1 main
-git push upstream src/cloud-api-adaptor/v0.8.0-alpha.1
-git tag src/cloud-providers/v0.8.0-alpha.1 main
-git push upstream src/cloud-providers/v0.8.0-alpha.1
-git tag src/csi-wrapper/v0.8.0-alpha.1 main
-git push upstream src/csi-wrapper/v0.8.0-alpha.1
-git tag src/peerpod-ctrl/v0.8.0-alpha.1 main
-git push upstream src/peerpod-ctrl/v0.8.0-alpha.1
-git tag src/webhook/v0.8.0-alpha.1 main
-git push upstream src/webhook/v0.8.0-alpha.1
-```
-Copy and paste the generated commands to create and push release candidate tags, the output looks like:
-```bash
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
-To github.com:confidential-containers/cloud-api-adaptor.git
- * [new tag]         src/cloud-api-adaptor/v0.8.0-alpha.1 -> src/cloud-api-adaptor/v0.8.0-alpha.1
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
-To github.com:confidential-containers/cloud-api-adaptor.git
- * [new tag]         src/cloud-providers/v0.8.0-alpha.1 -> src/cloud-providers/v0.8.0-alpha.1
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
-To github.com:confidential-containers/cloud-api-adaptor.git
- * [new tag]         src/csi-wrapper/v0.8.0-alpha.1 -> src/csi-wrapper/v0.8.0-alpha.1
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
-To github.com:confidential-containers/cloud-api-adaptor.git
- * [new tag]         src/peerpod-ctrl/v0.8.0-alpha.1 -> src/peerpod-ctrl/v0.8.0-alpha.1
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
-To github.com:confidential-containers/cloud-api-adaptor.git
- * [new tag]         src/webhook/v0.8.0-alpha.1 -> src/webhook/v0.8.0-alpha.1
-```
-- After this we should create a cloud-api-adaptor [pre-release](https://github.com/confidential-containers/cloud-api-adaptor/releases/new)
-named `v<version>-alpha.1` to trigger the creation of the podvm build.
-
-- At this point we want to freeze the `main` branch to ensure that no accidental changes go in an destabilise the release selection.
-To do this contact an admin (e.g. Pradipta, or Steve) and ask them to lock the `main` branch.
-
-These versions should be tested to ensure that there are no breaking changes and the wider confidential-containers
-release team updated with the status. If there are any issues then this phase might be repeated until it is
-successful.
 
 ### Cutting releases
 
@@ -186,7 +106,7 @@ confidential-containers release team to let them know it has completed successfu
 
 If the `main` branch was not already unlocked, then ask an admin to do this now.
 
-The CoCo operator reference commit in the [versions.yaml](../src/cloud-api-adaptor/versions.yaml) should be reverted to use `main` branch.
+Update the `dependencies.kata-deploy` version in [`Chart.yaml`](../src/cloud-api-adaptor/install/charts/peerpods/Chart.yaml)  should be reverted to use the `0.0.0-dev` tag.
 
 The commit that pinned the overlay kustomization files should be reverted to start using the latest cloud-api-adaptor images again.
 
