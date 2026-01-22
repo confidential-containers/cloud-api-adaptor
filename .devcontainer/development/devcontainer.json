@@ -3,14 +3,29 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/alpine
 {
 	"name": "General development container",
-	"image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".",
+		"args": {
+			"BUILDKIT_INLINE_CACHE": "1"
+		}
+	},
 	"postCreateCommand": "bash .devcontainer/development/scripts/postCreateCommand.sh",
+	"runArgs": ["--platform=linux/amd64"],
 	"capAdd": [
 		"CAP_AUDIT_WRITE"
 	],
 	"features": {
-		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
-		"ghcr.io/devcontainers/features/go:1": {}
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"version": "latest"
+		},
+		"ghcr.io/devcontainers/features/go:1": {
+			"version": "latest"
+		}
+	},
+	"remoteEnv": {
+		"DOCKER_BUILDKIT": "0",
+		"DOCKER_DEFAULT_PLATFORM": "linux/amd64"
 	},
 	"containerEnv": {
 		"CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}"
