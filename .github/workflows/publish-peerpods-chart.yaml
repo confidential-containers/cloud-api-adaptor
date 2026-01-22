@@ -27,6 +27,7 @@ jobs:
     permissions:
       contents: read   # Required for checkout
       packages: write  # Required for pushing to GitHub Container Registry
+      id-token: write  # Required for attestation signing
 
     defaults:
       run:
@@ -147,6 +148,7 @@ jobs:
           tar -tzf .cr-release-packages/peerpods-*.tgz | head -20
 
       - name: Push Helm chart to OCI registry
+        id: push_chart
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.read_version.outputs.version }}
@@ -163,6 +165,25 @@ jobs:
           helm push "${CHART_PACKAGE}" "${OCI_REGISTRY}"
 
           echo "Helm chart pushed to ${OCI_REGISTRY}/peerpods:${VERSION}"
+
+          # Extract digest for attestation
+          echo "Extracting OCI digest..."
+          DIGEST=$(helm show chart "oci://${REGISTRY}/peerpods" --version "${VERSION}" 2>&1 | awk '/Digest:/ {print $2}')
+
+          if [ -z "${DIGEST}" ]; then
+            echo "ERROR: Failed to extract digest"
+            exit 1
+          fi
+
+          echo "digest=${DIGEST}" >> "${GITHUB_OUTPUT}"
+          echo "OCI Digest: ${DIGEST}"
+
+      - name: Generate attestation for Helm chart
+        uses: actions/attest-build-provenance@1c608d11d69870c2092266b3f9a6f3abbf17002c # v1.4.3
+        with:
+          subject-name: ${{ steps.registry.outputs.registry }}/peerpods
+          subject-digest: ${{ steps.push_chart.outputs.digest }}
+          push-to-registry: true
 
       - name: Release Summary
         env:

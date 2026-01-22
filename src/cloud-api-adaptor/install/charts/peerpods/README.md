@@ -22,7 +22,30 @@ Before installing this chart, ensure you have:
 > (`--set webhook.enabled=false`) is only recommended for development or when
 > worker nodes have sufficient resources.
 
-## Quick Start
+## Installation from OCI Registry
+
+The chart is published to GitHub Container Registry with cryptographic attestations for supply chain security.
+
+### Verifying Chart Authenticity
+
+Before installing, you can verify the chart was built by the official GitHub Actions workflow:
+
+```bash
+gh attestation verify oci://ghcr.io/confidential-containers/cloud-api-adaptor/charts/peerpods:0.1.0-dev \
+  --owner confidential-containers
+```
+
+### Installing from Registry
+
+```bash
+helm install peerpods oci://ghcr.io/confidential-containers/cloud-api-adaptor/charts/peerpods \
+  --version 0.1.0-dev \
+  -f providers/<provider>.yaml \
+  -n confidential-containers-system \
+  --create-namespace
+```
+
+## Quick Start (Development)
 
 ### Option A: Development/Testing (secrets.mode: create)
 
