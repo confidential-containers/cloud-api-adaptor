@@ -136,6 +136,24 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		}
 	}
 
+	// Return error early
+	if config.ZoneName == "" {
+		return nil, fmt.Errorf("zone was not provided and could not detect automatically")
+	}
+
+	if len(config.DedicatedHostIDs) > 0 {
+		selected, err := pickIDInZone(
+			config.DedicatedHostIDs,
+			config.ZoneName,
+			func(id string) (string, error) { return getDedicatedHostZone(vpcV1, id) },
+			"Dedicated Host",
+		)
+		if err != nil {
+			return nil, err
+		}
+		config.selectedDedicatedHostID = selected
+	}
+
 	gTaggingV1, err := globaltaggingv1.NewGlobalTaggingV1(
 		&globaltaggingv1.GlobalTaggingV1Options{
 			Authenticator: authenticator,
@@ -209,6 +227,47 @@ func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourc
 	return
 }
 
+func getDedicatedHostZone(vpcV1 *vpcv1.VpcV1, dedicatedHostID string) (string, error) {
+	dedicatedHostOptions := vpcv1.GetDedicatedHostOptions{
+		ID: &dedicatedHostID,
+	}
+	dedicatedHost, response, err := vpcV1.GetDedicatedHost(&dedicatedHostOptions)
+	if err != nil {
+		return "", fmt.Errorf("VPC error with:\n %w\nfurther details:\n %v", err, response)
+	}
+
+	return *dedicatedHost.Zone.Name, nil
+}
+
+// pickIDInZone finds the first ID whose zone equals zoneName.
+// If multiple IDs match the zone, it logs a warning and returns the first.
+// If none match, it returns a descriptive error.
+func pickIDInZone(ids []string, zoneName string, getZone func(string) (string, error), resourceLabel string) (string, error) {
+	var selected string
+
+	for _, id := range ids {
+		zone, err := getZone(id)
+		if err != nil {
+			return "", fmt.Errorf("couldn't get %s %s's zone: %w", id, resourceLabel, err)
+		}
+		if zone == zoneName {
+			if selected != "" && logger != nil {
+				logger.Printf("warning, multiple %ss were provided in zone %s; only one will be used",
+					resourceLabel, zoneName)
+				// Continue to keep the first match as the selected one.
+				continue
+			}
+			selected = id
+		}
+	}
+
+	if selected == "" {
+		return "", fmt.Errorf("no %s in zone %s was provided; please provide a %s in the specified zone for High Availability",
+			resourceLabel, zoneName, resourceLabel)
+	}
+	return selected, nil
+}
+
 func (p *ibmcloudVPCProvider) getAttachTagOptions(vpcInstanceCRN *string) (*globaltaggingv1.AttachTagOptions, error) {
 	if vpcInstanceCRN == nil {
 		return nil, fmt.Errorf("missing vpc instance crn, can't create attach tag options")
@@ -275,6 +334,10 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 				},
 			},
 		}
+	}
+
+	if p.serviceConfig.selectedDedicatedHostID != "" {
+		prototype.PlacementTarget = &vpcv1.InstancePlacementTargetPrototypeDedicatedHostIdentityDedicatedHostIdentityByID{ID: &p.serviceConfig.selectedDedicatedHostID}
 	}
 
 	return prototype
