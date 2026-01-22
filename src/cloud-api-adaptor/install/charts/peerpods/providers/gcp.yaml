@@ -42,6 +42,10 @@ providerConfigs:
     # (default: "pd-standard")
     # GCP_DISK_TYPE: "pd-standard"
 
+    # Machine types to be used for the Pod VMs, comma separated
+    # (default: "")
+    # GCP_INSTANCE_TYPES: ""
+
     # Pod VM instance type
     # (default: "e2-medium")
     # GCP_MACHINE_TYPE: "e2-medium"
