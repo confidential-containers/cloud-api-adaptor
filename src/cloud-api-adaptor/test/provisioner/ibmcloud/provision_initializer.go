@@ -55,6 +55,7 @@ type IBMCloudProperties struct {
 	VxlanPort         string
 	ClusterID         string
 	Tags              string
+	DedicatedHostIDs  string
 
 	WorkerCount   int
 	IsSelfManaged bool
@@ -103,6 +104,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		VxlanPort:         properties["VXLAN_PORT"],
 		ClusterID:         properties["CLUSTER_ID"],
 		Tags:              properties["TAGS"],
+		DedicatedHostIDs:  properties["DEDICATED_HOST_IDS"],
 	}
 
 	if len(IBMCloudProps.IBMCloudProvider) <= 0 {
