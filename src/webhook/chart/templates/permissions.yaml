@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/created-by: peerpods-webhook
     app.kubernetes.io/part-of: peerpods-webhook
   name: {{ .Values.namePrefix }}controller-manager
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -27,7 +27,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.namePrefix }}controller-manager
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.Namespace }}
 ---
 # permissions to do leader election.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -40,7 +40,7 @@ metadata:
     app.kubernetes.io/created-by: peerpods-webhook
     app.kubernetes.io/part-of: peerpods-webhook
   name: {{ .Values.namePrefix }}leader-election-role
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups:
   - ""
@@ -84,7 +84,7 @@ metadata:
     app.kubernetes.io/created-by: peerpods-webhook
     app.kubernetes.io/part-of: peerpods-webhook
   name: {{ .Values.namePrefix }}leader-election-rolebinding
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -92,7 +92,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.namePrefix }}controller-manager
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.Namespace }}
 {{- if .Values.authProxy.enabled }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -136,7 +136,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.namePrefix }}controller-manager
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

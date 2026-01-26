@@ -10,7 +10,7 @@ metadata:
     app.kubernetes.io/part-of: peerpodctrl
     control-plane: controller-manager
   name: {{ .Values.namePrefix }}controller-manager-metrics-service
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.Namespace }}
 spec:
   ports:
   - name: https
