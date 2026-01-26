@@ -17,11 +17,16 @@ function _publish_multiarch_manifest()
 	${IMAGE_TAGS:?}
     IFS=',' read -ra TAGS <<< "${IMAGE_TAGS}"
 
+    ARCHES=${ARCHES:-"amd64,arm64,ppc64le,s390x"}
+    IFS=',' read -ra MULTI_ARCHES <<< "${ARCHES}"
+
     for tag in "${TAGS[@]}"; do
-        docker manifest create ${IMAGE_REGISTRY}:${tag} \
-            --amend ${IMAGE_REGISTRY}:${tag}-amd64 \
-            --amend ${IMAGE_REGISTRY}:${tag}-s390x \
-            --amend ${IMAGE_REGISTRY}:${tag}-ppc64le
+        amend=""
+        for arch in "${MULTI_ARCHES[@]}"; do
+            amend+="--amend ${IMAGE_REGISTRY}:${tag}-${arch} "
+        done
+            docker manifest create ${IMAGE_REGISTRY}:${tag} \
+                ${amend}
 
         docker manifest push ${IMAGE_REGISTRY}:${tag}
     done
