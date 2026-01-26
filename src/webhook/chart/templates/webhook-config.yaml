@@ -10,7 +10,7 @@ webhooks:
   clientConfig:
     service:
       name: {{ .Values.namePrefix }}webhook-service
-      namespace: {{ .Values.namespace }}
+      namespace: {{ .Release.Namespace }}
       path: /mutate-v1-pod
   failurePolicy: {{ .Values.webhook.failurePolicy }}
   name: mwebhook.peerpods.io

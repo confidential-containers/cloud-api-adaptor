@@ -1,8 +1,5 @@
 # Default values for peerpods (CAA) chart
 
-# Namespace where peerpods resources will be deployed
-namespace: confidential-containers-system
-
 # Secret configuration
 secrets:
   # How to handle provider secrets:
