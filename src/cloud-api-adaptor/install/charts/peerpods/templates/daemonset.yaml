@@ -18,6 +18,9 @@ spec:
     metadata:
       labels:
         app: cloud-api-adaptor
+        {{- with .Values.daemonset.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: cloud-api-adaptor
       containers:

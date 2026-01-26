@@ -58,6 +58,15 @@ daemonset:
     # Override with custom values for specific deployment needs.
     maxUnavailable: 0
     maxSurge: 1
+  # A free-form map which can be used to inject provider-specific or platform-specific labels.
+  #
+  # Example (Azure Workload Identity):
+  # podLabels:
+  #   azure.workload.identity/use: "true"
+  # NOTE:
+  # - Keys may contain dots (.) and slashes (/)
+  # - When setting via CLI, prefer --set-json or a values file (plain --set will interpret dots as map nesting)
+  podLabels: {}
 
 # peerpod-ctrl subchart configuration
 # Manages lifecycle of peer pod cloud resources and cleans up dangling VMs
