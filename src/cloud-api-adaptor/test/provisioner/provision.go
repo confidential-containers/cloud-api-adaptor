@@ -288,6 +288,34 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		if err := chart.Install(ctx, cfg); err != nil {
 			return err
 		}
+
+		// Wait for webhook and peerpod-ctrl deployments to be available
+		// This ensures the webhook server is ready to accept connections
+		client, err := cfg.NewClient()
+		if err != nil {
+			return err
+		}
+		resources := client.Resources(p.namespace)
+
+		webhookDeployment := appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "peer-pods-webhook-controller-manager", Namespace: p.namespace},
+		}
+		peerpodctrlDeployment := appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "peerpodctrl-controller-manager", Namespace: p.namespace},
+		}
+
+		fmt.Printf("Wait for webhook deployment %s to be available\n", webhookDeployment.GetName())
+		if err = wait.For(conditions.New(resources).DeploymentConditionMatch(&webhookDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
+			wait.WithTimeout(time.Minute*5)); err != nil {
+			return err
+		}
+
+		fmt.Printf("Wait for peerpod-ctrl deployment %s to be available\n", peerpodctrlDeployment.GetName())
+		if err = wait.For(conditions.New(resources).DeploymentConditionMatch(&peerpodctrlDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
+			wait.WithTimeout(time.Minute*5)); err != nil {
+			return err
+		}
+
 		return nil
 	}
 
