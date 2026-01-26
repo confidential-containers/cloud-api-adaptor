@@ -1,9 +1,15 @@
 {{- if .Values.certManager.enabled }}
+# Use post-install hooks to ensure cert-manager webhook is ready before creating CRs.
+# When cert-manager is installed as a dependency, its CRDs are created but the webhook
+# pods may not be running yet. These hooks run after --wait confirms all pods are ready.
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: {{ .Values.namePrefix }}selfsigned-issuer
   namespace: {{ .Values.namespace }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "1"
 spec:
   selfSigned: {}
 ---
@@ -12,6 +18,9 @@ kind: Certificate
 metadata:
   name: {{ .Values.namePrefix }}serving-cert
   namespace: {{ .Values.namespace }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "2"
 spec:
   dnsNames:
   - {{ .Values.namePrefix }}webhook-service.{{ .Values.namespace }}.svc
