@@ -62,19 +62,37 @@ jobs:
 
       - name: Commit and push changes
         if: steps.go-mod-tidy-changed.outputs.changed == 'true'
-        uses: devops-infra/action-commit-push@8a2d9d73c3f506468129be2e4409e60dbed70357 # v1.0.3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          commit_message: "chore: Auto-run go mod tidy after Dependabot update"
+        # uses: devops-infra/action-commit-push@8a2d9d73c3f506468129be2e4409e60dbed70357 # v1.0.3
+        # with:
+        #   github_token: ${{ secrets.GITHUB_TOKEN }}
+        #   commit_message: "chore: Auto-run go mod tidy after Dependabot update"
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "${UPDATED_BRANCH}"
+          git add .
+          git commit -m "Apply automated changes to ${ORIGINAL_BRANCH}"
+          git push origin "${UPDATED_BRANCH}"
+        env:
+          ORIGINAL_BRANCH: ${{ github.event.pull_request.head.ref }}
+          UPDATED_BRANCH: "automated-updates-${{ github.event.pull_request.number }}"
+
 
       - name: Create new pull request
         if: steps.go-mod-tidy-changed.outputs.changed == 'true'
         id: create_pr
-        uses: devops-infra/action-pull-request@b2895bff2ff66579f6704d717a1ea75fad919e84 # v1.0.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          body: "**Automated pull request**<br><br>Updating dependabot PR with go mod tidy"
-          title: ${{ github.event.commits[0].message }}
+        run: |
+          gh pr create \
+            --title "Automated Fixes for ${ORIGINAL_BRANCH}" \
+            --body "This PR applies automated changes to the branch associated with PR #${{ github.event.pull_request.number }}." \
+            --base "${ORIGINAL_BRANCH}" \
+            --head "${UPDATED_BRANCH}"
+          echo "pr_number=$(gh pr view --json number --jq '.number') >> "${GITHUB_OUTPUT}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORIGINAL_BRANCH: ${{ github.event.pull_request.head.ref }}
+          UPDATED_BRANCH: "automated-updates-${{ github.event.pull_request.number }}"
 
       - name: Close original Pull Request
         if: steps.go-mod-tidy-changed.outputs.changed == 'true'
