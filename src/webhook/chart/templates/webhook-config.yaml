@@ -3,6 +3,10 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
+{{- if .Values.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ .Values.namePrefix }}serving-cert
+{{- end }}
   name: {{ .Values.namePrefix }}mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
@@ -14,6 +18,13 @@ webhooks:
       path: /mutate-v1-pod
   failurePolicy: {{ .Values.webhook.failurePolicy }}
   name: mwebhook.peerpods.io
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+      - {{ .Release.Namespace }}
+      - kube-system
   rules:
   - apiGroups:
     - ""
@@ -24,4 +35,5 @@ webhooks:
     - UPDATE
     resources:
     - pods
+    scope: Namespaced
   sideEffects: None

@@ -58,6 +58,10 @@ spec:
 {{- end }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
         env:
         - name: TARGET_RUNTIMECLASS
           value: {{ .Values.webhook.targetRuntimeClass }}
