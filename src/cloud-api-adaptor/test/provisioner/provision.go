@@ -289,31 +289,14 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 			return err
 		}
 
-		// Wait for webhook and peerpod-ctrl deployments to be available
-		// This ensures the webhook server is ready to accept connections
-		client, err := cfg.NewClient()
-		if err != nil {
-			return err
-		}
-		resources := client.Resources(p.namespace)
-
-		webhookDeployment := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Name: "peer-pods-webhook-controller-manager", Namespace: p.namespace},
-		}
-		peerpodctrlDeployment := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Name: "peerpodctrl-controller-manager", Namespace: p.namespace},
+		// Wait for webhook and peerpod-ctrl deployments to be available.
+		// Use label-based lookup to find deployments regardless of namespace or namePrefix overrides.
+		if err := findAndWaitForDeployment(ctx, cfg, "peerpods-webhook", time.Minute*5); err != nil {
+			return fmt.Errorf("webhook deployment wait failed: %w", err)
 		}
 
-		fmt.Printf("Wait for webhook deployment %s to be available\n", webhookDeployment.GetName())
-		if err = wait.For(conditions.New(resources).DeploymentConditionMatch(&webhookDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
-			wait.WithTimeout(time.Minute*5)); err != nil {
-			return err
-		}
-
-		fmt.Printf("Wait for peerpod-ctrl deployment %s to be available\n", peerpodctrlDeployment.GetName())
-		if err = wait.For(conditions.New(resources).DeploymentConditionMatch(&peerpodctrlDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
-			wait.WithTimeout(time.Minute*5)); err != nil {
-			return err
+		if err := findAndWaitForDeployment(ctx, cfg, "peerpodctrl", time.Minute*5); err != nil {
+			return fmt.Errorf("peerpod-ctrl deployment wait failed: %w", err)
 		}
 
 		return nil
@@ -521,5 +504,44 @@ func (p *CloudAPIAdaptor) installCertManager(ctx context.Context, cfg *envconf.C
 		log.Infof("Error in install cert-manager: %s: %s", err, stdoutStderr)
 		return err
 	}
+	return nil
+}
+
+// findAndWaitForDeployment finds a deployment by labels and waits for it to be available.
+// This is used for helm installations where namespace and namePrefix can be overridden.
+func findAndWaitForDeployment(ctx context.Context, cfg *envconf.Config, partOfLabel string, timeout time.Duration) error {
+	client, err := cfg.NewClient()
+	if err != nil {
+		return err
+	}
+
+	// List all deployments and filter by labels
+	deploymentList := &appsv1.DeploymentList{}
+	if err = client.Resources().List(ctx, deploymentList); err != nil {
+		return fmt.Errorf("failed to list deployments: %w", err)
+	}
+
+	// Find deployment matching labels
+	var deployment *appsv1.Deployment
+	for i := range deploymentList.Items {
+		labels := deploymentList.Items[i].GetLabels()
+		if labels["app.kubernetes.io/part-of"] == partOfLabel && labels["control-plane"] == "controller-manager" {
+			deployment = &deploymentList.Items[i]
+			break
+		}
+	}
+
+	if deployment == nil {
+		return fmt.Errorf("deployment not found with label app.kubernetes.io/part-of=%s", partOfLabel)
+	}
+
+	resources := client.Resources(deployment.Namespace)
+
+	fmt.Printf("Wait for deployment %s in namespace %s to be available\n", deployment.Name, deployment.Namespace)
+	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(deployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
+		wait.WithTimeout(timeout)); err != nil {
+		return err
+	}
+
 	return nil
 }
