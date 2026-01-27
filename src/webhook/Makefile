@@ -68,12 +68,12 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	# controller-gen generated base.
 	@sed -i 's/name: mutating-webhook-configuration/name: {{ .Values.namePrefix }}mutating-webhook-configuration/' chart/templates/webhook-config.yaml
 	@sed -i 's/name: webhook-service/name: {{ .Values.namePrefix }}webhook-service/' chart/templates/webhook-config.yaml
-	@sed -i 's/namespace: system/namespace: {{ .Release.Namespace }}/' chart/templates/webhook-config.yaml
+	@sed -i 's/namespace: system/namespace: {{ .Values.namespaceOverride | default .Release.Namespace }}/' chart/templates/webhook-config.yaml
 	@sed -i 's/failurePolicy: Fail/failurePolicy: {{ .Values.webhook.failurePolicy }}/' chart/templates/webhook-config.yaml
 	# Add cert-manager CA injection annotation (equivalent to webhookcainjection_patch.yaml)
-	@sed -i '/^metadata:/a\{{- if .Values.certManager.enabled }}\n  annotations:\n    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ .Values.namePrefix }}serving-cert\n{{- end }}' chart/templates/webhook-config.yaml
+	@sed -i '/^metadata:/a\{{- if .Values.certManager.enabled }}\n  annotations:\n    cert-manager.io/inject-ca-from: {{ .Values.namespaceOverride | default .Release.Namespace }}/{{ .Values.namePrefix }}serving-cert\n{{- end }}' chart/templates/webhook-config.yaml
 	# Add namespaceSelector to exclude webhook namespace and kube-system (equivalent to namespace_selector_patch.yaml)
-	@sed -i '/  name: mwebhook.peerpods.io/a\  namespaceSelector:\n    matchExpressions:\n    - key: kubernetes.io/metadata.name\n      operator: NotIn\n      values:\n      - {{ .Release.Namespace }}\n      - kube-system' chart/templates/webhook-config.yaml
+	@sed -i '/  name: mwebhook.peerpods.io/a\  namespaceSelector:\n    matchExpressions:\n    - key: kubernetes.io/metadata.name\n      operator: NotIn\n      values:\n      - {{ .Values.namespaceOverride | default .Release.Namespace }}\n      - kube-system' chart/templates/webhook-config.yaml
 	# Add scope to rules (equivalent to inline scope patch in kustomization.yaml)
 	@sed -i '/    - pods/a\    scope: Namespaced' chart/templates/webhook-config.yaml
 

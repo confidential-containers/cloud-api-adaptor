@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/part-of: peerpods-webhook
     control-plane: controller-manager
   name: {{ .Values.namePrefix }}controller-manager
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.namespaceOverride | default .Release.Namespace }}
 spec:
   replicas: {{ .Values.replicas }}
   selector:
