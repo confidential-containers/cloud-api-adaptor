@@ -5,7 +5,7 @@ kind: MutatingWebhookConfiguration
 metadata:
 {{- if .Values.certManager.enabled }}
   annotations:
-    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ .Values.namePrefix }}serving-cert
+    cert-manager.io/inject-ca-from: {{ .Values.namespaceOverride | default .Release.Namespace }}/{{ .Values.namePrefix }}serving-cert
 {{- end }}
   name: {{ .Values.namePrefix }}mutating-webhook-configuration
 webhooks:
@@ -14,7 +14,7 @@ webhooks:
   clientConfig:
     service:
       name: {{ .Values.namePrefix }}webhook-service
-      namespace: {{ .Release.Namespace }}
+      namespace: {{ .Values.namespaceOverride | default .Release.Namespace }}
       path: /mutate-v1-pod
   failurePolicy: {{ .Values.webhook.failurePolicy }}
   name: mwebhook.peerpods.io
@@ -23,7 +23,7 @@ webhooks:
     - key: kubernetes.io/metadata.name
       operator: NotIn
       values:
-      - {{ .Release.Namespace }}
+      - {{ .Values.namespaceOverride | default .Release.Namespace }}
       - kube-system
   rules:
   - apiGroups:

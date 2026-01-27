@@ -1,6 +1,14 @@
 # Prefix prepended to all resource names
 namePrefix: peer-pods-webhook-
 
+# By default this chart uses .Release.Namespace as the namespace for all resources.
+# When installed as a subchart, Helm uses the parent chart's namespace (for peerpods
+# this is typically confidential-containers-system). However, to maintain consistency
+# with the kustomize deployment approach that deploys webhook resources in a separate
+# namespace (peer-pods-webhook-system), this override is provided. Set to empty string
+# to use .Release.Namespace instead, or override with --set namespaceOverride=<namespace>.
+namespaceOverride: "peer-pods-webhook-system"
+
 # Webhook deployment configuration
 replicas: 2
 
