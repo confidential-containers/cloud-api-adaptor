@@ -951,8 +951,11 @@ func getProfileList() string {
 			profileList = "bz2-2x8,cz2-2x4,mz2-2x16"
 		}
 	} else {
-		profileList = "bx2-2x8,cx2-2x4,mx2-2x16"
-
+		if strings.Contains(IBMCloudProps.InstanceProfile, "dc-") {
+			profileList = "bx3dc-2x10,cx3dc-2x5,bx3dc-4x20" // Profiles with confidential computing support
+		} else {
+			profileList = "bx2-2x8,cx2-2x4,mx2-2x16"
+		}
 	}
 	return profileList
 }
@@ -980,6 +983,7 @@ func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Co
 		"INITDATA":                             IBMCloudProps.InitData,
 		"IBMCLOUD_CLUSTER_ID":                  IBMCloudProps.ClusterID,
 		"TAGS":                                 IBMCloudProps.Tags,
+		"CONTAINER_RUNTIME":                    IBMCloudProps.ContainerRuntime,
 	}
 }
 
