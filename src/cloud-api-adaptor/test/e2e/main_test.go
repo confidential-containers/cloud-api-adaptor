@@ -6,10 +6,12 @@ package e2e
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 
 	kconf "sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/pkg/env"
@@ -186,10 +188,53 @@ func TestMain(m *testing.M) {
 				return ctx, err
 			}
 
-			props = provisioner.GetProperties(ctx, cfg)
 			log.Info("Deploy the Cloud API Adaptor")
-			if err = cloudAPIAdaptor.Deploy(ctx, cfg, props); err != nil {
-				return ctx, err
+			if os.Getenv("INSTALL_METHOD") == "helm" {
+				// Helm approach: pass values files directly (comma-separated)
+				valuesFilesEnv := os.Getenv("HELM_VALUES_FILES")
+				var valuesFiles []string
+				if valuesFilesEnv != "" {
+					valuesFiles = strings.Split(valuesFilesEnv, ",")
+					// Trim whitespace from each file path
+					for i := range valuesFiles {
+						valuesFiles[i] = strings.TrimSpace(valuesFiles[i])
+					}
+				}
+
+				// Get dynamic provision values and write to yaml file
+				provisionValues := provisioner.GetProvisionValues()
+				if provisionValues != nil {
+					provisionYaml, err := os.CreateTemp("", "provision-*.yaml")
+					if err != nil {
+						return ctx, err
+					}
+					defer os.Remove(provisionYaml.Name())
+
+					data, err := yaml.Marshal(provisionValues)
+					if err != nil {
+						return ctx, err
+					}
+					if _, err := provisionYaml.Write(data); err != nil {
+						return ctx, err
+					}
+					provisionYaml.Close()
+
+					valuesFiles = append(valuesFiles, provisionYaml.Name())
+				}
+
+				if err = cloudAPIAdaptor.DeployWithHelm(ctx, cfg, valuesFiles); err != nil {
+					if err == pv.ErrDryRun {
+						log.Info("Dry-run mode: exiting after helm template output")
+						os.Exit(0)
+					}
+					return ctx, err
+				}
+			} else {
+				// Kustomize approach: use properties map
+				props = provisioner.GetProperties(ctx, cfg)
+				if err = cloudAPIAdaptor.Deploy(ctx, cfg, props); err != nil {
+					return ctx, err
+				}
 			}
 		}
 
@@ -212,8 +257,14 @@ func TestMain(m *testing.M) {
 
 		if shouldInstallCAA {
 			log.Info("Delete the Cloud API Adaptor installation")
-			if err = cloudAPIAdaptor.Delete(ctx, cfg); err != nil {
-				return ctx, err
+			if os.Getenv("INSTALL_METHOD") == "helm" {
+				if err = cloudAPIAdaptor.DeleteWithHelm(ctx, cfg); err != nil {
+					return ctx, err
+				}
+			} else {
+				if err = cloudAPIAdaptor.Delete(ctx, cfg); err != nil {
+					return ctx, err
+				}
 			}
 		}
 

@@ -366,6 +366,11 @@ func getPropertiesImpl() map[string]string {
 	return props
 }
 
+func (p *AzureCloudProvisioner) GetProvisionValues() map[string]interface{} {
+	// TODO: implement properly
+	return nil
+}
+
 func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	log.Trace("GetProperties()")
 	return getPropertiesImpl()

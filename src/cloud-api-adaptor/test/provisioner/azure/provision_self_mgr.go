@@ -33,6 +33,11 @@ func (p *AzureSelfManagedClusterProvisioner) UploadPodvm(imagePath string, ctx c
 	return nil
 }
 
+func (p *AzureSelfManagedClusterProvisioner) GetProvisionValues() map[string]interface{} {
+	// TODO: implement properly
+	return nil
+}
+
 func (p *AzureSelfManagedClusterProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return getPropertiesImpl()
 }

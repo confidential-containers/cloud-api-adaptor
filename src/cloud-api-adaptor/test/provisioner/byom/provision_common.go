@@ -178,6 +178,11 @@ func (b *ByomProvisioner) DeletePodVMInstance(ctx context.Context, cfg *envconf.
 	return nil
 }
 
+func (b *ByomProvisioner) GetProvisionValues() map[string]interface{} {
+	// TODO: implement properly
+	return nil
+}
+
 func (b *ByomProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
 		"VM_POOL_IPS":              ByomProps.VMPoolIPs,
