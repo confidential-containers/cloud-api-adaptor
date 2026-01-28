@@ -58,6 +58,10 @@ providerConfigs:
     # (default: "")
     # IBMCLOUD_RESOURCE_GROUP_ID: ""
 
+    # List of Security Group IDs to be used for the Pod VM, comma separated
+    # (default: "")
+    # IBMCLOUD_SECURITY_GROUP_IDS: ""
+
     # SSH Key ID
     # (default: "")
     # IBMCLOUD_SSH_KEY_ID: ""
@@ -69,10 +73,6 @@ providerConfigs:
     # VPC ID
     # (default: "")
     # IBMCLOUD_VPC_ID: ""
-
-    # Primary security group ID
-    # (default: "")
-    # IBMCLOUD_VPC_SG_ID: ""
 
     # Primary subnet ID
     # (default: "")
