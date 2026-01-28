@@ -87,6 +87,11 @@ func (p *GCPProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 	return p.GcpVPC.DeleteVPC(ctx, cfg)
 }
 
+func (p *GCPProvisioner) GetProvisionValues() map[string]interface{} {
+	// TODO: implement properly
+	return nil
+}
+
 func (p *GCPProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
 		// GkeCluster properties

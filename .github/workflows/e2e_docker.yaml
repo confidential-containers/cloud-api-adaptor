@@ -144,16 +144,36 @@ jobs:
           DOCKER_API_VERSION="1.44"
           EOF
 
-          # If using helm, split CAA_IMAGE into CAA_IMAGE_NAME and CAA_IMAGE_TAG
-          if [ "${INSTALL_METHOD}" = "helm" ]; then
-            CAA_IMAGE_TAG="${CAA_IMAGE##*:}"
-            CAA_IMAGE_NAME="${CAA_IMAGE%:*}"
-            echo "CAA_IMAGE=\"${CAA_IMAGE_NAME}\"" >> docker.properties
-            echo "CAA_IMAGE_TAG=\"${CAA_IMAGE_TAG}\"" >> docker.properties
-          fi
+          # For debugging
+          echo "::group::docker.properties"
+          cat docker.properties
+          echo "::endgroup::"
+
+      - name: Create helm values file
+        if: ${{ inputs.install_method == 'helm' }}
+        env:
+          DOCKER_PODVM_IMAGE: ${{ inputs.podvm_image }}
+        run: |
+          CAA_IMAGE_TAG="${CAA_IMAGE##*:}"
+          CAA_IMAGE_NAME="${CAA_IMAGE%:*}"
+          cat <<EOF > helm-values.yaml
+          image:
+            name: "${CAA_IMAGE_NAME}"
+            tag: "${CAA_IMAGE_TAG}"
+          providerConfigs:
+            docker:
+              DOCKER_HOST: "unix:///var/run/docker.sock"
+              DOCKER_NETWORK_NAME: "kind"
+              DOCKER_API_VERSION: "1.44"
+              DOCKER_PODVM_IMAGE: "${DOCKER_PODVM_IMAGE}"
+          EOF
+
+          echo "HELM_VALUES_FILES=install/charts/peerpods/providers/docker.yaml,$PWD/helm-values.yaml" >> "$GITHUB_ENV"
 
           # For debugging
-          cat docker.properties
+          echo "::group::helm-values.yaml"
+          cat helm-values.yaml
+          echo "::endgroup::"
 
       - name: run tests
         id: runTests

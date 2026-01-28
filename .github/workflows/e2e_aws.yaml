@@ -191,6 +191,31 @@ jobs:
           cat aws.properties
           echo "::endgroup::"
 
+      - name: Create helm values file
+        if: ${{ inputs.install_method == 'helm' }}
+        run: |
+          CAA_IMAGE_TAG="${CAA_IMAGE##*:}"
+          CAA_IMAGE_NAME="${CAA_IMAGE%:*}"
+          cat <<EOF > helm-values.yaml
+          image:
+            name: "${CAA_IMAGE_NAME}"
+            tag: "${CAA_IMAGE_TAG}"
+          providerConfigs:
+            aws:
+              DISABLECVM: "true"
+              SSH_KP_NAME: "caa-e2e-test"
+              AWS_REGION: "us-east-1"
+              PODVM_INSTANCE_TYPE: "t2.medium"
+              USE_PUBLIC_IP: "true"
+          EOF
+
+          echo "HELM_VALUES_FILES=install/charts/peerpods/providers/aws.yaml,$PWD/helm-values.yaml" >> "$GITHUB_ENV"
+
+          # For debugging
+          echo "::group::helm-values.yaml"
+          cat helm-values.yaml
+          echo "::endgroup::"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:

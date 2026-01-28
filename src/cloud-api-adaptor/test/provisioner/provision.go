@@ -33,6 +33,7 @@ type CloudProvisioner interface {
 	DeleteCluster(ctx context.Context, cfg *envconf.Config) error
 	DeleteVPC(ctx context.Context, cfg *envconf.Config) error
 	GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string
+	GetProvisionValues() map[string]interface{}
 	UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error
 }
 
@@ -84,20 +85,6 @@ type InstallOverlay interface {
 	// Edit changes overlay files
 	Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
 }
-
-// InstallChart defines common operations to an install chart (install/charts/*)
-type InstallChart interface {
-	// Install installs the chart. Equivalent to the `helm install` command
-	Install(ctx context.Context, cfg *envconf.Config) error
-	// Uninstall uninstalls the chart. Equivalent to the `helm uninstall` command
-	Uninstall(ctx context.Context, cfg *envconf.Config) error
-	// Configure changes chart values
-	Configure(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
-}
-
-type NewInstallChartFunc func(installDir, provider string) (InstallChart, error)
-
-var NewInstallChartFunctions = make(map[string]NewInstallChartFunc)
 
 // Waiting timeout for bringing up the pod
 const PodWaitTimeout = time.Second * 30
@@ -167,30 +154,9 @@ func GetInstallOverlay(provider string, installDir string) (InstallOverlay, erro
 	return overlayFunc(installDir, provider)
 }
 
-// GetInstallChart returns the InstallChart implementation for the provider
-func GetInstallChart(provider string, installDir string) (InstallChart, error) {
-	chartFunc, ok := NewInstallChartFunctions[provider]
-	if !ok {
-		return nil, fmt.Errorf("Not implemented install chart for %s\n", provider)
-	}
-
-	return chartFunc(installDir, provider)
-}
-
-// Deletes the peer pods installation including the controller manager.
+// Delete uninstalls the peer pods installation using kustomize.
+// For helm-based uninstallation, use DeleteWithHelm() instead.
 func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error {
-	if os.Getenv("INSTALL_METHOD") == "helm" {
-		log.Info("Uninstall the cloud-api-adaptor using helm")
-		chart, err := GetInstallChart(p.cloudProvider, p.installDir)
-		if err != nil {
-			return err
-		}
-		if err = chart.Uninstall(ctx, cfg); err != nil {
-			return err
-		}
-		return nil
-	}
-
 	client, err := cfg.NewClient()
 	if err != nil {
 		return err
@@ -270,38 +236,70 @@ func (p *CloudAPIAdaptor) Delete(ctx context.Context, cfg *envconf.Config) error
 	return nil
 }
 
-// Deploy installs Peer Pods on the cluster.
-func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
-	if os.Getenv("INSTALL_METHOD") == "helm" {
-		// Install cert-manager (required for webhook)
+// DeployWithHelm installs Peer Pods using Helm with provided values files.
+func (p *CloudAPIAdaptor) DeployWithHelm(ctx context.Context, cfg *envconf.Config, valuesFiles []string) error {
+	dryRun := os.Getenv("HELM_DRY_RUN") == "true"
+
+	// Install cert-manager (required for webhook) - skip in dry-run mode
+	if !dryRun {
 		if err := p.installCertManager(ctx, cfg); err != nil {
 			return err
 		}
-		log.Info("Install the cloud-api-adaptor using helm")
-		chart, err := GetInstallChart(p.cloudProvider, p.installDir)
-		if err != nil {
-			return err
-		}
-		if err := chart.Configure(ctx, cfg, props); err != nil {
-			return err
-		}
-		if err := chart.Install(ctx, cfg); err != nil {
-			return err
-		}
-
-		// Wait for webhook and peerpod-ctrl deployments to be available.
-		// Use label-based lookup to find deployments regardless of namespace or namePrefix overrides.
-		if err := findAndWaitForDeployment(ctx, cfg, "peerpods-webhook", time.Minute*5); err != nil {
-			return fmt.Errorf("webhook deployment wait failed: %w", err)
-		}
-
-		if err := findAndWaitForDeployment(ctx, cfg, "peerpodctrl", time.Minute*5); err != nil {
-			return fmt.Errorf("peerpod-ctrl deployment wait failed: %w", err)
-		}
-
-		return nil
 	}
 
+	log.Info("Install the cloud-api-adaptor using helm")
+	chartPath := filepath.Join(p.installDir, "charts", "peerpods")
+	namespace := GetCAANamespace()
+
+	helm, err := NewHelm(chartPath, namespace, "peerpods", false)
+	if err != nil {
+		return err
+	}
+
+	// Load all values files (provider base + static from workflow + dynamic from provisioner)
+	for _, vf := range valuesFiles {
+		if err := helm.LoadFromFile(vf); err != nil {
+			return err
+		}
+	}
+
+	if err := helm.Install(ctx, cfg); err != nil {
+		if err == ErrDryRun {
+			log.Info("Dry-run completed, skipping deployment waits")
+			return ErrDryRun
+		}
+		return err
+	}
+
+	// Wait for webhook and peerpod-ctrl deployments to be available.
+	if err := findAndWaitForDeployment(ctx, cfg, "peerpods-webhook", time.Minute*5); err != nil {
+		return fmt.Errorf("webhook deployment wait failed: %w", err)
+	}
+
+	if err := findAndWaitForDeployment(ctx, cfg, "peerpodctrl", time.Minute*5); err != nil {
+		return fmt.Errorf("peerpod-ctrl deployment wait failed: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteWithHelm uninstalls Peer Pods using Helm.
+func (p *CloudAPIAdaptor) DeleteWithHelm(ctx context.Context, cfg *envconf.Config) error {
+	log.Info("Uninstall the cloud-api-adaptor using helm")
+	chartPath := filepath.Join(p.installDir, "charts", "peerpods")
+	namespace := GetCAANamespace()
+
+	helm, err := NewHelm(chartPath, namespace, "peerpods", false)
+	if err != nil {
+		return err
+	}
+
+	return helm.Uninstall(ctx, cfg)
+}
+
+// Deploy installs Peer Pods on the cluster using kustomize.
+// For helm-based installation, use DeployWithHelm() instead.
+func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
 	client, err := cfg.NewClient()
 	if err != nil {
 		return err
