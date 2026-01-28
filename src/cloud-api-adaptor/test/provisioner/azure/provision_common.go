@@ -367,8 +367,18 @@ func getPropertiesImpl() map[string]string {
 }
 
 func (p *AzureCloudProvisioner) GetProvisionValues() map[string]interface{} {
-	// TODO: implement properly
-	return nil
+	// SubnetID is discovered from the AKS VNET during CreateCluster.
+	if AzureProps.SubnetID == "" {
+		return nil
+	}
+
+	return map[string]interface{}{
+		"providerConfigs": map[string]interface{}{
+			"azure": map[string]interface{}{
+				"AZURE_SUBNET_ID": AzureProps.SubnetID,
+			},
+		},
+	}
 }
 
 func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {

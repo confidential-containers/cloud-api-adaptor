@@ -34,8 +34,18 @@ func (p *AzureSelfManagedClusterProvisioner) UploadPodvm(imagePath string, ctx c
 }
 
 func (p *AzureSelfManagedClusterProvisioner) GetProvisionValues() map[string]interface{} {
-	// TODO: implement properly
-	return nil
+	// SubnetID is discovered from the AKS VNET during CreateCluster.
+	if AzureProps.SubnetID == "" {
+		return nil
+	}
+
+	return map[string]interface{}{
+		"providerConfigs": map[string]interface{}{
+			"azure": map[string]interface{}{
+				"AZURE_SUBNET_ID": AzureProps.SubnetID,
+			},
+		},
+	}
 }
 
 func (p *AzureSelfManagedClusterProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
