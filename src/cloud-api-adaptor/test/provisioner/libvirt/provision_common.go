@@ -6,6 +6,7 @@ package libvirt
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"os"
 	"os/exec"
@@ -25,6 +26,7 @@ const DefaultCPU = 2
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
+	caa_image        string           // The CAA image to install
 	conn             *libvirt.Connect // Libvirt connection
 	containerRuntime string           // Name of the container runtime
 	network          string           // Network name
@@ -42,6 +44,10 @@ type LibvirtProvisioner struct {
 // LibvirtInstallOverlay implements the InstallOverlay interface
 type LibvirtInstallOverlay struct {
 	Overlay *pv.KustomizeOverlay
+}
+
+type LibvirtInstallChart struct {
+	Helm *pv.Helm
 }
 
 func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, error) {
@@ -105,6 +111,7 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
+		caa_image:        properties["CAA_IMAGE"],
 		conn:             conn,
 		containerRuntime: properties["container_runtime"],
 		network:          network,
@@ -221,6 +228,7 @@ func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config)
 
 func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
+		"CAA_IMAGE":         l.caa_image,
 		"CONTAINER_RUNTIME": l.containerRuntime,
 		"network":           l.network,
 		"podvm_volume":      l.volumeName,
@@ -364,6 +372,68 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 
 	if err = lio.Overlay.YamlReload(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func NewLibvirtInstallChart(installDir, provider string) (pv.InstallChart, error) {
+	chartPath := filepath.Join(installDir, "charts", "peerpods")
+	namespace := pv.GetCAANamespace()
+	releaseName := "peerpods"
+	debug := false
+
+	helm, err := pv.NewHelm(chartPath, namespace, releaseName, provider, debug)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LibvirtInstallChart{
+		Helm: helm,
+	}, nil
+}
+
+func (l *LibvirtInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
+	return l.Helm.Install(ctx, cfg)
+}
+
+func (l *LibvirtInstallChart) Uninstall(ctx context.Context, cfg *envconf.Config) error {
+	return l.Helm.Uninstall(ctx, cfg)
+}
+
+func (l *LibvirtInstallChart) Configure(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
+	if properties["CAA_IMAGE"] != "" {
+		img := strings.Split(properties["CAA_IMAGE"], ":")
+		imageNameProp := "image.name"
+		log.Printf("Configuring helm: override value (%s=%s)", imageNameProp, img[0])
+		l.Helm.OverrideValues[imageNameProp] = img[0]
+		if len(img) == 2 {
+			imageTagProp := "image.tag"
+			l.Helm.OverrideValues[imageTagProp] = img[1]
+		}
+	}
+
+	if properties["CONTAINER_RUNTIME"] == "crio" {
+		prop := "kata-deploy.snapshotter.setup"
+		l.Helm.OverrideValues[prop] = ""
+	}
+
+	// Mapping the internal properties to Helm chart values.
+	mapProps := map[string]string{
+		"network":      "LIBVIRT_NET",
+		"pause_image":  "PAUSE_IMAGE",
+		"podvm_volume": "LIBVIRT_VOL_NAME",
+		"storage":      "LIBVIRT_POOL",
+		"uri":          "LIBVIRT_URI",
+		"tunnel_type":  "TUNNEL_TYPE",
+		"vxlan_port":   "VXLAN_PORT",
+		"INITDATA":     "INITDATA",
+	}
+
+	for k, v := range mapProps {
+		if properties[k] != "" {
+			l.Helm.OverrideProviderValues[v] = properties[k]
+		}
 	}
 
 	return nil

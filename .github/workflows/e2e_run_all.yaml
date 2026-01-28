@@ -327,6 +327,12 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
     needs: [podvm_mkosi_amd64, libvirt_e2e_arch_prep, caa_image_amd64]
+    strategy:
+      fail-fast: false
+      matrix:
+        install_method:
+          - kustomize
+          - helm
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: ubuntu-24.04
@@ -335,6 +341,7 @@ jobs:
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
       oras: true
+      install_method: ${{ matrix.install_method }}
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
@@ -347,6 +354,12 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
     needs: [podvm_mkosi_s390x, libvirt_e2e_arch_prep, caa_image_s390x]
+    strategy:
+      fail-fast: false
+      matrix:
+        install_method:
+          - kustomize
+          - helm
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: s390x-large
@@ -355,6 +368,7 @@ jobs:
       install_directory_artifact: install_directory
       git_ref: ${{ inputs.git_ref }}
       oras: true
+      install_method: ${{ matrix.install_method }}
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
