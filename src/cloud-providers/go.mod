@@ -25,6 +25,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.279.2
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/docker/go-connections v0.5.0
+	github.com/gophercloud/gophercloud/v2 v2.8.0
 	github.com/kdomanski/iso9660 v0.4.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.45.0
