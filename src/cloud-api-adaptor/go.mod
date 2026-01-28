@@ -1,6 +1,6 @@
 module github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor
 
-go 1.24.11
+go 1.24.12
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
