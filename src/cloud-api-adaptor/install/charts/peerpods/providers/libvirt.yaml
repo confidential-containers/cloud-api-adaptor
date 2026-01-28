@@ -48,32 +48,32 @@ providerConfigs:
     # LIBVIRT_CPU: "2"
 
     # Path to OVMF
-    # (default: "defaultFirmware")
-    # LIBVIRT_EFI_FIRMWARE: "defaultFirmware"
+    # (default: "")
+    # LIBVIRT_EFI_FIRMWARE: ""
 
     # Libvirt's LaunchSecurity element for Confidential VMs: s390-pv. If omitted, will automatically determine.
-    # (default: "defaultLaunchSecurity")
-    # LIBVIRT_LAUNCH_SECURITY: "defaultLaunchSecurity"
+    # (default: "")
+    # LIBVIRT_LAUNCH_SECURITY: ""
 
     # Amount of memory in MiB
     # (default: "8192")
     # LIBVIRT_MEMORY: "8192"
 
     # libvirt network pool
-    # (default: "defaultNetworkName")
-    # LIBVIRT_NET: "defaultNetworkName"
+    # (default: "default")
+    # LIBVIRT_NET: "default"
 
     # libvirt storage pool
-    # (default: "defaultPoolName")
-    # LIBVIRT_POOL: "defaultPoolName"
+    # (default: "default")
+    # LIBVIRT_POOL: "default"
 
     # libvirt URI
-    # (default: "defaultURI")
-    # LIBVIRT_URI: "defaultURI"
+    # (default: "qemu:///system")
+    # LIBVIRT_URI: "qemu:///system"
 
     # libvirt volume name
-    # (default: "defaultVolName")
-    # LIBVIRT_VOL_NAME: "defaultVolName"
+    # (default: "podvm-base.qcow2")
+    # LIBVIRT_VOL_NAME: "podvm-base.qcow2"
 
     # pause image to be used for the pods
     # (default: "")

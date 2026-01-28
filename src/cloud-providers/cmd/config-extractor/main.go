@@ -104,12 +104,16 @@ func parseFile(path string) ([]FlagInfo, error) {
 		return nil, err
 	}
 
+	// Parse all constants from the package directory
+	dir := filepath.Dir(path)
+	constants := parsePackageConstants(dir, fset)
+
 	var flags []FlagInfo
 
 	// Find all reg.XxxWithEnv calls anywhere in the file
 	ast.Inspect(node, func(n ast.Node) bool {
 		if call, ok := n.(*ast.CallExpr); ok {
-			if flagInfo, _ := extractFlagRegistrarCall(call, fset); flagInfo != nil {
+			if flagInfo, _ := extractFlagRegistrarCall(call, fset, constants); flagInfo != nil {
 				flags = append(flags, *flagInfo)
 			}
 		}
@@ -117,6 +121,60 @@ func parseFile(path string) ([]FlagInfo, error) {
 	})
 
 	return flags, nil
+}
+
+// parsePackageConstants extracts all const declarations from all .go files in the directory
+func parsePackageConstants(dir string, fset *token.FileSet) map[string]string {
+	constants := make(map[string]string)
+
+	pkgs, err := parser.ParseDir(fset, dir, nil, parser.ParseComments)
+	if err != nil {
+		return constants
+	}
+
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			extractConstants(file, constants)
+		}
+	}
+
+	return constants
+}
+
+// extractConstants walks through an AST file and extracts all const declarations
+func extractConstants(node *ast.File, constants map[string]string) {
+	ast.Inspect(node, func(n ast.Node) bool {
+		if genDecl, ok := n.(*ast.GenDecl); ok && genDecl.Tok == token.CONST {
+			for _, spec := range genDecl.Specs {
+				if valueSpec, ok := spec.(*ast.ValueSpec); ok {
+					for i, name := range valueSpec.Names {
+						if i < len(valueSpec.Values) {
+							if val, ok := exprToLiteral(valueSpec.Values[i]); ok {
+								constants[name.Name] = val
+							}
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+}
+
+// exprToLiteral extracts literal values from expressions (for const declarations)
+// Returns (value, ok) where ok indicates if parsing succeeded
+func exprToLiteral(expr ast.Expr) (string, bool) {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		return strings.Trim(e.Value, `"`), true
+	case *ast.UnaryExpr:
+		if e.Op == token.SUB {
+			if val, ok := exprToLiteral(e.X); ok {
+				return "-" + val, true
+			}
+		}
+	}
+	return "", false
 }
 
 func filterFlags(flags []FlagInfo, predicate func(FlagInfo) bool) []FlagInfo {
@@ -129,7 +187,7 @@ func filterFlags(flags []FlagInfo, predicate func(FlagInfo) bool) []FlagInfo {
 	return filtered
 }
 
-func extractFlagRegistrarCall(call *ast.CallExpr, fset *token.FileSet) (*FlagInfo, string) {
+func extractFlagRegistrarCall(call *ast.CallExpr, fset *token.FileSet, constants map[string]string) (*FlagInfo, string) {
 	// Look for calls like: reg.StringWithEnv(...), reg.IntWithEnv(...), etc.
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
@@ -182,7 +240,7 @@ func extractFlagRegistrarCall(call *ast.CallExpr, fset *token.FileSet) (*FlagInf
 		}
 
 		// Extract default value from arg[2]
-		flagInfo.Default = exprToString(call.Args[2])
+		flagInfo.Default = exprToString(call.Args[2], constants)
 
 		// Extract env var from arg[3]: "ENV_VAR"
 		if lit, ok := call.Args[3].(*ast.BasicLit); ok && lit.Kind == token.STRING {
@@ -228,16 +286,20 @@ func getFunctionName(fun ast.Expr) string {
 	return ""
 }
 
-func exprToString(expr ast.Expr) string {
+func exprToString(expr ast.Expr, constants map[string]string) string {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		return strings.Trim(e.Value, `"`)
 	case *ast.Ident:
+		// Try to resolve constant value first
+		if val, ok := constants[e.Name]; ok {
+			return val
+		}
 		return e.Name
 	case *ast.UnaryExpr:
 		// Handle negative numbers
 		if e.Op == token.SUB {
-			return "-" + exprToString(e.X)
+			return "-" + exprToString(e.X, constants)
 		}
 	}
 	return ""
