@@ -53,10 +53,21 @@ func (i *Images) Set(value string) error {
 }
 
 func toList(value, sep string) []string {
+	result := make([]string, 0)
+
 	if len(value) == 0 {
-		return make([]string, 0)
+		return result
 	}
-	return strings.Split(value, sep)
+
+	splits := strings.Split(value, sep)
+	for _, split := range splits {
+		trimmed := strings.TrimSpace(split)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+
+	return result
 }
 
 type tags []string
