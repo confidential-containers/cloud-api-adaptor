@@ -239,18 +239,20 @@ jobs:
           source libvirt.properties
 
           # Create SSH key secret for libvirt (keys created by config_libvirt.sh)
-          # TODO: This should use --set-file providerSecrets.libvirt.id_rsa once
-          #       providerSecrets.libvirt is defined in providers/libvirt.yaml
+          # This key is for connecting to the hypervisor, not the pod VM.
           kubectl create secret generic ssh-key-secret \
             --from-file=id_rsa="${HOME}/.ssh/id_rsa" \
-            --from-file=id_rsa.pub="${HOME}/.ssh/id_rsa.pub" \
             -n confidential-containers-system
 
           # Install chart with libvirt configuration
+          # Using secrets.mode=reference since we create the secret via kubectl above.
+          # existingSecretName is empty because libvirt has no cloud credentials.
           helm install peerpods ./install/charts/peerpods \
             -f install/charts/peerpods/providers/libvirt.yaml \
             --set "image.name=${IMAGE_NAME}" \
             --set "image.tag=${IMAGE_TAG}" \
+            --set "secrets.mode=reference" \
+            --set "secrets.existingSshKeySecretName=ssh-key-secret" \
             --set-string "providerConfigs.libvirt.LIBVIRT_URI=${libvirt_uri}" \
             -n confidential-containers-system \
             --wait --timeout=10m || {
