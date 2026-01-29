@@ -48,8 +48,8 @@ providerConfigs:
     # LIBVIRT_CPU: "2"
 
     # Path to OVMF
-    # (default: "")
-    # LIBVIRT_EFI_FIRMWARE: ""
+    # (default: "/usr/share/OVMF/OVMF_CODE_4M.fd")
+    # LIBVIRT_EFI_FIRMWARE: "/usr/share/OVMF/OVMF_CODE_4M.fd"
 
     # Libvirt's LaunchSecurity element for Confidential VMs: s390-pv. If omitted, will automatically determine.
     # (default: "")
