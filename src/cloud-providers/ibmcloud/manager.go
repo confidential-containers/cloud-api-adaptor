@@ -34,7 +34,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.StringWithEnv(&ibmcloudVPCConfig.VpcID, "vpc-id", "", "IBMCLOUD_VPC_ID", "VPC ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.ClusterID, "cluster-id", "", "IBMCLOUD_CLUSTER_ID", "Cluster ID")
 
-	reg.BoolWithEnv(&ibmcloudVPCConfig.DisableCVM, "disable-cvm", false, "DISABLECVM", "Use non-CVMs for peer pods")
+	reg.BoolWithEnv(&ibmcloudVPCConfig.DisableCVM, "disable-cvm", true, "DISABLECVM", "Use non-CVMs for peer pods")
 
 	// Flags without environment variable support (pass empty string for envVarName)
 	reg.StringWithEnv(&ibmcloudVPCConfig.CRTokenFileName, "cr-token-filename", "/var/run/secrets/tokens/vault-token", "", "Projected service account token")

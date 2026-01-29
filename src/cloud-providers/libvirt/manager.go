@@ -46,7 +46,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 
 	// Flags without environment variable support (pass empty string for envVarName)
 	reg.StringWithEnv(&libvirtcfg.DataDir, "data-dir", defaultDataDir, "", "libvirt storage dir")
-	reg.BoolWithEnv(&libvirtcfg.DisableCVM, "disable-cvm", false, "DISABLECVM", "Use non-CVMs for peer pods")
+	reg.BoolWithEnv(&libvirtcfg.DisableCVM, "disable-cvm", true, "DISABLECVM", "Use non-CVMs for peer pods")
 }
 
 func (_ *Manager) LoadEnv() {
