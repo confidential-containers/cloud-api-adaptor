@@ -22,7 +22,7 @@ const (
 	defaultDataDir        = "/var/lib/libvirt/images"
 	defaultVolName        = "podvm-base.qcow2"
 	defaultLaunchSecurity = ""
-	defaultFirmware       = ""
+	defaultFirmware       = "/usr/share/OVMF/OVMF_CODE_4M.fd"
 	defaultCPU            = "2"
 	defaultMemory         = "8192"
 )
