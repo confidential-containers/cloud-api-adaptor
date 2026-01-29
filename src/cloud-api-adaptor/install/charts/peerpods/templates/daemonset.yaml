@@ -32,8 +32,10 @@ spec:
             fieldRef:
               fieldPath: spec.nodeName
         envFrom:
+{{- if include "peerpods.secretName" . }}
         - secretRef:
             name: {{ include "peerpods.secretName" . }}
+{{- end }}
         - configMapRef:
             name: peer-pods-cm
         image: {{ .Values.image.name | default "quay.io/confidential-containers/cloud-api-adaptor" }}:{{ .Values.image.tag | default "latest" }}
@@ -51,10 +53,14 @@ spec:
           failureThreshold: 30
           periodSeconds: 20
           initialDelaySeconds: 20
+        # TODO: We should think about a better patch strategy for keeping per provider
+        # patches in different files, otherwise this template might get bloated.
         volumeMounts:
+{{- if and (eq .Values.provider "libvirt") (include "peerpods.sshKeySecretName" .) }}
         - mountPath: /root/.ssh/
           name: ssh
           readOnly: true
+{{- end }}
         - mountPath: /run/peerpod
           name: pods-dir
         - mountPath: /run/netns
@@ -80,11 +86,13 @@ spec:
       nodeSelector:
         node.kubernetes.io/worker: ""
       volumes:
+{{- if and (eq .Values.provider "libvirt") (include "peerpods.sshKeySecretName" .) }}
       - name: ssh
         secret:
           defaultMode: 384
           optional: true
-          secretName: ssh-key-secret
+          secretName: {{ include "peerpods.sshKeySecretName" . }}
+{{- end }}
       - hostPath:
           path: /run/peerpod
         name: pods-dir

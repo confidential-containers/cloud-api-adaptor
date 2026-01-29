@@ -16,10 +16,14 @@ secrets:
   #
   mode: "create"
 
-  # Name of existing secret (only used when mode: "reference")
+  # Name of existing secret for provider credentials (only used when mode: "reference")
   # The secret must contain the required env var keys for your provider.
   # See providers/*-secrets.yaml.template for the list of required keys.
   existingSecretName: ""
+
+  # Name of existing SSH key secret for libvirt (only used when mode: "reference")
+  # The secret must contain the private key (id_rsa) for connecting to the hypervisor.
+  existingSshKeySecretName: ""
 
 # CAA (Cloud API Adaptor) image
 #
