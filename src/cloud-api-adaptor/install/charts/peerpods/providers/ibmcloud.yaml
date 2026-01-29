@@ -23,8 +23,8 @@ providerConfigs:
     # CLOUD_CONFIG_VERIFY: "false"
 
     # Use non-CVMs for peer pods
-    # (default: "false")
-    # DISABLECVM: "false"
+    # (default: "true")
+    # DISABLECVM: "true"
 
     # Enable encrypted scratch space for pod VMs
     # (default: "false")
