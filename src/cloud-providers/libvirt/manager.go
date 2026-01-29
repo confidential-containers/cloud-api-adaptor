@@ -16,7 +16,7 @@ var libvirtcfg Config
 type Manager struct{}
 
 const (
-	defaultURI            = "qemu:///system"
+	defaultURI            = "qemu+ssh://root@192.168.122.1/system?no_verify=1"
 	defaultPoolName       = "default"
 	defaultNetworkName    = "default"
 	defaultDataDir        = "/var/lib/libvirt/images"

@@ -68,8 +68,8 @@ providerConfigs:
     # LIBVIRT_POOL: "default"
 
     # libvirt URI
-    # (default: "qemu:///system")
-    # LIBVIRT_URI: "qemu:///system"
+    # (default: "qemu+ssh://root@192.168.122.1/system?no_verify=1")
+    # LIBVIRT_URI: "qemu+ssh://root@192.168.122.1/system?no_verify=1"
 
     # libvirt volume name
     # (default: "podvm-base.qcow2")
