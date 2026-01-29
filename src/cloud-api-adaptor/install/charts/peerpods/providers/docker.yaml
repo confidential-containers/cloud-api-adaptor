@@ -40,12 +40,12 @@ providerConfigs:
     # DOCKER_HOST: "unix:///var/run/docker.sock"
 
     # Docker network name to connect to
-    # (default: "defaultDockerNetworkName")
-    # DOCKER_NETWORK_NAME: "defaultDockerNetworkName"
+    # (default: "bridge")
+    # DOCKER_NETWORK_NAME: "bridge"
 
     # Docker image to use for podvm
-    # (default: "defaultPodVMDockerImage")
-    # DOCKER_PODVM_IMAGE: "defaultPodVMDockerImage"
+    # (default: "quay.io/confidential-containers/podvm-docker-image")
+    # DOCKER_PODVM_IMAGE: "quay.io/confidential-containers/podvm-docker-image"
 
     # Use TLS and verify the remote server certificate
     # (default: "false")
