@@ -6,7 +6,7 @@ to delete them.
 
 > **Note**: This chart is automatically installed as a dependency of the main
 > `peerpods` chart. In most cases, you don't need to install it manually.
-> See the [peerpods chart documentation](../peerpods/README.md) for standard installation.
+> See the [peerpods chart documentation](../../cloud-api-adaptor/install/charts/peerpods/README.md) for standard installation.
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ Before installing this chart, ensure you have:
 
 ```bash
 # Install the chart
-helm install peerpodctrl ./chart \
+helm install peerpodctrl . \
   -n confidential-containers-system \
   --create-namespace
 ```
@@ -30,7 +30,7 @@ helm install peerpodctrl ./chart \
 ### Installation as Dependency
 
 This chart is typically installed as a dependency of the main `peerpods` chart.
-See the [peerpods chart documentation](../cloud-api-adaptor/install/charts/peerpods/README.md)
+See the [peerpods chart documentation](../../cloud-api-adaptor/install/charts/peerpods/README.md)
 for installation instructions.
 
 ## Configuration
@@ -45,7 +45,7 @@ To customize the installation, you can either:
 Example with custom namespace:
 
 ```bash
-helm install my-controller ./chart \
+helm install my-controller . \
   --set namespace=my-namespace \
   --set namePrefix=my-controller- \
   -n my-namespace \
@@ -56,8 +56,8 @@ helm install my-controller ./chart \
 
 This chart includes auto-generated resources:
 
-- **CRD** (`crds/confidentialcontainers.org_peerpods.yaml`) - Generated from Go types
-- **RBAC** (`templates/rbac.yaml`) - Generated from RBAC markers in Go code
+- **CRD** ([crds/confidentialcontainers.org_peerpods.yaml](./crds/confidentialcontainers.org_peerpods.yaml)) - Generated from Go types
+- **RBAC** ([templates/rbac.yaml](./templates/rbac.yaml)) - Generated from RBAC markers in Go code
 
 These files are automatically regenerated when running:
 
