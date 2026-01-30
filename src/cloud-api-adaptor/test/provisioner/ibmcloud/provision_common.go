@@ -957,6 +957,11 @@ func getProfileList() string {
 	return profileList
 }
 
+func (p *IBMCloudProvisioner) GetProvisionValues() map[string]interface{} {
+	// TODO: implement properly
+	return nil
+}
+
 func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
 		"CLOUD_PROVIDER":                       IBMCloudProps.IBMCloudProvider,

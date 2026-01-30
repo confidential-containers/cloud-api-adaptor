@@ -219,6 +219,12 @@ func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config)
 	return nil
 }
 
+func (l *LibvirtProvisioner) GetProvisionValues() map[string]interface{} {
+	// Libvirt has no dynamic values created during provisioning.
+	// Static config (URI, SSH keys) comes from workflow's helm values file.
+	return nil
+}
+
 func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
 		"CONTAINER_RUNTIME": l.containerRuntime,
