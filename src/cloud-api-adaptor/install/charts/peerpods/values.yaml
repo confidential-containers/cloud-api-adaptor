@@ -84,6 +84,10 @@ webhook:
 
 # kata-deploy subchart configuration
 kata-deploy:
+  # Installs kata and the kata-remote RuntimeClass required by peer pods.
+  # Set to false if kata is already installed (e.g., via another chart or operator).
+  # If disabled, ensure kata-remote shim is enabled otherwise CAA will not work.
+  enabled: true
   snapshotter:
     setup: ["nydus"]
   defaultShim:
