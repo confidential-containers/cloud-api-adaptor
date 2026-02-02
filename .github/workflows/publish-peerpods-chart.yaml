@@ -25,9 +25,10 @@ jobs:
     name: Release PeerPods Helm Chart
     runs-on: ubuntu-22.04
     permissions:
-      contents: read   # Required for checkout
-      packages: write  # Required for pushing to GitHub Container Registry
-      id-token: write  # Required for attestation signing
+      contents: read       # Required for checkout
+      packages: write      # Required for pushing to GitHub Container Registry
+      id-token: write      # Required for attestation signing
+      attestations: write  # Required for persisting attestations
 
     defaults:
       run:
