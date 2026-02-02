@@ -41,6 +41,9 @@ debug_common() {
 
     echo "::group::peerpodctrl installation logs"
     pod=$(kubectl get pod -o name -n confidential-containers-system | grep peerpodctrl-controller-manager)
+    if [ -z "$pod" ]; then
+        pod=$(kubectl get pod -o name -n confidential-containers-system | grep peerpod-ctrl-controller-manager)
+    fi
     [ -n "$pod" ] && kubectl logs "$pod" --tail=-1 -n confidential-containers-system
     echo "::endgroup::"
 
