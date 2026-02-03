@@ -148,6 +148,11 @@ type AzureInstallOverlay struct {
 	Overlay *pv.KustomizeOverlay
 }
 
+// AzureInstallChart implements the InstallChart interface
+type AzureInstallChart struct {
+	Helm *pv.Helm
+}
+
 func NewAzureCloudProvisioner(properties map[string]string) (pv.CloudProvisioner, error) {
 	if err := initAzureProperties(properties); err != nil {
 		return nil, err
@@ -468,6 +473,82 @@ func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, p
 
 	if err = lio.Overlay.YamlReload(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func NewAzureInstallChart(installDir, provider string) (pv.InstallChart, error) {
+	chartPath := filepath.Join(installDir, "charts", "peerpods")
+	namespace := pv.GetCAANamespace()
+	releaseName := "peerpods"
+	debug := false
+
+	helm, err := pv.NewHelm(chartPath, namespace, releaseName, provider, debug)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AzureInstallChart{
+		Helm: helm,
+	}, nil
+}
+
+func (a *AzureInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
+	if err := a.Helm.Install(ctx, cfg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *AzureInstallChart) Uninstall(ctx context.Context, cfg *envconf.Config) error {
+	return a.Helm.Uninstall(ctx, cfg)
+}
+
+func (a *AzureInstallChart) Configure(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
+	// Handle CAA image - parse it like kustomization does
+	// CAA_IMAGE might be a full image reference (name:tag@digest) or just the name
+	if AzureProps.CaaImage != "" {
+		spec, err := reference.Parse(AzureProps.CaaImage)
+		if err != nil {
+			return fmt.Errorf("parsing CAA image: %w", err)
+		}
+
+		log.Infof("Configuring helm: CAA image %q", spec.Locator)
+		a.Helm.OverrideValues["image.name"] = spec.Locator
+
+		// For Helm, pass tag and digest together in image.tag
+		// spec.Object contains the tag part (which may include @digest)
+		tag := spec.Object
+		if tag != "" {
+			log.Infof("Configuring helm: CAA image tag %q", tag)
+			a.Helm.OverrideValues["image.tag"] = tag
+		}
+	}
+
+	if AzureProps.ClientID != "" {
+		a.Helm.OverrideProviderSecrets["AZURE_CLIENT_ID"] = AzureProps.ClientID
+		log.Infof("Configuring helm: set secret (AZURE_CLIENT_ID)")
+		if properties["AZURE_CLIENT_SECRET"] == "" {
+			// Set pod label for workload identity
+			// The chart supports daemonset.podLabels which will add labels to the pod template
+			// Note: For nested keys with dots/slashes, we need to use the escaped format
+			// Helm will interpret this as a nested map: daemonset.podLabels["azure.workload.identity/use"] = "true"
+			a.Helm.OverrideValues["daemonset.podLabels.azure\\.workload\\.identity/use"] = "true"
+			log.Infof("Configuring helm: set pod label for workload identity")
+		}
+	}
+
+	for k, v := range properties {
+		if isAzureKustomizeConfigMapKey(k) {
+			a.Helm.OverrideProviderValues[v] = properties[k]
+			continue
+		}
+		if k == "AZURE_CLIENT_SECRET" || k == "AZURE_TENANT_ID" {
+			log.Infof("Configuring helm: set secret (%s)", k)
+			a.Helm.OverrideProviderSecrets[k] = properties[k]
+		}
 	}
 
 	return nil
