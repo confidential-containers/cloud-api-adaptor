@@ -49,8 +49,15 @@ jobs:
     - build-podvm-image
     permissions:
       id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        install_method:
+          - kustomize
+          - helm
     with:
       podvm-image-id: ${{ needs.build-podvm-image.outputs.image-id }}
+      install_method: ${{ matrix.install_method }}
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
