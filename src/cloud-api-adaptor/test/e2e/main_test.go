@@ -193,7 +193,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		if err = CreateAndWaitForNamespace(ctx, cfg.Client(), E2eNamespace); err != nil {
+		if err = pv.CreateAndWaitForNamespace(ctx, cfg.Client(), E2eNamespace); err != nil {
 			return ctx, err
 		}
 
