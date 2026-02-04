@@ -6,9 +6,15 @@ package gcp
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	//"google.golang.org/api/option"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
+	log "github.com/sirupsen/logrus"
+
 	//"google.golang.org/api/compute/v1"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
@@ -109,5 +115,78 @@ func (p *GCPProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 }
 
 func (p *GCPProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
+	return nil
+}
+
+// GCPInstallChart implements the InstallChart interface
+type GCPInstallChart struct {
+	Helm *pv.Helm
+}
+
+func NewGCPInstallChart(installDir, provider string) (pv.InstallChart, error) {
+	chartPath := filepath.Join(installDir, "charts", "peerpods")
+	namespace := pv.GetCAANamespace()
+	releaseName := "peerpods"
+	debug := false
+
+	helm, err := pv.NewHelm(chartPath, namespace, releaseName, provider, debug)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GCPInstallChart{
+		Helm: helm,
+	}, nil
+}
+
+func (g *GCPInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
+	return g.Helm.Install(ctx, cfg)
+}
+
+func (g *GCPInstallChart) Uninstall(ctx context.Context, cfg *envconf.Config) error {
+	return g.Helm.Uninstall(ctx, cfg)
+}
+
+func (g *GCPInstallChart) Configure(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
+	// Handle CAA image - split on ":" like kustomization does
+	if GCPProps.CaaImage != "" {
+		parts := strings.Split(GCPProps.CaaImage, ":")
+		if len(parts) >= 1 && parts[0] != "" {
+			log.Infof("Configuring helm: CAA image %q", parts[0])
+			g.Helm.OverrideValues["image.name"] = parts[0]
+		}
+		if len(parts) >= 2 && parts[1] != "" {
+			log.Infof("Configuring helm: CAA image tag %q", parts[1])
+			g.Helm.OverrideValues["image.tag"] = parts[1]
+		}
+	}
+
+	// Map properties to Helm chart providerConfigs
+	// List matches the keys in install/charts/peerpods/providers/gcp.yaml
+	providerConfigKeys := map[string]string{
+		"podvm_image_name":   "PODVM_IMAGE_NAME",
+		"podvm_machine_type": "GCP_MACHINE_TYPE",
+		"project_id":         "GCP_PROJECT_ID",
+		"zone":               "GCP_ZONE",
+		"vpc_name":           "GCP_NETWORK",
+	}
+
+	for k, v := range providerConfigKeys {
+		if properties[k] != "" {
+			g.Helm.OverrideProviderValues[v] = properties[k]
+		}
+	}
+
+	// Handle GCP credentials - read from file and set as secret
+	credsPath := properties["credentials"]
+	if credsPath != "" {
+		credData, err := os.ReadFile(credsPath)
+		if err != nil {
+			return fmt.Errorf("failed to read GCP credentials file %q: %w", credsPath, err)
+		}
+		log.Info("Configuring helm: GCP credentials")
+		g.Helm.OverrideProviderSecrets["GCP_CREDENTIALS"] = string(credData)
+	}
+
 	return nil
 }
