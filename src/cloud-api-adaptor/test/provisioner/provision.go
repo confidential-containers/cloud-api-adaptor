@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"sigs.k8s.io/e2e-framework/klient"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
@@ -544,4 +545,58 @@ func findAndWaitForDeployment(ctx context.Context, cfg *envconf.Config, partOfLa
 	}
 
 	return nil
+}
+
+func CreateAndWaitForNamespace(ctx context.Context, client klient.Client, namespaceName string) error {
+	log.Infof("Creating namespace '%s'...", namespaceName)
+	nsObj := corev1.Namespace{}
+	nsObj.Name = namespaceName
+	if err := client.Resources().Create(ctx, &nsObj); err != nil {
+		return err
+	}
+
+	if err := waitForNamespaceToBeUseable(ctx, client, namespaceName); err != nil {
+		return err
+	}
+	return nil
+}
+
+const WAIT_NAMESPACE_AVAILABLE_TIMEOUT = time.Second * 120
+
+func waitForNamespaceToBeUseable(ctx context.Context, client klient.Client, namespaceName string) error {
+	log.Infof("Wait for namespace '%s' be ready...", namespaceName)
+	nsObj := corev1.Namespace{}
+	nsObj.Name = namespaceName
+	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(&nsObj, func(object k8s.Object) bool {
+		ns, ok := object.(*corev1.Namespace)
+		if !ok {
+			log.Printf("Not a namespace object: %v", object)
+			return false
+		}
+		return ns.Status.Phase == corev1.NamespaceActive
+	}), wait.WithTimeout(WAIT_NAMESPACE_AVAILABLE_TIMEOUT)); err != nil {
+		return err
+	}
+
+	// SH: There is a race condition where the default service account isn't ready when we
+	// try and use it #1657, so we want to ensure that it is available before continuing.
+	// As the serviceAccount doesn't have a status I can't seem to use the wait condition to
+	// detect if it is ready, so do things the old-fashioned way
+	log.Infof("Wait for default serviceaccount in namespace '%s'...", namespaceName)
+	var saList corev1.ServiceAccountList
+	for start := time.Now(); time.Since(start) < WAIT_NAMESPACE_AVAILABLE_TIMEOUT; {
+		if err := client.Resources(namespaceName).List(ctx, &saList); err != nil {
+			return err
+		}
+		for _, sa := range saList.Items {
+			if sa.ObjectMeta.Name == "default" {
+
+				log.Infof("default serviceAccount exists, namespace '%s' is ready for use", namespaceName)
+				return nil
+			}
+		}
+		log.Tracef("default serviceAccount not found after %.0f seconds", time.Since(start).Seconds())
+		time.Sleep(5 * time.Second)
+	}
+	return fmt.Errorf("default service account not found in namespace '%s' after %.0f seconds wait", namespaceName, WAIT_NAMESPACE_AVAILABLE_TIMEOUT.Seconds())
 }
