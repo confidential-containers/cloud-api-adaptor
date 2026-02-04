@@ -8,6 +8,8 @@ updates:
       # Check for updates to GitHub Actions every week on Saturday
       interval: "weekly"
       day: "saturday"
+    cooldown:
+      default-days: 7
   - package-ecosystem: "gomod"
     directories:
       - "src/cloud-api-adaptor"
@@ -48,3 +50,5 @@ updates:
     schedule:
       interval: "weekly"
       day: "saturday"
+    cooldown:
+      default-days: 7
