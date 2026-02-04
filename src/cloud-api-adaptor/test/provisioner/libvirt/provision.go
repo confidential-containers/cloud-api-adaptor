@@ -12,4 +12,5 @@ import (
 func init() {
 	pv.NewProvisionerFunctions["libvirt"] = NewLibvirtProvisioner
 	pv.NewInstallOverlayFunctions["libvirt"] = NewLibvirtInstallOverlay
+	pv.NewInstallChartFunctions["libvirt"] = NewLibvirtInstallChart
 }
