@@ -14,5 +14,8 @@
     },
     "gomod": {
         "enabled": false
+    },
+    "terraform": {
+        "enabled": false
     }
 }
