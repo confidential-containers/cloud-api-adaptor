@@ -6,6 +6,8 @@
     "dockerfile": {
         "ignorePaths": [
             "src/cloud-api-adaptor/Dockerfile",
+            "**/cloud-api-adaptor/test/**",
+            "**/hack/**",
             "**/csi-wrapper/**",
             "**/peerpod-ctrl/**",
             "**/podvm-mkosi/**",
