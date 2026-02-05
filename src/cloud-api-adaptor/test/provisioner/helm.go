@@ -66,19 +66,19 @@ func (h *Helm) Install(ctx context.Context, cfg *envconf.Config) error {
 		args = append(args, "--debug")
 	}
 
-	// Add --set flags for OverrideValues if not empty (passed as-is)
+	// Add --set-literal flags for OverrideValues if not empty (passed as-is)
 	if len(h.OverrideValues) > 0 {
 		for key, value := range h.OverrideValues {
 			setArg := fmt.Sprintf("%s=%s", key, value)
-			args = append(args, "--set", setArg)
+			args = append(args, "--set-literal", setArg)
 		}
 	}
 
-	// Add --set flags for OverrideProviderValues if not empty
+	// Add --set-literal flags for OverrideProviderValues if not empty
 	if len(h.OverrideProviderValues) > 0 {
 		for key, value := range h.OverrideProviderValues {
 			setArg := fmt.Sprintf("providerConfigs.%s.%s=%s", h.Provider, key, value)
-			args = append(args, "--set", setArg)
+			args = append(args, "--set-literal", setArg)
 		}
 	}
 
@@ -86,7 +86,7 @@ func (h *Helm) Install(ctx context.Context, cfg *envconf.Config) error {
 	if len(h.OverrideProviderSecrets) > 0 {
 		for key, value := range h.OverrideProviderSecrets {
 			setArg := fmt.Sprintf("providerSecrets.%s.%s=%s", h.Provider, key, value)
-			args = append(args, "--set", setArg)
+			args = append(args, "--set-literal", setArg)
 		}
 	}
 
