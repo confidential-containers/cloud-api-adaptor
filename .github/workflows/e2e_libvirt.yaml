@@ -196,6 +196,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Authenticate Helm with GitHub Container Registry
+        if: inputs.install_method == 'helm' && runner.environment == 'self-hosted'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          echo "Authenticating Helm with GHCR..."
+          echo "${GITHUB_TOKEN}" | helm registry login ghcr.io \
+            --username "${GITHUB_ACTOR}" \
+            --password-stdin
+          echo "Helm authenticated with ghcr.io"
+
       - name: run tests
         id: runTests
         env:
