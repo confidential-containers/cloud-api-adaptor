@@ -12,4 +12,5 @@ import (
 func init() {
 	pv.NewProvisionerFunctions["ibmcloud"] = NewIBMCloudProvisioner
 	pv.NewInstallOverlayFunctions["ibmcloud"] = NewIBMCloudInstallOverlay
+	pv.NewInstallChartFunctions["ibmcloud"] = NewIBMCloudInstallChart
 }
