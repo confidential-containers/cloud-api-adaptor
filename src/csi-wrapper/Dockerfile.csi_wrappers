@@ -7,13 +7,13 @@
 ARG SOURCE_FROM=remote
 
 ##### Builder Dev Image #####
-FROM --platform=${BUILDPLATFORM} quay.io/confidential-containers/golang-fedora:1.24.12-41 AS builder-local
+FROM --platform=${BUILDPLATFORM} quay.io/confidential-containers/golang-fedora:1.24.13-41 AS builder-local
 WORKDIR /src
 COPY csi-wrapper ./cloud-api-adaptor/src/csi-wrapper/
 COPY cloud-api-adaptor ./cloud-api-adaptor/src/cloud-api-adaptor
 
 ##### Builder Release Image #####
-FROM --platform=${BUILDPLATFORM} quay.io/confidential-containers/golang-fedora:1.24.12-41 AS builder-remote
+FROM --platform=${BUILDPLATFORM} quay.io/confidential-containers/golang-fedora:1.24.13-41 AS builder-remote
 ARG BINARY
 ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
 ARG CAA_SRC_REF="main"
