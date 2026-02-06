@@ -105,12 +105,21 @@ By default, your Red Hat OpenShift cluster will not work with the peer pod compo
     oc label nodes $(oc get nodes -o jsonpath={.items..metadata.name}) node.kubernetes.io/worker=
     ```
 
-1. Give `cc-operator` and `cloud-api-adaptor` priviledged OpenShift SCC permission
+1. Give `kata-deploy` and `cloud-api-adaptor` privileged OpenShift SCC permission
+
+    > **Note:** If you previously used the cc-operator, the service account
+    > was `cc-operator-controller-manager`. With the helm-based install,
+    > the kata-deploy chart uses `kata-deploy-sa*` instead.
+
+    > **Warning:** The `kata-deploy` DaemonSet requires privileged access
+    > to install kata binaries on nodes. Without this, its pods will be
+    > blocked by OpenShift's default restricted SCC.
 
     ```bash
     oc create namespace confidential-containers-system
     oc project confidential-containers-system
-    oc adm policy add-scc-to-user privileged -z cc-operator-controller-manager
+    oc adm policy add-scc-to-user privileged -z kata-deploy-sa
+    oc adm policy add-scc-to-user privileged -z kata-deploy-sa-cleanup
     oc adm policy add-scc-to-user privileged -z cloud-api-adaptor
     oc project default
     ```
