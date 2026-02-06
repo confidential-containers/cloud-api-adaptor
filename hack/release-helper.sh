@@ -67,9 +67,9 @@ update_provider_overlays() {
         pushd "${provider}" || exit
 
         # libvirt uses the dev built image
-        tag_prefix=""
+        tag_suffix=""
         if [ "${provider}" == "libvirt" ] || [ "${provider}" == "docker" ] ; then
-            tag_prefix="dev-"
+            tag_suffix="-dev"
         fi
 
         # yq and kustomize edit both reformat the file, so fall back to using sed :(
@@ -78,7 +78,7 @@ update_provider_overlays() {
         if ! sed --version >/dev/null 2>&1; then
             sed_inplace=(-i "")
         fi
-        sed "${sed_inplace[@]}" "s/^\(.*newTag:\).*/\1 ${tag_prefix}${image_tag}/g" kustomization.yaml
+        sed "${sed_inplace[@]}" "s/^\(.*newTag:\).*/\1 ${image_tag}${tag_suffix}/g" kustomization.yaml
         popd || exit
     done
     popd || return
