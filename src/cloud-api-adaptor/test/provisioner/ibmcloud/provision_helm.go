@@ -110,5 +110,10 @@ func (i *IBMCloudInstallChart) Configure(ctx context.Context, cfg *envconf.Confi
 		}
 	}
 
+	if properties["CONTAINER_RUNTIME"] == "crio" {
+		log.Print("Configuring helm: disable snapshotter setup")
+		i.Helm.OverrideValues["kata-deploy.snapshotter.setup"] = ""
+	}
+
 	return nil
 }

@@ -25,6 +25,7 @@ type IBMCloudProperties struct {
 	Bucket                string
 	CaaImageTag           string
 	ClusterName           string
+	ContainerRuntime      string
 	CosApiKey             string
 	CosInstanceID         string
 	CosServiceURL         string
@@ -69,6 +70,11 @@ type IBMCloudProperties struct {
 var IBMCloudProps = &IBMCloudProperties{}
 
 func InitIBMCloudProperties(properties map[string]string) error {
+	containerRuntime := "crio"
+	if properties["CONTAINER_RUNTIME"] != "" {
+		containerRuntime = properties["CONTAINER_RUNTIME"]
+	}
+
 	IBMCloudProps = &IBMCloudProperties{
 		IBMCloudProvider:      properties["IBMCLOUD_PROVIDER"],
 		ApiKey:                properties["APIKEY"],
@@ -76,6 +82,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		Bucket:                properties["COS_BUCKET"],
 		CaaImageTag:           properties["CAA_IMAGE_TAG"],
 		ClusterName:           properties["CLUSTER_NAME"],
+		ContainerRuntime:      containerRuntime,
 		CosApiKey:             properties["COS_APIKEY"],
 		CosInstanceID:         properties["COS_INSTANCE_ID"],
 		CosServiceURL:         properties["COS_SERVICE_URL"],
