@@ -81,6 +81,12 @@ spec:
         - mountPath: /var/lib/docker
           name: docker-dir
 {{- end }}
+{{- if eq .Values.provider "ibmcloud" }}
+        - mountPath: /run/kata-containers/shared/direct-volumes
+          name: kata-direct-volumes-dir
+        - mountPath: /var/run/secrets/tokens
+          name: vault-token
+{{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
@@ -120,4 +126,17 @@ spec:
       - name: docker-dir
         hostPath:
           path: /var/lib/docker
+{{- end }}
+{{- if eq .Values.provider "ibmcloud" }}
+      - name: kata-direct-volumes-dir
+        hostPath:
+          path: /run/kata-containers/shared/direct-volumes
+          type: DirectoryOrCreate
+      - name: vault-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: vault-token
+              expirationSeconds: 3600
+              audience: iam
 {{- end }}
