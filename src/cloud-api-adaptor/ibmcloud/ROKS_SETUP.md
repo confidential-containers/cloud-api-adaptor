@@ -5,7 +5,7 @@ This guide describes how to set up a simple peer pod demo environment with a Red
 1. [Set up an OpenShift Kubernetes cluster for PeerPod VMs](#set-up-an-openshift-kubernetes-cluster-for-peerpod-vms)
 1. [Upload a PeerPod VM Custom Image](#upload-a-peerpod-vm-custom-image)
 1. [Deploy the PeerPod Webhook](#deploy-the-peerpod-webhook)
-1. [Deploy the Confidential-containers operator](#deploy-the-confidential-containers-operator)
+1. [Deploy kata-deploy and cloud-api-adaptor ](#deploy-confidential-containers)
 1. [Run a Helloworld sample](#run-a-helloworld-sample)
 
 ## Pre-reqs
@@ -17,6 +17,7 @@ Before proceeding you will need to install:
     - container-service[kubernetes-service/ks]
     - vpc-infrastructure[infrastructure-service/is]
 1. the OpenShift [oc CLI](https://cloud.ibm.com/docs/openshift?topic=openshift-cli-install#install-kubectl-cli)
+1. [helm](https://helm.sh/docs/intro/install/)
 
 ## Set up an OpenShift Kubernetes cluster for PeerPod VMs
 
@@ -155,9 +156,9 @@ needed below.
 
 Follow the [webhook instructions in README.md](./README.md#deploy-peerpod-webhook) to deploy cert-manager and the peer-pods webhook.
 
-## Deploy the Confidential-containers operator
+## Deploy Confidential-containers
 
-The `caa-provisioner-cli` command can be use to simplify deployment of the operator and the cloud-api-adaptor resources on to any cluster. See the [test/tools/README.md](../test/tools/README.md) for full instructions. To create an ibmcloud-ready version of the provisioner CLI, run the following make command:
+The `caa-provisioner-cli` command can be use to simplify deployment of the confidential containers and the cloud-api-adaptor resources on to any cluster. See the [test/tools/README.md](../test/tools/README.md) for full instructions. To create an ibmcloud-ready version of the provisioner CLI, run the following make command:
 
 ```bash
 # Starting from root directory of the cloud-api-adaptor repository
@@ -166,7 +167,7 @@ make BUILTIN_CLOUD_PROVIDERS="ibmcloud" all
 popd
 ```
 
-This will create `caa-provisioner-cli` in the `src/cloud-api-adaptor/test/tools` directory. To use the command you will need to set up a `.properties` file containing the relevant ibmcloud information to enable your cluster to create and use peer-pods. 
+This will create `caa-provisioner-cli` in the `src/cloud-api-adaptor/test/tools` directory. To use the command you will need to set up a `.properties` file containing the relevant ibmcloud information to enable your cluster to create and use peer-pods.
 
 Set the SSH_KEY_ID and PODVM_IMAGE_ID environment variables to your values (Note that the IBMCLOUD_API_KEY, VPC_ID, SUBNET_ID and CLUSTER_NAME environment variables should already have been set in [Set up an OpenShift Kubernetes cluster for PeerPod VMs
 ](#set-up-an-openshift-kubernetes-cluster-for-peerpod-vms)):
@@ -200,6 +201,8 @@ IBMCLOUD_PROVIDER="ibmcloud"
 INSTANCE_PROFILE_NAME="bx2-2x8"
 CAA_IMAGE_TAG="latest-amd64"
 DISABLECVM="true"
+CLUSTER_ID="$(ibmcloud oc cluster get --cluster ${CLUSTER_NAME} --output json | jq -r '.id')"
+CONTAINER_RUNTIME="crio"
 EOF
 ```
 
@@ -217,18 +220,19 @@ sed -i ".bak" -e 's/DISABLECVM="true"/DISABLECVM="false"/' -e 's/bx2-2x8/bx3dc-2
 > [!TIP]
 > You can configure and run a simple Trustee in another VSI in your VPC by following the instructions in [Deploy a test Trustee](#deploy-a-test-trustee) before proceeding.
 
-Finally, run the `caa-provisioner-cli` command to install the operator and cloud-api-adaptor:
+Finally, run the `caa-provisioner-cli` command to install confidential-container and cloud-api-adaptor:
 
 ```bash
 export CLOUD_PROVIDER=ibmcloud
 export TEST_PROVISION_FILE="$HOME/peerpods-cluster.properties"
 export TEST_TEARDOWN="no"
+export INSTALL_METHOD="helm"
 pushd src/cloud-api-adaptor/test/tools
 ./caa-provisioner-cli -action=install
 popd
 ```
 
-Run the following command to confirm that the operator and cloud-api-adaptor have been deployed:
+Run the following command to confirm that the confidential-containers runtime and cloud-api-adaptor have been deployed:
 
 ```bash
 oc get pods -n confidential-containers-system
@@ -237,14 +241,12 @@ oc get pods -n confidential-containers-system
 Once everything is up and ruuning, you should see output similar to the following:
 
 ```
-cc-operator-controller-manager-7f8db55b55-r9thx   2/2     Running   0          7m55s
-cc-operator-daemon-install-2dsnz                  1/1     Running   0          6m59s
-cc-operator-daemon-install-d522m                  1/1     Running   0          6m58s
-cc-operator-pre-install-daemon-gzl8w              1/1     Running   0          7m29s
-cc-operator-pre-install-daemon-w5whl              1/1     Running   0          7m29s
-cloud-api-adaptor-daemonset-m5x5s                 1/1     Running   0          7m29s
-cloud-api-adaptor-daemonset-v6jdr                 1/1     Running   0          7m29s
-peerpod-ctrl-controller-manager-65f76cb59-vhbt4   2/2     Running   0          5m20s
+NAME                                              READY   STATUS    RESTARTS   AGE
+cloud-api-adaptor-daemonset-nt4h7                 1/1     Running   0          5m45s
+cloud-api-adaptor-daemonset-txssq                 1/1     Running   0          5m45s
+kata-deploy-7ncjq                                 1/1     Running   0          5m45s
+kata-deploy-w5kfp                                 1/1     Running   0          5m45s
+peerpodctrl-controller-manager-7d94b54bc9-266bw   2/2     Running   0          5m45s
 ```
 
 ## Run a Helloworld sample
@@ -313,7 +315,7 @@ Hello version: v1, instance: helloworld
 
 ## Uninstall and clean up
 
-If you want to cleanup the whole demo, including the cluster, simply delete the IBM Cloud cluster. 
+If you want to cleanup the whole demo, including the cluster, simply delete the IBM Cloud cluster.
 
 > [!NOTE]
 > Deleting the cluster might persist the podvm created by cloud-api-adaptor. Make sure to delete the Helloworld pod first.
@@ -327,7 +329,7 @@ Otherwise:
     oc delete -n default pod helloworld
     ```
 
-1. To uninstall the peer pod components 
+1. To uninstall the peer pod components
 
     ```bash
     pushd src/cloud-api-adaptor/test/tools
