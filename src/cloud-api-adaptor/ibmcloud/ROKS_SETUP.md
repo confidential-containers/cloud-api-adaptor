@@ -12,10 +12,21 @@ This guide describes how to set up a simple peer pod demo environment with a Red
 
 Before proceeding you will need to install:
 
-1. the [Pre-reqs in README.md](./README.md#pre-reqs) but not including Terraform and Ansible, which are not used in this guide.
-1. ibmcloud plugins:
-    - container-service[kubernetes-service/ks]
-    - vpc-infrastructure[infrastructure-service/is]
+1. [IBM Cloud CLI](https://cloud.ibm.com/docs/cli?topic=cli-install-ibmcloud-cli) and `container-service[kubernetes-service/ks]` and `vpc-infrastructure[infrastructure-service/is]` plugins
+> **Tips**
+> - If you are using Ubuntu linux, you can run follow commands simply:
+>     ```bash
+>     $ curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+>     $ ibmcloud plugin install kubernetes-service
+>     $ ibmcloud plugin install vpc-infrastructure
+>     ```
+2. [`jq`](https://stedolan.github.io/jq/download/)
+> **Tip:** If you are using Ubuntu linux, you can run follow command:
+> ```bash
+> $ sudo apt-get install jq
+> ```
+3. [go](https://go.dev/doc/install)
+1. `make`
 1. the OpenShift [oc CLI](https://cloud.ibm.com/docs/openshift?topic=openshift-cli-install#install-kubectl-cli)
 
 ## Set up an OpenShift Kubernetes cluster for PeerPod VMs
@@ -166,7 +177,7 @@ make BUILTIN_CLOUD_PROVIDERS="ibmcloud" all
 popd
 ```
 
-This will create `caa-provisioner-cli` in the `src/cloud-api-adaptor/test/tools` directory. To use the command you will need to set up a `.properties` file containing the relevant ibmcloud information to enable your cluster to create and use peer-pods. 
+This will create `caa-provisioner-cli` in the `src/cloud-api-adaptor/test/tools` directory. To use the command you will need to set up a `.properties` file containing the relevant ibmcloud information to enable your cluster to create and use peer-pods.
 
 Set the SSH_KEY_ID and PODVM_IMAGE_ID environment variables to your values (Note that the IBMCLOUD_API_KEY, VPC_ID, SUBNET_ID and CLUSTER_NAME environment variables should already have been set in [Set up an OpenShift Kubernetes cluster for PeerPod VMs
 ](#set-up-an-openshift-kubernetes-cluster-for-peerpod-vms)):
@@ -313,7 +324,7 @@ Hello version: v1, instance: helloworld
 
 ## Uninstall and clean up
 
-If you want to cleanup the whole demo, including the cluster, simply delete the IBM Cloud cluster. 
+If you want to cleanup the whole demo, including the cluster, simply delete the IBM Cloud cluster.
 
 > [!NOTE]
 > Deleting the cluster might persist the podvm created by cloud-api-adaptor. Make sure to delete the Helloworld pod first.
@@ -327,7 +338,7 @@ Otherwise:
     oc delete -n default pod helloworld
     ```
 
-1. To uninstall the peer pod components 
+1. To uninstall the peer pod components
 
     ```bash
     pushd src/cloud-api-adaptor/test/tools
