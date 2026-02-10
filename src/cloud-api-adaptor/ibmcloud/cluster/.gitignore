@@ -1,5 +1,0 @@
-.terraform*
-terraform.tfvars
-terraform.tfstate*
-/ansible/inventory
-/config

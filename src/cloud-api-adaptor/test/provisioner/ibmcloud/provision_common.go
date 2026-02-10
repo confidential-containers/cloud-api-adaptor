@@ -630,10 +630,6 @@ func NewIBMCloudProvisioner(properties map[string]string) (pv.CloudProvisioner, 
 		return nil, err
 	}
 
-	if IBMCloudProps.IsSelfManaged {
-		return &IBMSelfManagedClusterProvisioner{}, nil
-	}
-
 	return &IBMCloudProvisioner{}, nil
 }
 

@@ -12,10 +12,21 @@ This guide describes how to set up a simple peer pod demo environment with a Red
 
 Before proceeding you will need to install:
 
-1. the [Pre-reqs in README.md](./README.md#pre-reqs) but not including Terraform and Ansible, which are not used in this guide.
-1. ibmcloud plugins:
-    - container-service[kubernetes-service/ks]
-    - vpc-infrastructure[infrastructure-service/is]
+1. [IBM Cloud CLI](https://cloud.ibm.com/docs/cli?topic=cli-install-ibmcloud-cli) and `container-service[kubernetes-service/ks]` and `vpc-infrastructure[infrastructure-service/is]` plugins
+> **Tips**
+> - If you are using Ubuntu linux, you can run follow commands simply:
+>     ```bash
+>     $ curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+>     $ ibmcloud plugin install kubernetes-service
+>     $ ibmcloud plugin install vpc-infrastructure
+>     ```
+2. [`jq`](https://stedolan.github.io/jq/download/)
+> **Tip:** If you are using Ubuntu linux, you can run follow command:
+> ```bash
+> $ sudo apt-get install jq
+> ```
+3. [go](https://go.dev/doc/install)
+1. `make`
 1. the OpenShift [oc CLI](https://cloud.ibm.com/docs/openshift?topic=openshift-cli-install#install-kubectl-cli)
 1. [helm](https://helm.sh/docs/intro/install/)
 
