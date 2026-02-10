@@ -19,11 +19,6 @@ on:
       podvm-image-id:
         type: string
         description: prebuilt podvm image
-      install_method:
-        default: 'kustomize'
-        description: Installation method. Either kustomize or helm.
-        required: false
-        type: string
     secrets:
       AZURE_CLIENT_ID:
         required: true
@@ -169,8 +164,6 @@ jobs:
 
   run-e2e-test:
     runs-on: ubuntu-24.04
-    # TODO: remove when helm installation gets implemented and stable.
-    continue-on-error: ${{ inputs.install_method == 'helm' }}
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
@@ -230,7 +223,6 @@ jobs:
           sudo bash -s /usr/local/bin
 
     - name: Install Helm
-      if: ${{ inputs.install_method == 'helm' }}
       run: |
         curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
         echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
@@ -276,7 +268,7 @@ jobs:
       id: runTests
       env:
         TEST_PROVISION: "no"
-        INSTALL_METHOD: "${{ inputs.install_method }}"
+        INSTALL_METHOD: "helm"
         DEPLOY_KBS: "yes"
         CUSTOM_PCCS_URL: "https://global.acccache.azure.net/sgx/certification/v4"
         CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
