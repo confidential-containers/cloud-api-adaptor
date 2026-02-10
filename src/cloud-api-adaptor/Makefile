@@ -23,6 +23,7 @@ TEST_E2E_TIMEOUT ?= 60m
 RUN_TESTS ?= ''
 
 RESOURCE_CTRL ?= true
+WEBHOOK_ENABLED ?= true
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
 	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure gcp ibmcloud ibmcloud_powervs
@@ -126,38 +127,33 @@ image-with-arch: .git-commit ## Build the per arch image
 ##@ Deployment
 
 .PHONY: deploy
-deploy: ## Deploy cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
+deploy: ## Deploy cloud-api-adaptor using Helm charts. Assumes provider secrets file exists at install/charts/peerpods/providers/$(CLOUD_PROVIDER)-secrets.yaml
 ifneq ($(CLOUD_PROVIDER),)
-	kubectl apply -k "$(COCO_OPERATOR_REPO)/config/$(COCO_OPERATOR_CONFIG)?ref=$(COCO_OPERATOR_REF)"
-	kubectl apply -k "$(COCO_OPERATOR_REPO)/config/samples/ccruntime/peer-pods?ref=$(COCO_OPERATOR_REF)"
-	kubectl apply -k install/overlays/$(CLOUD_PROVIDER)
-else
-	$(error CLOUD_PROVIDER is not set)
+	$(eval HELM_VALUES_FILES := install/charts/peerpods/providers/$(CLOUD_PROVIDER).yaml)
+ifeq ($(filter $(CLOUD_PROVIDER),docker),)
+	$(eval HELM_VALUES_FILES := $(HELM_VALUES_FILES) install/charts/peerpods/providers/$(CLOUD_PROVIDER)-secrets.yaml)
 endif
-ifeq ($(RESOURCE_CTRL),true)
-	$(MAKE) -C ../peerpod-ctrl deploy
-	@if kubectl get svc -n cert-manager cert-manager-webhook > /dev/null 2>&1; then \
-		echo "Installing webhook" ;\
-		$(MAKE) -C ../webhook deploy ;\
-	else \
+
+ifeq ($(WEBHOOK_ENABLED),true)
+	@if ! kubectl get svc -n cert-manager cert-manager-webhook > /dev/null 2>&1; then \
 		echo "Installing cert-manager" ;\
 		$(MAKE) -C ../webhook deploy-cert-manager ;\
-		echo "Installing webhook" ;\
-		$(MAKE) -C ../webhook deploy ;\
 	fi
+endif
+	helm install peerpods install/charts/peerpods \
+		$(foreach file,$(HELM_VALUES_FILES),-f $(file)) \
+		--set webhook.enabled=$(WEBHOOK_ENABLED) \
+		--set resourceCtrl.enabled=$(RESOURCE_CTRL) \
+		--dependency-update \
+		-n confidential-containers-system \
+		--create-namespace
+else
+	$(error CLOUD_PROVIDER is not set)
 endif
 
 .PHONY: delete
-delete: ## Delete cloud-api-adaptor using the operator, according to install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml file.
-ifeq ($(RESOURCE_CTRL),true)
-	$(MAKE) -C ../peerpod-ctrl undeploy
-	$(MAKE) -C ../webhook undeploy
-endif
-ifneq ($(CLOUD_PROVIDER),)
-	kubectl delete -k install/overlays/$(CLOUD_PROVIDER)
-else
-	$(error CLOUD_PROVIDER is not set)
-endif
+delete: ## Delete cloud-api-adaptor using Helm charts.
+	helm uninstall peerpods -n confidential-containers-system
 
 ### PODVM IMAGE BUILDING ###
 
