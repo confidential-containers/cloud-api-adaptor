@@ -10,7 +10,7 @@ image:
   tag: "latest"
 
 providerConfigs:
-  libvirt: {}
+  libvirt:
     # CA cert file
     # (default: "")
     # CACERT_FILE: ""

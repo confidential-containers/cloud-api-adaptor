@@ -23,11 +23,7 @@ define gen-provider-values
 			empty \
 		end), \
 		"providerConfigs:", \
-		(if ([.flags[] | select(.env_var != "" and .required)] | length) > 0 then \
-			"  \(.provider):" \
-		else \
-			"  \(.provider): {}" \
-		end), \
+			"  \(.provider):", \
 		(.flags[] | select(.env_var != "") | \
 			if .required then \
 				"    # \(.description)", \
