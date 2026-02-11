@@ -57,31 +57,25 @@ update_provider_overlays() {
 
     image_tag=$1
 
-    pushd src/cloud-api-adaptor/install/overlays/ || exit
-    for provider in *; do
-        if [ "${provider}" == "alibabacloud" ] ; then
-            # The alibabacloud image is managed in a separate mirror
-            continue
-        fi
+    sed_inplace=(-i)
+    # BSD Sed compatibility
+    if ! sed --version >/dev/null 2>&1; then
+        sed_inplace=(-i "")
+    fi
 
-        pushd "${provider}" || exit
+    # Update Helm chart values
+    chart_dir="src/cloud-api-adaptor/install/charts/peerpods"
 
-        # libvirt uses the dev built image
-        tag_prefix=""
-        if [ "${provider}" == "libvirt" ] || [ "${provider}" == "docker" ] ; then
-            tag_prefix="dev-"
-        fi
+    sed "${sed_inplace[@]}" "s/^\(  tag:\).*/\1 \"${image_tag}\"/" "${chart_dir}/values.yaml"
+    echo "Updated ${chart_dir}/values.yaml -> ${image_tag}"
 
-        # yq and kustomize edit both reformat the file, so fall back to using sed :(
-        sed_inplace=(-i)
-        # BSD Sed compatbility
-        if ! sed --version >/dev/null 2>&1; then
-            sed_inplace=(-i "")
+    for provider in libvirt docker; do
+        provider_file="${chart_dir}/providers/${provider}.yaml"
+        if [ -f "${provider_file}" ]; then
+            sed "${sed_inplace[@]}" "s/^\(  tag:\).*/\1 \"dev-${image_tag}\"/" "${provider_file}"
+            echo "Updated ${provider_file} -> dev-${image_tag}"
         fi
-        sed "${sed_inplace[@]}" "s/^\(.*newTag:\).*/\1 ${tag_prefix}${image_tag}/g" kustomization.yaml
-        popd || exit
     done
-    popd || return
 }
 
 
@@ -97,9 +91,10 @@ usage() {
                 - release_tag is the version of the release
                 - remote_name is the optional name of the remote, upstream branch
                 (defaults to origin)
-        "caa-image-tag": Updates the install overlay kustomization files to specific
-        image tag of the cloud-api-adaptor to use for the release, to provide a
-        pinned and stable version
+        "caa-image-tag": Updates the Helm chart values to a specific image
+        tag of the cloud-api-adaptor to use for the release, to provide a
+        pinned and stable version.
+        Providers libvirt and docker get the dev- prefix.
             - Parameters: <image_tag> where
                 - image_tag corresponds to the tag of the pre-release tested version
                 of the quay.io/confidential-containers/cloud-api-adaptor image
