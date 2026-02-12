@@ -29,6 +29,7 @@ var E2eNamespace = envconf.RandomName("coco-pp-e2e-test", 25)
 func DoTestCreateSimplePod(t *testing.T, e env.Environment, assert CloudAssert) {
 	pod := NewBusyboxPodWithName(E2eNamespace, "simple-test").GetPodOrFatal(t)
 	if isTestOnCrio() {
+		t.Log("crio busybox error")
 		NewTestCase(t, e, "SimplePeerPod", assert, "PodVM is created").WithPod(pod).Run()
 	} else {
 		NewTestCase(t, e, "SimplePeerPod", assert, "PodVM is created").WithPod(pod).WithNydusSnapshotter().Run()
@@ -604,7 +605,7 @@ func DoTestKbsKeyRelease(t *testing.T, e env.Environment, assert CloudAssert, kb
 		},
 	}
 
-	NewTestCase(t, e, "KbsKeyReleasePod", assert, "Kbs key release is successful").WithPod(pod).WithTestCommands(testCommands).Run()
+	NewTestCase(t, e, "KbsKeyReleasePod", assert, "Kbs key release is successful").WithPod(pod).WithTestCommands(testCommands).WithExpectedPodvmConsoleLog("error").Run()
 }
 
 // DoTestKbsKeyRelease and DoTestKbsKeyReleaseForFailure should be run in a single test case if you're chaining opa in kbs
