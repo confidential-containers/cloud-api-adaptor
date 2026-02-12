@@ -1,0 +1,103 @@
+name: Automatically run go mod tidy on dependabot PRs
+on:
+  pull_request_target:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  tidy-dependabot-pr:
+    name: Run go mod tidy on dependabot PR
+    runs-on: ubuntu-24.04
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    permissions:
+      contents: write # We need permissions to push new content to the PR
+      pull-requests: write # Permissions to create a new PR and close the original
+
+    steps:
+      - name: Checkout the PR Code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+
+      - name: Read properties from versions.yaml
+        id: read-properties
+        run: |
+          go_version="$(yq '.tools.golang' src/cloud-api-adaptor/versions.yaml)"
+          [ -n "$go_version" ]
+          echo "go_version=${go_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Setup Golang version
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version: ${{ steps.read-properties.outputs.go_version }}
+          cache-dependency-path: "**/go.sum"
+          cache: false
+
+      - name: Go tidy check
+        run: |
+          ./hack/go-tidy.sh
+          echo "Go mod tidy made: $(git diff)"
+
+      - name: Check if go mod tidy produces changes
+        id: go-mod-tidy-changed
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Commit and push changes
+        if: steps.go-mod-tidy-changed.outputs.changed == 'true'
+        # uses: devops-infra/action-commit-push@8a2d9d73c3f506468129be2e4409e60dbed70357 # v1.0.3
+        # with:
+        #   github_token: ${{ secrets.GITHUB_TOKEN }}
+        #   commit_message: "chore: Auto-run go mod tidy after Dependabot update"
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "${UPDATED_BRANCH}"
+          git add .
+          git commit -m "Apply automated changes to ${ORIGINAL_BRANCH}"
+          git push origin "${UPDATED_BRANCH}"
+        env:
+          ORIGINAL_BRANCH: ${{ github.event.pull_request.head.ref }}
+          UPDATED_BRANCH: "automated-updates-${{ github.event.pull_request.number }}"
+
+
+      - name: Create new pull request
+        if: steps.go-mod-tidy-changed.outputs.changed == 'true'
+        id: create_pr
+        run: |
+          gh pr create \
+            --title "Automated Fixes for ${ORIGINAL_BRANCH}" \
+            --body "This PR applies automated changes to the branch associated with PR #${{ github.event.pull_request.number }}." \
+            --base "${ORIGINAL_BRANCH}" \
+            --head "${UPDATED_BRANCH}"
+          echo "pr_number=$(gh pr view --json number --jq '.number') >> "${GITHUB_OUTPUT}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORIGINAL_BRANCH: ${{ github.event.pull_request.head.ref }}
+          UPDATED_BRANCH: "automated-updates-${{ github.event.pull_request.number }}"
+
+      - name: Close original Pull Request
+        if: steps.go-mod-tidy-changed.outputs.changed == 'true'
+        run: gh pr close "${ORIGINAL_PR}" --comment "PR replaced with ${REPLACEMENT_PR}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORIGINAL_PR: ${{ github.event.pull_request.number }}
+          REPLACEMENT_PR: ${{ steps.create_pr.outputs.pr_number }}
