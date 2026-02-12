@@ -357,6 +357,7 @@ func getPropertiesImpl() map[string]string {
 		"AZURE_SUBSCRIPTION_ID": AzureProps.SubscriptionID,
 		"AZURE_CLIENT_ID":       AzureProps.ClientID,
 		"AZURE_RESOURCE_GROUP":  AzureProps.ResourceGroupName,
+		"AZURE_TENANT_ID":       AzureProps.TenantID,
 		"CLUSTER_NAME":          AzureProps.ClusterName,
 		"AZURE_REGION":          AzureProps.Location,
 		"AZURE_IMAGE_ID":        AzureProps.ImageID,
@@ -542,12 +543,13 @@ func (a *AzureInstallChart) Configure(ctx context.Context, cfg *envconf.Config, 
 
 	for k, v := range properties {
 		if isAzureKustomizeConfigMapKey(k) {
-			a.Helm.OverrideProviderValues[v] = properties[k]
+			log.Infof("Configuring helm: override value (%s=%q)", k, v)
+			a.Helm.OverrideProviderValues[k] = properties[v]
 			continue
 		}
 		if k == "AZURE_CLIENT_SECRET" || k == "AZURE_TENANT_ID" {
 			log.Infof("Configuring helm: set secret (%s)", k)
-			a.Helm.OverrideProviderSecrets[k] = properties[k]
+			a.Helm.OverrideProviderSecrets[k] = properties[v]
 		}
 	}
 
