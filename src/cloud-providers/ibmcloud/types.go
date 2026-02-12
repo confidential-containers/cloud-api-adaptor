@@ -53,10 +53,21 @@ func (i *Images) Set(value string) error {
 }
 
 func toList(value, sep string) []string {
+	result := make([]string, 0)
+
 	if len(value) == 0 {
-		return make([]string, 0)
+		return result
 	}
-	return strings.Split(value, sep)
+
+	splits := strings.Split(value, sep)
+	for _, split := range splits {
+		trimmed := strings.TrimSpace(split)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+
+	return result
 }
 
 type tags []string
@@ -66,6 +77,17 @@ func (i *tags) String() string {
 }
 
 func (i *tags) Set(value string) error {
+	*i = append(*i, toList(value, ",")...)
+	return nil
+}
+
+type securityGroupIds []string
+
+func (i *securityGroupIds) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *securityGroupIds) Set(value string) error {
 	*i = append(*i, toList(value, ",")...)
 	return nil
 }
@@ -103,7 +125,7 @@ type Config struct {
 	ZoneName                 string
 	Images                   Images
 	PrimarySubnetID          string
-	PrimarySecurityGroupID   string
+	SecurityGroupIds         securityGroupIds
 	SecondarySubnetID        string
 	SecondarySecurityGroupID string
 	KeyID                    string
