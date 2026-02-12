@@ -10,7 +10,7 @@ image:
   tag: "latest"
 
 providerConfigs:
-  docker: {}
+  docker:
     # CA cert file
     # (default: "")
     # CACERT_FILE: ""
