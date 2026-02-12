@@ -1,0 +1,105 @@
+name: (Callable) Build and push cloud-api-adaptor multi-arch manifest image for all type/arch combinations
+
+on:
+  workflow_call:
+    inputs:
+      registry:
+        default: 'quay.io/confidential-containers'
+        description: 'Image registry (e.g. "quay.io/confidential-containers") where the built image will be pushed to'
+        required: false
+        type: string
+      dev_tags:
+        description: 'Comma-separated list of tags for the dev built image (e.g. latest,<sha>-dev)'
+        required: true
+        type: string
+      release_tags:
+        description: 'Comma-separated list of tags for the release built image (e.g. <sha>)'
+        required: true
+        type: string
+      git_ref:
+        default: 'main'
+        description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
+        required: false
+        type: string
+    secrets:
+      QUAY_PASSWORD:
+        required: true
+
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
+permissions: {}
+
+jobs:
+  build_push_job:
+    name: build and push single arch dev and release images
+    strategy:
+      fail-fast: false
+      matrix:
+        types: [
+          { arch: linux/amd64,   runner: ubuntu-24.04 },
+          { arch: linux/arm64,   runner: ubuntu-24.04-arm },
+          { arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
+          { arch: linux/s390x,   runner: ubuntu-24.04-s390x },
+        ]
+    uses: ./.github/workflows/caa_build_and_push.yaml
+    with:
+      dev_arches: ${{ matrix.types.arch }}
+      dev_tags: ${{ inputs.dev_tags }}
+      git_ref: ${{ inputs.git_ref}}
+      registry: ${{ inputs.registry }}
+      release_arches: ${{ matrix.types.arch }}
+      release_tags: ${{ inputs.release_tags }}
+      runner: ${{ matrix.types.runner}}
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+    permissions:
+      packages: write  # Needed to push the images to GHCR
+
+  manifest_job:
+    name: generate images manifest
+    runs-on: ubuntu-24.04
+    needs: [build_push_job]
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: "${{ inputs.git_ref }}"
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Login to quay Container Registry
+        if: ${{ startsWith(inputs.registry, 'quay.io') }}
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ vars.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Login to Github Container Registry
+        if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish multi-arch dev manifest
+        run: |
+          ./hack/publish.sh publish-multiarch-manifest
+        env:
+          IMAGE_REGISTRY: ${{ inputs.registry }}
+          IMAGE_NAME: "cloud-api-adaptor"
+          IMAGE_TAGS: ${{ inputs.dev_tags}}
+
+      - name: Publish multi-arch release manifest
+        run: |
+          ./hack/publish.sh publish-multiarch-manifest
+        env:
+          IMAGE_REGISTRY: ${{ inputs.registry }}
+          IMAGE_NAME: "cloud-api-adaptor"
+          IMAGE_TAGS: ${{ inputs.release_tags}}
