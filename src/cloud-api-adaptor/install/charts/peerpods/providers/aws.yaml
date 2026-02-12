@@ -18,15 +18,15 @@ providerConfigs:
     # (default: "")
     # AWS_SUBNET_ID: ""
 
-    # CA cert file
+    # CA certificate file for custom TLS (e.g. /etc/certificates/ca.crt)
     # (default: "")
     # CACERT_FILE: ""
 
-    # cert file
+    # Client certificate file for custom TLS (e.g. /etc/certificates/client.crt)
     # (default: "")
     # CERT_FILE: ""
 
-    # cert key
+    # Client key file for custom TLS (e.g. /etc/certificates/client.key)
     # (default: "")
     # CERT_KEY: ""
 
