@@ -542,12 +542,13 @@ func (a *AzureInstallChart) Configure(ctx context.Context, cfg *envconf.Config, 
 
 	for k, v := range properties {
 		if isAzureKustomizeConfigMapKey(k) {
-			a.Helm.OverrideProviderValues[v] = properties[k]
+			log.Infof("Configuring helm: override value (%s)", k)
+			a.Helm.OverrideProviderValues[k] = properties[v]
 			continue
 		}
 		if k == "AZURE_CLIENT_SECRET" || k == "AZURE_TENANT_ID" {
 			log.Infof("Configuring helm: set secret (%s)", k)
-			a.Helm.OverrideProviderSecrets[k] = properties[k]
+			a.Helm.OverrideProviderSecrets[k] = properties[v]
 		}
 	}
 
