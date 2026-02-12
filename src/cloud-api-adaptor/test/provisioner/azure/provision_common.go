@@ -357,6 +357,7 @@ func getPropertiesImpl() map[string]string {
 		"AZURE_SUBSCRIPTION_ID": AzureProps.SubscriptionID,
 		"AZURE_CLIENT_ID":       AzureProps.ClientID,
 		"AZURE_RESOURCE_GROUP":  AzureProps.ResourceGroupName,
+		"AZURE_TENANT_ID":       AzureProps.TenantID,
 		"CLUSTER_NAME":          AzureProps.ClusterName,
 		"AZURE_REGION":          AzureProps.Location,
 		"AZURE_IMAGE_ID":        AzureProps.ImageID,
