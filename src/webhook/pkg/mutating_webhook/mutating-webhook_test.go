@@ -1,4 +1,4 @@
-package mutating_webhook
+package mutating
 
 import (
 	"os"
