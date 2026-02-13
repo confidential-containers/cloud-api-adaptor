@@ -135,12 +135,12 @@ func defaultContainerResourceRequirements() corev1.ResourceRequirements {
 	requirements.Requests = corev1.ResourceList{}
 	requirements.Limits = corev1.ResourceList{}
 
-	var podVmExtResource string
-	if podVmExtResource = os.Getenv("POD_VM_EXTENDED_RESOURCE"); podVmExtResource == "" {
-		podVmExtResource = PodVMExtendedResourceDefault
+	var podVMExtResource string
+	if podVMExtResource = os.Getenv("POD_VM_EXTENDED_RESOURCE"); podVMExtResource == "" {
+		podVMExtResource = PodVMExtendedResourceDefault
 	}
 
-	requirements.Requests[corev1.ResourceName(podVmExtResource)] = resource.MustParse("1")
-	requirements.Limits[corev1.ResourceName(podVmExtResource)] = resource.MustParse("1")
+	requirements.Requests[corev1.ResourceName(podVMExtResource)] = resource.MustParse("1")
+	requirements.Limits[corev1.ResourceName(podVMExtResource)] = resource.MustParse("1")
 	return requirements
 }
