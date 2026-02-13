@@ -43,16 +43,16 @@ func TestMutatePod_CpuMemReqLimit(t *testing.T) {
 		t.Fatalf("mutatePod() error = %v", err)
 	}
 
-	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "3" {
-		t.Errorf("Expected CPU annotation to be 3, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsCPUAnnotation] != "3" {
+		t.Errorf("Expected CPU annotation to be 3, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "5120" {
-		t.Errorf("Expected Memory annotation to be 5120, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsMemoryAnnotation] != "5120" {
+		t.Errorf("Expected Memory annotation to be 5120, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
-		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsGPUAnnotation]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 	// Check resource requirements for all containers are cleared
 	// Except for the first container which has the peer-pod resource added
@@ -68,8 +68,8 @@ func TestMutatePod_CpuMemReqLimit(t *testing.T) {
 	}
 
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
-		t.Errorf("Expected peer-pod VM resource request to be 1, got %v", mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
+		t.Errorf("Expected peer-pod VM resource request to be 1, got %v", mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
 
@@ -104,16 +104,16 @@ func TestMutatePod_CpuReq(t *testing.T) {
 		t.Fatalf("mutatePod() error = %v", err)
 	}
 
-	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "2" {
-		t.Errorf("Expected CPU annotation to be 2, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsCPUAnnotation] != "2" {
+		t.Errorf("Expected CPU annotation to be 2, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION]; exists {
-		t.Errorf("Expected no Memory annotation, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsMemoryAnnotation]; exists {
+		t.Errorf("Expected no Memory annotation, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
-		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsGPUAnnotation]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 	// Check resource requirements for all containers are cleared
 	// Except for the first container which has the peer-pod resource added
@@ -129,8 +129,8 @@ func TestMutatePod_CpuReq(t *testing.T) {
 	}
 
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
-		t.Errorf("Expected peer-pod VM resource request to be 1, got %v", mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
+		t.Errorf("Expected peer-pod VM resource request to be 1, got %v", mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
 
@@ -165,16 +165,16 @@ func TestMutatePod_MemReq(t *testing.T) {
 		t.Fatalf("mutatePod() error = %v", err)
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION]; exists {
-		t.Errorf("Expected no CPU annotation, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsCPUAnnotation]; exists {
+		t.Errorf("Expected no CPU annotation, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "4096" {
-		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsMemoryAnnotation] != "4096" {
+		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
-		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsGPUAnnotation]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 
 	// Check resource requirements for all containers are cleared
@@ -191,8 +191,8 @@ func TestMutatePod_MemReq(t *testing.T) {
 	}
 
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
-		t.Errorf("Expected peer-pod VM resource request to be 1, got %v", mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
+		t.Errorf("Expected peer-pod VM resource request to be 1, got %v", mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
 
@@ -227,16 +227,16 @@ func TestMutatePod_GpuReq(t *testing.T) {
 		t.Fatalf("mutatePod() error = %v", err)
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION]; exists {
-		t.Errorf("Expected no CPU annotation, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsCPUAnnotation]; exists {
+		t.Errorf("Expected no CPU annotation, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION]; exists {
-		t.Errorf("Expected no Memory annotation, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsMemoryAnnotation]; exists {
+		t.Errorf("Expected no Memory annotation, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION] != "1" {
-		t.Errorf("Expected GPU annotation to be 1, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsGPUAnnotation] != "1" {
+		t.Errorf("Expected GPU annotation to be 1, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 
 	// Check resource requirements for all containers are cleared
@@ -254,9 +254,9 @@ func TestMutatePod_GpuReq(t *testing.T) {
 	}
 
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
 		t.Errorf("Expected peer-pod VM resource request to be 1, got %v",
-			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
 
@@ -286,16 +286,16 @@ func TestMutatePod_NoReq(t *testing.T) {
 		t.Fatalf("mutatePod() error = %v", err)
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION]; exists {
-		t.Errorf("Expected no CPU annotation, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsCPUAnnotation]; exists {
+		t.Errorf("Expected no CPU annotation, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION]; exists {
-		t.Errorf("Expected no Memory annotation, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsMemoryAnnotation]; exists {
+		t.Errorf("Expected no Memory annotation, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
-		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsGPUAnnotation]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 
 	// Check resource requirements for all containers are cleared
@@ -313,9 +313,9 @@ func TestMutatePod_NoReq(t *testing.T) {
 	}
 
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
 		t.Errorf("Expected peer-pod VM resource request to be 1, got %v",
-			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
 
@@ -355,16 +355,16 @@ func TestMutatePod_CpuMemReqLimitSame(t *testing.T) {
 		t.Fatalf("mutatePod() error = %v", err)
 	}
 
-	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "2" {
-		t.Errorf("Expected CPU annotation to be 3, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsCPUAnnotation] != "2" {
+		t.Errorf("Expected CPU annotation to be 3, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "4096" {
-		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsMemoryAnnotation] != "4096" {
+		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
-		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsGPUAnnotation]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 
 	// Check resource requirements for all containers are cleared
@@ -382,9 +382,9 @@ func TestMutatePod_CpuMemReqLimitSame(t *testing.T) {
 	}
 
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
 		t.Errorf("Expected peer-pod VM resource request to be 1, got %v",
-			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
 
@@ -469,16 +469,16 @@ func TestMutatePod_InitContainers(t *testing.T) {
 	}
 
 	// Check annotations
-	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "6" {
-		t.Errorf("Expected CPU annotation to be 6, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsCPUAnnotation] != "6" {
+		t.Errorf("Expected CPU annotation to be 6, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "8192" {
-		t.Errorf("Expected Memory annotation to be 8192, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsMemoryAnnotation] != "8192" {
+		t.Errorf("Expected Memory annotation to be 8192, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION] != "1" {
-		t.Errorf("Expected GPU annotation to be 1, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsGPUAnnotation] != "1" {
+		t.Errorf("Expected GPU annotation to be 1, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 
 	// Check resource requirements for all containers are cleared
@@ -505,9 +505,9 @@ func TestMutatePod_InitContainers(t *testing.T) {
 
 	// Check that the first container has the peer-pod resource added
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
 		t.Errorf("Expected VM resource request to be 1, got %v",
-			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
 
@@ -546,16 +546,16 @@ func TestMutatePod_NoChangeForDifferentRuntimeClass(t *testing.T) {
 	}
 
 	// Check that the pod spec has not been mutated
-	if _, exists := mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION]; exists {
-		t.Errorf("Expected no CPU annotation, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsCPUAnnotation]; exists {
+		t.Errorf("Expected no CPU annotation, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION]; exists {
-		t.Errorf("Expected no Memory annotation, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsMemoryAnnotation]; exists {
+		t.Errorf("Expected no Memory annotation, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
-		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsGPUAnnotation]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 
 	// Check resource requirements for all containers; it shouldn't be cleared
@@ -604,16 +604,16 @@ func TestMutatePod_FractionalCpu(t *testing.T) {
 	}
 
 	// Check annotations
-	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "1" {
-		t.Errorf("Expected CPU annotation to be 1, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsCPUAnnotation] != "1" {
+		t.Errorf("Expected CPU annotation to be 1, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "4096" {
-		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsMemoryAnnotation] != "4096" {
+		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
-		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsGPUAnnotation]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 
 	// Check resource requirements for all containers are cleared
@@ -631,9 +631,9 @@ func TestMutatePod_FractionalCpu(t *testing.T) {
 	}
 
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
 		t.Errorf("Expected peer-pod VM resource request to be 1, got %v",
-			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
 
@@ -673,16 +673,16 @@ func TestMutatePod_FractionalCpuMoreThanOne(t *testing.T) {
 	}
 
 	// Check annotations
-	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "2" {
-		t.Errorf("Expected CPU annotation to be 1, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsCPUAnnotation] != "2" {
+		t.Errorf("Expected CPU annotation to be 1, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "4096" {
-		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsMemoryAnnotation] != "4096" {
+		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
-	if _, exists := mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION]; exists {
-		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PEERPODS_GPU_ANNOTATION])
+	if _, exists := mutatedPod.Annotations[PeerPodsGPUAnnotation]; exists {
+		t.Errorf("Expected no GPU annotation, got %s", mutatedPod.Annotations[PeerPodsGPUAnnotation])
 	}
 
 	// Check resource requirements for all containers are cleared
@@ -700,9 +700,9 @@ func TestMutatePod_FractionalCpuMoreThanOne(t *testing.T) {
 	}
 
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
 		t.Errorf("Expected peer-pod VM resource request to be 1, got %v",
-			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
 
@@ -761,12 +761,12 @@ func TestMutatePod_FractionalCpu_MultipleContainers(t *testing.T) {
 	}
 
 	// Check annotations
-	if mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION] != "2" {
-		t.Errorf("Expected CPU annotation to be 2, got %s", mutatedPod.Annotations[PEERPODS_CPU_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsCPUAnnotation] != "2" {
+		t.Errorf("Expected CPU annotation to be 2, got %s", mutatedPod.Annotations[PeerPodsCPUAnnotation])
 	}
 
-	if mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION] != "8192" {
-		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PEERPODS_MEMORY_ANNOTATION])
+	if mutatedPod.Annotations[PeerPodsMemoryAnnotation] != "8192" {
+		t.Errorf("Expected Memory annotation to be 4096, got %s", mutatedPod.Annotations[PeerPodsMemoryAnnotation])
 	}
 
 	// Check resource requirements for all containers are cleared
@@ -784,8 +784,8 @@ func TestMutatePod_FractionalCpu_MultipleContainers(t *testing.T) {
 	}
 
 	expectedResource := resource.MustParse("1")
-	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)].Equal(expectedResource) {
+	if !mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)].Equal(expectedResource) {
 		t.Errorf("Expected peer-pod VM resource request to be 1, got %v",
-			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(POD_VM_EXTENDED_RESOURCE_DEFAULT)])
+			mutatedPod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(PodVMExtendedResourceDefault)])
 	}
 }
