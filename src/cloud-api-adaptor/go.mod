@@ -13,7 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.279.2
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.285.0
 	github.com/containerd/containerd v1.7.29
 	github.com/containerd/ttrpc v1.2.7
 	github.com/coreos/go-iptables v0.6.0
@@ -66,9 +66,9 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/service/eks v1.77.0
+	github.com/aws/aws-sdk-go-v2/service/eks v1.77.1
 	github.com/aws/aws-sdk-go-v2/service/iam v1.53.2
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.95.1
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
 	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.0.0-00010101000000-000000000000
 	github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl v0.0.0-00010101000000-000000000000
 	github.com/distribution/reference v0.6.0
