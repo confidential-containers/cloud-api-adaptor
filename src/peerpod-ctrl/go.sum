@@ -59,10 +59,10 @@ github.com/IBM-Cloud/power-go-client v1.14.4 h1:XXQp4atVwvCfDps1nF5zyi2FzNbsuHts
 github.com/IBM-Cloud/power-go-client v1.14.4/go.mod h1:TT0jJbptQuDRwB9PPYDcGe0ZwFSl5GiSrNuQeJzJYco=
 github.com/IBM/go-sdk-core/v5 v5.21.2 h1:mJ5QbLPOm4g5qhZiVB6wbSllfpeUExftGoyPek2hk4M=
 github.com/IBM/go-sdk-core/v5 v5.21.2/go.mod h1:ngpMgwkjur1VNUjqn11LPk3o5eCyOCRbcfg/0YAY7Hc=
-github.com/IBM/platform-services-go-sdk v0.91.0 h1:5o4XotMmP9UfCg9BKG0cx/pTAMhBh0KzjyFQQyHZTgE=
-github.com/IBM/platform-services-go-sdk v0.91.0/go.mod h1:KAnBhxKaYsu9It2aVXV6oCPEj78imvTs2qSG0ScZKpM=
-github.com/IBM/vpc-go-sdk v0.66.0 h1:S0HW+f6Qf6OLSGESQ7WRgWLq1bDgvs+vvOJ7AWgUMbw=
-github.com/IBM/vpc-go-sdk v0.66.0/go.mod h1:VL7sy61ybg6tvA60SepoQx7TFe20m7JyNUt+se2tHP4=
+github.com/IBM/platform-services-go-sdk v0.94.2 h1:Yxjwww965TxUEE3MPJLZbejP8E2DmwHf7eWh+fvpdwE=
+github.com/IBM/platform-services-go-sdk v0.94.2/go.mod h1:KAnBhxKaYsu9It2aVXV6oCPEj78imvTs2qSG0ScZKpM=
+github.com/IBM/vpc-go-sdk v0.80.0 h1:F9x5n/X6NLdBOFcrtNv1hFtRVpiR7iHeqnjniyjkSY0=
+github.com/IBM/vpc-go-sdk v0.80.0/go.mod h1:85bJ/0FS7vYAifHdZvlnXypf8pQSmuf9kxReDDI5ZdY=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
