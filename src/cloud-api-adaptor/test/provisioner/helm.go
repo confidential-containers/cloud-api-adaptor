@@ -22,6 +22,7 @@ type Helm struct {
 	Provider                string            // cloud provider name
 	Debug                   bool              // enable debug mode for helm commands
 	OverrideValues          map[string]string // key-value map for overriding chart values
+	OverrideValueMap        map[string]string // key-value map for overriding chart values where value=JSON string
 	OverrideProviderValues  map[string]string // key-value map for overriding provider-specific chart values
 	OverrideProviderSecrets map[string]string // key-value map for overriding provider-specific chart secrets
 }
@@ -45,6 +46,7 @@ func NewHelm(chartPath, namespace, releaseName, provider string, debug bool) (*H
 		Provider:                provider,
 		Debug:                   debug,
 		OverrideValues:          make(map[string]string),
+		OverrideValueMap:        make(map[string]string),
 		OverrideProviderValues:  make(map[string]string),
 		OverrideProviderSecrets: make(map[string]string),
 	}, nil
@@ -71,6 +73,14 @@ func (h *Helm) Install(ctx context.Context, cfg *envconf.Config) error {
 		for key, value := range h.OverrideValues {
 			setArg := fmt.Sprintf("%s=%s", key, value)
 			args = append(args, "--set-literal", setArg)
+		}
+	}
+
+	// Add --set-json flags for OverrideValueMap (for maps, arrays, or keys with dots/slashes)
+	if len(h.OverrideValueMap) > 0 {
+		for key, value := range h.OverrideValueMap {
+			setArg := fmt.Sprintf("%s=%s", key, value)
+			args = append(args, "--set-json", setArg)
 		}
 	}
 
