@@ -532,10 +532,7 @@ func (a *AzureInstallChart) Configure(ctx context.Context, cfg *envconf.Config, 
 		log.Infof("Configuring helm: set secret (AZURE_CLIENT_ID)")
 		if properties["AZURE_CLIENT_SECRET"] == "" {
 			// Set pod label for workload identity
-			// The chart supports daemonset.podLabels which will add labels to the pod template
-			// Note: For nested keys with dots/slashes, we need to use the escaped format
-			// Helm will interpret this as a nested map: daemonset.podLabels["azure.workload.identity/use"] = "true"
-			a.Helm.OverrideValues["daemonset.podLabels.azure\\.workload\\.identity/use"] = "true"
+			a.Helm.OverrideValueMap["daemonset.podLabels"] = `{"azure.workload.identity/use":"true"}`
 			log.Infof("Configuring helm: set pod label for workload identity")
 		}
 	}
