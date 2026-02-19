@@ -4,7 +4,7 @@ tools for development and testing.
 
 ## provisioner-cli
 
-`provisioner-cli` provides a cli program that leverage the [cluster provisioner package](../provisioner) to create VPC, Subnet and Cluster and other necessary resources, and then deploy the cloud-api-adaptor operator to enable the function in the created cluster. Which is also used to upload a VM image to cloud vendor.
+`provisioner-cli` provides a cli program that leverage the [cluster provisioner package](../provisioner) to create VPC, Subnet and Cluster and other necessary resources, and then install the PeerPods Helm charts to enable the function in the created cluster. Which is also used to upload a VM image to cloud vendor.
 
 ### Build provisioner-cli
 In the root directory of `test/tools`, run command as below to build the cli program:
@@ -41,7 +41,7 @@ export INSTALL_DIR="../../install"
 
 `deprovision` : Deletes the cluster that we previously created
 
-`install` : Install the cloud-api-adaptor using the operator to an existing cluster, must set `KUBECONFIG`
+`install` : Install the cloud-api-adaptor using the Helm charts to an existing cluster, must set `KUBECONFIG`
 
 `uninstall` : Removes the cloud-api-adaptor resources from the cluster, must set `KUBECONFIG`
 

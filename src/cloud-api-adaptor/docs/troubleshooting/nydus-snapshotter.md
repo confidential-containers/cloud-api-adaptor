@@ -2,7 +2,7 @@
 
 ## Check nydus configuration
 
-When using `containerd` runtime, CoCo operator configures `nydus-snapshotter` to handle in-guest
+When using `containerd` runtime, kata-deploy configures `nydus-snapshotter` to handle in-guest
 container image pull.
 
 Login to the worker node and run the following command to verify if `nydus-snapshotter` is set up successfully.

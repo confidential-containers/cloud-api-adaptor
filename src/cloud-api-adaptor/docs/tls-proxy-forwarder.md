@@ -56,8 +56,9 @@ You will need CA certificate if using self-signed certificates.
 
 ### Enable TLS settings for cloud-api-adaptor
 
-- Update the options under the `TLS_SETTINGS` comment in `kustomization.yaml` under the `install/overlays/{provider}` directory
-- Deploy the operator
+- Update the options under the `TLS certificates for CAA-to-peer-pod communication`
+  comment in `install/charts/peerpods/values.yaml`
+- Deploy PeerPods using Helm charts (see [install/README.md](../install/README.md))
 
 ### Generate self-signed certificates
 This is only recommended for dev/test scenarios
