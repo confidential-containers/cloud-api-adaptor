@@ -44,10 +44,6 @@ one_of() {
 aws() {
     test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 
-    # Global flags without env var support - still need conversion
-    [[ "${EXTERNAL_NETWORK_VIA_PODVM}" ]] && optionals+="-ext-network-via-podvm  "
-    [[ "${POD_SUBNET_CIDRS}" ]] && optionals+="-pod-subnet-cidrs ${POD_SUBNET_CIDRS} "
-
     set -x
     exec cloud-api-adaptor aws ${optionals}
 
@@ -66,9 +62,6 @@ alibabacloud() {
     # TODO: Variable name mismatch - kustomization/entrypoint uses INSTANCE_TYPE
     # but manager.go expects PODVM_INSTANCE_TYPE. Consider standardizing in future.
     [[ "${INSTANCE_TYPE}" ]] && optionals+=" -instance-type ${INSTANCE_TYPE} "
-    # Global flag without env var support - still need conversion
-    [[ "${EXTERNAL_NETWORK_VIA_PODVM}" ]] && optionals+=" -ext-network-via-podvm"
-
     set -x
     exec cloud-api-adaptor alibabacloud ${optionals}
 }

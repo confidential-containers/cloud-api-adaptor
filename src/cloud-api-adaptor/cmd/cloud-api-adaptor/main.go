@@ -112,13 +112,13 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		reg.BoolWithEnv(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "CLOUD_CONFIG_VERIFY", "Enable cloud config verify - should use it for production")
 		reg.IntWithEnv(&cfg.serverConfig.PeerPodsLimitPerNode, "peerpods-limit-per-node", 10, "PEERPODS_LIMIT_PER_NODE", "peer pods limit per node (default=10)")
 		reg.BoolWithEnv(&cfg.serverConfig.EnableScratchSpace, "enable-scratch-space", false, "ENABLE_SCRATCH_SPACE", "Enable encrypted scratch space for pod VMs")
+		reg.BoolWithEnv(&cfg.networkConfig.ExternalNetViaPodVM, "ext-network-via-podvm", false, "EXTERNAL_NETWORK_VIA_PODVM", "[EXPERIMENTAL] Enable external networking via pod VM")
+		reg.CustomTypeWithEnv(&cfg.networkConfig.PodSubnetCIDRs, "pod-subnet-cidrs", "", "POD_SUBNET_CIDRS", "[EXPERIMENTAL] Comma separated CIDRs for local pod subnets")
 
 		// Flags without environment variable support
 		flags.BoolVar(&disableTLS, "disable-tls", false, "Disable TLS encryption - use it only for testing")
 		flags.StringVar(&cfg.networkConfig.HostInterface, "host-interface", "", "Host Interface")
 		flags.IntVar(&cfg.networkConfig.VXLAN.MinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
-		flags.BoolVar(&cfg.networkConfig.ExternalNetViaPodVM, "ext-network-via-podvm", false, "[EXPERIMENTAL] Enable external networking via pod VM")
-		flags.Var(&cfg.networkConfig.PodSubnetCIDRs, "pod-subnet-cidrs", "[EXPERIMENTAL] Comma separated CIDRs for local pod subnets")
 
 		cloud.ParseCmd(flags)
 	})

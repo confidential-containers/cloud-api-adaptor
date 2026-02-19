@@ -26,6 +26,10 @@ providerConfigs:
     # (default: "false")
     # ENABLE_SCRATCH_SPACE: "false"
 
+    # [EXPERIMENTAL] Enable external networking via pod VM
+    # (default: "false")
+    # EXTERNAL_NETWORK_VIA_PODVM: "false"
+
     # port number of agent protocol forwarder
     # (default: "")
     # FORWARDER_PORT: ""
@@ -45,6 +49,10 @@ providerConfigs:
     # base directory for pod directories
     # (default: "")
     # PODS_DIR: ""
+
+    # [EXPERIMENTAL] Comma separated CIDRs for local pod subnets
+    # (default: "")
+    # POD_SUBNET_CIDRS: ""
 
     # ID of the boot image
     # (required)
