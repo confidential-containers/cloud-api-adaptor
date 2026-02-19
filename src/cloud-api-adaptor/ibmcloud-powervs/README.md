@@ -32,7 +32,7 @@ Add the following snippet to `image-prep.template`
 ```
 yum install -y gcc gcc-c++ git make wget
 export PATH=${PATH}:/usr/local/go/bin:${HOME}/.cargo/bin
-wget https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_ppc64le
+wget https://github.com/mikefarah/yq/releases/download/v4.50.1/yq_linux_ppc64le
 chmod +x yq_linux_ppc64le && mv yq_linux_ppc64le /usr/local/bin/yq
 git clone https://github.com/confidential-containers/cloud-api-adaptor.git
 cd cloud-api-adaptor/src/cloud-api-adaptor/ibmcloud-powervs/image
@@ -56,7 +56,7 @@ make build
 
 2. Download the qcow2 image and converts into ova type
 ```
-pvsadm image qcow2ova --image-name <name> --image-dist centos --image-url https://cloud.centos.org/centos/9-stream/ppc64le/images/CentOS-Stream-GenericCloud-9-latest.ppc64le.qcow2 --prep-template image-prep.template --image-size 20
+pvsadm image qcow2ova --image-name <name> --image-dist centos --image-url https://cloud.centos.org/centos/10-stream/ppc64le/images/CentOS-Stream-GenericCloud-10-latest.ppc64le.qcow2 --prep-template image-prep.template --image-size 20
 ```
 
 
