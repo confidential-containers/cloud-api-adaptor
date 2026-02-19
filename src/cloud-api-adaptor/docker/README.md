@@ -14,7 +14,7 @@ The `docker` provider simulates a pod VM inside a docker container.
 
   Ensure you complete the [post install steps](https://docs.docker.com/engine/install/linux-postinstall/) if using non-root user
 
-- Install [yq](https://github.com/mikefarah/yq/releases/download/v4.44.2/yq_linux_amd64), [kubectl](https://storage.googleapis.com/kubernetes-release/release/v1.29.4/bin/linux/amd64/kubectl), [kind](https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64) manually or using `prereqs.sh` helper script under `src/cloud-api-adaptor/docker`.
+- Install [yq](https://github.com/mikefarah/yq/releases/download/v4.44.2/yq_linux_amd64), [kubectl](https://storage.googleapis.com/kubernetes-release/release/v1.29.4/bin/linux/amd64/kubectl), [kind](https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64), [helm](https://helm.sh/docs/intro/install/) manually or using `prereqs.sh` helper script under `src/cloud-api-adaptor/docker`.
 
 - Kubernetes cluster
 ```
@@ -67,7 +67,8 @@ with the docker engine installed.
 
 ## Deploy CAA
 
-The following [`kustomization.yaml`](../install/overlays/docker/kustomization.yaml) is used.
+The following [`docker.yaml`](../install/charts/peerpods/providers/docker.yaml)
+is used, and you can edit it to customize the installation.
 
 ### Deploy CAA on the Kubernetes cluster
 
@@ -97,6 +98,7 @@ been tested.
 
 Following software prerequisites are needed on the test system:
 
+- helm
 - make
 - go
 - yq
