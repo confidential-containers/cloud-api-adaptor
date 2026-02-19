@@ -4,6 +4,7 @@
 
 - validate kubectl is available in your `$PATH` and `$KUBECONFIG` is set to point to your Kubernetes cluster
 - `yq` tool is available in your `$PATH`
+- `helm` tool is installed
 - At least one node in the cluster must have the "worker" role.
 
   Verify by executing the following command.
@@ -26,59 +27,34 @@
   kubectl label node $NODENAME node.kubernetes.io/worker=
   ```
 
-## Deploy CoCo operator and cloud-api-adaptor daemonset
+## Deploy cloud-api-adaptor using Helm charts
 
-- Update the `kustomization.yaml` file in `install/overlays/$(CLOUD_PROVIDER)/kustomization.yaml` with your own settings
-- Optionally [set up authenticated registry support](../docs/registries-authentication.md)
-- Install
+This project currently uses Helm charts to deploy the kata-deploy chart and
+the cloud-api-adaptor components.
 
+This section provides just a quick-start for developers. For detailed installation
+instructions, prerequisites, and configuration options, please refer to
+the [PeerPods Helm Chart README](./charts/peerpods/README.md).
+
+For development, the easiest way to install it to a given `PROVIDER` is:
+
+- Copy `charts/peerpods/providers/PROVIDER-secrets.yaml.template` to
+  `charts/peerpods/providers/PROVIDER-secrets.yaml` and edit the secrets
+  properly, unless you are installing for docker.
+
+- Fill `charts/peerpods/providers/PROVIDER.yaml` with required values and any customizations
+
+- Then run the `make deploy` command:
   ```sh
   export CLOUD_PROVIDER=<aws|azure|gcp|docker|ibmcloud|ibmcloud-powervs|libvirt>
   make deploy
   ```
 
-  This will deploy the latest code from main.
+This will deploy the latest code from main. Otherwise if you are in a release tag
+then it will deploy the released version, because the containers images will be
+pinned to the release version.
 
-  > **Note:** `make delete` deletes the `cloud-api-adaptor` daemonset and all related pods.
-
-### Installing a specific release version
-
-Take a look at the [tags](https://github.com/confidential-containers/operator/tags) for available releases
-and use the specific tag for deployment.
-
-For example if you want to install `v0.11.0` then run the following commands:
-
-  ```sh
-  export RELEASE_VERSION=v0.11.0
-  kubectl apply -k github.com/confidential-containers/operator/config/default?ref=${RELEASE_VERSION}
-  kubectl apply -k github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods?ref=${RELEASE_VERSION}
-  ```
-
-> **Note:** the release version needs to be `v0.9.0` or later for the above approach to work.
-
-- Wait until all the pods are running with:
-
-  ```sh
-  kubectl get pods -n confidential-containers-system --watch
-  ```
-
-- Wait until the `kata-remote` runtime class has been created by running:
-
-  ```sh
-  kubectl get runtimeclass --watch
-  ```
-
-- Apply the kustomize.yaml configuration that you modified earlier with:
-
-  ```sh
-  kubectl apply -k install/overlays/ibmcloud
-  ```
-
-- Wait until all the pods are running with:
-
-  ```sh
-  kubectl get pods -n confidential-containers-system --watch
-  ```
+> **Note:** `make delete` deletes the `cloud-api-adaptor` daemonset and all related pods.
 
 ### Verify
 
@@ -92,17 +68,24 @@ For example if you want to install `v0.11.0` then run the following commands:
   namespace.
 
   ```sh
-  NAME                                              READY   STATUS    RESTARTS   AGE
-  cc-operator-controller-manager-546574cf87-phbdv   2/2     Running   0          43m
-  cc-operator-daemon-install-pzc4b                  1/1     Running   0          42m
-  cc-operator-pre-install-daemon-sgld6              1/1     Running   0          42m
-  cloud-api-adaptor-daemonset-mk8ln                 1/1     Running   0          37s
+  NAME                                              READY   STATUS     RESTARTS    AGE
+  cloud-api-adaptor-daemonset-wklbv                 1/1     Running    0           15m
+  kata-deploy-b5pz2                                 1/1     Running    0           15m
+  peerpodctrl-controller-manager-74b5bb8c8b-f2zmm   2/2     Running    0           15m
+  ```
+
+  Also the webhook controllers PODs are all "Runnning" under the `peer-pods-webhook-system` namespace.
+
+  ```sh
+  NAME                                                    READY   STATUS    RESTARTS   AGE
+  peer-pods-webhook-controller-manager-565b98769c-sm78h   2/2     Running   0          18m
+  peer-pods-webhook-controller-manager-565b98769c-vrv52   2/2     Running   0          18m
   ```
 
 - View cloud-api-adaptor logs
 
   ```sh
-  kubectl logs pod/cloud-api-adaptor-daemonset-mk8ln -n confidential-containers-system
+  kubectl logs -l app=cloud-api-adaptor -n confidential-containers-system
   ```
 
 ## Building custom cloud-api-adaptor image
