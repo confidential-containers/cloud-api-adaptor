@@ -1,11 +1,6 @@
 # PeerPods Helm Chart
 
-> [!WARNING]
-> **Experimental**: This chart is subject to change. The final location for
-> this chart has not been decided. It may move to the CAA repository, the
-> operator repository, or its own repository.
-
-Experimental Helm chart for deploying Cloud API Adaptor (CAA) controllers and
+Helm chart for deploying Cloud API Adaptor (CAA) controllers and
 PeerPods configuration.
 
 ## Prerequisites
