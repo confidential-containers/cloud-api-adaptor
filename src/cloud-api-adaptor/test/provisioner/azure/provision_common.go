@@ -539,13 +539,17 @@ func (a *AzureInstallChart) Configure(ctx context.Context, cfg *envconf.Config, 
 
 	for k, v := range properties {
 		if isAzureKustomizeConfigMapKey(k) {
+			// Do not override CLOUD_PROVIDER; use the chart default.
+			if k == "CLOUD_PROVIDER" {
+				continue
+			}
 			log.Infof("Configuring helm: override value (%s)", k)
-			a.Helm.OverrideProviderValues[k] = properties[v]
+			a.Helm.OverrideProviderValues[k] = v
 			continue
 		}
 		if k == "AZURE_CLIENT_SECRET" || k == "AZURE_TENANT_ID" {
 			log.Infof("Configuring helm: set secret (%s)", k)
-			a.Helm.OverrideProviderSecrets[k] = properties[v]
+			a.Helm.OverrideProviderSecrets[k] = v
 		}
 	}
 
