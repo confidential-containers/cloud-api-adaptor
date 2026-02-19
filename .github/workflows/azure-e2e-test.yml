@@ -66,9 +66,9 @@ jobs:
       run: |
         az acr login --name "$ACR_URL"
         # This builds image in the following format:
-        # $ACR_URL/cloud-api-adaptor:dev-COMMIT
+        # $ACR_URL/cloud-api-adaptor:dev-COMMIT-<arch>
         make image "registry=${ACR_URL}"
-        echo "caa-image=${ACR_URL}/cloud-api-adaptor:dev-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+        echo "caa-image=${ACR_URL}/cloud-api-adaptor:dev-${GITHUB_SHA}-amd64" >> "$GITHUB_OUTPUT"
 
   install-aks:
     runs-on: ubuntu-24.04
