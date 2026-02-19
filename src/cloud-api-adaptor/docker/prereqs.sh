@@ -95,6 +95,7 @@ install_binary_packages() {
         "yq=https://github.com/mikefarah/yq/releases/download/v4.44.2/yq_linux_amd64"
         "kubectl=https://storage.googleapis.com/kubernetes-release/release/v1.29.4/bin/linux/amd64/kubectl"
         "kind=https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64"
+        "helm=https://get.helm.sh/helm-v4.0.4-linux-amd64.tar.gz"
     )
 
     # Specify the installation directory
@@ -119,6 +120,10 @@ install_binary_packages() {
             if [[ "${package_url}" == *.tar.gz ]]; then
                 sudo tar -xf "${download_path}" -C "${install_dir}" ||
                     error_exit "Failed to extract ${package_name}"
+                if [ "${package_name}" = "helm" ]; then
+                    sudo mv "${install_dir}/linux-amd64/helm" "${install_dir}"
+                    sudo rm -rf "${install_dir}/linux-amd64"
+                fi
             # If not a tar.gz file, then it is a binary file
             else
                 echo "${package_name} is binary file."
