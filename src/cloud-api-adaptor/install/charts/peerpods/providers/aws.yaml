@@ -42,6 +42,10 @@ providerConfigs:
     # (default: "false")
     # ENABLE_SCRATCH_SPACE: "false"
 
+    # [EXPERIMENTAL] Enable external networking via pod VM
+    # (default: "false")
+    # EXTERNAL_NETWORK_VIA_PODVM: "false"
+
     # port number of agent protocol forwarder
     # (default: "")
     # FORWARDER_PORT: ""
@@ -77,6 +81,10 @@ providerConfigs:
     # AWS Launch Template Name
     # (default: "kata")
     # PODVM_LAUNCHTEMPLATE_NAME: "kata"
+
+    # [EXPERIMENTAL] Comma separated CIDRs for local pod subnets
+    # (default: "")
+    # POD_SUBNET_CIDRS: ""
 
     # Maximum timeout in minutes for establishing agent proxy connection
     # (default: "")
