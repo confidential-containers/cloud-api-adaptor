@@ -1,0 +1,73 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../yamls
+
+images:
+- name: cloud-api-adaptor
+  newName: quay.io/confidential-containers/cloud-api-adaptor # change image if needed
+  newTag: latest
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: peer-pods-cm
+  namespace: confidential-containers-system
+  literals:
+  - CLOUD_PROVIDER="openstack"
+  - ENABLE_CLOUD_PROVIDER_EXTERNAL_PLUGIN="false" # flag to enable/disable dynamically load cloud provider external plugin feature
+  - CLOUD_CONFIG_VERIFY="false" # It's better set as true to enable could config verify in production env
+  - OPENSTACK_SERVER_PREFIX="" # set
+  - OPENSTACK_IMAGE_ID="" # set
+  - OPENSTACK_FLAVOR_ID="" # set
+  - OPENSTACK_SECURITY_GROUP="" # set
+  - OPENSTACK_NETWORK_ID="" # set
+  - OPENSTACK_FLOATING_IP_NETWORK_ID="" # set if specific floating IP needed
+
+  # The following options are not implemented for OpenStack at this time.
+  #- DISABLECVM=""
+  #- PAUSE_IMAGE=""
+  #- TUNNEL_TYPE=""
+  #- VXLAN_PORT=""
+  #- TAGS=""
+  #- USE_PUBLIC_IP="true"
+  #- EXTERNAL_NETWORK_VIA_PODVM="true"
+  #- POD_SUBNET_CIDRS="10.244.0.0/16,10.96.0.0/12"
+  #- ROOT_VOLUME_SIZE="30"
+  #- FORWARDER_PORT=""
+  #- PEERPODS_LIMIT_PER_NODE="10"
+  #- REMOTE_HYPERVISOR_ENDPOINT="/run/peerpod/hypervisor.sock"
+  #- PEER_PODS_DIR="/run/peerpod/pods"
+  #- ENABLE_SCRATCH_SPACE="false"
+##TLS_SETTINGS
+  #- CACERT_FILE="/etc/certificates/ca.crt" # for TLS
+  #- CERT_FILE="/etc/certificates/client.crt" # for TLS
+  #- CERT_KEY="/etc/certificates/client.key" # for TLS
+  #- TLS_SKIP_VERIFY="" # for testing only
+##TLS_SETTINGS
+
+secretGenerator:
+- name: peer-pods-secret
+  namespace: confidential-containers-system
+  # This file should look like this (w/o quotes!):
+  # OPENSTACK_IDENTITY_ENDPOINT=...
+  # OPENSTACK_USERNAME=...
+  # OPENSTACK_PASSWORD=...
+  # OPENSTACK_TENANT_NAME=...
+  envs:
+    - openstack-cred.env
+##TLS_SETTINGS
+#- name: certs-for-tls
+#  namespace: confidential-containers-system
+#  files:
+#  - <path_to_ca.crt> # set - relative path to ca.crt, located either in the same folder as the kustomization.yaml file or within a subfolder
+#  - <path_to_client.crt> # set - relative path to client.crt, located either in the same folder as the kustomization.yaml file or within a subfolder
+#  - <path_to_client.key> # set - relative path to client.key, located either in the same folder as the kustomization.yaml file or within a subfolder
+##TLS_SETTINGS
+
+patchesStrategicMerge:
+##TLS_SETTINGS
+  #- tls_certs_volume_mount.yaml # set (for tls)
+##TLS_SETTINGS
