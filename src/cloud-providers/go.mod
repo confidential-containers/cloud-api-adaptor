@@ -3,7 +3,7 @@ module github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers
 go 1.24.0
 
 require (
-	cloud.google.com/go/compute v1.53.0
+	cloud.google.com/go/compute v1.54.0
 	cloud.google.com/go/resourcemanager v1.10.7
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.11.0
