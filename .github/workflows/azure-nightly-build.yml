@@ -49,6 +49,8 @@ jobs:
     - build-podvm-image
     permissions:
       id-token: write
+    strategy:
+      fail-fast: false
     with:
       podvm-image-id: ${{ needs.build-podvm-image.outputs.image-id }}
     secrets:

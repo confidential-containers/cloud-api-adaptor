@@ -191,8 +191,12 @@ jobs:
 
     - name: Extract version numbers
       run: |
-        echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)" >> "$GITHUB_ENV"
-        echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)" >> "$GITHUB_ENV"
+        {
+          echo "GO_VERSION=$(yq -e '.tools.golang' versions.yaml)"
+          echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)"
+          echo "HELM_VERSION=$(yq -e '.tools.helm.version' versions.yaml)"
+          echo "HELM_CHECKSUM=$(yq -e '.tools.helm.sha256' versions.yaml)"
+        } >> "$GITHUB_ENV"
 
     - uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1.2.4
       with:
@@ -215,6 +219,15 @@ jobs:
         command -v kustomize >/dev/null || \
         curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
           sudo bash -s /usr/local/bin
+
+    - name: Install Helm
+      run: |
+        curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+        echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
+        tar -xzf helm.tar.gz
+        sudo mv linux-amd64/helm /usr/local/bin/helm
+        rm -rf helm.tar.gz linux-amd64
+        helm version
 
     - name: Restore the configuration created before
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -253,6 +266,7 @@ jobs:
       id: runTests
       env:
         TEST_PROVISION: "no"
+        INSTALL_METHOD: "helm"
         DEPLOY_KBS: "yes"
         CUSTOM_PCCS_URL: "https://global.acccache.azure.net/sgx/certification/v4"
         CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"

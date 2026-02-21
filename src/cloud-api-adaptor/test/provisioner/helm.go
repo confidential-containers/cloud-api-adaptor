@@ -22,6 +22,7 @@ type Helm struct {
 	Provider                string            // cloud provider name
 	Debug                   bool              // enable debug mode for helm commands
 	OverrideValues          map[string]string // key-value map for overriding chart values
+	OverrideValueMap        map[string]string // key-value map for overriding chart values where value=JSON string
 	OverrideProviderValues  map[string]string // key-value map for overriding provider-specific chart values
 	OverrideProviderSecrets map[string]string // key-value map for overriding provider-specific chart secrets
 }
@@ -45,6 +46,7 @@ func NewHelm(chartPath, namespace, releaseName, provider string, debug bool) (*H
 		Provider:                provider,
 		Debug:                   debug,
 		OverrideValues:          make(map[string]string),
+		OverrideValueMap:        make(map[string]string),
 		OverrideProviderValues:  make(map[string]string),
 		OverrideProviderSecrets: make(map[string]string),
 	}, nil
@@ -66,19 +68,27 @@ func (h *Helm) Install(ctx context.Context, cfg *envconf.Config) error {
 		args = append(args, "--debug")
 	}
 
-	// Add --set flags for OverrideValues if not empty (passed as-is)
+	// Add --set-literal flags for OverrideValues if not empty (passed as-is)
 	if len(h.OverrideValues) > 0 {
 		for key, value := range h.OverrideValues {
 			setArg := fmt.Sprintf("%s=%s", key, value)
-			args = append(args, "--set", setArg)
+			args = append(args, "--set-literal", setArg)
 		}
 	}
 
-	// Add --set flags for OverrideProviderValues if not empty
+	// Add --set-json flags for OverrideValueMap (for maps, arrays, or keys with dots/slashes)
+	if len(h.OverrideValueMap) > 0 {
+		for key, value := range h.OverrideValueMap {
+			setArg := fmt.Sprintf("%s=%s", key, value)
+			args = append(args, "--set-json", setArg)
+		}
+	}
+
+	// Add --set-literal flags for OverrideProviderValues if not empty
 	if len(h.OverrideProviderValues) > 0 {
 		for key, value := range h.OverrideProviderValues {
 			setArg := fmt.Sprintf("providerConfigs.%s.%s=%s", h.Provider, key, value)
-			args = append(args, "--set", setArg)
+			args = append(args, "--set-literal", setArg)
 		}
 	}
 
@@ -86,7 +96,7 @@ func (h *Helm) Install(ctx context.Context, cfg *envconf.Config) error {
 	if len(h.OverrideProviderSecrets) > 0 {
 		for key, value := range h.OverrideProviderSecrets {
 			setArg := fmt.Sprintf("providerSecrets.%s.%s=%s", h.Provider, key, value)
-			args = append(args, "--set", setArg)
+			args = append(args, "--set-literal", setArg)
 		}
 	}
 

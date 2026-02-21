@@ -630,10 +630,6 @@ func NewIBMCloudProvisioner(properties map[string]string) (pv.CloudProvisioner, 
 		return nil, err
 	}
 
-	if IBMCloudProps.IsSelfManaged {
-		return &IBMSelfManagedClusterProvisioner{}, nil
-	}
-
 	return &IBMCloudProvisioner{}, nil
 }
 
@@ -960,6 +956,7 @@ func getProfileList() string {
 func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
 		"CLOUD_PROVIDER":                       IBMCloudProps.IBMCloudProvider,
+		"CONTAINER_RUNTIME":                    IBMCloudProps.ContainerRuntime,
 		"IBMCLOUD_VPC_ENDPOINT":                IBMCloudProps.VpcServiceURL,
 		"IBMCLOUD_RESOURCE_GROUP_ID":           IBMCloudProps.ResourceGroupID,
 		"IBMCLOUD_SSH_KEY_ID":                  IBMCloudProps.SshKeyID,

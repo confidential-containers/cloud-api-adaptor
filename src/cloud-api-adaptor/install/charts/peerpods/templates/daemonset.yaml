@@ -61,6 +61,11 @@ spec:
           name: ssh
           readOnly: true
 {{- end }}
+{{- if include "peerpods.hasTlsCerts" . }}
+        - mountPath: /etc/certificates
+          name: certs
+          readOnly: true
+{{- end }}
         - mountPath: /run/peerpod
           name: pods-dir
         - mountPath: /run/netns
@@ -81,6 +86,12 @@ spec:
         - mountPath: /var/lib/docker
           name: docker-dir
 {{- end }}
+{{- if eq .Values.provider "ibmcloud" }}
+        - mountPath: /run/kata-containers/shared/direct-volumes
+          name: kata-direct-volumes-dir
+        - mountPath: /var/run/secrets/tokens
+          name: vault-token
+{{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
@@ -92,6 +103,13 @@ spec:
           defaultMode: 384
           optional: true
           secretName: {{ include "peerpods.sshKeySecretName" . }}
+{{- end }}
+{{- if include "peerpods.hasTlsCerts" . }}
+      - name: certs
+        secret:
+          defaultMode: 384
+          optional: true
+          secretName: {{ include "peerpods.tlsSecretName" . }}
 {{- end }}
       - hostPath:
           path: /run/peerpod
@@ -120,4 +138,17 @@ spec:
       - name: docker-dir
         hostPath:
           path: /var/lib/docker
+{{- end }}
+{{- if eq .Values.provider "ibmcloud" }}
+      - name: kata-direct-volumes-dir
+        hostPath:
+          path: /run/kata-containers/shared/direct-volumes
+          type: DirectoryOrCreate
+      - name: vault-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: vault-token
+              expirationSeconds: 3600
+              audience: iam
 {{- end }}

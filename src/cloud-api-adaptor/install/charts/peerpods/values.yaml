@@ -25,6 +25,47 @@ secrets:
   # The secret must contain the private key (id_rsa) for connecting to the hypervisor.
   existingSshKeySecretName: ""
 
+  # TLS certificates for CAA-to-peer-pod communication.
+  #
+  # TLS between CAA and agent-protocol-forwarder is always enabled. By default,
+  # CAA auto-generates certificates in memory and no configuration is needed.
+  #
+  # To use custom certificates, two things are required:
+  #
+  # 1. Provide the certificate files below (create mode) or via an external
+  #    secret (reference mode, see existingTlsSecretName)
+  # 2. Set CACERT_FILE, CERT_FILE, CERT_KEY in providerConfigs pointing to
+  #    /etc/certificates/ca.crt, client.crt, client.key respectively
+  #
+  # This two-step approach matches the kustomize deployment flow. A future
+  # improvement may auto-derive the env vars from the certificate files.
+  #
+  # Three modes:
+  #
+  # 1. Automatic (default): Do not set CACERT_FILE/CERT_FILE/CERT_KEY in
+  #    providerConfigs. CAA auto-generates certs in memory. Nothing to
+  #    configure.
+  #
+  # 2. Custom certs, create mode (secrets.mode: "create"): Provide cert
+  #    files via --set-file into secrets.tlsCerts and set the env vars in
+  #    providerConfigs. Helm creates the certs-for-tls secret and mounts
+  #    it at /etc/certificates.
+  #
+  # 3. Custom certs, reference mode (secrets.mode: "reference"): Set
+  #    existingTlsSecretName to a secret you manage externally (must
+  #    contain keys: ca.crt, client.crt, client.key) and set the env
+  #    vars in providerConfigs. Helm only creates the volume mount.
+
+  # Name of existing TLS secret (only used when mode: "reference")
+  existingTlsSecretName: ""
+
+  # Certificate files for custom TLS (only used when mode: "create").
+  # Provide via --set-file, e.g.: --set-file secrets.tlsCerts.caCert=./ca.crt
+  tlsCerts:
+    caCert: ""
+    clientCert: ""
+    clientKey: ""
+
 # CAA (Cloud API Adaptor) image
 #
 # Two image variants are published:
