@@ -29,6 +29,7 @@ configMapGenerator:
   #- LIBVIRT_VOL_NAME="" # Uncomment and set if you want to use a specific volume name. Defaults to podvm-base.qcow2
   #- LIBVIRT_CPU="2"
   #- LIBVIRT_MEMORY="8192"
+  #- LIBVIRT_CPUSET="" # Uncomment and set to pin vCPUs to physical CPUs (e.g., "0,2,4,6" or "0-3")
   #- PAUSE_IMAGE="" # Uncomment and set if you want to use a specific pause image
   #- TUNNEL_TYPE="" # Uncomment and set if you want to use a specific tunnel type. Defaults to vxlan
   #- VXLAN_PORT="" # Uncomment and set if you want to use a specific vxlan port. Defaults to 4789
