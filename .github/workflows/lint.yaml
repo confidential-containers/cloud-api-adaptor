@@ -76,7 +76,7 @@ jobs:
           sudo apt-get install -y libvirt-dev
       - name: Install golangci-lint
         env:
-          GOLANGCI_LINT_VERSION: "1.64.5"
+          GOLANGCI_LINT_VERSION: "2.9.0"
         working-directory: /tmp
         run: |
           curl -sSfLO "https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"

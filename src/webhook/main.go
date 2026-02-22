@@ -20,10 +20,9 @@ import (
 	"flag"
 	"os"
 
-	"github.com/confidential-containers/cloud-api-adaptor/src/webhook/pkg/mutating_webhook"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	mutating "github.com/confidential-containers/cloud-api-adaptor/src/webhook/pkg/mutating"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -86,7 +85,7 @@ func main() {
 	}
 
 	setupLog.Info("Setting up webhook server")
-	podMutator := &mutating_webhook.PodMutator{
+	podMutator := &mutating.PodMutator{
 		Client:  mgr.GetClient(),
 		Decoder: admission.NewDecoder(mgr.GetScheme()),
 	}
