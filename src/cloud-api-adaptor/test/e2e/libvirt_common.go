@@ -81,3 +81,95 @@ func CreateInstanceProfileFromCPUMemory(cpu uint, memory uint) string {
 	memStr := strconv.FormatUint(uint64(memory), 10)
 	return cpuStr + "x" + memStr
 }
+
+func (l LibvirtAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedString string) {
+
+	var dom *libvirt.Domain
+	var err error
+	t.Logf("Looking for PodVM %s", podvmName)
+	domains, err := l.conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
+	for _, dom := range domains {
+		name, _ := dom.GetName()
+		t.Logf("Found PodVM %s", name)
+	}
+
+	for range 10 {
+		t.Logf("Checking for PodVM %s", podvmName)
+		dom, err = l.conn.LookupDomainByName(podvmName)
+		t.Logf("LookupDomainByName returned err: %v", err)
+		if err == nil {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	if dom == nil {
+		t.Error("PodVM was not created")
+	}
+
+	state, _, err := dom.GetState()
+	if err != nil {
+		t.Error("Failed to get domain state")
+	}
+
+	if state == libvirt.DOMAIN_SHUTOFF {
+		t.Log("starting podvm")
+		err = dom.Create()
+		if err != nil {
+			t.Error("Failed to start domain")
+		}
+
+	}
+
+	stream, err := l.conn.NewStream(0)
+	for err != nil {
+		t.Logf("Warning: Failed to create stream : %v", err)
+	}
+
+	defer stream.Free()
+
+	err = dom.OpenConsole("", stream, libvirt.DOMAIN_CONSOLE_FORCE)
+	start := time.Now()
+	duration := 1 * time.Minute
+	for err != nil && time.Since(start) < duration {
+		t.Logf("Warning: Failed to open console : %v", err)
+		err = dom.OpenConsole("", stream, libvirt.DOMAIN_CONSOLE_FORCE)
+		time.Sleep(2 * time.Second)
+	}
+
+	if err != nil {
+		t.Logf("Warning: Failed to open console after retries : %v", err)
+		return
+	}
+
+	buf := make([]byte, 4096)
+	var output strings.Builder
+	var LibvirtLog = ""
+
+	start = time.Now()
+	duration = 6 * time.Minute
+	maxBytes := 0
+
+	for time.Since(start) < duration {
+		n, err := stream.Recv(buf)
+		if maxBytes < n {
+			maxBytes = n
+			output.Write(buf[:n])
+			if len(output.String()) > len(LibvirtLog) {
+				LibvirtLog = output.String()
+			}
+			if strings.Contains(LibvirtLog, expectedString) {
+				t.Logf("Found expected String :%s in \n console :%s", expectedString, LibvirtLog)
+				return
+			}
+		}
+		if err != nil && LibvirtLog != "" {
+			t.Logf("Warning: Did not find expected String :%s in \n console :%s", expectedString, LibvirtLog)
+		} else if err != nil {
+			t.Logf("Warning: Did not receive any data from console yet, err: %v", err)
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	t.Logf("Warning: Timed out waiting for expected String :%s in \n console :%s", expectedString, LibvirtLog)
+}

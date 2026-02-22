@@ -634,9 +634,10 @@ func CreateSealedSecretValue(resourceURI string) string {
 
 // CloudAssert defines assertions to perform on the cloud provider.
 type CloudAssert interface {
-	HasPodVM(t *testing.T, id string)                             // Assert there is a PodVM with `id`.
-	GetInstanceType(t *testing.T, podName string) (string, error) // Get Instance Type of PodVM
-	DefaultTimeout() time.Duration                                // Default timeout for cloud operations
+	HasPodVM(t *testing.T, id string)                                  // Assert there is a PodVM with `id`.
+	GetInstanceType(t *testing.T, podName string) (string, error)      // Get Instance Type of PodVM
+	DefaultTimeout() time.Duration                                     // Default timeout for cloud operations
+	VerifyPodvmConsole(t *testing.T, podvmNamw, expectedString string) // Verify PodVM console output
 }
 
 // RollingUpdateAssert defines assertions for rolling update test

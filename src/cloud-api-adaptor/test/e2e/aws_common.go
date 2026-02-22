@@ -70,3 +70,10 @@ func (aa AWSAssert) GetInstanceType(t *testing.T, podName string) (string, error
 	// Get Instance Type of PodVM
 	return "", nil
 }
+
+func (aa AWSAssert) VerifyPodvmConsole(t *testing.T, podvmName, expectedString string) {
+	// Verify PodVM console output with provided expectedString
+	// This is not implemented for AWS as of now.
+	// So skipping this test.
+	t.Log("Warning: console verification is not added for AWS")
+}
