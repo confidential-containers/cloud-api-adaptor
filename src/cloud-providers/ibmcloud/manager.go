@@ -17,7 +17,7 @@ func init() {
 	provider.AddCloudProvider("ibmcloud", &Manager{})
 }
 
-func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
@@ -49,14 +49,14 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.DedicatedHostGroupIDs, "dedicated-host-group-ids", "", "IBMCLOUD_DEDICATED_HOST_GROUP_IDS", "List of Dedicated Host Group IDs, provide one from each Zone")
 }
 
-func (_ *Manager) LoadEnv() {
+func (*Manager) LoadEnv() {
 	// No longer needed - environment variables are handled in ParseCmd
 }
 
-func (_ *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&ibmcloudVPCConfig)
 }
 
-func (_ *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &ibmcloudVPCConfig
 }

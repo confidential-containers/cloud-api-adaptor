@@ -20,7 +20,7 @@ func init() {
 	provider.AddCloudProvider("byom", &Manager{})
 }
 
-func (m *Manager) ParseCmd(flags *flag.FlagSet) {
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
@@ -35,14 +35,14 @@ func (m *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.StringWithEnv(&byomcfg.SSHHostKeyAllowlistDir, "ssh-host-key-allowlist-dir", "", "SSH_HOST_KEY_ALLOWLIST_DIR", "Directory containing allowed SSH host key files (enables allowlist mode if set)")
 }
 
-func (m *Manager) LoadEnv() {
+func (*Manager) LoadEnv() {
 	// No longer needed - environment variables are handled in ParseCmd
 }
 
-func (m *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&byomcfg)
 }
 
-func (m *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &byomcfg
 }
