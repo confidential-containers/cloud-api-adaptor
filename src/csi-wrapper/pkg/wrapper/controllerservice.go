@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolumeV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolume "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned"
 	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/utils"
@@ -196,8 +195,8 @@ func (s *ControllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		glog.Errorf("Error happens while Update PeerpodVolume in ControllerPublishVolume, err: %v", err.Error())
 		return
 	}
-	savedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
-		State: v1alpha1.ControllerPublishVolumeCached,
+	savedPeerpodvolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+		State: peerpodvolumeV1alpha1.ControllerPublishVolumeCached,
 	}
 	_, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 	if err != nil {
@@ -260,7 +259,7 @@ func (s *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *
 			glog.Errorf("Error happens while clean PeerpodVolume specs, err: %v", err.Error())
 		}
 
-		updatedSavedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
+		updatedSavedPeerpodvolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
 			State: "",
 		}
 		_, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), updatedSavedPeerpodvolume, metav1.UpdateOptions{})
@@ -408,8 +407,8 @@ func (s *ControllerService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.Pee
 						glog.Errorf("Error happens while Update PeerpodVolume with ControllerPublishVolumeResponse for peer pod, err: %v", err.Error())
 						return
 					}
-					updatedPeerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
-						State: v1alpha1.ControllerPublishVolumeApplied,
+					updatedPeerPodVolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+						State: peerpodvolumeV1alpha1.ControllerPublishVolumeApplied,
 					}
 					_, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), updatedPeerPodVolume, metav1.UpdateOptions{})
 					if err != nil {
@@ -425,17 +424,17 @@ func (s *ControllerService) DeleteFunction(peerPodVolume *peerpodvolumeV1alpha1.
 	glog.Infof("deleteFunction from controllerService: %v ", peerPodVolume)
 }
 
-func (s *ControllerService) createPeerpodVolume(volumeID, volumeName string) (*v1alpha1.PeerpodVolume, error) {
+func (s *ControllerService) createPeerpodVolume(volumeID, volumeName string) (*peerpodvolumeV1alpha1.PeerpodVolume, error) {
 	labels := map[string]string{
 		"volumeName": volumeName,
 	}
-	newPeerpodvolume := &v1alpha1.PeerpodVolume{
+	newPeerpodvolume := &peerpodvolumeV1alpha1.PeerpodVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      volumeID,
 			Namespace: s.Namespace,
 			Labels:    labels,
 		},
-		Spec: v1alpha1.PeerpodVolumeSpec{
+		Spec: peerpodvolumeV1alpha1.PeerpodVolumeSpec{
 			VolumeID:   volumeID,
 			VolumeName: volumeName,
 		},

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolumeV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolume "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -167,8 +166,8 @@ func (s *PodVMNodeService) ReproduceNodeStageVolume(peerPodVolume *peerpodvolume
 				if err != nil {
 					glog.Errorf("Failed to reproduce NodeStageVolume with modified NodeStageVolumeRequest, err: %v", err.Error())
 				} else {
-					peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
-						State: v1alpha1.NodeStageVolumeApplied,
+					peerPodVolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+						State: peerpodvolumeV1alpha1.NodeStageVolumeApplied,
 					}
 					_, err := s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 					if err != nil {
@@ -212,8 +211,8 @@ func (s *PodVMNodeService) ReproduceNodePublishVolume(peerPodVolume *peerpodvolu
 				if err != nil {
 					glog.Errorf("Failed to reproduce NodePublishVolume with the NodePublishVolumeRequest, err: %v", err.Error())
 				} else {
-					peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
-						State: v1alpha1.NodePublishVolumeApplied,
+					peerPodVolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+						State: peerpodvolumeV1alpha1.NodePublishVolumeApplied,
 					}
 					_, err := s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 					if err != nil {
@@ -251,8 +250,8 @@ func (s *PodVMNodeService) ReproduceNodeUnpublishVolume(peerPodVolume *peerpodvo
 			if err != nil {
 				glog.Errorf("Failed to reproduce NodeUnpublishVolume with the NodeUnpublishVolumeRequest, err: %v", err.Error())
 			} else {
-				peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
-					State: v1alpha1.NodeUnpublishVolumeApplied,
+				peerPodVolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+					State: peerpodvolumeV1alpha1.NodeUnpublishVolumeApplied,
 				}
 				_, err := s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 				if err != nil {
@@ -279,8 +278,8 @@ func (s *PodVMNodeService) ReproduceNodeUnstageVolume(peerPodVolume *peerpodvolu
 			if err != nil {
 				glog.Errorf("Failed to reproduce NodeUnstageVolume with the NodeUnstageVolumeRequest, err: %v", err.Error())
 			} else {
-				peerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
-					State: v1alpha1.NodeUnstageVolumeApplied,
+				peerPodVolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+					State: peerpodvolumeV1alpha1.NodeUnstageVolumeApplied,
 				}
 				_, err := s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), peerPodVolume, metav1.UpdateOptions{})
 				if err != nil {

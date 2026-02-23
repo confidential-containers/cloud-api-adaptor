@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	podvminfo "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/proto/podvminfo"
-	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolumeV1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/apis/peerpodvolume/v1alpha1"
 	peerpodvolume "github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/generated/peerpodvolume/clientset/versioned"
 	"github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper/pkg/utils"
@@ -147,8 +146,8 @@ func (s *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		}
 		// TODO: error check
 		savedPeerpodvolume, _ = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).Get(context.Background(), volumeID, metav1.GetOptions{})
-		savedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
-			State: v1alpha1.NodePublishVolumeCached,
+		savedPeerpodvolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+			State: peerpodvolumeV1alpha1.NodePublishVolumeCached,
 		}
 		_, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
@@ -196,8 +195,8 @@ func (s *NodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 			glog.Errorf("Error happens while Update PeerpodVolume, err: %v", upErr.Error())
 			return nil, upErr
 		}
-		updatedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
-			State: v1alpha1.NodeUnpublishVolumeCached,
+		updatedPeerpodvolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+			State: peerpodvolumeV1alpha1.NodeUnpublishVolumeCached,
 		}
 		_, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
@@ -244,8 +243,8 @@ func (s *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		}
 		// TODO: error check
 		savedPeerpodvolume, _ = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).Get(context.Background(), volumeID, metav1.GetOptions{})
-		savedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
-			State: v1alpha1.NodeStageVolumeCached,
+		savedPeerpodvolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+			State: peerpodvolumeV1alpha1.NodeStageVolumeCached,
 		}
 		_, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
@@ -291,8 +290,8 @@ func (s *NodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 			glog.Errorf("Error happens while Update PeerpodVolume, err: %v", upErr.Error())
 			return nil, upErr
 		}
-		updatedPeerpodvolume.Status = v1alpha1.PeerpodVolumeStatus{
-			State: v1alpha1.NodeUnstageVolumeCached,
+		updatedPeerpodvolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+			State: peerpodvolumeV1alpha1.NodeUnstageVolumeCached,
 		}
 		_, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 		if err != nil {
@@ -382,8 +381,8 @@ func (s *NodeService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVo
 			if err != nil {
 				glog.Errorf("Error happens while Update vmID to PeerpodVolume, err: %v", err.Error())
 			}
-			updatedPeerPodVolume.Status = v1alpha1.PeerpodVolumeStatus{
-				State: v1alpha1.PeerPodVSIIDReady,
+			updatedPeerPodVolume.Status = peerpodvolumeV1alpha1.PeerpodVolumeStatus{
+				State: peerpodvolumeV1alpha1.PeerPodVSIIDReady,
 			}
 			_, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).UpdateStatus(context.Background(), updatedPeerPodVolume, metav1.UpdateOptions{})
 			if err != nil {
