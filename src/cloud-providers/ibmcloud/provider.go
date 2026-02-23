@@ -377,7 +377,7 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 
 	if p.serviceConfig.SecondarySubnetID != "" {
 
-		var allowIPSpoofing bool = true
+		allowIPSpoofing := true
 
 		prototype.NetworkInterfaces = []vpcv1.NetworkInterfacePrototype{
 			{
