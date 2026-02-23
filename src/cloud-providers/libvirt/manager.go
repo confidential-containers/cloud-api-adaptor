@@ -31,7 +31,7 @@ func init() {
 	provider.AddCloudProvider("libvirt", &Manager{})
 }
 
-func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
+func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
@@ -49,14 +49,14 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.BoolWithEnv(&libvirtcfg.DisableCVM, "disable-cvm", true, "DISABLECVM", "Use non-CVMs for peer pods")
 }
 
-func (_ *Manager) LoadEnv() {
+func (*Manager) LoadEnv() {
 	// No longer needed - environment variables are handled in ParseCmd
 }
 
-func (_ *Manager) NewProvider() (provider.Provider, error) {
+func (*Manager) NewProvider() (provider.Provider, error) {
 	return NewProvider(&libvirtcfg)
 }
 
-func (_ *Manager) GetConfig() (config *Config) {
+func (*Manager) GetConfig() (config *Config) {
 	return &libvirtcfg
 }
