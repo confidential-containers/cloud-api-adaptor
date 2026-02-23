@@ -172,7 +172,7 @@ func GetPodLog(ctx context.Context, client klient.Client, pod *v1.Pod) (string, 
 		return "", err
 	}
 
-	req := clientset.CoreV1().Pods(pod.ObjectMeta.Namespace).GetLogs(pod.ObjectMeta.Name, &v1.PodLogOptions{})
+	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &v1.PodLogOptions{})
 	podLogs, err := req.Stream(ctx)
 	if err != nil {
 		return "", err
@@ -294,7 +294,7 @@ func CompareInstanceType(ctx context.Context, t *testing.T, client klient.Client
 		return err
 	}
 	for _, podItem := range podlist.Items {
-		if podItem.ObjectMeta.Name == pod.Name {
+		if podItem.Name == pod.Name {
 			instanceType, err := getInstanceTypeFn(t, pod.Name)
 			if err != nil {
 				return fmt.Errorf("CompareInstanceType: failed to getCaaPod: %v", err)
@@ -426,7 +426,7 @@ func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 		}
 		if pod.Status.ContainerStatuses[0].State.Terminated.Reason == "StartError" {
 			errorPod++
-			t.Log("WARNING:", pod.ObjectMeta.Name, "-", pod.Status.ContainerStatuses[0].State.Terminated.Reason)
+			t.Log("WARNING:", pod.Name, "-", pod.Status.ContainerStatuses[0].State.Terminated.Reason)
 		}
 		if pod.Status.ContainerStatuses[0].State.Terminated.Reason == "Completed" {
 			successPod++
@@ -438,7 +438,7 @@ func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 			for event := range watcher.ResultChan() {
 				if event.Object.(*v1.Event).Reason == "Started" && pod.Status.ContainerStatuses[0].State.Terminated.Reason == "Completed" {
 					func() {
-						req := clientset.CoreV1().Pods(job.Namespace).GetLogs(pod.ObjectMeta.Name, &v1.PodLogOptions{})
+						req := clientset.CoreV1().Pods(job.Namespace).GetLogs(pod.Name, &v1.PodLogOptions{})
 						podLogs, err := req.Stream(ctx)
 						if err != nil {
 							return
@@ -451,7 +451,7 @@ func GetSuccessfulAndErroredPods(ctx context.Context, t *testing.T, client klien
 						}
 						podLogString = strings.TrimSpace(buf.String())
 					}()
-					t.Log("SUCCESS:", pod.ObjectMeta.Name, "-", pod.Status.ContainerStatuses[0].State.Terminated.Reason, "- LOG:", podLogString)
+					t.Log("SUCCESS:", pod.Name, "-", pod.Status.ContainerStatuses[0].State.Terminated.Reason, "- LOG:", podLogString)
 					break
 				}
 			}
@@ -549,7 +549,7 @@ func findPod(ctx context.Context, client klient.Client, pod *v1.Pod) (*v1.Pod, e
 		return nil, fmt.Errorf("Failed to list pod, error : %s", err.Error())
 	}
 	for _, podItem := range podList.Items {
-		if podItem.ObjectMeta.Name == pod.Name {
+		if podItem.Name == pod.Name {
 			return &podItem, nil
 		}
 	}
@@ -768,7 +768,7 @@ func getStringFromPod(ctx context.Context, client klient.Client, pod *v1.Pod, fn
 		return "", err
 	}
 	for _, podItem := range podlist.Items {
-		if podItem.ObjectMeta.Name == pod.Name {
+		if podItem.Name == pod.Name {
 			return fn(ctx, client, &podItem)
 		}
 	}

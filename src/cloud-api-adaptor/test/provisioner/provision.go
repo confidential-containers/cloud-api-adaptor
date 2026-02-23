@@ -589,7 +589,7 @@ func waitForNamespaceToBeUseable(ctx context.Context, client klient.Client, name
 			return err
 		}
 		for _, sa := range saList.Items {
-			if sa.ObjectMeta.Name == "default" {
+			if sa.Name == "default" {
 
 				log.Infof("default serviceAccount exists, namespace '%s' is ready for use", namespaceName)
 				return nil

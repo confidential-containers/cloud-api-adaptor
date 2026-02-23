@@ -538,7 +538,7 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 	}
 
 	for _, service := range services.Items {
-		if service.ObjectMeta.Name == serviceName {
+		if service.Name == serviceName {
 			// Ensure the service is of type NodePort
 			if service.Spec.Type != corev1.ServiceTypeNodePort {
 				return "", fmt.Errorf("Service %s is not of type NodePort", "kbs")
