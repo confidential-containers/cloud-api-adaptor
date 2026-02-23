@@ -816,7 +816,7 @@ type Neighbor struct {
 
 type NeighborState uint16
 
-const NEIGHBOR_STATE_PERMANENT = netlink.NUD_PERMANENT
+const NeighborStatePermanent = netlink.NUD_PERMANENT
 
 var neighorStateMap = map[NeighborState]string{
 	netlink.NUD_NONE:       "none",

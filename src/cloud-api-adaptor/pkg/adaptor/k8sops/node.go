@@ -28,7 +28,7 @@ func AdvertiseExtendedResources(peerPodsLimitPerNode int) error {
 
 	nodeName := os.Getenv("NODE_NAME")
 
-	patch := append([]jsonPatch{}, newJsonPatch("add", "/status/capacity", "kata.peerpods.io~1vm",
+	patch := append([]jsonPatch{}, newJSONPatch("add", "/status/capacity", "kata.peerpods.io~1vm",
 		strconv.Itoa(peerPodsLimitPerNode)))
 
 	config, err := getKubeConfig()
@@ -59,7 +59,7 @@ func RemoveExtendedResources() error {
 
 	nodeName := os.Getenv("NODE_NAME")
 
-	patch := append([]jsonPatch{}, newJsonPatch("remove", "/status/capacity", "kata.peerpods.io~1vm", ""))
+	patch := append([]jsonPatch{}, newJSONPatch("remove", "/status/capacity", "kata.peerpods.io~1vm", ""))
 
 	config, err := getKubeConfig()
 	if err != nil {
@@ -205,8 +205,8 @@ type jsonPatch struct {
 	Value string `json:"value,omitempty"`
 }
 
-// newJsonPatch returns a new jsonPatch object
-func newJsonPatch(verb string, jsonpath string, key string, value string) jsonPatch {
+// newJSONPatch returns a new jsonPatch object
+func newJSONPatch(verb string, jsonpath string, key string, value string) jsonPatch {
 	return jsonPatch{verb, path.Join(jsonpath, strings.ReplaceAll(key, "/", "~1")), value}
 }
 

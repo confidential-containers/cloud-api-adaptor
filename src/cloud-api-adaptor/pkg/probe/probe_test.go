@@ -72,7 +72,7 @@ func getFakeClientSetWithParas(podnamePrefix, namespace, nodeName, runtimeClass 
 func Test_GetRuntimeclassName_Default(t *testing.T) {
 	os.Setenv("RUNTIMECLASS_NAME", "")
 	ret := GetRuntimeclassName()
-	assert.Equal(t, ret, DEFAULT_CC_RUNTIMECLASS_NAME)
+	assert.Equal(t, ret, DefaultCCRuntimeClassName)
 }
 
 func Test_GetRuntimeclassName_Env(t *testing.T) {
@@ -84,10 +84,10 @@ func Test_GetRuntimeclassName_Env(t *testing.T) {
 func Test_GetAllPeerPods_BeTrue(t *testing.T) {
 	os.Setenv("NODE_NAME", "node-name-1")
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionTrue, timeAfter)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionTrue, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       "",
 	}
 	result, err := checker.GetAllPeerPods(timeStart)
@@ -98,7 +98,7 @@ func Test_GetAllPeerPods_BeTrue(t *testing.T) {
 	clientset = getFakeClientSetWithParas("pod", "default", "node-name-1", "", corev1.ConditionTrue, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       "",
 	}
 	result, err = checker.GetAllPeerPods(timeStart)
@@ -110,10 +110,10 @@ func Test_GetAllPeerPods_BeTrue(t *testing.T) {
 func Test_GetAllPeerPods_BeFalse(t *testing.T) {
 	os.Setenv("NODE_NAME", "node-name-1")
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionFalse, timeAfter)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionFalse, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       "",
 	}
 	result, err := checker.GetAllPeerPods(timeStart)
@@ -125,10 +125,10 @@ func Test_GetAllPeerPods_BeFalse(t *testing.T) {
 func Test_GetAllPeerPods_BeFalse_time_before(t *testing.T) {
 	os.Setenv("NODE_NAME", "node-name-1")
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionTrue, timeBefore)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionTrue, timeBefore)
 	checker = Checker{
 		Clientset:        clientset,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       "",
 	}
 	result, err := checker.GetAllPeerPods(timeStart)
@@ -140,10 +140,10 @@ func Test_GetAllPeerPods_BeFalse_time_before(t *testing.T) {
 func Test_GetAllPeerPods_BeError(t *testing.T) {
 	os.Setenv("NODE_NAME", "")
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionFalse, timeAfter)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionFalse, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       "",
 	}
 	result, err := checker.GetAllPeerPods(timeStart)
@@ -162,7 +162,7 @@ func Test_IsSocketOpen_BeOpen(t *testing.T) {
 
 	checker = Checker{
 		Clientset:        nil,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       socketPath,
 	}
 
@@ -177,7 +177,7 @@ func Test_IsSocketOpen_BeNotOpen(t *testing.T) {
 	socketPath := "/tmp/caa-probe-test-socket.sock"
 	checker = Checker{
 		Clientset:        nil,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       socketPath,
 	}
 
@@ -196,10 +196,10 @@ func Test_StartupHandler_BeReady(t *testing.T) {
 	}
 	defer socket.Close()
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionFalse, timeAfter)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionFalse, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       socketPath,
 	}
 
@@ -225,10 +225,10 @@ func Test_StartupHandler_NotBeAllPodsReady(t *testing.T) {
 	}
 	defer socket.Close()
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionFalse, timeAfter)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionFalse, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       socketPath,
 	}
 
@@ -254,10 +254,10 @@ func Test_StartupHandler_BeAllPodsReady(t *testing.T) {
 	}
 	defer socket.Close()
 
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DEFAULT_CC_RUNTIMECLASS_NAME, corev1.ConditionTrue, timeAfter)
+	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionTrue, timeAfter)
 	checker = Checker{
 		Clientset:        clientset,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       socketPath,
 	}
 
@@ -290,7 +290,7 @@ func Test_StartupHandler_BeErrorListPods(t *testing.T) {
 
 	checker = Checker{
 		Clientset:        clientset,
-		RuntimeclassName: DEFAULT_CC_RUNTIMECLASS_NAME,
+		RuntimeclassName: DefaultCCRuntimeClassName,
 		SocketPath:       socketPath,
 	}
 

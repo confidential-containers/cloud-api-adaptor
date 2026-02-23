@@ -60,7 +60,7 @@ func NewPeerPodService() (*PeerPodService, error) {
 	return &PeerPodService{client: clientset, uclient: restClient, cloudProvider: cloudProvider, podToPP: make(map[string]string)}, nil
 }
 
-func (s *PeerPodService) newPeerPod(pod *v1.Pod, instanceId string) *peerPodV1alpha1.PeerPod {
+func (s *PeerPodService) newPeerPod(pod *v1.Pod, instanceID string) *peerPodV1alpha1.PeerPod {
 	pp := peerPodV1alpha1.PeerPod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: peerPodV1alpha1.GroupVersion.Group + "/" + peerPodV1alpha1.GroupVersion.Version,
@@ -75,7 +75,7 @@ func (s *PeerPodService) newPeerPod(pod *v1.Pod, instanceId string) *peerPodV1al
 			},
 		},
 		Spec: peerPodV1alpha1.PeerPodSpec{
-			InstanceID:    string(instanceId),
+			InstanceID:    string(instanceID),
 			CloudProvider: s.cloudProvider,
 		},
 	}
