@@ -83,13 +83,13 @@ func (s *NodeService) redirect(ctx context.Context, req interface{}, fn func(con
 
 	return nil
 }
-func (s *NodeService) getPodUIDandVolumeName(targetPath string) (podUid, volumeName string) {
+func (s *NodeService) getPodUIDandVolumeName(targetPath string) (podUID, volumeName string) {
 	// /var/lib/kubelet/pods/69576836-28c2-447e-a726-fdf8866a0622/volumes/kubernetes.io~csi/pvc-e9d79b06-fd06-487f-ac93-ea6424819a7d/mount
 	paths := strings.Split(targetPath, "/")
 	glog.Infof("split paths is :%v", paths)
-	podUid = paths[5]
+	podUID = paths[5]
 	volumeName = paths[8]
-	glog.Infof("podUid is :%v, volumeName is: %v", podUid, volumeName)
+	glog.Infof("podUid is :%v, volumeName is: %v", podUID, volumeName)
 	return
 }
 
@@ -125,9 +125,9 @@ func (s *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		nodePublishVolumeRequest := reqBuf.String()
 		glog.Infof("NodePublishVolumeRequest JSON string: %s\n", nodePublishVolumeRequest)
 		savedPeerpodvolume.Spec.TargetPath = targetPath
-		podUid, volumeName := s.getPodUIDandVolumeName(targetPath)
-		savedPeerpodvolume.Labels["podUid"] = podUid
-		savedPeerpodvolume.Spec.PodUid = podUid
+		podUID, volumeName := s.getPodUIDandVolumeName(targetPath)
+		savedPeerpodvolume.Labels["podUid"] = podUID
+		savedPeerpodvolume.Spec.PodUID = podUID
 		savedVolumeName := savedPeerpodvolume.Spec.VolumeName
 		if volumeName != savedVolumeName && savedVolumeName != peerpodVolumeNamePlaceholder {
 			glog.Error("The volume name from target path doesn't match with the CR")

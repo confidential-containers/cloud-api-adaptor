@@ -147,8 +147,8 @@ func (c *PeerpodvolumeController) syncHandler(key string) error {
 	}
 
 	glog.Infof("Detected a Peerpodvolume object: %s \n", key)
-	objJsonString, _ := json.Marshal(peerPodVolume)
-	objString := string(objJsonString)
+	objJSONString, _ := json.Marshal(peerPodVolume)
+	objString := string(objJSONString)
 	glog.Infof("Detected Peerpodvolume json.Marshal.string: %s\n", objString)
 	// call the syncFunction from node service or controller service
 	if c.syncFunction != nil {
