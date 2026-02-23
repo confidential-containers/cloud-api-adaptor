@@ -27,7 +27,7 @@ func (m *machineTypes) Set(value string) error {
 
 type Config struct {
 	GcpCredentials      string
-	ProjectId           string
+	ProjectID           string
 	Zone                string
 	ImageName           string
 	MachineType         string

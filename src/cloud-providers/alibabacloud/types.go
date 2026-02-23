@@ -36,15 +36,15 @@ func (i *instanceTypes) Set(value string) error {
 }
 
 type Config struct {
-	AccessKeyId          string
+	AccessKeyID          string
 	SecretKey            string
 	Region               string
-	ImageId              string
+	ImageID              string
 	InstanceType         string
 	KeyName              string
-	VpcId                string
-	VswitchId            string
-	SecurityGroupIds     securityGroupIds
+	VpcID                string
+	VswitchID            string
+	SecurityGroupIDs     securityGroupIds
 	InstanceTypes        instanceTypes
 	InstanceTypeSpecList []provider.InstanceTypeSpec
 	Tags                 provider.KeyValueFlag
@@ -54,5 +54,5 @@ type Config struct {
 }
 
 func (c Config) Redact() Config {
-	return *util.RedactStruct(&c, "AccessKeyId", "SecretKey").(*Config)
+	return *util.RedactStruct(&c, "AccessKeyID", "SecretKey").(*Config)
 }

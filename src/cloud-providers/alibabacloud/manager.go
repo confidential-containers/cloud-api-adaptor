@@ -21,12 +21,12 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
-	reg.StringWithEnv(&alibabacloudcfg.AccessKeyId, "alibabacloud-access-key-id", "", "ALIBABACLOUD_ACCESS_KEY_ID", "Access Key ID", provider.Secret())
+	reg.StringWithEnv(&alibabacloudcfg.AccessKeyID, "alibabacloud-access-key-id", "", "ALIBABACLOUD_ACCESS_KEY_ID", "Access Key ID", provider.Secret())
 	reg.StringWithEnv(&alibabacloudcfg.SecretKey, "alibabacloud-secret-access-key", "", "ALIBABACLOUD_ACCESS_KEY_SECRET", "Secret Key", provider.Secret())
 	reg.StringWithEnv(&alibabacloudcfg.Region, "region", "cn-beijing", "REGION", "Region")
-	reg.StringWithEnv(&alibabacloudcfg.ImageId, "imageid", "", "IMAGEID", "Pod VM image id", provider.Required())
+	reg.StringWithEnv(&alibabacloudcfg.ImageID, "imageid", "", "IMAGEID", "Pod VM image id", provider.Required())
 	reg.StringWithEnv(&alibabacloudcfg.InstanceType, "instance-type", "ecs.g8i.xlarge", "PODVM_INSTANCE_TYPE", "Pod VM instance type")
-	reg.StringWithEnv(&alibabacloudcfg.VswitchId, "vswitch-id", "", "VSWITCH_ID", "vSwitch ID to be used for the Pod VMs", provider.Required())
+	reg.StringWithEnv(&alibabacloudcfg.VswitchID, "vswitch-id", "", "VSWITCH_ID", "vSwitch ID to be used for the Pod VMs", provider.Required())
 	reg.StringWithEnv(&alibabacloudcfg.KeyName, "keyname", "", "KEYNAME", "SSH Keypair name to be used with the Pod VM")
 
 	reg.BoolWithEnv(&alibabacloudcfg.UsePublicIP, "use-public-ip", false, "USE_PUBLIC_IP", "Use Public IP for connecting to the kata-agent inside the Pod VM")
@@ -34,10 +34,10 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.BoolWithEnv(&alibabacloudcfg.DisableCVM, "disable-cvm", false, "DISABLECVM", "Use non-CVMs for peer pods")
 
 	// Flags without environment variable support (pass empty string for envVarName)
-	reg.StringWithEnv(&alibabacloudcfg.VpcId, "vpc-id", "", "", "VPC ID to be used for the Pod VMs")
+	reg.StringWithEnv(&alibabacloudcfg.VpcID, "vpc-id", "", "", "VPC ID to be used for the Pod VMs")
 
 	// Custom flag types (comma-separated lists)
-	reg.CustomTypeWithEnv(&alibabacloudcfg.SecurityGroupIds, "security-group-ids", "cn-beijing", "SECURITY_GROUP_IDS", "Security Group Ids to be used for the Pod VM, comma separated")
+	reg.CustomTypeWithEnv(&alibabacloudcfg.SecurityGroupIDs, "security-group-ids", "cn-beijing", "SECURITY_GROUP_IDS", "Security Group Ids to be used for the Pod VM, comma separated")
 	reg.CustomTypeWithEnv(&alibabacloudcfg.Tags, "tags", "", "TAGS", "Custom tags (key=value pairs) to be used for the Pod VMs, comma separated")
 }
 

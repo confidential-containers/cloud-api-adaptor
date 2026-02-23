@@ -68,7 +68,7 @@ func Test_dockerProvider_CreateInstance(t *testing.T) {
 		Client *mockDockerClient
 	}
 
-	testAPFConfigJson := `{
+	testAPFConfigJSON := `{
 		"pod-network": {
 			"podip": "10.244.0.19/24",
 			"pod-hw-addr": "0e:8f:62:f3:81:ad",
@@ -99,7 +99,7 @@ func Test_dockerProvider_CreateInstance(t *testing.T) {
 	// Create a CloudConfig struct
 	cloudConfig := &cloudinit.CloudConfig{
 		WriteFiles: []cloudinit.WriteFile{
-			{Path: "/run/peerpod/apf.json", Content: string(testAPFConfigJson)},
+			{Path: "/run/peerpod/apf.json", Content: string(testAPFConfigJSON)},
 		},
 	}
 

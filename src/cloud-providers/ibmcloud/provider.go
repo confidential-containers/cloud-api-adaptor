@@ -64,9 +64,9 @@ func NewProvider(config *Config) (provider.Provider, error) {
 
 	var authenticator core.Authenticator
 
-	if config.ApiKey != "" {
+	if config.APIKey != "" {
 		authenticator = &core.IamAuthenticator{
-			ApiKey: config.ApiKey,
+			ApiKey: config.APIKey,
 			URL:    config.IamServiceURL,
 		}
 	} else if config.IAMProfileID != "" {
@@ -333,7 +333,7 @@ func (p *ibmcloudVPCProvider) getAttachTagOptions(vpcInstanceCRN *string) (*glob
 	return options, nil
 }
 
-func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageId string) *vpcv1.InstancePrototype {
+func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageID string) *vpcv1.InstancePrototype {
 
 	securityGroups := make([]vpcv1.SecurityGroupIdentityIntf, 0, len(p.serviceConfig.SecurityGroupIds))
 	for i := range p.serviceConfig.SecurityGroupIds {
@@ -344,7 +344,7 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 
 	prototype := &vpcv1.InstancePrototype{
 		Name:     &instanceName,
-		Image:    &vpcv1.ImageIdentity{ID: &imageId},
+		Image:    &vpcv1.ImageIdentity{ID: &imageID},
 		UserData: &userData,
 		Profile:  &vpcv1.InstanceProfileIdentity{Name: &instanceProfile},
 		Zone:     &vpcv1.ZoneIdentity{Name: &p.serviceConfig.ZoneName},

@@ -15,5 +15,5 @@ func NewAzureClient(config Config) (azcore.TokenCredential, error) {
 		return azidentity.NewWorkloadIdentityCredential(nil)
 	}
 
-	return azidentity.NewClientSecretCredential(config.TenantId, config.ClientId, config.ClientSecret, nil)
+	return azidentity.NewClientSecretCredential(config.TenantID, config.ClientID, config.ClientSecret, nil)
 }

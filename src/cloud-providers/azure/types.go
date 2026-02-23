@@ -26,18 +26,18 @@ func (i *instanceSizes) Set(value string) error {
 }
 
 type Config struct {
-	SubscriptionId       string
-	ClientId             string
+	SubscriptionID       string
+	ClientID             string
 	ClientSecret         string
-	TenantId             string
+	TenantID             string
 	ResourceGroupName    string
 	Zone                 string
 	Region               string
-	SubnetId             string
+	SubnetID             string
 	SecurityGroupName    string
-	SecurityGroupId      string
+	SecurityGroupID      string
 	Size                 string
-	ImageId              string
+	ImageID              string
 	SSHKeyPath           string
 	SSHUserName          string
 	DisableCVM           bool
@@ -53,5 +53,5 @@ type Config struct {
 }
 
 func (c Config) Redact() Config {
-	return *util.RedactStruct(&c, "ClientId", "TenantId", "ClientSecret").(*Config)
+	return *util.RedactStruct(&c, "ClientID", "TenantID", "ClientSecret").(*Config)
 }

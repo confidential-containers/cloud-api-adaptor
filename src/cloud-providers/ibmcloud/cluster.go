@@ -109,25 +109,25 @@ type securityGroup struct {
 }
 
 const (
-	HEADER_NAME_USER_AGENT = "User-Agent"
+	HeaderNameUserAgent = "User-Agent"
 
-	NAME = "cloud-api-adaptor-ibm"
+	Name = "cloud-api-adaptor-ibm"
 
-	X_REQUEST_ID = "X-Request-Id"
+	XRequestID = "X-Request-Id"
 
-	VERSION = "0.0.1"
+	Version = "0.0.1"
 )
 
-func GetHeaders(serviceName string, serviceVersion string, operationId string) map[string]string {
+func GetHeaders(serviceName string, serviceVersion string, operationID string) map[string]string {
 	sdkHeaders := make(map[string]string)
 
-	sdkHeaders[HEADER_NAME_USER_AGENT] = GetUserAgentInfo()
-	sdkHeaders[X_REQUEST_ID] = GetNewXRequestID()
+	sdkHeaders[HeaderNameUserAgent] = GetUserAgentInfo()
+	sdkHeaders[XRequestID] = GetNewXRequestID()
 
 	return sdkHeaders
 }
 
-var UserAgent string = fmt.Sprintf("%s-%s %s", NAME, VERSION, GetSystemInfo())
+var UserAgent string = fmt.Sprintf("%s-%s %s", Name, Version, GetSystemInfo())
 
 func GetUserAgentInfo() string {
 	return UserAgent
@@ -144,5 +144,5 @@ func GetSystemInfo() string {
 }
 
 func GetComponentInfo() *core.ProblemComponent {
-	return core.NewProblemComponent("github.com/confidential-containers/cloud-api-adaptor", VERSION)
+	return core.NewProblemComponent("github.com/confidential-containers/cloud-api-adaptor", Version)
 }
