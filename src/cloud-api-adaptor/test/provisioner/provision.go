@@ -120,7 +120,7 @@ func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, e
 	return &CloudAPIAdaptor{
 		caaDaemonSet:         &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset", Namespace: namespace}},
 		ccDaemonSet:          &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-daemon-install", Namespace: namespace}},
-		ccOpGitRepo:          ccOperator.Url,
+		ccOpGitRepo:          ccOperator.URL,
 		ccOpConfig:           ccOperator.Config,
 		ccOpGitRef:           ccOperator.Ref,
 		cloudProvider:        provider,
@@ -561,7 +561,7 @@ func CreateAndWaitForNamespace(ctx context.Context, client klient.Client, namesp
 	return nil
 }
 
-const WAIT_NAMESPACE_AVAILABLE_TIMEOUT = time.Second * 120
+const WaitNamespaceAvailableTimeout = time.Second * 120
 
 func waitForNamespaceToBeUseable(ctx context.Context, client klient.Client, namespaceName string) error {
 	log.Infof("Wait for namespace '%s' be ready...", namespaceName)
@@ -574,7 +574,7 @@ func waitForNamespaceToBeUseable(ctx context.Context, client klient.Client, name
 			return false
 		}
 		return ns.Status.Phase == corev1.NamespaceActive
-	}), wait.WithTimeout(WAIT_NAMESPACE_AVAILABLE_TIMEOUT)); err != nil {
+	}), wait.WithTimeout(WaitNamespaceAvailableTimeout)); err != nil {
 		return err
 	}
 
@@ -584,7 +584,7 @@ func waitForNamespaceToBeUseable(ctx context.Context, client klient.Client, name
 	// detect if it is ready, so do things the old-fashioned way
 	log.Infof("Wait for default serviceaccount in namespace '%s'...", namespaceName)
 	var saList corev1.ServiceAccountList
-	for start := time.Now(); time.Since(start) < WAIT_NAMESPACE_AVAILABLE_TIMEOUT; {
+	for start := time.Now(); time.Since(start) < WaitNamespaceAvailableTimeout; {
 		if err := client.Resources(namespaceName).List(ctx, &saList); err != nil {
 			return err
 		}
@@ -598,5 +598,5 @@ func waitForNamespaceToBeUseable(ctx context.Context, client klient.Client, name
 		log.Tracef("default serviceAccount not found after %.0f seconds", time.Since(start).Seconds())
 		time.Sleep(5 * time.Second)
 	}
-	return fmt.Errorf("default service account not found in namespace '%s' after %.0f seconds wait", namespaceName, WAIT_NAMESPACE_AVAILABLE_TIMEOUT.Seconds())
+	return fmt.Errorf("default service account not found in namespace '%s' after %.0f seconds wait", namespaceName, WaitNamespaceAvailableTimeout.Seconds())
 }

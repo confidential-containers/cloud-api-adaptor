@@ -43,7 +43,7 @@ type AzureProperties struct {
 	ManagedVnetClient                  *armnetwork.VirtualNetworksClient
 	ManagedSubnetClient                *armnetwork.SubnetsClient
 	ManagedAksClient                   *armcontainerservice.ManagedClustersClient
-	ManagedVmClient                    *armcompute.VirtualMachinesClient
+	ManagedVMClient                    *armcompute.VirtualMachinesClient
 	FederatedIdentityCredentialsClient *armmsi.FederatedIdentityCredentialsClient
 	FederatedCredentialName            string
 	ContainerRuntime                   string
@@ -146,7 +146,7 @@ func initManagedClients() error {
 	AzureProps.ManagedVnetClient = networkClientFactory.NewVirtualNetworksClient()
 	AzureProps.ManagedSubnetClient = networkClientFactory.NewSubnetsClient()
 
-	AzureProps.ManagedVmClient, err = armcompute.NewVirtualMachinesClient(AzureProps.SubscriptionID, cred, nil)
+	AzureProps.ManagedVMClient, err = armcompute.NewVirtualMachinesClient(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
 		return fmt.Errorf("creating virtual machine client: %w", err)
 	}

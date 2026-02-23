@@ -26,11 +26,11 @@ const DefaultCPU = 2
 
 // LibvirtProvisioner implements the CloudProvisioner interface for Libvirt.
 type LibvirtProvisioner struct {
-	caa_image        string           // The CAA image to install
+	caaImage         string           // The CAA image to install
 	conn             *libvirt.Connect // Libvirt connection
 	containerRuntime string           // Name of the container runtime
 	network          string           // Network name
-	ssh_key_file     string           // SSH key file used to connect to Libvirt
+	sshKeyFile       string           // SSH key file used to connect to Libvirt
 	storage          string           // Storage pool name
 	uri              string           // Libvirt URI
 	wd               string           // libvirt's directory path on this repository
@@ -60,9 +60,9 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		network = properties["libvirt_network"]
 	}
 
-	ssh_key_file := ""
+	sshKeyFile := ""
 	if properties["libvirt_ssh_key_file"] != "" {
-		ssh_key_file = properties["libvirt_ssh_key_file"]
+		sshKeyFile = properties["libvirt_ssh_key_file"]
 	}
 
 	storage := "default"
@@ -75,16 +75,16 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		uri = properties["libvirt_uri"]
 	}
 
-	vol_name := "podvm-base.qcow2"
+	volumeName := "podvm-base.qcow2"
 	if properties["libvirt_vol_name"] != "" {
-		vol_name = properties["libvirt_vol_name"]
+		volumeName = properties["libvirt_vol_name"]
 	}
 
-	conn_uri := "qemu:///system"
+	connURI := "qemu:///system"
 	if properties["libvirt_conn_uri"] != "" {
-		conn_uri = properties["libvirt_conn_uri"]
+		connURI = properties["libvirt_conn_uri"]
 	}
-	conn, err := libvirt.NewConnect(conn_uri)
+	conn, err := libvirt.NewConnect(connURI)
 	if err != nil {
 		return nil, err
 	}
@@ -111,15 +111,15 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 
 	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
-		caa_image:        properties["CAA_IMAGE"],
+		caaImage:         properties["CAA_IMAGE"],
 		conn:             conn,
 		containerRuntime: properties["container_runtime"],
 		network:          network,
-		ssh_key_file:     ssh_key_file,
+		sshKeyFile:       sshKeyFile,
 		storage:          storage,
 		uri:              uri,
 		wd:               wd,
-		volumeName:       vol_name,
+		volumeName:       volumeName,
 		clusterName:      clusterName,
 		tunnelType:       tunnelType,
 		vxlanPort:        vxlanPort,
@@ -228,11 +228,11 @@ func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config)
 
 func (l *LibvirtProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
-		"CAA_IMAGE":         l.caa_image,
+		"CAA_IMAGE":         l.caaImage,
 		"CONTAINER_RUNTIME": l.containerRuntime,
 		"network":           l.network,
 		"podvm_volume":      l.volumeName,
-		"ssh_key_file":      l.ssh_key_file,
+		"ssh_key_file":      l.sshKeyFile,
 		"storage":           l.storage,
 		"uri":               l.uri,
 		"tunnel_type":       l.tunnelType,

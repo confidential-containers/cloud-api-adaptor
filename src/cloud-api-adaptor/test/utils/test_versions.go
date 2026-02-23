@@ -49,9 +49,9 @@ func getTestVersions() (*TestVersions, error) {
 }
 
 func GetImage(image string) (string, error) {
-	test_versions, err := getTestVersions()
+	testVersions, err := getTestVersions()
 	if err != nil {
 		return "", fmt.Errorf("getTestImage: failed to read image: %s, with error %v", image, err)
 	}
-	return test_versions.ContainerImage[image].getImage(), nil
+	return testVersions.ContainerImage[image].getImage(), nil
 }

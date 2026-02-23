@@ -222,7 +222,7 @@ func TestInitDataMeasurement(t *testing.T) {
 	cmd := []string{"sh", "-c", shCmd}
 
 	annotations := map[string]string{
-		INITDATA_ANNOTATION: annotation,
+		InitdataAnnotation: annotation,
 	}
 	job := NewJob(E2eNamespace, name, 0, image, WithJobCommand(cmd), WithJobAnnotations(annotations))
 	NewTestCase(t, testEnv, "InitDataMeasurement", assert, "InitData measured correctly").WithJob(job).WithExpectedPodLogString(msStr).Run()

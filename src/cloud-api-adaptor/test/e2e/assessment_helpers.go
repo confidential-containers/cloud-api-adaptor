@@ -142,8 +142,8 @@ func getCaaPod(ctx context.Context, client klient.Client, t *testing.T, nodeName
 // <date time> [adaptor/proxy]         mount_point:/run/kata-containers/<id>/rootfs source:<image> fstype:overlay driver:image_guest_pull
 // <date time> 11:47:42 [adaptor/proxy] CreateContainer: Ignoring PullImage before CreateContainer (cid: "<cid>")
 // was output
-func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, nodeName string, containerId string) (bool, error) {
-	nydusSnapshotterPullRegex, err := regexp.Compile(`.*mount_point:/run/kata-containers.*` + containerId + `.*driver:image_guest_pull.*$`)
+func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, nodeName string, containerID string) (bool, error) {
+	nydusSnapshotterPullRegex, err := regexp.Compile(`.*mount_point:/run/kata-containers.*` + containerID + `.*driver:image_guest_pull.*$`)
 	if err != nil {
 		return false, err
 	}
@@ -266,7 +266,7 @@ func ComparePodEventWarningDescriptions(ctx context.Context, t *testing.T, clien
 
 	if pod.Status.Phase != v1.PodFailed {
 		// If not failed state we might have to wait/retry until the error happens
-		retries = int(WAIT_POD_RUNNING_TIMEOUT / delay)
+		retries = int(WaitPodRunningTimeout / delay)
 	}
 
 	var err error = nil
@@ -350,13 +350,13 @@ func VerifyNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Cli
 	}
 	log.Tracef("Test pod running on node %s", nodeName)
 
-	containerId := pod.Status.ContainerStatuses[0].ContainerID
-	containerId, found := strings.CutPrefix(containerId, "containerd://")
+	containerID := pod.Status.ContainerStatuses[0].ContainerID
+	containerID, found := strings.CutPrefix(containerID, "containerd://")
 	if !found {
-		return fmt.Errorf("VerifyNydusSnapshotter: unexpected container id format: %s", containerId)
+		return fmt.Errorf("VerifyNydusSnapshotter: unexpected container id format: %s", containerID)
 	}
 
-	usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client, nodeName, containerId)
+	usedNydusSnapshotter, err := IsPulledWithNydusSnapshotter(ctx, t, client, nodeName, containerID)
 	if err != nil {
 		return fmt.Errorf("IsPulledWithNydusSnapshotter:  failed with %v", err)
 	}
@@ -477,12 +477,12 @@ func getCaaPodLogForPod(ctx context.Context, t *testing.T, client klient.Client,
 
 	// Find the logs starting with the pod
 	// e.g. 2024/12/19 17:18:52 [adaptor/cloud] create a sandbox 27e11ff35fd1284b45d3be30b42f435a9a597c322bb66e965785c003338d792a for pod job-pi-fgr78 in namespace coco-pp-e2e-test-9a6697df
-	date_matcher := "[0-9]{4}/[0-9]{2}/[0-9]{2}"
-	time_matcher := "([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
-	pod_matcher := regexp.MustCompile(date_matcher + " " + time_matcher + ` \[adaptor\/cloud\] create a sandbox [0-9|a-f]* for pod ` + pod.Name)
-	matches := pod_matcher.FindStringIndex(podLogString)
+	dateMatcher := "[0-9]{4}/[0-9]{2}/[0-9]{2}"
+	timeMatcher := "([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
+	podMatcher := regexp.MustCompile(dateMatcher + " " + timeMatcher + ` \[adaptor\/cloud\] create a sandbox [0-9|a-f]* for pod ` + pod.Name)
+	matches := podMatcher.FindStringIndex(podLogString)
 	if matches == nil {
-		return "", fmt.Errorf("GetCaaPodLog: couldn't find pod log matcher: %s in CAA log %s", pod_matcher, podLogString)
+		return "", fmt.Errorf("GetCaaPodLog: couldn't find pod log matcher: %s in CAA log %s", podMatcher, podLogString)
 	}
 
 	podLogString = podLogString[matches[0]:]
@@ -526,10 +526,10 @@ func IsBufferEmpty(buffer bytes.Buffer) bool {
 func AssessPodRequestAndLimit(ctx context.Context, client klient.Client, pod *v1.Pod) error {
 	// Check if the pod has the "kata.peerpods.io/vm request and limit with value "1"
 
-	podVmExtResource := "kata.peerpods.io/vm"
+	podVMExtResource := "kata.peerpods.io/vm"
 
-	request := pod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(podVmExtResource)]
-	limit := pod.Spec.Containers[0].Resources.Limits[corev1.ResourceName(podVmExtResource)]
+	request := pod.Spec.Containers[0].Resources.Requests[corev1.ResourceName(podVMExtResource)]
+	limit := pod.Spec.Containers[0].Resources.Limits[corev1.ResourceName(podVMExtResource)]
 
 	// Check if the request and limit are set to "1"
 	if request.Cmp(resource.MustParse("1")) != 0 {
@@ -611,12 +611,12 @@ func ProvisionPod(ctx context.Context, client klient.Client, t *testing.T, pod *
 	if err := client.Resources().Create(ctx, pod); err != nil {
 		t.Fatal(err)
 	}
-	if err := wait.For(conditions.New(client.Resources()).PodPhaseMatch(pod, podState), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+	if err := wait.For(conditions.New(client.Resources()).PodPhaseMatch(pod, podState), wait.WithTimeout(WaitPodRunningTimeout)); err != nil {
 		t.Fatal(err)
 	}
 	if podState == v1.PodRunning || len(testCommands) > 0 {
 		t.Logf("Waiting for containers in pod: %v are ready", pod.Name)
-		if err := wait.For(conditions.New(client.Resources()).ContainersReady(pod), wait.WithTimeout(WAIT_POD_RUNNING_TIMEOUT)); err != nil {
+		if err := wait.For(conditions.New(client.Resources()).ContainersReady(pod), wait.WithTimeout(WaitPodRunningTimeout)); err != nil {
 			//Added logs for debugging nightly tests
 			clientset, err := kubernetes.NewForConfig(client.RESTConfig())
 			if err != nil {

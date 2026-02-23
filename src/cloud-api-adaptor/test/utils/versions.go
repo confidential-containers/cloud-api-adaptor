@@ -15,7 +15,7 @@ const VersionsFile = "../../versions.yaml"
 // Versions represents the project's versions.yaml
 type Versions struct {
 	Git map[string]struct {
-		Url    string `yaml:"url"`
+		URL    string `yaml:"url"`
 		Ref    string `yaml:"reference"`
 		Config string `yaml:"config"`
 	}
