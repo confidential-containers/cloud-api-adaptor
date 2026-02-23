@@ -18,7 +18,7 @@ func DoTestRemoteAttestation(t *testing.T, e env.Environment, assert CloudAssert
 		log.Fatalf("failed to build initdata %s", err)
 	}
 	annotations := map[string]string{
-		INITDATA_ANNOTATION: initdata,
+		InitdataAnnotation: initdata,
 	}
 	job := NewJob(E2eNamespace, name, 0, image, WithJobCommand(cmd), WithJobAnnotations(annotations))
 	NewTestCase(t, e, "RemoteAttestation", assert, "Received KBS token").WithJob(job).Run()

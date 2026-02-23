@@ -20,13 +20,13 @@ import (
 
 type IBMCloudProperties struct {
 	IBMCloudProvider      string
-	ApiKey                string
+	APIKey                string
 	IamProfileID          string
 	Bucket                string
 	CaaImageTag           string
 	ClusterName           string
 	ContainerRuntime      string
-	CosApiKey             string
+	CosAPIKey             string
 	CosInstanceID         string
 	CosServiceURL         string
 	SecurityGroupIDs      string
@@ -41,9 +41,9 @@ type IBMCloudProperties struct {
 	PublicGatewayID       string
 	Region                string
 	ResourceGroupID       string
-	SshKeyContent         string
-	SshKeyID              string
-	SshKeyName            string
+	SSHKeyContent         string
+	SSHKeyID              string
+	SSHKeyName            string
 	SubnetName            string
 	SubnetID              string
 	VpcName               string
@@ -76,13 +76,13 @@ func InitIBMCloudProperties(properties map[string]string) error {
 
 	IBMCloudProps = &IBMCloudProperties{
 		IBMCloudProvider:      properties["IBMCLOUD_PROVIDER"],
-		ApiKey:                properties["APIKEY"],
+		APIKey:                properties["APIKEY"],
 		IamProfileID:          properties["IAM_PROFILE_ID"],
 		Bucket:                properties["COS_BUCKET"],
 		CaaImageTag:           properties["CAA_IMAGE_TAG"],
 		ClusterName:           properties["CLUSTER_NAME"],
 		ContainerRuntime:      containerRuntime,
-		CosApiKey:             properties["COS_APIKEY"],
+		CosAPIKey:             properties["COS_APIKEY"],
 		CosInstanceID:         properties["COS_INSTANCE_ID"],
 		CosServiceURL:         properties["COS_SERVICE_URL"],
 		IamServiceURL:         properties["IAM_SERVICE_URL"],
@@ -95,15 +95,15 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		PublicGatewayName:     properties["PUBLIC_GATEWAY_NAME"],
 		Region:                properties["REGION"],
 		ResourceGroupID:       properties["RESOURCE_GROUP_ID"],
-		SshKeyName:            properties["SSH_KEY_NAME"],
-		SshKeyContent:         properties["SSH_PUBLIC_KEY_CONTENT"],
+		SSHKeyName:            properties["SSH_KEY_NAME"],
+		SSHKeyContent:         properties["SSH_PUBLIC_KEY_CONTENT"],
 		SubnetName:            properties["VPC_SUBNET_NAME"],
 		VpcName:               properties["VPC_NAME"],
 		VpcServiceURL:         properties["VPC_SERVICE_URL"],
 		WorkerFlavor:          properties["WORKER_FLAVOR"],
 		WorkerOS:              properties["WORKER_OPERATION_SYSTEM"],
 		Zone:                  properties["ZONE"],
-		SshKeyID:              properties["SSH_KEY_ID"],
+		SSHKeyID:              properties["SSH_KEY_ID"],
 		SubnetID:              properties["VPC_SUBNET_ID"],
 		SecurityGroupIDs:      properties["IBMCLOUD_SECURITY_GROUP_IDS"],
 		VpcID:                 properties["VPC_ID"],
@@ -184,7 +184,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 
 	needProvisionStr := os.Getenv("TEST_PROVISION")
 	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") || pv.Action == "uploadimage" {
-		if len(IBMCloudProps.ApiKey) <= 0 {
+		if len(IBMCloudProps.APIKey) <= 0 {
 			return errors.New("APIKEY is required for provisioning")
 		}
 		if len(IBMCloudProps.Region) <= 0 {
@@ -200,7 +200,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 			return errors.New("WORKER_OPERATION_SYSTEM was not set, set it like: UBUNTU_20_64, UBUNTU_18_S390X")
 		}
 	} else {
-		if len(IBMCloudProps.SshKeyID) <= 0 {
+		if len(IBMCloudProps.SSHKeyID) <= 0 {
 			log.Info("[warning] SSH_KEY_ID was not set.")
 		}
 		if len(IBMCloudProps.SubnetID) <= 0 {
@@ -216,7 +216,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 
 	podvmImage := os.Getenv("TEST_PODVM_IMAGE")
 	if len(podvmImage) > 0 {
-		if len(IBMCloudProps.CosApiKey) <= 0 {
+		if len(IBMCloudProps.CosAPIKey) <= 0 {
 			return errors.New("COS_APIKEY was not set.")
 		}
 		if len(IBMCloudProps.CosInstanceID) <= 0 {
@@ -232,11 +232,11 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		return errors.New("PODVM_IMAGE_ID was not set, set it with existing custom image id in VPC")
 	}
 
-	if len(IBMCloudProps.ApiKey) <= 0 && len(IBMCloudProps.IamProfileID) <= 0 {
+	if len(IBMCloudProps.APIKey) <= 0 && len(IBMCloudProps.IamProfileID) <= 0 {
 		return errors.New("APIKEY or IAM_PROFILE_ID must be set")
 	}
 
-	if len(IBMCloudProps.ApiKey) > 0 {
+	if len(IBMCloudProps.APIKey) > 0 {
 		if err := initClustersAPI(); err != nil {
 			return err
 		}
@@ -258,7 +258,7 @@ func initVpcV1() error {
 
 	vpcService, err := vpcv1.NewVpcV1(&vpcv1.VpcV1Options{
 		Authenticator: &core.IamAuthenticator{
-			ApiKey: IBMCloudProps.ApiKey,
+			ApiKey: IBMCloudProps.APIKey,
 			URL:    IBMCloudProps.IamServiceURL,
 		},
 		URL: IBMCloudProps.VpcServiceURL,
@@ -284,7 +284,7 @@ func initClustersAPI() error {
 	log.Tracef("IAM token provider endpoint for bx config is %s.", tokenProviderEndpoint)
 
 	cfg := &bx.Config{
-		BluemixAPIKey:         IBMCloudProps.ApiKey,
+		BluemixAPIKey:         IBMCloudProps.APIKey,
 		Region:                IBMCloudProps.Region,
 		Endpoint:              &IBMCloudProps.IksServiceURL,
 		TokenProviderEndpoint: &tokenProviderEndpoint,

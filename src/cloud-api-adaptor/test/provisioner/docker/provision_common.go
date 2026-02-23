@@ -37,7 +37,7 @@ type DockerInstallChart struct {
 
 type DockerProperties struct {
 	DockerHost       string
-	ApiVer           string
+	APIVer           string
 	ClusterName      string
 	NetworkName      string
 	PodvmImage       string
@@ -54,7 +54,7 @@ func initDockerProperties(properties map[string]string) error {
 
 	DockerProps = &DockerProperties{
 		DockerHost:       properties["DOCKER_HOST"],
-		ApiVer:           properties["DOCKER_API_VERSION"],
+		APIVer:           properties["DOCKER_API_VERSION"],
 		ClusterName:      properties["CLUSTER_NAME"],
 		NetworkName:      properties["DOCKER_NETWORK_NAME"],
 		PodvmImage:       properties["DOCKER_PODVM_IMAGE"],
@@ -80,8 +80,8 @@ func NewDockerProvisioner(properties map[string]string) (pv.CloudProvisioner, er
 
 	// set environment variables
 	os.Setenv("DOCKER_HOST", DockerProps.DockerHost)
-	if DockerProps.ApiVer != "" {
-		os.Setenv("DOCKER_API_VERSION", DockerProps.ApiVer)
+	if DockerProps.APIVer != "" {
+		os.Setenv("DOCKER_API_VERSION", DockerProps.APIVer)
 	}
 
 	conn, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -140,7 +140,7 @@ func (l *DockerProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) 
 func (l *DockerProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	allProps := map[string]string{
 		"DOCKER_HOST":         DockerProps.DockerHost,
-		"DOCKER_API_VERSION":  DockerProps.ApiVer,
+		"DOCKER_API_VERSION":  DockerProps.APIVer,
 		"CLUSTER_NAME":        DockerProps.ClusterName,
 		"DOCKER_NETWORK_NAME": DockerProps.NetworkName,
 		"DOCKER_PODVM_IMAGE":  DockerProps.PodvmImage,

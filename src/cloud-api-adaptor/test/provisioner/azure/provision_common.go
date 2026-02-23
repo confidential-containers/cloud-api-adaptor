@@ -281,11 +281,11 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 	}
 
 	// Fetch aks-rg details
-	aks_rg := *cluster.Properties.NodeResourceGroup
+	aksRg := *cluster.Properties.NodeResourceGroup
 
 	// Fetch default vnet name
 	vnetName := ""
-	pager := AzureProps.ManagedVnetClient.NewListPager(aks_rg, nil)
+	pager := AzureProps.ManagedVnetClient.NewListPager(aksRg, nil)
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
@@ -296,7 +296,7 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 		}
 	}
 
-	virtualNetwork, err := AzureProps.ManagedVnetClient.Get(ctx, aks_rg, vnetName, nil)
+	virtualNetwork, err := AzureProps.ManagedVnetClient.Get(ctx, aksRg, vnetName, nil)
 	if err != nil {
 		return fmt.Errorf("failed to fetch vnet: %q: %v", vnetName, err)
 	}

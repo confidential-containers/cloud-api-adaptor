@@ -255,25 +255,25 @@ func TestLibvirtCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *t
 
 func TestLibvirtCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := getLibvirtAssert(t)
-	DoTestPodWithCpuMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "1792Mi")
+	DoTestPodWithCPUMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "1792Mi")
 }
 
-func TestLibvirtPodVMwithAnnotationsCPUMemory(t *testing.T) {
+func TestLibvirtPodVMWithAnnotationsCPUMemory(t *testing.T) {
 	assert := getLibvirtAssert(t)
-	DoTestPodVMwithAnnotationsCPUMemory(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(2, 12288))
+	DoTestPodVMWithAnnotationsCPUMemory(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(2, 12288))
 }
 
-func TestLibvirtPodVMwithAnnotationCPU(t *testing.T) {
+func TestLibvirtPodVMWithAnnotationCPU(t *testing.T) {
 	assert := getLibvirtAssert(t)
-	DoTestPodVMwithAnnotationCPU(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(4, libvirt.DefaultMemory))
+	DoTestPodVMWithAnnotationCPU(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(4, libvirt.DefaultMemory))
 }
 
-func TestLibvirtPodVMwithAnnotationMemory(t *testing.T) {
+func TestLibvirtPodVMWithAnnotationMemory(t *testing.T) {
 	assert := getLibvirtAssert(t)
-	DoTestPodVMwithAnnotationMemory(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(libvirt.DefaultCPU, 7168))
+	DoTestPodVMWithAnnotationMemory(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(libvirt.DefaultCPU, 7168))
 }
 
-func TestLibvirtPodVMwithNoAnnotations(t *testing.T) {
+func TestLibvirtPodVMWithNoAnnotations(t *testing.T) {
 	assert := getLibvirtAssert(t)
 	DoTestPodVMwithNoAnnotations(t, testEnv, assert, CreateInstanceProfileFromCPUMemory(libvirt.DefaultCPU, libvirt.DefaultMemory))
 }

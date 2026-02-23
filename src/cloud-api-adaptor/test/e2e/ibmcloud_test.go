@@ -200,11 +200,11 @@ func TestPodVMwithAnnotationsInstanceType(t *testing.T) {
 	DoTestPodVMwithAnnotationsInstanceType(t, testEnv, assert, GetIBMInstanceProfileType("c", "2x4"))
 }
 
-func TestPodVMwithAnnotationsCPUMemory(t *testing.T) {
+func TestPodVMWithAnnotationsCPUMemory(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
-	DoTestPodVMwithAnnotationsCPUMemory(t, testEnv, assert, GetIBMInstanceProfileType("m", "2x16"))
+	DoTestPodVMWithAnnotationsCPUMemory(t, testEnv, assert, GetIBMInstanceProfileType("m", "2x16"))
 }
 
 func TestPodVMwithAnnotationsInvalidInstanceType(t *testing.T) {

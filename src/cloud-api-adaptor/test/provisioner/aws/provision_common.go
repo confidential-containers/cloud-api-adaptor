@@ -55,10 +55,10 @@ type AMIImage struct {
 	Description     string // Image description
 	DiskDescription string // Disk description
 	DiskFormat      string // Disk format
-	EBSSnapshotId   string // EBS disk snapshot ID
+	EBSSnapshotID   string // EBS disk snapshot ID
 	ID              string // AMI image ID
 	RootDeviceName  string // Root device name
-	VmImportRole    string // vmimport role name
+	VMImportRole    string // vmimport role name
 }
 
 // Vpc represents an AWS VPC
@@ -67,12 +67,12 @@ type Vpc struct {
 	CidrBlock         string
 	Client            *ec2.Client
 	ID                string
-	InternetGatewayId string
+	InternetGatewayID string
 	Region            string
-	RouteTableId      string
-	SecurityGroupId   string
-	SubnetId          string
-	SecondarySubnetId string
+	RouteTableID      string
+	SecurityGroupID   string
+	SubnetID          string
+	SecondarySubnetID string
 }
 
 // Cluster defines create/delete/access interfaces to Kubernetes clusters
@@ -92,7 +92,7 @@ type EKSCluster struct {
 	NodeGroupName   string
 	NodesRoleName   string
 	NumWorkers      int32
-	SshKpName       string
+	SSHKpName       string
 	Version         string
 	Vpc             *Vpc
 }
@@ -118,7 +118,7 @@ type AWSProvisioner struct {
 	PublicIP           string
 	TunnelType         string
 	VxlanPort          string
-	SshKpName          string
+	SSHKpName          string
 	PeerpodsSecretName string
 }
 
@@ -188,7 +188,7 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 		PublicIP:           properties["use_public_ip"],
 		TunnelType:         properties["tunnel_type"],
 		VxlanPort:          properties["vxlan_port"],
-		SshKpName:          properties["ssh_kp_name"],
+		SSHKpName:          properties["ssh_kp_name"],
 		PeerpodsSecretName: properties["peerpods_secret_name"],
 	}
 
@@ -221,24 +221,24 @@ func (a *AWSProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) err
 		log.Infof("VPC Id: %s", a.Vpc.ID)
 	}
 
-	if a.Vpc.SubnetId == "" {
+	if a.Vpc.SubnetID == "" {
 		log.Infof("Create subnet on VPC %s", a.Vpc.ID)
 		if err = a.Vpc.createSubnet(); err != nil {
 			return err
 		}
-		log.Infof("Subnet Id: %s", a.Vpc.SubnetId)
+		log.Infof("Subnet Id: %s", a.Vpc.SubnetID)
 
 		if err = a.Vpc.setupVpcNetworking(); err != nil {
 			return err
 		}
 	}
 
-	if a.Vpc.SecurityGroupId == "" {
+	if a.Vpc.SecurityGroupID == "" {
 		log.Infof("Create security group on VPC %s", a.Vpc.ID)
 		if err = a.Vpc.setupSecurityGroup(); err != nil {
 			return err
 		}
-		log.Infof("Security groupd Id: %s", a.Vpc.SecurityGroupId)
+		log.Infof("Security groupd Id: %s", a.Vpc.SecurityGroupID)
 	}
 
 	return nil
@@ -252,15 +252,15 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 	var err error
 	vpc := a.Vpc
 
-	if vpc.SubnetId != "" {
-		log.Infof("Delete subnet: %s", vpc.SubnetId)
+	if vpc.SubnetID != "" {
+		log.Infof("Delete subnet: %s", vpc.SubnetID)
 		if err = vpc.deleteSubnet(); err != nil {
 			return err
 		}
 	}
 
-	if vpc.SecurityGroupId != "" {
-		log.Infof("Delete security group: %s", vpc.SecurityGroupId)
+	if vpc.SecurityGroupID != "" {
+		log.Infof("Delete security group: %s", vpc.SecurityGroupID)
 		if err = vpc.deleteSecurityGroup(); err != nil {
 			return err
 		}
@@ -273,7 +273,7 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 		}
 	}
 
-	if a.Image.ID != "" || a.Image.EBSSnapshotId != "" {
+	if a.Image.ID != "" || a.Image.EBSSnapshotID != "" {
 		if err = a.Image.deregisterImage(); err != nil {
 			return err
 		}
@@ -281,13 +281,13 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 
 	// Delete the vmimport role if it exists
 	_, err = a.iamClient.GetRole(context.TODO(), &iam.GetRoleInput{
-		RoleName: aws.String(a.Image.VmImportRole),
+		RoleName: aws.String(a.Image.VMImportRole),
 	})
 	if err == nil {
-		log.Infof("Delete VM import role: %s", a.Image.VmImportRole)
+		log.Infof("Delete VM import role: %s", a.Image.VMImportRole)
 		// First delete the role policy
 		_, err = a.iamClient.DeleteRolePolicy(context.TODO(), &iam.DeleteRolePolicyInput{
-			RoleName:   aws.String(a.Image.VmImportRole),
+			RoleName:   aws.String(a.Image.VMImportRole),
 			PolicyName: aws.String("vmimport"),
 		})
 		if err != nil {
@@ -296,7 +296,7 @@ func (a *AWSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) err
 
 		// Then delete the role
 		_, err = a.iamClient.DeleteRole(context.TODO(), &iam.DeleteRoleInput{
-			RoleName: aws.String(a.Image.VmImportRole),
+			RoleName: aws.String(a.Image.VMImportRole),
 		})
 		if err != nil {
 			log.Errorf("Failed to delete VM import role: %s", err)
@@ -330,9 +330,9 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"podvm_launchtemplate": "",
 		"podvm_ami":            a.Image.ID,
 		"podvm_instance_type":  "t2.medium",
-		"sg_ids":               a.Vpc.SecurityGroupId, // TODO: what other SG needed?
-		"subnet_id":            a.Vpc.SubnetId,
-		"ssh_kp_name":          a.SshKpName,
+		"sg_ids":               a.Vpc.SecurityGroupID, // TODO: what other SG needed?
+		"subnet_id":            a.Vpc.SubnetID,
+		"ssh_kp_name":          a.SSHKpName,
 		"region":               a.AwsConfig.Region,
 		"resources_basename":   a.Vpc.BaseName,
 		"access_key_id":        credentials.AccessKeyID,
@@ -372,8 +372,8 @@ func (a *AWSProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg 
 	}
 
 	// Create the vmimport role
-	log.Infof("Create vmimport service role: %s", a.Image.VmImportRole)
-	if err = createVmimportServiceRole(ctx, a.iamClient, a.Bucket.Name, a.Image.VmImportRole); err != nil {
+	log.Infof("Create vmimport service role: %s", a.Image.VMImportRole)
+	if err = createVmimportServiceRole(ctx, a.iamClient, a.Bucket.Name, a.Image.VMImportRole); err != nil {
 		return err
 	}
 
@@ -412,10 +412,10 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 		Client:            client,
 		ID:                properties["aws_vpc_id"],
 		Region:            properties["aws_region"],
-		SecurityGroupId:   properties["aws_vpc_sg_id"],
-		SubnetId:          properties["aws_vpc_subnet_id"],
-		InternetGatewayId: properties["aws_vpc_igw_id"],
-		RouteTableId:      properties["aws_vpc_rt_id"],
+		SecurityGroupID:   properties["aws_vpc_sg_id"],
+		SubnetID:          properties["aws_vpc_subnet_id"],
+		InternetGatewayID: properties["aws_vpc_igw_id"],
+		RouteTableID:      properties["aws_vpc_rt_id"],
 	}
 }
 
@@ -446,7 +446,7 @@ func (v *Vpc) createSubnet() error {
 		return err
 	}
 
-	v.SubnetId = *subnet.Subnet.SubnetId
+	v.SubnetID = *subnet.Subnet.SubnetId
 
 	// Allow for instances created on the subnet to have a public IP assigned
 	if _, err = v.Client.ModifySubnetAttribute(context.TODO(),
@@ -454,7 +454,7 @@ func (v *Vpc) createSubnet() error {
 			MapPublicIpOnLaunch: &ec2types.AttributeBooleanValue{
 				Value: aws.Bool(true),
 			},
-			SubnetId: aws.String(v.SubnetId),
+			SubnetId: aws.String(v.SubnetID),
 		}); err != nil {
 		return err
 	}
@@ -463,7 +463,7 @@ func (v *Vpc) createSubnet() error {
 }
 
 func (v *Vpc) createSecondarySubnet() error {
-	if v.SecondarySubnetId != "" {
+	if v.SecondarySubnetID != "" {
 		return nil
 	}
 
@@ -472,7 +472,7 @@ func (v *Vpc) createSecondarySubnet() error {
 	// subnet's AZ don't clash with the primary's.
 	subnets, err := v.Client.DescribeSubnets(context.TODO(),
 		&ec2.DescribeSubnetsInput{
-			SubnetIds: []string{v.SubnetId},
+			SubnetIds: []string{v.SubnetID},
 		})
 	if err != nil {
 		return err
@@ -496,7 +496,7 @@ func (v *Vpc) createSecondarySubnet() error {
 		return err
 	}
 
-	v.SecondarySubnetId = *subnet.Subnet.SubnetId
+	v.SecondarySubnetID = *subnet.Subnet.SubnetId
 
 	return nil
 }
@@ -510,7 +510,7 @@ func (v *Vpc) setupVpcNetworking() error {
 		err       error
 	)
 
-	if v.SubnetId == "" {
+	if v.SubnetID == "" {
 		return fmt.Errorf("Missing subnet Id to setup the VPC %s network\n", v.ID)
 	}
 
@@ -520,7 +520,7 @@ func (v *Vpc) setupVpcNetworking() error {
 		}); err != nil {
 		return err
 	}
-	v.InternetGatewayId = *igwOutput.InternetGateway.InternetGatewayId
+	v.InternetGatewayID = *igwOutput.InternetGateway.InternetGatewayId
 
 	if _, err = v.Client.AttachInternetGateway(context.TODO(),
 		&ec2.AttachInternetGatewayInput{
@@ -547,12 +547,12 @@ func (v *Vpc) setupVpcNetworking() error {
 		return err
 	}
 
-	v.RouteTableId = *rtOutput.RouteTable.RouteTableId
+	v.RouteTableID = *rtOutput.RouteTable.RouteTableId
 
 	if _, err := v.Client.AssociateRouteTable(context.TODO(),
 		&ec2.AssociateRouteTableInput{
 			RouteTableId: rtOutput.RouteTable.RouteTableId,
-			SubnetId:     aws.String(v.SubnetId),
+			SubnetId:     aws.String(v.SubnetID),
 		}); err != nil {
 		return err
 	}
@@ -570,7 +570,7 @@ func (v *Vpc) setupSecurityGroup() error {
 		}); err != nil {
 		return err
 	} else {
-		v.SecurityGroupId = *sgOutput.GroupId
+		v.SecurityGroupID = *sgOutput.GroupId
 	}
 
 	if _, err := v.Client.AuthorizeSecurityGroupIngress(context.TODO(),
@@ -621,7 +621,7 @@ func (v *Vpc) setupSecurityGroup() error {
 					ToPort: aws.Int32(15150),
 				},
 			},
-			GroupId: aws.String(v.SecurityGroupId),
+			GroupId: aws.String(v.SecurityGroupID),
 		}); err != nil {
 		return err
 	}
@@ -641,7 +641,7 @@ func (v *Vpc) setupSecurityGroup() error {
 					ToPort: aws.Int32(6443),
 				},
 			},
-			GroupId: aws.String(v.SecurityGroupId),
+			GroupId: aws.String(v.SecurityGroupID),
 		}); err != nil {
 		return err
 	}
@@ -651,13 +651,13 @@ func (v *Vpc) setupSecurityGroup() error {
 
 // deleteSecurityGroup deletes the security group.
 func (v *Vpc) deleteSecurityGroup() error {
-	if v.SecurityGroupId == "" {
+	if v.SecurityGroupID == "" {
 		return nil
 	}
 
 	if _, err := v.Client.DeleteSecurityGroup(context.TODO(),
 		&ec2.DeleteSecurityGroupInput{
-			GroupId: aws.String(v.SecurityGroupId),
+			GroupId: aws.String(v.SecurityGroupID),
 		}); err != nil {
 		return err
 	}
@@ -668,7 +668,7 @@ func (v *Vpc) deleteSecurityGroup() error {
 // deleteSubnet deletes the subnet. Instances running on the subnet will
 // be terminated before.
 func (v *Vpc) deleteSubnet() error {
-	if v.SubnetId == "" {
+	if v.SubnetID == "" {
 		return nil
 	}
 
@@ -680,7 +680,7 @@ func (v *Vpc) deleteSubnet() error {
 			Filters: []ec2types.Filter{
 				{
 					Name:   aws.String("subnet-id"),
-					Values: []string{v.SubnetId},
+					Values: []string{v.SubnetID},
 				},
 			},
 		})
@@ -689,25 +689,25 @@ func (v *Vpc) deleteSubnet() error {
 	}
 
 	// Getting the instances IDs
-	instanceIds := make([]string, 0)
+	instanceIDs := make([]string, 0)
 	for _, reservation := range describeInstances.Reservations {
 		for _, instance := range reservation.Instances {
-			instanceIds = append(instanceIds, *instance.InstanceId)
+			instanceIDs = append(instanceIDs, *instance.InstanceId)
 		}
 	}
 
-	if len(instanceIds) > 0 {
+	if len(instanceIDs) > 0 {
 		// Delete all instances in a single step
 		if _, err = v.Client.TerminateInstances(context.TODO(),
 			&ec2.TerminateInstancesInput{
-				InstanceIds: instanceIds,
+				InstanceIds: instanceIDs,
 			}); err != nil {
 			return err
 		}
 		// Wait them to terminate
 		waiter := ec2.NewInstanceTerminatedWaiter(v.Client)
 		if err = waiter.Wait(context.TODO(), &ec2.DescribeInstancesInput{
-			InstanceIds: instanceIds,
+			InstanceIds: instanceIDs,
 		}, time.Minute*5); err != nil {
 			return err
 		}
@@ -716,7 +716,7 @@ func (v *Vpc) deleteSubnet() error {
 	// Finally delete the subnet
 	if _, err = v.Client.DeleteSubnet(context.TODO(),
 		&ec2.DeleteSubnetInput{
-			SubnetId: aws.String(v.SubnetId),
+			SubnetId: aws.String(v.SubnetID),
 		}); err != nil {
 		return err
 	}
@@ -734,27 +734,27 @@ func (v *Vpc) deleteVpc() error {
 	}
 
 	// Delete the networking resources first
-	if v.RouteTableId != "" {
+	if v.RouteTableID != "" {
 		if _, err = v.Client.DeleteRouteTable(context.TODO(),
 			&ec2.DeleteRouteTableInput{
-				RouteTableId: aws.String(v.RouteTableId),
+				RouteTableId: aws.String(v.RouteTableID),
 			}); err != nil {
 			return err
 		}
 	}
 
 	// The internet gateway time
-	if v.InternetGatewayId != "" {
+	if v.InternetGatewayID != "" {
 		if _, err = v.Client.DetachInternetGateway(context.TODO(),
 			&ec2.DetachInternetGatewayInput{
-				InternetGatewayId: aws.String(v.InternetGatewayId),
+				InternetGatewayId: aws.String(v.InternetGatewayID),
 				VpcId:             aws.String(v.ID),
 			}); err != nil {
 			return err
 		}
 		if _, err = v.Client.DeleteInternetGateway(context.TODO(),
 			&ec2.DeleteInternetGatewayInput{
-				InternetGatewayId: aws.String(v.InternetGatewayId),
+				InternetGatewayId: aws.String(v.InternetGatewayID),
 			}); err != nil {
 			return err
 		}
@@ -944,10 +944,10 @@ func NewAMIImage(client *ec2.Client, properties map[string]string) *AMIImage {
 		Description:     "Peer Pod VM image",
 		DiskDescription: "Peer Pod VM disk",
 		DiskFormat:      "RAW",
-		EBSSnapshotId:   "", // To be defined when the snapshot is created
+		EBSSnapshotID:   "", // To be defined when the snapshot is created
 		ID:              properties["podvm_aws_ami_id"],
 		RootDeviceName:  "/dev/xvda",
-		VmImportRole:    properties["resources_basename"] + "-vmimport",
+		VMImportRole:    properties["resources_basename"] + "-vmimport",
 	}
 }
 
@@ -964,7 +964,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 				S3Key:    aws.String(bucket.Key),
 			},
 		},
-		RoleName:          aws.String(i.VmImportRole),
+		RoleName:          aws.String(i.VMImportRole),
 		TagSpecifications: defaultTagSpecifications(i.BaseName+"-snap", ec2types.ResourceTypeImportSnapshotTask),
 	})
 	if err != nil {
@@ -988,11 +988,11 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 		return err
 	}
 	taskDetail := describeTasks.ImportSnapshotTasks[0].SnapshotTaskDetail
-	i.EBSSnapshotId = *taskDetail.SnapshotId
+	i.EBSSnapshotID = *taskDetail.SnapshotId
 
 	// Let's warn but ignore any tagging error
 	if _, err = i.Client.CreateTags(context.TODO(), &ec2.CreateTagsInput{
-		Resources: []string{i.EBSSnapshotId},
+		Resources: []string{i.EBSSnapshotID},
 		Tags: []ec2types.Tag{
 			{
 				Key:   aws.String("Name"),
@@ -1000,7 +1000,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 			},
 		},
 	}); err != nil {
-		log.Warnf("Failed to tag EBS snapshot %s: %v", i.EBSSnapshotId, err)
+		log.Warnf("Failed to tag EBS snapshot %s: %v", i.EBSSnapshotID, err)
 	}
 
 	return nil
@@ -1009,7 +1009,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 // registerImage Registers an AMI image
 func (i *AMIImage) registerImage(imageName string) error {
 
-	if i.EBSSnapshotId == "" {
+	if i.EBSSnapshotID == "" {
 		return fmt.Errorf("EBS Snapshot ID not found\n")
 	}
 
@@ -1020,7 +1020,7 @@ func (i *AMIImage) registerImage(imageName string) error {
 			DeviceName: aws.String(i.RootDeviceName),
 			Ebs: &ec2types.EbsBlockDevice{
 				DeleteOnTermination: aws.Bool(true),
-				SnapshotId:          aws.String(i.EBSSnapshotId),
+				SnapshotId:          aws.String(i.EBSSnapshotID),
 			},
 		}},
 		Description:        aws.String(i.Description),
@@ -1053,10 +1053,10 @@ func (i *AMIImage) deregisterImage() error {
 	}
 
 	// Removing the EBS snapshot
-	if i.EBSSnapshotId != "" {
-		log.Infof("Delete Snapshot ID: %s", i.EBSSnapshotId)
+	if i.EBSSnapshotID != "" {
+		log.Infof("Delete Snapshot ID: %s", i.EBSSnapshotID)
 		_, err = i.Client.DeleteSnapshot(context.TODO(), &ec2.DeleteSnapshotInput{
-			SnapshotId: aws.String(i.EBSSnapshotId),
+			SnapshotId: aws.String(i.EBSSnapshotID),
 		})
 		if err != nil {
 			log.Errorf("Failed to delete snapshot: %s", err)
@@ -1124,10 +1124,10 @@ func ConvertQcow2ToRaw(qcow2 string, raw string) error {
 
 // createCredentialFile Creates the AWS credential file in the install overlay directory
 // that's used by kustomize the setup CAA. The session_token parameter is optional.
-func createCredentialFile(dir, access_key_id, secret_access_key, session_token string) error {
-	content := fmt.Sprintf("AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n", access_key_id, secret_access_key)
-	if session_token != "" {
-		content += fmt.Sprintf("AWS_SESSION_TOKEN=%s\n", session_token)
+func createCredentialFile(dir, accessKeyID, secretAccessKey, sessionToken string) error {
+	content := fmt.Sprintf("AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n", accessKeyID, secretAccessKey)
+	if sessionToken != "" {
+		content += fmt.Sprintf("AWS_SESSION_TOKEN=%s\n", sessionToken)
 	}
 	err := os.WriteFile(filepath.Join(dir, AwsCredentialsFile), []byte(content), 0666)
 	if err != nil {
@@ -1341,7 +1341,7 @@ func createRoleAndAttachPolicy(client *iam.Client, roleName string, trustPolicy 
 // It requires a AWS configuration with access and authentication information, a
 // VPC already instantiated and with a public subnet, and an EC2 SSH key-pair used
 // to access the cluster's worker nodes.
-func NewEKSCluster(cfg aws.Config, vpc *Vpc, SshKpName string) *EKSCluster {
+func NewEKSCluster(cfg aws.Config, vpc *Vpc, SSHKpName string) *EKSCluster {
 	name := "peer-pods-test-k8s"
 	return &EKSCluster{
 		AwsConfig:       cfg,
@@ -1352,7 +1352,7 @@ func NewEKSCluster(cfg aws.Config, vpc *Vpc, SshKpName string) *EKSCluster {
 		NodeGroupName:   name + "-nodegrp",
 		NodesRoleName:   "CaaEksNodesRole",
 		NumWorkers:      1,
-		SshKpName:       SshKpName,
+		SSHKpName:       SSHKpName,
 		Version:         EksVersion,
 		Vpc:             vpc,
 	}
@@ -1377,12 +1377,12 @@ func (e *EKSCluster) CreateCluster() error {
 		return err
 	}
 
-	if e.Vpc.SecondarySubnetId == "" {
+	if e.Vpc.SecondarySubnetID == "" {
 		log.Info("Create a secondary subnet for EKS")
 		if err = e.Vpc.createSecondarySubnet(); err != nil {
 			return err
 		}
-		log.Infof("Secondary subnet Id: %s", e.Vpc.SecondarySubnetId)
+		log.Infof("Secondary subnet Id: %s", e.Vpc.SecondarySubnetID)
 	}
 
 	log.Infof("Creating the EKS cluster: %s ...", e.Name)
@@ -1391,7 +1391,7 @@ func (e *EKSCluster) CreateCluster() error {
 			Name:    aws.String(e.Name),
 			Version: aws.String(e.Version),
 			ResourcesVpcConfig: &ekstypes.VpcConfigRequest{
-				SubnetIds: []string{e.Vpc.SubnetId, e.Vpc.SecondarySubnetId},
+				SubnetIds: []string{e.Vpc.SubnetID, e.Vpc.SecondarySubnetID},
 			},
 			RoleArn: aws.String(roleArn),
 		})
@@ -1419,12 +1419,12 @@ func (e *EKSCluster) CreateCluster() error {
 			NodegroupName: aws.String(e.NodeGroupName),
 			// Let's simplify and create the nodes only on the public subnet so that it
 			// doesn't need to configure Amazon ECR for pulling container images.
-			Subnets:       []string{e.Vpc.SubnetId},
+			Subnets:       []string{e.Vpc.SubnetID},
 			AmiType:       ekstypes.AMITypesAl2X8664,
 			CapacityType:  ekstypes.CapacityTypesOnDemand,
 			InstanceTypes: []string{"t3.medium"},
 			RemoteAccess: &ekstypes.RemoteAccessConfig{
-				Ec2SshKey: aws.String(e.SshKpName),
+				Ec2SshKey: aws.String(e.SSHKpName),
 			},
 			ScalingConfig: &ekstypes.NodegroupScalingConfig{
 				DesiredSize: aws.Int32(e.NumWorkers),

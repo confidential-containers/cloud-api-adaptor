@@ -32,11 +32,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
-const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
-const INITDATA_ANNOTATION = "io.katacontainers.config.hypervisor.cc_init_data"
+const WaitDeploymentAvailableTimeout = time.Second * 180
+const InitdataAnnotation = "io.katacontainers.config.hypervisor.cc_init_data"
 
-const POLICY = `package agent_policy
+const Policy = `package agent_policy
 
 import future.keywords.in
 import future.keywords.every
@@ -111,7 +110,7 @@ func buildInitdataAnnotation(kbsEndpoint string) (string, error) {
 	params := initdataParams{
 		CoCoASURL: kbsEndpoint,
 		KBSURL:    kbsEndpoint,
-		Policy:    POLICY,
+		Policy:    Policy,
 	}
 
 	if strings.HasPrefix(kbsEndpoint, "https") {
@@ -223,7 +222,7 @@ func WithCommand(command []string) PodOption {
 	}
 }
 
-func WithCpuMemRequestAndLimit(cpuRequest, memRequest, cpuLimit, memLimit string) PodOption {
+func WithCPUMemRequestAndLimit(cpuRequest, memRequest, cpuLimit, memLimit string) PodOption {
 	// If any of the parameters is empty, don't set it
 	return func(p *corev1.Pod) {
 		p.Spec.Containers[0].Resources = corev1.ResourceRequirements{
@@ -310,7 +309,7 @@ func WithInitdata(kbsEndpoint string) PodOption {
 		if p.Annotations == nil {
 			p.Annotations = make(map[string]string)
 		}
-		key := INITDATA_ANNOTATION
+		key := InitdataAnnotation
 		value, err := buildInitdataAnnotation(kbsEndpoint)
 		if err != nil {
 			log.Fatalf("failed to build initdata %s", err)
@@ -456,7 +455,7 @@ func NewBusyboxPodWithNameWithInitdata(namespace, podName string, kbsEndpoint st
 		return fromError(err)
 	}
 	annotationData := map[string]string{
-		INITDATA_ANNOTATION: initdata,
+		InitdataAnnotation: initdata,
 	}
 	busyboxImage, err := utils.GetImage("busybox")
 	if err != nil {
@@ -600,7 +599,7 @@ func WaitForClusterIP(t *testing.T, client klient.Client, svc *v1.Service) strin
 			log.Printf("Current service: %v", svcObj)
 			return false
 		}
-	}), wait.WithTimeout(WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT)); err != nil {
+	}), wait.WithTimeout(WaitDeploymentAvailableTimeout)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -641,6 +640,6 @@ type CloudAssert interface {
 
 // RollingUpdateAssert defines assertions for rolling update test
 type RollingUpdateAssert interface {
-	CachePodVmIDs(t *testing.T, deploymentName string) // Cache Pod VM IDs before rolling update
-	VerifyOldVmDeleted(t *testing.T)                   // Verify old Pod VMs have been deleted
+	CachePodVMIDs(t *testing.T, deploymentName string) // Cache Pod VM IDs before rolling update
+	VerifyOldVMDeleted(t *testing.T)                   // Verify old Pod VMs have been deleted
 }
