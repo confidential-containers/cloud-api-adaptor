@@ -49,6 +49,29 @@ installGolang() {
     mkdir -p $HOME/go
 }
 
+installHelm() {
+    local version
+    local checksum
+    local goarch
+
+    version="$(yq -e -r '.tools.helm.version' versions.yaml)"
+    checksum="$(yq -e -r '.tools.helm.sha256' versions.yaml)"
+
+    goarch="$(uname -m)"
+    [ "${goarch}" = "x86_64" ] && goarch="amd64"
+
+    if ! command -v "helm" > /dev/null; then
+        echo "Installing helm"
+        pushd /tmp
+        curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${version}-linux-${goarch}.tar.gz"
+        echo "${checksum}  helm.tar.gz" | sha256sum --check --strict
+        tar -xzf helm.tar.gz
+        sudo mv "linux-${goarch}/helm" /usr/local/bin/helm
+        rm -rf helm.tar.gz "linux-${goarch}"
+        popd
+    fi
+}
+
 installLibvirt() {
     if [ $OS_DISTRO == "rhel" ]; then
         echo "install required packages for rhel"
@@ -101,6 +124,8 @@ installK8sclis() {
 
 echo "Installing Go..."
 installGolang
+echo "Installing helm..."
+installHelm
 echo "Installing Libvirt..."
 installLibvirt
 echo "Installing kcli..."
@@ -111,19 +136,16 @@ installK8sclis
 # kcli needs a pair of keys to setup the VMs
 [ -f $HOME/.ssh/id_rsa ] || ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -N ""
 
-pushd install/overlays/libvirt
-cp $HOME/.ssh/id_rsa* .
-cat id_rsa.pub >> $HOME/.ssh/authorized_keys
+cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
 chmod 600 $HOME/.ssh/authorized_keys
 
 echo "Verifing libvirt connection..."
 IP="$(hostname -I | cut -d' ' -f1)"
-virsh -c "qemu+ssh://${USER}@${IP}/system?keyfile=$(pwd)/id_rsa&no_verify=1" nodeinfo
-popd
+virsh -c "qemu+ssh://${USER}@${IP}/system?keyfile=${HOME}/.ssh/id_rsa&no_verify=1" nodeinfo
 
 rm -f libvirt.properties
 echo "libvirt_uri=\"qemu+ssh://${USER}@${IP}/system?no_verify=1\"" >> libvirt.properties
-echo "libvirt_ssh_key_file=\"id_rsa\"" >> libvirt.properties
+echo "libvirt_ssh_key_file=\"${HOME}/.ssh/id_rsa\"" >> libvirt.properties
 echo "CLUSTER_NAME=\"peer-pods\"" >> libvirt.properties
 
 if [[ "${OS_DISTRO}" == "ubuntu" ]] && [[ "${CI:-}" != "true" ]]; then

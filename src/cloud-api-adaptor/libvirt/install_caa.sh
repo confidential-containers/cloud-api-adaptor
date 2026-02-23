@@ -90,25 +90,28 @@ main() {
 
 	label_workers
 
-	local kustomization_file="$script_dir/../install/overlays/libvirt/kustomization.yaml"
-	if [ ! -f "$kustomization_file" ]; then
-		echo "ERROR: kustomization file not found: $kustomization_file"
+	local values_file="$script_dir/../install/charts/peerpods/providers/libvirt.yaml"
+	if [ ! -f "$values_file" ]; then
+		echo "ERROR: kustomization file not found: $values_file"
 		exit 1
 	fi
 
 	[ "$LIBVIRT_NET" == "default" ] || \
-		sed -i -e 's/\(\s\+-\sLIBVIRT_NET=\).*/\1"'"${LIBVIRT_NET}"'"/' \
-		"$kustomization_file"
+		sed -i -e 's/\(\s\+\)#\s\(LIBVIRT_NET: \).*/\1\2"'"${LIBVIRT_NET}"'"/' \
+		"$values_file"
 	[ "$LIBVIRT_POOL" == "default" ] || \
-		sed -i -e 's/\(\s\+-\sLIBVIRT_POOL=\).*/\1"'"${LIBVIRT_POOL}"'"/' \
-		"$kustomization_file"
+		sed -i -e 's/\(\s\+\)#\s\(LIBVIRT_POOL: \).*/\1\2"'"${LIBVIRT_POOL}"'"/' \
+		"$values_file"
 	[ "$SSH_KEY_FILE" == "default" ] || \
-		sed -i -e 's@\(\s\+\)#\?- id_rsa.*@\1- '"$SSH_KEY_FILE"'@' \
-		"$kustomization_file"
+		{
+		printf '%s\n' 'providerSecrets:' '  libvirt:' '    id_rsa: |'
+		sed 's/^/      /' "${SSH_KEY_FILE}"
+		} > "$script_dir/../install/charts/peerpods/providers/libvirt-secrets.yaml"
 
 	local libvirt_uri="qemu+ssh://${LIBVIRT_USER}@${LIBVIRT_IP}/system?no_verify=1"
-	sed -i -e 's#\(\s\+- LIBVIRT_URI=\).*#\1"'"${libvirt_uri}"'"#' \
-		"$kustomization_file"
+	sed -i -e 's!\(\s\+\)#\s\(LIBVIRT_URI: \).*!\1\2"'"${libvirt_uri}"'"!' \
+		-e 's/libvirt: {}/libvirt:/' \
+		"$values_file"
 
 	# Finally install the operator
 	(cd "$script_dir/.." && make CLOUD_PROVIDER=libvirt deploy)

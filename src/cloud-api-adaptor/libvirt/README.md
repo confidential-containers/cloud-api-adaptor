@@ -16,6 +16,7 @@ You must have a Linux/KVM system with libvirt installed and the following tools:
 - [kubectl](https://kubernetes.io/docs/reference/kubectl/)
 - [kcli](https://kcli.readthedocs.io/en/latest/)
 - [go](https://github.com/golang/go)
+- [helm](https://helm.sh)
 
 To configure the basic set of tools one can use
 [config_libvirt.sh](config_libvirt.sh) script (tested on Ubuntu 20.04
@@ -93,29 +94,43 @@ Allocation:     631.52 MiB
 # Install and configure Confidential Containers and cloud-api-adaptor in the cluster
 
 The easiest way to install the cloud-api-adaptor along with Confidential
-Containers in the cluster is through the Kubernetes operator
-[`install_operator.sh`](./install_operator.sh) script.
+Containers in the cluster is through the [`install_caa.sh`](./install_caa.sh)
+script.
 
 If you need to set any non-default parameter, please run the script with the
 `--help` option.
 
 ```
-$ export SSH_KEY_FILE="id_rsa"
-$ ./libvirt/install_operator.sh
+$ export SSH_KEY_FILE="${HOME}/.ssh/id_rsa"
+$ ./libvirt/install_caa.sh
 ```
 
-If everything goes well you will be able to see the operator's controller manager and cloud-api-adaptor Pods running:
+If everything goes well you will be able to see the kata-deploy and cloud-api-adaptor Pods running:
 
 ```
 $ kubectl get pods -n confidential-containers-system
 NAME                                              READY   STATUS    RESTARTS   AGE
-cc-operator-controller-manager-5df7584679-5dbmr   2/2     Running   0          3m58s
-cloud-api-adaptor-daemonset-vgj2s                 1/1     Running   0          3m57s
-$ kubectl logs pod/cloud-api-adaptor-daemonset-vgj2s -n confidential-containers-system
-+ exec cloud-api-adaptor libvirt -uri 'qemu+ssh://wmoschet@192.168.122.1/system?no_verify=1' -data-dir /opt/data-dir -pods-dir /run/peerpod/pods -network-name default -pool-name default -socket /run/peerpod/hypervisor.sock
-2022/11/09 18:18:00 [helper/hypervisor] hypervisor config {/run/peerpod/hypervisor.sock  registry.k8s.io/pause:3.7 /run/peerpod/pods libvirt}
-2022/11/09 18:18:00 [helper/hypervisor] cloud config {qemu+ssh://wmoschet@192.168.122.1/system?no_verify=1 default default /opt/data-dir}
-2022/11/09 18:18:00 [helper/hypervisor] service config &{qemu+ssh://wmoschet@192.168.122.1/system?no_verify=1 default default /opt/data-dir}
+cloud-api-adaptor-daemonset-72xm5                 1/1     Running   0          3m39s
+kata-deploy-mbc6c                                 1/1     Running   0          3m39s
+peerpodctrl-controller-manager-74b5bb8c8b-76glp   2/2     Running   0          3m39s
+$ kubectl logs -l app=cloud-api-adaptor -n confidential-containers-system --tail=-1
++ exec cloud-api-adaptor libvirt -data-dir /opt/data-dir
+2026/02/23 17:31:13 [adaptor/cloud] Cloud provider external plugin loading is disabled, skipping plugin loading
+2026/02/23 17:31:13 [adaptor/cloud/libvirt] libvirt config: &libvirt.Config{URI:"qemu+ssh://wmoschet@192.168.122.1/system?no_verify=1", PoolName:"default", NetworkName:"default", DataDir:"/opt/data-dir", DisableCVM:true, VolName:"podvm-base.qcow2", LaunchSecurity:"", Firmware:"/usr/share/OVMF/OVMF_CODE_4M.fd", CPU:0x2, Memory:0x2000}
+cloud-api-adaptor version v0.17.0-dev
+  commit: b7569dc107c7b36487903641e493c1852056d574
+  go: go1.24.13
+cloud-api-adaptor: starting Cloud API Adaptor daemon for "libvirt"
+2026/02/23 17:31:17 [adaptor/cloud/libvirt] Created libvirt connection
+2026/02/23 17:31:17 [adaptor] server config: &cloud.ServerConfig{TLSConfig:(*tlsutil.TLSConfig)(0xc0003de300), SocketPath:"/run/peerpod/hypervisor.sock", PauseImage:"", PodsDir:"/run/peerpod/pods", ForwarderPort:"15150", ProxyTimeout:300000000000, Initdata:"", EnableCloudConfigVerify:false, PeerPodsLimitPerNode:10, RootVolumeSize:0, EnableScratchSpace:false}
+2026/02/23 17:31:17 [util/k8sops] initialized PeerPodService
+2026/02/23 17:31:17 [probe/probe] Using port: 8000
+2026/02/23 17:31:17 [util/k8sops] set up extended resources
+2026/02/23 17:31:17 [util/k8sops] Successfully set extended resource for node peer-pods-worker-0
+2026/02/23 17:31:17 [adaptor] server started
+2026/02/23 17:31:41 [probe/probe] nodeName: peer-pods-worker-0
+2026/02/23 17:31:41 [probe/probe] Selected pods count: 12
+2026/02/23 17:31:41 [probe/probe] All PeerPods standup. we do not check the PeerPods status any more.
 ```
 
 You will also notice that Kubernetes [*runtimeClass*](https://kubernetes.io/docs/concepts/containers/runtime-class/) resources
@@ -224,86 +239,35 @@ You might want to reinstall the Confidential Containers and cloud-api-adaptor in
 
 1. Delete the Kubernetes cluster entirely and start over. In this case you should just run `./kcli_cluster.sh delete` to
    wipe out the cluster created with kcli
-1. Uninstall the operator resources then install them again with the `install_operator.sh` script
+1. Uninstall the Peerpods helm chart then install them again with the `install_caa.sh` script
 
-Let's show you how to delete the operator resources. On the listing below you can see the actual pods running on
+Let's show you how to delete the helm chart. On the listing below you can see the actual pods running on
 the *confidential-containers-system* namespace:
 
 ```
 $ kubectl get pods -n confidential-containers-system
-NAME                                             READY   STATUS    RESTARTS   AGE
-cc-operator-controller-manager-fbb5dcf9d-h42nn   2/2     Running   0          20h
-cc-operator-daemon-install-fkkzz                 1/1     Running   0          20h
-cloud-api-adaptor-daemonset-libvirt-lxj7v        1/1     Running   0          20h
+NAME                                              READY   STATUS    RESTARTS   AGE
+cloud-api-adaptor-daemonset-z7qwt                 1/1     Running   0          9m34s
+kata-deploy-6hgdq                                 1/1     Running   0          9m34s
+peerpodctrl-controller-manager-74b5bb8c8b-rrsmd   2/2     Running   0          9m34s
 ```
 
-In order to remove the *\*-cloud-api-adaptor-daemonset-\** pod, run the following command from the
+In order to remove all pods, run the following command from the
 root directory:
 
 ```
 $ CLOUD_PROVIDER=libvirt make delete
-
-kubectl delete -k install/overlays/libvirt
-serviceaccount "cloud-api-adaptor" deleted
-clusterrole.rbac.authorization.k8s.io "node-viewer" deleted
-clusterrole.rbac.authorization.k8s.io "peerpod-editor" deleted
-clusterrole.rbac.authorization.k8s.io "pod-viewer" deleted
-clusterrolebinding.rbac.authorization.k8s.io "node-viewer" deleted
-clusterrolebinding.rbac.authorization.k8s.io "peerpod-editor" deleted
-clusterrolebinding.rbac.authorization.k8s.io "pod-viewer" deleted
-configmap "peer-pods-cm" deleted
-secret "peer-pods-secret" deleted
-secret "ssh-key-secret" deleted
-daemonset.apps "cloud-api-adaptor-daemonset" deleted
-```
-
-This can be useful if one needs to update kustomization.yaml. After making changes, one can re-apply the cloud-api-adaptor with:
-```
-kubectl apply -k install/overlays/libvirt/
-```
-
-To delete Confidential Containers, (the ccruntime resource, the cc-operator-daemon-install and cc-operator-pre-install-daemon pods) run:
-
-```
-$ kubectl delete -k "github.com/confidential-containers/operator/config/samples/ccruntime/peer-pods"
-
-ccruntime.confidentialcontainers.org "ccruntime-peer-pods" deleted
-```
-
-It can take some minutes to get those pods deleted. Afterwards you will notice that only the *controller-manager* pod is
-still up. The ccruntime resource will also be deleted. This can be verified with:
-```
-kubectl get ccruntime
-```
-which should return nothing.
-
-To delete the *controller-manager*:
-
-```
-$ kubectl delete -k "github.com/confidential-containers/operator/config/default"
-
-namespace "confidential-containers-system" deleted
-customresourcedefinition.apiextensions.k8s.io "ccruntimes.confidentialcontainers.org" deleted
-serviceaccount "cc-operator-controller-manager" deleted
-role.rbac.authorization.k8s.io "cc-operator-leader-election-role" deleted
-clusterrole.rbac.authorization.k8s.io "cc-operator-manager-role" deleted
-clusterrole.rbac.authorization.k8s.io "cc-operator-metrics-reader" deleted
-clusterrole.rbac.authorization.k8s.io "cc-operator-proxy-role" deleted
-rolebinding.rbac.authorization.k8s.io "cc-operator-leader-election-rolebinding" deleted
-clusterrolebinding.rbac.authorization.k8s.io "cc-operator-manager-rolebinding" deleted
-clusterrolebinding.rbac.authorization.k8s.io "cc-operator-proxy-rolebinding" deleted
-configmap "cc-operator-manager-config" deleted
-service "cc-operator-controller-manager-metrics-service" deleted
-deployment.apps "cc-operator-controller-manager" deleted
+helm uninstall peerpods -n confidential-containers-system
+release "peerpods" uninstalled
 ```
 
 Verify that all pods and the namespace has been destroyed.
 ```
 kubectl get pods -n confidential-containers-system
 ```
-should return nothing. Additionally,
+should return nothing.
 
+This can be useful if one needs to update [install/charts/peerpods/providers/libvirt.yaml](../install/charts/peerpods/providers/libvirt.yaml). After making changes, one can re-apply the cloud-api-adaptor with:
 ```
-kubectl get namespaces
+CLOUD_PROVIDER=libvirt make deploy
 ```
-should show that there is no longer a confidential-containers-system namespace.
