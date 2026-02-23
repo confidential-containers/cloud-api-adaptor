@@ -111,7 +111,7 @@ func generateSSHPublicKey() ([]byte, error) {
 }
 
 func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachine) ([]netip.Addr, error) {
-	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionID, p.azureClient, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create network interfaces client: %w", err)
 	}
@@ -122,9 +122,9 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 	var ipcs []*armnetwork.InterfaceIPConfiguration
 
 	for _, nicRef := range nicRefs {
-		nicId := *nicRef.ID
+		nicID := *nicRef.ID
 		// the last segment of a nic id is the name
-		nicName := nicId[strings.LastIndex(nicId, "/")+1:]
+		nicName := nicID[strings.LastIndex(nicID, "/")+1:]
 		nic, err := nicClient.Get(ctx, rgName, nicName, nil)
 		if err != nil {
 			return nil, fmt.Errorf("get network interface: %w", err)
@@ -134,7 +134,7 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 
 	// we add the public ip addresses as first elements, if available
 	if p.serviceConfig.UsePublicIP {
-		publicIPClient, err := armnetwork.NewPublicIPAddressesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+		publicIPClient, err := armnetwork.NewPublicIPAddressesClient(p.serviceConfig.SubscriptionID, p.azureClient, nil)
 		if err != nil {
 			return nil, fmt.Errorf("create public ip client: %w", err)
 		}
@@ -178,7 +178,7 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 }
 
 func (p *azureProvider) create(ctx context.Context, parameters *armcompute.VirtualMachine) (*armcompute.VirtualMachine, error) {
-	vmClient, err := armcompute.NewVirtualMachinesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	vmClient, err := armcompute.NewVirtualMachinesClient(p.serviceConfig.SubscriptionID, p.azureClient, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating VM client: %w", err)
 	}
@@ -205,19 +205,19 @@ func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMa
 		Name: to.Ptr("ip-config"),
 		Properties: &armcompute.VirtualMachineNetworkInterfaceIPConfigurationProperties{
 			Subnet: &armcompute.SubResource{
-				ID: to.Ptr(p.serviceConfig.SubnetId),
+				ID: to.Ptr(p.serviceConfig.SubnetID),
 			},
 		},
 	}
 
 	if p.serviceConfig.UsePublicIP {
-		publicIpConfig := armcompute.VirtualMachinePublicIPAddressConfiguration{
+		publicIPConfig := armcompute.VirtualMachinePublicIPAddressConfiguration{
 			Name: to.Ptr(nicName),
 			Properties: &armcompute.VirtualMachinePublicIPAddressConfigurationProperties{
 				DeleteOption: to.Ptr(armcompute.DeleteOptionsDelete),
 			},
 		}
-		ipConfig.Properties.PublicIPAddressConfiguration = &publicIpConfig
+		ipConfig.Properties.PublicIPAddressConfiguration = &publicIPConfig
 	}
 
 	config := armcompute.VirtualMachineNetworkInterfaceConfiguration{
@@ -228,9 +228,9 @@ func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMa
 		},
 	}
 
-	if p.serviceConfig.SecurityGroupId != "" {
+	if p.serviceConfig.SecurityGroupID != "" {
 		config.Properties.NetworkSecurityGroup = &armcompute.SubResource{
-			ID: to.Ptr(p.serviceConfig.SecurityGroupId),
+			ID: to.Ptr(p.serviceConfig.SecurityGroupID),
 		}
 	}
 
@@ -276,14 +276,14 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		}
 	}
 
-	imageId := p.serviceConfig.ImageId
+	imageID := p.serviceConfig.ImageID
 
 	if spec.Image != "" {
 		logger.Printf("Choosing %s from annotation as the Azure Image for the PodVM image", spec.Image)
-		imageId = spec.Image
+		imageID = spec.Image
 	}
 
-	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, nicName, imageId)
+	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, nicName, imageID)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +315,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 }
 
 func (p *azureProvider) DeleteInstance(ctx context.Context, instanceID string) error {
-	vmClient, err := armcompute.NewVirtualMachinesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	vmClient, err := armcompute.NewVirtualMachinesClient(p.serviceConfig.SubscriptionID, p.azureClient, nil)
 	if err != nil {
 		return fmt.Errorf("creating VM client: %w", err)
 	}
@@ -348,8 +348,8 @@ func (p *azureProvider) Teardown() error {
 }
 
 func (p *azureProvider) ConfigVerifier() error {
-	imageId := p.serviceConfig.ImageId
-	if len(imageId) == 0 {
+	imageID := p.serviceConfig.ImageID
+	if len(imageID) == 0 {
 		return fmt.Errorf("ImageId is empty")
 	}
 
@@ -374,7 +374,7 @@ func (p *azureProvider) selectInstanceType(ctx context.Context, spec provider.In
 func (p *azureProvider) updateInstanceSizeSpecList() error {
 
 	// Create a new instance of the Virtual Machine Sizes client
-	vmSizesClient, err := armcompute.NewVirtualMachineSizesClient(p.serviceConfig.SubscriptionId, p.azureClient, nil)
+	vmSizesClient, err := armcompute.NewVirtualMachineSizesClient(p.serviceConfig.SubscriptionID, p.azureClient, nil)
 	if err != nil {
 		return fmt.Errorf("creating VM sizes client: %w", err)
 	}
@@ -422,7 +422,7 @@ func (p *azureProvider) getResourceTags() map[string]*string {
 	return tags
 }
 
-func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string, imageId string) (*armcompute.VirtualMachine, error) {
+func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string, imageID string) (*armcompute.VirtualMachine, error) {
 	userDataB64 := base64.StdEncoding.EncodeToString([]byte(cloudConfig))
 
 	// Azure limits the base64 encrypted userData to 64KB.
@@ -457,11 +457,11 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 	}
 
 	imgRef := &armcompute.ImageReference{
-		ID: to.Ptr(imageId),
+		ID: to.Ptr(imageID),
 	}
-	if strings.HasPrefix(imageId, "/CommunityGalleries/") {
+	if strings.HasPrefix(imageID, "/CommunityGalleries/") {
 		imgRef = &armcompute.ImageReference{
-			CommunityGalleryImageID: to.Ptr(imageId),
+			CommunityGalleryImageID: to.Ptr(imageID),
 		}
 	}
 

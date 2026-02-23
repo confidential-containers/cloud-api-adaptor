@@ -115,7 +115,7 @@ func (i *dedicatedHostGroupIDs) Set(value string) error {
 }
 
 type Config struct {
-	ApiKey                   string
+	APIKey                   string
 	IAMProfileID             string
 	CRTokenFileName          string
 	IamServiceURL            string
@@ -143,5 +143,5 @@ type Config struct {
 }
 
 func (c Config) Redact() Config {
-	return *util.RedactStruct(&c, "ApiKey").(*Config)
+	return *util.RedactStruct(&c, "APIKey").(*Config)
 }

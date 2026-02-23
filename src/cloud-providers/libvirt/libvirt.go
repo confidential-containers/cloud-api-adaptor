@@ -66,7 +66,7 @@ func checkDomainExistsByName(name string, libvirtClient *libvirtClient) (exist b
 
 }
 
-func checkDomainExistsById(id uint32, libvirtClient *libvirtClient) (exist bool, err error) {
+func checkDomainExistsByID(id uint32, libvirtClient *libvirtClient) (exist bool, err error) {
 
 	logger.Printf("Checking if instance (%d) exists", id)
 	domain, err := libvirtClient.connection.LookupDomainById(id)
@@ -621,8 +621,8 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 		return nil, fmt.Errorf("Failed to get domain ID: %s", err)
 	}
 
-	v.instanceId = strconv.FormatUint(uint64(id), 10)
-	logger.Printf("VM id %s", v.instanceId)
+	v.instanceID = strconv.FormatUint(uint64(id), 10)
+	logger.Printf("VM id %s", v.instanceID)
 
 	// Wait for sometime for the IP to be visible
 	if err := retry.Do(
@@ -661,7 +661,7 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, id string) 
 	logger.Printf("Deleting instance (%s)", id)
 	idUint, _ := strconv.ParseUint(id, 10, 32)
 	// libvirt API takes uint32
-	exists, err := checkDomainExistsById(uint32(idUint), libvirtClient)
+	exists, err := checkDomainExistsByID(uint32(idUint), libvirtClient)
 	if err != nil {
 		logger.Printf("Unable to check instance (%s)", id)
 		return err

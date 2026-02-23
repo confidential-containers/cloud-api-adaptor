@@ -21,7 +21,7 @@ func (_ *Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
-	reg.StringWithEnv(&ibmcloudVPCConfig.ApiKey, "api-key", "", "IBMCLOUD_API_KEY", "IBM Cloud API key", provider.Secret())
+	reg.StringWithEnv(&ibmcloudVPCConfig.APIKey, "api-key", "", "IBMCLOUD_API_KEY", "IBM Cloud API key", provider.Secret())
 	reg.StringWithEnv(&ibmcloudVPCConfig.IAMProfileID, "iam-profile-id", "", "IBMCLOUD_IAM_PROFILE_ID", "IBM IAM Profile ID", provider.Secret())
 	reg.StringWithEnv(&ibmcloudVPCConfig.IamServiceURL, "iam-service-url", "https://iam.cloud.ibm.com/identity/token", "IBMCLOUD_IAM_ENDPOINT", "IBM Cloud IAM Service URL")
 	reg.StringWithEnv(&ibmcloudVPCConfig.VpcServiceURL, "vpc-service-url", "", "IBMCLOUD_VPC_ENDPOINT", "IBM Cloud VPC Service URL")

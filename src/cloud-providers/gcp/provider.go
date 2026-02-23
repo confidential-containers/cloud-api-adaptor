@@ -128,7 +128,7 @@ func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*c
 	}
 	defer tagValuesClient.Close()
 
-	parent := fmt.Sprintf("projects/%s", p.serviceConfig.ProjectId)
+	parent := fmt.Sprintf("projects/%s", p.serviceConfig.ProjectID)
 	tags := make(map[string]map[string]*crmpb.TagValue)
 
 	it := tagKeysClient.ListTagKeys(ctx, &crmpb.ListTagKeysRequest{Parent: parent})
@@ -182,7 +182,7 @@ func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, 
 
 	// Fallback to ConfigMap project and image name
 	if projectID == "" {
-		projectID = p.serviceConfig.ProjectId
+		projectID = p.serviceConfig.ProjectID
 		parts := strings.Split(image, "/")
 		imageName = parts[len(parts)-1]
 	}
@@ -224,13 +224,13 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	allTagValues := make([]*crmpb.TagValue, 0)
 	for tagKey, tagValue := range p.serviceConfig.Tags {
-		tagId := allTags[tagKey][tagValue]
-		if tagId == nil {
+		tagID := allTags[tagKey][tagValue]
+		if tagID == nil {
 			msg := fmt.Sprintf("Aborting: Tag %s=%s not found", tagKey, tagValue)
 			logger.Print(msg)
 			return nil, fmt.Errorf("%s", msg)
 		}
-		allTagValues = append(allTagValues, tagId)
+		allTagValues = append(allTagValues, tagID)
 	}
 
 	//Convert userData to base64
@@ -244,7 +244,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	if hasAnyPrefix(p.serviceConfig.ImageName, "projects/", "/projects", "https") {
 		srcImage = proto.String(p.serviceConfig.ImageName)
 	} else {
-		srcImage = proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectId, p.serviceConfig.ImageName))
+		srcImage = proto.String(fmt.Sprintf("projects/%s/global/images/%s", p.serviceConfig.ProjectID, p.serviceConfig.ImageName))
 	}
 
 	if spec.Image != "" {
@@ -284,7 +284,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 			zoneParts := strings.Split(p.serviceConfig.Zone, "-")
 			if len(zoneParts) >= 2 {
 				region := strings.Join(zoneParts[:len(zoneParts)-1], "-")
-				formattedSubnetwork := fmt.Sprintf("projects/%s/regions/%s/subnetworks/%s", p.serviceConfig.ProjectId, region, subnetworkName)
+				formattedSubnetwork := fmt.Sprintf("projects/%s/regions/%s/subnetworks/%s", p.serviceConfig.ProjectID, region, subnetworkName)
 				subnetworkValue = proto.String(formattedSubnetwork)
 			} else {
 				// Fallback: assume zone format is invalid, try to use as-is
@@ -368,7 +368,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	}
 
 	insertReq := &computepb.InsertInstanceRequest{
-		Project:          p.serviceConfig.ProjectId,
+		Project:          p.serviceConfig.ProjectID,
 		Zone:             p.serviceConfig.Zone,
 		InstanceResource: instanceResource,
 	}
@@ -390,7 +390,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	}
 
 	getReq := &computepb.GetInstanceRequest{
-		Project:  p.serviceConfig.ProjectId,
+		Project:  p.serviceConfig.ProjectID,
 		Zone:     p.serviceConfig.Zone,
 		Instance: instanceName,
 	}
@@ -412,7 +412,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	}
 	defer tagBindingsClient.Close()
 
-	parent := fmt.Sprintf("//compute.googleapis.com/projects/%s/zones/%s/instances/%d", p.serviceConfig.ProjectId, p.serviceConfig.Zone, gcpInstance.GetId())
+	parent := fmt.Sprintf("//compute.googleapis.com/projects/%s/zones/%s/instances/%d", p.serviceConfig.ProjectID, p.serviceConfig.Zone, gcpInstance.GetId())
 
 	for _, tagValue := range allTagValues {
 		logger.Printf("Creating tag binding for %s on %s", tagValue.Name, parent)
@@ -454,7 +454,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 func (p *gcpProvider) DeleteInstance(ctx context.Context, instanceID string) error {
 	req := &computepb.DeleteInstanceRequest{
-		Project:  p.serviceConfig.ProjectId,
+		Project:  p.serviceConfig.ProjectID,
 		Zone:     p.serviceConfig.Zone,
 		Instance: instanceID,
 	}

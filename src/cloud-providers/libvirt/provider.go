@@ -105,7 +105,7 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		return nil, err
 	}
 
-	instanceID := result.instance.instanceId
+	instanceID := result.instance.instanceID
 
 	logger.Printf("created an instance %s for sandbox %s", result.instance.name, sandboxID)
 

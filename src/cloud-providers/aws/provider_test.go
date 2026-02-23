@@ -168,16 +168,16 @@ func (m mockEC2Client) DescribeAddresses(ctx context.Context,
 	optFns ...func(*ec2.Options)) (*ec2.DescribeAddressesOutput, error) {
 
 	// Return a mock Elastic IP address
-	mockAssociationId := "eipassoc-12345678"
-	mockAllocationId := "eipalloc-12345678"
-	mockPublicIp := "192.168.100.1"
+	mockAssociationID := "eipassoc-12345678"
+	mockAllocationID := "eipalloc-12345678"
+	mockPublicIP := "192.168.100.1"
 
 	return &ec2.DescribeAddressesOutput{
 		Addresses: []types.Address{
 			{
-				AssociationId: &mockAssociationId,
-				AllocationId:  &mockAllocationId,
-				PublicIp:      &mockPublicIp,
+				AssociationId: &mockAssociationID,
+				AllocationId:  &mockAllocationID,
+				PublicIp:      &mockPublicIP,
 				InstanceId:    aws.String("i-1234567890abcdef0"),
 			},
 		},
@@ -269,11 +269,11 @@ var serviceConfig = &Config{
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
-	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
+	SecurityGroupIDs: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "ami-1234567890abcdef0",
+	ImageID: "ami-1234567890abcdef0",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{"t2.small", "t2.medium"},
 }
@@ -284,11 +284,11 @@ var serviceConfigPublicIP = &Config{
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
-	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
+	SecurityGroupIDs: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "ami-1234567890abcdef0",
+	ImageID: "ami-1234567890abcdef0",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{"t2.small", "t2.medium"},
 	// Add public IP to serviceConfig
@@ -301,11 +301,11 @@ var serviceConfigInvalidInstanceType = &Config{
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
-	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
+	SecurityGroupIDs: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "ami-1234567890abcdef0",
+	ImageID: "ami-1234567890abcdef0",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{"t2.large", "t2.medium"},
 }
@@ -316,26 +316,26 @@ var serviceConfigEmptyInstanceTypes = &Config{
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
-	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
+	SecurityGroupIDs: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "ami-1234567890abcdef0",
+	ImageID: "ami-1234567890abcdef0",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{},
 }
 
 // Create a serviceConfig with empty ImageId
-var serviceConfigEmptyImageId = &Config{
+var serviceConfigEmptyImageID = &Config{
 	Region: "us-east-1",
 	// Add instance type to serviceConfig
 	InstanceType: "t2.small",
 	// Add subnet ID to serviceConfig
-	SubnetId: "subnet-1234567890abcdef0",
+	SubnetID: "subnet-1234567890abcdef0",
 	// Add security group ID to serviceConfig
-	SecurityGroupIds: []string{"sg-1234567890abcdef0"},
+	SecurityGroupIDs: []string{"sg-1234567890abcdef0"},
 	// Add image ID to serviceConfig
-	ImageId: "",
+	ImageID: "",
 	// Add InstanceTypes to serviceConfig
 	InstanceTypes: []string{"t2.large", "t2.medium"},
 }
@@ -702,7 +702,7 @@ func TestConfigVerifier(t *testing.T) {
 		{
 			name: "checkInvalidImageId",
 			fields: fields{
-				serviceConfig: serviceConfigEmptyImageId,
+				serviceConfig: serviceConfigEmptyImageID,
 			},
 			// Test should return an error
 			wantErr: true,

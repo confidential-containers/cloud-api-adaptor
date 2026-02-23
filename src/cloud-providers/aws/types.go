@@ -37,17 +37,17 @@ func (i *instanceTypes) Set(value string) error {
 }
 
 type Config struct {
-	AccessKeyId          string
+	AccessKeyID          string
 	SecretKey            string
 	SessionToken         string
 	Region               string
 	LoginProfile         string
 	LaunchTemplateName   string
-	ImageId              string
+	ImageID              string
 	InstanceType         string
 	KeyName              string
-	SubnetId             string
-	SecurityGroupIds     securityGroupIds
+	SubnetID             string
+	SecurityGroupIDs     securityGroupIds
 	UseLaunchTemplate    bool
 	InstanceTypes        instanceTypes
 	InstanceTypeSpecList []provider.InstanceTypeSpec
@@ -59,5 +59,5 @@ type Config struct {
 }
 
 func (c Config) Redact() Config {
-	return *util.RedactStruct(&c, "AccessKeyId", "SecretKey", "SessionToken").(*Config)
+	return *util.RedactStruct(&c, "AccessKeyID", "SecretKey", "SessionToken").(*Config)
 }
