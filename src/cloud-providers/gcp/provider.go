@@ -14,7 +14,6 @@ import (
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
 	crm "cloud.google.com/go/resourcemanager/apiv3"
-	crmpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	resourcemanagerpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
@@ -115,7 +114,7 @@ func getIPs(intfcs []*computepb.NetworkInterface, usePublicIPs bool) ([]netip.Ad
 	return podNodeIPs, nil
 }
 
-func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*crmpb.TagValue, error) {
+func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*resourcemanagerpb.TagValue, error) {
 	tagKeysClient, err := crm.NewTagKeysClient(ctx)
 	if err != nil {
 		return nil, err
@@ -129,9 +128,9 @@ func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*c
 	defer tagValuesClient.Close()
 
 	parent := fmt.Sprintf("projects/%s", p.serviceConfig.ProjectID)
-	tags := make(map[string]map[string]*crmpb.TagValue)
+	tags := make(map[string]map[string]*resourcemanagerpb.TagValue)
 
-	it := tagKeysClient.ListTagKeys(ctx, &crmpb.ListTagKeysRequest{Parent: parent})
+	it := tagKeysClient.ListTagKeys(ctx, &resourcemanagerpb.ListTagKeysRequest{Parent: parent})
 	for {
 		key, err := it.Next()
 		if err != nil {
@@ -139,9 +138,9 @@ func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*c
 		}
 		tagKeyID := key.Name
 		keyName := key.ShortName
-		tags[keyName] = make(map[string]*crmpb.TagValue)
+		tags[keyName] = make(map[string]*resourcemanagerpb.TagValue)
 
-		valIt := tagValuesClient.ListTagValues(ctx, &crmpb.ListTagValuesRequest{Parent: tagKeyID})
+		valIt := tagValuesClient.ListTagValues(ctx, &resourcemanagerpb.ListTagValuesRequest{Parent: tagKeyID})
 		for {
 			val, err := valIt.Next()
 			if err != nil {
@@ -222,7 +221,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		return nil, fmt.Errorf("Aborting: Failed to list tags: %w", err)
 	}
 
-	allTagValues := make([]*crmpb.TagValue, 0)
+	allTagValues := make([]*resourcemanagerpb.TagValue, 0)
 	for tagKey, tagValue := range p.serviceConfig.Tags {
 		tagID := allTags[tagKey][tagValue]
 		if tagID == nil {
