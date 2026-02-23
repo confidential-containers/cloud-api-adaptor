@@ -49,7 +49,7 @@ func NewPeerPodService() (*PeerPodService, error) {
 	if err != nil {
 		return nil, fmt.Errorf("NewPeerPodService: failed to create clientset: %w", err)
 	}
-	config.ContentConfig.GroupVersion = &schema.GroupVersion{Group: peerPodV1alpha1.GroupVersion.Group, Version: peerPodV1alpha1.GroupVersion.Version}
+	config.GroupVersion = &schema.GroupVersion{Group: peerPodV1alpha1.GroupVersion.Group, Version: peerPodV1alpha1.GroupVersion.Version}
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.APIPath = "/apis"
 	restClient, err := rest.UnversionedRESTClientFor(config)
