@@ -36,12 +36,12 @@ func main() {
 	glog.Infof("TargetEndpoint: %s", cfg.TargetEndpoint)
 	podName := os.Getenv("POD_NAME")
 	podNamespace := os.Getenv("POD_NAME_SPACE")
-	podUid := os.Getenv("POD_UID")
+	podUID := os.Getenv("POD_UID")
 	podNodeName := os.Getenv("POD_NODE_NAME")
 
 	glog.Infof("POD_NAME: %v ", podName)
 	glog.Infof("POD_NAME_SPACE: %s", podNamespace)
-	glog.Infof("POD_UID: %v ", podUid)
+	glog.Infof("POD_UID: %v ", podUID)
 	glog.Infof("POD_NODE_NAME: %v ", podNodeName)
 
 	k8sconfig, err := clientcmd.BuildConfigFromFlags("", "")
@@ -68,13 +68,13 @@ func main() {
 		}
 	}()
 
-	labelSelector := labels.SelectorFromSet(map[string]string{"podUid": string(podUid)})
+	labelSelector := labels.SelectorFromSet(map[string]string{"podUid": string(podUID)})
 	options := metav1.ListOptions{
 		LabelSelector: labelSelector.String(),
 	}
 	peerpodVolumes, err := peerPodVolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(cfg.Namespace).List(context.Background(), options)
 	if err != nil {
-		glog.Fatalf("Failed to get peerpodVolume crd object by podUid: %v, err: %v", podUid, err)
+		glog.Fatalf("Failed to get peerpodVolume crd object by podUid: %v, err: %v", podUID, err)
 	}
 	glog.Infof("peerpodVolume crd object number is: %v ", len(peerpodVolumes.Items))
 	for idx, savedPeerpodvolume := range peerpodVolumes.Items {

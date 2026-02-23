@@ -177,20 +177,20 @@ func (s *ControllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	if err := (&jsonpb.Marshaler{}).Marshal(&reqBuf, req); err != nil {
 		glog.Error(err, "Error happens while Marshal ControllerPublishVolumeRequest")
 	}
-	reqJsonString := reqBuf.String()
-	glog.Infof("ControllerPublishVolumeRequest JSON string: %s\n", reqJsonString)
+	reqJSONString := reqBuf.String()
+	glog.Infof("ControllerPublishVolumeRequest JSON string: %s\n", reqJSONString)
 
 	var resBuf bytes.Buffer
 	if err := (&jsonpb.Marshaler{}).Marshal(&resBuf, res); err != nil {
 		glog.Error(err, "Error happens while Marshal ControllerPublishVolumeResponse")
 	}
-	resJsonString := resBuf.String()
-	glog.Infof("ControllerPublishVolumeResponse JSON string: %s\n", resJsonString)
+	resJSONString := resBuf.String()
+	glog.Infof("ControllerPublishVolumeResponse JSON string: %s\n", resJSONString)
 
 	savedPeerpodvolume.Labels["nodeID"] = nodeID
 	savedPeerpodvolume.Spec.NodeID = nodeID
-	savedPeerpodvolume.Spec.WrapperControllerPublishVolumeReq = string(reqJsonString)
-	savedPeerpodvolume.Spec.WrapperControllerPublishVolumeRes = string(resJsonString)
+	savedPeerpodvolume.Spec.WrapperControllerPublishVolumeReq = string(reqJSONString)
+	savedPeerpodvolume.Spec.WrapperControllerPublishVolumeRes = string(resJSONString)
 	savedPeerpodvolume, err = s.PeerpodvolumeClient.ConfidentialcontainersV1alpha1().PeerpodVolumes(s.Namespace).Update(context.Background(), savedPeerpodvolume, metav1.UpdateOptions{})
 	if err != nil {
 		glog.Errorf("Error happens while Update PeerpodVolume in ControllerPublishVolume, err: %v", err.Error())
@@ -244,7 +244,7 @@ func (s *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		savedPeerpodvolume.Spec.NodeName = ""
 		savedPeerpodvolume.Spec.PodName = ""
 		savedPeerpodvolume.Spec.PodNamespace = ""
-		savedPeerpodvolume.Spec.PodUid = ""
+		savedPeerpodvolume.Spec.PodUID = ""
 		savedPeerpodvolume.Spec.StagingTargetPath = ""
 		savedPeerpodvolume.Spec.TargetPath = ""
 		savedPeerpodvolume.Spec.VMID = ""
@@ -397,9 +397,9 @@ func (s *ControllerService) SyncHandler(peerPodVolume *peerpodvolumeV1alpha1.Pee
 					if err := (&jsonpb.Marshaler{}).Marshal(&resBuf, response); err != nil {
 						glog.Error(err, "Error happens while Marshal ControllerPublishVolumeResponse")
 					}
-					resJsonString := resBuf.String()
-					glog.Infof("ControllerPublishVolumeResponse for peer pod JSON string: %s\n", resJsonString)
-					peerPodVolume.Spec.WrapperControllerPublishVolumeRes = resJsonString
+					resJSONString := resBuf.String()
+					glog.Infof("ControllerPublishVolumeResponse for peer pod JSON string: %s\n", resJSONString)
+					peerPodVolume.Spec.WrapperControllerPublishVolumeRes = resJSONString
 					devicePath := response.PublishContext["device-path"]
 					glog.Infof("device-path for peer pod VM: %s\n", devicePath)
 					peerPodVolume.Spec.DevicePath = devicePath
