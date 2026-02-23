@@ -399,7 +399,7 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 		if err != nil {
 			return fmt.Errorf("getting next page of VM sizes: %w", err)
 		}
-		for _, vmSize := range nextResult.VirtualMachineSizeListResult.Value {
+		for _, vmSize := range nextResult.Value {
 			if util.Contains(instanceSizes, *vmSize.Name) {
 				instanceSizeSpecList = append(instanceSizeSpecList, provider.InstanceTypeSpec{InstanceType: *vmSize.Name, VCPUs: int64(*vmSize.NumberOfCores), Memory: int64(*vmSize.MemoryInMB)})
 			}
