@@ -28,7 +28,7 @@ func isGCPVM(ctx context.Context) bool {
 	if cpuid.CPU.HypervisorVendorID != cpuid.KVM {
 		return false
 	}
-	_, err := imdsGet(ctx, GcpImdsUrl, false, []kvPair{{"Metadata-Flavor", "Google"}})
+	_, err := imdsGet(ctx, GcpImdsURL, false, []kvPair{{"Metadata-Flavor", "Google"}})
 	return err == nil
 }
 

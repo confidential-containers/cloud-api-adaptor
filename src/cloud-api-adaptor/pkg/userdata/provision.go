@@ -21,17 +21,17 @@ const (
 	DigestPath   = "/run/peerpod/initdata.digest"
 	PolicyPath   = "/run/peerpod/policy.rego"
 	// Ref: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
-	AWSImdsUrl         = "http://169.254.169.254/latest/dynamic/instance-identity/document"
-	AWSUserDataImdsUrl = "http://169.254.169.254/latest/user-data"
+	AWSImdsURL         = "http://169.254.169.254/latest/dynamic/instance-identity/document"
+	AWSUserDataImdsURL = "http://169.254.169.254/latest/user-data"
 	// Ref: https://docs.microsoft.com/en-us/azure/virtual-machines/linux/instance-metadata-service
-	AzureImdsUrl         = "http://169.254.169.254/metadata/instance/compute?api-version=2021-01-01"
-	AzureUserDataImdsUrl = "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text"
+	AzureImdsURL         = "http://169.254.169.254/metadata/instance/compute?api-version=2021-01-01"
+	AzureUserDataImdsURL = "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text"
 	// Ref: https://cloud.google.com/compute/docs/storing-retrieving-metadata
-	GcpImdsUrl         = "http://metadata.google.internal/computeMetadata/v1/instance"
-	GcpUserDataImdsUrl = "http://metadata.google.internal/computeMetadata/v1/instance/attributes/user-data"
+	GcpImdsURL         = "http://metadata.google.internal/computeMetadata/v1/instance"
+	GcpUserDataImdsURL = "http://metadata.google.internal/computeMetadata/v1/instance/attributes/user-data"
 	// Ref: https://www.alibabacloud.com/help/en/ecs/user-guide/customize-the-initialization-configuration-for-an-instance
-	AlibabaCloudImdsUrl         = "http://100.100.100.200/latest/dynamic/instance-identity/document"
-	AlibabaCloudUserDataImdsUrl = "http://100.100.100.200/latest/user-data"
+	AlibabaCloudImdsURL         = "http://100.100.100.200/latest/dynamic/instance-identity/document"
+	AlibabaCloudUserDataImdsURL = "http://100.100.100.200/latest/user-data"
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
@@ -81,7 +81,7 @@ func (d DefaultRetry) GetRetryDelay() time.Duration {
 type AzureUserDataProvider struct{ DefaultRetry }
 
 func (a AzureUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := AzureUserDataImdsUrl
+	url := AzureUserDataImdsURL
 	logger.Printf("provider: Azure, userDataUrl: %s\n", url)
 	return imdsGet(ctx, url, true, []kvPair{{"Metadata", "true"}})
 }
@@ -89,7 +89,7 @@ func (a AzureUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) 
 type AWSUserDataProvider struct{ DefaultRetry }
 
 func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := AWSUserDataImdsUrl
+	url := AWSUserDataImdsURL
 	logger.Printf("provider: AWS, userDataUrl: %s\n", url)
 	// aws user data is not base64 encoded
 	return imdsGet(ctx, url, false, nil)
@@ -98,7 +98,7 @@ func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 type GCPUserDataProvider struct{ DefaultRetry }
 
 func (g GCPUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := GcpUserDataImdsUrl
+	url := GcpUserDataImdsURL
 	logger.Printf("provider: GCP, userDataUrl: %s\n", url)
 	return imdsGet(ctx, url, true, []kvPair{{"Metadata-Flavor", "Google"}})
 }
@@ -119,7 +119,7 @@ func (a FileUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 type AlibabaCloudDataProvider struct{ DefaultRetry }
 
 func (a AlibabaCloudDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	url := AlibabaCloudUserDataImdsUrl
+	url := AlibabaCloudUserDataImdsURL
 	logger.Printf("provider: AlibabaCloud, userDataUrl: %s\n", url)
 	return imdsGet(ctx, url, false, nil)
 }

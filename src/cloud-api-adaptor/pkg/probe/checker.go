@@ -92,5 +92,5 @@ func GetRuntimeclassName() string {
 	if runtimeclassName != "" {
 		return runtimeclassName
 	}
-	return DEFAULT_CC_RUNTIMECLASS_NAME
+	return DefaultCCRuntimeClassName
 }

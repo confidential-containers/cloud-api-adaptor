@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	programName          = "agent-protocol-forwarder"
-	API_SERVER_REST_PORT = 8006
+	programName = "agent-protocol-forwarder"
 )
 
 type Config struct {
