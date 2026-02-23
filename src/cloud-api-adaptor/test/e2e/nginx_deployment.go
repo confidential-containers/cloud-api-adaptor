@@ -138,17 +138,17 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 				return ctx
 			}
 			var podlist v1.PodList
-			if err := client.Resources(deployment.ObjectMeta.Namespace).List(ctx, &podlist); err != nil {
+			if err := client.Resources(deployment.Namespace).List(ctx, &podlist); err != nil {
 				t.Error(err)
 				return ctx
 			}
 			for _, pod := range podlist.Items {
-				if pod.ObjectMeta.Labels["app"] == "nginx" {
+				if pod.Labels["app"] == "nginx" {
 					podvmName, err := getPodvmName(ctx, client, &pod)
 					if err != nil {
 						t.Errorf("GetPodvmName failed: %v", err)
 					}
-					t.Logf("Checking PodVM for pod %s with PodVM name %s", pod.ObjectMeta.Name, podvmName)
+					t.Logf("Checking PodVM for pod %s with PodVM name %s", pod.Name, podvmName)
 					assert.HasPodVM(t, podvmName)
 				}
 			}
@@ -192,15 +192,15 @@ func waitForNginxDeploymentAvailable(ctx context.Context, t *testing.T, client k
 	}), wait.WithTimeout(WAIT_NGINX_DEPLOYMENT_TIMEOUT), wait.WithInterval(10*time.Second)); err != nil {
 		var podlist v1.PodList
 		t.Errorf("%v", err)
-		if err := client.Resources(deployment.ObjectMeta.Namespace).List(ctx, &podlist); err != nil {
+		if err := client.Resources(deployment.Namespace).List(ctx, &podlist); err != nil {
 			t.Errorf("%v", err)
 			return
 		}
 		for _, pod := range podlist.Items {
-			if pod.ObjectMeta.Labels["app"] == "nginx" {
+			if pod.Labels["app"] == "nginx" {
 				// Added logs for debugging nightly tests
 				t.Log("===================")
-				t.Logf("Debug info for pod: %v", pod.ObjectMeta.Name)
+				t.Logf("Debug info for pod: %v", pod.Name)
 				yamlData, err := yaml.Marshal(pod.Status)
 				if err != nil {
 					t.Logf("Error marshaling pod.Status to YAML: %v", err.Error())

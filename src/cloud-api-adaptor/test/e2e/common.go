@@ -255,7 +255,7 @@ func WithJobCommand(command []string) JobOption {
 
 func WithJobAnnotations(data map[string]string) JobOption {
 	return func(j *batchv1.Job) {
-		j.Spec.Template.ObjectMeta.Annotations = data
+		j.Spec.Template.Annotations = data
 	}
 }
 
@@ -307,27 +307,27 @@ func WithPVCBinding(t *testing.T, mountPath string, pvcName string, containerNam
 
 func WithInitdata(kbsEndpoint string) PodOption {
 	return func(p *corev1.Pod) {
-		if p.ObjectMeta.Annotations == nil {
-			p.ObjectMeta.Annotations = make(map[string]string)
+		if p.Annotations == nil {
+			p.Annotations = make(map[string]string)
 		}
 		key := INITDATA_ANNOTATION
 		value, err := buildInitdataAnnotation(kbsEndpoint)
 		if err != nil {
 			log.Fatalf("failed to build initdata %s", err)
 		}
-		p.ObjectMeta.Annotations[key] = value
+		p.Annotations[key] = value
 	}
 }
 
 func WithAnnotations(data map[string]string) PodOption {
 	return func(p *corev1.Pod) {
-		p.ObjectMeta.Annotations = data
+		p.Annotations = data
 	}
 }
 
 func WithLabel(data map[string]string) PodOption {
 	return func(p *corev1.Pod) {
-		p.ObjectMeta.Labels = data
+		p.Labels = data
 	}
 }
 
@@ -381,8 +381,8 @@ func NewPod(namespace string, podName string, containerName string, imageName st
 	// Don't override the policy annotation if it's already set
 	if enableAllowAllPodPolicyOverride() {
 		allowAllPolicyFilePath := "fixtures/policies/allow-all.rego"
-		if _, ok := pod.ObjectMeta.Annotations["io.katacontainers.config.agent.policy"]; !ok {
-			pod.ObjectMeta.Annotations["io.katacontainers.config.agent.policy"] = encodePolicyFile(allowAllPolicyFilePath)
+		if _, ok := pod.Annotations["io.katacontainers.config.agent.policy"]; !ok {
+			pod.Annotations["io.katacontainers.config.agent.policy"] = encodePolicyFile(allowAllPolicyFilePath)
 		}
 	}
 

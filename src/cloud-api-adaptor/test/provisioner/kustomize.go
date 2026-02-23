@@ -208,8 +208,8 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorEnv(sgName string, file s
 			return fmt.Errorf("SecretGenerator %s not found\n", sgName)
 		}
 		gs := &m.SecretGenerator[i]
-		if !stringSliceContains(gs.GeneratorArgs.DataSources.FileSources, file) {
-			gs.GeneratorArgs.DataSources.EnvSource = file
+		if !stringSliceContains(gs.FileSources, file) {
+			gs.EnvSource = file
 		}
 
 	}
@@ -259,8 +259,8 @@ func (kh *KustomizeOverlay) SetKustomizeSecretGeneratorFile(sgName string, file 
 			return fmt.Errorf("SecretGenerator %s not found\n", sgName)
 		}
 		gs := &m.SecretGenerator[i]
-		if !stringSliceContains(gs.GeneratorArgs.DataSources.FileSources, file) {
-			gs.GeneratorArgs.DataSources.FileSources = append(gs.GeneratorArgs.DataSources.FileSources, file)
+		if !stringSliceContains(gs.FileSources, file) {
+			gs.FileSources = append(gs.FileSources, file)
 		}
 
 	}
@@ -407,8 +407,8 @@ func setConfigMapGeneratorLiteral(k *ktypes.Kustomization, cmgName string, key s
 	}
 	cmg := &k.ConfigMapGenerator[i]
 
-	newLiterals := setLiteral(cmg.GeneratorArgs.DataSources.LiteralSources, key, value)
-	cmg.GeneratorArgs.DataSources.LiteralSources = newLiterals
+	newLiterals := setLiteral(cmg.LiteralSources, key, value)
+	cmg.LiteralSources = newLiterals
 
 	return nil
 }
@@ -424,8 +424,8 @@ func setSecretGeneratorLiteral(k *ktypes.Kustomization, secretName string, key s
 	}
 	secretg := &k.SecretGenerator[i]
 
-	newLiterals := setLiteral(secretg.GeneratorArgs.DataSources.LiteralSources, key, value)
-	secretg.GeneratorArgs.DataSources.LiteralSources = newLiterals
+	newLiterals := setLiteral(secretg.LiteralSources, key, value)
+	secretg.LiteralSources = newLiterals
 
 	return nil
 }
