@@ -13,7 +13,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
-	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 )
 
 const (
@@ -35,8 +35,8 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
-var WriteFilesList = []string{AACfgPath, CDHCfgPath, ForwarderCfgPath, AuthFilePath, InitDataPath, ScratchSpacePath}
-var InitdDataFilesList = []string{AACfgPath, CDHCfgPath, PolicyPath}
+var WriteFilesList = []string{paths.AACfgPath, paths.CDHCfgPath, paths.ForwarderCfgPath, paths.AuthFilePath, paths.InitDataPath, paths.ScratchSpacePath}
+var InitdDataFilesList = []string{paths.AACfgPath, paths.CDHCfgPath, PolicyPath}
 
 type Config struct {
 	fetchTimeout  int
@@ -51,7 +51,7 @@ func NewConfig(fetchTimeout int) *Config {
 	return &Config{
 		fetchTimeout:  fetchTimeout,
 		parentPath:    ConfigParent,
-		initdataPath:  InitDataPath,
+		initdataPath:  paths.InitDataPath,
 		digestPath:    DigestPath,
 		writeFiles:    WriteFilesList,
 		initdataFiles: InitdDataFilesList,
@@ -106,7 +106,7 @@ func (g GCPUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 type FileUserDataProvider struct{ DefaultRetry }
 
 func (a FileUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	path := UserDataPath
+	path := paths.UserDataPath
 	logger.Printf("provider: File, userDataPath: %s\n", path)
 	userData, err := os.ReadFile(path)
 	if err != nil {
