@@ -22,7 +22,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
-	. "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
@@ -275,7 +275,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 			logger.Printf("Credentials file is too large to be included in cloud-config")
 		} else {
 			cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-				Path:    AuthFilePath,
+				Path:    paths.AuthFilePath,
 				Content: string(authJSON),
 			})
 		}
@@ -294,7 +294,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	if initdataEnc != "" {
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    InitDataPath,
+			Path:    paths.InitDataPath,
 			Content: initdataEnc,
 		})
 	}
@@ -302,7 +302,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	// Set encrypted scratch space config
 	if s.serverConfig.EnableScratchSpace {
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    ScratchSpacePath,
+			Path:    paths.ScratchSpacePath,
 			Content: "",
 		})
 	}
