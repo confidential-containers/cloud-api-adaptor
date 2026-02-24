@@ -31,7 +31,7 @@ func NewLibvirtAssertWithURI(uri string) (*LibvirtAssert, error) {
 	return &LibvirtAssert{conn: *conn}, nil
 }
 
-func (c LibvirtAssert) DefaultTimeout() time.Duration {
+func (l LibvirtAssert) DefaultTimeout() time.Duration {
 	return 1 * time.Minute
 }
 
