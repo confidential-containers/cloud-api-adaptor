@@ -27,7 +27,6 @@ import (
 	"text/template"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -495,9 +494,9 @@ func NewImagePullSecret(namespace, name string, image string, credentials string
 	}
 }`
 	authJSON := fmt.Sprintf(template, registryName, credentials)
-	secretData := map[string][]byte{v1.DockerConfigJsonKey: []byte(authJSON)}
+	secretData := map[string][]byte{corev1.DockerConfigJsonKey: []byte(authJSON)}
 
-	return NewSecret(namespace, name, secretData, v1.SecretTypeDockerConfigJson)
+	return NewSecret(namespace, name, secretData, corev1.SecretTypeDockerConfigJson)
 }
 
 // NewSecret returns a new secret object.
@@ -583,10 +582,10 @@ func NewService(namespace, serviceName string, servicePorts []corev1.ServicePort
 	}
 }
 
-func WaitForClusterIP(t *testing.T, client klient.Client, svc *v1.Service) string {
+func WaitForClusterIP(t *testing.T, client klient.Client, svc *corev1.Service) string {
 	var clusterIP string
 	if err := wait.For(conditions.New(client.Resources()).ResourceMatch(svc, func(object k8s.Object) bool {
-		svcObj, ok := object.(*v1.Service)
+		svcObj, ok := object.(*corev1.Service)
 		if !ok {
 			log.Printf("Not a Service object: %v", object)
 			return false
@@ -606,9 +605,9 @@ func WaitForClusterIP(t *testing.T, client klient.Client, svc *v1.Service) strin
 	return clusterIP
 }
 
-func WaitForPVCBound(client klient.Client, pvc *v1.PersistentVolumeClaim, timeout time.Duration) error {
+func WaitForPVCBound(client klient.Client, pvc *corev1.PersistentVolumeClaim, timeout time.Duration) error {
 	return wait.For(conditions.New(client.Resources()).ResourceMatch(pvc, func(object k8s.Object) bool {
-		return object.(*v1.PersistentVolumeClaim).Status.Phase == v1.ClaimBound
+		return object.(*corev1.PersistentVolumeClaim).Status.Phase == corev1.ClaimBound
 	}), wait.WithTimeout(timeout))
 }
 
