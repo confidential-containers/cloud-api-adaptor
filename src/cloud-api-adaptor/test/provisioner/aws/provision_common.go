@@ -244,7 +244,7 @@ func (a *AWSProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) err
 	return nil
 }
 
-func (aws *AWSProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
+func (a *AWSProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
 	return nil
 }
 
