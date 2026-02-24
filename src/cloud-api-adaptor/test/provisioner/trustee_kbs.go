@@ -315,7 +315,7 @@ func skipSeCertsVerification(patchFile string) error {
 		return fmt.Errorf("failed to read file: %v", err)
 	}
 	content := string(data)
-	content = strings.Replace(content, "false", "true", -1)
+	content = strings.ReplaceAll(content, "false", "true")
 	err = os.WriteFile(patchFile, []byte(content), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
@@ -329,8 +329,8 @@ func createPVonTargetWorkerNode(pvFilePath, nodeName string, cfg *envconf.Config
 		return fmt.Errorf("failed to read file: %v", err)
 	}
 	content := string(data)
-	content = strings.Replace(content, "${IBM_SE_CREDS_DIR}", "/root/ibmse", -1)
-	content = strings.Replace(content, "${NODE_NAME}", nodeName, -1)
+	content = strings.ReplaceAll(content, "${IBM_SE_CREDS_DIR}", "/root/ibmse")
+	content = strings.ReplaceAll(content, "${NODE_NAME}", nodeName)
 	err = os.WriteFile(pvFilePath, []byte(content), 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
