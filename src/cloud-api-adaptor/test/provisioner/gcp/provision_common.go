@@ -182,7 +182,7 @@ func (g *GCPInstallChart) Configure(ctx context.Context, cfg *envconf.Config, pr
 	if credsPath != "" {
 		credData, err := os.ReadFile(credsPath)
 		if err != nil {
-			return fmt.Errorf("failed to read GCP credentials file %q: %w", credsPath, err)
+			return fmt.Errorf("failed to read GCP credentials file with error: %w", err)
 		}
 		log.Info("Configuring helm: GCP credentials")
 		g.Helm.OverrideProviderSecrets["GCP_CREDENTIALS"] = string(credData)
