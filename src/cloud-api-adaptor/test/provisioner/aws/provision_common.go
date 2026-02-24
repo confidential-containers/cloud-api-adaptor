@@ -156,16 +156,15 @@ func NewAWSProvisioner(properties map[string]string) (pv.CloudProvisioner, error
 
 	vpc := NewVpc(ec2Client, properties)
 
-	if properties["cluster_type"] == "" ||
-		properties["cluster_type"] == "onprem" {
+	switch properties["cluster_type"] {
+	case "", "onprem":
 		cluster = NewOnPremCluster()
 		// The podvm should be created with public IP so CAA can connect
 		properties["use_public_ip"] = "true"
-	} else if properties["cluster_type"] == "eks" {
+	case "eks":
 		cluster = NewEKSCluster(cfg, vpc, properties["ssh_kp_name"])
-	} else {
-		return nil, fmt.Errorf("Cluster type '%s' not implemented",
-			properties["cluster_type"])
+	default:
+		return nil, fmt.Errorf("Cluster type '%s' not implemented", properties["cluster_type"])
 	}
 
 	AWSProps = &AWSProvisioner{
