@@ -364,8 +364,15 @@ func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config,
 	}
 
 	if properties["ssh_key_file"] != "" {
+		// TODO hack workaround to get the ssh-key-secret within the kustomize directory. To be removed post release with the kustomize code
+		cmd := exec.Command("cp", properties["ssh_key_file"], "../../install/overlays/libvirt")
+		stdoutStderr, err := cmd.CombinedOutput()
+		log.Tracef("%v, output: %s", cmd, stdoutStderr)
+		if err != nil {
+			return fmt.Errorf("failed to copy ssh-key: %w, output: %s", err, string(stdoutStderr))
+		}
 		if err = lio.Overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret",
-			properties["ssh_key_file"]); err != nil {
+			"id_rsa"); err != nil {
 			return err
 		}
 	}
@@ -455,8 +462,8 @@ func (l *LibvirtInstallChart) Configure(ctx context.Context, cfg *envconf.Config
 // NOTE: Helm deals with secret properties, but this particular one is outside
 // its scope for now. We need to create it manually while our Helm template
 // doesn't have a mechanism to properly inject secrets (respecting the backend types).
-func (l *LibvirtInstallChart) createSSHKeySecret(ctx context.Context, cfg *envconf.Config, sshKeyFile, secretName string) error {
-	if sshKeyFile == "" {
+func (l *LibvirtInstallChart) createSSHKeySecret(ctx context.Context, cfg *envconf.Config, sshKeyPath, secretName string) error {
+	if sshKeyPath == "" {
 		return nil
 	}
 
@@ -464,14 +471,6 @@ func (l *LibvirtInstallChart) createSSHKeySecret(ctx context.Context, cfg *envco
 	if err := pv.CreateAndWaitForNamespace(ctx, cfg.Client(), l.Helm.Namespace); err != nil {
 		return fmt.Errorf("failed to create Namespace: %w", err)
 	}
-
-	// TODO: Once we have removed the kustomize flow - update config_libvirt.sh to write
-	// the full path of the ssh-key created and then remove this ~/.ssh offset
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
-	}
-	sshKeyPath := filepath.Join(homeDir, ".ssh", sshKeyFile)
 
 	// TODO rewrite this to use go's k8s framework once stable
 	args := []string{
