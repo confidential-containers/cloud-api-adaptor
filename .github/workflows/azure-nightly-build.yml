@@ -36,6 +36,7 @@ jobs:
       contents: read
       packages: write
       attestations: write
+      artifact-metadata: write
     with:
       image-version: ${{ needs.generate-podvm-image-version.outputs.image-version }}
     secrets:
