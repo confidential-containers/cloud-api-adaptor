@@ -28,7 +28,6 @@ jobs:
       caa_image: ${{ inputs.caa_image }}
       podvm_image: ${{ inputs.podvm_image }}
       git_ref: ${{ github.ref }}
-      oras: false
       container_runtime: containerd
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
