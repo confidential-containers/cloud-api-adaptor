@@ -54,6 +54,9 @@ RELEASE_TAG="6d7d2a3fe8243809b3c3a710792c8498292e2fc3"
 ./hack/release-helper.sh caa-image-tag ${RELEASE_TAG}
 ```
 
+At the same time we need to update the value in [Makefile](../src/cloud-providers/Makefile)
+to set the dev commit to `dev-${RELEASE_TAG}`.
+
 In the same PR, bump the Helm chart versions in
 [`Chart.yaml`](../src/cloud-api-adaptor/install/charts/peerpods/Chart.yaml):
 - `version`: bump to the new chart release version (e.g. `0.1.0` => `0.1.1`)
