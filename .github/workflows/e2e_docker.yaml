@@ -28,11 +28,6 @@ on:
         description: Name of the container runtime. Either containerd or crio.
         required: false
         type: string
-      install_method:
-        default: 'kustomize'
-        description: Installation method. Either kustomize or helm.
-        required: false
-        type: string
     secrets:
       QUAY_PASSWORD:
         required: true
@@ -50,12 +45,10 @@ permissions: {}
 
 jobs:
   test-docker:
-    name: "Docker e2e tests: (${{ inputs.container_runtime }}, ${{ inputs.install_method }})"
+    name: "Docker e2e tests: (${{ inputs.container_runtime }})"
     runs-on: ubuntu-22.04
-    # TODO: remove when helm installation gets implemented and stable.
-    continue-on-error: ${{ inputs.install_method == 'helm' }}
     env:
-      INSTALL_METHOD: "${{ inputs.install_method }}"
+      INSTALL_METHOD: "helm"  # TODO remove this env once the e2e test code matching has been removed
       CAA_IMAGE: "${{ inputs.caa_image }}"
     steps:
       - name: Checkout Code
@@ -114,18 +107,7 @@ jobs:
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
             sudo bash -s /usr/local/bin
 
-      - name: Update kustomization configuration
-        if: ${{ inputs.install_method == 'kustomize' }}
-        run: |
-          cd "install/overlays/docker"
-          kustomize edit set image "cloud-api-adaptor=${{ inputs.caa_image }}"
-          # Print for debugging
-          echo "::group::docker kustomization"
-          cat kustomization.yaml
-          echo "::endgroup::"
-
       - name: Install Helm
-        if: ${{ inputs.install_method == 'helm' }}
         run: |
           curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
           echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
@@ -144,13 +126,11 @@ jobs:
           DOCKER_API_VERSION="1.44"
           EOF
 
-          # If using helm, split CAA_IMAGE into CAA_IMAGE_NAME and CAA_IMAGE_TAG
-          if [ "${INSTALL_METHOD}" = "helm" ]; then
-            CAA_IMAGE_TAG="${CAA_IMAGE##*:}"
-            CAA_IMAGE_NAME="${CAA_IMAGE%:*}"
-            echo "CAA_IMAGE=\"${CAA_IMAGE_NAME}\"" >> docker.properties
-            echo "CAA_IMAGE_TAG=\"${CAA_IMAGE_TAG}\"" >> docker.properties
-          fi
+          # Split CAA_IMAGE into CAA_IMAGE_NAME and CAA_IMAGE_TAG
+          CAA_IMAGE_TAG="${CAA_IMAGE##*:}"
+          CAA_IMAGE_NAME="${CAA_IMAGE%:*}"
+          echo "CAA_IMAGE=\"${CAA_IMAGE_NAME}\"" >> docker.properties
+          echo "CAA_IMAGE_TAG=\"${CAA_IMAGE_TAG}\"" >> docker.properties
 
           # For debugging
           cat docker.properties

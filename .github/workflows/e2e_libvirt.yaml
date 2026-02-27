@@ -38,11 +38,6 @@ on:
         description: Name of the container runtime. Either containerd or crio.
         required: false
         type: string
-      install_method:
-        default: 'kustomize'
-        description: Installation method. Either kustomize or helm.
-        required: false
-        type: string
     secrets:
       REGISTRY_CREDENTIAL_ENCODED:
         required: true
@@ -60,7 +55,7 @@ permissions: {}
 jobs:
   test:
     runs-on: ${{ inputs.runner }}
-    name: "Libvirt e2e tests: (${{ inputs.runner }}, ${{ inputs.container_runtime }}, mkosi: ${{ inputs.oras }}, ${{ inputs.install_method }}"
+    name: "Libvirt e2e tests: (${{ inputs.runner }}, ${{ inputs.container_runtime }}, mkosi: ${{ inputs.oras }}"
     steps:
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -152,15 +147,7 @@ jobs:
           sudo apt update -y
           sudo apt install -y ovmf
 
-      - name: Install kustomize
-        if: ${{ inputs.install_method == 'kustomize' }}
-        run: |
-          command -v kustomize >/dev/null || \
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
-            sudo bash -s /usr/local/bin
-
       - name: Install Helm
-        if: ${{ inputs.install_method == 'helm' }}
         run: |
           curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
           echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
@@ -169,27 +156,6 @@ jobs:
           rm -rf helm.tar.gz linux-amd64
           helm version
 
-# For the legacy packer approach we don't want to use the default firmware, so comment it out
-      - name: Set blank firmware for packer libvirt tests
-        if: ${{ inputs.install_method == 'kustomize' && !inputs.oras }}
-        run: |
-          cd "install/overlays/libvirt"
-          sed -i 's/\(- LIBVIRT_EFI_FIRMWARE=.*\)/#\1/g' kustomization.yaml
-          # Print for debugging
-          echo "::group::Kustomization.yaml"
-          cat kustomization.yaml
-          echo "::endgroup::"
-
-      - name: Update kustomization configuration
-        if: ${{ inputs.install_method == 'kustomize' }}
-        run: |
-          cd "install/overlays/libvirt"
-          kustomize edit set image "cloud-api-adaptor=${{ inputs.caa_image }}"
-          # Print for debugging
-          echo "::group::libvirt kustomization"
-          cat kustomization.yaml
-          echo "::endgroup::"
-
       - name: Checkout KBS Repository
         run: |
           test/utils/checkout_kbs.sh
@@ -197,7 +163,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Authenticate Helm with GitHub Container Registry
-        if: inputs.install_method == 'helm' && runner.environment == 'self-hosted'
+        if: runner.environment == 'self-hosted'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -214,7 +180,7 @@ jobs:
           AUTHENTICATED_REGISTRY_IMAGE: ${{ vars.AUTHENTICATED_REGISTRY_IMAGE }}
           REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INSTALL_METHOD: ${{ inputs.install_method }}
+          INSTALL_METHOD: "helm"  # TODO remove this env once the e2e test code matching has been removed
           CLOUD_PROVIDER: libvirt
           CONTAINER_RUNTIME: ${{ inputs.container_runtime }}
           DEPLOY_KBS: "true"

@@ -17,14 +17,6 @@ on:
         required: false
         default: 'quay.io/confidential-containers/podvm-generic-ubuntu-amd64:latest'
         type: string
-      install_method:
-        description: 'Installation method'
-        required: false
-        default: 'helm'
-        type: choice
-        options:
-          - helm
-          - kustomize
 
 permissions: {}
 
@@ -35,7 +27,6 @@ jobs:
       runner: ubuntu-24.04
       caa_image: ${{ inputs.caa_image }}
       podvm_image: ${{ inputs.podvm_image }}
-      install_method: ${{ inputs.install_method }}
       git_ref: ${{ github.ref }}
       oras: false
       container_runtime: containerd
