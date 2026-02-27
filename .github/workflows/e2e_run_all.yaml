@@ -177,34 +177,6 @@ jobs:
     secrets:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
-  # Run libvirt e2e tests if pull request labeled 'test_e2e_libvirt'
-  libvirt:
-    name: libvirt
-    if: |
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt')
-    needs: [podvm, image]
-    strategy:
-      fail-fast: false
-      matrix:
-        container_runtime:
-          ["containerd", "crio"]
-        os:
-           - ubuntu
-        provider:
-           - generic
-        arch:
-          - amd64
-    uses: ./.github/workflows/e2e_libvirt.yaml
-    with:
-      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
-      container_runtime: ${{ matrix.container_runtime }}
-      podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
-      git_ref: ${{ inputs.git_ref }}
-    secrets:
-      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
-
   caa_image_amd64:
     uses: ./.github/workflows/caa_build_and_push.yaml
     with:
@@ -267,7 +239,6 @@ jobs:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
       podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.qcow2_oras_image }}
       git_ref: ${{ inputs.git_ref }}
-      oras: true
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
@@ -286,7 +257,6 @@ jobs:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-s390x-dev
       podvm_image: ${{ needs.podvm_mkosi_s390x.outputs.qcow2_oras_image }}
       git_ref: ${{ inputs.git_ref }}
-      oras: true
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
