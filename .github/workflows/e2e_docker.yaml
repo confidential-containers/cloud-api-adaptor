@@ -13,11 +13,6 @@ on:
       caa_image:
         description: The cloud-api-adaptor OCI image (including tag) to test
         type: string
-      install_directory_artifact:
-        description: The archive name of the install directory
-        default: ''
-        required: false
-        type: string
       git_ref:
         default: 'main'
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
