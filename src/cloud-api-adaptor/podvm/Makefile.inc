@@ -31,39 +31,15 @@ DEFAULT_AGENT_POLICY_FILE ?= allow-all.rego
 
 # Run github artifact provenance verifications
 VERIFY_PROVENANCE ?= no
-GUEST_COMPONENTS_REPO := confidential-containers/guest-components
-KATA_REPO := kata-containers/kata-containers
 
-ifdef GITHUB_TOKEN
-GH_AUTH_HEADER := -H "Authorization: Bearer $(GITHUB_TOKEN)"
-endif
-GH_API_BASE := https://api.github.com
-GH_CURL := curl --fail --silent --show-error --retry 3 $(GH_AUTH_HEADER)
-
-# probe version if the ref does not appear to be a git commit digest
+# Verify that GUEST_COMPONENTS_REF is a sha-1 commit digest
 ifeq ($(shell echo $(GUEST_COMPONENTS_REF) | grep -E "^[0-9a-f]{40}$$"),)
-GUEST_COMPONENTS_COMMIT := $(shell \
-	$(GH_CURL) \
-	$(GH_API_BASE)/repos/$(GUEST_COMPONENTS_REPO)/commits/v$(GUEST_COMPONENTS_REF) \
-	| jq -r '.sha // empty')
-ifeq ($(GUEST_COMPONENTS_COMMIT),)
-$(error jq failed to extract SHA from ref $(GUEST_COMPONENTS_REF))
-endif
-else
-GUEST_COMPONENTS_COMMIT := $(GUEST_COMPONENTS_REF)
+	$(error GUEST_COMPONENTS_REF must be a 40-character lowercase git commit SHA)
 endif
 
-# probe version if the ref does not appear to be a git commit digest
+# Verify that KATA_REF is a sha-1 commit digest
 ifeq ($(shell echo $(KATA_REF) | grep -E "^[0-9a-f]{40}$$"),)
-KATA_COMMIT := $(shell \
-	$(GH_CURL) \
-	$(GH_API_BASE)/repos/$(KATA_REPO)/commits/$(KATA_REF) \
-	| jq -r '.sha // empty')
-ifeq ($(KATA_COMMIT),)
-$(error jq failed to extract SHA from ref $(KATA_REF))
-endif
-else
-KATA_COMMIT := $(KATA_REF)
+	$(error KATA_REF must be a 40-character lowercase git commit SHA)
 endif
 
 FORCE_TARGET := $(if $(FORCE),force,)
@@ -88,7 +64,7 @@ IMAGE_FILE = $(IMAGE_NAME)$(IMAGE_SUFFIX)
 AGENT_PROTOCOL_FORWARDER = $(FILES_DIR)/usr/local/bin/agent-protocol-forwarder
 KATA_AGENT    = $(FILES_DIR)/usr/local/bin/kata-agent
 
-# The pause binary can be named differently.
+# The pause binary can be named differently
 PAUSE_BIN ?= pause
 PAUSE      = $(FILES_DIR)/$(PAUSE_BUNDLE)/rootfs/$(PAUSE_BIN)
 
@@ -97,8 +73,7 @@ CONFIDENTIAL_DATA_HUB = $(FILES_DIR)/usr/local/bin/confidential-data-hub
 API_SERVER_REST  = $(FILES_DIR)/usr/local/bin/api-server-rest
 PROCESS_USER_DATA = $(FILES_DIR)/usr/local/bin/process-user-data
 
-
-# Allow BINARIES to be overriden externally
+# Allow BINARIES to be overridden externally
 
 BINARIES ?= \
 	$(AGENT_PROTOCOL_FORWARDER) \
@@ -128,7 +103,7 @@ define pull_agent_artifact
 	$(if $(filter yes,$(VERIFY_PROVENANCE)),$(ROOT_DIR)hack/verify-provenance.sh \
 		-a $(OCI_REF) \
 		-r $(KATA_REPO) \
-		-d $(KATA_COMMIT))
+		-d $(KATA_REF))
 	oras pull $(OCI_REF)
 endef
 
@@ -142,7 +117,7 @@ define pull_gc_artifact
 	$(if $(filter yes,$(VERIFY_PROVENANCE)),$(ROOT_DIR)hack/verify-provenance.sh \
 		-a $(OCI_REF) \
 		-r $(GUEST_COMPONENTS_REPO) \
-		-d $(GUEST_COMPONENTS_COMMIT))
+		-d $(GUEST_COMPONENTS_REF))
 	oras pull $(OCI_REF)
 endef
 

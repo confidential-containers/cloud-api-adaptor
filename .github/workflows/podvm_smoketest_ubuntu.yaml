@@ -107,8 +107,8 @@ jobs:
         working-directory: src/cloud-api-adaptor
         run: |
           {
-            echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
-            echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
+            echo "KATA_REF=$(yq -e '.oci.kata-agent-ctl.reference' versions.yaml)";
+            echo "KATA_REG=$(yq -e '.oci.kata-agent-ctl.registry' versions.yaml)";
           } >> "$GITHUB_ENV"
 
       - name: Install kata-agent-ctl
