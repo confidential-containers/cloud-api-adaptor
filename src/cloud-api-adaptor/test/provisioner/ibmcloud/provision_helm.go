@@ -47,13 +47,6 @@ func (i *IBMCloudInstallChart) Configure(ctx context.Context, cfg *envconf.Confi
 	if IBMCloudProps.CaaImageTag != "" {
 		log.Infof("Configuring helm: CAA image tag %q", IBMCloudProps.CaaImageTag)
 		i.Helm.OverrideValues["image.tag"] = IBMCloudProps.CaaImageTag
-	} else if isWorkerS390xFlavors() {
-		// For s390x flavors, get the latest commit tag like kustomization does
-		newTag := getCaaLatestCommitTag()
-		if newTag != "" {
-			log.Infof("Configuring helm: CAA image tag %q (latest commit for s390x)", newTag)
-			i.Helm.OverrideValues["image.tag"] = newTag
-		}
 	}
 
 	// Map properties to Helm chart providerConfigs
