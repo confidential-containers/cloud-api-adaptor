@@ -236,7 +236,6 @@ Finally, run the `caa-provisioner-cli` command to install confidential-container
 export CLOUD_PROVIDER=ibmcloud
 export TEST_PROVISION_FILE="$HOME/peerpods-cluster.properties"
 export TEST_TEARDOWN="no"
-export INSTALL_METHOD="helm"
 pushd src/cloud-api-adaptor/test/tools
 ./caa-provisioner-cli -action=install
 popd
