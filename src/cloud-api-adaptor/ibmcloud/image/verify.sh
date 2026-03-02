@@ -33,11 +33,9 @@ image=${image%.qcow2}
 
 case "$image" in
     *-amd64) profile=bx2-2x8 ;;
-    *-s390x) profile=bz2-2x8 ;;
     *)       echo "$0: image for unknown architecture: $image" 1>&2; exit 1 ;;
 esac
 
-[ "${SE_BOOT:-false}" = "true" ] && profile=bz2e-2x8
 
 name=$(printf "imagetest-%.8s-%s" "$(uuidgen)" "$image")
 
