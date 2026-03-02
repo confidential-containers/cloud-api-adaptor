@@ -197,7 +197,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 			return errors.New("KUBE_VERSION was not set, get it via command: ibmcloud cs versions")
 		}
 		if len(IBMCloudProps.WorkerOS) <= 0 {
-			return errors.New("WORKER_OPERATION_SYSTEM was not set, set it like: UBUNTU_20_64, UBUNTU_18_S390X")
+			return errors.New("WORKER_OPERATION_SYSTEM was not set, set it like: UBUNTU_24_64")
 		}
 	} else {
 		if len(IBMCloudProps.SshKeyID) <= 0 {

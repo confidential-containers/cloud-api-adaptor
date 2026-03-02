@@ -894,16 +894,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	log.Infof("File %s uploaded to bucket.", key)
 
 	var osNames []string
-	if strings.EqualFold("s390x", IBMCloudProps.PodvmImageArch) {
-		if strings.Contains(IBMCloudProps.InstanceProfile, "e-") {
-			osNames = []string{"hyper-protect-1-0-s390x"}
-		} else {
-			osNames = []string{"ubuntu-22-04-s390x"}
-		}
-	} else {
-		osNames = []string{"ubuntu-24-04-amd64"}
-
-	}
+	osNames = []string{"ubuntu-24-04-amd64"}
 	operatingSystemIdentityModel := &vpcv1.OperatingSystemIdentityByName{
 		Name: &osNames[0],
 	}
@@ -929,18 +920,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 }
 
 func getProfileList() string {
-	var profileList string
-	if strings.EqualFold("s390x", IBMCloudProps.PodvmImageArch) {
-		if strings.Contains(IBMCloudProps.InstanceProfile, "e-") {
-			profileList = "bz2e-2x8,cz2e-2x4,mz2e-2x16"
-		} else {
-			profileList = "bz2-2x8,cz2-2x4,mz2-2x16"
-		}
-	} else {
-		profileList = "bx2-2x8,cx2-2x4,mx2-2x16"
-
-	}
-	return profileList
+	return "bx2-2x8,cx2-2x4,mx2-2x16"
 }
 
 func (p *IBMCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
