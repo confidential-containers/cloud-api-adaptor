@@ -31,6 +31,8 @@ DEFAULT_AGENT_POLICY_FILE ?= allow-all.rego
 
 # Run github artifact provenance verifications
 VERIFY_PROVENANCE ?= no
+GUEST_COMPONENTS_REPO := confidential-containers/guest-components
+KATA_REPO := kata-containers/kata-containers
 
 # Verify that GUEST_COMPONENTS_REF is a sha-1 commit digest
 ifeq ($(shell echo $(GUEST_COMPONENTS_REF) | grep -E "^[0-9a-f]{40}$$"),)
