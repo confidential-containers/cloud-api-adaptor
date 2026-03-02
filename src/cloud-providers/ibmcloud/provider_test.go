@@ -107,7 +107,7 @@ func (v *mockVPC) GetImageWithContext(context context.Context, options *vpcv1.Ge
 		return nil, nil, fmt.Errorf("image not found")
 	}
 
-	arch := "s390x"
+	arch := "amd64"
 	os := "ubuntu"
 
 	return &vpcv1.Image{
@@ -298,12 +298,12 @@ func TestGetImageDetails(t *testing.T) {
 				globalTagging: &mockTagging{},
 			},
 			instanceSpec: provider.InstanceTypeSpec{
-				Arch: "s390x",
+				Arch: "amd64",
 			},
 			expectListErr:   false,
 			expectSelectErr: false,
 			wantID:          "valid-id-1",
-			profileInstance: "bz2-2x8",
+			profileInstance: "bx2-2x8",
 		},
 		// Test selecting an image from an empty image list
 		{
@@ -316,12 +316,12 @@ func TestGetImageDetails(t *testing.T) {
 				globalTagging: &mockTagging{},
 			},
 			instanceSpec: provider.InstanceTypeSpec{
-				Arch: "s390x",
+				Arch: "amd64",
 			},
 			expectListErr:   true,
 			expectSelectErr: false,
 			wantID:          "",
-			profileInstance: "bz2-2x8",
+			profileInstance: "bx2-2x8",
 		},
 		// Test selecting an image from an image list with no valid ids
 		{
@@ -334,12 +334,12 @@ func TestGetImageDetails(t *testing.T) {
 				globalTagging: &mockTagging{},
 			},
 			instanceSpec: provider.InstanceTypeSpec{
-				Arch: "s390x",
+				Arch: "amd64",
 			},
 			expectListErr:   true,
 			expectSelectErr: false,
 			wantID:          "",
-			profileInstance: "bz2-2x8",
+			profileInstance: "bx2-2x8",
 		},
 		// Test selecting an image from an image list with no valid archs
 		{
@@ -352,7 +352,7 @@ func TestGetImageDetails(t *testing.T) {
 				globalTagging: &mockTagging{},
 			},
 			instanceSpec: provider.InstanceTypeSpec{
-				Arch: "amd64",
+				Arch: "junk",
 			},
 			expectListErr:   false,
 			expectSelectErr: true,
@@ -365,7 +365,7 @@ func TestGetImageDetails(t *testing.T) {
 				vpc: &mockVPC{},
 				serviceConfig: &Config{
 					Images:                  validImageList,
-					InstanceProfileSpecList: []provider.InstanceTypeSpec{{InstanceType: "bz2-2x8", Arch: "s390x"}},
+					InstanceProfileSpecList: []provider.InstanceTypeSpec{{InstanceType: "bx2-2x8", Arch: "amd64"}},
 				},
 				globalTagging: &mockTagging{},
 			},
@@ -373,7 +373,7 @@ func TestGetImageDetails(t *testing.T) {
 			expectListErr:   false,
 			expectSelectErr: false,
 			wantID:          "valid-id-1",
-			profileInstance: "bz2-2x8",
+			profileInstance: "bx2-2x8",
 		},
 		// Test selecting an image from an image list with no valid archs because of profile instance arch difference
 		{
@@ -382,7 +382,7 @@ func TestGetImageDetails(t *testing.T) {
 				vpc: &mockVPC{},
 				serviceConfig: &Config{
 					Images:                  validImageList,
-					InstanceProfileSpecList: []provider.InstanceTypeSpec{{InstanceType: "bx2-2x8", Arch: "amd64"}},
+					InstanceProfileSpecList: []provider.InstanceTypeSpec{{InstanceType: "bx2-2x8", Arch: "junk"}},
 				},
 				globalTagging: &mockTagging{},
 			},
@@ -410,7 +410,7 @@ func TestGetImageDetails(t *testing.T) {
 				return
 			}
 			if id != tt.wantID {
-				t.Errorf("ibmcloudProvider.selectImage() gotID = %v, want %v", id, tt.wantID)
+				t.Errorf("ibmcloudProvider.selectImage() gotID: %v, expected: %v, err: %v", id, tt.wantID, err)
 			}
 		})
 	}
