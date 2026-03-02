@@ -24,7 +24,6 @@ var GCPProps = &GCPProvisioner{}
 type GCPProvisioner struct {
 	GkeCluster       *GKECluster
 	GcpVPC           *GCPVPC
-	GcpOverlay       *GCPInstallOverlay
 	CaaImage         string
 	PodvmImageName   string
 	PodvmMachineType string

@@ -122,11 +122,6 @@ type AWSProvisioner struct {
 	PeerpodsSecretName string
 }
 
-// AwsInstallOverlay implements the InstallOverlay interface
-type AwsInstallOverlay struct {
-	Overlay *pv.KustomizeOverlay
-}
-
 // AwsInstallChart implements the InstallChart interface
 type AwsInstallChart struct {
 	Helm *pv.Helm
@@ -1115,95 +1110,6 @@ func ConvertQcow2ToRaw(qcow2 string, raw string) error {
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// createCredentialFile Creates the AWS credential file in the install overlay directory
-// that's used by kustomize the setup CAA. The session_token parameter is optional.
-func createCredentialFile(dir, accessKeyID, secretAccessKey, sessionToken string) error {
-	content := fmt.Sprintf("AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n", accessKeyID, secretAccessKey)
-	if sessionToken != "" {
-		content += fmt.Sprintf("AWS_SESSION_TOKEN=%s\n", sessionToken)
-	}
-	err := os.WriteFile(filepath.Join(dir, AwsCredentialsFile), []byte(content), 0666)
-	if err != nil {
-		return nil
-	}
-
-	return nil
-}
-
-func NewAwsInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
-	overlayDir := filepath.Join(installDir, "overlays", provider)
-
-	// The credential file should exist in the overlay directory otherwise kustomize fails
-	// to load it. At this point we don't know the key id nor access key, so using empty
-	// values (later the file will be re-written properly).
-	err := createCredentialFile(overlayDir, "", "", "")
-	if err != nil {
-		return nil, err
-	}
-
-	overlay, err := pv.NewKustomizeOverlay(overlayDir)
-	if err != nil {
-		return nil, err
-	}
-
-	return &AwsInstallOverlay{
-		Overlay: overlay,
-	}, nil
-}
-
-func (a *AwsInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return a.Overlay.Apply(ctx, cfg)
-}
-
-func (a *AwsInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return a.Overlay.Delete(ctx, cfg)
-}
-
-func (a *AwsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
-	var err error
-
-	// Mapping the internal properties to ConfigMapGenerator properties.
-	mapProps := map[string]string{
-		"disablecvm":           "DISABLECVM",
-		"pause_image":          "PAUSE_IMAGE",
-		"podvm_launchtemplate": "PODVM_LAUNCHTEMPLATE_NAME",
-		"podvm_ami":            "PODVM_AMI_ID",
-		"podvm_instance_type":  "PODVM_INSTANCE_TYPE",
-		"sg_ids":               "AWS_SG_IDS",
-		"subnet_id":            "AWS_SUBNET_ID",
-		"ssh_kp_name":          "SSH_KP_NAME",
-		"region":               "AWS_REGION",
-		"tunnel_type":          "TUNNEL_TYPE",
-		"vxlan_port":           "VXLAN_PORT",
-		"use_public_ip":        "USE_PUBLIC_IP",
-	}
-
-	for k, v := range mapProps {
-		if properties[k] != "" {
-			if err = a.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm",
-				v, properties[k]); err != nil {
-				return err
-			}
-		}
-	}
-
-	if properties["access_key_id"] != "" && properties["secret_access_key"] != "" {
-		if err = createCredentialFile(a.Overlay.ConfigDir, properties["access_key_id"], properties["secret_access_key"], properties["session_token"]); err != nil {
-			return err
-		}
-
-		if err = a.Overlay.SetKustomizeSecretGeneratorEnv("peer-pods-secret", AwsCredentialsFile); err != nil {
-			return err
-		}
-	}
-
-	if err = a.Overlay.YamlReload(); err != nil {
 		return err
 	}
 

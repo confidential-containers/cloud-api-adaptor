@@ -12,6 +12,5 @@ import (
 func init() {
 	// Add this implementation to the list of provisioners.
 	pv.NewProvisionerFunctions["aws"] = NewAWSProvisioner
-	pv.NewInstallOverlayFunctions["aws"] = NewAwsInstallOverlay
 	pv.NewInstallChartFunctions["aws"] = NewAwsInstallChart
 }

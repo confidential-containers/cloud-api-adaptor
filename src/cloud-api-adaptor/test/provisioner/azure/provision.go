@@ -11,6 +11,5 @@ import (
 
 func init() {
 	pv.NewProvisionerFunctions["azure"] = NewAzureCloudProvisioner
-	pv.NewInstallOverlayFunctions["azure"] = NewAzureInstallOverlay
 	pv.NewInstallChartFunctions["azure"] = NewAzureInstallChart
 }
