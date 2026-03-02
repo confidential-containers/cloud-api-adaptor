@@ -11,6 +11,5 @@ import (
 
 func init() {
 	pv.NewProvisionerFunctions["gcp"] = NewGCPProvisioner
-	pv.NewInstallOverlayFunctions["gcp"] = NewGCPInstallOverlay
 	pv.NewInstallChartFunctions["gcp"] = NewGCPInstallChart
 }

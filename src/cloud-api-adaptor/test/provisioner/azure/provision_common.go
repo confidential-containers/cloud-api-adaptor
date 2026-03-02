@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -141,11 +140,6 @@ func WaitForCondition(pollingFunc func() (bool, error), timeout time.Duration, i
 
 // AzureCloudProvisioner implements the CloudProvision interface for azure.
 type AzureCloudProvisioner struct {
-}
-
-// AzureInstallOverlay implements the InstallOverlay interface
-type AzureInstallOverlay struct {
-	Overlay *pv.KustomizeOverlay
 }
 
 // AzureInstallChart implements the InstallChart interface
@@ -382,102 +376,6 @@ func (p *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Contex
 	return nil
 }
 
-func isAzureKustomizeConfigMapKey(key string) bool {
-	switch key {
-	case "CLOUD_PROVIDER", "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID", "INITDATA", "TAGS", "TUNNEL_TYPE", "VXLAN_PORT":
-		return true
-	default:
-		return false
-	}
-}
-
-func isAzureKustomizeSecretKey(key string) bool {
-	return key == "AZURE_CLIENT_ID"
-}
-
-func NewAzureInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
-	overlay, err := pv.NewKustomizeOverlay(filepath.Join(installDir, "overlays", provider))
-	if err != nil {
-		return nil, err
-	}
-
-	return &AzureInstallOverlay{
-		Overlay: overlay,
-	}, nil
-}
-
-func (lio *AzureInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return lio.Overlay.Apply(ctx, cfg)
-}
-
-func (lio *AzureInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return lio.Overlay.Delete(ctx, cfg)
-}
-
-func (lio *AzureInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
-	var err error
-
-	// If a custom image is defined then update it in the kustomization file.
-	if AzureProps.CaaImage != "" {
-		spec, err := reference.Parse(AzureProps.CaaImage)
-		if err != nil {
-			return fmt.Errorf("parsing image: %w", err)
-		}
-
-		log.Infof("Updating CAA image with %q", spec.Locator)
-		if err = lio.Overlay.SetKustomizeImage("cloud-api-adaptor", "newName", spec.Locator); err != nil {
-			return err
-		}
-
-		digest := spec.Digest()
-		tag := spec.Object
-		if i := strings.Index(tag, "@"); i >= 0 {
-			tag = tag[:i]
-		}
-
-		log.Infof("Updating CAA image tag with %q", tag)
-		if err = lio.Overlay.SetKustomizeImage("cloud-api-adaptor", "newTag", tag); err != nil {
-			return err
-		}
-
-		log.Infof("Updating CAA image digest with %q", digest)
-		if err = lio.Overlay.SetKustomizeImage("cloud-api-adaptor", "digest", digest.String()); err != nil {
-			return err
-		}
-	}
-
-	for k, v := range properties {
-		// configMapGenerator
-		if isAzureKustomizeConfigMapKey(k) {
-			if err = lio.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm", k, v); err != nil {
-				return err
-			}
-		}
-		// secretGenerator
-		if isAzureKustomizeSecretKey(k) {
-			if err = lio.Overlay.SetKustomizeSecretGeneratorLiteral("peer-pods-secret", k, v); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Replace the contents of the `workload-identity.yaml` with the client id
-	workloadIdentity := filepath.Join(lio.Overlay.ConfigDir, "workload-identity.yaml")
-	if err = replaceTextInFile(workloadIdentity, "00000000-0000-0000-0000-000000000000", AzureProps.ClientID); err != nil {
-		return fmt.Errorf("replacing client id in workload-identity.yaml: %w", err)
-	}
-
-	if err = lio.Overlay.AddToPatchesStrategicMerge("workload-identity.yaml"); err != nil {
-		return err
-	}
-
-	if err = lio.Overlay.YamlReload(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func NewAzureInstallChart(installDir, provider string) (pv.InstallChart, error) {
 	chartPath := filepath.Join(installDir, "charts", "peerpods")
 	namespace := pv.GetCAANamespace()
@@ -538,38 +436,14 @@ func (a *AzureInstallChart) Configure(ctx context.Context, cfg *envconf.Config, 
 	}
 
 	for k, v := range properties {
-		if isAzureKustomizeConfigMapKey(k) {
-			// Do not override CLOUD_PROVIDER; use the chart default.
-			if k == "CLOUD_PROVIDER" {
-				continue
-			}
+		switch k {
+		case "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID", "INITDATA", "TAGS", "TUNNEL_TYPE", "VXLAN_PORT":
 			log.Infof("Configuring helm: override value (%s)", k)
 			a.Helm.OverrideProviderValues[k] = v
-			continue
-		}
-		if k == "AZURE_CLIENT_SECRET" || k == "AZURE_TENANT_ID" {
+		case "AZURE_CLIENT_SECRET", "AZURE_TENANT_ID":
 			log.Infof("Configuring helm: set secret (%s)", k)
 			a.Helm.OverrideProviderSecrets[k] = v
 		}
-	}
-
-	return nil
-}
-
-func replaceTextInFile(filePath, oldText, newText string) error {
-	// Read the file content
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-
-	// Replace the old text with the new text
-	newContent := strings.ReplaceAll(string(content), oldText, newText)
-
-	// Write the modified content back to the file
-	err = os.WriteFile(filePath, []byte(newContent), 0)
-	if err != nil {
-		return err
 	}
 
 	return nil

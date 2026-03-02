@@ -41,11 +41,6 @@ type LibvirtProvisioner struct {
 	initdata         string           // InitData
 }
 
-// LibvirtInstallOverlay implements the InstallOverlay interface
-type LibvirtInstallOverlay struct {
-	Overlay *pv.KustomizeOverlay
-}
-
 type LibvirtInstallChart struct {
 	Helm *pv.Helm
 }
@@ -317,71 +312,6 @@ func (l *LibvirtProvisioner) GetStoragePool() (*libvirt.StoragePool, error) {
 	}
 
 	return sp, nil
-}
-
-func NewLibvirtInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
-	overlay, err := pv.NewKustomizeOverlay(filepath.Join(installDir, "overlays", provider))
-	if err != nil {
-		return nil, err
-	}
-
-	return &LibvirtInstallOverlay{
-		Overlay: overlay,
-	}, nil
-}
-
-func (lio *LibvirtInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return lio.Overlay.Apply(ctx, cfg)
-}
-
-func (lio *LibvirtInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return lio.Overlay.Delete(ctx, cfg)
-}
-
-// Update install/overlays/libvirt/kustomization.yaml
-func (lio *LibvirtInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
-	var err error
-
-	// Mapping the internal properties to ConfigMapGenerator properties and their default values.
-	mapProps := map[string][2]string{
-		"network":      {"default", "LIBVIRT_NET"},
-		"storage":      {"default", "LIBVIRT_POOL"},
-		"pause_image":  {"", "PAUSE_IMAGE"},
-		"podvm_volume": {"", "LIBVIRT_VOL_NAME"},
-		"uri":          {"qemu+ssh://root@192.168.122.1/system?no_verify=1", "LIBVIRT_URI"},
-		"tunnel_type":  {"", "TUNNEL_TYPE"},
-		"vxlan_port":   {"", "VXLAN_PORT"},
-		"INITDATA":     {"", "INITDATA"},
-	}
-
-	for k, v := range mapProps {
-		if properties[k] != v[0] {
-			if err = lio.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm",
-				v[1], properties[k]); err != nil {
-				return err
-			}
-		}
-	}
-
-	if properties["ssh_key_file"] != "" {
-		// TODO hack workaround to get the ssh-key-secret within the kustomize directory. To be removed post release with the kustomize code
-		cmd := exec.Command("cp", properties["ssh_key_file"], "../../install/overlays/libvirt")
-		stdoutStderr, err := cmd.CombinedOutput()
-		log.Tracef("%v, output: %s", cmd, stdoutStderr)
-		if err != nil {
-			return fmt.Errorf("failed to copy ssh-key: %w, output: %s", err, string(stdoutStderr))
-		}
-		if err = lio.Overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret",
-			"id_rsa"); err != nil {
-			return err
-		}
-	}
-
-	if err = lio.Overlay.YamlReload(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func NewLibvirtInstallChart(installDir, provider string) (pv.InstallChart, error) {
