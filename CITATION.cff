@@ -5,6 +5,6 @@ authors:
 title: Cloud API Adaptor
 abstract: Ability to create Kata pods using cloud provider APIs aka the peer-pods approach
 license: Apache-2.0
-version: 0.17.0
-date-released: 2025-11-24
+version: 0.18.0
+date-released: 2026-02-28
 commit: 0275f8b095db93ad3296a17b838cbcd6f810e0ae
