@@ -18,10 +18,11 @@ jobs:
         - variant: debug
     uses: ./.github/workflows/azure-podvm-image-build.yml
     permissions:
-      id-token: write      # for OIDC to Azure
-      contents: read       # to fetch the code
-      packages: write      # to push measurements to OCI
-      attestations: write  # to create the attestation
+      id-token: write          # for OIDC to Azure
+      contents: read           # to fetch the code
+      packages: write          # to push measurements to OCI
+      attestations: write      # to create the attestation
+      artifact-metadata: write # required by the attest wf
     with:
       git-ref: "v${{ github.event.inputs.version }}"
       image-version: ${{ github.event.inputs.version }}
