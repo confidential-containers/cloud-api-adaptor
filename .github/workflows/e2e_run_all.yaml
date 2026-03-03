@@ -86,21 +86,21 @@ jobs:
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
-  podvm_mkosi_amd64:
-    uses: ./.github/workflows/podvm_mkosi.yaml
-    with:
-      registry: ${{ inputs.registry }}
-      image_tag: ${{ inputs.podvm_image_tag }}
-      git_ref: ${{ inputs.git_ref }}
-      arch: amd64
-      debug: true
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-      attestations: write
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+  #podvm_mkosi_amd64:
+  #  uses: ./.github/workflows/podvm_mkosi.yaml
+  #  with:
+  #    registry: ${{ inputs.registry }}
+  #    image_tag: ${{ inputs.podvm_image_tag }}
+  #    git_ref: ${{ inputs.git_ref }}
+  #    arch: amd64
+  #    debug: true
+  #  permissions:
+  #    contents: read
+  #    packages: write
+  #    id-token: write
+  #    attestations: write
+  #  secrets:
+  #    QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm_mkosi_s390x:
     uses: ./.github/workflows/podvm_mkosi.yaml
@@ -132,18 +132,18 @@ jobs:
   #
   # Reference: https://docs.github.com/en/actions/using-workflows/reusing-workflows#limitations
   #
-  image:
-    uses: ./.github/workflows/caa_build_and_push.yaml
-    with:
-      registry: ${{ inputs.registry }}
-      dev_tags: ${{ inputs.caa_image_tag }}-dev
-      release_tags: ${{ inputs.caa_image_tag }}
-      git_ref: ${{ inputs.git_ref }}
-    permissions:
-      contents: read
-      packages: write
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+  #image:
+  #  uses: ./.github/workflows/caa_build_and_push.yaml
+  #  with:
+  #    registry: ${{ inputs.registry }}
+  #    dev_tags: ${{ inputs.caa_image_tag }}-dev
+  #    release_tags: ${{ inputs.caa_image_tag }}
+  #    git_ref: ${{ inputs.git_ref }}
+  #  permissions:
+  #    contents: read
+  #    packages: write
+  #  secrets:
+  #    QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   # Edit the kustomize files under the install directory to reference the
   # built cloud-api-adaptor images. The entire directory is archived so that
@@ -154,137 +154,137 @@ jobs:
   # then please update the PROVIDERS list (space-separated names, e.g.,
   # "aws libvirt").
   # TODO - when the packer approach is removed this can go as well
-  prep_install:
-    runs-on: ubuntu-24.04
-    env:
-      PROVIDERS: "aws docker libvirt"
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          ref: ${{ inputs.git_ref }}
+  #prep_install:
+  #  runs-on: ubuntu-24.04
+  #  env:
+  #    PROVIDERS: "aws docker libvirt"
+  #  steps:
+  #    - name: Checkout Code
+  #      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+  #      with:
+  #        fetch-depth: 0
+  #        persist-credentials: false
+  #        ref: ${{ inputs.git_ref }}
 
-      - name: Rebase the code
-        if: github.event_name == 'pull_request_target'
-        working-directory: ./
-        run: |
-          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+  #    - name: Rebase the code
+  #      if: github.event_name == 'pull_request_target'
+  #      working-directory: ./
+  #      run: |
+  #        ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
-      - name: Install kustomize
-        run: |
-          command -v kustomize >/dev/null || \
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
-            bash -s /usr/local/bin
+  #    - name: Install kustomize
+  #      run: |
+  #        command -v kustomize >/dev/null || \
+  #        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | \
+  #          bash -s /usr/local/bin
 
-      - name: Update kustomization configuration
-        run: |
-          providers=(${{ env.PROVIDERS }})
-          # If there aren't providers then something is wrong
-          [[ ${#providers[@]} -gt 0 ]] || exit 1
-          for provider in "${providers[@]}"; do
-            img="${E2E_IMG_REGISTRY}/cloud-api-adaptor"
-            tag="${E2E_IMG_RELEASE_TAG}"
-            [[ "$provider" = "libvirt" ]] && tag="${E2E_IMG_DEV_TAG}"
-            echo "::group::Update ${provider}"
-            pushd "install/overlays/${provider}"
-            kustomize edit set image "cloud-api-adaptor=${img}:${tag}"
-            # Print for debugging
-            cat kustomization.yaml
-            echo "::endgroup::"
-            # Validate the file to avoid it silently testing with a wrong image
-            grep "newName: ${img}" kustomization.yaml
-            grep "newTag: ${tag}" kustomization.yaml
-            popd
-          done
+  #    - name: Update kustomization configuration
+  #      run: |
+  #        providers=(${{ env.PROVIDERS }})
+  #        # If there aren't providers then something is wrong
+  #        [[ ${#providers[@]} -gt 0 ]] || exit 1
+  #        for provider in "${providers[@]}"; do
+  #          img="${E2E_IMG_REGISTRY}/cloud-api-adaptor"
+  #          tag="${E2E_IMG_RELEASE_TAG}"
+  #          [[ "$provider" = "libvirt" ]] && tag="${E2E_IMG_DEV_TAG}"
+  #          echo "::group::Update ${provider}"
+  #          pushd "install/overlays/${provider}"
+  #          kustomize edit set image "cloud-api-adaptor=${img}:${tag}"
+  #          # Print for debugging
+  #          cat kustomization.yaml
+  #          echo "::endgroup::"
+  #          # Validate the file to avoid it silently testing with a wrong image
+  #          grep "newName: ${img}" kustomization.yaml
+  #          grep "newTag: ${tag}" kustomization.yaml
+  #          popd
+  #        done
 
-      - name: Upload install directory for next test runs
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: install_directory
-          path: src/cloud-api-adaptor/install/
-          retention-days: 7
+  #    - name: Upload install directory for next test runs
+  #      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+  #      with:
+  #        name: install_directory
+  #        path: src/cloud-api-adaptor/install/
+  #        retention-days: 7
 
   # Run AWS e2e tests if pull request labeled 'test_e2e_aws'
-  aws:
-    name: aws
-    if: |
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'test_e2e_aws')
-    needs: [podvm, image, prep_install]
-    strategy:
-      fail-fast: false
-      matrix:
-        container_runtime:
-          - crio
-        install_method:
-          - kustomize
-          - helm
-        os:
-          - ubuntu
-        provider:
-          - generic
-        arch:
-          - amd64
-    permissions:
-      id-token: write # Required by aws-actions/configure-aws-credentials
-      contents: read  # Required by aws-actions/configure-aws-credentials
-    uses: ./.github/workflows/e2e_aws.yaml
-    with:
-      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}
-      container_runtime: ${{ matrix.container_runtime }}
-      install_method: ${{ matrix.install_method }}
-      podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
-      git_ref: ${{ inputs.git_ref }}
-      oras: false
-    secrets:
-      AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
+  #aws:
+  #  name: aws
+  #  if: |
+  #    github.event_name == 'schedule' ||
+  #    github.event_name == 'workflow_dispatch' ||
+  #    contains(github.event.pull_request.labels.*.name, 'test_e2e_aws')
+  #  needs: [podvm, image, prep_install]
+  #  strategy:
+  #    fail-fast: false
+  #    matrix:
+  #      container_runtime:
+  #        - crio
+  #      install_method:
+  #        - kustomize
+  #        - helm
+  #      os:
+  #        - ubuntu
+  #      provider:
+  #        - generic
+  #      arch:
+  #        - amd64
+  #  permissions:
+  #    id-token: write # Required by aws-actions/configure-aws-credentials
+  #    contents: read  # Required by aws-actions/configure-aws-credentials
+  #  uses: ./.github/workflows/e2e_aws.yaml
+  #  with:
+  #    caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}
+  #    container_runtime: ${{ matrix.container_runtime }}
+  #    install_method: ${{ matrix.install_method }}
+  #    podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
+  #    git_ref: ${{ inputs.git_ref }}
+  #    oras: false
+  #  secrets:
+  #    AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
   # Run libvirt e2e tests if pull request labeled 'test_e2e_libvirt'
-  libvirt:
-    name: libvirt
-    if: |
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt')
-    needs: [podvm, image, prep_install]
-    strategy:
-      fail-fast: false
-      matrix:
-        container_runtime:
-          ["containerd", "crio"]
-        os:
-           - ubuntu
-        provider:
-           - generic
-        arch:
-          - amd64
-    uses: ./.github/workflows/e2e_libvirt.yaml
-    with:
-      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
-      container_runtime: ${{ matrix.container_runtime }}
-      podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
-      install_directory_artifact: install_directory
-      git_ref: ${{ inputs.git_ref }}
-    secrets:
-      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
+  #libvirt:
+  #  name: libvirt
+  #  if: |
+  #    github.event_name == 'schedule' ||
+  #    github.event_name == 'workflow_dispatch' ||
+  #    contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt')
+  #  needs: [podvm, image, prep_install]
+  #  strategy:
+  #    fail-fast: false
+  #    matrix:
+  #      container_runtime:
+  #        ["containerd", "crio"]
+  #      os:
+  #         - ubuntu
+  #      provider:
+  #         - generic
+  #      arch:
+  #        - amd64
+  #  uses: ./.github/workflows/e2e_libvirt.yaml
+  #  with:
+  #    caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev
+  #    container_runtime: ${{ matrix.container_runtime }}
+  #    podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
+  #    install_directory_artifact: install_directory
+  #    git_ref: ${{ inputs.git_ref }}
+  #  secrets:
+  #    REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
-  caa_image_amd64:
-    uses: ./.github/workflows/caa_build_and_push.yaml
-    with:
-      registry: ${{ inputs.registry }}
-      dev_arches: 'linux/amd64'
-      release_arches: 'linux/amd64'
-      dev_tags: ${{ inputs.caa_image_tag }}-amd64-dev
-      release_tags: ${{ inputs.caa_image_tag }}-amd64
-      git_ref: ${{ inputs.git_ref }}
-    permissions:
-      contents: read
-      packages: write
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+  #caa_image_amd64:
+  #  uses: ./.github/workflows/caa_build_and_push.yaml
+  #  with:
+  #    registry: ${{ inputs.registry }}
+  #    dev_arches: 'linux/amd64'
+  #    release_arches: 'linux/amd64'
+  #    dev_tags: ${{ inputs.caa_image_tag }}-amd64-dev
+  #    release_tags: ${{ inputs.caa_image_tag }}-amd64
+  #    git_ref: ${{ inputs.git_ref }}
+  #  permissions:
+  #    contents: read
+  #    packages: write
+  #  secrets:
+  #    QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   caa_image_s390x:
     uses: ./.github/workflows/caa_build_and_push.yaml
@@ -319,31 +319,31 @@ jobs:
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
   # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
-  libvirt_amd64:
-    name: E2E tests on libvirt for the amd64 architecture
-    if: |
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
-      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
-    needs: [podvm_mkosi_amd64, libvirt_e2e_arch_prep, caa_image_amd64]
-    strategy:
-      fail-fast: false
-      matrix:
-        install_method:
-          - kustomize
-          - helm
-    uses: ./.github/workflows/e2e_libvirt.yaml
-    with:
-      runner: ubuntu-24.04
-      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
-      podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.qcow2_oras_image }}
-      install_directory_artifact: install_directory
-      git_ref: ${{ inputs.git_ref }}
-      oras: true
-      install_method: ${{ matrix.install_method }}
-    secrets:
-      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
+  #libvirt_amd64:
+  #  name: E2E tests on libvirt for the amd64 architecture
+  #  if: |
+  #    github.event_name == 'schedule' ||
+  #    github.event_name == 'workflow_dispatch' ||
+  #    contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
+  #    contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
+  #  needs: [podvm_mkosi_amd64, libvirt_e2e_arch_prep, caa_image_amd64]
+  #  strategy:
+  #    fail-fast: false
+  #    matrix:
+  #      install_method:
+  #        - kustomize
+  #        - helm
+  #  uses: ./.github/workflows/e2e_libvirt.yaml
+  #  with:
+  #    runner: ubuntu-24.04
+  #    caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
+  #    podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.qcow2_oras_image }}
+  #    install_directory_artifact: install_directory
+  #    git_ref: ${{ inputs.git_ref }}
+  #    oras: true
+  #    install_method: ${{ matrix.install_method }}
+  #  secrets:
+  #    REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
   # Run libvirt s390x e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_s390x:
@@ -358,7 +358,7 @@ jobs:
       fail-fast: false
       matrix:
         install_method:
-          - kustomize
+          #- kustomize
           - helm
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
@@ -373,34 +373,34 @@ jobs:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
   # Run docker e2e tests if pull request labeled 'test_e2e_docker'
-  docker:
-    name: docker
-    if: |
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'test_e2e_docker')
-    needs: [podvm_mkosi_amd64, caa_image_amd64]
-    strategy:
-      fail-fast: false
-      matrix:
-        container_runtime:
-          - crio
-        install_method:
-          - kustomize
-          - helm
-        os:
-          - fedora
-        provider:
-          - docker
-        arch:
-          - amd64
-    uses: ./.github/workflows/e2e_docker.yaml
-    with:
-      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
-      container_runtime: ${{ matrix.container_runtime }}
-      install_method: ${{ matrix.install_method }}
-      podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.docker_oci_image }}
-      install_directory_artifact: install_directory
-      git_ref: ${{ inputs.git_ref }}
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+  #docker:
+  #  name: docker
+  #  if: |
+  #    github.event_name == 'schedule' ||
+  #    github.event_name == 'workflow_dispatch' ||
+  #    contains(github.event.pull_request.labels.*.name, 'test_e2e_docker')
+  #  needs: [podvm_mkosi_amd64, caa_image_amd64]
+  #  strategy:
+  #    fail-fast: false
+  #    matrix:
+  #      container_runtime:
+  #        - crio
+  #      install_method:
+  #        - kustomize
+  #        - helm
+  #      os:
+  #        - fedora
+  #      provider:
+  #        - docker
+  #      arch:
+  #        - amd64
+  #  uses: ./.github/workflows/e2e_docker.yaml
+  #  with:
+  #    caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
+  #    container_runtime: ${{ matrix.container_runtime }}
+  #    install_method: ${{ matrix.install_method }}
+  #    podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.docker_oci_image }}
+  #    install_directory_artifact: install_directory
+  #    git_ref: ${{ inputs.git_ref }}
+  #  secrets:
+  #    QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
