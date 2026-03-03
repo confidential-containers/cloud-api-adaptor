@@ -59,7 +59,15 @@ function build_caa_payload_image() {
 		build_type=release
 	fi
 
-	docker buildx build --platform "${supported_arches}" \
+	# if we are building for a single arch, then Disable provenance and SBOM
+	# so each tag is a single image manifest and we can create a mutli-arch from it later
+	buildx_options=" "
+	if [[ -n "${supported_arches:-}" ]] && [[ "${supported_arches:-}" != *,* ]];then
+		buildx_options="--provenance false --sbom false "
+	fi
+
+ 	# Disable provenance and SBOM so each tag is a single image manifest.
+	docker buildx build --platform "${supported_arches}" ${buildx_options} \
 		--build-arg RELEASE_BUILD="${release_build}" \
 		--build-arg BUILD_TYPE="${build_type}" \
 		--build-arg VERSION="${version}" \
