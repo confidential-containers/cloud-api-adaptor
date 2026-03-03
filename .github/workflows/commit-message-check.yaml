@@ -19,7 +19,10 @@ jobs:
   commit-message-check:
     runs-on: ubuntu-24.04
     env:
-      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+      BOT_AUTHORED: >
+        ${{ github.event.pull_request.user.login == 'dependabot[bot]' ||
+            github.event.pull_request.user.login == 'copilot-swe-agent[bot]'
+        }}
     name: Commit Message Check
     steps:
       - name: Get PR Commits
@@ -41,7 +44,7 @@ jobs:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
 
       - name: Check Subject Line Length
-        if: ${{ (env.PR_AUTHOR != 'dependabot[bot]') && ( success() || failure() ) }}
+        if: ${{ (!env.BOT_AUTHORED) && ( success() || failure() ) }}
         uses: tim-actions/commit-message-checker-with-regex@094fc16ff83d04e2ec73edb5eaf6aa267db33791 # v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
@@ -50,7 +53,7 @@ jobs:
           post_error: ${{ env.error_msg }}
 
       - name: Check Body Line Length
-        if: ${{ (env.PR_AUTHOR != 'dependabot[bot]') && ( success() || failure() ) }}
+        if: ${{ (!env.BOT_AUTHORED) && ( success() || failure() ) }}
         uses: tim-actions/commit-message-checker-with-regex@094fc16ff83d04e2ec73edb5eaf6aa267db33791 # v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
@@ -77,7 +80,7 @@ jobs:
           post_error: ${{ env.error_msg }}
 
       - name: Check Subsystem
-        if: ${{ (env.PR_AUTHOR != 'dependabot[bot]') && ( success() || failure() ) }}
+        if: ${{ (!env.BOT_AUTHORED) && ( success() || failure() ) }}
         uses: tim-actions/commit-message-checker-with-regex@094fc16ff83d04e2ec73edb5eaf6aa267db33791 # v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
