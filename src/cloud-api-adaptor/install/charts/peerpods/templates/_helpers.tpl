@@ -16,7 +16,7 @@ peer-pods-secret
 {{- end -}}
 
 {{/*
-Return the SSH key secret name for libvirt:
+Return the SSH key secret name for providers that use SSH (libvirt, byom):
 - "create": Use the chart-managed secret (ssh-key-secret)
 - "reference": Use the user-provided existing secret name (validated)
 */}}
