@@ -266,7 +266,6 @@ jobs:
       id: runTests
       env:
         TEST_PROVISION: "no"
-        INSTALL_METHOD: "helm"  # TODO remove this env once the e2e test code matching has been removed
         DEPLOY_KBS: "yes"
         CUSTOM_PCCS_URL: "https://global.acccache.azure.net/sgx/certification/v4"
         CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
