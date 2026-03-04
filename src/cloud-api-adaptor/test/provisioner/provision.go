@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -53,17 +52,12 @@ type KbsInstallOverlay struct {
 var NewProvisionerFunctions = make(map[string]NewProvisionerFunc)
 
 type CloudAPIAdaptor struct {
-	caaDaemonSet         *appsv1.DaemonSet    // Represents the cloud-api-adaptor daemonset
-	ccDaemonSet          *appsv1.DaemonSet    // Represents the CoCo installer daemonset
-	ccOpGitRepo          string               // CoCo operator's repository URL
-	ccOpConfig           string               // CoCo operator's config to use: default or release
-	ccOpGitRef           string               // CoCo operator's repository reference
-	cloudProvider        string               // Cloud provider
-	controllerDeployment *appsv1.Deployment   // Represents the controller manager deployment
-	namespace            string               // The CoCo namespace
-	installDir           string               // The install directory path
-	runtimeClass         *nodev1.RuntimeClass // The Kata Containers runtimeclass
-	rootSrcDir           string               // The root src directory of cloud-api-adaptor
+	caaDaemonSet  *appsv1.DaemonSet    // Represents the cloud-api-adaptor daemonset
+	cloudProvider string               // Cloud provider
+	namespace     string               // The CoCo namespace
+	installDir    string               // The install directory path
+	runtimeClass  *nodev1.RuntimeClass // The Kata Containers runtimeclass
+	rootSrcDir    string               // The root src directory of cloud-api-adaptor
 }
 
 type KeyBrokerService struct {
@@ -101,24 +95,13 @@ const PodWaitTimeout = time.Second * 30
 func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, error) {
 	namespace := GetCAANamespace()
 
-	versions, err := utils.GetVersions()
-	if err != nil {
-		return nil, err
-	}
-	ccOperator := versions.Git["coco-operator"]
-
 	return &CloudAPIAdaptor{
-		caaDaemonSet:         &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset", Namespace: namespace}},
-		ccDaemonSet:          &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-daemon-install", Namespace: namespace}},
-		ccOpGitRepo:          ccOperator.URL,
-		ccOpConfig:           ccOperator.Config,
-		ccOpGitRef:           ccOperator.Ref,
-		cloudProvider:        provider,
-		controllerDeployment: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cc-operator-controller-manager", Namespace: namespace}},
-		namespace:            namespace,
-		installDir:           installDir,
-		runtimeClass:         &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata-remote", Namespace: ""}},
-		rootSrcDir:           filepath.Dir(installDir),
+		caaDaemonSet:  &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "cloud-api-adaptor-daemonset", Namespace: namespace}},
+		cloudProvider: provider,
+		namespace:     namespace,
+		installDir:    installDir,
+		runtimeClass:  &nodev1.RuntimeClass{ObjectMeta: metav1.ObjectMeta{Name: "kata-remote", Namespace: ""}},
+		rootSrcDir:    filepath.Dir(installDir),
 	}, nil
 }
 
