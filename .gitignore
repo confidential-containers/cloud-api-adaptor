@@ -39,7 +39,6 @@ src/cloud-api-adaptor/*.qcow2
 *.tar.gz
 
 # Secrets
-install/overlays/gcp/GCP_CREDENTIALS
 install/charts/peerpods/providers/*-secrets.yaml
 
 # Helm chart dependencies
