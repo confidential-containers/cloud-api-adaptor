@@ -46,10 +46,6 @@ configMapGenerator:
 ##TLS_SETTINGS
 
 secretGenerator:
-- name: auth-json-secret
-  namespace: confidential-containers-system
-  files:
-  #- auth.json # set - path to auth.json pull credentials file
 - name: peer-pods-secret
   namespace: confidential-containers-system
   envs:

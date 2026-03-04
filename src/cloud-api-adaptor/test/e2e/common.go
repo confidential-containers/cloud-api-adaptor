@@ -33,7 +33,6 @@ import (
 )
 
 const WAIT_DEPLOYMENT_AVAILABLE_TIMEOUT = time.Second * 180
-const DEFAULT_AUTH_SECRET = "auth-json-secret-default"
 const INITDATA_ANNOTATION = "io.katacontainers.config.hypervisor.cc_init_data"
 
 const POLICY = `package agent_policy
