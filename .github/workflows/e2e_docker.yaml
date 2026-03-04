@@ -43,7 +43,6 @@ jobs:
     name: "Docker e2e tests: (${{ inputs.container_runtime }})"
     runs-on: ubuntu-22.04
     env:
-      INSTALL_METHOD: "helm"  # TODO remove this env once the e2e test code matching has been removed
       CAA_IMAGE: "${{ inputs.caa_image }}"
     steps:
       - name: Checkout Code
