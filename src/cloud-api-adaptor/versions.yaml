@@ -41,10 +41,6 @@ tools:
     sha256: 29454bc351f4433e66c00f5d37841627cbbcc02e4c70a6d796529d355237671c
 # Referenced Git repositories
 git:
-  coco-operator:
-    url: https://github.com/confidential-containers/operator
-    config: release
-    reference: v0.17.0
   umoci:
     url: https://github.com/opencontainers/umoci
     reference: v0.5.0
