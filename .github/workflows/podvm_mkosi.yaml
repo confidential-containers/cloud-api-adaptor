@@ -143,6 +143,7 @@ jobs:
         run: make binaries
         env:
           ARCH: ${{ inputs.arch }}
+          VERIFY_PROVENANCE: yes
 
       - name: Build mkosi debug image
         if: ${{ inputs.debug == 'true' }}

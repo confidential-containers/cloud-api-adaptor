@@ -148,6 +148,7 @@ jobs:
         env:
           ARCH: ${{ inputs.arch }}
           PODVM_DISTRO: ubuntu
+          VERIFY_PROVENANCE: yes
 
       - name: Build mkosi debug image
         if: ${{ inputs.debug == 'true' }}
