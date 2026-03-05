@@ -226,7 +226,6 @@ VPC_SERVICE_URL="https://jp-tok.iaas.cloud.ibm.com/v1"
 IKS_SERVICE_URL="https://containers.cloud.ibm.com/global"
 PODVM_IMAGE_ID="<podvm-image-uploaded-previously>"
 INSTANCE_PROFILE_NAME="bx2-2x8"
-PODVM_IMAGE_ARCH="s390x"
 IMAGE_PULL_API_KEY="<can-be-same-as-apikey>"
 CAA_IMAGE_TAG="<caa-image-tag>"
 EOF

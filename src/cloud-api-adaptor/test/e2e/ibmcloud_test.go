@@ -186,32 +186,32 @@ func TestDeletePod(t *testing.T) {
 	DoTestDeleteSimplePod(t, testEnv, assert)
 }
 
-func TestPodVMwithNoAnnotations(t *testing.T) {
+func TestPodVMWithNoAnnotations(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
-	DoTestPodVMwithNoAnnotations(t, testEnv, assert, GetIBMInstanceProfileType("b", "2x8"))
+	DoTestPodVMwithNoAnnotations(t, testEnv, assert, "bx2-2x8")
 }
 
-func TestPodVMwithAnnotationsInstanceType(t *testing.T) {
+func TestPodVMWithAnnotationsInstanceType(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
-	DoTestPodVMwithAnnotationsInstanceType(t, testEnv, assert, GetIBMInstanceProfileType("c", "2x4"))
+	DoTestPodVMwithAnnotationsInstanceType(t, testEnv, assert, "cx2-2x4")
 }
 
 func TestPodVMWithAnnotationsCPUMemory(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
-	DoTestPodVMWithAnnotationsCPUMemory(t, testEnv, assert, GetIBMInstanceProfileType("m", "2x16"))
+	DoTestPodVMWithAnnotationsCPUMemory(t, testEnv, assert, "mx2-2x16")
 }
 
-func TestPodVMwithAnnotationsInvalidInstanceType(t *testing.T) {
+func TestPodVMWithAnnotationsInvalidInstanceType(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
-	DoTestPodVMwithAnnotationsInvalidInstanceType(t, testEnv, assert, GetIBMInstanceProfileType("b", "2x4"))
+	DoTestPodVMwithAnnotationsInvalidInstanceType(t, testEnv, assert, "bx2-2x4")
 }
 func TestPodVMwithAnnotationsLargerMemory(t *testing.T) {
 	assert := IBMCloudAssert{

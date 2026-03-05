@@ -36,7 +36,6 @@ type IBMCloudProperties struct {
 	InstanceProfile       string
 	KubeVersion           string
 	PodvmImageID          string
-	PodvmImageArch        string
 	PublicGatewayName     string
 	PublicGatewayID       string
 	Region                string
@@ -91,7 +90,6 @@ func InitIBMCloudProperties(properties map[string]string) error {
 		InstanceProfile:       properties["INSTANCE_PROFILE_NAME"],
 		KubeVersion:           properties["KUBE_VERSION"],
 		PodvmImageID:          properties["PODVM_IMAGE_ID"],
-		PodvmImageArch:        properties["PODVM_IMAGE_ARCH"],
 		PublicGatewayName:     properties["PUBLIC_GATEWAY_NAME"],
 		Region:                properties["REGION"],
 		ResourceGroupID:       properties["RESOURCE_GROUP_ID"],

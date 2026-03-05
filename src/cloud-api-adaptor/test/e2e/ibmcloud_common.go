@@ -329,17 +329,6 @@ func (c IBMCloudAssert) GetInstanceType(t *testing.T, podName string) (string, e
 	return "", errors.New("Failed to Create PodVM Instance")
 }
 
-func GetIBMInstanceProfileType(prefix string, config string) string {
-	if strings.EqualFold("s390x", pv.IBMCloudProps.PodvmImageArch) {
-		if strings.Contains(pv.IBMCloudProps.InstanceProfile, "e-") {
-			return prefix + "z2e-" + config
-		} else {
-			return prefix + "z2-" + config
-		}
-	}
-	return prefix + "x2-" + config
-}
-
 type IBMRollingUpdateAssert struct {
 	VPC *vpcv1.VpcV1
 	// cache Pod VM instance IDs for rolling update test
