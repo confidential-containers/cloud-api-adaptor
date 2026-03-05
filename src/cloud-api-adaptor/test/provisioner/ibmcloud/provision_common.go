@@ -893,8 +893,7 @@ func (p *IBMCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context,
 	}
 	log.Infof("File %s uploaded to bucket.", key)
 
-	var osNames []string
-	osNames = []string{"ubuntu-24-04-amd64"}
+	osNames := []string{"ubuntu-24-04-amd64"}
 	operatingSystemIdentityModel := &vpcv1.OperatingSystemIdentityByName{
 		Name: &osNames[0],
 	}
