@@ -31,7 +31,7 @@ import (
 // podMutator mutates Pods
 type PodMutator struct {
 	Client  client.Client
-	Decoder *admission.Decoder
+	Decoder admission.Decoder
 }
 
 // podMutator adds peer-pod extended resource to the pod spec add removes all other resource specs
