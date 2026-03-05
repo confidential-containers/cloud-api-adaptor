@@ -38,7 +38,7 @@ jobs:
           filter_out_pattern: '^Revert "'
 
       - name: Commit Body Missing Check
-        if: ${{ ( success() || failure() ) }}
+        if: ${{ (!env.BOT_AUTHORED) && ( success() || failure() ) }}
         uses: tim-actions/commit-body-check@d2e0e8e1f0332b3281c98867c42a2fbe25ad3f15 # v1.0.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
