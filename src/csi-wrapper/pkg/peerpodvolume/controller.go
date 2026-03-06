@@ -23,7 +23,7 @@ type PeerpodvolumeController struct {
 	clientset      clientset.Interface
 	lister         listers.PeerpodVolumeLister
 	synced         cache.InformerSynced
-	queue          workqueue.RateLimitingInterface
+	queue          workqueue.TypedRateLimitingInterface[string]
 	syncFunction   func(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume)
 	deleteFunction func(peerPodVolume *peerpodvolumeV1alpha1.PeerpodVolume)
 }
@@ -42,7 +42,7 @@ func newPeerpodvolumeController(
 		clientset:      clientset,
 		lister:         informer.Lister(),
 		synced:         informer.Informer().HasSynced,
-		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Peerpodvolumes"),
+		queue:          workqueue.NewTypedRateLimitingQueueWithConfig(workqueue.DefaultTypedControllerRateLimiter[string](), workqueue.TypedRateLimitingQueueConfig[string]{Name: "Peerpodvolumes"}),
 		syncFunction:   syncFunction,
 		deleteFunction: deleteFunction,
 	}
@@ -109,7 +109,7 @@ func (c *PeerpodvolumeController) processNextWorkItem() bool {
 	}
 	defer c.queue.Done(key)
 
-	err := c.syncHandler(key.(string))
+	err := c.syncHandler(key)
 	if err == nil {
 		c.queue.Forget(key)
 		return true

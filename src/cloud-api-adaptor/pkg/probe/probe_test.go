@@ -28,7 +28,7 @@ var timeAfter time.Time = timeStart.Add(time.Second * 10)
 
 // Mock a successful clientset
 func getFakeClientSetWithParas(podnamePrefix, namespace, nodeName, runtimeClass string, status corev1.ConditionStatus, transitionTime time.Time) *fake.Clientset {
-	clientset := fake.NewSimpleClientset(&corev1.Pod{
+	clientset := fake.NewClientset(&corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podnamePrefix + "-1",
 			Namespace: namespace,
@@ -283,7 +283,7 @@ func Test_StartupHandler_BeErrorListPods(t *testing.T) {
 	}
 	defer socket.Close()
 
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	clientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("list", "pods", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		return true, nil, errors.New("Error creating secret")
 	})
