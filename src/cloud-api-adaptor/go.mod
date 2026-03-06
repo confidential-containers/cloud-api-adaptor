@@ -8,8 +8,8 @@ require (
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20230120122421-afb48116b8f1
 	github.com/IBM-Cloud/power-go-client v1.14.4 // indirect
 	github.com/IBM/go-sdk-core/v5 v5.21.2
-	github.com/IBM/platform-services-go-sdk v0.91.0 // indirect
-	github.com/IBM/vpc-go-sdk v0.66.0
+	github.com/IBM/platform-services-go-sdk v0.94.3 // indirect
+	github.com/IBM/vpc-go-sdk v0.80.0
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.9
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.9 // indirect
@@ -41,7 +41,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
 	github.com/Azure/go-autorest/autorest v0.11.30
 	github.com/BurntSushi/toml v1.5.0
-	github.com/IBM/ibm-cos-sdk-go v1.9.4
+	github.com/IBM/ibm-cos-sdk-go v1.13.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/docker/docker v28.3.3+incompatible
