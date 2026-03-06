@@ -11,7 +11,7 @@ mv "${BUILDROOT}/etc/issue.d" "${BUILDROOT}/usr/lib/issue.d" || true
   echo "IMAGE_ID=\"podvm\""
   echo "IMAGE_VERSION=\"${IMAGE_VERSION-v0.0.0}\""
   echo "VARIANT_ID=\"${VARIANT_ID}\""
-} >> "${BUILDROOT}/etc/os-release"
+} >>"${BUILDROOT}/etc/os-release"
 
 # remove unused units of legacy image
 rm -f "${BUILDROOT}"/etc/systemd/system/{run-image,run-kata\x2dcontainers}.mount
