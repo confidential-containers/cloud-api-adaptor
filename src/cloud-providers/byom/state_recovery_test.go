@@ -25,7 +25,7 @@ func TestConfigMapVMPoolManagerRecoverState(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Pre-create ConfigMap with some state
 	existingState := &IPAllocationState{
@@ -115,7 +115,7 @@ func TestConfigMapVMPoolManagerRecoverStateWithNodeAllocations(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Create ConfigMap with allocations including some from the current test node
 	existingState := &IPAllocationState{
@@ -228,7 +228,7 @@ func TestConfigMapVMPoolManagerRecoverStateKeepsOrphanedAllocations(t *testing.T
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Create ConfigMap with test-node allocation that would be "orphaned" after CAA restart
 	existingState := &IPAllocationState{
@@ -321,7 +321,7 @@ func TestConfigMapVMPoolManagerRecoverEmptyState(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// No ConfigMap exists
 	manager, err := NewConfigMapVMPoolManager(client, config)
@@ -368,7 +368,7 @@ func TestConfigMapVMPoolManagerRepairStateFromPrimaryConfig(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Create ConfigMap with state that doesn't match primary config
 	corruptedState := &IPAllocationState{
@@ -484,7 +484,7 @@ func TestConfigMapVMPoolManagerMismatchedPoolSizes(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Create ConfigMap with MORE IPs than primary config
 	mismatchedState := &IPAllocationState{
@@ -585,7 +585,7 @@ func TestConfigMapVMPoolManagerMissingPrimaryIPs(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Create ConfigMap with FEWER IPs than primary config (missing some primary IPs)
 	incompleteState := &IPAllocationState{
@@ -673,7 +673,7 @@ func TestConfigMapVMPoolManagerPoolIPsChange(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Create ConfigMap with existing state using original pool IPs
 	existingState := &IPAllocationState{
