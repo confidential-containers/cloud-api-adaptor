@@ -42,7 +42,7 @@ func TestNewConfigMapVMPoolManager(t *testing.T) {
 		PoolIPs:       []string{"192.168.1.10", "192.168.1.11"},
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	manager, err := NewConfigMapVMPoolManager(client, config)
 	if err != nil {
@@ -61,7 +61,7 @@ func TestNewConfigMapVMPoolManagerValidation(t *testing.T) {
 		PoolIPs:       []string{"192.168.1.10", "invalid-ip"},
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	_, err := NewConfigMapVMPoolManager(client, config)
 	if err == nil {
@@ -81,7 +81,7 @@ func TestNewConfigMapVMPoolManagerNilClient(t *testing.T) {
 }
 
 func TestNewConfigMapVMPoolManagerNilConfig(t *testing.T) {
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	_, err := NewConfigMapVMPoolManager(client, nil)
 	if err == nil {
@@ -97,7 +97,7 @@ func TestNewConfigMapVMPoolManagerEmptyIPs(t *testing.T) {
 		PoolIPs: []string{},
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	_, err := NewConfigMapVMPoolManager(client, config)
 	if err == nil {
@@ -117,7 +117,7 @@ func TestConfigMapVMPoolManagerAllocateIP(t *testing.T) {
 		SkipVMReadiness:  true,  // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// For testing basic allocation functionality, we don't need PeerPod service
 	manager, err := NewConfigMapVMPoolManager(client, config)
@@ -184,7 +184,7 @@ func TestConfigMapVMPoolManagerDeallocateIP(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Pre-create ConfigMap with allocated IP
 	initialState := &IPAllocationState{
@@ -260,7 +260,7 @@ func TestConfigMapVMPoolManagerGetAllocatedIP(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 	manager, err := NewConfigMapVMPoolManager(client, config)
 	if err != nil {
 		t.Fatalf("Failed to create ConfigMapVMPoolManager: %v", err)
@@ -312,7 +312,7 @@ func TestConfigMapVMPoolManagerListAllocatedIPs(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 	manager, err := NewConfigMapVMPoolManager(client, config)
 	if err != nil {
 		t.Fatalf("Failed to create ConfigMapVMPoolManager: %v", err)
@@ -369,7 +369,7 @@ func TestConfigMapVMPoolManagerInitializeEmptyState(t *testing.T) {
 		PoolIPs:       []string{"192.168.1.10", "192.168.1.11", "192.168.1.12"},
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 	manager := &ConfigMapVMPoolManager{
 		client: client,
 		config: config,
@@ -417,7 +417,7 @@ func TestConfigMapVMPoolManagerErrorHandling(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Add reactor to simulate ConfigMap creation failure
 	client.PrependReactor("create", "configmaps", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
@@ -450,7 +450,7 @@ func TestConfigMapVMPoolManagerDoubleAllocation(t *testing.T) {
 		SkipVMReadiness:  true, // Skip VM readiness checks in tests
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 	manager, err := NewConfigMapVMPoolManager(client, config)
 	if err != nil {
 		t.Fatalf("Failed to create ConfigMapVMPoolManager: %v", err)

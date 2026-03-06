@@ -18,7 +18,7 @@ import (
 
 // setupTestClient sets up a fake Kubernetes client for testing
 func setupTestClient(t *testing.T) (kubernetes.Interface, func()) {
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	cleanup := func() {
 		// Nothing to cleanup for fake client
