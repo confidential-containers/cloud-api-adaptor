@@ -106,7 +106,7 @@ func (p *GCPProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		// GkeVpc
 		"vpc_name": p.GcpVPC.vpcName,
 
-		// Overlay Parameters
+		// Charts Parameters
 		"caa_image":          p.CaaImage,
 		"podvm_machine_type": p.PodvmMachineType, // GCP_MACHINE_TYPE
 		"podvm_image_name":   p.PodvmImageName,   // PODVM_IMAGE_NAME

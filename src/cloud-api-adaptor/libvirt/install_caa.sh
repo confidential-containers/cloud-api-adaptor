@@ -3,7 +3,7 @@
 # Copyright Confidential Containers Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Install the CAA operator in a Kubernetes cluster.
+# Install the CAA chart in a Kubernetes cluster.
 #
 set -o errexit
 set -o nounset
@@ -113,7 +113,7 @@ main() {
 		-e 's/libvirt: {}/libvirt:/' \
 		"$values_file"
 
-	# Finally install the operator
+	# Finally install the chart
 	(cd "$script_dir/.." && make CLOUD_PROVIDER=libvirt deploy)
 
 	wait_pods
