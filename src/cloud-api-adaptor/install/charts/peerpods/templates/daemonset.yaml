@@ -56,7 +56,7 @@ spec:
         # TODO: We should think about a better patch strategy for keeping per provider
         # patches in different files, otherwise this template might get bloated.
         volumeMounts:
-{{- if and (eq .Values.provider "libvirt") (include "peerpods.sshKeySecretName" .) }}
+{{- if and (or (eq .Values.provider "libvirt") (eq .Values.provider "byom")) (include "peerpods.sshKeySecretName" .) }}
         - mountPath: /root/.ssh/
           name: ssh
           readOnly: true
@@ -97,7 +97,7 @@ spec:
       nodeSelector:
         node.kubernetes.io/worker: ""
       volumes:
-{{- if and (eq .Values.provider "libvirt") (include "peerpods.sshKeySecretName" .) }}
+{{- if and (or (eq .Values.provider "libvirt") (eq .Values.provider "byom")) (include "peerpods.sshKeySecretName" .) }}
       - name: ssh
         secret:
           defaultMode: 384
