@@ -32,7 +32,7 @@ func TestNodeSpecificStateRecovery(t *testing.T) {
 		OperationTimeout: 10000,
 	}
 
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	// Create initial state with allocations from multiple nodes
 	initialState := &IPAllocationState{
