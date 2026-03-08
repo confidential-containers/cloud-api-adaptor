@@ -6,9 +6,9 @@ require (
 	github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
-	k8s.io/api v0.35.1
+	k8s.io/api v0.35.2
 	k8s.io/apimachinery v0.35.2
-	k8s.io/client-go v0.35.1
+	k8s.io/client-go v0.35.2
 	sigs.k8s.io/controller-runtime v0.23.1
 )
 
