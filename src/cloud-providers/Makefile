@@ -60,7 +60,7 @@ define gen-provider-secrets
 			elif .provider == "byom" then \
 				"# Note: SSH keys for VM access are handled differently as secrets.mode is:", \
 				"# - reference: you should create the ssh-key-secret secret yourself.", \
-				"# - create: you should uncomment below lines and fill both id_rsa and id_rsa.pub fields", \
+				"# - create: you should uncomment below lines and fill both id_rsa and id_rsa_pub fields", \
 				"#", \
 				"# providerSecrets:", \
 				"#   byom:", \
@@ -68,7 +68,7 @@ define gen-provider-secrets
 				"#       -----BEGIN OPENSSH PRIVATE KEY-----", \
 				"#       ...", \
 				"#       -----END OPENSSH PRIVATE KEY-----", \
-				"#     id_rsa.pub: |", \
+				"#     id_rsa_pub: |", \
 				"#       ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@host" \
 			else empty end) \
 		else \

@@ -191,32 +191,27 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG... [optional-comment]
 
 ## Deployment Configuration
 
-### Using Kustomize
+### Using Helm Charts
 
-Trust on First Use (TOFU) is the default. For configuring
-SSH host key allowlist you'll need to make the following changes to `kustomization.yaml`
-
+1. Copy the secrets template file and add your SSH keys:
+```bash
+cp src/cloud-api-adaptor/install/charts/peerpods/providers/byom-secrets.yaml.template src/cloud-api-adaptor/install/charts/peerpods/providers/byom-secrets.yaml
+```
 ```yaml
-configMapGenerator:
-- name: peer-pods-cm
-  namespace: confidential-containers-system
-  literals:
-  - SSH_HOST_KEY_ALLOWLIST_DIR="/etc/ssh-allowlist"  # Enable allowlist mode
+providerSecrets:
+  byom:
+    id_rsa: |
+      -----BEGIN OPENSSH PRIVATE KEY-----
+      <paste your private key content here>
+      -----END OPENSSH PRIVATE KEY-----
+    id_rsa_pub: |
+      ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@host <-- replace this with your private key
+```
+**Note:** Both `id_rsa` (private key) and `id_rsa.pub` (public key) are required for BYOM provider.
 
-secretGenerator:
-- name: ssh-host-key-allowlist
-  namespace: confidential-containers-system
-  files:
-  - vm1_rsa.pub      # Host keys from VM 1
-  - vm1_ecdsa.pub
-  - vm1_ed25519.pub
-  - vm2_rsa.pub      # Host keys from VM 2
-  - vm2_ecdsa.pub
-  - vm2_ed25519.pub
-
-##SSH_HOST_KEY_ALLOWLIST
-  - ssh_host_key_allowlist_volume_mount.yaml # set (for SSH host key allowlist)
-##SSH_HOST_KEY_ALLOWLIST
+2. Populate the VM_POOL_IPs in `byom.yaml` with the precreated VM IPs
+```yaml
+VM_POOL_IPS: "<add your IPs here>"
 ```
 
 ## Deploy
