@@ -201,7 +201,7 @@ jobs:
       dev_tags: ${{ inputs.caa_image_tag }}-s390x-dev
       release_tags: ${{ inputs.caa_image_tag }}-s390x
       git_ref: ${{ inputs.git_ref }}
-      runner: 's390x'
+      runner: 'ubuntu-24.04-s390x'
     permissions:
       contents: read
       packages: write

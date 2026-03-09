@@ -74,7 +74,7 @@ permissions: {}
 jobs:
   build-image:
     name: Build mkosi Ubuntu image for ${{ inputs.arch }}
-    runs-on: ${{ inputs.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.arch == 's390x' && 'ubuntu-24.04-s390x' || 'ubuntu-24.04' }}
     permissions:
       contents: read # Required if we want to run on a fork?
       packages: write # Required to publish the oras package to ghcr
