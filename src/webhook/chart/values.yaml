@@ -41,7 +41,7 @@ webhook:
 # Set to false to expose metrics without authentication (not recommended for production)
 authProxy:
   enabled: true
-  image: gcr.io/kubebuilder/kube-rbac-proxy:v0.14.0
+  image: registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.14.0
   resources:
     limits:
       cpu: 500m
