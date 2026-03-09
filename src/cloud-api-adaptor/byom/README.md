@@ -9,23 +9,23 @@ The BYOM (Bring Your Own Machine) provider allows you to use pre-created VMs as 
 - **VM_POOL_IPS**: Comma-separated list of pre-created VM IP addresses or IP ranges, or a combination of both. Each range can include up to 100 IPs by default. This limit can be customized by setting `MAX_RANGE_IPS`
 - **SSH_USERNAME**: SSH username for VM access. Default is "peerpod" for VM image built using the mkosi `sftp` profile
 
+## Prerequisites
+
 ### Create SSH key pair
 
 ```bash
 ssh-keygen -f ./id_rsa -N ""
 ```
-This will create `id_rsa` and `id_rsa.pub`. You'll need this in the subsequent steps.
+This will create `id_rsa` and `id_rsa.pub`. You'll need them for [deployment](#deployment-configuration) later.
+
+## Option 1: Build Custom Pod VM Image
+
+If you want to build your own PodVM image with embedded SSH keys, follow these steps.
 
 Copy `id_rsa.pub` to `./resources/authorized_keys`
 
 ```bash
 cp id_rsa.pub ./resources/authorized_keys
-```
-
-Copy `id_rsa` and `id_rsa.pub` to `../install/overlays/byom`
-
-```bash
-cp id_rsa id_rsa.pub ../install/overlays/byom
 ```
 
 ### Build Pod VM image
@@ -83,7 +83,11 @@ Capture the VM IP
 virsh domifaddr podvm-test
 ```
 
-## Set up and use an existing VM for pool
+Once you have your VMs ready with IPs, proceed to [deployment](#deployment-configuration).
+
+## Option 2: Use Existing VMs
+
+If you have existing VMs and want to configure them automatically, follow these steps.
 
 1. Prerequisites
 Ensure the following tools are installed and available in your environment:
@@ -104,30 +108,20 @@ cd cloud-api-adaptor/src/cloud-api-adaptor
 SSH_PUBLIC_KEY_PATH=<path-to-public-key> ./hack/setup-podvm-byom.sh
 ```
 
-## Deployment Configuration
+Once your VMs are configured, proceed to [deployment](#deployment-configuration).
 
-You must run the following command from `src/cloud-api-adaptor/install/overlays/byom` as the base directory.
-
-### Set pre-created VM IPs in `kustomization.yaml`
-
-Update the IPs as per your environment.
-
-```yaml
-- VM_POOL_IPS: <192.168.1.100,192.168.1.101,...>
-```
-
-### SSH Host Key Verification
+## SSH Host Key Verification
 
 The BYOM provider supports two modes for SSH host key verification:
 
-#### 1. Stateless TOFU (Trust On First Use) - Default
+### 1. Stateless TOFU (Trust On First Use) - Default
 
 When no allowlist is configured, the provider uses stateless TOFU mode:
 
 - Accepts any SSH host key during connection
 - Logs the key fingerprint for security monitoring 
 
-#### 2. Host Key Allowlist - Recommended
+### 2. Host Key Allowlist - Recommended
 
 Configure **SSH_HOST_KEY_ALLOWLIST_DIR** to enable allowlist mode:
 
@@ -191,32 +185,27 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG... [optional-comment]
 
 ## Deployment Configuration
 
-### Using Kustomize
+### Using Helm Charts
 
-Trust on First Use (TOFU) is the default. For configuring
-SSH host key allowlist you'll need to make the following changes to `kustomization.yaml`
-
+1. Copy the secrets template file and add your SSH keys (generated in [Prerequisites](#prerequisites)):
+```bash
+cp src/cloud-api-adaptor/install/charts/peerpods/providers/byom-secrets.yaml.template src/cloud-api-adaptor/install/charts/peerpods/providers/byom-secrets.yaml
+```
 ```yaml
-configMapGenerator:
-- name: peer-pods-cm
-  namespace: confidential-containers-system
-  literals:
-  - SSH_HOST_KEY_ALLOWLIST_DIR="/etc/ssh-allowlist"  # Enable allowlist mode
+providerSecrets:
+  byom:
+    id_rsa: |
+      -----BEGIN OPENSSH PRIVATE KEY-----
+      <paste your private key content here>
+      -----END OPENSSH PRIVATE KEY-----
+    id_rsa_pub: |
+      ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@host
+```
+**Note:** Both `id_rsa` (private key) and `id_rsa.pub` (public key) are required for BYOM provider.
 
-secretGenerator:
-- name: ssh-host-key-allowlist
-  namespace: confidential-containers-system
-  files:
-  - vm1_rsa.pub      # Host keys from VM 1
-  - vm1_ecdsa.pub
-  - vm1_ed25519.pub
-  - vm2_rsa.pub      # Host keys from VM 2
-  - vm2_ecdsa.pub
-  - vm2_ed25519.pub
-
-##SSH_HOST_KEY_ALLOWLIST
-  - ssh_host_key_allowlist_volume_mount.yaml # set (for SSH host key allowlist)
-##SSH_HOST_KEY_ALLOWLIST
+2. Populate the VM_POOL_IPs in [`byom.yaml`](../install/charts/peerpods/providers/byom.yaml) with your VM IPs
+```yaml
+VM_POOL_IPS: "<add your IPs here>"
 ```
 
 ## Deploy
