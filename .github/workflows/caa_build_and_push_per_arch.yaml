@@ -176,13 +176,13 @@ jobs:
           persist-credentials: false
 
       - name: Download release tags.txt
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: image-tags
           path: src/cloud-api-adaptor
 
       - name: Download release commits file
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           pattern: tags-architectures-*
           merge-multiple: true
