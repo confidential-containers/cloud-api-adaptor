@@ -21,8 +21,10 @@ secrets:
   # See providers/*-secrets.yaml.template for the list of required keys.
   existingSecretName: ""
 
-  # Name of existing SSH key secret for libvirt (only used when mode: "reference")
-  # The secret must contain the private key (id_rsa) for connecting to the hypervisor.
+  # Name of existing SSH key secret for providers that use SSH (libvirt, byom).
+  # Only used when mode: "reference".
+  # - libvirt: must contain id_rsa (private key)
+  # - byom: must contain id_rsa (private key) and id_rsa.pub (public key)
   existingSshKeySecretName: ""
 
   # TLS certificates for CAA-to-peer-pod communication.
