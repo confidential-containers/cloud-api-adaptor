@@ -126,7 +126,9 @@ jobs:
             dnf \
             qemu-utils \
             uidmap
-          sudo snap install yq
+          # yq may be pre-installed on self-hosted runners
+          command -v yq || sudo snap install yq
+          yq --version | grep -qE 'v4\.[0-9]+' || { echo "yq version is not 4.x, please install yq 4.x"; exit 1; }
 
       - name: Read properties from versions.yaml
         run: |
