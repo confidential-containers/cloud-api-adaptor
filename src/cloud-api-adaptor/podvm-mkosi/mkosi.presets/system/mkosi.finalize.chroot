@@ -2,6 +2,21 @@
 
 set -euxo pipefail
 
+# Build DKMS kernel modules at image creation time and seal them into the
+# squashfs. This is required because systemd.volatile=state wipes /var
+# (including /var/lib/dkms) on every boot, so dkms.service never has a
+# registration database at runtime and exits 0 without building anything.
+# After this runs, the compiled .ko files live in /lib/modules/<ver>/extra/
+# inside the squashfs and modprobe finds them normally.
+if command -v dkms &>/dev/null; then
+    for kernel_ver in /lib/modules/*/; do
+        kernel_ver=$(basename "${kernel_ver}")
+        echo "=== DKMS: building modules for kernel ${kernel_ver} ==="
+        dkms autoinstall --kernelver "${kernel_ver}" || true
+        depmod -a "${kernel_ver}" || true
+    done
+fi
+
 if [[ "${ARCHITECTURE}" == "s390x" ]]; then
 	# enable cloud-init services
         systemctl enable cloud-init-local.service
