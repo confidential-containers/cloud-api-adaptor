@@ -144,24 +144,6 @@ else
 	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
 endif
 
-PHONY: image-gpu
-image-gpu: insecure-builder
-	rm -rf ./build
-	@echo "Building GPU image (Fedora + nvidia drivers)..."
-	mkdir -p build
-	docker buildx build \
-		-f Dockerfile.mkosi \
-		-t $(PODVM_IMAGE) \
-		--build-arg PROFILE=gpu \
-		--build-arg IMAGE_VERSION \
-		--build-arg MKOSI_VERSION \
-		--progress=plain \
-		-o type=local,dest=./build \
-		--builder insecure-builder \
-		--allow security.insecure \
-		.
-	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
-
 PHONY: image-sftp
 image-sftp: insecure-builder
 	rm -rf ./build

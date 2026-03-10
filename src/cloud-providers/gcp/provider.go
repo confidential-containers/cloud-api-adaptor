@@ -360,9 +360,15 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		requiresTerminatePolicy = true
 	}
 
-	if requiresTerminatePolicy {
+	if requiresTerminatePolicy || p.serviceConfig.UseSpotInstances {
+		provisioningModel := "STANDARD"
+		if p.serviceConfig.UseSpotInstances {
+			provisioningModel = "SPOT"
+			logger.Printf("UseSpotInstances=true, setting ProvisioningModel to SPOT")
+		}
 		instanceResource.Scheduling = &computepb.Scheduling{
 			OnHostMaintenance: proto.String("TERMINATE"),
+			ProvisioningModel: proto.String(provisioningModel),
 		}
 	}
 
