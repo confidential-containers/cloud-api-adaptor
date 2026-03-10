@@ -55,9 +55,9 @@ require (
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
 	google.golang.org/api v0.256.0
 	google.golang.org/protobuf v1.36.11
-	k8s.io/api v0.35.1
+	k8s.io/api v0.35.2
 	k8s.io/apimachinery v0.35.2
-	k8s.io/client-go v0.35.1
+	k8s.io/client-go v0.35.2
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	sigs.k8s.io/e2e-framework v0.6.0
 	sigs.k8s.io/kustomize v2.0.3+incompatible
