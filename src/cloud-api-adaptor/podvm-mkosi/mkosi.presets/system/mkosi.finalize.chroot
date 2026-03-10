@@ -12,7 +12,11 @@ if command -v dkms &>/dev/null; then
     for kernel_ver in /lib/modules/*/; do
         kernel_ver=$(basename "${kernel_ver}")
         echo "=== DKMS: building modules for kernel ${kernel_ver} ==="
-        dkms autoinstall --kernelver "${kernel_ver}" || true
+        if ! dkms autoinstall --kernelver "${kernel_ver}"; then
+            echo "=== DKMS build failed — make.log ==="
+            find /var/lib/dkms -name make.log -exec cat {} \;
+            exit 1
+        fi
         depmod -a "${kernel_ver}" || true
     done
 fi
