@@ -6,13 +6,21 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   stale:
+    name: stale
     runs-on: ubuntu-24.04
+    permissions:
+      actions: write  # Needed to manage caches for state persistence across runs
+      pull-requests: write  # Needed to add/remove labels, post comments, or close PRs
     steps:
       - uses: actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f # v10.2.0
         with:
-          stale-pr-message: 'This PR has been opened without with no activity for 90 days. Comment on the issue otherwise it will be closed in 7 days'
+          stale-pr-message: 'This PR has been opened without any activity for 90 days. Please comment on the issue otherwise it will be closed in 7 days'
           days-before-pr-stale: 90
           days-before-pr-close: 7
           days-before-issue-stale: -1
