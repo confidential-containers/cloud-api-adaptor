@@ -39,6 +39,7 @@ type Config struct {
 	RootVolumeSize      int
 	Tags                provider.KeyValueFlag
 	UsePublicIP         bool
+	UseSpotInstances    bool
 	MachineTypes        machineTypes
 	MachineTypeSpecList []provider.InstanceTypeSpec
 }
