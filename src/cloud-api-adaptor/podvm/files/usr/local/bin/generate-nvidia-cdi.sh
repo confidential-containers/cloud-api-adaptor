@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Create device nodes. Modules are already loaded by systemd-modules-load.service
-# reading /usr/lib/modules-load.d/nvidia.conf — do not pass --load-kernel-modules
-# here as that would race with the modules-load unit. nvidia-persistenced is managed
-# by its own systemd unit (nvidia-persistenced.service) which this service depends on
-# via nvidia-cdi.service; do not start it inline here.
+# Create device nodes. Kernel modules (nvidia, nvidia-uvm, nvidia-modeset) are
+# loaded by systemd-modules-load.service from /usr/lib/modules-load.d/nvidia.conf.
+# Do not pass --load-kernel-modules here to avoid racing with that unit.
+# nvidia-persistenced is managed by nvidia-persistenced.service; this unit
+# depends on it via nvidia-cdi.service, so do not start it inline here.
 nvidia-ctk -d system create-device-nodes --control-devices
 
 # Set confidential compute to ready state
