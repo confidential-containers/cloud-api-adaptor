@@ -119,7 +119,7 @@ confidential-containers release team to let them know it has completed successfu
 
 After the GitHub release is created and the release workflow has finished building the images, we can publish the
 Helm chart. Trigger the
-[`publish-peerpods-chart`](../.github/workflows/publish-peerpods-chart.yaml) workflow manually from the `main`
+[`peerpods-chart_image`](../.github/workflows/peerpods-chart_image.yaml) workflow manually from the `main`
 branch. This will package the chart and push it to the OCI registry at
 `oci://ghcr.io/confidential-containers/cloud-api-adaptor/charts/peerpods`.
 
