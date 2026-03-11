@@ -61,3 +61,14 @@ jobs:
       packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
+  peerpods-chart:
+    uses: ./.github/workflows/peerpods-chart_image.yaml
+    with:
+      chart_version: "0.0.0-dev"
+      git_ref: ${{ github.sha }}
+    permissions:
+      contents: read       # Required for checkout
+      packages: write      # Required for pushing to GitHub Container Registry
+      id-token: write      # Required for attestation signing
+      attestations: write  # Required for persisting attestations
