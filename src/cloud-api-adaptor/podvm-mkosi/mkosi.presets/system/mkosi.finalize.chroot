@@ -5,7 +5,9 @@ set -euxo pipefail
 if [[ "${ARCHITECTURE}" == "s390x" ]]; then
 	# enable cloud-init services
         systemctl enable cloud-init-local.service
-        systemctl enable cloud-init.service
+	# Note: cloud-init.service was renamed to cloud-init-network.service in cloud-init 24.3
+	# https://github.com/canonical/cloud-init/blob/main/doc/rtd/reference/breaking_changes.rst#243
+        systemctl enable cloud-init-network.service
         systemctl enable cloud-config.service
         systemctl enable cloud-final.service
 

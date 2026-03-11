@@ -40,8 +40,8 @@ DISTRO_IMAGE := ubuntu:24.04
 DISTRO_RELEASE := 24.04
 PKG_INSTALL := apt-get update && apt-get install -y
 else
-DISTRO_IMAGE := fedora:41
-DISTRO_RELEASE := 41
+DISTRO_IMAGE := fedora:43
+DISTRO_RELEASE := 43
 PKG_INSTALL := dnf install -y
 endif
 
