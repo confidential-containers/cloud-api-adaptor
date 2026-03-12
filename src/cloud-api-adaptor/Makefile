@@ -153,7 +153,12 @@ endif
 
 .PHONY: delete
 delete: ## Delete cloud-api-adaptor using Helm charts.
-	helm uninstall peerpods -n confidential-containers-system
+	@if helm status peerpods -n confidential-containers-system >/dev/null 2>&1; then \
+		echo "Uninstalling peerpods release..."; \
+		helm uninstall peerpods -n confidential-containers-system; \
+	else \
+		echo "Release 'peerpods' not found in namespace 'confidential-containers-system'(either not installed or already uninstalled)"; \
+	fi
 
 ### PODVM IMAGE BUILDING ###
 
