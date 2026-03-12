@@ -8,4 +8,3 @@ OutputDirectory=build
 
 [Distribution]
 Distribution=fedora
-Release=41

@@ -2,23 +2,10 @@
 
 set -euxo pipefail
 
-# Build DKMS kernel modules at image creation time and seal them into the
-# squashfs. This is required because systemd.volatile=state wipes /var
-# (including /var/lib/dkms) on every boot, so dkms.service never has a
-# registration database at runtime and exits 0 without building anything.
-# After this runs, the compiled .ko files live in /lib/modules/<ver>/extra/
-# inside the squashfs and modprobe finds them normally.
+# NVIDIA DKMS modules are built at boot time (nvidia-dkms-build.service)
+# rather than image creation time, so just enable the service here.
 if command -v dkms &>/dev/null; then
-    for kernel_ver in /lib/modules/*/; do
-        kernel_ver=$(basename "${kernel_ver}")
-        echo "=== DKMS: building modules for kernel ${kernel_ver} ==="
-        if ! dkms autoinstall --kernelver "${kernel_ver}"; then
-            echo "=== DKMS build failed — make.log ==="
-            find /var/lib/dkms -name make.log -exec cat {} \;
-            exit 1
-        fi
-        depmod -a "${kernel_ver}" || true
-    done
+    systemctl enable nvidia-dkms-build.service
 fi
 
 if [[ "${ARCHITECTURE}" == "s390x" ]]; then

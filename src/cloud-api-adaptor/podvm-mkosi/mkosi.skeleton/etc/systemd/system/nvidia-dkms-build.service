@@ -1,0 +1,15 @@
+[Unit]
+Description=Build NVIDIA kernel modules via DKMS
+DefaultDependencies=no
+After=local-fs.target
+Before=systemd-modules-load.service
+ConditionFileIsExecutable=/usr/sbin/dkms
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nvidia-dkms-build.sh
+RemainAfterExit=yes
+TimeoutStartSec=300
+
+[Install]
+WantedBy=sysinit.target

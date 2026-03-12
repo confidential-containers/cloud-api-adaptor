@@ -1,11 +1,8 @@
 [Unit]
 Description=Generate NVIDIA CDI Configuration
-# Must run after kernel modules finish loading (kmod-nvidia-open-dkms loads the
-# nvidia module via systemd-modules-load). Without this ordering both
-# nvidia-persistenced and nvidia-cdi start before the module is present and fail
-# on first boot, but succeed on manual restart — a classic race condition.
-After=systemd-modules-load.service nvidia-persistenced.service
-Requires=nvidia-persistenced.service
+# Must run after DKMS builds and loads the NVIDIA kernel modules.
+After=nvidia-dkms-build.service nvidia-persistenced.service
+Requires=nvidia-dkms-build.service nvidia-persistenced.service
 Before=kata-agent.service
 
 [Service]
