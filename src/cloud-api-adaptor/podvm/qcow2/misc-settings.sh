@@ -32,7 +32,14 @@ if [[ "$CLOUD_PROVIDER" != "docker" ]]; then
     if [ ! -x "$(command -v iptables)" ]; then
         case $PODVM_DISTRO in
         rhel)
-            dnf -q install iptables -y
+            if [[ "$ARCH" == "s390x" ]]; then
+                dnf -q install iptables-nft -y && dnf install -y kernel-modules-"$(uname -r)" kernel-modules-extra-"$(uname -r)"
+                dnf install -y 'dnf-command(versionlock)'
+                dnf versionlock add kernel-"$(uname -r)"
+                dnf versionlock add kernel-modules-"$(uname -r)"
+            else
+                dnf -q install iptables -y
+            fi
             ;;
         ubuntu)
             apt-get -qq update && apt-get -qq install iptables -y
