@@ -6,7 +6,7 @@ networking:
 nodes:
   - role: control-plane
     # Same image version as used for pod VM base image
-    image: kindest/node:v1.29.4
+    image: kindest/node:v1.34.0
     extraMounts:
       # The config.json file contains the registry secrets that you might
       # need to pull images from a private registry or docker registry to avoid
@@ -14,7 +14,7 @@ nodes:
       - hostPath: /tmp/config.json
         containerPath: /var/lib/kubelet/config.json
   - role: worker
-    image: kindest/node:v1.29.4
+    image: kindest/node:v1.34.0
     extraMounts:
       - hostPath: /var/run/docker.sock
         containerPath: /var/run/docker.sock

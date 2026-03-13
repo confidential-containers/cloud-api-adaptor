@@ -39,7 +39,7 @@ if [ "$1" == "create" ]; then
     kind create cluster --name "\$CLUSTER_NAME" --config "\$KIND_CONFIG_FILE" || exit 1
 
     # Deploy calico
-    kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml || exit 1
+    kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.0/manifests/calico.yaml || exit 1
 
     exit 0
 fi
