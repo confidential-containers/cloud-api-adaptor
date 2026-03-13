@@ -72,7 +72,9 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push
-      run: make podvm-binaries
+      run: |
+        make podvm-binaries
+        make podvm-byom-binaries-image
       env:
           PUSH: true
           REGISTRY: ${{ inputs.registry }}
