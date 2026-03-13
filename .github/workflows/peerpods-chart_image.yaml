@@ -7,10 +7,26 @@ on:
         description: 'OCI registry path (without oci:// prefix). Leave empty for default (ghcr.io/{repo}/charts)'
         required: false
         type: string
+      chart_version:
+        description: 'Chart version to publish (e.g. 0.0.0-dev for dev). Leave empty to use version from Chart.yaml'
+        required: false
+        type: string
+      git_ref:
+        description: 'Git ref to checkout (e.g. tag for releases). Leave empty to checkout default ref'
+        required: false
+        type: string
   workflow_call:
     inputs:
       registry:
         description: 'OCI registry path (without oci:// prefix). Leave empty for default (ghcr.io/{repo}/charts)'
+        required: false
+        type: string
+      chart_version:
+        description: 'Chart version to publish (e.g. 0.0.0-dev for dev). Leave empty to use version from Chart.yaml'
+        required: false
+        type: string
+      git_ref:
+        description: 'Git ref to checkout (e.g. tag for releases). Leave empty to checkout default ref'
         required: false
         type: string
 
@@ -38,6 +54,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          ref: ${{ inputs.git_ref || github.ref }}
           persist-credentials: false
           fetch-depth: 0
 
@@ -51,15 +68,22 @@ jobs:
       - name: Read versions from Chart.yaml and versions.yaml
         id: read_version
         working-directory: .
+        env:
+          INPUT_CHART_VERSION: ${{ inputs.chart_version }}
         run: |
-          VERSION="$(yq '.version' src/cloud-api-adaptor/install/charts/peerpods/Chart.yaml)"
+          if [ -n "${INPUT_CHART_VERSION}" ]; then
+            VERSION="${INPUT_CHART_VERSION}"
+          else
+            VERSION="$(yq '.version' src/cloud-api-adaptor/install/charts/peerpods/Chart.yaml)"
+          fi
+
           APP_VERSION="$(yq '.appVersion' src/cloud-api-adaptor/install/charts/peerpods/Chart.yaml)"
           HELM_VERSION="$(yq -e '.tools.helm.version' src/cloud-api-adaptor/versions.yaml)"
           HELM_CHECKSUM="$(yq -e '.tools.helm.sha256' src/cloud-api-adaptor/versions.yaml)"
 
           # Check version exists
           if [ -z "${VERSION}" ] || [ "${VERSION}" = "null" ]; then
-            echo "ERROR: Failed to read version from Chart.yaml"
+            echo "ERROR: Failed to determine chart version"
             exit 1
           fi
 
@@ -137,10 +161,12 @@ jobs:
           echo "Helm dependencies updated"
 
       - name: Package Helm chart
+        env:
+          VERSION: ${{ steps.read_version.outputs.version }}
         run: |
           echo "Packaging Helm chart with dependencies..."
           mkdir -p .cr-release-packages
-          helm package . --destination .cr-release-packages
+          helm package . --version "${VERSION}" --destination .cr-release-packages
           echo "Helm chart packaged"
           echo "Package contents:"
           ls -lh .cr-release-packages/

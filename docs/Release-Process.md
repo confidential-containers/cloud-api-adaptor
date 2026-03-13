@@ -115,14 +115,6 @@ named `v<version>`. Choose the "Create new tag" option when drafting a release.
 This will trigger the podvm builds to happen again and we should re-test the release code before updating the
 confidential-containers release team to let them know it has completed successfully
 
-### Helm chart release
-
-After the GitHub release is created and the release workflow has finished building the images, we can publish the
-Helm chart. Trigger the
-[`publish-peerpods-chart`](../.github/workflows/publish-peerpods-chart.yaml) workflow manually from the `main`
-branch. This will package the chart and push it to the OCI registry at
-`oci://ghcr.io/confidential-containers/cloud-api-adaptor/charts/peerpods`.
-
 ### Post-release
 
 If the `main` branch was not already unlocked, then ask an admin to do this now.
