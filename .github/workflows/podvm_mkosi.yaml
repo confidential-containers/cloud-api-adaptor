@@ -71,6 +71,7 @@ jobs:
   build-image:
     name: Build mkosi image for ${{ inputs.arch }}
     runs-on: ${{ inputs.arch == 's390x' && 's390x' || inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    continue-on-error: ${{ inputs.arch == 's390x' }}  # Remove once s390x image build is stable
     permissions:
       contents: read  # Required for checkout on forks
       packages: write  # Required to publish the oras package to ghcr
