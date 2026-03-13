@@ -119,6 +119,38 @@ jobs:
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
+  podvm_ubuntu_amd64:
+    uses: ./.github/workflows/podvm_mkosi_ubuntu.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      image_tag: ${{ inputs.podvm_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      arch: amd64
+      debug: true
+    permissions:
+      contents: read # Required if we want to run on a fork?
+      packages: write # Required to publish the oras package to ghcr
+      id-token: write # Required to publish the attestation provenance to ghcr
+      attestations: write # Required to publish the attestation provenance to ghcr
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
+  podvm_ubuntu_s390x:
+    uses: ./.github/workflows/podvm_mkosi_ubuntu.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      image_tag: ${{ inputs.podvm_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      arch: s390x
+      debug: true
+    permissions:
+      contents: read # Required if we want to run on a fork?
+      packages: write # Required to publish the oras package to ghcr
+      id-token: write # Required to publish the attestation provenance to ghcr
+      attestations: write # Required to publish the attestation provenance to ghcr
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
   # Build and push the cloud-api-adaptor image
   #
   # By using a reusable `workflow_call` workflow we are hitting two
@@ -256,6 +288,42 @@ jobs:
       runner: s390x-large
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-s390x-dev
       podvm_image: ${{ needs.podvm_mkosi_s390x.outputs.qcow2_oras_image }}
+      git_ref: ${{ inputs.git_ref }}
+    secrets:
+      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
+
+  # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
+  libvirt_ubuntu_amd64:
+    name: E2E tests on libvirt, with the mkosi_ubuntu podvm image for the amd64 architecture
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
+    needs: [podvm_ubuntu_amd64, libvirt_e2e_arch_prep, caa_image_amd64]
+    uses: ./.github/workflows/e2e_libvirt.yaml
+    with:
+      runner: ubuntu-24.04
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
+      podvm_image: ${{ needs.podvm_ubuntu_amd64.outputs.qcow2_oras_image }}
+      git_ref: ${{ inputs.git_ref }}
+    secrets:
+      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
+
+  # Run libvirt s390x e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
+  libvirt_ubuntu_s390x:
+    name: E2E tests on libvirt, with the mkosi_ubuntu podvm image for the s390x architecture
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
+    needs: [podvm_ubuntu_s390x, libvirt_e2e_arch_prep, caa_image_s390x]
+    uses: ./.github/workflows/e2e_libvirt.yaml
+    with:
+      runner: s390x-large
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-s390x-dev
+      podvm_image: ${{ needs.podvm_ubuntu_s390x.outputs.qcow2_oras_image }}
       git_ref: ${{ inputs.git_ref }}
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}

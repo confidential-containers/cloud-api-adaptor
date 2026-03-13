@@ -63,3 +63,22 @@ jobs:
       debug: false
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
+  podvm-ubuntu-mkosi:
+    uses: ./.github/workflows/podvm_mkosi_ubuntu.yaml
+    permissions:
+      contents: read # Required if we want to run on a fork?
+      packages: write # Required to publish the oras package to ghcr
+      id-token: write # Required to publish the attestation provenance to ghcr
+      attestations: write # Required to publish the attestation provenance to ghcr
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, s390x, arm64]
+    with:
+      git_ref: ${{ github.sha }}
+      image_tag: ${{ github.sha }}
+      arch: ${{ matrix.arch}}
+      debug: false
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
