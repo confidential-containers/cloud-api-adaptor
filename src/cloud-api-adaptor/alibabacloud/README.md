@@ -8,7 +8,7 @@ This documentation will walk you through setting up CAA (a.k.a. Peer Pods) on Al
 
 > **Note**: Run the following commands from the following directory - `src/cloud-api-adaptor`
 
-> **Note**: Now Confidential Computing instances [are only available](https://www.alibabacloud.com/help/en/ecs/user-guide/build-a-tdx-confidential-computing-environment) in `cn-beijing` region within zone `cn-beijing-i`. 
+> **Note**: Now Confidential Computing instances [are only available](https://www.alibabacloud.com/help/en/ecs/user-guide/build-a-tdx-confidential-computing-environment) in `cn-beijing` region within zone `cn-beijing-i`.
 
 ## Prerequisites
 
@@ -36,7 +36,7 @@ If you want to build a pod VM image yourself, please follow the steps.
 
 2. Upload to OSS storage and create ECS Image.
 
-    You will then need to upload the Pod VM image to OSS (Object Storage Service). 
+    You will then need to upload the Pod VM image to OSS (Object Storage Service).
     ```sh
     export REGION_ID=<region-id>
     export IMAGE_FILE=<path-to-qcow2-file>
@@ -56,7 +56,7 @@ If you want to build a pod VM image yourself, please follow the steps.
         --DiskDeviceMapping.1.OSSBucket ${BUCKET} --DiskDeviceMapping.1.OSSObject ${OBJECT} \
         --Features.NvmeSupport supported \
         --method POST --force
-    
+
     export POD_IMAGE_ID=<ImageId>
     ```
 
@@ -97,13 +97,13 @@ later.
         }
       ]
     }"
-    
+
     export CLUSTER_ID=<cluster-id>
     export SECURITY_GROUP_ID=$(aliyun cs DescribeClusterDetail --ClusterId ${CLUSTER_ID} | jq -r  ".security_group_id")
     ```
 
     Wait for the cluster to be created. Get the vSwitch id of the cluster.
-    
+
     ```sh
     VSWITCH_IDS=$(aliyun cs DescribeClusterDetail --ClusterId ${CLUSTER_ID} | jq -r  ".parameters.WorkerVSwitchIds" | sed 's/^/["/; s/$/"]/; s/,/","/g')
     ```
@@ -141,7 +141,7 @@ later.
         ]
       }
     }"
-    
+
     NODE_POOL_ID=<node-pool-id>
     ```
 
@@ -157,7 +157,7 @@ later.
       --NatType Enhanced \
       --VSwitchId ${VSWITCH_ID} \
       --NetworkType internet
-    
+
     export GATEWAY_ID="<NatGatewayId>"
     export SNAT_TABLE_ID="<SnatTableId>"
 
@@ -170,14 +170,14 @@ later.
 
     export EIP_ID="<AllocationId>"
     export EIP_ADDRESS="<EipAddress>"
-  
+
     aliyun vpc AssociateEipAddress \
       --region ${REGION_ID} \
       --RegionId ${REGION_ID} \
       --AllocationId ${EIP_ID} \
       --InstanceId ${GATEWAY_ID} \
       --InstanceType Nat
-    
+
     aliyun vpc CreateSnatEntry \
       --region ${REGION_ID} \
       --RegionId ${REGION_ID} \
@@ -193,7 +193,7 @@ later.
     export ROLE_NAME=caa-alibaba
     export RRSA_ISSUER=$(aliyun cs DescribeClusterDetail --ClusterId ${CLUSTER_ID} | jq -r ".rrsa_config.issuer" | cut -d',' -f1)
     export RRSA_ARN=$(aliyun cs DescribeClusterDetail --ClusterId ${CLUSTER_ID} | jq -r ".rrsa_config.oidc_arn" | cut -d',' -f1)
-  
+
     aliyun ram CreateRole --region ${REGION_ID} \
       --RoleName ${ROLE_NAME} \
       --AssumeRolePolicyDocument "
@@ -280,24 +280,22 @@ later.
 
 ### Create the credentials file
 
-```sh
-cat <<EOF > install/overlays/alibabacloud/alibabacloud-cred.env
+Set the following values
+in [`alibabacloud-secrets.yaml`](../install/charts/peerpods/providers/alibabacloud-secrets.yaml).
+```
 # If the WorkerNode is on ACK, we use RRSA to authenticate
 ALIBABA_CLOUD_ROLE_ARN=${ROLE_ARN}
 ALIBABA_CLOUD_OIDC_PROVIDER_ARN=${RRSA_ARN}
 ALIBABA_CLOUD_OIDC_TOKEN_FILE=/var/run/secrets/ack.alibabacloud.com/rrsa-tokens/token
-EOF
 ```
 
-### Update the `kustomization.yaml` file
-
-At a minimum you need to update the followint values
-in [`kustomization.yaml`](../install/overlays/alibabacloud/kustomization.yaml).
+At a minimum you need to update the following values
+in [`alibabacloud.yaml`](../install/charts/peerpods/providers/alibabacloud.yaml).
 
 - `VSWITCH_ID`: Use one of the values of `${VSWITCH_IDS}`
 - `SECURITY_GROUP_IDS`: We can reuse the ACK's security group id `${SECURITY_GROUP_ID}`.
 - `IMAGEID`: The ECS images ID, e.g. `m-2ze1w9aj2aonwckv64cw` in `cn-beijing` region.
-- `REGION`: The region where Peer Pods run, e.g. `cn-beijing`. 
+- `REGION`: The region where Peer Pods run, e.g. `cn-beijing`.
 
 ### Deploy CAA on the Kubernetes cluster
 
@@ -310,20 +308,6 @@ done
 ```
 
 Run the following command to deploy CAA:
-
-> **Note**: We have a [forked version](https://github.com/AliyunContainerService/coco-operator)
-of CoCo Operator for Alibaba Cloud. Specifically,
-we enabled containerd 1.7+ installation and mirrored images from `quay.io` on
-Alibaba Cloud to accelerate.
-
-```sh
-export COCO_OPERATOR_REPO="https://github.com/AliyunContainerService/coco-operator"
-export COCO_OPERATOR_REF="main"
-export RESOURCE_CTRL=false
-export CLOUD_PROVIDER=alibabacloud
-make deploy
-```
-
 Generic CAA deployment instructions are also described [here](../install/README.md).
 
 ## Run sample application
@@ -374,7 +358,7 @@ You can verify that the peer-pod VM was created by running the following command
 aliyun ecs DescribeInstances --RegionId ${REGION_ID} --InstanceName 'podvm-*'
 ```
 
-Here you should see the VM associated with the pod `nginx`. 
+Here you should see the VM associated with the pod `nginx`.
 If you run into problems then check the troubleshooting guide [here](../docs/troubleshooting/README.md).
 
 ## Attestation

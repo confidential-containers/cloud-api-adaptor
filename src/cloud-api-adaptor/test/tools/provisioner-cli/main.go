@@ -164,7 +164,7 @@ func main() {
 	}
 
 	if *action == "install" {
-		log.Info("Installing CoCo operator and cloud-api-adaptor resources")
+		log.Info("Installing kata and cloud-api-adaptor resources")
 		deployer, err := pv.NewCloudAPIAdaptor(cloudProvider, installDirectory)
 		if err != nil {
 			log.Fatal(err)
@@ -183,7 +183,7 @@ func main() {
 	}
 
 	if *action == "uninstall" {
-		log.Info("Uninstalling CoCo operator and cloud-api-adaptor resources")
+		log.Info("Uninstalling kata and cloud-api-adaptor resources")
 		deployer, err := pv.NewCloudAPIAdaptor(cloudProvider, installDirectory)
 		if err != nil {
 			log.Fatal(err)

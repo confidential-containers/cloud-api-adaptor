@@ -45,7 +45,7 @@ function update_tags() {
     done
 }
 
-update_provider_overlays() {
+update_provider_charts() {
 
     # Check if release tag is provided
     if [ $# -eq 0 ]; then
@@ -111,7 +111,7 @@ main() {
             update_tags "$@"
             ;;
         caa-image-tag)
-            update_provider_overlays "$@"
+            update_provider_charts "$@"
             ;;
         *)
             echo "::error:: Unknown command '$command'"
