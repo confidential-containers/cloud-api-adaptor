@@ -85,6 +85,8 @@ usage() {
 
 cleanup() {
 	# Cleanup (only when DESTRUCTIVE!=1)
+	echo "Serial log of ${VM_NAME:-smoketest}"
+	sudo cat /var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log || echo "Failed to read /var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log"
 	if [ "${DESTRUCTIVE}" -ne 1 ]; then
 		set +e
 		popd >/dev/null 2>&1 || true
@@ -254,7 +256,8 @@ sudo virt-install \
 	--boot loader="${OVMF}" \
 	--transient \
 	--noautoconsole \
-	--channel unix,mode=bind,path=${WORKDIR}/${VM_NAME}.agent,target_type=virtio,name=org.qemu.guest_agent.0
+	--channel unix,mode=bind,path=${WORKDIR}/${VM_NAME}.agent,target_type=virtio,name=org.qemu.guest_agent.0 \
+	--serial file,path=/var/log/libvirt/qemu/${VM_NAME}.serial.log
 
 SECONDS=0
 while [ $SECONDS -lt 120 ]; do
