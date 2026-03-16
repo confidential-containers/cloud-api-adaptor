@@ -84,9 +84,12 @@ usage() {
 }
 
 cleanup() {
+	local exit_code=$?
 	# Cleanup (only when DESTRUCTIVE!=1)
-	echo "Serial log of ${VM_NAME:-smoketest}"
-	sudo cat /var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log || echo "Failed to read /var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log"
+	if [ "${exit_code}" -ne 0 ]; then
+		echo "Serial log of ${VM_NAME:-smoketest}"
+		sudo cat /var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log || echo "Failed to read /var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log"
+	fi
 	if [ "${DESTRUCTIVE}" -ne 1 ]; then
 		set +e
 		popd >/dev/null 2>&1 || true
@@ -231,7 +234,7 @@ else
 	cp "${IMG}" "${IMAGE}"
 fi
 chmod a+rwx "${WORKDIR}"
-sudo chown -R libvirt-qemu "${WORKDIR}" || true
+sudo chown -R libvirt-qemu "${WORKDIR}" || sudo chown -R qemu "${WORKDIR}" || true
 sudo chmod +x "${WORKDIR}"
 
 # Resize the VM disk image to add free space
