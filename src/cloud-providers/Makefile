@@ -17,7 +17,7 @@ define gen-provider-values
 			"# Dev image required for this provider (includes CGO bindings)", \
 			"# Update to dev-<commit> at release time", \
 			"image:", \
-			"  tag: \"latest\"", \
+			"  tag: \"dev-a5f492482236b9fc4a77088efe6b4c2159ae6a03\"", \
 			"" \
 		else \
 			empty \
