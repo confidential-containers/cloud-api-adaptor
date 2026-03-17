@@ -10,7 +10,7 @@ ARG BINARIES_IMG="quay.io/confidential-containers/podvm-binaries-ubuntu-amd64"
 
 FROM ${BINARIES_IMG} AS podvm_binaries
 
-FROM ubuntu:24.04 as builder
+FROM ubuntu@sha256:0d39fcc8335d6d74d5502f6df2d30119ff4790ebbb60b364818d5112d9e3e932 as builder #24.04
 
 COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/podvm-binaries.tar.gz
 RUN mkdir /src/files && tar xvf /src/podvm-binaries.tar.gz -C /src/files
