@@ -6,7 +6,8 @@
 # Creates a builder container image that should be used to build the Pod VM
 # disk inside a container.
 #
-FROM ubuntu@sha256:0d39fcc8335d6d74d5502f6df2d30119ff4790ebbb60b364818d5112d9e3e932 #24.04
+# ubuntu:24.04
+FROM ubuntu@sha256:0d39fcc8335d6d74d5502f6df2d30119ff4790ebbb60b364818d5112d9e3e932
 
 ARG ARCH="x86_64"
 ARG GO_ARCH="amd64"

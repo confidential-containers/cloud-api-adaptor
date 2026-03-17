@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.5-labs
 
-ARG BASE_IMAGE=registry.fedoraproject.org/fedora@sha256:893f7eeffce8e3e2bb2bc62786ba5603fb1e0bd6ba07091acb892266b95bafdf #41
+# registry.fedoraproject.org/fedora:41
+ARG BASE_IMAGE=registry.fedoraproject.org/fedora@sha256:893f7eeffce8e3e2bb2bc62786ba5603fb1e0bd6ba07091acb892266b95bafdf
 FROM --platform=$TARGETPLATFORM ${BASE_IMAGE} AS base
 
 # DO NOT UPDATE THIS BY HAND !!
