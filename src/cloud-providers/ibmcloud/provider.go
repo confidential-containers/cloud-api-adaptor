@@ -5,6 +5,7 @@ package ibmcloud
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -224,11 +225,26 @@ func getClusterID() (string, error) {
 	}
 
 	clusterID, ok := cm.Data["cluster_id"]
-	if !ok {
-		return "", fmt.Errorf("could not find cluster_id key in %s config map in %s namespace", clusterInfoCMName, clusterInfoCMNamespace)
+	if ok {
+		return clusterID, nil
 	}
 
-	return clusterID, nil
+	clusterJSON, ok := cm.Data["cluster-config.json"]
+	if ok {
+		var clusterConfig map[string]interface{}
+		if err := json.Unmarshal([]byte(clusterJSON), &clusterConfig); err != nil {
+			return "", fmt.Errorf("failed to unmarshal cluster-config.json in %s config map in %s namespace: %w", clusterInfoCMName, clusterInfoCMNamespace, err)
+		}
+		if id, exists := clusterConfig["cluster_id"]; exists {
+			if clusterID, ok := id.(string); ok {
+				return clusterID, nil
+			}
+			return "", fmt.Errorf("cluster_id in cluster-config.json in %s config map in %s namespace is not a string", clusterInfoCMName, clusterInfoCMNamespace)
+		}
+		return "", fmt.Errorf("could not find cluster_id in cluster-config.json in %s config map in %s namespace", clusterInfoCMName, clusterInfoCMNamespace)
+	}
+
+	return "", fmt.Errorf("could not find cluster_id key in %s config map in %s namespace", clusterInfoCMName, clusterInfoCMNamespace)
 }
 
 func fetchVPCDetails(vpcV1 *vpcv1.VpcV1, subnetID string) (vpcID string, resourceGroupID string, e error) {
