@@ -5,6 +5,7 @@ package ibmcloudpowervs
 
 import (
 	"flag"
+	"time"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
@@ -32,6 +33,7 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.Float64WithEnv(&ibmcloudPowerVSConfig.Memory, "memory", 2, "POWERVS_MEMORY", "Amount of memory in GB")
 	reg.Float64WithEnv(&ibmcloudPowerVSConfig.Processors, "cpu", 0.5, "POWERVS_PROCESSORS", "Number of processors allocated")
 	reg.BoolWithEnv(&ibmcloudPowerVSConfig.UsePublicIP, "use-public-ip", false, "USE_PUBLIC_IP", "Use Public IP for connecting to the agent-protocol-forwarder inside the Pod VM")
+	reg.DurationWithEnv(&ibmcloudPowerVSConfig.BuildTimeout, "build-timeout", 150*time.Second, "POWERVS_BUILD_TIMEOUT", "Maximum timeout to build the VM")
 }
 
 func (*Manager) LoadEnv() {
