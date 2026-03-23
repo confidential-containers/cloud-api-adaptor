@@ -247,18 +247,6 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 
 	}
 
-	customPCCSURL := os.Getenv("CUSTOM_PCCS_URL")
-	if customPCCSURL != "" {
-		log.Info("CUSTOM_PCCS_URL is provided, write custom PCCS config")
-		configFilePath := filepath.Join(getKbsKubernetesFilePath(), "custom_pccs/sgx_default_qcnl.conf")
-		collateralURL := "https://api.trustedservices.intel.com/sgx/certification/v4/"
-		config := fmt.Sprintf(`{ "pccs_url": "%s", "collateral_service": "%s"}`, customPCCSURL, collateralURL)
-		err = saveToFile(configFilePath, []byte(config))
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// IBM_SE_CREDS_DIR describe at https://github.com/confidential-containers/trustee/blob/main/kbs/config/kubernetes/README.md#deploy-kbs
 	ibmseCredsDir := os.Getenv("IBM_SE_CREDS_DIR")
 	if ibmseCredsDir != "" {
@@ -438,18 +426,7 @@ func NewHTTPSKbsInstallOverlay(installDir string, cfg *envconf.Config) (InstallO
 		fmt.Println("Error generating certificate and key:", err)
 	}
 
-	platform, err := getHardwarePlatform()
-	if err != nil {
-		return nil, err
-	}
-
-	var overlayFolder string
-	if platform == "x86_64" && os.Getenv("CUSTOM_PCCS_URL") != "" {
-		log.Info("CUSTOM_PCCS_URL is provided on x86_64, deploy with custom pccs config")
-		overlayFolder = "kbs/config/kubernetes/custom_pccs"
-	} else {
-		overlayFolder = "kbs/config/kubernetes/nodeport/"
-	}
+	overlayFolder := "kbs/config/kubernetes/nodeport/"
 	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, overlayFolder))
 	if err != nil {
 		return nil, err
