@@ -115,7 +115,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 	}
 
 	if len(*pvsInstances) <= 0 {
-		return nil, fmt.Errorf("there are no instances created for instance: %s", instanceName)
+		return nil, fmt.Errorf("instance is not created: %s", instanceName)
 	}
 
 	ins := (*pvsInstances)[0]
