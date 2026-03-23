@@ -66,6 +66,11 @@ spec:
           name: certs
           readOnly: true
 {{- end }}
+{{- if include "peerpods.alibabacloudRrsaEnabled" . }}
+        - mountPath: /var/run/secrets/ack.alibabacloud.com/rrsa-tokens
+          name: rrsa-oidc-token
+          readOnly: true
+{{- end }}
         - mountPath: /run/peerpod
           name: pods-dir
         - mountPath: /run/netns
@@ -110,6 +115,16 @@ spec:
           defaultMode: 384
           optional: true
           secretName: {{ include "peerpods.tlsSecretName" . }}
+{{- end }}
+{{- if include "peerpods.alibabacloudRrsaEnabled" . }}
+      - name: rrsa-oidc-token
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: "sts.aliyuncs.com"
+              expirationSeconds: 3600
+              path: token
 {{- end }}
       - hostPath:
           path: /run/peerpod

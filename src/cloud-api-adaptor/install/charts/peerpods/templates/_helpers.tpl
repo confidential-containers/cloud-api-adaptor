@@ -42,6 +42,17 @@ certs-for-tls
 {{- end -}}
 
 {{/*
+Alibaba Cloud RRSA: mount projected service account token when enabled.
+Uses chained `and` (short-circuit) so missing .Values.alibabacloud / .rrsa is safe.
+Returns non-empty "true" when the RRSA volume should be rendered.
+*/}}
+{{- define "peerpods.alibabacloudRrsaEnabled" -}}
+{{- if and (eq .Values.provider "alibabacloud") .Values.alibabacloud .Values.alibabacloud.rrsa .Values.alibabacloud.rrsa.enable -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
 Check if custom TLS certificates are configured.
 Returns "true" when CACERT_FILE is set in providerConfigs for the active
 provider AND a TLS secret name is available (either chart-managed or external).
