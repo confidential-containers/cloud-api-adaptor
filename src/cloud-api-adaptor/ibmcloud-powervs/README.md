@@ -81,10 +81,10 @@ pvsadm image import -n <service-instance-name> -b <bucket-name> -o <file-name> -
 
 1. Setup necessary cloud resources such as PowerVS Service instance, network, API Key etc..
 
-2. Create `ibmcloud-powervs-secrets.yaml` based on
- [`ibmcloud-secrets.yaml.template`](../install/charts/peerpods/providers/ibmcloud-secrets.yaml.template)
+2. Create `ibmcloudpowervs-secrets.yaml` based on
+ [`ibmcloud-secrets.yaml.template`](../install/charts/peerpods/providers/ibmcloudpowervs-secrets.yaml.template)
  with the IBM Cloud API Key filled in.
 
-3. Update [ibmcloud-powervs.yaml](../install/charts/peerpods/providers/ibmcloud-powervs.yaml) with the required details
+3. Update [ibmcloudpowervs.yaml](../install/charts/peerpods/providers/ibmcloudpowervs.yaml) with the required details
 
 4. Deploy Cloud API Adaptor by following the [install](../install/README.md) guide
