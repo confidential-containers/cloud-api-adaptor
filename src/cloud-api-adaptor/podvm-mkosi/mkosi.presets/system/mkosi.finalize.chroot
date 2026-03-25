@@ -17,6 +17,9 @@ fi
 
 # Conditional SFTP support: enable process-user-data.path only if ENABLE_SFTP is set
 
+# Ensure systemd-resolved stub is wired up so DNS works at boot.
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+
 ENABLE_SFTP=${ENABLE_SFTP:-false}
 
 if [[ "${ENABLE_SFTP}" == "true" ]]; then
