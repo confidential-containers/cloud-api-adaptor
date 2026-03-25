@@ -82,9 +82,7 @@ jobs:
 
   test:
     name: Run initdata PCR8 measurement test
-    # We're pinning the runner to 22.04 b/c OVMF_CODE.fd (2MB, non-4M
-    # variant) is required; ubuntu-24.04 only ships OVMF_CODE_4M.fd.
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: Checkout
@@ -97,11 +95,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             genisoimage \
+            jq \
             ovmf \
             qemu-system-x86 \
             socat \
             swtpm \
-            tpm2-tools \
             xxd
 
       - name: Download qcow2 artifact
