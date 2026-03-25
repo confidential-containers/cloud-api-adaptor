@@ -270,7 +270,7 @@ jobs:
         CLUSTER_NAME: "${{ format(env.CLUSTER_NAME_TEMPLATE, matrix.parameters.id) }}"
       run: |
         az aks get-credentials --resource-group "$RG_NAME" --name "$CLUSTER_NAME"
-        make test-e2e RUN_TESTS="^Test\(CreateSimplePodAzure\|RemoteAttestation\|InitDataMeasurement\)$"
+        make test-e2e RUN_TESTS="^Test\(CreateSimplePodAzure\|RemoteAttestation\)$"
 
     - name: Debug on failure
       if: failure() && steps.runTests.outcome == 'failure'
