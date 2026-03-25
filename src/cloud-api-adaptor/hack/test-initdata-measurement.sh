@@ -75,6 +75,7 @@ if [[ -z "$OVMF" ]]; then
 	for candidate in \
 		/usr/share/edk2/ovmf/OVMF_CODE.fd \
 		/usr/share/OVMF/OVMF_CODE.fd \
+		/usr/share/OVMF/OVMF_CODE_4M.fd \
 		/usr/share/qemu/OVMF.fd \
 		/usr/share/edk2-ovmf/OVMF_CODE.fd; do
 		if [[ -f "$candidate" ]]; then
