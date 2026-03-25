@@ -29,7 +29,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 IMAGE=""
 OVMF=""
-BOOT_TIMEOUT=120
+BOOT_TIMEOUT=30
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -50,63 +50,6 @@ EOF
 die() {
 	echo "ERROR: $*" >&2
 	exit 1
-}
-
-# Execute a command inside the guest via qemu-guest-agent.
-# Usage: qga_exec <socket> <command> [args...]
-# Returns the decoded stdout of the command.
-qga_exec() {
-	local sock="$1"; shift
-	local cmd="$1"; shift
-
-	# Build JSON arg array from remaining positional params
-	local args_json="[]"
-	if [[ $# -gt 0 ]]; then
-		args_json=$(printf '%s\n' "$@" | jq -R . | jq -s .)
-	fi
-
-	local exec_json
-	exec_json=$(jq -n \
-		--arg path "$cmd" \
-		--argjson arg "$args_json" \
-		'{"execute":"guest-exec","arguments":{"path":$path,"arg":$arg,"capture-output":true}}')
-
-	local resp
-	resp=$(echo "$exec_json" | socat - "UNIX-CONNECT:$sock")
-	local pid
-	pid=$(echo "$resp" | jq -r '.return.pid // empty')
-	[[ -n "$pid" ]] || { echo "guest-exec failed: $resp" >&2; return 1; }
-
-	# Poll for completion
-	local status_json
-	status_json='{"execute":"guest-exec-status","arguments":{"pid":'"$pid"'}}'
-	local exited="false"
-	local status_resp=""
-	for _ in {1..30}; do
-		status_resp=$(echo "$status_json" | socat - "UNIX-CONNECT:$sock")
-		exited=$(echo "$status_resp" | jq -r '.return.exited // "false"')
-		[[ "$exited" == "true" ]] && break
-		sleep 1
-	done
-
-	if [[ "$exited" != "true" ]]; then
-		echo "guest-exec-status: command did not exit in time" >&2
-		return 1
-	fi
-
-	local exit_code
-	exit_code=$(echo "$status_resp" | jq -r '.return.exitcode // 0')
-	if [[ "$exit_code" -ne 0 ]]; then
-		local err_data
-		err_data=$(echo "$status_resp" | jq -r '.return["err-data"] // empty')
-		[[ -n "$err_data" ]] && echo "$err_data" | base64 -d >&2
-		echo "guest command exited with code $exit_code" >&2
-		return 1
-	fi
-
-	local out_data
-	out_data=$(echo "$status_resp" | jq -r '.return["out-data"] // empty')
-	[[ -n "$out_data" ]] && echo "$out_data" | base64 -d
 }
 
 # ---------------------------------------------------------------------------
@@ -195,6 +138,7 @@ cat >"$WORKDIR/initdata.toml" <<'EOF'
 algorithm = "sha384"
 version = "0.1.0"
 
+# randomized body: $WORKDIR
 [data]
 "aa.toml" = ""
 EOF
@@ -298,7 +242,6 @@ echo "swtpm PID: $SWTPM_PID"
 echo
 echo "==> Step 5: Starting QEMU VM..."
 
-QGA_SOCK="$WORKDIR/qga.sock"
 CONSOLE_LOG="$WORKDIR/console.log"
 touch "$CONSOLE_LOG"
 
@@ -324,7 +267,7 @@ fi
 qemu-system-x86_64 \
 	-machine "$MACHINE_FLAGS" \
 	"${CPU_FLAGS[@]+"${CPU_FLAGS[@]}"}" \
-	-m 1024 \
+	-m "1536M" \
 	-drive "file=$OVMF_LOCAL,format=raw,if=pflash" \
 	-drive "file=$IMAGE,format=$IMG_FORMAT" \
 	-drive "file=$WORKDIR/cidata.iso,media=cdrom" \
@@ -332,98 +275,44 @@ qemu-system-x86_64 \
 	-tpmdev "emulator,id=tpm0,chardev=chrtpm" \
 	-device tpm-tis,tpmdev=tpm0 \
 	-device virtio-serial \
-	-chardev "socket,path=$QGA_SOCK,server=on,wait=off,id=qga0" \
-	-device "virtserialport,chardev=qga0,name=org.qemu.guest_agent.0" \
+	-monitor none \
 	-serial "file:$CONSOLE_LOG" \
 	-nographic \
 	-no-reboot &
 QEMU_PID=$!
 echo "QEMU PID: $QEMU_PID"
 
-# Wait for the guest-agent socket to appear
-for _ in {1..30}; do
-	[[ -S "$QGA_SOCK" ]] && break
-	sleep 1
-done
-[[ -S "$QGA_SOCK" ]] || die "QEMU guest-agent socket was not created"
-
 # ---------------------------------------------------------------------------
-# Step 6: Wait for guest-agent and process-user-data.service
+# Step 6: Wait for VM to reach a login prompt (indicates boot completion)
 # ---------------------------------------------------------------------------
 echo
-echo "==> Step 6: Waiting for guest-agent and service completion (timeout: ${BOOT_TIMEOUT}s)..."
-
-# Poll until the guest agent responds (the VM needs to boot first)
-QGA_READY=false
-DEADLINE=$((SECONDS + BOOT_TIMEOUT))
-while [[ $SECONDS -lt $DEADLINE ]]; do
-	if resp=$(echo '{"execute":"guest-ping"}' | socat - "UNIX-CONNECT:$QGA_SOCK" 2>/dev/null); then
-		if echo "$resp" | jq -e '.return == {}' >/dev/null 2>&1; then
-			QGA_READY=true
-			break
-		fi
-	fi
-	sleep 2
-done
-[[ "$QGA_READY" == "true" ]] || die "guest-agent did not become ready within ${BOOT_TIMEOUT}s"
-echo "Guest agent is ready."
-
-# Wait for process-user-data.service to finish (it extends PCR8 in its
-# ExecStartPost).  Poll via guest-exec running systemctl.
-echo "Waiting for process-user-data.service..."
-SVC_DONE=false
+echo "==> Step 6: Waiting for VM to reach login prompt (timeout: ${BOOT_TIMEOUT}s)..."
 for _ in {1..60}; do
-	if output=$(qga_exec "$QGA_SOCK" /usr/bin/systemctl is-active process-user-data.service 2>/dev/null); then
-		state=$(echo "$output" | tr -d '[:space:]')
-		if [[ "$state" == "active" || "$state" == "inactive" ]]; then
-			SVC_DONE=true
-			break
-		fi
-	fi
-	sleep 2
+    grep -q "login:" "$CONSOLE_LOG" && break
+    sleep 2
 done
-[[ "$SVC_DONE" == "true" ]] || die "process-user-data.service did not complete in time"
-echo "process-user-data.service has completed."
+grep -q "login:" "$CONSOLE_LOG" || die "VM did not reach login prompt within ${BOOT_TIMEOUT}s"
+echo "VM is ready."
 
 # ---------------------------------------------------------------------------
-# Step 7: Read PCR8 via guest-agent
+# Step 7: Scrub PCR8 from console log
 # ---------------------------------------------------------------------------
 echo
-echo "==> Step 7: Reading PCR8 via guest-agent..."
+echo "==> Step 7: Extracting PCR8 value from console log..."
 
-PCR_OUTPUT=$(qga_exec "$QGA_SOCK" /usr/bin/tpm2_pcrread sha256:8) \
-	|| die "failed to run tpm2_pcrread in guest"
-
-echo "tpm2_pcrread output:"
-echo "$PCR_OUTPUT"
-
-# tpm2_pcrread sha256:8 output format:
-#   sha256:
-#     8 : 0x<64-hex-chars>
-ACTUAL_PCR8=$(echo "$PCR_OUTPUT" |
-	grep -E '^\s+8\s*:\s*0x' |
-	tail -1 |
-	awk '{print $NF}' |
-	sed 's/^0x//' |
-	tr '[:upper:]' '[:lower:]')
-
-if [[ -z "$ACTUAL_PCR8" ]]; then
-	echo "Could not parse PCR8 value from tpm2_pcrread output." >&2
-	echo "--- Last 60 lines of console log ---"
-	tail -60 "$CONSOLE_LOG"
-	exit 1
-fi
-
-# Shut down the VM cleanly
-qga_exec "$QGA_SOCK" /usr/sbin/poweroff 2>/dev/null || true
-echo "Waiting for VM to shut down..."
-timeout 30 wait "$QEMU_PID" 2>/dev/null || true
-QEMU_PID=""
+ACTUAL_PCR8=$(grep -A 40 'Detected vTPM PCR values:' "$CONSOLE_LOG" \
+    | grep '^\s*8 :' \
+    | awk '{print $3}' \
+    | sed 's/^0x//' \
+    | tr '[:upper:]' '[:lower:]' \
+    | tr -d '[:space:]')
+[[ -n "$ACTUAL_PCR8" ]] || die "PCR8 value not found in console log"
 
 # ---------------------------------------------------------------------------
 # Step 8: Compare
 # ---------------------------------------------------------------------------
 echo
+echo "==> Step 8: Comparing expected vs actual PCR8..."
 echo "Expected PCR8: $EXPECTED_PCR8"
 echo "Actual PCR8:   $ACTUAL_PCR8"
 

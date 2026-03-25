@@ -9,19 +9,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'src/cloud-api-adaptor/hack/test-initdata-measurement.sh'
-      - 'src/cloud-api-adaptor/podvm-mkosi/**'
-      - 'src/cloud-api-adaptor/pkg/userdata/**'
-      - 'src/cloud-api-adaptor/cmd/process-user-data/**'
-      - '.github/workflows/podvm_initdata_measurement.yaml'
   pull_request:
-    paths:
-      - 'src/cloud-api-adaptor/hack/test-initdata-measurement.sh'
-      - 'src/cloud-api-adaptor/podvm-mkosi/**'
-      - 'src/cloud-api-adaptor/pkg/userdata/**'
-      - 'src/cloud-api-adaptor/cmd/process-user-data/**'
-      - '.github/workflows/podvm_initdata_measurement.yaml'
   workflow_dispatch:
 
 concurrency:
@@ -110,5 +98,5 @@ jobs:
 
       - name: Run initdata measurement test
         run: |
-          src/cloud-api-adaptor/hack/test-initdata-measurement.sh \
+          sudo src/cloud-api-adaptor/hack/test-initdata-measurement.sh \
             -i podvm-fedora-amd64.qcow2
