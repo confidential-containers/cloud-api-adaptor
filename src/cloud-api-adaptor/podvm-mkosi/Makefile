@@ -195,6 +195,11 @@ push-image-container:
 	docker push $(PODVM_CONTAINER_NAME):$(PODVM_TAG)
 	docker push $(PODVM_CONTAINER_NAME):latest
 
+.PHONY: test-initdata-measurement
+test-initdata-measurement:
+	@[ -n "$(IMAGE)" ] || { echo "Usage: make test-initdata-measurement IMAGE=<path/to/debug.qcow2> [OVMF=<path/to/OVMF_CODE.fd>]"; exit 1; }
+	../hack/test-initdata-measurement.sh -i $(IMAGE) $(if $(OVMF),-o $(OVMF),) $(if $(BOOT_TIMEOUT),-t $(BOOT_TIMEOUT),)
+
 PHONY: clean
 clean:
 	rm -rf ./build
