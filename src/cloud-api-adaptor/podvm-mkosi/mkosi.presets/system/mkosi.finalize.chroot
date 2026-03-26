@@ -17,8 +17,12 @@ fi
 
 # Conditional SFTP support: enable process-user-data.path only if ENABLE_SFTP is set
 
-# Ensure systemd-resolved stub is wired up so DNS works at boot.
-ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+# On Ubuntu, mkosi installs systemd-resolved but doesn't create the resolv.conf
+# symlink (the Ubuntu installer normally does). Wire it up explicitly.
+source /etc/os-release
+if [[ "${ID}" == "ubuntu" ]]; then
+    ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+fi
 
 ENABLE_SFTP=${ENABLE_SFTP:-false}
 
