@@ -32,7 +32,7 @@ type vmConfig struct {
 	rootDiskSize       uint64
 	userData           string
 	ips                []netip.Addr
-	instanceID         string //keeping it consistent with sandbox.vsi
+	instanceID         string // Domain UUID - keeping it consistent with sandbox.vsi
 	launchSecurityType LaunchSecurityType
 	firmware           string
 }

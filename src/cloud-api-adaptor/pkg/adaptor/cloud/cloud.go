@@ -346,7 +346,7 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	// Cleanup instance if it was created but an error occurred (either during creation or later)
 	defer func() {
 		if err != nil && instance != nil && instance.ID != "" {
-			logger.Printf("cleaning up instance %s due to error: %v", instance.ID, err)
+			logger.Printf("cleaning up instance %s (ID: %s) due to error: %v", instance.Name, instance.ID, err)
 			cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 			defer cancel()
 			if delErr := s.provider.DeleteInstance(cleanupCtx, instance.ID); delErr != nil {

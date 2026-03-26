@@ -10,7 +10,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/netip"
-	"strconv"
 	"time"
 
 	retry "github.com/avast/retry-go/v4"
@@ -54,22 +53,6 @@ func checkDomainExistsByName(name string, libvirtClient *libvirtClient) (exist b
 
 	logger.Printf("Checking if instance (%s) exists", name)
 	domain, err := libvirtClient.connection.LookupDomainByName(name)
-	if err != nil {
-		if err.(libvirt.Error).Code == libvirt.ERR_NO_DOMAIN {
-			return false, nil
-		}
-		return false, err
-	}
-	defer freeDomain(domain, &err)
-
-	return true, nil
-
-}
-
-func checkDomainExistsByID(id uint32, libvirtClient *libvirtClient) (exist bool, err error) {
-
-	logger.Printf("Checking if instance (%d) exists", id)
-	domain, err := libvirtClient.connection.LookupDomainById(id)
 	if err != nil {
 		if err.(libvirt.Error).Code == libvirt.ERR_NO_DOMAIN {
 			return false, nil
@@ -616,13 +599,17 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 		return nil, fmt.Errorf("Failed to start VM: %s", err)
 	}
 
-	id, err := dom.GetID()
+	// Get the domain UUID which persists across all domain states
+	uuid, err := dom.GetUUIDString()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get domain ID: %s", err)
+		return nil, fmt.Errorf("Failed to get domain UUID: %s", err)
 	}
 
-	v.instanceID = strconv.FormatUint(uint64(id), 10)
-	logger.Printf("VM id %s", v.instanceID)
+	// For libvirt, store the domain UUID as instanceID.
+	// UUIDs persist across all domain states (running, paused, shut off),
+	// allowing cleanup to work reliably even for crashed domains.
+	v.instanceID = uuid
+	logger.Printf("VM created: name=%s, uuid=%s", v.name, uuid)
 
 	// Wait for sometime for the IP to be visible
 	if err := retry.Do(
@@ -643,11 +630,17 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	); err != nil {
 		logger.Printf("Unable to get IP addresses after %d retries (sleep time=%ds): %s",
 			GetDomainIPsRetries, GetDomainIPsSleep, err)
-		return nil, fmt.Errorf("Domain (id=%d) IP addresses not found", id)
+		// Returning the instance with UUID allows the caller to clean it up properly.
+		return &createDomainOutput{
+			instance: v,
+		}, fmt.Errorf("Domain (uuid=%s) IP addresses not found", uuid)
 	}
 
 	if v.ips, err = getDomainIPs(dom); err != nil {
-		return nil, fmt.Errorf("Internal error on getting domain IPs: %s", err)
+		// Return the instance even on error so cleanup can happen
+		return &createDomainOutput{
+			instance: v,
+		}, fmt.Errorf("Internal error on getting domain IPs: %s", err)
 	}
 
 	logger.Printf("Instance created successfully")
@@ -656,32 +649,20 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}, nil
 }
 
-func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, id string) (err error) {
+func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID string) (err error) {
 
-	logger.Printf("Deleting instance (%s)", id)
-	idUint, _ := strconv.ParseUint(id, 10, 32)
-	// libvirt API takes uint32
-	exists, err := checkDomainExistsByID(uint32(idUint), libvirtClient)
+	logger.Printf("Deleting instance (uuid: %s)", domainUUID)
+
+	// Look up domain by UUID.
+	domain, err := libvirtClient.connection.LookupDomainByUUIDString(domainUUID)
 	if err != nil {
-		logger.Printf("Unable to check instance (%s)", id)
-		return err
+		logger.Printf("Error retrieving libvirt domain by UUID %s: %v", domainUUID, err)
+		return fmt.Errorf("failed to lookup domain by UUID: %w", err)
 	}
-	if !exists {
-		logger.Printf("Instance (%s) not found", id)
-		return err
-	}
-	// Stop and undefine domain
 
-	// Sadly couldn't find an API to do the following
-	// virsh undefine <domid> --remove-all-storage
-
-	domain, err := libvirtClient.connection.LookupDomainById(uint32(idUint))
-	if err != nil {
-		logger.Printf("Error retrieving libvirt domain: %s", err)
-		return err
-	}
 	defer freeDomain(domain, &err)
 
+	// Stop domain if running, then undefine and remove storage
 	state, _, err := domain.GetState()
 	if err != nil {
 		logger.Printf("Couldn't get info about domain: %s", err)
