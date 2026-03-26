@@ -18,11 +18,6 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
         required: false
         type: string
-      oras:
-        description: Whether the podvm_image is oras published
-        default: false
-        required: false
-        type: boolean
       cluster_type:
         description: Specify the cluster type. Accepted values are "onprem" or "eks".
         default: onprem
@@ -122,19 +117,7 @@ jobs:
         with:
           version: ${{ env.ORAS_VERSION }}
 
-      - name: Extract qcow2 from ${{ inputs.podvm_image }}
-        if: ${{ !inputs.oras }}
-        run: |
-           # shellcheck disable=SC2001
-           qcow2=$(echo "${PODVM_IMAGE}" | sed -e "s#.*/\(.*\):.*#\1.qcow2#")
-           ./hack/download-image.sh "${PODVM_IMAGE}" . -o "${qcow2}" --clean-up
-           echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
-           # Clean up docker images to make space
-           docker system prune -a -f
-        working-directory: src/cloud-api-adaptor/podvm
-
       - name: Use oras to get qcow2 from ${{ inputs.podvm_image }}
-        if: ${{ inputs.oras }}
         run: |
           oras pull "${PODVM_IMAGE}"
           tar xvJpf podvm.tar.xz
