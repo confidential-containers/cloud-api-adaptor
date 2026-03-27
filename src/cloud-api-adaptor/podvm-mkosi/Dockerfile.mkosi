@@ -33,6 +33,7 @@ COPY mkosi.presets /image/mkosi.presets
 COPY mkosi.profiles /image/mkosi.profiles
 COPY mkosi.skeleton /image/mkosi.skeleton
 COPY mkosi.skeleton-debug /image/mkosi.skeleton-debug
+COPY mkosi.skeleton-debug-fedora /image/mkosi.skeleton-debug-fedora
 COPY mkosi.skeleton-sftp /image/mkosi.skeleton-sftp
 COPY mkosi.workspace /image/mkosi.workspace
 COPY resources /image/resources
