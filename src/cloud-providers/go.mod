@@ -22,7 +22,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.12
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.12
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.20
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.294.1
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.296.0
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/kdomanski/iso9660 v0.4.0
