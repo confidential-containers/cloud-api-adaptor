@@ -76,6 +76,16 @@ update_provider_charts() {
             echo "Updated ${provider_file} -> dev-${image_tag}"
         fi
     done
+
+    # Pin peerpod-ctrl and webhook image tags
+    peerpodctrl_values="src/peerpod-ctrl/chart/values.yaml"
+    webhook_values="src/webhook/chart/values.yaml"
+
+    sed "${sed_inplace[@]}" "s/^\(  tag:\).*/\1 ${image_tag}/" "${peerpodctrl_values}"
+    echo "Updated ${peerpodctrl_values} -> ${image_tag}"
+
+    sed "${sed_inplace[@]}" "s/^\(  tag:\).*/\1 ${image_tag}/" "${webhook_values}"
+    echo "Updated ${webhook_values} -> ${image_tag}"
 }
 
 
@@ -92,8 +102,8 @@ usage() {
                 - remote_name is the optional name of the remote, upstream branch
                 (defaults to origin)
         "caa-image-tag": Updates the Helm chart values to a specific image
-        tag of the cloud-api-adaptor to use for the release, to provide a
-        pinned and stable version.
+        tag of the cloud-api-adaptor, peerpod-ctrl and webhook to use for
+        the release, to provide a pinned and stable version.
         Providers libvirt and docker get the dev- prefix.
             - Parameters: <image_tag> where
                 - image_tag corresponds to the tag of the pre-release tested version
