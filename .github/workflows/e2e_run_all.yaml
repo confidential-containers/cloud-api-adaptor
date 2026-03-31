@@ -121,64 +121,6 @@ jobs:
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
-  # Build and push the cloud-api-adaptor image
-  #
-  # By using a reusable `workflow_call` workflow we are hitting two
-  # GHA limitations here:
-  #
-  # - Cannot access the `env` context from the `with` so that it cannot
-  #   reuse the E2E_IMG_* environment variables set at this workflow level.
-  # - Cannot call a reusable workflow from a job's step, so the we cannot
-  #   merge the `image` and `prep_env` into a single one (unless we create
-  #   another reusable workflow and, well, likely hit another limitation...).
-  #
-  # Reference: https://docs.github.com/en/actions/using-workflows/reusing-workflows#limitations
-  #
-  image:
-    uses: ./.github/workflows/caa_build_and_push.yaml
-    with:
-      registry: ${{ inputs.registry }}
-      dev_tags: ${{ inputs.caa_image_tag }}-dev-amd64
-      release_tags: ${{ inputs.caa_image_tag }}-amd64
-      git_ref: ${{ inputs.git_ref }}
-    permissions:
-      contents: read
-      packages: write
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-
-  # Run AWS e2e tests if pull request labeled 'test_e2e_aws'
-  aws:
-    name: aws
-    if: |
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'test_e2e_aws')
-    needs: [podvm, image]
-    strategy:
-      fail-fast: false
-      matrix:
-        container_runtime:
-          - crio
-        os:
-          - ubuntu
-        provider:
-          - generic
-        arch:
-          - amd64
-    permissions:
-      id-token: write # Required by aws-actions/configure-aws-credentials
-      contents: read  # Required by aws-actions/configure-aws-credentials
-    uses: ./.github/workflows/e2e_aws.yaml
-    with:
-      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}
-      container_runtime: ${{ matrix.container_runtime }}
-      podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
-      git_ref: ${{ inputs.git_ref }}
-      oras: false
-    secrets:
-      AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
-
   caa_image_amd64:
     uses: ./.github/workflows/caa_build_and_push.yaml
     with:
@@ -209,6 +151,38 @@ jobs:
       packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
+  # Run AWS e2e tests if pull request labeled 'test_e2e_aws'
+  aws:
+    name: aws
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_aws')
+    needs: [podvm, caa_image_amd64]
+    strategy:
+      fail-fast: false
+      matrix:
+        container_runtime:
+          - crio
+        os:
+          - ubuntu
+        provider:
+          - generic
+        arch:
+          - amd64
+    permissions:
+      id-token: write # Required by aws-actions/configure-aws-credentials
+      contents: read  # Required by aws-actions/configure-aws-credentials
+    uses: ./.github/workflows/e2e_aws.yaml
+    with:
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
+      container_runtime: ${{ matrix.container_runtime }}
+      podvm_image: ${{ inputs.registry }}/podvm-${{ matrix.provider }}-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.podvm_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      oras: false
+    secrets:
+      AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
   libvirt_e2e_arch_prep:
     runs-on: ubuntu-24.04
