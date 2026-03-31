@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +kubebuilder:webhook:admissionReviewVersions=v1,path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create,versions=v1,name=mwebhook.peerpods.io,sideEffects=None
+// +kubebuilder:webhook:admissionReviewVersions=v1,path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create,versions=v1,name=mwebhook.peerpods.io,sideEffects=None,reinvocationPolicy=IfNeeded
 
 // podMutator mutates Pods
 type PodMutator struct {

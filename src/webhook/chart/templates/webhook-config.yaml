@@ -25,6 +25,7 @@ webhooks:
       values:
       - {{ .Values.namespaceOverride | default .Release.Namespace }}
       - kube-system
+  reinvocationPolicy: IfNeeded
   rules:
   - apiGroups:
     - ""
