@@ -122,7 +122,13 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	ips, err := getIPs(result.instance)
 	if err != nil {
 		logger.Printf("failed to get IPs for the instance : %v ", err)
-		return nil, err
+		// Return partial instance for cleanup even if IP retrieval fails
+		instance := &provider.Instance{
+			ID:   instanceUUID,
+			Name: instanceName,
+			IPs:  nil,
+		}
+		return instance, err
 	}
 
 	instance := &provider.Instance{
