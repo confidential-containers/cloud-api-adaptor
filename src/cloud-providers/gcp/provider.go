@@ -6,6 +6,7 @@ package gcp
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 	"net/netip"
@@ -19,6 +20,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	proto "google.golang.org/protobuf/proto"
 )
@@ -459,6 +461,10 @@ func (p *gcpProvider) DeleteInstance(ctx context.Context, instanceID string) err
 	}
 	op, err := p.instancesClient.Delete(ctx, req)
 	if err != nil {
+		if isGCPNotFound(err) {
+			logger.Printf("instance %s already deleted, nothing to do", instanceID)
+			return nil
+		}
 		return fmt.Errorf("Instances.Delete error: %w, req: %v", err, req)
 	}
 	err = op.Wait(ctx)
@@ -467,6 +473,14 @@ func (p *gcpProvider) DeleteInstance(ctx context.Context, instanceID string) err
 	}
 	logger.Printf("deleted an instance %s", instanceID)
 	return nil
+}
+
+func isGCPNotFound(err error) bool {
+	var apiErr *googleapi.Error
+	if errors.As(err, &apiErr) {
+		return apiErr.Code == 404
+	}
+	return false
 }
 
 func (p *gcpProvider) Teardown() error {
