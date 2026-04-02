@@ -99,6 +99,7 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+      artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -116,6 +117,7 @@ jobs:
       packages: write
       attestations: write
       id-token: write
+      artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
