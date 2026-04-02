@@ -37,6 +37,7 @@ jobs:
       contents: read
       packages: write
       attestations: write
+      artifact-metadata: write
     secrets:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
