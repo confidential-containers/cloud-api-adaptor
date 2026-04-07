@@ -66,6 +66,10 @@ providerConfigs:
     # (default: "")
     # GCP_SUBNETWORK: ""
 
+    # Use Spot (preemptible) instances for peer pod VMs. Reduces cost significantly but VMs may be reclaimed by GCP at any time.
+    # (default: "false")
+    # GCP_USE_SPOT_INSTANCES: "false"
+
     # Zone
     # (required)
     GCP_ZONE: ""
