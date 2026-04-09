@@ -1,0 +1,15 @@
+#!/bin/bash
+# Check if NVIDIA GPU hardware is present at PCI level.
+# Returns 0 if GPU found, 1 if not (for use with systemd ExecCondition=).
+
+if lspci -n 2>/dev/null | grep -q '10de:'; then
+    exit 0
+fi
+
+for vendor_file in /sys/bus/pci/devices/*/vendor; do
+    if [ -f "$vendor_file" ] && grep -q '0x10de' "$vendor_file" 2>/dev/null; then
+        exit 0
+    fi
+done
+
+exit 1

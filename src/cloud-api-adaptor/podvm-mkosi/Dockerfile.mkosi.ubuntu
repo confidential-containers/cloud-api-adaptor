@@ -11,7 +11,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
 	apt-get install -y \
 	bubblewrap \
+	curl \
 	git \
+	gnupg \
 	cpio \
 	systemd-repart \
 	kmod \
@@ -42,6 +44,34 @@ COPY mkosi.skeleton-sftp /image/mkosi.skeleton-sftp
 COPY mkosi.workspace /image/mkosi.workspace
 COPY resources /image/resources
 COPY mkosi.conf.ubuntu /image/mkosi.conf
+
+# Add NVIDIA APT repos to mkosi.skeleton/ so they are present in the image tree
+# *before* package installation. mkosi applies SkeletonTrees before apt-get runs.
+RUN mkdir -p /image/mkosi.skeleton/etc/apt/sources.list.d \
+             /image/mkosi.skeleton/etc/apt/preferences.d \
+             /image/mkosi.skeleton/usr/share/keyrings \
+    && curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-archive-keyring.gpg \
+       -o /image/mkosi.skeleton/usr/share/keyrings/cuda-archive-keyring.gpg \
+    && curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+       | gpg --dearmor -o /image/mkosi.skeleton/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+    && echo 'deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/ /' \
+       > /image/mkosi.skeleton/etc/apt/sources.list.d/cuda-ubuntu2404-x86_64.list \
+    && echo 'deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/amd64 /' \
+       > /image/mkosi.skeleton/etc/apt/sources.list.d/nvidia-container-toolkit.list \
+    && printf '%s\n' \
+       'Package: nvidia-*' \
+       'Pin: origin developer.download.nvidia.com' \
+       'Pin-Priority: 1001' \
+       '' \
+       'Package: libnvidia-*' \
+       'Pin: origin developer.download.nvidia.com' \
+       'Pin-Priority: 1001' \
+       '' \
+       'Package: cuda-*' \
+       'Pin: origin developer.download.nvidia.com' \
+       'Pin-Priority: 1001' \
+       > /image/mkosi.skeleton/etc/apt/preferences.d/nvidia-cuda-repo
+
 RUN --security=insecure mkosi --profile=$PROFILE --image-version=$IMAGE_VERSION
 
 FROM scratch
