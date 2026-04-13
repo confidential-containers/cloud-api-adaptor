@@ -28,7 +28,6 @@ require (
 	github.com/kdomanski/iso9660 v0.4.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.49.0
-	golang.org/x/oauth2 v0.36.0
 	google.golang.org/api v0.273.1
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v2 v2.4.0
@@ -63,6 +62,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	golang.org/x/oauth2 v0.36.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
@@ -70,7 +70,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/auth v0.18.2 // indirect
+	cloud.google.com/go/auth v0.18.2
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.6.0 // indirect

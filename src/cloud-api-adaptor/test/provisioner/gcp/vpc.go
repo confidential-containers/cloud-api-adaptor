@@ -56,7 +56,7 @@ func (g *GCPVPC) CreateVPC(
 		return nil
 	}
 
-	srv, err := compute.NewService(ctx, option.WithCredentialsFile(credentials))
+	srv, err := compute.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, credentials))
 	if err != nil {
 		return fmt.Errorf("GKE: compute.NewService: %v", err)
 	}
@@ -113,7 +113,7 @@ func (g *GCPVPC) CreateVPC(
 
 // DeleteVPC deletes a VPC in Google Cloud.
 func (g *GCPVPC) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
-	srv, err := compute.NewService(ctx, option.WithCredentialsFile(g.credentials))
+	srv, err := compute.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, g.credentials))
 	if err != nil {
 		return fmt.Errorf("GKE: compute.NewService: %v", err)
 	}
@@ -178,7 +178,7 @@ func (g *GCPVPC) WaitForVPCCreation(ctx context.Context, timeout time.Duration) 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	srv, err := compute.NewService(ctx, option.WithCredentialsFile(g.credentials))
+	srv, err := compute.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, g.credentials))
 	if err != nil {
 		return fmt.Errorf("compute.NewService: %v", err)
 	}
@@ -217,7 +217,7 @@ func (g *GCPVPC) WaitForVPCCreation(ctx context.Context, timeout time.Duration) 
 // 	ctx, cancel := context.WithTimeout(ctx, timeout)
 // 	defer cancel()
 //
-// 	srv, err := compute.NewService(ctx, option.WithCredentialsFile(g.credentials))
+// 	srv, err := compute.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, g.credentials))
 // 	if err != nil {
 // 		return fmt.Errorf("compute.NewService: %v", err)
 // 	}
@@ -253,7 +253,7 @@ func (g *GCPVPC) WaitForVPCDeleted(
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	srv, err := compute.NewService(ctx, option.WithCredentialsFile(g.credentials))
+	srv, err := compute.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, g.credentials))
 	if err != nil {
 		return fmt.Errorf("GKE: compute.NewService: %v", err)
 	}

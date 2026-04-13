@@ -123,7 +123,7 @@ func (g *GKECluster) CreateCluster(ctx context.Context) error {
 	defer cancel()
 
 	srv, err := container.NewService(
-		ctx, option.WithCredentialsFile(g.credentials),
+		ctx, option.WithAuthCredentialsFile(option.ServiceAccount, g.credentials),
 	)
 	if err != nil {
 		return fmt.Errorf("GKE: container.NewService: %v", err)
@@ -177,7 +177,7 @@ func (g *GKECluster) DeleteCluster(ctx context.Context) error {
 	defer cancel()
 
 	srv, err := container.NewService(
-		ctx, option.WithCredentialsFile(g.credentials),
+		ctx, option.WithAuthCredentialsFile(option.ServiceAccount, g.credentials),
 	)
 	if err != nil {
 		return fmt.Errorf("GKE: container.NewService: %v", err)
@@ -264,7 +264,7 @@ func (g *GKECluster) WaitForClusterActive(
 	ctx context.Context, activationTimeout time.Duration,
 ) (*container.Cluster, error) {
 	srv, err := container.NewService(
-		ctx, option.WithCredentialsFile(g.credentials),
+		ctx, option.WithAuthCredentialsFile(option.ServiceAccount, g.credentials),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("GKE: container.NewService: %v", err)
@@ -301,7 +301,7 @@ func (g *GKECluster) WaitForClusterDeleted(
 	ctx context.Context, activationTimeout time.Duration,
 ) error {
 	srv, err := container.NewService(
-		ctx, option.WithCredentialsFile(g.credentials),
+		ctx, option.WithAuthCredentialsFile(option.ServiceAccount, g.credentials),
 	)
 	if err != nil {
 		return fmt.Errorf("GKE: container.NewService: %v", err)

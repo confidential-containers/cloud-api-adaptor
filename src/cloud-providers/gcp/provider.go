@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"strings"
 
+	"cloud.google.com/go/auth/credentials"
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
 	crm "cloud.google.com/go/resourcemanager/apiv3"
@@ -18,7 +19,6 @@ import (
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	proto "google.golang.org/protobuf/proto"
 )
@@ -44,11 +44,13 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		instancesClient: nil,
 	}
 	if config.GcpCredentials != "" {
-		creds, err := google.CredentialsFromJSON(context.TODO(), []byte(config.GcpCredentials), computeScope)
+		creds, err := credentials.NewCredentialsFromJSON(credentials.ServiceAccount, []byte(config.GcpCredentials), &credentials.DetectOptions{
+			Scopes: []string{computeScope},
+		})
 		if err != nil {
 			return nil, fmt.Errorf("configuration error when using creds: %s", err)
 		}
-		provider.instancesClient, err = compute.NewInstancesRESTClient(context.TODO(), option.WithCredentials(creds))
+		provider.instancesClient, err = compute.NewInstancesRESTClient(context.TODO(), option.WithAuthCredentials(creds))
 		if err != nil {
 			return nil, fmt.Errorf("NewInstancesRESTClient with credentials error: %s", err)
 		}
