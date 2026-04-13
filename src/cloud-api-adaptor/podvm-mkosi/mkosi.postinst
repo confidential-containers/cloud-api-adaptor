@@ -18,6 +18,11 @@ rm -f "${BUILDROOT}"/etc/systemd/system/{run-image,run-kata\x2dcontainers}.mount
 rm -f "${BUILDROOT}"/etc/systemd/system/multi-user.target.wants/{run-image,run-kata\x2dcontainers}.mount
 
 # mask unwanted sytemd units that measure a bunch of stuff into the vTPM
+# Set up /etc/resolv.conf symlink if not already present (Ubuntu only)
+if [ ! -e "${BUILDROOT}/etc/resolv.conf" ]; then
+    ln -s /run/systemd/resolve/stub-resolv.conf "${BUILDROOT}/etc/resolv.conf" || true
+fi
+
 ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrmachine.service"
 ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrfs-root.service"
 ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrfs@.service"
