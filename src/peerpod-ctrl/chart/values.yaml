@@ -1,6 +1,10 @@
 # Prefix prepended to all resource names
 namePrefix: peerpodctrl-
 
+# ServiceAccount annotations (e.g. Workload Identity binding)
+serviceAccount:
+  annotations: {}
+
 # PeerPod controller image
 image:
   repository: quay.io/confidential-containers/peerpod-ctrl

@@ -79,11 +79,29 @@ secrets:
 #
 # Note: libvirt/docker provider files override this with the dev image.
 image:
-  name: quay.io/confidential-containers/cloud-api-adaptor
-  tag: "2274f17ad298088eeefa20fe4b3a58a350ceab4e"
+  name: us-central1-docker.pkg.dev/cohere-confidential-computing/cloud-api-adaptor/cloud-api-adaptor
+  tag: "44d97551e74d3d835e6ab17d37475f1033b2011a"
 
 # Cloud provider: libvirt, aws, azure, gcp, ibmcloud, vsphere
-provider: libvirt
+provider: gcp
+
+# Override the DaemonSet container command. Set to bypass entrypoint.sh when
+# using Workload Identity (no GCP_CREDENTIALS file needed).
+command: ["/bin/sh", "-c", "exec cloud-api-adaptor gcp"]
+
+# DaemonSet nodeSelector. GKE nodes are labeled by the node pool config.
+nodeSelector:
+  fortress.cohere.com/caa-worker: "true"
+
+# ServiceAccount annotations (e.g. Workload Identity binding)
+serviceAccount:
+  annotations: {}
+
+# GKE node config fixes. Deploys a separate DaemonSet that patches containerd
+# (discard_unpacked_layers) and kubelet (runtimeRequestTimeout) on each node.
+gkeNodeFix:
+  enabled: true
+  runtimeRequestTimeout: "15m"
 
 # Maximum number of peer pods allowed to run simultaneously
 # This limit prevents resource exhaustion on the cloud provider
@@ -117,6 +135,9 @@ daemonset:
 # Configuration options documented in ../../../peerpod-ctrl/chart/values.yaml
 resourceCtrl:
   enabled: true
+  image:
+    repository: us-central1-docker.pkg.dev/cohere-confidential-computing/cloud-api-adaptor/peerpod-ctrl
+    tag: "bfd5b9847b2fb44c843f6a3b6209092d0a217d83"
 
 # peerpods-webhook subchart configuration
 # Mutating webhook that modifies pod specs to use peer pods runtime and resources

@@ -1,0 +1,94 @@
+{{- if .Values.gkeNodeFix.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fix-gke-node-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: fix-gke-node-config
+spec:
+  selector:
+    matchLabels:
+      app: fix-gke-node-config
+  template:
+    metadata:
+      labels:
+        app: fix-gke-node-config
+    spec:
+      tolerations:
+      - operator: Exists
+      hostPID: true
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      initContainers:
+      - name: fix-containerd
+        image: alpine:3.21
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: host-containerd-config
+          mountPath: /etc/containerd
+        command:
+        - /bin/sh
+        - -c
+        - |
+          TOML=/etc/containerd/config.toml
+
+          if grep -q 'discard_unpacked_layers = false' "$TOML"; then
+            echo "containerd: already patched, skipping"
+            exit 0
+          fi
+
+          if grep -q 'discard_unpacked_layers = true' "$TOML"; then
+            sed -i 's/discard_unpacked_layers = true/discard_unpacked_layers = false/g' "$TOML"
+            echo "containerd: patched $TOML"
+            grep discard_unpacked_layers "$TOML"
+            nsenter -t 1 -m -u -i -n -p -- systemctl restart containerd
+            echo "containerd: restarted"
+          else
+            echo "containerd: discard_unpacked_layers setting not found, skipping restart"
+            grep discard_unpacked_layers "$TOML" || true
+          fi
+      - name: fix-kubelet
+        image: alpine:3.21
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: host-kubelet-config
+          mountPath: /home/kubernetes
+        command:
+        - /bin/sh
+        - -c
+        - |
+          CONFIG=/home/kubernetes/kubelet-config.yaml
+          DESIRED="{{ .Values.gkeNodeFix.runtimeRequestTimeout }}"
+
+          if grep -q "runtimeRequestTimeout: \"$DESIRED\"" "$CONFIG" 2>/dev/null; then
+            echo "kubelet: already set to $DESIRED, skipping"
+            exit 0
+          fi
+
+          if grep -q "runtimeRequestTimeout:" "$CONFIG"; then
+            sed -i "s/runtimeRequestTimeout:.*/runtimeRequestTimeout: \"$DESIRED\"/" "$CONFIG"
+          else
+            echo "runtimeRequestTimeout: \"$DESIRED\"" >> "$CONFIG"
+          fi
+
+          echo "kubelet: patched $CONFIG"
+          grep runtimeRequestTimeout "$CONFIG"
+
+          nsenter -t 1 -m -u -i -n -p -- systemctl restart kubelet
+          echo "kubelet: restarted"
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.10
+      volumes:
+      - name: host-containerd-config
+        hostPath:
+          path: /etc/containerd
+          type: Directory
+      - name: host-kubelet-config
+        hostPath:
+          path: /home/kubernetes
+          type: Directory
+{{- end }}

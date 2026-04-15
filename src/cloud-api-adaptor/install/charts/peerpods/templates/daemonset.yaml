@@ -25,7 +25,11 @@ spec:
       serviceAccountName: cloud-api-adaptor
       containers:
       - command:
+        {{- if .Values.command }}
+        {{- toYaml .Values.command | nindent 8 }}
+        {{- else }}
         - /usr/local/bin/entrypoint.sh
+        {{- end }}
         env:
         - name: NODE_NAME
           valueFrom:
@@ -100,7 +104,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
-        node.kubernetes.io/worker: ""
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
       volumes:
 {{- if and (or (eq .Values.provider "libvirt") (eq .Values.provider "byom")) (include "peerpods.sshKeySecretName" .) }}
       - name: ssh
