@@ -1,7 +1,7 @@
 [Unit]
 Description=Kata Agent
 BindsTo=netns@podns.service
-After=netns@podns.service process-user-data.service scratch-storage.service
+After=netns@podns.service scratch-storage.service
 Wants=scratch-storage.service
 
 [Service]

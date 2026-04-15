@@ -1,0 +1,9 @@
+[Unit]
+Description=Wait for kata-agent socket before starting Agent Protocol Forwarder
+
+[Path]
+PathExists=/run/kata-containers/agent.sock
+Unit=agent-protocol-forwarder.service
+
+[Install]
+WantedBy=multi-user.target

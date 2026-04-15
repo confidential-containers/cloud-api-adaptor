@@ -1,6 +1,6 @@
 [Unit]
 Description=Configurable Scratch Storage Setup for Kata Agent
-After=systemd-repart.service process-user-data.service
+After=systemd-repart.service
 # It must complete before the kata-agent starts
 Before=kata-agent.service
 DefaultDependencies=no

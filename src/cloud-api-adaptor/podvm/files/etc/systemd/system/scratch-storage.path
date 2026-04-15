@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for scratch storage marker
+
+[Path]
+PathExists=/run/peerpod/scratch-space.marker
+Unit=scratch-storage.service
+
+[Install]
+WantedBy=multi-user.target

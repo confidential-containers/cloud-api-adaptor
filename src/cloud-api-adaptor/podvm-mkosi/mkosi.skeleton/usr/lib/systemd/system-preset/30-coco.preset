@@ -1,4 +1,4 @@
-enable agent-protocol-forwarder.service
+enable agent-protocol-forwarder.path
 enable attestation-agent.path
 enable api-server-rest.path
 enable confidential-data-hub.path
@@ -8,4 +8,4 @@ enable setup-nat-for-imds.service
 
 enable gen-issue.service
 enable image-env.service
-enable scratch-storage.service
+enable scratch-storage.path
