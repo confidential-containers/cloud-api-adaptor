@@ -10,6 +10,3 @@ ExecStart=/usr/local/bin/kata-agent --config /etc/agent-config.toml
 ExecStartPre=-umount /sys/fs/cgroup/misc
 ExecStopPost=/usr/local/bin/kata-agent-clean --config /etc/agent-config.toml
 SyslogIdentifier=kata-agent
-
-[Install]
-WantedBy=multi-user.target
