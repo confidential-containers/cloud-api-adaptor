@@ -1,0 +1,1 @@
+tmpfs /run tmpfs rw,nosuid,nodev,size=80% 0 0

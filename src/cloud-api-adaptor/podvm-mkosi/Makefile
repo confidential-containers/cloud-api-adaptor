@@ -15,6 +15,23 @@ PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(DISTRO_ARCH)
 VERIFY_PROVENANCE ?= no
 MKOSI_VERSION ?= v22
 
+# Comma-separated list of guest-components binaries to build from source
+# instead of using upstream pre-built OCI artifacts.
+# Recognized: attestation-agent, api-server-rest, confidential-data-hub
+# Example: CUSTOM_GC_BINARIES=attestation-agent,api-server-rest
+CUSTOM_GC_BINARIES ?=
+
+# Cargo features for attestation-agent (required when attestation-agent is
+# listed in CUSTOM_GC_BINARIES).
+# Example: AA_FEATURES=bin,ttrpc,kbs,coco_as,rust-crypto,tdx-attester,nvidia-attester
+AA_FEATURES ?=
+
+# Git repo + ref for guest-components source checkout.
+# GUEST_COMPONENTS_REF is required when CUSTOM_GC_BINARIES is set.
+# Defaults to the OCI reference from versions.yaml via Makefile.defaults.
+GUEST_COMPONENTS_REPO ?= https://github.com/confidential-containers/guest-components.git
+# GUEST_COMPONENTS_REF is inherited from Makefile.defaults (oci.guest-components.reference)
+
 _SHA := $(shell git rev-parse --short HEAD)
 _SHA_DIRTY := $(shell [ -n "$$(git status --porcelain 2>/dev/null)" ] && printf -- '-dirty')
 IMAGE_VERSION ?= $(_SHA)$(_SHA_DIRTY)
@@ -78,6 +95,9 @@ endif
 		--build-arg PAUSE_BIN=$(PAUSE_BIN) \
 		--build-arg IMAGE_NAME=mkosi-podvm-binaries \
 		--build-arg VERIFY_PROVENANCE=$(VERIFY_PROVENANCE) \
+		$(if $(CUSTOM_GC_BINARIES),--build-arg CUSTOM_GC_BINARIES=$(CUSTOM_GC_BINARIES),) \
+		$(if $(AA_FEATURES),--build-arg AA_FEATURES=$(AA_FEATURES),) \
+		$(if $(GUEST_COMPONENTS_REF),--build-arg GUEST_COMPONENTS_REF=$(GUEST_COMPONENTS_REF) --build-arg GUEST_COMPONENTS_REPO=$(GUEST_COMPONENTS_REPO),) \
 		$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		$(if $(filter $(PUSH),true),,-o type=local,dest="./resources/binaries-tree") \

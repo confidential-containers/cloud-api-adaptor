@@ -5,6 +5,38 @@
 #
 # Build binaries for mkosi podvm image
 #
+# Optional: build guest-components binaries from source.
+# Set CUSTOM_GC_BINARIES to a comma-separated list of components to compile
+# from the guest-components repo instead of using upstream pre-built artifacts.
+# Recognized: attestation-agent, api-server-rest, confidential-data-hub
+#
+# When attestation-agent is included, AA_FEATURES must also be set.
+# GUEST_COMPONENTS_REF controls which git ref to build from.
+FROM rust:1.90-bookworm AS gc_builder
+ARG CUSTOM_GC_BINARIES=""
+ARG AA_FEATURES=""
+ARG GUEST_COMPONENTS_REF=""
+ARG GUEST_COMPONENTS_REPO="https://github.com/confidential-containers/guest-components.git"
+ARG DEBIAN_FRONTEND=noninteractive
+RUN set -e; \
+    if [ -n "${CUSTOM_GC_BINARIES}" ] && [ -z "${GUEST_COMPONENTS_REF}" ]; then \
+      echo "ERROR: GUEST_COMPONENTS_REF must be set when CUSTOM_GC_BINARIES is specified" >&2; \
+      exit 1; \
+    fi; \
+    if [ -n "${CUSTOM_GC_BINARIES}" ] && [ -n "${GUEST_COMPONENTS_REF}" ]; then \
+      apt-get update && \
+      apt-get install -y --no-install-recommends \
+        protobuf-compiler pkg-config clang libssl-dev libtss2-dev && \
+      apt-get clean && rm -rf /var/lib/apt/lists/* && \
+      mkdir -p /build/gc && cd /build/gc && \
+      git init && \
+      git remote add origin "${GUEST_COMPONENTS_REPO}" && \
+      git fetch --depth=1 origin "${GUEST_COMPONENTS_REF}" && \
+      git reset --hard FETCH_HEAD; \
+    fi
+COPY cloud-api-adaptor/podvm/build-guest-components.sh /build/
+RUN /build/build-guest-components.sh "${CUSTOM_GC_BINARIES}" "${AA_FEATURES}"
+
 # ubuntu:24.04
 FROM ubuntu@sha256:0d39fcc8335d6d74d5502f6df2d30119ff4790ebbb60b364818d5112d9e3e932 AS builder
 
@@ -107,6 +139,12 @@ WORKDIR /src/cloud-api-adaptor/podvm
 RUN ./hack/cross-build-extras.sh
 
 RUN LIBC=gnu make binaries
+
+COPY --from=gc_builder /output/ /tmp/gc-overrides/
+RUN for bin in /tmp/gc-overrides/*; do \
+      [ -f "$bin" ] && [ -s "$bin" ] && \
+      install -m0755 "$bin" /src/cloud-api-adaptor/podvm/files/usr/local/bin/"$(basename "$bin")"; \
+    done; true
 
 FROM scratch
 COPY --from=podvm_binaries_builder /src/cloud-api-adaptor/podvm/files /

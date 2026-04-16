@@ -1,12 +1,16 @@
 # syntax=docker/dockerfile:1.5.0-labs
-# ubuntu:24.04
-FROM ubuntu@sha256:0d39fcc8335d6d74d5502f6df2d30119ff4790ebbb60b364818d5112d9e3e932 AS builder
+# ubuntu:24.10 (Oracular) — provides systemd 256 EFI stub with TDX RTMR support
+FROM ubuntu@sha256:cdf755952ed117f6126ff4e65810bf93767d4c38f5c7185b50ec1f1078b464cc AS builder
 
 ARG MKOSI_VERSION="v22"
 ARG PROFILE="debug"
 ARG IMAGE_VERSION="0.0.0"
 
 ARG DEBIAN_FRONTEND=noninteractive
+
+# 24.10 is EOL; redirect apt to old-releases mirror
+RUN sed -i 's|archive.ubuntu.com|old-releases.ubuntu.com|g; s|security.ubuntu.com|old-releases.ubuntu.com|g' \
+	/etc/apt/sources.list.d/ubuntu.sources
 
 RUN apt-get update && \
 	apt-get install -y \
