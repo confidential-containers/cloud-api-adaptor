@@ -35,6 +35,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+{{- if include "peerpods.gcpWorkloadIdentityEnabled" . }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/run/secrets/gcp-wif/credentials.json
+        - name: GCP_CREDENTIALS
+          value: ""
+{{- end }}
         envFrom:
 {{- if include "peerpods.secretName" . }}
         - secretRef:
@@ -73,6 +79,11 @@ spec:
 {{- if include "peerpods.alibabacloudRrsaEnabled" . }}
         - mountPath: /var/run/secrets/ack.alibabacloud.com/rrsa-tokens
           name: rrsa-oidc-token
+          readOnly: true
+{{- end }}
+{{- if include "peerpods.gcpWorkloadIdentityEnabled" . }}
+        - mountPath: /var/run/secrets/gcp-wif
+          name: gcp-wif
           readOnly: true
 {{- end }}
         - mountPath: /run/peerpod
@@ -129,6 +140,26 @@ spec:
               audience: "sts.aliyuncs.com"
               expirationSeconds: 3600
               path: token
+{{- end }}
+{{- if include "peerpods.gcpWorkloadIdentityEnabled" . }}
+      # GCP Workload Identity Federation: projected SA token + ADC config
+      # merged into one volume. The GCP SDK reads credentials.json (from the
+      # ConfigMap), which points at token (from the projected SA token) and
+      # exchanges it at STS for an impersonation access token on
+      # `gcpWorkloadIdentity.serviceAccountEmail`. Works over hostNetwork.
+      - name: gcp-wif
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: {{ include "peerpods.gcpWorkloadIdentityTokenAudience" . | quote }}
+              expirationSeconds: {{ .Values.gcpWorkloadIdentity.tokenExpirationSeconds | default 3600 }}
+              path: token
+          - configMap:
+              name: cloud-api-adaptor-gcp-wif
+              items:
+              - key: credentials.json
+                path: credentials.json
 {{- end }}
       - hostPath:
           path: /run/peerpod

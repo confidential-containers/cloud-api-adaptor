@@ -1,0 +1,34 @@
+{{- if include "peerpods.gcpWorkloadIdentityEnabled" . }}
+{{- if not .Values.gcpWorkloadIdentity.audience }}
+{{- fail "gcpWorkloadIdentity.enabled=true requires gcpWorkloadIdentity.audience" }}
+{{- end }}
+{{- if not .Values.gcpWorkloadIdentity.serviceAccountEmail }}
+{{- fail "gcpWorkloadIdentity.enabled=true requires gcpWorkloadIdentity.serviceAccountEmail" }}
+{{- end }}
+# Application Default Credentials (ADC) config for GCP Workload Identity
+# Federation. The CAA container reads this file via GOOGLE_APPLICATION_CREDENTIALS
+# and the GCP SDK exchanges the projected SA token at STS for an impersonation
+# token on `serviceAccountEmail`. This flow does NOT use the GKE metadata server,
+# so it works with hostNetwork=true.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-api-adaptor-gcp-wif
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: cloud-api-adaptor
+data:
+  credentials.json: |
+    {
+      "universe_domain": "googleapis.com",
+      "type": "external_account",
+      "audience": {{ .Values.gcpWorkloadIdentity.audience | quote }},
+      "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+      "token_url": "https://sts.googleapis.com/v1/token",
+      "credential_source": {
+        "file": "/var/run/secrets/gcp-wif/token",
+        "format": { "type": "text" }
+      },
+      "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{{ .Values.gcpWorkloadIdentity.serviceAccountEmail }}:generateAccessToken"
+    }
+{{- end }}

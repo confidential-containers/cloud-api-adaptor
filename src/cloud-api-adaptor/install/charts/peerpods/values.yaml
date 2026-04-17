@@ -97,6 +97,45 @@ nodeSelector:
 serviceAccount:
   annotations: {}
 
+# GCP Workload Identity Federation for CAA (hostNetwork-compatible).
+#
+# CAA runs with hostNetwork=true, which bypasses the GKE metadata proxy. Regular
+# GKE Workload Identity (the `iam.gke.io/gcp-service-account` annotation alone)
+# therefore does NOT authenticate CAA as the bound GSA — it falls through to the
+# node SA instead.
+#
+# This block wires up Workload Identity Federation via a projected SA token and
+# an ADC external_account config. The GCP Go SDK (`cloud.google.com/go/auth`)
+# reads the token from disk and exchanges it at STS, with no metadata server
+# involvement. This path works over hostNetwork.
+#
+# Required on the GCP side (typically via Terraform):
+#   - A workload identity pool + provider for the GKE cluster
+#   - roles/iam.workloadIdentityUser on `serviceAccountEmail` for the KSA
+#     principal  serviceAccount:<pool>.svc.id.goog[<ns>/cloud-api-adaptor]
+#   - IAM roles on `serviceAccountEmail` for CAA's Compute API needs
+#
+# When enabled, this also unsets GCP_CREDENTIALS in the CAA env so the SDK
+# falls through to ADC detection (which picks up GOOGLE_APPLICATION_CREDENTIALS).
+gcpWorkloadIdentity:
+  enabled: false
+  # Full STS audience for the ADC external_account config — begins with
+  # "//iam.googleapis.com/projects/...". Example:
+  #   //iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/my-pool/providers/my-provider
+  audience: ""
+  # The GSA CAA should impersonate. Must have compute.instanceAdmin.v1,
+  # compute.networkUser, and iam.serviceAccountUser on the project (or the
+  # subset of those needed by the peer pod provisioning flow).
+  serviceAccountEmail: ""
+  # Audience to request in the projected SA token. For GKE's default pool this
+  # is typically the same URL as `audience` (without the leading `//`), i.e.
+  # "https://iam.googleapis.com/projects/..../providers/...". Leave empty to
+  # derive from `audience` automatically.
+  tokenAudience: ""
+  # Token refresh cadence (seconds). Kubernetes caps projected SA token
+  # lifetimes; 3600 is a reasonable balance between rotation and STS load.
+  tokenExpirationSeconds: 3600
+
 # GKE node config fixes. Deploys a separate DaemonSet that patches containerd
 # (discard_unpacked_layers) and kubelet (runtimeRequestTimeout) on each node.
 gkeNodeFix:

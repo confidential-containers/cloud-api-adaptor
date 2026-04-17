@@ -53,6 +53,35 @@ true
 {{- end -}}
 
 {{/*
+GCP Workload Identity Federation: render the external_account ConfigMap + token
+mount when enabled. Only meaningful for provider=gcp; short-circuits if the
+block is missing or disabled.
+*/}}
+{{- define "peerpods.gcpWorkloadIdentityEnabled" -}}
+{{- if and (eq .Values.provider "gcp") .Values.gcpWorkloadIdentity .Values.gcpWorkloadIdentity.enabled -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+GCP WIF: resolve the projected-token audience. Defaults to the `audience` value
+with the leading "//" stripped (the STS audience format takes "//...", but
+Kubernetes projected tokens take the https:// URL form).
+*/}}
+{{- define "peerpods.gcpWorkloadIdentityTokenAudience" -}}
+{{- if .Values.gcpWorkloadIdentity.tokenAudience -}}
+{{- .Values.gcpWorkloadIdentity.tokenAudience -}}
+{{- else -}}
+{{- $aud := .Values.gcpWorkloadIdentity.audience | default "" -}}
+{{- if hasPrefix "//" $aud -}}
+https:{{ $aud }}
+{{- else -}}
+{{- $aud -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Check if custom TLS certificates are configured.
 Returns "true" when CACERT_FILE is set in providerConfigs for the active
 provider AND a TLS secret name is available (either chart-managed or external).
