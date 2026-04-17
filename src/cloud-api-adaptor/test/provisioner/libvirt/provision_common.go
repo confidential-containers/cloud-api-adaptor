@@ -330,6 +330,8 @@ func NewLibvirtInstallChart(installDir, provider string) (pv.InstallChart, error
 	}, nil
 }
 
+func (l *LibvirtInstallChart) GetHelm() *pv.Helm { return l.Helm }
+
 func (l *LibvirtInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
 	return l.Helm.Install(ctx, cfg)
 }

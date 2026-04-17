@@ -33,6 +33,8 @@ func NewIBMCloudInstallChart(installDir, provider string) (pv.InstallChart, erro
 	}, nil
 }
 
+func (i *IBMCloudInstallChart) GetHelm() *pv.Helm { return i.Helm }
+
 func (i *IBMCloudInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
 	return i.Helm.Install(ctx, cfg)
 }

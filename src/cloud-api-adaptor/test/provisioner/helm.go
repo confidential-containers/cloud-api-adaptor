@@ -14,6 +14,29 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
+// ConfigureSubchartImages sets helm override values for sub-chart images
+// (peerpod-ctrl and webhook) from environment variables. These overrides are
+// provider-agnostic and applied centrally from Deploy().
+func (h *Helm) ConfigureSubchartImages() {
+	if img := os.Getenv("PEERPOD_CTRL_IMAGE"); img != "" {
+		parts := strings.SplitN(img, ":", 2)
+		h.OverrideValues["resourceCtrl.image.repository"] = parts[0]
+		if len(parts) == 2 {
+			h.OverrideValues["resourceCtrl.image.tag"] = parts[1]
+		}
+		log.Infof("Configuring helm: peerpod-ctrl image override (%s)", img)
+	}
+
+	if img := os.Getenv("WEBHOOK_IMAGE"); img != "" {
+		parts := strings.SplitN(img, ":", 2)
+		h.OverrideValues["webhook.image.repository"] = parts[0]
+		if len(parts) == 2 {
+			h.OverrideValues["webhook.image.tag"] = parts[1]
+		}
+		log.Infof("Configuring helm: webhook image override (%s)", img)
+	}
+}
+
 // Helm represents a Helm chart installer
 type Helm struct {
 	ChartPath               string            // path to the chart directory

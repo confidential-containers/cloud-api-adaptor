@@ -13,6 +13,16 @@ on:
       caa_image:
         type: string
         required: true
+      peerpod_ctrl_image:
+        description: The peerpod-ctrl OCI image (including tag)
+        required: false
+        default: ''
+        type: string
+      webhook_image:
+        description: The peer-pods-webhook OCI image (including tag)
+        required: false
+        default: ''
+        type: string
       git_ref:
         default: 'main'
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
@@ -36,6 +46,8 @@ jobs:
     env:
       CAA_IMAGE: "${{ inputs.caa_image }}"
       BYOM_PODVM_IMAGE: "${{ inputs.podvm_image }}"
+      PEERPOD_CTRL_IMAGE: "${{ inputs.peerpod_ctrl_image }}"
+      WEBHOOK_IMAGE: "${{ inputs.webhook_image }}"
     steps:
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

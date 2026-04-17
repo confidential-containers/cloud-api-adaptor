@@ -83,6 +83,8 @@ type InstallChart interface {
 	Uninstall(ctx context.Context, cfg *envconf.Config) error
 	// Configure changes chart values
 	Configure(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
+	// GetHelm returns the underlying Helm instance for provider-agnostic configuration
+	GetHelm() *Helm
 }
 
 type NewInstallChartFunc func(installDir, provider string) (InstallChart, error)
@@ -168,6 +170,7 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 	if err := chart.Configure(ctx, cfg, props); err != nil {
 		return err
 	}
+	chart.GetHelm().ConfigureSubchartImages()
 	if err := chart.Install(ctx, cfg); err != nil {
 		return err
 	}

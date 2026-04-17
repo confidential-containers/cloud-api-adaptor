@@ -392,6 +392,8 @@ func NewAzureInstallChart(installDir, provider string) (pv.InstallChart, error) 
 	}, nil
 }
 
+func (a *AzureInstallChart) GetHelm() *pv.Helm { return a.Helm }
+
 func (a *AzureInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
 	if err := a.Helm.Install(ctx, cfg); err != nil {
 		return err

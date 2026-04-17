@@ -18,6 +18,16 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
         required: false
         type: string
+      peerpod_ctrl_image:
+        description: The peerpod-ctrl OCI image (including tag)
+        required: false
+        default: ''
+        type: string
+      webhook_image:
+        description: The peer-pods-webhook OCI image (including tag)
+        required: false
+        default: ''
+        type: string
       cluster_type:
         description: Specify the cluster type. Accepted values are "onprem" or "eks".
         default: onprem
@@ -70,8 +80,10 @@ jobs:
         CAA_IMAGE: "${{ inputs.caa_image }}"
         CLUSTER_TYPE: "${{ inputs.cluster_type }}"
         CONTAINER_RUNTIME: "${{ inputs.container_runtime }}"
+        PEERPOD_CTRL_IMAGE: "${{ inputs.peerpod_ctrl_image }}"
         PODVM_IMAGE: "${{ inputs.podvm_image }}"
         RESOURCES_BASENAME: "ci-caa-${{ github.run_id }}-${{ github.run_attempt }}"
+        WEBHOOK_IMAGE: "${{ inputs.webhook_image }}"
     permissions:
       id-token: write # Required by aws-actions/configure-aws-credentials
       contents: read  # Required by aws-actions/configure-aws-credentials

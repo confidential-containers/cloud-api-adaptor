@@ -23,6 +23,16 @@ on:
         description: Name of the container runtime. Either containerd or crio.
         required: false
         type: string
+      peerpod_ctrl_image:
+        description: The peerpod-ctrl OCI image (including tag)
+        required: false
+        default: ''
+        type: string
+      webhook_image:
+        description: The peer-pods-webhook OCI image (including tag)
+        required: false
+        default: ''
+        type: string
     secrets:
       QUAY_PASSWORD:
         required: true
@@ -44,6 +54,8 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       CAA_IMAGE: "${{ inputs.caa_image }}"
+      PEERPOD_CTRL_IMAGE: "${{ inputs.peerpod_ctrl_image }}"
+      WEBHOOK_IMAGE: "${{ inputs.webhook_image }}"
     steps:
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
