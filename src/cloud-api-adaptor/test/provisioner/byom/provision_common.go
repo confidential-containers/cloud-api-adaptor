@@ -6,28 +6,28 @@ package byom
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/libvirt"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/docker"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
-
-	"github.com/distribution/reference"
 )
 
-// ByomProvisioner extends LibvirtProvisioner for BYOM-specific functionality
+// ByomProvisioner uses DockerProvisioner for BYOM-specific functionality
 type ByomProvisioner struct {
-	*libvirt.LibvirtProvisioner
+	*docker.DockerProvisioner
 	provisionerCreatedVMs []string // Track VMs created by this provisioner instance
 }
 
-// ByomInstallOverlay implements the InstallOverlay interface
-type ByomInstallOverlay struct {
-	Overlay *pv.KustomizeOverlay
+// ByomInstallChart implements the InstallChart interface
+type ByomInstallChart struct {
+	Helm *pv.Helm
 }
 
 type ByomProperties struct {
@@ -35,36 +35,41 @@ type ByomProperties struct {
 	SSHSecretPubKeyPath  string
 	SSHUsername          string
 	VMPoolIPs            string
+	PoolSize             int // Number of containers to create for the pool
 	ClusterName          string
+	WorkerNodeName       string
 	ContainerRuntime     string
-	LibvirtNetwork       string
-	LibvirtStorage       string
-	LibvirtURI           string
-	LibvirtConnURI       string
-	LibvirtVolName       string
-	LibvirtSSHKeyFile    string
+	DockerHost           string
+	DockerNetworkName    string
+	ByomPodvmImage       string
 	CaaImage             string
 	CaaImageTag          string
+	KindConfigFile       string
 }
 
 var ByomProps = &ByomProperties{}
 
 func initByomProperties(properties map[string]string) error {
+	poolSize, err := strconv.Atoi(properties["POOL_SIZE"])
+	if err != nil || poolSize <= 0 {
+		return fmt.Errorf("invalid POOL_SIZE value: %s", properties["POOL_SIZE"])
+	}
+
 	ByomProps = &ByomProperties{
 		SSHSecretPrivKeyPath: properties["SSH_SECRET_PRIV_KEY_PATH"],
 		SSHSecretPubKeyPath:  properties["SSH_SECRET_PUB_KEY_PATH"],
 		SSHUsername:          properties["SSH_USERNAME"],
 		VMPoolIPs:            properties["VM_POOL_IPS"],
+		PoolSize:             poolSize,
 		ClusterName:          properties["CLUSTER_NAME"],
+		WorkerNodeName:       properties["WORKER_NODE_NAME"],
 		ContainerRuntime:     properties["CONTAINER_RUNTIME"],
-		LibvirtNetwork:       properties["LIBVIRT_NETWORK"],
-		LibvirtStorage:       properties["LIBVIRT_STORAGE"],
-		LibvirtURI:           properties["LIBVIRT_URI"],
-		LibvirtConnURI:       properties["LIBVIRT_CONN_URI"],
-		LibvirtVolName:       properties["LIBVIRT_VOL_NAME"],
-		LibvirtSSHKeyFile:    properties["LIBVIRT_SSH_KEY_FILE"],
+		DockerHost:           properties["DOCKER_HOST"],
+		DockerNetworkName:    properties["DOCKER_NETWORK_NAME"],
+		ByomPodvmImage:       properties["BYOM_PODVM_IMAGE"],
 		CaaImage:             properties["CAA_IMAGE"],
 		CaaImageTag:          properties["CAA_IMAGE_TAG"],
+		KindConfigFile:       properties["KIND_CONFIG_FILE"],
 	}
 
 	// Set defaults
@@ -74,23 +79,14 @@ func initByomProperties(properties map[string]string) error {
 	if ByomProps.ClusterName == "" {
 		ByomProps.ClusterName = "peer-pods"
 	}
+	if ByomProps.WorkerNodeName == "" {
+		ByomProps.WorkerNodeName = fmt.Sprintf("%s-worker", ByomProps.ClusterName)
+	}
 	if ByomProps.ContainerRuntime == "" {
 		ByomProps.ContainerRuntime = "containerd"
 	}
-	if ByomProps.LibvirtNetwork == "" {
-		ByomProps.LibvirtNetwork = "default"
-	}
-	if ByomProps.LibvirtStorage == "" {
-		ByomProps.LibvirtStorage = "default"
-	}
-	if ByomProps.LibvirtURI == "" {
-		ByomProps.LibvirtURI = "qemu+ssh://root@192.168.122.1/system?no_verify=1"
-	}
-	if ByomProps.LibvirtConnURI == "" {
-		ByomProps.LibvirtConnURI = "qemu:///system"
-	}
-	if ByomProps.LibvirtVolName == "" {
-		ByomProps.LibvirtVolName = "podvm-base.qcow2"
+	if ByomProps.DockerNetworkName == "" {
+		ByomProps.DockerNetworkName = "kind"
 	}
 
 	return nil
@@ -100,74 +96,123 @@ func NewByomProvisioner(properties map[string]string) (pv.CloudProvisioner, erro
 	if err := initByomProperties(properties); err != nil {
 		return nil, err
 	}
-
-	// Create libvirt properties from BYOM properties
-	libvirtProps := map[string]string{
-		"libvirt_network":      ByomProps.LibvirtNetwork,
-		"libvirt_storage":      ByomProps.LibvirtStorage,
-		"libvirt_uri":          ByomProps.LibvirtURI,
-		"libvirt_conn_uri":     ByomProps.LibvirtConnURI,
-		"libvirt_vol_name":     ByomProps.LibvirtVolName,
-		"libvirt_ssh_key_file": ByomProps.LibvirtSSHKeyFile,
-		"cluster_name":         ByomProps.ClusterName,
-		"container_runtime":    ByomProps.ContainerRuntime,
+	dockerProps := map[string]string{
+		"DOCKER_HOST":         ByomProps.DockerHost,
+		"DOCKER_NETWORK_NAME": ByomProps.DockerNetworkName,
+		"BYOM_PODVM_IMAGE":    ByomProps.ByomPodvmImage,
+		"CLUSTER_NAME":        ByomProps.ClusterName,
+		"CONTAINER_RUNTIME":   ByomProps.ContainerRuntime,
+		"CAA_IMAGE":           ByomProps.CaaImage,
+		"CAA_IMAGE_TAG":       ByomProps.CaaImageTag,
 	}
 
-	libvirtProvisioner, err := libvirt.NewLibvirtProvisioner(libvirtProps)
+	dockerProvisioner, err := docker.NewDockerProvisioner(dockerProps)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ByomProvisioner{
-		LibvirtProvisioner:    libvirtProvisioner.(*libvirt.LibvirtProvisioner),
-		provisionerCreatedVMs: make([]string, 0),
+		DockerProvisioner: dockerProvisioner.(*docker.DockerProvisioner),
 	}, nil
 }
 
 func (b *ByomProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
-	return b.LibvirtProvisioner.CreateCluster(ctx, cfg)
+	kindConfigPath, err := filepath.Abs(ByomProps.KindConfigFile)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path of kind config file: %w", err)
+	}
+
+	log.Infof("Using BYOM kind config from: %s", kindConfigPath)
+	os.Setenv("KIND_CONFIG_FILE", kindConfigPath)
+
+	if err := b.DockerProvisioner.CreateCluster(ctx, cfg); err != nil {
+		return err
+	}
+
+	// Update containerd configuration to not discard unpacked layers
+	log.Info("Configuring containerd on worker node to keep unpacked layers...")
+
+	cmd := exec.Command("docker", "exec", ByomProps.WorkerNodeName, "sed", "-i",
+		"s/discard_unpacked_layers = true/discard_unpacked_layers = false/g",
+		"/etc/containerd/config.toml")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Warnf("Failed to update containerd config: %v, output: %s", err, string(output))
+	} else {
+		log.Info("Updated containerd config to keep unpacked layers")
+
+		// Restart containerd to apply the change
+		cmd = exec.Command("docker", "exec", ByomProps.WorkerNodeName, "systemctl", "restart", "containerd")
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Warnf("Failed to restart containerd: %v, output: %s", err, string(output))
+		} else {
+			log.Info("Restarted containerd, waiting for it to be ready...")
+			time.Sleep(5 * time.Second)
+
+			// Verify if containerd is running
+			cmd = exec.Command("docker", "exec", ByomProps.WorkerNodeName, "systemctl", "is-active", "containerd")
+			output, err = cmd.CombinedOutput()
+			status := strings.TrimSpace(string(output))
+			if err != nil || status != "active" {
+				log.Warnf("Containerd may not be running properly: status=%s, err=%v", status, err)
+			} else {
+				log.Info("Containerd is active and running")
+			}
+		}
+	}
+
+	return nil
 }
 
-// Calling this method means we are not using existing pre-created VM IPs. Instead asking the provisioner
-// to create a new VM from the uploaded image and use its IP.
+// CreatePodVMInstance creates new containers from the uploaded image and use their IPs for the pool.
 func (b *ByomProvisioner) CreatePodVMInstance(ctx context.Context, cfg *envconf.Config) error {
-	// Create VM from libvirt storage volume (uploaded via UploadPodvm)
-	vmName := fmt.Sprintf("byom-vm-%d", time.Now().Unix())
-	if err := b.createVMFromStorage(vmName); err != nil {
-		return err
+	log.Infof("Creating %d BYOM container instances", ByomProps.PoolSize)
+
+	var poolIPs []string
+
+	for i := 0; i < ByomProps.PoolSize; i++ {
+		containerName := fmt.Sprintf("byom-container-%d-%d", time.Now().Unix(), i)
+
+		log.Infof("Creating container %d/%d: %s", i+1, ByomProps.PoolSize, containerName)
+		if err := b.createContainerFromImage(containerName); err != nil {
+			return fmt.Errorf("failed to create container %d: %w", i, err)
+		}
+
+		b.provisionerCreatedVMs = append(b.provisionerCreatedVMs, containerName)
+
+		// Get container IP address
+		ip, err := b.getContainerIPAddress(containerName)
+		if err != nil {
+			return fmt.Errorf("failed to get IP for container %d: %w", i, err)
+		}
+
+		poolIPs = append(poolIPs, ip)
+		log.Infof("Created container %d/%d: %s with IP: %s", i+1, ByomProps.PoolSize, containerName, ip)
 	}
 
-	// Track this VM as created by the provisioner
-	b.provisionerCreatedVMs = append(b.provisionerCreatedVMs, vmName)
+	ByomProps.VMPoolIPs = strings.Join(poolIPs, ",")
 
-	ip, err := b.getVMIPAddress(vmName)
-	if err != nil {
-		return err
-	}
-
-	ByomProps.VMPoolIPs = ip
-
-	log.Infof("Created VM instance %s with IP: %s (total pool: %s)", vmName, ip, ByomProps.VMPoolIPs)
+	log.Infof("Successfully created %d containers with pool IPs: %s", ByomProps.PoolSize, ByomProps.VMPoolIPs)
 	return nil
 }
 
 func (b *ByomProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
-	return b.LibvirtProvisioner.DeleteCluster(ctx, cfg)
+	return b.DockerProvisioner.DeleteCluster(ctx, cfg)
 }
 
 func (b *ByomProvisioner) DeletePodVMInstance(ctx context.Context, cfg *envconf.Config) error {
-	// Only delete VMs that were created by this provisioner instance
 	if len(b.provisionerCreatedVMs) == 0 {
-		log.Info("No VMs created by this provisioner to clean up")
+		log.Info("No containers created by this provisioner to clean up")
 		return nil
 	}
 
-	log.Infof("Cleaning up %d VMs created by this provisioner", len(b.provisionerCreatedVMs))
+	log.Infof("Cleaning up %d containers created by this provisioner", len(b.provisionerCreatedVMs))
 
-	for _, vmName := range b.provisionerCreatedVMs {
-		log.Infof("Destroying provisioner-created VM: %s", vmName)
-		if err := b.destroyVM(vmName); err != nil {
-			log.Warnf("Failed to destroy VM %s: %v", vmName, err)
+	for _, containerName := range b.provisionerCreatedVMs {
+		log.Infof("Destroying provisioner-created container: %s", containerName)
+		if err := b.destroyContainer(containerName); err != nil {
+			log.Warnf("Failed to destroy container %s: %v", containerName, err)
 		}
 	}
 
@@ -185,164 +230,226 @@ func (b *ByomProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config
 		"SSH_SECRET_PUB_KEY_PATH":  ByomProps.SSHSecretPubKeyPath,
 		"SSH_USERNAME":             ByomProps.SSHUsername,
 		"CLUSTER_NAME":             ByomProps.ClusterName,
+		"WORKER_NODE_NAME":         ByomProps.WorkerNodeName,
 		"CONTAINER_RUNTIME":        ByomProps.ContainerRuntime,
-		"LIBVIRT_NETWORK":          ByomProps.LibvirtNetwork,
-		"LIBVIRT_STORAGE":          ByomProps.LibvirtStorage,
-		"LIBVIRT_URI":              ByomProps.LibvirtURI,
-		"LIBVIRT_CONN_URI":         ByomProps.LibvirtConnURI,
-		"LIBVIRT_VOL_NAME":         ByomProps.LibvirtVolName,
-		"LIBVIRT_SSH_KEY_FILE":     ByomProps.LibvirtSSHKeyFile,
+		"DOCKER_HOST":              ByomProps.DockerHost,
+		"DOCKER_NETWORK_NAME":      ByomProps.DockerNetworkName,
+		"BYOM_PODVM_IMAGE":         ByomProps.ByomPodvmImage,
 		"CAA_IMAGE":                ByomProps.CaaImage,
 		"CAA_IMAGE_TAG":            ByomProps.CaaImageTag,
+		"KIND_CONFIG_FILE":         ByomProps.KindConfigFile,
 	}
 }
 
-func NewByomInstallOverlay(installDir, provider string) (pv.InstallOverlay, error) {
-	overlay, err := pv.NewKustomizeOverlay(filepath.Join(installDir, "overlays", provider))
+func NewByomInstallChart(installDir, provider string) (pv.InstallChart, error) {
+	chartPath := filepath.Join(installDir, "charts", "peerpods")
+	namespace := pv.GetCAANamespace()
+	releaseName := "peerpods"
+	debug := false
+
+	helm, err := pv.NewHelm(chartPath, namespace, releaseName, provider, debug)
 	if err != nil {
-		log.Errorf("Error creating the byom provider install overlay: %v", err)
 		return nil, err
 	}
 
-	return &ByomInstallOverlay{
-		Overlay: overlay,
+	return &ByomInstallChart{
+		Helm: helm,
 	}, nil
 }
 
-func (bio *ByomInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return bio.Overlay.Apply(ctx, cfg)
-}
-
-func (bio *ByomInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return bio.Overlay.Delete(ctx, cfg)
-}
-
-func (bio *ByomInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
-	// Configure CAA image if provided
-	if caaImage, exists := properties["CAA_IMAGE"]; exists && caaImage != "" {
-		spec, err := reference.Parse(caaImage)
-		if err != nil {
-			return fmt.Errorf("parsing CAA image: %w", err)
-		}
-
-		log.Infof("Updating CAA image with %q", spec.String())
-		if err = bio.Overlay.SetKustomizeImage("cloud-api-adaptor", "newName", spec.String()); err != nil {
-			return err
-		}
+func (b *ByomInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
+	// Create SSH key secret before installing Helm chart
+	if err := b.createSSHKeySecret(ctx, cfg); err != nil {
+		return fmt.Errorf("failed to create SSH key secret: %w", err)
 	}
 
-	if caaImageTag, exists := properties["CAA_IMAGE_TAG"]; exists && caaImageTag != "" {
-		log.Infof("Updating CAA image tag with %q", caaImageTag)
-		if err := bio.Overlay.SetKustomizeImage("cloud-api-adaptor", "newTag", caaImageTag); err != nil {
-			return err
-		}
-	}
-
-	// Configure VM pool IPs and SSH settings in ConfigMap
-	configMapKeys := []string{"VM_POOL_IPS", "SSH_USERNAME"}
-
-	for _, key := range configMapKeys {
-		if value, exists := properties[key]; exists && value != "" {
-			if err := bio.Overlay.SetKustomizeConfigMapGeneratorLiteral("peer-pods-cm", key, value); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Configure SSH key files in secrets. This is the key pair used when building the pod VM image
-	// and used by CAA to SSH into the Pod VMs.
-	if sshPrivKey, exists := properties["SSH_SECRET_PRIV_KEY_PATH"]; exists && sshPrivKey != "" {
-		if err := bio.Overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret", sshPrivKey); err != nil {
-			return err
-		}
-	}
-
-	if sshPubKey, exists := properties["SSH_SECRET_PUB_KEY_PATH"]; exists && sshPubKey != "" {
-		if err := bio.Overlay.SetKustomizeSecretGeneratorFile("ssh-key-secret", sshPubKey); err != nil {
-			return err
-		}
-	}
-
-	if err := bio.Overlay.YamlReload(); err != nil {
+	if err := b.Helm.Install(ctx, cfg); err != nil {
 		return err
+	}
+
+	// Wait for the worker node and heck for kata-runtime label
+	log.Info("Waiting for worker node to be labeled with kata-runtime...")
+	timeout := time.Now().Add(3 * time.Minute)
+	for time.Now().Before(timeout) {
+		checkLabel := exec.Command("kubectl", "get", "node", ByomProps.WorkerNodeName, "--show-labels")
+		checkLabel.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
+		out, err := checkLabel.Output()
+		if err == nil && strings.Contains(string(out), "katacontainers.io/kata-runtime=true") {
+			log.Info("Worker node is labeled with kata-runtime and ready!")
+			return nil
+		}
+		time.Sleep(15 * time.Second)
+	}
+
+	return fmt.Errorf("kata-runtime label not found - node may not be ready for deployment")
+}
+
+func (b *ByomInstallChart) createSSHKeySecret(ctx context.Context, cfg *envconf.Config) error {
+	if ByomProps.SSHSecretPrivKeyPath == "" || ByomProps.SSHSecretPubKeyPath == "" {
+		return fmt.Errorf("SSH_SECRET_PRIV_KEY_PATH and SSH_SECRET_PUB_KEY_PATH must be set")
+	}
+
+	// Create namespace first if it doesn't exist
+	if err := pv.CreateAndWaitForNamespace(ctx, cfg.Client(), b.Helm.Namespace); err != nil {
+		return fmt.Errorf("failed to create Namespace: %w", err)
+	}
+
+	secretName := "ssh-key-secret"
+	log.Infof("Creating SSH key secret from %s and %s", ByomProps.SSHSecretPrivKeyPath, ByomProps.SSHSecretPubKeyPath)
+
+	// Create the secret using kubectl
+	args := []string{
+		"create", "secret", "generic", secretName,
+		"--from-file=id_rsa=" + ByomProps.SSHSecretPrivKeyPath,
+		"--from-file=id_rsa.pub=" + ByomProps.SSHSecretPubKeyPath,
+		"-n", b.Helm.Namespace,
+	}
+	cmd := exec.Command("kubectl", args...)
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
+	stdoutStderr, err := cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return fmt.Errorf("failed to create ssh-key-secret: %w, output: %s", err, string(stdoutStderr))
+	}
+	log.Infof("Created ssh-key-secret from SSH key files")
+	return nil
+}
+
+func (b *ByomInstallChart) Uninstall(ctx context.Context, cfg *envconf.Config) error {
+	return b.Helm.Uninstall(ctx, cfg)
+}
+
+func (b *ByomInstallChart) Configure(ctx context.Context, cfg *envconf.Config, properties map[string]string) error {
+	// Handle CAA image - already split into CAA_IMAGE and CAA_IMAGE_TAG
+	if properties["CAA_IMAGE"] != "" {
+		b.Helm.OverrideValues["image.name"] = properties["CAA_IMAGE"]
+	}
+	if properties["CAA_IMAGE_TAG"] != "" {
+		b.Helm.OverrideValues["image.tag"] = properties["CAA_IMAGE_TAG"]
+	}
+
+	// Mapping the internal properties to Helm chart values.
+	mapProps := map[string]string{
+		"VM_POOL_IPS":              "VM_POOL_IPS",
+		"SSH_USERNAME":             "SSH_USERNAME",
+		"SSH_SECRET_PRIV_KEY_PATH": "SSH_SECRET_PRIV_KEY_PATH",
+		"SSH_SECRET_PUB_KEY_PATH":  "SSH_SECRET_PUB_KEY_PATH",
+		"DOCKER_HOST":              "DOCKER_HOST",
+		"DOCKER_NETWORK_NAME":      "DOCKER_NETWORK_NAME",
+		"BYOM_PODVM_IMAGE":         "BYOM_PODVM_IMAGE",
+	}
+
+	for k, v := range mapProps {
+		if properties[k] != "" {
+			b.Helm.OverrideProviderValues[v] = properties[k]
+		}
 	}
 
 	return nil
 }
 
-func (b *ByomProvisioner) createVMFromStorage(vmName string) error {
-	log.Infof("Creating VM %s from libvirt storage", vmName)
+func (b *ByomProvisioner) createContainerFromImage(containerName string) error {
+	log.Infof("Creating container %s from Docker image", containerName)
 
-	// Use virt-install to create VM with UEFI boot
-	cmd := exec.Command("sudo", "virt-install",
-		"--name", vmName,
-		"--memory", "1024",
-		"--vcpus", "1",
-		"--disk", fmt.Sprintf("vol=%s/%s,bus=virtio", ByomProps.LibvirtStorage, ByomProps.LibvirtVolName),
-		"--network", fmt.Sprintf("network=%s,model=virtio", ByomProps.LibvirtNetwork),
-		"--boot", "uefi",
-		"--osinfo", "detect=on,require=off",
-		"--noautoconsole",
-		"--import")
+	cmd := exec.Command("docker", "run",
+		"-d",
+		"--name", containerName,
+		"--network", ByomProps.DockerNetworkName,
+		"--restart=always",
+		"--privileged",
+		ByomProps.ByomPodvmImage)
 
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
 	if err != nil {
-		return fmt.Errorf("failed to create VM with virt-install: %w", err)
+		return fmt.Errorf("failed to create container with docker run: %w, output: %s", err, string(stdoutStderr))
 	}
 
-	log.Infof("VM %s created and started successfully", vmName)
+	log.Infof("Container %s created and started successfully", containerName)
+
+	// Copy SSH public key to container
+	if ByomProps.SSHSecretPubKeyPath != "" {
+		if err := b.copySSHKeyToContainer(containerName); err != nil {
+			return fmt.Errorf("failed to copy SSH key to container: %w", err)
+		}
+	}
+
 	return nil
 }
 
-func (b *ByomProvisioner) getVMIPAddress(vmName string) (string, error) {
-	log.Infof("Getting IP address for VM %s", vmName)
+func (b *ByomProvisioner) copySSHKeyToContainer(containerName string) error {
+	log.Infof("Copying SSH public key from %s to container %s", ByomProps.SSHSecretPubKeyPath, containerName)
 
-	// Wait up to 2 minutes for VM to get an IP
-	timeout := time.Now().Add(2 * time.Minute)
+	// Copy the public key file to container
+	cmd := exec.Command("docker", "cp",
+		ByomProps.SSHSecretPubKeyPath,
+		fmt.Sprintf("%s:/home/peerpod/.ssh/authorized_keys", containerName))
+
+	stdoutStderr, err := cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return fmt.Errorf("failed to copy SSH key: %w, output: %s", err, string(stdoutStderr))
+	}
+
+	// Fix permissions on the authorized_keys file
+	cmd = exec.Command("docker", "exec", containerName,
+		"chmod", "600", "/home/peerpod/.ssh/authorized_keys")
+	stdoutStderr, err = cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return fmt.Errorf("failed to set permissions on authorized_keys: %w, output: %s", err, string(stdoutStderr))
+	}
+
+	// Fix ownership of the authorized_keys file
+	cmd = exec.Command("docker", "exec", containerName,
+		"chown", "peerpod:peerpod", "/home/peerpod/.ssh/authorized_keys")
+	stdoutStderr, err = cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	if err != nil {
+		return fmt.Errorf("failed to set ownership on authorized_keys: %w, output: %s", err, string(stdoutStderr))
+	}
+
+	log.Infof("SSH public key copied and configured successfully")
+	return nil
+}
+
+func (b *ByomProvisioner) getContainerIPAddress(containerName string) (string, error) {
+	log.Infof("Getting IP address for container %s", containerName)
+
+	timeout := time.Now().Add(30 * time.Second)
 	for time.Now().Before(timeout) {
-		cmd := exec.Command("sudo", "virsh", "--quiet", "domifaddr", vmName)
+		cmd := exec.Command("docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", containerName)
 		output, err := cmd.Output()
 		if err != nil {
-			log.Debugf("Error getting VM IP (retrying): %v", err)
+			log.Debugf("Error getting container IP (retrying): %v", err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
 
-		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-		for _, line := range lines {
-			fields := strings.Fields(line)
-			if len(fields) >= 4 {
-				// Extract IP from CIDR format (e.g., 192.168.122.100/24)
-				ipCIDR := fields[3]
-				if strings.Contains(ipCIDR, "/") {
-					ip := strings.Split(ipCIDR, "/")[0]
-					log.Infof("Found IP %s for VM %s", ip, vmName)
-					return ip, nil
-				}
-			}
+		ip := strings.TrimSpace(string(output))
+		if ip != "" {
+			log.Infof("Found IP %s for container %s", ip, containerName)
+			return ip, nil
 		}
 
-		log.Debugf("No IP found yet for VM %s, retrying...", vmName)
+		log.Debugf("No IP found yet for container %s, retrying...", containerName)
 		time.Sleep(5 * time.Second)
 	}
 
-	return "", fmt.Errorf("timeout waiting for VM %s to get IP address", vmName)
+	return "", fmt.Errorf("timeout waiting for container %s to get IP address", containerName)
 }
 
-func (b *ByomProvisioner) destroyVM(vmName string) error {
-	log.Infof("Destroying VM %s", vmName)
+func (b *ByomProvisioner) destroyContainer(containerName string) error {
+	log.Infof("Destroying container %s", containerName)
 
-	// Stop VM (force if necessary)
-	if err := exec.Command("sudo", "virsh", "destroy", vmName).Run(); err != nil {
-		return fmt.Errorf("Failed to destroy VM %s: %v", vmName, err)
+	if err := exec.Command("docker", "stop", containerName).Run(); err != nil {
+		log.Warnf("Failed to stop container %s: %v", containerName, err)
 	}
 
-	// Undefine VM with storage and NVRAM cleanup for UEFI VMs
-	if err := exec.Command("sudo", "virsh", "undefine", vmName, "--remove-all-storage", "--nvram").Run(); err != nil {
-		return fmt.Errorf("Failed to undefine VM %s: %v", vmName, err)
+	if err := exec.Command("docker", "rm", "-f", containerName).Run(); err != nil {
+		return fmt.Errorf("Failed to remove container %s: %v", containerName, err)
 	}
 
-	log.Infof("VM %s destroyed successfully", vmName)
+	log.Infof("Container %s destroyed successfully", containerName)
 	return nil
 }

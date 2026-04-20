@@ -11,5 +11,5 @@ import (
 
 func init() {
 	pv.NewProvisionerFunctions["byom"] = NewByomProvisioner
-	pv.NewInstallOverlayFunctions["byom"] = NewByomInstallOverlay
+	pv.NewInstallChartFunctions["byom"] = NewByomInstallChart
 }

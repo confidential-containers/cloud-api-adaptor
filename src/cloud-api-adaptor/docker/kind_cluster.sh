@@ -8,7 +8,7 @@ newgrp docker <<EOF
 # delete: deletes a kind cluster
 
 CLUSTER_NAME="${CLUSTER_NAME:-peer-pods}"
-KIND_CONFIG_FILE="kind-config.yaml"
+KIND_CONFIG_FILE="${KIND_CONFIG_FILE:-kind-config.yaml}"
 
 if [ "$1" == "create" ]; then
     # Check if kind is installed
