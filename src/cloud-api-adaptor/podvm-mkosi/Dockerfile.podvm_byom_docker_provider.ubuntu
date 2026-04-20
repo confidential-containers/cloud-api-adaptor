@@ -1,0 +1,71 @@
+# Dockerfile for BYOM PodVM with SSH/SFTP support (Ubuntu version)
+# Based on the standard Docker PodVM Ubuntu image with added SSH capabilities
+# Includes services from mkosi.skeleton-sftp for BYOM functionality
+
+ARG BASE_IMAGE=quay.io/confidential-containers/podvm-docker-image:latest
+
+FROM $BASE_IMAGE
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install SSH server
+RUN apt-get update && \
+    apt-get install -y \
+    openssh-server \
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create peerpod user for SFTP access
+RUN useradd -m -s /bin/bash peerpod && \
+    mkdir -p /home/peerpod/.ssh && \
+    chmod 700 /home/peerpod/.ssh && \
+    chown -R peerpod:peerpod /home/peerpod/.ssh 
+
+# Generate SSH host keys in /etc/ssh
+RUN ssh-keygen -A
+
+# Create /media/cidata directory for SFTP with proper chroot permissions
+# For chroot to work: /media must be owned by root and the subdirectory 
+# /media/cidata is owned by peerpod
+RUN mkdir -p /media/cidata && \
+    chown root:root /media && \
+    chmod 755 /media && \
+    chown peerpod:peerpod /media/cidata && \
+    chmod 750 /media/cidata
+
+# Copy systemd service files from mkosi.skeleton-sftp
+COPY mkosi.skeleton-sftp/usr/lib/systemd/system/media-cidata.mount /usr/lib/systemd/system/
+COPY mkosi.skeleton-sftp/usr/lib/systemd/system/sftp-dir.service /usr/lib/systemd/system/
+COPY mkosi.skeleton-sftp/usr/lib/systemd/system/reboot-watcher.path /usr/lib/systemd/system/
+COPY mkosi.skeleton-sftp/usr/lib/systemd/system/reboot-watcher.service /usr/lib/systemd/system/
+COPY mkosi.skeleton-sftp/etc/ssh/sshd_config /etc/ssh/sshd_config
+
+# Update host key paths to use /etc/ssh instead of /run/ssh
+RUN sed -i 's|/run/ssh/ssh_host_|/etc/ssh/ssh_host_|g' /etc/ssh/sshd_config
+
+# Fix kata-containers mount configuration for BYOM to enable reuse of containers
+RUN set -e; \
+    KATA_MOUNT_FILE='/etc/systemd/system/run-kata\x2dcontainers.mount'; \
+    if [ -f "$KATA_MOUNT_FILE" ] && \
+       grep -q '^Type=none' "$KATA_MOUNT_FILE" && \
+       grep -q '^Options=bind' "$KATA_MOUNT_FILE"; then \
+        sed -i 's/^Type=none/Type=tmpfs/; s/^Options=bind/Options=mode=0755,uid=root,gid=root/' "$KATA_MOUNT_FILE" && \
+        echo "Updated $KATA_MOUNT_FILE to Type=tmpfs for BYOM"; \
+    fi
+
+# Enable SSH and SFTP-related services
+RUN systemctl enable ssh && \
+    systemctl enable media-cidata.mount && \
+    systemctl enable sftp-dir.service && \
+    systemctl enable reboot-watcher.path && \
+    systemctl enable process-user-data.path && \
+    systemctl disable process-user-data.service
+
+# Restore the native systemd service that deletes /run/nologin at the end of the boot process to allow SSH
+RUN mkdir -p /etc/systemd/system/multi-user.target.wants/ && \
+    ln -sf /lib/systemd/system/systemd-user-sessions.service /etc/systemd/system/multi-user.target.wants/systemd-user-sessions.service
+
+# Expose SSH port
+EXPOSE 22
+
+# ENTRYPOINT and CMD are already set in base image
