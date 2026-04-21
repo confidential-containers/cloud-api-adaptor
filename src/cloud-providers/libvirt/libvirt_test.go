@@ -152,3 +152,58 @@ func TestCreateDomainXMLaarch64(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestGetDeletableDiskPaths(t *testing.T) {
+	tests := []struct {
+		name     string
+		domain   *libvirtxml.Domain
+		expected []string
+	}{
+		{
+			name: "returns file-backed disks only",
+			domain: &libvirtxml.Domain{
+				Devices: &libvirtxml.DomainDeviceList{
+					Disks: []libvirtxml.DomainDisk{
+						{
+							Source: &libvirtxml.DomainDiskSource{
+								File: &libvirtxml.DomainDiskSourceFile{File: "/var/lib/libvirt/images/root.qcow2"},
+							},
+						},
+						{
+							Source: &libvirtxml.DomainDiskSource{
+								File: &libvirtxml.DomainDiskSourceFile{File: "/var/lib/libvirt/images/cloudinit.iso"},
+							},
+						},
+						{
+							Source: &libvirtxml.DomainDiskSource{},
+						},
+						{},
+					},
+				},
+			},
+			expected: []string{
+				"/var/lib/libvirt/images/root.qcow2",
+				"/var/lib/libvirt/images/cloudinit.iso",
+			},
+		},
+		{
+			name:     "nil domain returns nil",
+			domain:   nil,
+			expected: nil,
+		},
+		{
+			name: "empty disk list returns empty slice",
+			domain: &libvirtxml.Domain{
+				Devices: &libvirtxml.DomainDeviceList{},
+			},
+			expected: []string{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			paths := getDeletableDiskPaths(tc.domain)
+			assert.Equal(t, tc.expected, paths)
+		})
+	}
+}

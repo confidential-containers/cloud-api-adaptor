@@ -8,8 +8,10 @@ package libvirt
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"net/netip"
+	"strings"
 	"time"
 
 	retry "github.com/avast/retry-go/v4"
@@ -676,46 +678,64 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID 
 		}
 	}
 
-	// Delete volumes
+	var cleanupErrs []string
+
 	domainXMLDesc, err := domain.GetXMLDesc(0)
 	if err != nil {
 		logger.Printf("Error retrieving libvirt domain XML description: %s", err)
-		return err
-	}
-	domainDef := libvirtxml.Domain{}
-	err = xml.Unmarshal([]byte(domainXMLDesc), &domainDef)
-	if err != nil {
-		logger.Printf("Unable to get the domain XML: %s", err)
+		cleanupErrs = append(cleanupErrs, fmt.Sprintf("get domain XML: %v", err))
+	} else {
+		domainDef := libvirtxml.Domain{}
+		if err = xml.Unmarshal([]byte(domainXMLDesc), &domainDef); err != nil {
+			logger.Printf("Unable to get the domain XML: %s", err)
+			cleanupErrs = append(cleanupErrs, fmt.Sprintf("unmarshal domain XML: %v", err))
+		} else {
+			logger.Printf("domainDef %v", domainDef.Devices.Disks)
+			for _, diskPath := range getDeletableDiskPaths(&domainDef) {
+				err = deleteVolumeByPath(libvirtClient, diskPath)
+				if err != nil {
+					logger.Printf("Deleting volume (%s) returned error: %s", diskPath, err)
+					cleanupErrs = append(cleanupErrs, fmt.Sprintf("delete volume %s: %v", diskPath, err))
+				}
+			}
+		}
 	}
 
-	// Get the volume path from the XML
-	logger.Printf("domainDef %v", domainDef.Devices.Disks)
-	vol1File := domainDef.Devices.Disks[0].Source.File.File
-	vol2File := domainDef.Devices.Disks[1].Source.File.File
-
-	err = deleteVolumeByPath(libvirtClient, vol1File)
-	if err != nil {
-		logger.Printf("Deleting volume (%s) returned error: %s", vol1File, err)
-	}
-	err = deleteVolumeByPath(libvirtClient, vol2File)
-	if err != nil {
-		logger.Printf("Deleting volume (%s) returned error: %s", vol2File, err)
-	}
 	// Undefine the domain
 	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
 		if e := err.(libvirt.Error); e.Code == libvirt.ERR_NO_SUPPORT || e.Code == libvirt.ERR_INVALID_ARG {
 			logger.Printf("libvirt does not support undefine flags: will try again without flags")
 			if err = domain.Undefine(); err != nil {
 				logger.Printf("couldn't undefine libvirt domain: %v", err)
-				return err
+				cleanupErrs = append(cleanupErrs, fmt.Sprintf("undefine domain: %v", err))
 			}
 		} else {
 			logger.Printf("couldn't undefine libvirt domain with flags: %v", err)
-			return err
+			cleanupErrs = append(cleanupErrs, fmt.Sprintf("undefine domain with flags: %v", err))
 		}
 	}
 
+	if len(cleanupErrs) > 0 {
+		return errors.New(strings.Join(cleanupErrs, "; "))
+	}
+
 	return nil
+}
+
+func getDeletableDiskPaths(domainDef *libvirtxml.Domain) []string {
+	if domainDef == nil {
+		return nil
+	}
+
+	paths := make([]string, 0, len(domainDef.Devices.Disks))
+	for _, disk := range domainDef.Devices.Disks {
+		if disk.Source == nil || disk.Source.File == nil || disk.Source.File.File == "" {
+			continue
+		}
+		paths = append(paths, disk.Source.File.File)
+	}
+
+	return paths
 }
 
 func NewLibvirtClient(libvirtCfg Config) (*libvirtClient, error) {
