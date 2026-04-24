@@ -412,6 +412,14 @@ func (s *redirector) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (r
 	return s.agentClient.SetPolicy(ctx, req)
 }
 
+func (s *redirector) GetDiagnosticData(ctx context.Context, req *pb.GetDiagnosticDataRequest) (res *pb.GetDiagnosticDataResponse, err error) {
+
+	if err := s.Connect(ctx); err != nil {
+		return nil, err
+	}
+	return s.agentClient.GetDiagnosticData(ctx, req)
+}
+
 // HealthService methods
 
 func (s *redirector) Check(ctx context.Context, req *pb.CheckRequest) (res *pb.HealthCheckResponse, err error) {

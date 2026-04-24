@@ -520,6 +520,10 @@ func (s *agentService) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *
 	log.Printf("agent call: %T %#v", req, req)
 	return &emptypb.Empty{}, nil
 }
+func (s *agentService) GetDiagnosticData(ctx context.Context, req *agent.GetDiagnosticDataRequest) (*agent.GetDiagnosticDataResponse, error) {
+	log.Printf("agent call: %T %#v", req, req)
+	return &agent.GetDiagnosticDataResponse{}, nil
+}
 func (s *agentService) SetPolicy(ctx context.Context, req *agent.SetPolicyRequest) (*emptypb.Empty, error) {
 	log.Printf("agent call: SetPolicy %#v", req)
 	return &emptypb.Empty{}, nil
