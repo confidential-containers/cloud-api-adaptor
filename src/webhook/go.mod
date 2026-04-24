@@ -3,11 +3,11 @@ module github.com/confidential-containers/cloud-api-adaptor/src/webhook
 go 1.25.9
 
 require (
-	k8s.io/api v0.35.2
-	k8s.io/apimachinery v0.35.2
-	k8s.io/client-go v0.35.2
-	k8s.io/cloud-provider v0.35.2
-	sigs.k8s.io/controller-runtime v0.23.1
+	k8s.io/api v0.35.4
+	k8s.io/apimachinery v0.35.4
+	k8s.io/client-go v0.35.4
+	k8s.io/cloud-provider v0.35.4
+	sigs.k8s.io/controller-runtime v0.23.3
 )
 
 require (
