@@ -56,7 +56,7 @@ while :; do
 		exit 1
 	fi
 	sleep 1
-	((counter++))
+	((++counter))
 done
 
 # Execute functions
