@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+set -euxo pipefail
+
+# Set up /etc/resolv.conf symlink if not already present
+if [ ! -e "${BUILDROOT}/etc/resolv.conf" ]; then
+    ln -s /run/systemd/resolve/stub-resolv.conf "${BUILDROOT}/etc/resolv.conf" || true
+fi
+
+# Mask TPM PCR measurement units that should not run in the initrd
+mkdir -p "${BUILDROOT}/etc/systemd/system"
+ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrmachine.service"
+ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrfs-root.service"
+ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrfs@.service"
+ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase@.service"
+ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase-initrd.service"
+ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase-sysinit.service"
+ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase.service"

@@ -2,7 +2,7 @@
 # fedora:43
 FROM fedora@sha256:781b7642e8bf256e9cf75d2aa58d86f5cc695fd2df113517614e181a5eee9138 AS builder
 
-ARG MKOSI_VERSION="v22"
+ARG MKOSI_VERSION="v26"
 ARG PROFILE="debug"
 ARG IMAGE_VERSION="0.0.0"
 
@@ -15,8 +15,10 @@ RUN dnf install -y \
 	systemd-boot \
 	cryptsetup-libs \
 	squashfs-tools \
+	btrfs-progs \
 	systemd-ukify \
 	dosfstools \
+	distribution-gpg-keys \
 	mtools \
 	python3
 
@@ -28,10 +30,7 @@ RUN mkosi --version
 
 RUN mkdir /image
 WORKDIR /image
-COPY mkosi.postinst /image/mkosi.postinst
-COPY mkosi.presets /image/mkosi.presets
-COPY mkosi.profiles /image/mkosi.profiles
-COPY mkosi.skeleton /image/mkosi.skeleton
+COPY mkosi.images /image/mkosi.images
 COPY mkosi.skeleton-debug /image/mkosi.skeleton-debug
 COPY mkosi.skeleton-sftp /image/mkosi.skeleton-sftp
 COPY mkosi.workspace /image/mkosi.workspace

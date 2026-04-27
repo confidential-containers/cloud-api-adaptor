@@ -40,12 +40,17 @@ mount "${tmp_nbd}p2" "${dst_mnt}"
 mkdir -p "${dst_mnt}"/boot
 mount -o norecovery "${tmp_nbd}"p1 "${dst_mnt}"/boot
 
-cp initrd.cpio.zst "${dst_mnt}"/boot/initrd.img
-cp system.vmlinuz "${dst_mnt}"/boot/vmlinuz
-
 src_mnt=system
 tar_opts=(--numeric-owner --preserve-permissions --acl --selinux --xattrs --xattrs-include='*' --sparse)
 tar -cf - "${tar_opts[@]}" --sort=none -C "${src_mnt}" . | tar -xf - "${tar_opts[@]}" --preserve-order  -C "${dst_mnt}"
+
+# Place boot artifacts after system extraction to avoid /boot content from
+# the tar stream replacing or masking the expected files.
+# Ensure that the extracted system tree does not leave behind an initramfs
+# or vmlinuz in /boot, which may interfere with the expected boot artifacts.
+rm -f "${dst_mnt}/boot/initrd.img" "${dst_mnt}/boot/vmlinuz"
+cp initrd.cpio.zst "${dst_mnt}"/boot/initrd.img
+cp system.vmlinuz "${dst_mnt}"/boot/vmlinuz
 
 cat <<END > "${dst_mnt}/etc/fstab"
 #This file was auto-generated

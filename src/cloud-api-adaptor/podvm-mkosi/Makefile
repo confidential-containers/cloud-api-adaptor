@@ -13,7 +13,7 @@ PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH
 PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT),true),-se,)-$(DISTRO_ARCH):$(PODVM_TAG)
 PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(DISTRO_ARCH)
 VERIFY_PROVENANCE ?= no
-MKOSI_VERSION ?= v22
+MKOSI_VERSION ?= v26
 
 _SHA := $(shell git rev-parse --short HEAD)
 _SHA_DIRTY := $(shell [ -n "$$(git status --porcelain 2>/dev/null)" ] && printf -- '-dirty')
@@ -36,13 +36,17 @@ sftp:binaries image-sftp
 container: binaries image-container
 
 ifeq ($(PODVM_DISTRO),ubuntu)
+DISTRO_NAME := ubuntu
 DISTRO_IMAGE := ubuntu:24.04
-DISTRO_RELEASE := 24.04
-PKG_INSTALL := apt-get update && apt-get install -y
+DISTRO_RELEASE := noble
+DISTRO_REPOS := --repositories=universe
+PKG_INSTALL := apt-get update && apt-get install -y debian-archive-keyring
 else
+DISTRO_NAME := fedora
 DISTRO_IMAGE := fedora:43
 DISTRO_RELEASE := 43
-PKG_INSTALL := dnf install -y
+DISTRO_REPOS :=
+PKG_INSTALL := dnf install -y distribution-gpg-keys libseccomp
 endif
 
 define run_mkosi_in_container
@@ -50,7 +54,7 @@ define run_mkosi_in_container
 		-v "$(shell pwd)":/workspace \
 		-w /workspace \
 		$(DISTRO_IMAGE) \
-		bash -c "$(PKG_INSTALL) bubblewrap coreutils git python3; mkdir -p /build; git clone -b $(MKOSI_VERSION) https://github.com/systemd/mkosi /build/mkosi; export PATH="/build/mkosi/bin:$$PATH"; mkosi --tools-tree=default --tools-tree-release=$(DISTRO_RELEASE) $(1)"
+		bash -c "$(PKG_INSTALL) bubblewrap coreutils git python3; mkdir -p /build; git clone -b $(MKOSI_VERSION) https://github.com/systemd/mkosi /build/mkosi; export PATH="/build/mkosi/bin:$$PATH"; mkosi --tools-tree=default --tools-tree-release=$(DISTRO_RELEASE) --tools-tree-distribution=$(DISTRO_NAME) --distribution=$(DISTRO_NAME) --release=$(DISTRO_RELEASE) $(DISTRO_REPOS) $(1)"
 endef
 
 binaries:

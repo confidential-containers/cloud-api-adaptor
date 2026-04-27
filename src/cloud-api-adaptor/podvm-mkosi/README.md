@@ -148,12 +148,12 @@ reduce complexity of configuration and CI and shall not be seen as open to-dos.
 ## Build s390x image
 We can use the mkosi **ToolsTree** feature defined in `mkosi.conf` to download latest tools automatically:
 ```
-[Host]
+[Runtime]
 ToolsTree=default
 ```
 And install **mkosi** from the repository:
 ```sh
-git clone -b v21 https://github.com/systemd/mkosi
+git clone -b v26 https://github.com/systemd/mkosi
 ln -s $PWD/mkosi/bin/mkosi /usr/local/bin/mkosi
 mkosi --version
 ```

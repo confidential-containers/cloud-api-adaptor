@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+set -euxo pipefail
+
+# Set up /etc/resolv.conf symlink if not already present
+if [ ! -e /etc/resolv.conf ]; then
+    ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+fi
+
+# Mask TPM PCR measurement units that should not run in this image
+systemctl mask systemd-pcrmachine.service
+systemctl mask systemd-pcrfs-root.service
+systemctl mask "systemd-pcrfs@.service"
+systemctl mask "systemd-pcrphase@.service"
+systemctl mask systemd-pcrphase-initrd.service
+systemctl mask systemd-pcrphase-sysinit.service
+systemctl mask systemd-pcrphase.service
+
+if [[ "${ARCHITECTURE}" == "s390x" ]]; then
+	# enable cloud-init services (Ubuntu s390x only; Fedora does not ship cloud-init)
+	if [[ -f /usr/lib/systemd/system/cloud-init-local.service || \
+	      -f /lib/systemd/system/cloud-init-local.service ]]; then
+		systemctl enable cloud-init-local.service
+		# cloud-init.service was renamed to cloud-init-network.service in cloud-init 24.3.
+		# Enable whichever unit exists in the image.
+		if [[ -f /usr/lib/systemd/system/cloud-init-network.service || -f /lib/systemd/system/cloud-init-network.service ]]; then
+			systemctl enable cloud-init-network.service
+		else
+			systemctl enable cloud-init.service
+		fi
+		systemctl enable cloud-config.service
+		systemctl enable cloud-final.service
+
+		# disable networkd-wait-online since NetworkManager-wait-online.service is used instead
+		systemctl disable systemd-networkd-wait-online.service
+	fi
+fi
+
+# Conditional SFTP support: enable process-user-data.path only if ENABLE_SFTP is set
+
+ENABLE_SFTP=${ENABLE_SFTP:-false}
+
+if [[ "${ENABLE_SFTP}" == "true" ]]; then
+	echo "Enabling SFTP user-data processing service (ENABLE_SFTP=true)"
+	systemctl enable process-user-data.path
+	systemctl disable process-user-data.service
+	# Create peerpod user for SFTP access
+	mkdir -p /home/peerpod
+	useradd -r -s /sbin/nologin -d /home/peerpod peerpod
+	# Ensure proper permissions for SSH key
+	chown -R peerpod:peerpod /home/peerpod
+	chmod 600 /home/peerpod/.ssh/authorized_keys
+	chmod 700 /home/peerpod/.ssh
+else
+	echo "SFTP user-data processing service disabled (ENABLE_SFTP=false)"
+	systemctl disable process-user-data.path
+	systemctl enable process-user-data.service
+	# These units doesn't exist in regular and debug profiles
+fi
