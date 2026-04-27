@@ -7,6 +7,10 @@ metadata:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: peerpodctrl
     app.kubernetes.io/part-of: peerpodctrl
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   name: {{ .Values.namePrefix }}controller-manager
   namespace: {{ .Release.Namespace }}
 ---

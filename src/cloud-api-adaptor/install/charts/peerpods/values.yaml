@@ -112,6 +112,14 @@ daemonset:
   # - When setting via CLI, prefer --set-json or a values file (plain --set will interpret dots as map nesting)
   podLabels: {}
 
+  # ServiceAccount customization for the cloud-api-adaptor daemonset.
+  # For example, attach a cloud workload-identity binding via
+  # serviceAccount.annotations.azure\.workload\.identity/client-id (Azure
+  # Workload Identity), or the equivalent GCP / AWS annotation, so the
+  # daemonset can authenticate to the cloud provider.
+  serviceAccount:
+    annotations: {}
+
 # peerpod-ctrl subchart configuration
 # Manages lifecycle of peer pod cloud resources and cleans up dangling VMs
 # Configuration options documented in ../../../peerpod-ctrl/chart/values.yaml
