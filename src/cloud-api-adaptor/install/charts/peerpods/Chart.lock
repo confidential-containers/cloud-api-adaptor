@@ -4,9 +4,9 @@ dependencies:
   version: 3.29.0
 - name: peerpodctrl
   repository: file://../../../../peerpod-ctrl/chart
-  version: 0.1.0
+  version: 0.2.0
 - name: peerpods-webhook
   repository: file://../../../../webhook/chart
-  version: 0.1.0
-digest: sha256:e328c71c67995b3c06912a2aa76c8d794115fb825bae47797acd58daa37fe6ff
-generated: "2026-04-27T09:13:27.677889+01:00"
+  version: 0.2.0
+digest: sha256:d44b8cb6ab073c25034c28dc699a7f336be0ed464f45c62d6d0feaa1e23cc94d
+generated: "2026-04-28T10:14:36.191176+01:00"
