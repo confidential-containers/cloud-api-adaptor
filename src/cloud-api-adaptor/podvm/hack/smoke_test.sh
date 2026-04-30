@@ -95,7 +95,7 @@ cleanup() {
 		popd >/dev/null 2>&1 || true
 		[ -n "${SOCAT_PID}" ] && kill "${SOCAT_PID}" >/dev/null 2>&1 || true
 		sudo virsh destroy "${VM_NAME:-smoketest}" >/dev/null 2>&1 || true
-		rm -Rf "${WORKDIR}" || true
+		sudo rm -Rf "${WORKDIR}" || true
 	fi
 }
 
