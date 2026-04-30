@@ -5,25 +5,64 @@ package proxy
 
 import (
 	"context"
-	"errors"
 	"net"
 	"net/url"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	"github.com/containerd/ttrpc"
-	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
-	"google.golang.org/protobuf/types/known/emptypb"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// Test constants for proxy_test.go
+const (
+	// Socket and path constants
+	testSocketPathDummy   = "/run/dummy.sock"
+	testSocketPathTest    = "/run/test.sock"
+	testSocketPathInvalid = "/proc/invalid/test.sock"
+	testSocketFileName    = "test.sock"
+
+	// Server and network constants
+	testServerName         = "test-server"
+	testServerNamePodVM    = "podvm"
+	testListenAddressProxy = "127.0.0.1:0"
+	testInvalidAddress     = "0.0.0.0:0"
+	testUnreachableAddress = "127.0.0.1:1"
+	testUnreachablePort    = "127.0.0.1:9999"
+	testSchemeGRPC         = "grpc"
+	testNetworkUnix        = "unix"
+
+	// Container and annotation constants
+	testContainerIDProxy     = "123"
+	testAnnotationKeyProxy   = "aaa"
+	testAnnotationValueProxy = "111"
+
+	// Image constants
+	testPauseImageLatest = "pause:latest"
+
+	// Timeout constants
+	testTimeout1Second      = 1 * time.Second
+	testTimeout2Second      = 2 * time.Second
+	testTimeout5SecondProxy = 5 * time.Second
+	testTimeout250          = 250 * time.Millisecond
+
+	// TLS and certificate constants
+	testCAFilePath   = "/path/to/ca.pem"
+	testCertData     = "test-cert-data"
+	testMockRootCert = "mock-root-cert"
+	testMockCert     = "mock-cert"
+	testMockKey      = "mock-key"
 )
 
 func TestNewAgentProxy(t *testing.T) {
 
-	socketPath := "/run/dummy.sock"
+	socketPath := testSocketPathDummy
 
-	proxy := NewAgentProxy("podvm", socketPath, "", nil, nil, 0)
+	proxy := NewAgentProxy(testServerNamePodVM, socketPath, "", nil, nil, 0)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
@@ -34,52 +73,20 @@ func TestNewAgentProxy(t *testing.T) {
 }
 
 func TestStartStop(t *testing.T) {
-
 	dir := t.TempDir()
+	socketPath := filepath.Join(dir, testSocketFileName)
 
-	socketPath := filepath.Join(dir, "test.sock")
-
-	agentServer, err := ttrpc.NewServer()
-	if err != nil {
-		t.Fatalf("expect no error, got %q", err)
-	}
-	pb.RegisterAgentServiceService(agentServer, &agentMock{})
-	pb.RegisterHealthService(agentServer, &agentMock{})
-
-	agentListener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("expect no error, got %q", err)
-	}
-	defer func() {
-		err := agentListener.Close()
-		if e, a := net.ErrClosed, err; !errors.Is(a, e) {
-			t.Fatalf("expect %q, got %q", e, a)
-		}
-	}()
-
-	agentServerErrCh := make(chan error)
-	go func() {
-		defer close(agentServerErrCh)
-
-		err := agentServer.Serve(context.Background(), agentListener)
-		if err != nil {
-			agentServerErrCh <- err
-			return
-		}
-	}()
-	defer func() {
-		err := agentServer.Shutdown(context.Background())
-		if err != nil {
-			t.Fatalf("expect no error, got %q", err)
-		}
-	}()
+	// Setup mock agent server using shared helper
+	agentServer, agentListener := setupMockAgent(t)
+	defer func() { _ = agentServer.Shutdown(context.Background()) }()
+	defer agentListener.Close()
 
 	serverURL := &url.URL{
-		Scheme: "grpc",
+		Scheme: testSchemeGRPC,
 		Host:   agentListener.Addr().String(),
 	}
 
-	proxy := NewAgentProxy("podvm", socketPath, "", nil, nil, 5*time.Second)
+	proxy := NewAgentProxy(testServerNamePodVM, socketPath, "", nil, nil, testTimeout5SecondProxy)
 	p, ok := proxy.(*agentProxy)
 	if !ok {
 		t.Fatalf("expect %T, got %T", &agentProxy{}, proxy)
@@ -88,27 +95,22 @@ func TestStartStop(t *testing.T) {
 	proxyErrCh := make(chan error)
 	go func() {
 		defer close(proxyErrCh)
-
 		if err := proxy.Start(context.Background(), serverURL); err != nil {
 			proxyErrCh <- err
 		}
 	}()
 	defer func() {
-		if err := p.Shutdown(); err != nil {
-			t.Fatalf("expect no error, got %q", err)
-		}
+		require.NoError(t, p.Shutdown(), "expect no error during shutdown")
 	}()
 
 	select {
 	case err := <-proxyErrCh:
-		t.Fatalf("expect no error, got %q", err)
+		require.NoError(t, err, "expect no error from proxy")
 	case <-proxy.Ready():
 	}
 
-	conn, err := net.Dial("unix", socketPath)
-	if err != nil {
-		t.Fatalf("expect no error, got %q", err)
-	}
+	conn, err := net.Dial(testNetworkUnix, socketPath)
+	require.NoError(t, err, "expect no error dialing unix socket")
 
 	ttrpcClient := ttrpc.NewClient(conn)
 
@@ -121,50 +123,40 @@ func TestStartStop(t *testing.T) {
 	}
 
 	{
-		res, err := client.CreateContainer(context.Background(), &pb.CreateContainerRequest{ContainerId: "123", OCI: &pb.Spec{Annotations: map[string]string{"aaa": "111"}}})
-		if err != nil {
-			t.Fatalf("expect no error, got %q", err)
-		}
-		if res == nil {
-			t.Fatal("expect non nil, got nil")
-		}
+		res, err := client.CreateContainer(context.Background(), &pb.CreateContainerRequest{ContainerId: testContainerIDProxy, OCI: &pb.Spec{Annotations: map[string]string{testAnnotationKeyProxy: testAnnotationValueProxy}}})
+		assert.NoError(t, err, "expect no error creating container")
+		assert.NotNil(t, res, "expect non nil response")
 	}
 
 	select {
-	case err := <-agentServerErrCh:
-		t.Fatalf("expect no error, got %q", err)
 	case err := <-proxyErrCh:
-		t.Fatalf("expect no error, got %q", err)
+		assert.NoError(t, err, "expect no error from proxy channel")
 	default:
 	}
 }
 
 func TestDialerSuccess(t *testing.T) {
 	p := &agentProxy{
-		proxyTimeout: 5 * time.Second,
+		proxyTimeout: testTimeout5SecondProxy,
 	}
 
 	for {
-		listener, err := net.Listen("tcp", "127.0.0.1:0")
-		if err != nil {
-			t.Fatalf("expect no error, got %q", err)
-		}
+		listener, err := net.Listen(testNetworkTCP, testListenAddressProxy)
+		require.NoError(t, err, "expect no error creating listener")
 
 		address := listener.Addr().String()
 
-		if err := listener.Close(); err != nil {
-			t.Fatalf("expect no error, got %q", err)
-		}
+		require.NoError(t, listener.Close(), "expect no error closing listener")
 
 		listenerErrCh := make(chan error)
 		go func() {
 			defer close(listenerErrCh)
 
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(testTimeout250)
 
 			var err error
 			// Open the same port
-			listener, err = net.Listen("tcp", address)
+			listener, err = net.Listen(testNetworkTCP, address)
 			if err != nil {
 				listenerErrCh <- err
 			}
@@ -184,161 +176,157 @@ func TestDialerSuccess(t *testing.T) {
 		}
 
 		listener.Close()
-		if err != nil {
-			t.Fatalf("expect no error, got %q", err)
-		}
+		assert.NoError(t, err, "expect no error dialing")
 		break
 	}
 }
 
 func TestDialerFailure(t *testing.T) {
 	p := &agentProxy{
-		proxyTimeout: 5 * time.Second,
+		proxyTimeout: testTimeout5SecondProxy,
 	}
 
-	address := "0.0.0.0:0"
+	address := testInvalidAddress
 	conn, err := p.dial(context.Background(), address)
+	assert.ErrorContains(t, err, "failed to establish agent proxy connection")
 	if err == nil {
 		conn.Close()
-		t.Fatal("expect error, got nil")
-	}
-
-	if e, a := "failed to establish agent proxy connection", err.Error(); !strings.Contains(a, e) {
-		t.Fatalf("expect %q, got %q", e, a)
 	}
 }
 
-type agentMock struct{}
+// Test CAService method
+func TestCAService(t *testing.T) {
+	t.Run("CAService returns nil when not set", func(t *testing.T) {
+		proxy := NewAgentProxy(testServerNamePodVM, testSocketPathTest, "", nil, nil, 0)
+		p := proxy.(*agentProxy)
+		assert.Nil(t, p.CAService())
+	})
 
-func (m *agentMock) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+	t.Run("CAService returns service when set", func(t *testing.T) {
+		mockCAService := &mockCAService{}
+		proxy := NewAgentProxy(testServerNamePodVM, testSocketPathTest, "", nil, mockCAService, 0)
+		p := proxy.(*agentProxy)
+		assert.Equal(t, mockCAService, p.CAService())
+	})
 }
-func (m *agentMock) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+
+// Test ClientCA method
+func TestClientCA(t *testing.T) {
+	t.Run("ClientCA returns nil when tlsConfig is nil", func(t *testing.T) {
+		proxy := NewAgentProxy(testServerNamePodVM, testSocketPathTest, "", nil, nil, 0)
+		p := proxy.(*agentProxy)
+		assert.Nil(t, p.ClientCA())
+	})
+
+	t.Run("ClientCA returns nil when CAFile is set", func(t *testing.T) {
+		tlsConfig := &tlsutil.TLSConfig{
+			CAFile: testCAFilePath,
+		}
+		proxy := NewAgentProxy(testServerNamePodVM, testSocketPathTest, "", tlsConfig, nil, 0)
+		p := proxy.(*agentProxy)
+		assert.Nil(t, p.ClientCA())
+	})
+
+	t.Run("ClientCA returns CertData when CAFile is empty", func(t *testing.T) {
+		certData := []byte(testCertData)
+		tlsConfig := &tlsutil.TLSConfig{
+			CertData: certData,
+		}
+		proxy := NewAgentProxy(testServerNamePodVM, testSocketPathTest, "", tlsConfig, nil, 0)
+		p := proxy.(*agentProxy)
+		result := p.ClientCA()
+		assert.Equal(t, string(certData), string(result))
+	})
 }
-func (m *agentMock) RemoveContainer(ctx context.Context, req *pb.RemoveContainerRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+
+// Test Ready channel
+func TestReady(t *testing.T) {
+	proxy := NewAgentProxy(testServerNamePodVM, testSocketPathTest, "", nil, nil, 0)
+	readyCh := proxy.Ready()
+	assert.NotNil(t, readyCh)
 }
-func (m *agentMock) ExecProcess(ctx context.Context, req *pb.ExecProcessRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+
+// Test multiple Shutdown calls
+func TestMultipleShutdown(t *testing.T) {
+	proxy := NewAgentProxy(testServerNamePodVM, testSocketPathTest, "", nil, nil, 0)
+	p := proxy.(*agentProxy)
+
+	// First shutdown
+	assert.NoError(t, p.Shutdown())
+
+	// Second shutdown should also succeed (stopOnce ensures it's safe)
+	assert.NoError(t, p.Shutdown())
 }
-func (m *agentMock) SignalProcess(ctx context.Context, req *pb.SignalProcessRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+
+// Test Start with invalid socket path
+func TestStartInvalidSocketPath(t *testing.T) {
+	// Use a path that cannot be created
+	socketPath := testSocketPathInvalid
+	proxy := NewAgentProxy(testServerNamePodVM, socketPath, "", nil, nil, testTimeout5SecondProxy)
+
+	serverURL := &url.URL{
+		Scheme: testSchemeGRPC,
+		Host:   testUnreachablePort,
+	}
+
+	err := proxy.Start(context.Background(), serverURL)
+	assert.ErrorContains(t, err, "failed to create parent directories")
 }
-func (m *agentMock) WaitProcess(ctx context.Context, req *pb.WaitProcessRequest) (*pb.WaitProcessResponse, error) {
-	return &pb.WaitProcessResponse{}, nil
+
+// Test Start with connection failure
+func TestStartConnectionFailure(t *testing.T) {
+	dir := t.TempDir()
+	socketPath := filepath.Join(dir, testSocketFileName)
+
+	proxy := NewAgentProxy(testServerNamePodVM, socketPath, "", nil, nil, testTimeout1Second)
+
+	// Use an address that will fail to connect
+	serverURL := &url.URL{
+		Scheme: testSchemeGRPC,
+		Host:   testUnreachableAddress, // Port 1 is typically not accessible
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout2Second)
+	defer cancel()
+
+	err := proxy.Start(ctx, serverURL)
+	assert.Error(t, err)
 }
-func (m *agentMock) UpdateContainer(ctx context.Context, req *pb.UpdateContainerRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+
+// Test NewFactory
+func TestNewFactory(t *testing.T) {
+	t.Run("NewFactory with nil TLS config", func(t *testing.T) {
+		proxyFactory := NewFactory(testPauseImageLatest, nil, testTimeout5SecondProxy)
+		assert.NotNil(t, proxyFactory)
+
+		// Just verify it's not nil and can create proxies
+		proxy := proxyFactory.New(testServerName, testSocketPathTest)
+		assert.NotNil(t, proxy)
+	})
+
+	t.Run("Factory.New creates AgentProxy", func(t *testing.T) {
+		proxyFactory := NewFactory(testPauseImageLatest, nil, testTimeout5SecondProxy)
+		proxy := proxyFactory.New(testServerName, testSocketPathTest)
+
+		assert.NotNil(t, proxy)
+
+		p, ok := proxy.(*agentProxy)
+		assert.True(t, ok, "expected *agentProxy, got %T", proxy)
+
+		assert.Equal(t, testServerName, p.serverName)
+		assert.Equal(t, testSocketPathTest, p.socketPath)
+		assert.Equal(t, testPauseImageLatest, p.pauseImage)
+		assert.Equal(t, testTimeout5SecondProxy, p.proxyTimeout)
+	})
 }
-func (m *agentMock) UpdateEphemeralMounts(ctx context.Context, req *pb.UpdateEphemeralMountsRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+
+// Mock types for testing
+type mockCAService struct{}
+
+func (m *mockCAService) RootCertificate() []byte {
+	return []byte(testMockRootCert)
 }
-func (m *agentMock) StatsContainer(ctx context.Context, req *pb.StatsContainerRequest) (*pb.StatsContainerResponse, error) {
-	return &pb.StatsContainerResponse{}, nil
-}
-func (m *agentMock) PauseContainer(ctx context.Context, req *pb.PauseContainerRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) ResumeContainer(ctx context.Context, req *pb.ResumeContainerRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) WriteStdin(ctx context.Context, req *pb.WriteStreamRequest) (*pb.WriteStreamResponse, error) {
-	return &pb.WriteStreamResponse{}, nil
-}
-func (m *agentMock) ReadStdout(ctx context.Context, req *pb.ReadStreamRequest) (*pb.ReadStreamResponse, error) {
-	return &pb.ReadStreamResponse{}, nil
-}
-func (m *agentMock) ReadStderr(ctx context.Context, req *pb.ReadStreamRequest) (*pb.ReadStreamResponse, error) {
-	return &pb.ReadStreamResponse{}, nil
-}
-func (m *agentMock) CloseStdin(ctx context.Context, req *pb.CloseStdinRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) TtyWinResize(ctx context.Context, req *pb.TtyWinResizeRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) UpdateInterface(ctx context.Context, req *pb.UpdateInterfaceRequest) (*protocols.Interface, error) {
-	return &protocols.Interface{}, nil
-}
-func (m *agentMock) UpdateRoutes(ctx context.Context, req *pb.UpdateRoutesRequest) (*pb.Routes, error) {
-	return &pb.Routes{}, nil
-}
-func (m *agentMock) ListInterfaces(ctx context.Context, req *pb.ListInterfacesRequest) (*pb.Interfaces, error) {
-	return &pb.Interfaces{}, nil
-}
-func (m *agentMock) ListRoutes(ctx context.Context, req *pb.ListRoutesRequest) (*pb.Routes, error) {
-	return &pb.Routes{}, nil
-}
-func (m *agentMock) AddARPNeighbors(ctx context.Context, req *pb.AddARPNeighborsRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) GetIPTables(ctx context.Context, req *pb.GetIPTablesRequest) (*pb.GetIPTablesResponse, error) {
-	return &pb.GetIPTablesResponse{}, nil
-}
-func (m *agentMock) SetIPTables(ctx context.Context, req *pb.SetIPTablesRequest) (*pb.SetIPTablesResponse, error) {
-	return &pb.SetIPTablesResponse{}, nil
-}
-func (m *agentMock) GetMetrics(ctx context.Context, req *pb.GetMetricsRequest) (*pb.Metrics, error) {
-	return &pb.Metrics{}, nil
-}
-func (m *agentMock) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) OnlineCPUMem(ctx context.Context, req *pb.OnlineCPUMemRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) ReseedRandomDev(ctx context.Context, req *pb.ReseedRandomDevRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) GetGuestDetails(ctx context.Context, req *pb.GuestDetailsRequest) (*pb.GuestDetailsResponse, error) {
-	return &pb.GuestDetailsResponse{}, nil
-}
-func (m *agentMock) MemHotplugByProbe(ctx context.Context, req *pb.MemHotplugByProbeRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) SetGuestDateTime(ctx context.Context, req *pb.SetGuestDateTimeRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) CopyFile(ctx context.Context, req *pb.CopyFileRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) GetOOMEvent(ctx context.Context, req *pb.GetOOMEventRequest) (*pb.OOMEvent, error) {
-	return &pb.OOMEvent{}, nil
-}
-func (m *agentMock) AddSwap(ctx context.Context, req *pb.AddSwapRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) GetVolumeStats(ctx context.Context, req *pb.VolumeStatsRequest) (*pb.VolumeStatsResponse, error) {
-	return &pb.VolumeStatsResponse{}, nil
-}
-func (m *agentMock) ResizeVolume(ctx context.Context, req *pb.ResizeVolumeRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) RemoveStaleVirtiofsShareMounts(ctx context.Context, req *pb.RemoveStaleVirtiofsShareMountsRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) GetDiagnosticData(ctx context.Context, req *pb.GetDiagnosticDataRequest) (*pb.GetDiagnosticDataResponse, error) {
-	return &pb.GetDiagnosticDataResponse{}, nil
-}
-func (m *agentMock) Check(ctx context.Context, req *pb.CheckRequest) (*pb.HealthCheckResponse, error) {
-	return &pb.HealthCheckResponse{}, nil
-}
-func (m *agentMock) Version(ctx context.Context, req *pb.CheckRequest) (*pb.VersionCheckResponse, error) {
-	return &pb.VersionCheckResponse{}, nil
-}
-func (m *agentMock) SetPolicy(ctx context.Context, req *pb.SetPolicyRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) AddSwapPath(ctx context.Context, req *pb.AddSwapPathRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) MemAgentMemcgSet(ctx context.Context, req *pb.MemAgentMemcgConfig) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-func (m *agentMock) MemAgentCompactSet(ctx context.Context, req *pb.MemAgentCompactConfig) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+
+func (m *mockCAService) Issue(name string) (certPEM, keyPEM []byte, err error) {
+	return []byte(testMockCert), []byte(testMockKey), nil
 }
