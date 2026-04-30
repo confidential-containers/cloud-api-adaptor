@@ -11,7 +11,7 @@ cloudimg:
         checksum: "sha256:367eef35e239ebd123bd00a1fb66cd048604b70bca362eccad1f95b0021d7458"
       arm64:
         url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-arm64.img
-        checksum: "f11282a728ad42f8bfe0b646a6807674d79a019bfc229d80032345dd3228a2db"
+        checksum: "sha256:f11282a728ad42f8bfe0b646a6807674d79a019bfc229d80032345dd3228a2db"
   rhel:
     9: # dummy links, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
       amd64:
@@ -56,7 +56,7 @@ git:
 oci:
   pause:
     registry: registry.k8s.io/pause
-    tag: 3.9
+    tag: "3.9"
   kata-containers:
     registry: ghcr.io/kata-containers/cached-artefacts
     reference: 8dccf4cf37aeea4b6c2caacf3e61510d6eef2f71 # v3.29.0
