@@ -1,0 +1,47 @@
+# (C) Copyright Confidential Containers Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Validate src/cloud-api-adaptor/versions.yaml against the JSON schema
+# embedded in the `versions` CLI tool. Runs on PRs and main pushes that
+# touch the file, the schema, or the tool's source.
+---
+name: versions
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'src/cloud-api-adaptor/versions.yaml'
+      - 'src/cloud-api-adaptor/cmd/versions/**'
+      - 'src/cloud-api-adaptor/pkg/versions/**'
+      - '.github/workflows/versions.yaml'
+  pull_request:
+    paths:
+      - 'src/cloud-api-adaptor/versions.yaml'
+      - 'src/cloud-api-adaptor/cmd/versions/**'
+      - 'src/cloud-api-adaptor/pkg/versions/**'
+      - '.github/workflows/versions.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  validate:
+    name: validate versions.yaml
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the pull request code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Validate versions.yaml against the embedded schema
+        working-directory: src/cloud-api-adaptor
+        run: make versions-check
