@@ -23,6 +23,38 @@ import (
 
 var logger = log.New(log.Writer(), "[forwarder] ", log.LstdFlags|log.Lmsgprefix)
 
+// singleClientListener wraps a net.Listener to enforce single-client mode.
+// When a new connection arrives, the previous connection is closed so the
+// ttrpc server's stream state is cleanly reset for the new CAA instance.
+// The forwarder→kata-agent connection is NOT touched — it survives CAA restarts.
+type singleClientListener struct {
+	net.Listener
+	mu          sync.Mutex
+	currentConn net.Conn
+}
+
+func newSingleClientListener(l net.Listener) *singleClientListener {
+	return &singleClientListener{Listener: l}
+}
+
+func (s *singleClientListener) Accept() (net.Conn, error) {
+	conn, err := s.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	if s.currentConn != nil {
+		logger.Printf("New connection from %s, closing previous connection", conn.RemoteAddr())
+		s.currentConn.Close()
+	}
+	s.currentConn = conn
+	s.mu.Unlock()
+
+	logger.Printf("Accepted connection from %s", conn.RemoteAddr())
+	return conn, nil
+}
+
 const (
 	DefaultListenHost          = "0.0.0.0"
 	DefaultListenPort          = "15150"
@@ -136,6 +168,11 @@ func (d *daemon) Start(ctx context.Context) error {
 
 	d.listenAddr = listener.Addr().String()
 
+	// Wrap listener with single-client mode to handle CAA reconnections.
+	// Only the CAA→forwarder TCP connection breaks on restart; the
+	// forwarder→kata-agent Unix socket stays alive, so we must NOT reset it.
+	singleClientListener := newSingleClientListener(listener)
+
 	ttrpcServer, err := ttrpc.NewServer()
 	if err != nil {
 		return fmt.Errorf("failed to create TTRPC server: %w", err)
@@ -148,7 +185,7 @@ func (d *daemon) Start(ctx context.Context) error {
 	go func() {
 		defer close(ttrpcServerErr)
 
-		if err := ttrpcServer.Serve(ctx, listener); err != nil && !errors.Is(err, ttrpc.ErrServerClosed) {
+		if err := ttrpcServer.Serve(ctx, singleClientListener); err != nil && !errors.Is(err, ttrpc.ErrServerClosed) {
 			ttrpcServerErr <- fmt.Errorf("error running TTRPC server for kata agent interceptor: %w", err)
 		}
 	}()

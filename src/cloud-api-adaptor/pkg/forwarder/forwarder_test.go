@@ -606,3 +606,69 @@ func TestDaemonWithTLSConfig(t *testing.T) {
 		assert.Nil(t, daemonImpl.tlsConfig)
 	})
 }
+
+func TestSingleClientListenerFirstAccept(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+
+	scl := newSingleClientListener(ln)
+
+	conn, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	accepted, err := scl.Accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer accepted.Close()
+
+	if accepted == nil {
+		t.Fatal("expected non-nil connection")
+	}
+}
+
+func TestSingleClientListenerReplacesConnection(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+
+	scl := newSingleClientListener(ln)
+
+	conn1, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn1.Close()
+
+	accepted1, err := scl.Accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	conn2, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn2.Close()
+
+	accepted2, err := scl.Accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer accepted2.Close()
+
+	// First accepted connection should be closed by singleClientListener
+	buf := make([]byte, 1)
+	_, readErr := accepted1.Read(buf)
+	if readErr == nil {
+		t.Fatal("expected error reading from closed first connection")
+	}
+}
