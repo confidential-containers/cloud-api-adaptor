@@ -33,16 +33,15 @@ jobs:
           sudo apt-get install -y \
             genisoimage \
             qemu-utils
-          sudo snap install yq
 
       - name: Read properties from versions.yaml
         working-directory: src/cloud-api-adaptor
         run: |
           {
-            echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)";
-            echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)";
-            echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
-            echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
+            echo "MKOSI_VERSION=$(./hack/versions.py -q tools.mkosi)";
+            echo "ORAS_VERSION=$(./hack/versions.py -q tools.oras)";
+            echo "KATA_REF=$(./hack/versions.py -q oci.kata-containers.reference)";
+            echo "KATA_REG=$(./hack/versions.py -q oci.kata-containers.registry)";
           } >> "$GITHUB_ENV"
 
       - uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
@@ -101,19 +100,23 @@ jobs:
             qemu-utils\
             socat \
             virt-manager
-          sudo snap install yq
 
       - name: Read properties from versions.yaml
         working-directory: src/cloud-api-adaptor
         run: |
           {
-            echo "KATA_REF=$(yq -e '.oci.kata-agent-ctl.reference' versions.yaml)";
-            echo "KATA_REG=$(yq -e '.oci.kata-agent-ctl.registry' versions.yaml)";
+            echo "ORAS_VERSION=$(./hack/versions.py -q tools.oras)";
+            echo "KATA_AGENT_CTL_REF=$(./hack/versions.py -q oci.kata-agent-ctl.reference)";
+            echo "KATA_AGENT_CTL_REG=$(./hack/versions.py -q oci.kata-agent-ctl.registry)";
           } >> "$GITHUB_ENV"
+
+      - uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+        with:
+          version: ${{ env.ORAS_VERSION }}
 
       - name: Install kata-agent-ctl
         run: |
-          oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
+          oras pull "${KATA_AGENT_CTL_REG}/agent-ctl:${KATA_AGENT_CTL_REF}-x86_64"
           tar --zstd -xf kata-static-agent-ctl.tar.zst
           cp opt/kata/bin/kata-agent-ctl /usr/local/bin
 
