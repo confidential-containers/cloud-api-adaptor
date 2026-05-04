@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/netip"
 	"strings"
+	"time"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
 )
@@ -18,6 +19,24 @@ type Provider interface {
 	DeleteInstance(ctx context.Context, instanceID string) error
 	Teardown() error
 	ConfigVerifier() error
+}
+
+const ClusterUIDTagKey = "caa-cluster-uid"
+
+// ClusterUID holds the kube-system namespace UID for this cluster.
+// Set once at startup by main.go; providers read it in CreateInstance
+// to tag VMs for orphan GC discovery.
+var ClusterUID string
+
+type ListInstancesInput struct {
+	ClusterUID string
+}
+
+// InstanceLister is an optional interface that providers can implement to
+// support orphan VM garbage collection. ListInstances returns all instances
+// tagged as belonging to this cluster.
+type InstanceLister interface {
+	ListInstances(ctx context.Context, input ListInstancesInput) ([]*Instance, error)
 }
 
 // keyValueFlag represents a flag of key-value pairs
@@ -58,6 +77,11 @@ type Instance struct {
 	ID   string
 	Name string
 	IPs  []netip.Addr
+	// CreatedAt is the instance creation timestamp from the cloud provider API
+	// (UTC). Available for informational logging; not used for grace period
+	// decisions (which use local discovery time instead to avoid cross-clock
+	// dependency in disconnected environments).
+	CreatedAt time.Time
 }
 
 type InstanceTypeSpec struct {
