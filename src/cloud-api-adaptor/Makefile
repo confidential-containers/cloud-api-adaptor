@@ -90,6 +90,10 @@ test: ## Run tests.
 	# parse build errors.
 	go test -v $(GOFLAGS) -cover $(PACKAGES) 2>&1
 
+.PHONY: versions-check
+versions-check: ## Validate versions.yaml against the JSON schema
+	./hack/versions.py -c versions.schema.json
+
 .PHONY: test-e2e
 test-e2e: ## Run end-to-end tests for single provider.
 ifneq ($(CLOUD_PROVIDER),)

@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "cloud-api-adaptor versions.yaml",
+  "description": "Schema for src/cloud-api-adaptor/versions.yaml",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tools", "git", "oci"],
+  "properties": {
+    "cloudimg": {
+      "type": "object",
+      "description": "Sources for base cloud OS images, keyed by distribution then release.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/imageSource"
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "description": "External tool versions used by build and CI. Each entry is either a plain version string or an object with a version and a sha256 checksum.",
+      "additionalProperties": false,
+      "required": [
+        "cert-manager",
+        "bats",
+        "iptables-wrapper",
+        "golang",
+        "kcli",
+        "mkosi",
+        "protoc",
+        "packer",
+        "oras",
+        "helm"
+      ],
+      "properties": {
+        "cert-manager":     { "$ref": "#/$defs/tool" },
+        "bats":             { "$ref": "#/$defs/tool" },
+        "iptables-wrapper": { "$ref": "#/$defs/tool" },
+        "golang":           { "$ref": "#/$defs/tool" },
+        "kcli":             { "$ref": "#/$defs/tool" },
+        "mkosi":            { "$ref": "#/$defs/tool" },
+        "protoc":           { "$ref": "#/$defs/tool" },
+        "packer":           { "$ref": "#/$defs/tool" },
+        "oras":             { "$ref": "#/$defs/tool" },
+        "helm":             { "$ref": "#/$defs/tool" }
+      }
+    },
+    "git": {
+      "type": "object",
+      "description": "Git repositories referenced at build/run time.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url", "reference"],
+        "properties": {
+          "url":       { "type": "string", "format": "uri" },
+          "reference": { "$ref": "#/$defs/nonEmptyString" }
+        }
+      }
+    },
+    "oci": {
+      "type": "object",
+      "description": "OCI artefacts pulled by tag or by reference.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["registry"],
+        "properties": {
+          "registry":  { "$ref": "#/$defs/nonEmptyString" },
+          "tag":       { "$ref": "#/$defs/nonEmptyString" },
+          "reference": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "oneOf": [
+          { "required": ["tag"] },
+          { "required": ["reference"] }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256Hex": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "tool": {
+      "oneOf": [
+        { "$ref": "#/$defs/nonEmptyString" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "sha256"],
+          "properties": {
+            "version": { "$ref": "#/$defs/nonEmptyString" },
+            "sha256":  { "$ref": "#/$defs/sha256Hex" }
+          }
+        }
+      ]
+    },
+    "imageSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "checksum"],
+      "properties": {
+        "url":      { "type": "string", "format": "uri" },
+        "checksum": {
+          "type": "string",
+          "description": "Algorithm-prefixed digest, e.g. sha256:<64 hex> or sha512:<128 hex>.",
+          "pattern": "^(sha256:[0-9a-f]{64}|sha512:[0-9a-f]{128})$"
+        }
+      }
+    }
+  }
+}
