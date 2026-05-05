@@ -158,9 +158,31 @@ func (p *libvirtProvider) Teardown() error {
 }
 
 func (p *libvirtProvider) ConfigVerifier() error {
-	VolName := p.serviceConfig.VolName
-	if len(VolName) == 0 {
+	config := p.serviceConfig
+
+	if config.URI == "" {
+		return fmt.Errorf("URI is empty")
+	}
+
+	if config.PoolName == "" {
+		return fmt.Errorf("PoolName is empty")
+	}
+
+	if config.NetworkName == "" {
+		return fmt.Errorf("NetworkName is empty")
+	}
+
+	if config.VolName == "" {
 		return fmt.Errorf("VolName is empty")
 	}
+
+	if config.CPU == 0 {
+		return fmt.Errorf("CPU must be greater than zero")
+	}
+
+	if config.Memory == 0 {
+		return fmt.Errorf("Memory must be greater than zero")
+	}
+
 	return nil
 }
