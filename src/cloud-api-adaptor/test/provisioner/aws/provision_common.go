@@ -434,10 +434,43 @@ func (v *Vpc) createVpc() error {
 	return nil
 }
 
-// createSubnet creates the VPC subnet
+// getPodvmInstanceTypeAZs returns the availability zones where the podvm instance type is offered.
+func (v *Vpc) getPodvmInstanceTypeAZs() ([]string, error) {
+	result, err := v.Client.DescribeInstanceTypeOfferings(context.TODO(),
+		&ec2.DescribeInstanceTypeOfferingsInput{
+			LocationType: ec2types.LocationTypeAvailabilityZone,
+			Filters: []ec2types.Filter{
+				{
+					Name:   aws.String("instance-type"),
+					Values: []string{v.PodvmInstanceType},
+				},
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	azs := make([]string, 0, len(result.InstanceTypeOfferings))
+	for _, offering := range result.InstanceTypeOfferings {
+		azs = append(azs, *offering.Location)
+	}
+	if len(azs) == 0 {
+		return nil, fmt.Errorf("instance type %s is not available in any AZ in region %s", v.PodvmInstanceType, v.Region)
+	}
+
+	return azs, nil
+}
+
+// createSubnet creates the VPC subnet in an AZ that supports the podvm instance type.
 func (v *Vpc) createSubnet() error {
+	azs, err := v.getPodvmInstanceTypeAZs()
+	if err != nil {
+		return fmt.Errorf("finding AZs for instance type %s: %w", v.PodvmInstanceType, err)
+	}
+
 	subnet, err := v.Client.CreateSubnet(context.TODO(),
 		&ec2.CreateSubnetInput{
+			AvailabilityZone:  aws.String(azs[0]),
 			VpcId:             aws.String(v.ID),
 			CidrBlock:         aws.String("10.0.0.0/25"),
 			TagSpecifications: defaultTagSpecifications(v.BaseName+"-subnet", ec2types.ResourceTypeSubnet),
