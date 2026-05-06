@@ -1017,9 +1017,11 @@ func (i *AMIImage) registerImage(imageName string) error {
 				SnapshotId:          aws.String(i.EBSSnapshotID),
 			},
 		}},
+		BootMode:           ec2types.BootModeValuesUefi,
 		Description:        aws.String(i.Description),
 		EnaSupport:         aws.Bool(true),
 		RootDeviceName:     aws.String(i.RootDeviceName),
+		TpmSupport:         ec2types.TpmSupportValuesV20,
 		VirtualizationType: aws.String("hvm"),
 		TagSpecifications:  defaultTagSpecifications(i.BaseName+"-img", ec2types.ResourceTypeImage),
 	})
