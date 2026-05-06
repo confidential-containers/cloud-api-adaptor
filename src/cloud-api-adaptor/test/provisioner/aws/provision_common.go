@@ -68,6 +68,7 @@ type Vpc struct {
 	Client            *ec2.Client
 	ID                string
 	InternetGatewayID string
+	PodvmInstanceType string
 	Region            string
 	RouteTableID      string
 	SecurityGroupID   string
@@ -323,7 +324,7 @@ func (a *AWSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config)
 		"pause_image":          a.PauseImage,
 		"podvm_launchtemplate": "",
 		"podvm_ami":            a.Image.ID,
-		"podvm_instance_type":  "t3.medium",
+		"podvm_instance_type":  a.Vpc.PodvmInstanceType,
 		"sg_ids":               a.Vpc.SecurityGroupID, // TODO: what other SG needed?
 		"subnet_id":            a.Vpc.SubnetID,
 		"ssh_kp_name":          a.SSHKpName,
@@ -400,11 +401,17 @@ func NewVpc(client *ec2.Client, properties map[string]string) *Vpc {
 		cidrBlock = "10.0.0.0/24"
 	}
 
+	podvmInstanceType := properties["podvm_instance_type"]
+	if podvmInstanceType == "" {
+		podvmInstanceType = "t3.medium"
+	}
+
 	return &Vpc{
 		BaseName:          properties["resources_basename"],
 		CidrBlock:         cidrBlock,
 		Client:            client,
 		ID:                properties["aws_vpc_id"],
+		PodvmInstanceType: podvmInstanceType,
 		Region:            properties["aws_region"],
 		SecurityGroupID:   properties["aws_vpc_sg_id"],
 		SubnetID:          properties["aws_vpc_subnet_id"],
