@@ -513,9 +513,21 @@ func (v *Vpc) createSecondarySubnet() error {
 	}
 
 	primarySubnetAz := *subnets.Subnets[0].AvailabilityZone
-	secondarySubnetAz := v.Region + "a"
-	if secondarySubnetAz == primarySubnetAz {
-		secondarySubnetAz = v.Region + "b"
+
+	azs, err := v.getPodvmInstanceTypeAZs()
+	if err != nil {
+		return fmt.Errorf("finding AZs for instance type %s: %w", v.PodvmInstanceType, err)
+	}
+
+	secondarySubnetAz := ""
+	for _, az := range azs {
+		if az != primarySubnetAz {
+			secondarySubnetAz = az
+			break
+		}
+	}
+	if secondarySubnetAz == "" {
+		return fmt.Errorf("no secondary AZ available for instance type %s (primary AZ: %s)", v.PodvmInstanceType, primarySubnetAz)
 	}
 
 	subnet, err := v.Client.CreateSubnet(context.TODO(),
