@@ -136,29 +136,32 @@ func (r *PeerPodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *PeerPodReconciler) cloudConfigsGetter() error {
-	peerpodscm := corev1.ConfigMap{}
-	peerpodssecret := corev1.Secret{}
-	ns := os.Getenv("PEERPODS_NAMESPACE")
-	if ns == "" {
+	return loadCloudConfigs(context.TODO(), r.Client, os.Getenv("PEERPODS_NAMESPACE"))
+}
+
+func loadCloudConfigs(ctx context.Context, k client.Reader, namespace string) error {
+	if namespace == "" {
 		return fmt.Errorf("PEERPODS_NAMESPACE is not set")
 	}
 
+	cm := corev1.ConfigMap{}
+	secret := corev1.Secret{}
+
 	var cmErr error
-	if cmErr = r.Get(context.TODO(), types.NamespacedName{Name: ppConfigMap, Namespace: ns}, &peerpodscm); cmErr == nil {
-		// set all configs as env vars to make sure all the required vars for auth are set
-		for k, v := range peerpodscm.Data {
+	if cmErr = k.Get(ctx, types.NamespacedName{Name: ppConfigMap, Namespace: namespace}, &cm); cmErr == nil {
+		for k, v := range cm.Data {
 			os.Setenv(k, v)
 		}
 	}
 
 	var secretErr error
-	if secretErr = r.Get(context.TODO(), types.NamespacedName{Name: ppSecret, Namespace: ns}, &peerpodssecret); secretErr == nil {
-		for k, v := range peerpodssecret.Data {
+	if secretErr = k.Get(ctx, types.NamespacedName{Name: ppSecret, Namespace: namespace}, &secret); secretErr == nil {
+		for k, v := range secret.Data {
 			os.Setenv(k, string(v))
 		}
 	}
 
-	if peerpodscm.Data == nil && peerpodssecret.Data == nil {
+	if cm.Data == nil && secret.Data == nil {
 		return fmt.Errorf("ConfigMap Error: %v, Secret Error: %v", cmErr, secretErr)
 	}
 
@@ -169,7 +172,7 @@ func GetProvider(cloudName string) (provider.Provider, error) {
 	if cloud := provider.Get(cloudName); cloud != nil {
 		// Load cloud provider configuration from environment variables.
 		//
-		// cloudConfigsGetter() has already populated os.Environ() with values from
+		// loadCloudConfigs() has already populated os.Environ() with values from
 		// the peer-pods-cm ConfigMap and peer-pods-secret Secret (e.g., AZURE_CLIENT_ID,
 		// AWS_ACCESS_KEY_ID, etc.).
 		//

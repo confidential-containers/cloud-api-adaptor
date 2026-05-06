@@ -12,10 +12,32 @@ The PeerPod CR is owned by the original Pod object. Upon Pod deletion [backgroun
 ### Deletion time:
 Normal case: When remote hypervisor will get the stopVM request (upon Pod deletion) it will delete the pod VM instance and if it succeeds it will remove the finalizer attached to the owned PeerPod object so it can then be cleaned by the GC.
 
-Failure case: If for any reason cloud-api-adaptor doesn’t honor the delete request or it fails to perform deletion, the finalizer is not removed. Hence, when PeerPod controller gets a delete event for the owned PeerPod object by the GC and it still has the finalizer, it will comprehend that it needs to perform the deletion of pod VM resource by itself, based on the PeerPod CR fields.
+Failure case: If for any reason cloud-api-adaptor doesn't honor the delete request or it fails to perform deletion, the finalizer is not removed. Hence, when PeerPod controller gets a delete event for the owned PeerPod object by the GC and it still has the finalizer, it will comprehend that it needs to perform the deletion of pod VM resource by itself, based on the PeerPod CR fields.
+
+### Orphan VM garbage collection
+If the cloud-api-adaptor crashes after creating a VM but before the corresponding PeerPod CR is written, the VM becomes an orphan with no Kubernetes object tracking it. The peerpod-ctrl includes a periodic garbage collector that detects and deletes these orphan VMs.
+
+**How it works:**
+1. At startup, the cloud-api-adaptor tags every VM it creates with a `caa-cluster-uid` tag containing the `kube-system` namespace UID, uniquely identifying the cluster.
+2. The garbage collector periodically calls `ListInstances` on the cloud provider to discover all VMs tagged with this cluster's UID.
+3. It compares the discovered VMs against existing PeerPod CRs. Any VM without a matching PeerPod CR is considered an orphan and deleted.
+
+**Grace period:** To avoid deleting VMs that were just created but whose PeerPod CR has not yet been written, the GC applies a 10-minute grace period. Instances are only deleted after the GC has observed them as orphan candidates for at least 10 minutes across consecutive cycles (using only the controller's local clock, avoiding any cross-clock dependency with the cloud provider). The 10-minute default provides a safety margin for large GPU instances that can take 5+ minutes to boot.
+
+**Timing:** An orphan is deleted on the first GC cycle after both (a) it has been discovered and (b) the grace period has elapsed since discovery. With defaults (`GC_INTERVAL=30m`, grace period 10m), deletion occurs on the cycle after first discovery (~30m), since 30m > 10m. Worst-case time from VM creation to deletion is approximately 2x `GC_INTERVAL` (one interval to discover, one to delete).
+
+**Configuration** via the `peer-pods-cm` ConfigMap (hot-reloadable, no restart needed):
+
+| Key | Default | Description |
+|---|---|---|
+| `ENABLE_GC` | `true` | Set to `false` to disable orphan VM garbage collection |
+| `GC_INTERVAL` | `30m` | How often the GC runs (Go duration string, must be > 0) |
+| `GC_GRACE_PERIOD` | `10m` | How long an orphan candidate must be observed before deletion (Go duration string, must be > 0) |
+
+**Provider support:** The garbage collector requires the cloud provider to implement the `InstanceLister` interface. Currently supported: AWS. Providers that do not implement this interface are gracefully skipped.
 
 ## Getting Started
-You’ll need a Kubernetes cluster on a [supported provider](../../README.md#supported-providers) to run against (e.g. you can use [Libvirt for development](../cloud-api-adaptor/libvirt)).
+You'll need a Kubernetes cluster on a [supported provider](../../README.md#supported-providers) to run against (e.g. you can use [Libvirt for development](../cloud-api-adaptor/libvirt)).
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
 ### Running on the cluster
