@@ -332,3 +332,17 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
+  # Run BYOM e2e tests if pull request labeled 'test_e2e_byom'
+  byom:
+    name: byom
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_byom')
+    needs: [podvm_ubuntu_amd64, caa_image_amd64]
+    uses: ./.github/workflows/e2e_byom.yaml
+    with:
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
+      podvm_image: ${{ needs.podvm_ubuntu_amd64.outputs.byom_e2e_image }}
+      git_ref: ${{ inputs.git_ref }}
