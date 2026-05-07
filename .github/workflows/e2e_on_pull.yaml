@@ -38,7 +38,8 @@ jobs:
     if: |
      contains(github.event.pull_request.labels.*.name, 'test_e2e_aws') ||
      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
-     contains(github.event.pull_request.labels.*.name, 'test_e2e_docker')
+     contains(github.event.pull_request.labels.*.name, 'test_e2e_docker') ||
+     contains(github.event.pull_request.labels.*.name, 'test_e2e_byom')
     steps:
       - run: "true"
   e2e:
