@@ -1,0 +1,132 @@
+# (C) Copyright Confidential Containers Contributors 2024.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Run BYOM (Bring Your Own Machine) e2e tests.
+name: (Callable) BYOM e2e tests
+
+on:
+  workflow_call:
+    inputs:
+      podvm_image:
+        required: true
+        type: string
+      caa_image:
+        type: string
+        required: true
+      git_ref:
+        default: 'main'
+        description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
+        required: false
+        type: string
+
+env:
+  CLOUD_PROVIDER: byom
+  DEBIAN_FRONTEND: noninteractive
+
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
+permissions: {}
+
+jobs:
+  test-byom:
+    name: "BYOM e2e tests"
+    runs-on: ubuntu-24.04
+    env:
+      CAA_IMAGE: "${{ inputs.caa_image }}"
+      BYOM_PODVM_IMAGE: "${{ inputs.podvm_image }}"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.git_ref }}
+          persist-credentials: false
+
+      - name: Rebase the code
+        if: github.event_name == 'pull_request_target'
+        working-directory: ./
+        run: |
+          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
+
+      - name: Remove unnecessary directories to free up space
+        working-directory: ./
+        run: |
+          sudo ./hack/ci-helper.sh clean-up-runner
+
+      - name: Read properties from versions.yaml
+        run: |
+          sudo snap install yq
+          go_version="$(yq '.tools.golang' versions.yaml)"
+          [ -n "$go_version" ]
+          {
+            echo "GO_VERSION=${go_version}"
+            echo "HELM_VERSION=$(yq -e '.tools.helm.version' versions.yaml)"
+            echo "HELM_CHECKSUM=$(yq -e '.tools.helm.sha256' versions.yaml)"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install Helm
+        run: |
+          curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
+          tar -xzf helm.tar.gz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          rm -rf helm.tar.gz linux-amd64
+          helm version
+
+      - name: Generate SSH keys for BYOM
+        run: |
+          mkdir -p "${HOME}/.ssh"
+          ssh-keygen -t rsa -b 4096 -f "${HOME}/.ssh/id_rsa" -N "" -C "byom-e2e-test"
+          echo "SSH_SECRET_PRIV_KEY_PATH=${HOME}/.ssh/id_rsa" >> "$GITHUB_ENV"
+          echo "SSH_SECRET_PUB_KEY_PATH=${HOME}/.ssh/id_rsa.pub" >> "$GITHUB_ENV"
+
+      - name: Config BYOM
+        run: |
+          # Copy the default properties file
+          cp test/provisioner/byom/provision_byom.properties byom.properties
+
+          # Split CAA_IMAGE into CAA_IMAGE_NAME and CAA_IMAGE_TAG
+          CAA_IMAGE_TAG="${CAA_IMAGE##*:}"
+          CAA_IMAGE_NAME="${CAA_IMAGE%:*}"
+
+          # Replace values that need to be changed
+          sed -i "s|^BYOM_PODVM_IMAGE=.*|BYOM_PODVM_IMAGE=\"${BYOM_PODVM_IMAGE}\"|" byom.properties
+          sed -i "s|^SSH_SECRET_PRIV_KEY_PATH=.*|SSH_SECRET_PRIV_KEY_PATH=\"${SSH_SECRET_PRIV_KEY_PATH}\"|" byom.properties
+          sed -i "s|^SSH_SECRET_PUB_KEY_PATH=.*|SSH_SECRET_PUB_KEY_PATH=\"${SSH_SECRET_PUB_KEY_PATH}\"|" byom.properties
+          sed -i "s|^CAA_IMAGE=.*|CAA_IMAGE=\"${CAA_IMAGE_NAME}\"|" byom.properties
+          sed -i "s|^CAA_IMAGE_TAG=.*|CAA_IMAGE_TAG=\"${CAA_IMAGE_TAG}\"|" byom.properties
+
+          # For debugging
+          echo "::group::byom.properties"
+          cat byom.properties
+          echo "::endgroup::"
+
+      - name: Run tests
+        id: runTests
+        run: |
+          export CLOUD_PROVIDER=byom
+          export DEPLOY_KBS=false
+          export TEST_PROVISION=yes
+          export TEST_TEARDOWN=no
+          export TEST_PROVISION_FILE="$PWD/byom.properties"
+          export TEST_E2E_TIMEOUT="50m"
+
+          make test-e2e
+
+      - name: Debug tests failure
+        if: failure() && steps.runTests.outcome == 'failure'
+        working-directory: ./
+        run: |
+          export KUBECONFIG="${HOME}/kube_peer-pods"
+          kind get kubeconfig -n "peer-pods" > "$KUBECONFIG"
+          ./hack/ci-e2e-debug-fail.sh
+        # Avoid running with `set -e` as command fails should be allowed
+        shell: bash {0}
+
