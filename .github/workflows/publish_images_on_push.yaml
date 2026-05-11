@@ -55,10 +55,8 @@ jobs:
       image_tags: latest,${{ github.sha }}
       git_ref: ${{ github.sha }}
       registry: ${{ inputs.registry != '' && inputs.registry || (github.repository == 'confidential-containers/cloud-api-adaptor' && 'quay.io/confidential-containers' || format('ghcr.io/{0}', github.repository_owner)) }}
-
     permissions:
-      contents: read
-      packages: write
+      packages: write  # Required for pushing to GitHub Container Registry
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
