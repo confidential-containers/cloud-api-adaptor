@@ -160,8 +160,6 @@ func (s *server) Shutdown() error {
 		close(s.stopCh)
 	})
 
-	_ = k8sops.RemoveExtendedResources()
-
 	return s.cloudService.Teardown()
 }
 
