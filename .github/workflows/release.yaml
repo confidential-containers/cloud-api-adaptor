@@ -40,8 +40,7 @@ jobs:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
     permissions:
-      contents: read
-      packages: write
+      packages: write  # Required for pushing to GitHub Container Registry
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
