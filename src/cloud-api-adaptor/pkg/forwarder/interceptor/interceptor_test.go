@@ -18,52 +18,31 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/agentproto"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/agentproto/testutil"
 )
 
-type mockRedirector struct {
-	agentproto.Redirector
-	createContainerCalled bool
-	startContainerCalled  bool
-	removeContainerCalled bool
-	createSandboxCalled   bool
-	destroySandboxCalled  bool
-	createContainerError  error
-	startContainerError   error
-	removeContainerError  error
-	createSandboxError    error
-	destroySandboxError   error
+type testRedirector struct {
+	*testutil.MockAgentServiceClient
+	*testutil.MockHealthServiceClient
 }
 
-func (m *mockRedirector) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*emptypb.Empty, error) {
-	m.createContainerCalled = true
-	return &emptypb.Empty{}, m.createContainerError
-}
-
-func (m *mockRedirector) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*emptypb.Empty, error) {
-	m.startContainerCalled = true
-	return &emptypb.Empty{}, m.startContainerError
-}
-
-func (m *mockRedirector) RemoveContainer(ctx context.Context, req *pb.RemoveContainerRequest) (*emptypb.Empty, error) {
-	m.removeContainerCalled = true
-	return &emptypb.Empty{}, m.removeContainerError
-}
-
-func (m *mockRedirector) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (*emptypb.Empty, error) {
-	m.createSandboxCalled = true
-	return &emptypb.Empty{}, m.createSandboxError
-}
-
-func (m *mockRedirector) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (*emptypb.Empty, error) {
-	m.destroySandboxCalled = true
-	return &emptypb.Empty{}, m.destroySandboxError
-}
-
-func (m *mockRedirector) Close() error {
+func (r *testRedirector) Connect(context.Context) error {
 	return nil
+}
+
+func (r *testRedirector) Close() error {
+	return nil
+}
+
+func newTestInterceptor(mock *testutil.MockAgentServiceClient, nsPath string) *interceptor {
+	return &interceptor{
+		Redirector: &testRedirector{
+			MockAgentServiceClient:  mock,
+			MockHealthServiceClient: &testutil.MockHealthServiceClient{},
+		},
+		nsPath: nsPath,
+	}
 }
 
 func TestNewInterceptor(t *testing.T) {
@@ -137,11 +116,8 @@ func TestIsTargetPath(t *testing.T) {
 func TestInterceptorCreateContainer(t *testing.T) {
 	t.Run("adds network namespace to container spec", func(t *testing.T) {
 		nsPath := "/run/netns/podns"
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     nsPath,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, nsPath)
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -156,7 +132,7 @@ func TestInterceptorCreateContainer(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 
 		// Verify network namespace was added
 		found := false
@@ -173,11 +149,8 @@ func TestInterceptorCreateContainer(t *testing.T) {
 		tmpDir := t.TempDir()
 		mountSource := filepath.Join(tmpDir, "nonexistent", "mount")
 
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -198,7 +171,7 @@ func TestInterceptorCreateContainer(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 
 		// Verify directory was created
 		_, err = os.Stat(mountSource)
@@ -210,11 +183,8 @@ func TestInterceptorCreateContainer(t *testing.T) {
 		mountSource := filepath.Join(tmpDir, "existing")
 		require.NoError(t, os.MkdirAll(mountSource, 0o755))
 
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -235,15 +205,12 @@ func TestInterceptorCreateContainer(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 
 	t.Run("handles non-bind mount types", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -264,18 +231,15 @@ func TestInterceptorCreateContainer(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 
 	t.Run("propagates redirector errors", func(t *testing.T) {
 		expectedErr := assert.AnError
-		mock := &mockRedirector{
-			createContainerError: expectedErr,
+		mock := &testutil.MockAgentServiceClient{
+			CreateContainerErr: expectedErr,
 		}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -291,16 +255,14 @@ func TestInterceptorCreateContainer(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Equal(t, expectedErr, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 }
 
 func TestInterceptorStartContainer(t *testing.T) {
 	t.Run("successfully starts container", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.StartContainerRequest{
 			ContainerId: "test-container",
@@ -310,17 +272,15 @@ func TestInterceptorStartContainer(t *testing.T) {
 		_, err := i.StartContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.startContainerCalled)
+		assert.True(t, mock.StartContainerCalled)
 	})
 
 	t.Run("propagates redirector errors", func(t *testing.T) {
 		expectedErr := assert.AnError
-		mock := &mockRedirector{
-			startContainerError: expectedErr,
+		mock := &testutil.MockAgentServiceClient{
+			StartContainerErr: expectedErr,
 		}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.StartContainerRequest{
 			ContainerId: "test-container",
@@ -331,16 +291,14 @@ func TestInterceptorStartContainer(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Equal(t, expectedErr, err)
-		assert.True(t, mock.startContainerCalled)
+		assert.True(t, mock.StartContainerCalled)
 	})
 }
 
 func TestInterceptorRemoveContainer(t *testing.T) {
 	t.Run("successfully removes container", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.RemoveContainerRequest{
 			ContainerId: "test-container",
@@ -350,17 +308,15 @@ func TestInterceptorRemoveContainer(t *testing.T) {
 		_, err := i.RemoveContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.removeContainerCalled)
+		assert.True(t, mock.RemoveContainerCalled)
 	})
 
 	t.Run("propagates redirector errors", func(t *testing.T) {
 		expectedErr := assert.AnError
-		mock := &mockRedirector{
-			removeContainerError: expectedErr,
+		mock := &testutil.MockAgentServiceClient{
+			RemoveContainerErr: expectedErr,
 		}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.RemoveContainerRequest{
 			ContainerId: "test-container",
@@ -371,16 +327,14 @@ func TestInterceptorRemoveContainer(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Equal(t, expectedErr, err)
-		assert.True(t, mock.removeContainerCalled)
+		assert.True(t, mock.RemoveContainerCalled)
 	})
 }
 
 func TestInterceptorCreateSandbox(t *testing.T) {
 	t.Run("successfully creates sandbox", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.CreateSandboxRequest{
 			Hostname:  "test-host",
@@ -391,14 +345,12 @@ func TestInterceptorCreateSandbox(t *testing.T) {
 		_, err := i.CreateSandbox(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createSandboxCalled)
+		assert.True(t, mock.CreateSandboxCalled)
 	})
 
 	t.Run("removes DNS settings from request", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.CreateSandboxRequest{
 			Hostname:  "test-host",
@@ -410,15 +362,13 @@ func TestInterceptorCreateSandbox(t *testing.T) {
 		_, err := i.CreateSandbox(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createSandboxCalled)
+		assert.True(t, mock.CreateSandboxCalled)
 		assert.Nil(t, req.Dns, "Expected DNS to be removed from request")
 	})
 
 	t.Run("handles empty DNS settings", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.CreateSandboxRequest{
 			Hostname:  "test-host",
@@ -430,17 +380,15 @@ func TestInterceptorCreateSandbox(t *testing.T) {
 		_, err := i.CreateSandbox(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createSandboxCalled)
+		assert.True(t, mock.CreateSandboxCalled)
 	})
 
 	t.Run("propagates redirector errors", func(t *testing.T) {
 		expectedErr := assert.AnError
-		mock := &mockRedirector{
-			createSandboxError: expectedErr,
+		mock := &testutil.MockAgentServiceClient{
+			CreateSandboxErr: expectedErr,
 		}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.CreateSandboxRequest{
 			Hostname:  "test-host",
@@ -452,16 +400,14 @@ func TestInterceptorCreateSandbox(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Equal(t, expectedErr, err)
-		assert.True(t, mock.createSandboxCalled)
+		assert.True(t, mock.CreateSandboxCalled)
 	})
 }
 
 func TestInterceptorDestroySandbox(t *testing.T) {
 	t.Run("successfully destroys sandbox", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.DestroySandboxRequest{}
 
@@ -469,17 +415,15 @@ func TestInterceptorDestroySandbox(t *testing.T) {
 		_, err := i.DestroySandbox(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.destroySandboxCalled)
+		assert.True(t, mock.DestroySandboxCalled)
 	})
 
 	t.Run("propagates redirector errors", func(t *testing.T) {
 		expectedErr := assert.AnError
-		mock := &mockRedirector{
-			destroySandboxError: expectedErr,
+		mock := &testutil.MockAgentServiceClient{
+			DestroySandboxErr: expectedErr,
 		}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.DestroySandboxRequest{}
 
@@ -488,7 +432,7 @@ func TestInterceptorDestroySandbox(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Equal(t, expectedErr, err)
-		assert.True(t, mock.destroySandboxCalled)
+		assert.True(t, mock.DestroySandboxCalled)
 	})
 }
 
@@ -500,11 +444,8 @@ func TestInterceptorWithAnnotations(t *testing.T) {
 		mountSource := filepath.Join(tmpDir, "actual-mount")
 		require.NoError(t, os.MkdirAll(mountSource, 0o755))
 
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -528,7 +469,7 @@ func TestInterceptorWithAnnotations(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 
 	t.Run("handles empty volume target path annotation", func(t *testing.T) {
@@ -536,11 +477,8 @@ func TestInterceptorWithAnnotations(t *testing.T) {
 		mountSource := filepath.Join(tmpDir, "volume")
 		require.NoError(t, os.MkdirAll(mountSource, 0o755))
 
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -564,7 +502,7 @@ func TestInterceptorWithAnnotations(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 
 	t.Run("handles missing volume target path annotation", func(t *testing.T) {
@@ -572,11 +510,8 @@ func TestInterceptorWithAnnotations(t *testing.T) {
 		mountSource := filepath.Join(tmpDir, "volume")
 		require.NoError(t, os.MkdirAll(mountSource, 0o755))
 
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -598,7 +533,7 @@ func TestInterceptorWithAnnotations(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 }
 
@@ -622,11 +557,8 @@ func TestInterceptorCreateContainerWithMountErrors(t *testing.T) {
 		// Try to create a subdirectory in the non-writable directory
 		mountSource := filepath.Join(restrictedDir, "subdir", "test-mount-should-fail")
 
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -648,7 +580,7 @@ func TestInterceptorCreateContainerWithMountErrors(t *testing.T) {
 		_, err = i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 
 	t.Run("handles multiple mounts with mixed types", func(t *testing.T) {
@@ -656,11 +588,8 @@ func TestInterceptorCreateContainerWithMountErrors(t *testing.T) {
 		bindMount := filepath.Join(tmpDir, "bind")
 		require.NoError(t, os.MkdirAll(bindMount, 0o755))
 
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -689,15 +618,12 @@ func TestInterceptorCreateContainerWithMountErrors(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 
 	t.Run("handles container with no mounts", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -713,15 +639,12 @@ func TestInterceptorCreateContainerWithMountErrors(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 
 	t.Run("handles container with nil mounts", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -737,18 +660,15 @@ func TestInterceptorCreateContainerWithMountErrors(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 }
 
 func TestInterceptorCreateContainerWithNamespaces(t *testing.T) {
 	t.Run("adds network namespace to existing namespaces", func(t *testing.T) {
 		nsPath := "/run/netns/podns"
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     nsPath,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, nsPath)
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -772,7 +692,7 @@ func TestInterceptorCreateContainerWithNamespaces(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 
 		// Verify network namespace was added
 		assert.Len(t, req.OCI.Linux.Namespaces, 3)
@@ -787,11 +707,8 @@ func TestInterceptorCreateContainerWithNamespaces(t *testing.T) {
 	})
 
 	t.Run("handles empty namespace path", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -806,7 +723,7 @@ func TestInterceptorCreateContainerWithNamespaces(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 
 		// Verify network namespace was added even with empty path
 		found := false
@@ -823,10 +740,8 @@ func TestInterceptorCreateContainerWithNamespaces(t *testing.T) {
 
 func TestInterceptorCreateSandboxWithDNS(t *testing.T) {
 	t.Run("handles single DNS server", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.CreateSandboxRequest{
 			Hostname:  "test-host",
@@ -838,15 +753,13 @@ func TestInterceptorCreateSandboxWithDNS(t *testing.T) {
 		_, err := i.CreateSandbox(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createSandboxCalled)
+		assert.True(t, mock.CreateSandboxCalled)
 		assert.Nil(t, req.Dns)
 	})
 
 	t.Run("handles many DNS servers", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.CreateSandboxRequest{
 			Hostname:  "test-host",
@@ -858,15 +771,13 @@ func TestInterceptorCreateSandboxWithDNS(t *testing.T) {
 		_, err := i.CreateSandbox(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createSandboxCalled)
+		assert.True(t, mock.CreateSandboxCalled)
 		assert.Nil(t, req.Dns)
 	})
 
 	t.Run("handles nil DNS", func(t *testing.T) {
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "")
 
 		req := &pb.CreateSandboxRequest{
 			Hostname:  "test-host",
@@ -878,7 +789,7 @@ func TestInterceptorCreateSandboxWithDNS(t *testing.T) {
 		_, err := i.CreateSandbox(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createSandboxCalled)
+		assert.True(t, mock.CreateSandboxCalled)
 		assert.Nil(t, req.Dns)
 	})
 }
@@ -891,11 +802,8 @@ func TestInterceptorWithComplexAnnotations(t *testing.T) {
 		mountSource := filepath.Join(tmpDir, "mount")
 		require.NoError(t, os.MkdirAll(mountSource, 0o755))
 
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -919,7 +827,7 @@ func TestInterceptorWithComplexAnnotations(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 
 	t.Run("handles annotation with single path and comma", func(t *testing.T) {
@@ -928,11 +836,8 @@ func TestInterceptorWithComplexAnnotations(t *testing.T) {
 		mountSource := filepath.Join(tmpDir, "mount")
 		require.NoError(t, os.MkdirAll(mountSource, 0o755))
 
-		mock := &mockRedirector{}
-		i := &interceptor{
-			Redirector: mock,
-			nsPath:     "/run/netns/podns",
-		}
+		mock := &testutil.MockAgentServiceClient{}
+		i := newTestInterceptor(mock, "/run/netns/podns")
 
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
@@ -956,7 +861,7 @@ func TestInterceptorWithComplexAnnotations(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 
 		require.NoError(t, err)
-		assert.True(t, mock.createContainerCalled)
+		assert.True(t, mock.CreateContainerCalled)
 	})
 }
 
