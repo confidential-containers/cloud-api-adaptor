@@ -30,7 +30,7 @@ tools:
   cert-manager: v1.15.3
   bats: 1.10.0
   iptables-wrapper: bfef9e5087a198b50a4124bb9ce9d2c7c99025dd
-  golang: 1.25.9
+  golang: 1.25.10
   kcli: 99.0.202507200957
   mkosi: v26
   protoc: 3.16.0

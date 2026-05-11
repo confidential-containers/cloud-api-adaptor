@@ -1,6 +1,6 @@
 module github.com/confidential-containers/cloud-api-adaptor/src/csi-wrapper
 
-go 1.25.9
+go 1.25.10
 
 require (
 	github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor v0.0.0-00010101000000-000000000000

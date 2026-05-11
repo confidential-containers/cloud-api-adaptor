@@ -7,15 +7,15 @@
 ARG SOURCE_FROM=remote
 
 ##### Builder Dev Image #####
-# golang:1.25.9
-FROM --platform=${BUILDPLATFORM} golang@sha256:a95d3d115ec2643a014c9539962dcecba297fb4ed5e5cbfab84cf726327e8b8c AS builder-local
+# golang:1.25.10
+FROM --platform=${BUILDPLATFORM} golang@sha256:3965b9511a9bed199f0b4eb146f99c31971a5c0adb3240d9f25e233cbd9e01c8 AS builder-local
 WORKDIR /src
 COPY csi-wrapper ./cloud-api-adaptor/src/csi-wrapper/
 COPY cloud-api-adaptor ./cloud-api-adaptor/src/cloud-api-adaptor
 
 ##### Builder Release Image #####
-# golang:1.25.9
-FROM --platform=${BUILDPLATFORM} golang@sha256:a95d3d115ec2643a014c9539962dcecba297fb4ed5e5cbfab84cf726327e8b8c AS builder-remote
+# golang:1.25.10
+FROM --platform=${BUILDPLATFORM} golang@sha256:3965b9511a9bed199f0b4eb146f99c31971a5c0adb3240d9f25e233cbd9e01c8 AS builder-remote
 ARG BINARY
 ARG CAA_SRC="https://github.com/confidential-containers/cloud-api-adaptor"
 ARG CAA_SRC_REF="main"
