@@ -13,11 +13,13 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder/interceptor/cdhpb"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/agentproto"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/agentproto/testutil"
 )
@@ -43,6 +45,50 @@ func newTestInterceptor(mock *testutil.MockAgentServiceClient, nsPath string) *i
 		},
 		nsPath: nsPath,
 	}
+}
+
+// mockRedirector is used by cloud-volumes tests added in upstream after this PR was approved.
+type mockRedirector struct {
+	agentproto.Redirector
+	createContainerCalled bool
+	startContainerCalled  bool
+	removeContainerCalled bool
+	createSandboxCalled   bool
+	destroySandboxCalled  bool
+	createContainerError  error
+	startContainerError   error
+	removeContainerError  error
+	createSandboxError    error
+	destroySandboxError   error
+}
+
+func (m *mockRedirector) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*emptypb.Empty, error) {
+	m.createContainerCalled = true
+	return &emptypb.Empty{}, m.createContainerError
+}
+
+func (m *mockRedirector) StartContainer(ctx context.Context, req *pb.StartContainerRequest) (*emptypb.Empty, error) {
+	m.startContainerCalled = true
+	return &emptypb.Empty{}, m.startContainerError
+}
+
+func (m *mockRedirector) RemoveContainer(ctx context.Context, req *pb.RemoveContainerRequest) (*emptypb.Empty, error) {
+	m.removeContainerCalled = true
+	return &emptypb.Empty{}, m.removeContainerError
+}
+
+func (m *mockRedirector) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (*emptypb.Empty, error) {
+	m.createSandboxCalled = true
+	return &emptypb.Empty{}, m.createSandboxError
+}
+
+func (m *mockRedirector) DestroySandbox(ctx context.Context, req *pb.DestroySandboxRequest) (*emptypb.Empty, error) {
+	m.destroySandboxCalled = true
+	return &emptypb.Empty{}, m.destroySandboxError
+}
+
+func (m *mockRedirector) Close() error {
+	return nil
 }
 
 func TestNewInterceptor(t *testing.T) {
