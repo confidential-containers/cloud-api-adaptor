@@ -120,6 +120,10 @@ spec:
       securityContext:
         runAsNonRoot: false
       serviceAccountName: {{ .Values.namePrefix }}controller-manager
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       terminationGracePeriodSeconds: 10
       volumes:
       - name: ssh
