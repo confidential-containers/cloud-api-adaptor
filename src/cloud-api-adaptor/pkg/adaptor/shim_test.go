@@ -99,7 +99,10 @@ func TestShim(t *testing.T) {
 	}
 
 	provider := &mockProvider{primaryIP: primaryIP, secondaryIP: secondaryIP}
-	srv := NewServer(provider, serverConfig, workerNode)
+	srv, err := NewServer(provider, serverConfig, workerNode)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	serverDone := make(chan struct{})
 	go func() {

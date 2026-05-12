@@ -56,3 +56,14 @@ func (f *factory) New(serverName, socketPath string) AgentProxy {
 
 	return NewAgentProxy(serverName, socketPath, f.pauseImage, f.tlsConfig, f.caService, f.proxyTimeout)
 }
+
+// NewFactoryWithCAService creates a Factory using pre-built TLS material.
+// Use when TLS material has been loaded from persistent storage.
+func NewFactoryWithCAService(pauseImage string, tlsConfig *tlsutil.TLSConfig, proxyTimeout time.Duration, caService tlsutil.CAService) Factory {
+	return &factory{
+		pauseImage:   pauseImage,
+		tlsConfig:    tlsConfig,
+		caService:    caService,
+		proxyTimeout: proxyTimeout,
+	}
+}

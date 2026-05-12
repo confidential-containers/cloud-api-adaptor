@@ -159,7 +159,11 @@ func newServer(t *testing.T, socketPath, podsDir string) Server {
 		EnableCloudConfigVerify: false,
 		PeerPodsLimitPerNode:    -1,
 	}
-	return NewServer(provider, serverConfig, &mockWorkerNode{})
+	srv, err := NewServer(provider, serverConfig, &mockWorkerNode{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return srv
 }
 
 func testServerShutdown(t *testing.T, s Server, socketPath, dir string, serverErrCh chan error) {

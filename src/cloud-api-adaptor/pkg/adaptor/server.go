@@ -5,6 +5,7 @@ package adaptor
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/vminfo"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsutil"
 	pbPodVMInfo "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/proto/podvminfo"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
@@ -49,11 +51,31 @@ type server struct {
 	PeerPodsLimitPerNode    int
 }
 
-func NewServer(provider provider.Provider, cfg *cloud.ServerConfig, workerNode podnetwork.WorkerNode) Server {
+// buildAgentFactory constructs a proxy.Factory, using persistent TLS material
+// when configured, falling back to ephemeral material otherwise.
+func buildAgentFactory(cfg *cloud.ServerConfig) (proxy.Factory, error) {
+	if cfg.TLSConfig != nil && cfg.TLSMaterialPath != "" {
+		caService, clientCertPEM, clientKeyPEM, err := tlsutil.LoadOrCreateTLSMaterial(cfg.TLSMaterialPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load/create TLS material from %s: %w", cfg.TLSMaterialPath, err)
+		}
+		cfg.TLSConfig.CertData = clientCertPEM
+		cfg.TLSConfig.KeyData = clientKeyPEM
+		cfg.TLSConfig.CAData = caService.RootCertificate()
+		logger.Printf("using persistent TLS material from %s", cfg.TLSMaterialPath)
+		return proxy.NewFactoryWithCAService(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout, caService), nil
+	}
+	return proxy.NewFactory(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout), nil
+}
+
+func NewServer(provider provider.Provider, cfg *cloud.ServerConfig, workerNode podnetwork.WorkerNode) (Server, error) {
 
 	logger.Printf("server config: %#v", cfg)
 
-	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout)
+	agentFactory, err := buildAgentFactory(cfg)
+	if err != nil {
+		return nil, err
+	}
 	cloudService := cloud.NewService(provider, agentFactory, workerNode, cfg)
 	vmInfoService := vminfo.NewService(cloudService)
 
@@ -66,7 +88,7 @@ func NewServer(provider provider.Provider, cfg *cloud.ServerConfig, workerNode p
 		stopCh:                  make(chan struct{}),
 		enableCloudConfigVerify: cfg.EnableCloudConfigVerify,
 		PeerPodsLimitPerNode:    cfg.PeerPodsLimitPerNode,
-	}
+	}, nil
 }
 
 func (s *server) Start(ctx context.Context) (err error) {
