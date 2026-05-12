@@ -18,18 +18,6 @@ var startTime time.Time
 const DefaultCCRuntimeClassName string = "kata-remote"
 
 func StartupHandler(w http.ResponseWriter, r *http.Request) {
-	opened, err := checker.IsSocketOpen()
-	if err != nil {
-		logger.Printf("UDS not opened, because %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if !opened {
-		logger.Printf("UDS not opened")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	if !podsReadizProbesDone {
 		ret, err := checker.GetAllPeerPods(startTime)
 		podsReadizProbesDone = ret

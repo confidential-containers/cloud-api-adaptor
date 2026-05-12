@@ -122,7 +122,7 @@ func Test_GetAllPeerPods_BeFalse(t *testing.T) {
 	assert.False(t, result)
 }
 
-func Test_GetAllPeerPods_BeFalse_time_before(t *testing.T) {
+func Test_GetAllPeerPods_BeTrue_time_before(t *testing.T) {
 	os.Setenv("NODE_NAME", "node-name-1")
 
 	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionTrue, timeBefore)
@@ -133,8 +133,8 @@ func Test_GetAllPeerPods_BeFalse_time_before(t *testing.T) {
 	}
 	result, err := checker.GetAllPeerPods(timeStart)
 
-	assert.NotNil(t, err)
-	assert.False(t, result)
+	assert.NoError(t, err)
+	assert.True(t, result)
 }
 
 func Test_GetAllPeerPods_BeError(t *testing.T) {
