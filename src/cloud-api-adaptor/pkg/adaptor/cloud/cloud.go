@@ -21,6 +21,7 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/state"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
@@ -91,8 +92,151 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 	return nil
 }
 
-func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	serverConfig *ServerConfig) Service {
+func (s *cloudService) reconnectToInstance(ctx context.Context, st *state.SandboxState) error {
+	sid := sandboxID(st.SandboxID)
+
+	// 1. Validate network namespace still exists
+	if _, err := os.Stat(st.NetNSPath); err != nil {
+		return fmt.Errorf("netns gone: %w", err)
+	}
+
+	// 2. Get instance IP from state
+	if len(st.InstanceIPs) == 0 {
+		return fmt.Errorf("no cached IPs")
+	}
+	instanceIP := st.InstanceIPs[0]
+
+	// 3. Recreate socket path
+	podDir := filepath.Join(s.serverConfig.PodsDir, st.SandboxID)
+	socketPath := filepath.Join(podDir, proxy.SocketName)
+	os.Remove(socketPath) // Remove stale socket
+
+	// 4. Create new agent proxy
+	agentProxy := s.proxyFactory.New(st.ServerName, socketPath)
+
+	// 5. Build server URL
+	forwarderPort := st.ForwarderPort
+	if forwarderPort == "" {
+		forwarderPort = s.serverConfig.ForwarderPort
+	}
+	serverURL := &url.URL{
+		Scheme: "http",
+		Host:   net.JoinHostPort(instanceIP, forwarderPort),
+		Path:   forwarder.AgentURLPath,
+	}
+
+	// 6. Start proxy in background
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
+		if err := agentProxy.Start(ctx, serverURL); err != nil {
+			errCh <- err
+		}
+	}()
+
+	// 7. Wait for ready or timeout
+	// TODO: 30s may be too short for slow podvms under load, causing false
+	// negatives that orphan running instances. Consider using ProxyTimeout
+	// or a dedicated config, but note that longer timeouts block CAA startup
+	// (N sandboxes × timeout each, non-cancellable).
+	select {
+	case <-time.After(30 * time.Second):
+		if err := agentProxy.Shutdown(); err != nil {
+			logger.Printf("agentProxy shutdown failed: %v", err)
+		}
+		return fmt.Errorf("timeout")
+	case err := <-errCh:
+		return fmt.Errorf("proxy failed: %w", err)
+	case <-agentProxy.Ready():
+	}
+
+	// 8. Add to sandboxes map
+	s.mutex.Lock()
+	s.sandboxes[sid] = &sandbox{
+		id:           sid,
+		podName:      st.PodName,
+		podNamespace: st.PodNamespace,
+		netNSPath:    st.NetNSPath,
+		instanceID:   st.InstanceID,
+		instanceName: st.InstanceName,
+		agentProxy:   agentProxy,
+		restored:     true,
+		podNetwork:   st.PodNetwork,
+	}
+	s.mutex.Unlock()
+
+	return nil
+}
+
+func (s *cloudService) recoverSandboxes(ctx context.Context) {
+	sandboxIDs, err := s.stateManager.List()
+	if err != nil {
+		logger.Printf("failed to list sandboxes: %v", err)
+		return
+	}
+
+	if len(sandboxIDs) == 0 {
+		return
+	}
+
+	logger.Printf("recovering %d sandboxes", len(sandboxIDs))
+
+	var wg sync.WaitGroup
+	for _, sid := range sandboxIDs {
+		wg.Add(1)
+		go func(sid string) {
+			defer wg.Done()
+			s.restoreSandbox(ctx, sid)
+		}(sid)
+	}
+	wg.Wait()
+
+	logger.Printf("sandbox recovery complete")
+}
+
+func (s *cloudService) restoreSandbox(ctx context.Context, sid string) {
+	st, err := s.stateManager.Load(sid)
+	if err != nil {
+		logger.Printf("failed to load state for %s: %v (skipping)", sid, err)
+		return
+	}
+
+	// Advance podIndex past restored indices to avoid VXLAN ID collisions
+	// with tunnels that may still exist on the host.
+	if st.PodNetwork != nil {
+		podnetwork.SetMinPodIndex(st.PodNetwork.Index + 1)
+	}
+
+	if st.Running {
+		if err := s.reconnectToInstance(ctx, st); err != nil {
+			logger.Printf("failed to reconnect %s: %v (cleaning up stale state)", sid, err)
+			s.cleanupSandboxState(sid, st)
+		} else {
+			logger.Printf("reconnected sandbox %s", sid)
+		}
+		return
+	}
+
+	logger.Printf("cleaning up incomplete sandbox %s", sid)
+	s.cleanupSandboxState(sid, st)
+}
+
+func (s *cloudService) cleanupSandboxState(sid string, st *state.SandboxState) {
+	if st.PodNetwork != nil {
+		if err := s.workerNode.Teardown(st.NetNSPath, st.PodNetwork); err != nil {
+			logger.Printf("network teardown for %s failed (non-fatal): %v", sid, err)
+		}
+	}
+	if err := s.stateManager.Delete(sid); err != nil {
+		logger.Printf("state delete for %s failed (non-fatal): %v", sid, err)
+	}
+}
+
+func NewService(provider provider.Provider,
+	proxyFactory proxy.Factory,
+	workerNode podnetwork.WorkerNode,
+	serverConfig *ServerConfig,
+) Service {
 	var err error
 
 	s := &cloudService{
@@ -101,6 +245,7 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 		sandboxes:    map[sandboxID]*sandbox{},
 		serverConfig: serverConfig,
 		workerNode:   workerNode,
+		stateManager: state.NewManager(serverConfig.PodsDir),
 	}
 	s.cond = sync.NewCond(&s.mutex)
 	s.ppService, err = k8sops.NewPeerPodService()
@@ -108,10 +253,31 @@ func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNo
 		logger.Printf("failed to create PeerPodService, runtime failure may result in dangling resources %s", err)
 	}
 
+	// TODO: context.Background() makes recovery non-cancellable during shutdown.
+	// Requires passing parent context from server.Start() through NewService.
+	s.recoverSandboxes(context.Background())
+
 	return s
 }
 
 func (s *cloudService) Teardown() error {
+	// Gracefully shutdown all agent proxies to drain pending requests
+	s.mutex.Lock()
+	sandboxes := make([]*sandbox, 0, len(s.sandboxes))
+	for _, sb := range s.sandboxes {
+		sandboxes = append(sandboxes, sb)
+	}
+	s.mutex.Unlock()
+
+	for _, sb := range sandboxes {
+		if sb.agentProxy != nil {
+			logger.Printf("draining sandbox %s", sb.id)
+			if err := sb.agentProxy.Shutdown(); err != nil {
+				logger.Printf("error shutting down agent proxy for sandbox %s: %v", sb.id, err)
+			}
+		}
+	}
+
 	return s.provider.Teardown()
 }
 
@@ -177,6 +343,16 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	if sid == "" {
 		return nil, fmt.Errorf("empty sandbox id")
 	}
+
+	// Idempotent: if sandbox was restored, return existing socket path
+	s.mutex.Lock()
+	if existing, ok := s.sandboxes[sid]; ok && existing.restored {
+		socketPath := filepath.Join(s.serverConfig.PodsDir, string(sid), proxy.SocketName)
+		s.mutex.Unlock()
+		logger.Printf("sandbox %s already restored, returning existing socket", sid)
+		return &pb.CreateVMResponse{AgentSocketPath: socketPath}, nil
+	}
+	s.mutex.Unlock()
 
 	pod := util.GetPodName(req.Annotations)
 	if pod == "" {
@@ -326,6 +502,25 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		return nil, fmt.Errorf("adding sandbox: %w", err)
 	}
 
+	if err := s.stateManager.Save(&state.SandboxState{
+		Version:      1,
+		SandboxID:    string(sid),
+		PodName:      pod,
+		PodNamespace: namespace,
+		NetNSPath:    netNSPath,
+		Running:      false,
+		CreatedAt:    time.Now(),
+
+		// agentProxy info
+		ServerName:    putil.GenerateInstanceName(pod, string(sid), 63),
+		ForwarderPort: s.serverConfig.ForwarderPort,
+
+		// Network config for teardown
+		PodNetwork: podNetworkConfig,
+	}); err != nil {
+		logger.Printf("state save for %s failed (non-fatal): %v", sid, err)
+	}
+
 	logger.Printf("create a sandbox %s for pod %s in namespace %s (netns: %s)", req.Id, pod, namespace, sandbox.netNSPath)
 
 	return &pb.CreateVMResponse{AgentSocketPath: socketPath}, nil
@@ -343,6 +538,12 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	sandbox, err := s.getSandbox(sid)
 	if err != nil {
 		return nil, fmt.Errorf("getting sandbox: %w", err)
+	}
+
+	// Idempotent: skip if restored (instance already exists)
+	if sandbox.restored {
+		logger.Printf("sandbox %s already running (restored), skipping StartVM", sid)
+		return &pb.StartVMResponse{}, nil
 	}
 
 	instance, err := s.provider.CreateInstance(ctx, sandbox.podName, string(sid), sandbox.cloudConfig, sandbox.spec)
@@ -375,6 +576,10 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 
 	if err = s.setInstance(sid, instance.ID, instance.Name); err != nil {
 		return nil, fmt.Errorf("setting instance: %w", err)
+	}
+
+	if err = s.stateManager.UpdateInstance(string(sid), instance.ID, instance.Name, instance.IPs); err != nil {
+		logger.Printf("failed to persist instance info: %v", err)
 	}
 
 	logger.Printf("created an instance %s for sandbox %s", instance.Name, sid)
@@ -419,6 +624,11 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	case <-sandbox.agentProxy.Ready():
 	}
 
+	// After proxy ready — persist final state including DestinationIP from Setup()
+	if err := s.stateManager.SetReady(string(sid), sandbox.podNetwork); err != nil {
+		logger.Printf("failed to mark sandbox as ready: %v", err)
+	}
+
 	logger.Print("agent proxy is ready")
 
 	return &pb.StartVMResponse{}, nil
@@ -434,8 +644,10 @@ func (s *cloudService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.S
 		return nil, err
 	}
 
-	if err := sandbox.agentProxy.Shutdown(); err != nil {
-		logger.Printf("stopping agent proxy: %v", err)
+	if sandbox.agentProxy != nil {
+		if err := sandbox.agentProxy.Shutdown(); err != nil {
+			logger.Printf("stopping agent proxy: %v", err)
+		}
 	}
 
 	if err := s.provider.DeleteInstance(ctx, sandbox.instanceID); err != nil {
@@ -452,6 +664,11 @@ func (s *cloudService) StopVM(ctx context.Context, req *pb.StopVMRequest) (*pb.S
 
 	if err = s.removeSandbox(sid); err != nil {
 		logger.Printf("removing sandbox %s: %v", sid, err)
+	}
+
+	// After successful cleanup
+	if err = s.stateManager.Delete(string(sid)); err != nil {
+		logger.Printf("state delete for %s failed (non-fatal): %v", sid, err)
 	}
 
 	return &pb.StopVMResponse{}, nil

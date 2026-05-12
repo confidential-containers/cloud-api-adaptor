@@ -241,6 +241,11 @@ func (n *workerNode) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunne
 }
 
 func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
+	// Skip teardown if config is nil (e.g., restored sandbox with missing podNetwork)
+	if config == nil {
+		logger.Printf("skipping teardown for %s: no network config", nsPath)
+		return nil
+	}
 
 	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
