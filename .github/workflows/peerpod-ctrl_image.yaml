@@ -107,6 +107,7 @@ jobs:
           context: src
           file: src/peerpod-ctrl/Dockerfile
           platforms: ${{ matrix.types.arch }}
+          provenance: false
           build-args: |
             GOFLAGS=-tags=aws,azure,ibmcloud,ibmcloud_powervs,libvirt
 
