@@ -517,6 +517,115 @@ write_files:
 	}
 }
 
+// TestAWSIMDSv2TokenSuccess tests successful token fetch from IMDSv2 endpoint.
+func TestAWSIMDSv2TokenSuccess(t *testing.T) {
+	const expectedToken = "test-imdsv2-token"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "expected PUT", http.StatusBadRequest)
+			return
+		}
+		if r.Header.Get("X-aws-ec2-metadata-token-ttl-seconds") == "" {
+			http.Error(w, "missing TTL header", http.StatusBadRequest)
+			return
+		}
+		_, _ = io.WriteString(w, expectedToken)
+	}))
+	defer srv.Close()
+
+	token, err := awsIMDSv2Token(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatalf("awsIMDSv2Token returned error: %v", err)
+	}
+	if token != expectedToken {
+		t.Fatalf("token mismatch: got %q, want %q", token, expectedToken)
+	}
+}
+
+// TestAWSIMDSv2TokenNon200 tests that non-200 responses return an error.
+func TestAWSIMDSv2TokenNon200(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	_, err := awsIMDSv2Token(context.Background(), srv.URL)
+	if err == nil {
+		t.Fatalf("expected error for 401 response, got nil")
+	}
+}
+
+// TestAWSIMDSHeadersV2 tests the IMDSv2 token header is returned.
+func TestAWSIMDSHeadersV2(t *testing.T) {
+	const expectedToken = "header-test-token"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, expectedToken)
+	}))
+	defer srv.Close()
+
+	headers := awsIMDSHeaders(context.Background(), srv.URL)
+	if len(headers) != 1 {
+		t.Fatalf("expected 1 header, got %d", len(headers))
+	}
+	if headers[0].k != "X-aws-ec2-metadata-token" || headers[0].v != expectedToken {
+		t.Fatalf("unexpected header: %+v", headers[0])
+	}
+}
+
+// TestAWSIMDSHeadersV1Fallback tests fallback to IMDSv1 when token fetch fails.
+func TestAWSIMDSHeadersV1Fallback(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "server error", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	headers := awsIMDSHeaders(context.Background(), srv.URL)
+	if headers != nil {
+		t.Fatalf("expected nil headers (v1 fallback), got %+v", headers)
+	}
+}
+
+// TestAWSIMDSv1FallbackEndToEnd tests the full fallback path: a token endpoint
+// that returns 401 forces awsIMDSHeaders to nil, after which imdsGet performs a
+// bare IMDSv1 GET that succeeds without the token header.
+func TestAWSIMDSv1FallbackEndToEnd(t *testing.T) {
+	const userData = "fallback-user-data"
+	const tokenPath = "/latest/api/token"
+	const userDataPath = "/latest/user-data"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case tokenPath:
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		case userDataPath:
+			if r.Header.Get("X-aws-ec2-metadata-token") != "" {
+				http.Error(w, "v2 header present on v1 fallback", http.StatusBadRequest)
+				return
+			}
+			_, _ = io.WriteString(w, userData)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	ctx := context.Background()
+	headers := awsIMDSHeaders(ctx, srv.URL+tokenPath)
+	if headers != nil {
+		t.Fatalf("expected nil headers after 401, got %+v", headers)
+	}
+
+	body, err := imdsGet(ctx, srv.URL+userDataPath, false, headers)
+	if err != nil {
+		t.Fatalf("imdsGet fallback returned error: %v", err)
+	}
+	if string(body) != userData {
+		t.Fatalf("body mismatch: got %q, want %q", string(body), userData)
+	}
+}
+
 // TestFailPlainTextUserData tests with plain text userData
 func TestFailPlainTextUserData(t *testing.T) {
 	// startTestServerPlainText
