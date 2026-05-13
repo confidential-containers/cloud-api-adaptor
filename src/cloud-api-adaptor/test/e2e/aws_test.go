@@ -122,3 +122,8 @@ func TestAwsPodWithInitContainer(t *testing.T) {
 	assert := NewAWSAssert()
 	DoTestPodWithInitContainer(t, testEnv, assert)
 }
+
+func TestAwsSandboxPersistence(t *testing.T) {
+	assert := NewAWSAssert()
+	DoTestSandboxPersistence(t, testEnv, assert)
+}

@@ -288,3 +288,8 @@ func TestLibvirtPodWithInitContainer(t *testing.T) {
 	assert := getLibvirtAssert(t)
 	DoTestPodWithInitContainer(t, testEnv, assert)
 }
+
+func TestLibvirtSandboxPersistence(t *testing.T) {
+	assert := getLibvirtAssert(t)
+	DoTestSandboxPersistence(t, testEnv, assert)
+}

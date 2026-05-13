@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -18,9 +19,15 @@ import (
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/e2e-framework/klient"
+	"sigs.k8s.io/e2e-framework/klient/wait"
+	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
+	"sigs.k8s.io/e2e-framework/pkg/features"
 )
 
 var E2eNamespace = envconf.RandomName("coco-pp-e2e-test", 25)
@@ -809,4 +816,262 @@ func DoTestPodVMWithAnnotationMemory(t *testing.T, e env.Environment, assert Clo
 	}
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 	NewTestCase(t, e, "PodVMwithAnnotationMemory", assert, "PodVM with Annotation Memory is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
+}
+
+func getCounter(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) int {
+	t.Helper()
+	logStr, err := GetPodLog(ctx, client, pod)
+	if err != nil {
+		t.Fatalf("Failed to get pod logs: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(logStr), "\n")
+	if len(lines) == 0 {
+		t.Fatal("No counter output found")
+	}
+	lastLine := lines[len(lines)-1]
+	var counter int
+	if _, err := fmt.Sscanf(lastLine, "counter=%d", &counter); err != nil {
+		t.Fatalf("Failed to parse counter from %q: %v", lastLine, err)
+	}
+	return counter
+}
+
+func verifyZeroRestarts(ctx context.Context, t *testing.T, client klient.Client, pod *v1.Pod) {
+	t.Helper()
+	refreshedPod, err := findPod(ctx, client, pod)
+	if err != nil {
+		t.Fatalf("findPod: %v", err)
+	}
+	for _, cs := range refreshedPod.Status.ContainerStatuses {
+		if cs.RestartCount != 0 {
+			t.Fatalf("Container %s has RestartCount=%d, expected 0", cs.Name, cs.RestartCount)
+		}
+	}
+}
+
+func rolloutRestartCAA(ctx context.Context, t *testing.T, client klient.Client, nodeName string) {
+	t.Helper()
+	caaNamespace := pv.GetCAANamespace()
+	clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+	if err != nil {
+		t.Fatalf("Failed to create clientset: %v", err)
+	}
+
+	dsName := "cloud-api-adaptor-daemonset"
+	ds, err := clientset.AppsV1().DaemonSets(caaNamespace).Get(ctx, dsName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Failed to get daemonset %s: %v", dsName, err)
+	}
+
+	caaPod, err := getCaaPod(ctx, client, t, nodeName)
+	if err != nil {
+		t.Fatalf("getCaaPod: %v", err)
+	}
+	oldCaaPodName := caaPod.Name
+
+	if ds.Spec.Template.Annotations == nil {
+		ds.Spec.Template.Annotations = make(map[string]string)
+	}
+	ds.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
+	if _, err := clientset.AppsV1().DaemonSets(caaNamespace).Update(ctx, ds, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("Failed to rollout restart daemonset: %v", err)
+	}
+	t.Logf("Triggered rollout restart of %s", dsName)
+
+	waitForNewCaaPod(ctx, t, client, caaNamespace, nodeName, oldCaaPodName)
+}
+
+func deleteCaaPodAndWait(ctx context.Context, t *testing.T, client klient.Client, nodeName string) {
+	t.Helper()
+	caaNamespace := pv.GetCAANamespace()
+	caaPod, err := getCaaPod(ctx, client, t, nodeName)
+	if err != nil {
+		t.Fatalf("getCaaPod: %v", err)
+	}
+	oldCaaPodName := caaPod.Name
+	t.Logf("Deleting CAA pod %s", oldCaaPodName)
+
+	if err := client.Resources().Delete(ctx, caaPod); err != nil {
+		t.Fatalf("Failed to delete CAA pod: %v", err)
+	}
+
+	waitForNewCaaPod(ctx, t, client, caaNamespace, nodeName, oldCaaPodName)
+}
+
+func waitForNewCaaPod(ctx context.Context, t *testing.T, client klient.Client, caaNamespace, nodeName, oldCaaPodName string) {
+	t.Helper()
+	t.Log("Waiting for new CAA pod to become ready")
+	if err := wait.For(func(ctx context.Context) (bool, error) {
+		pods, listErr := GetPodNamesByLabel(ctx, client, t, caaNamespace, "app", "cloud-api-adaptor", nodeName)
+		if listErr != nil {
+			return false, nil
+		}
+		for _, p := range pods.Items {
+			if p.Name == oldCaaPodName {
+				continue
+			}
+			for _, cond := range p.Status.Conditions {
+				if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+					t.Logf("New CAA pod %s is ready", p.Name)
+					return true, nil
+				}
+			}
+		}
+		return false, nil
+	}, wait.WithTimeout(5*time.Minute), wait.WithInterval(5*time.Second)); err != nil {
+		t.Fatalf("New CAA pod did not become ready: %v", err)
+	}
+
+	t.Log("Waiting for sandbox recovery")
+	time.Sleep(30 * time.Second)
+}
+
+// DoTestSandboxPersistence verifies that peer pods survive both types of CAA restart:
+// rollout restart (old + new pod overlap) and delete pod (daemonset recreates).
+// It creates two counter pods, restarts CAA twice, and verifies exec, counters,
+// and zero restarts throughout. Finally it deletes both pods and verifies cleanup.
+func DoTestSandboxPersistence(t *testing.T, e env.Environment, assert CloudAssert) {
+	// Skipped by default so it's safe to merge before the sandbox persistence feature lands.
+	// The feature branch enables it by setting TEST_SANDBOX_PERSISTENCE=true in CI workflows.
+	if os.Getenv("TEST_SANDBOX_PERSISTENCE") != "true" {
+		t.Skip("Sandbox persistence test requires TEST_SANDBOX_PERSISTENCE=true")
+	}
+	containerName := "busybox"
+	imageName := getBusyboxTestImage(t)
+	pod1 := NewPod(E2eNamespace, "sandbox-persistence-1", containerName, imageName,
+		WithCommand([]string{"/bin/sh", "-c", "i=0; while true; do echo counter=$i; i=$((i+1)); sleep 1; done"}),
+		WithRestartPolicy(v1.RestartPolicyAlways),
+	)
+	pod2 := NewPod(E2eNamespace, "sandbox-persistence-2", containerName, imageName,
+		WithCommand([]string{"/bin/sh", "-c", "i=0; while true; do echo counter=$i; i=$((i+1)); sleep 1; done"}),
+		WithRestartPolicy(v1.RestartPolicyAlways),
+	)
+
+	var counter1a, counter1b, counter2a int
+
+	feature := features.New("Sandbox persistence across CAA restarts").
+		WithSetup("Create pod1", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client, err := cfg.NewClient()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = client.Resources().Create(ctx, pod1); err != nil {
+				t.Fatal(err)
+			}
+			if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(pod1, v1.PodRunning), wait.WithTimeout(WaitPodRunningTimeout)); err != nil {
+				t.Fatal(err)
+			}
+			if err = wait.For(conditions.New(client.Resources()).ContainersReady(pod1), wait.WithTimeout(WaitPodRunningTimeout)); err != nil {
+				t.Fatal(err)
+			}
+			t.Log("pod1 is ready")
+			return ctx
+		}).
+		Assess("Verify pod1 exec and counter", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client := cfg.Client()
+			counter1a = getCounter(ctx, t, client, pod1)
+			t.Logf("pod1 counter = %d", counter1a)
+			if counter1a == 0 {
+				t.Fatal("Counter should be > 0")
+			}
+			return ctx
+		}).
+		Assess("Rollout restart CAA", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client := cfg.Client()
+			nodeName, err := GetNodeNameFromPod(ctx, client, pod1)
+			if err != nil {
+				t.Fatalf("GetNodeNameFromPod: %v", err)
+			}
+			rolloutRestartCAA(ctx, t, client, nodeName)
+			return ctx
+		}).
+		Assess("Verify pod1 after rollout restart", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client := cfg.Client()
+			counter1b = getCounter(ctx, t, client, pod1)
+			t.Logf("pod1 counter after rollout restart: %d (was %d)", counter1b, counter1a)
+			if counter1b <= counter1a {
+				t.Fatalf("Counter did not advance: before=%d, after=%d", counter1a, counter1b)
+			}
+			verifyZeroRestarts(ctx, t, client, pod1)
+			t.Log("pod1 survived rollout restart with zero restarts")
+			return ctx
+		}).
+		Assess("Create pod2 after rollout restart", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client := cfg.Client()
+			if err := client.Resources().Create(ctx, pod2); err != nil {
+				t.Fatal(err)
+			}
+			if err := wait.For(conditions.New(client.Resources()).PodPhaseMatch(pod2, v1.PodRunning), wait.WithTimeout(WaitPodRunningTimeout)); err != nil {
+				t.Fatal(err)
+			}
+			if err := wait.For(conditions.New(client.Resources()).ContainersReady(pod2), wait.WithTimeout(WaitPodRunningTimeout)); err != nil {
+				t.Fatal(err)
+			}
+			counter2a = getCounter(ctx, t, client, pod2)
+			t.Logf("pod2 counter = %d", counter2a)
+			return ctx
+		}).
+		Assess("Delete CAA pod restart", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client := cfg.Client()
+			nodeName, err := GetNodeNameFromPod(ctx, client, pod1)
+			if err != nil {
+				t.Fatalf("GetNodeNameFromPod: %v", err)
+			}
+			deleteCaaPodAndWait(ctx, t, client, nodeName)
+			return ctx
+		}).
+		Assess("Verify pods after delete-pod restart", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client := cfg.Client()
+
+			c1 := getCounter(ctx, t, client, pod1)
+			t.Logf("pod1 counter after delete restart: %d (was %d)", c1, counter1b)
+			if c1 <= counter1b {
+				t.Fatalf("pod1 counter did not advance: before=%d, after=%d", counter1b, c1)
+			}
+			verifyZeroRestarts(ctx, t, client, pod1)
+
+			c2 := getCounter(ctx, t, client, pod2)
+			t.Logf("pod2 counter after delete restart: %d (was %d)", c2, counter2a)
+			if c2 <= counter2a {
+				t.Fatalf("pod2 counter did not advance: before=%d, after=%d", counter2a, c2)
+			}
+			verifyZeroRestarts(ctx, t, client, pod2)
+
+			t.Log("Both pods survived delete-pod restart with zero restarts")
+			return ctx
+		}).
+		Teardown(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client, err := cfg.NewClient()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if t.Failed() {
+				LogPodDebugInfo(ctx, t, client, pod1)
+				LogPodDebugInfo(ctx, t, client, pod2)
+			}
+			deletionTimeout := assert.DefaultTimeout()
+			for _, pod := range []*v1.Pod{pod1, pod2} {
+				if err := client.Resources().Delete(ctx, pod); err != nil {
+					t.Errorf("Failed to delete %s: %v", pod.Name, err)
+					continue
+				}
+				t.Logf("Deleting pod %s...", pod.Name)
+				if err := wait.For(conditions.New(
+					client.Resources()).ResourceDeleted(pod),
+					wait.WithInterval(5*time.Second),
+					wait.WithTimeout(deletionTimeout)); err != nil {
+					t.Errorf("Pod %s not deleted: %v", pod.Name, err)
+				}
+				t.Logf("Pod %s deleted", pod.Name)
+			}
+			for _, pod := range []*v1.Pod{pod1, pod2} {
+				if _, err := findPod(ctx, client, pod); err == nil {
+					t.Errorf("Pod %s still exists after deletion", pod.Name)
+				}
+			}
+			t.Log("Clean state verified")
+			return ctx
+		}).Feature()
+
+	e.Test(t, feature)
 }

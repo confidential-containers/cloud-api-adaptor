@@ -179,3 +179,8 @@ func TestDockerCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := DockerAssert{}
 	DoTestPodWithCPUMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "200Mi")
 }
+
+func TestDockerSandboxPersistence(t *testing.T) {
+	assert := DockerAssert{}
+	DoTestSandboxPersistence(t, testEnv, assert)
+}

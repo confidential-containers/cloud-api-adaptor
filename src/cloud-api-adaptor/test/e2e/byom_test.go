@@ -86,3 +86,8 @@ func TestByomCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := ByomAssert{}
 	DoTestPodWithCPUMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "200Mi")
 }
+
+func TestByomSandboxPersistence(t *testing.T) {
+	assert := ByomAssert{}
+	DoTestSandboxPersistence(t, testEnv, assert)
+}
