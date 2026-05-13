@@ -31,6 +31,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+{{- if include "peerpods.gcpWifEnabled" . }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/run/secrets/gcp-creds/credentials.json
+{{- end }}
         envFrom:
 {{- if include "peerpods.secretName" . }}
         - secretRef:
@@ -69,6 +73,14 @@ spec:
 {{- if include "peerpods.alibabacloudRrsaEnabled" . }}
         - mountPath: /var/run/secrets/ack.alibabacloud.com/rrsa-tokens
           name: rrsa-oidc-token
+          readOnly: true
+{{- end }}
+{{- if include "peerpods.gcpWifEnabled" . }}
+        - mountPath: /var/run/secrets/tokens/gcp-ksa
+          name: gcp-ksa
+          readOnly: true
+        - mountPath: /var/run/secrets/gcp-creds
+          name: gcp-creds
           readOnly: true
 {{- end }}
         - mountPath: /run/peerpod
@@ -125,6 +137,22 @@ spec:
               audience: "sts.aliyuncs.com"
               expirationSeconds: 3600
               path: token
+{{- end }}
+{{- if include "peerpods.gcpWifEnabled" . }}
+      - name: gcp-ksa
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: {{ required "gcp.workloadIdentityFederation.workloadPool is required when gcp.workloadIdentityFederation.enable is true" .Values.gcp.workloadIdentityFederation.workloadPool | quote }}
+              expirationSeconds: 3600
+              path: token
+      - name: gcp-creds
+        configMap:
+          name: gcp-direct-wi-creds-config
+          items:
+          - key: credentials.json
+            path: credentials.json
 {{- end }}
       - hostPath:
           path: /run/peerpod
