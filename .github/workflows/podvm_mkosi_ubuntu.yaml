@@ -211,7 +211,7 @@ jobs:
           subject-digest: ${{ steps.publish_oras_qcow2.outputs.digest }}
           push-to-registry: true
 
-      - name: Clean up some space for the docker provider build
+      - name: Clean up some space for the docker podvm image build
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: |
           sudo du --max-depth=2 /home/runner || true
@@ -219,7 +219,7 @@ jobs:
           sudo rm -rf ./build
           sudo rm -rf ./mkosi.cache
 
-      - name: Build and push image for docker provider
+      - name: Build and push image for docker podvm image
         id: build_docker_oci
         working-directory: src/cloud-api-adaptor/podvm-mkosi
         run: |

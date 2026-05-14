@@ -57,9 +57,6 @@ on:
       qcow2_oras_image:
         description: The location of the qcow2 oras container this workflow pushed
         value: ${{ jobs.build-image.outputs.qcow2_oras_image }}
-      docker_oci_image:
-        description: The location of the docker oci container image this workflow pushed
-        value: ${{ jobs.build-image.outputs.docker_oci_image }}
 
 defaults:
   run:
@@ -80,7 +77,6 @@ jobs:
       artifact-metadata: write  # Required by actions/attest to write attestation metadata
     outputs:
       qcow2_oras_image: ${{ steps.publish_oras_qcow2.outputs.image }}:${{ steps.publish_oras_qcow2.outputs.tag }}
-      docker_oci_image: ${{ steps.build_docker_oci.outputs.image }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -197,24 +193,3 @@ jobs:
           subject-name: ${{ steps.publish_oras_qcow2.outputs.image }}
           subject-digest: ${{ steps.publish_oras_qcow2.outputs.digest }}
           push-to-registry: true
-
-      - name: Clean up some space for the docker provider build
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: |
-          sudo du --max-depth=2 /home/runner || true
-          sudo du --max-depth=2 /var/lib || true
-          sudo rm -rf ./build
-          sudo rm -rf ./mkosi.cache
-
-      - name: Build and push image for docker provider
-        id: build_docker_oci
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: |
-          tag=$(git rev-parse --short HEAD)
-          PODVM_TAG=${tag} make image-container
-          PODVM_TAG=${tag} make push-image-container
-          arch=$(uname -m)
-          arch=${arch/x86_64/amd64}
-          echo "image=${{ inputs.registry }}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
-        env:
-          REGISTRY: ${{ inputs.registry }}
