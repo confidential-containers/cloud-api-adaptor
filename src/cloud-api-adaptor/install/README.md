@@ -40,13 +40,13 @@ For development, the easiest way to install it to a given `PROVIDER` is:
 
 - Copy `charts/peerpods/providers/PROVIDER-secrets.yaml.template` to
   `charts/peerpods/providers/PROVIDER-secrets.yaml` and edit the secrets
-  properly, unless you are installing for docker.
+  properly.
 
 - Fill `charts/peerpods/providers/PROVIDER.yaml` with required values and any customizations
 
 - Then run the `make deploy` command:
   ```sh
-  export CLOUD_PROVIDER=<aws|azure|gcp|docker|ibmcloud|ibmcloud-powervs|libvirt>
+  export CLOUD_PROVIDER=<aws|azure|gcp|ibmcloud|ibmcloud-powervs|libvirt>
   make deploy
   ```
 

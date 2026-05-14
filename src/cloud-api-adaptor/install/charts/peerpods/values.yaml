@@ -72,12 +72,12 @@ secrets:
 #
 # Two image variants are published:
 # - Release image (<commit>): smaller, no CGO/libvirt bindings
-# - Dev image (dev-<commit> or "latest"): includes CGO bindings for libvirt/docker
+# - Dev image (dev-<commit> or "latest"): includes CGO bindings for libvirt
 #
 # During development: "latest" works for all providers
-# At release: most providers use <commit>, libvirt/docker use dev-<commit>
+# At release: most providers use <commit>, libvirt uses dev-<commit>
 #
-# Note: libvirt/docker provider files override this with the dev image.
+# Note: libvirt provider files override this with the dev image.
 image:
   name: quay.io/confidential-containers/cloud-api-adaptor
   tag: "latest"
