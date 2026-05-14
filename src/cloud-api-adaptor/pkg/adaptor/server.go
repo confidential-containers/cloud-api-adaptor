@@ -124,6 +124,7 @@ func (s *server) Start(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	listener.(*net.UnixListener).SetUnlinkOnClose(false)
 
 	ttRPCErr := make(chan error)
 	go func() {
