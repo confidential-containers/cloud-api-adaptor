@@ -114,6 +114,10 @@ providerConfigs:
     # (default: "")
     # TAGS: ""
 
+    # Path to persist TLS material across CAA restarts
+    # (default: "/run/peerpod/tls-material.json")
+    # TLS_MATERIAL_PATH: "/run/peerpod/tls-material.json"
+
     # Skip TLS certificate verification - use it only for testing
     # (default: "false")
     # TLS_SKIP_VERIFY: "false"
