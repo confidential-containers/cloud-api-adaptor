@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"regexp"
 	"strings"
 	"time"
 
@@ -31,6 +32,23 @@ const (
 	// The sleep time between retries to get the domain IP addresses
 	GetDomainIPsSleep = time.Second * 3
 )
+
+// validateCPUSet validates the CPUSet format.
+func validateCPUSet(cpuset string) error {
+	if cpuset == "" {
+		return nil // Empty is valid (no pinning)
+	}
+
+	// CPUSet format: comma-separated list of CPU numbers or ranges
+	// Valid examples: "0,2,4,6", "0-3", "0,2,4-7,10"
+	// Invalid examples: "ABC", "0-", "-3", "0,a,2"
+	cpusetRegex := regexp.MustCompile(`^(\d+(-\d+)?)(,\d+(-\d+)?)*$`)
+	if !cpusetRegex.MatchString(cpuset) {
+		return fmt.Errorf("invalid CPUSet format: %s (expected format: comma-separated CPU numbers or ranges, e.g., '0,2,4,6' or '0-3')", cpuset)
+	}
+
+	return nil
+}
 
 type domainConfig struct {
 	name        string
@@ -235,7 +253,8 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 			Value: cfg.mem, Unit: "MiB",
 		},
 		VCPU: &libvirtxml.DomainVCPU{
-			Value: cfg.cpu,
+			Value:  cfg.cpu,
+			CPUSet: vm.cpuset,
 		},
 		Clock: &libvirtxml.DomainClock{
 			Offset: "utc",
@@ -294,7 +313,7 @@ func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfi
 		Name:        cfg.name,
 		Description: "This Virtual Machine is the peer-pod VM",
 		Memory:      &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "MiB", DumpCore: "on"},
-		VCPU:        &libvirtxml.DomainVCPU{Value: cfg.cpu},
+		VCPU:        &libvirtxml.DomainVCPU{Value: cfg.cpu, CPUSet: vm.cpuset},
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{Arch: "x86_64", Type: typeHardwareVirtualMachine},
 		},
@@ -444,7 +463,7 @@ func createDomainXMLaarch64(client *libvirtClient, cfg *domainConfig, vm *vmConf
 			Firmware: "efi",
 		},
 		Memory: &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "MiB"},
-		VCPU:   &libvirtxml.DomainVCPU{Value: cfg.cpu},
+		VCPU:   &libvirtxml.DomainVCPU{Value: cfg.cpu, CPUSet: vm.cpuset},
 		CPU:    &libvirtxml.DomainCPU{Mode: "host-passthrough"},
 		Devices: &libvirtxml.DomainDeviceList{
 			Disks: []libvirtxml.DomainDisk{

@@ -51,6 +51,10 @@ providerConfigs:
     # (default: "2")
     # LIBVIRT_CPU: "2"
 
+    # CPU set for pinning vCPUs to physical CPUs (e.g., \"0,2,4,6\" or \"0-3\" or \"0-3,8,10-12\")
+    # (default: "")
+    # LIBVIRT_CPUSET: ""
+
     # Path to OVMF
     # (default: "/usr/share/OVMF/OVMF_CODE_4M.fd")
     # LIBVIRT_EFI_FIRMWARE: "/usr/share/OVMF/OVMF_CODE_4M.fd"
