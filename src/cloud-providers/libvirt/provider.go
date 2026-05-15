@@ -71,7 +71,7 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	}
 
 	// TODO: Specify the maximum instance name length in Libvirt
-	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, userData: userData, firmware: p.serviceConfig.Firmware}
+	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, userData: userData, firmware: p.serviceConfig.Firmware, cpuset: p.serviceConfig.CPUSet}
 
 	if p.serviceConfig.DisableCVM {
 		vm.launchSecurityType = NoLaunchSecurity
@@ -182,6 +182,10 @@ func (p *libvirtProvider) ConfigVerifier() error {
 
 	if config.Memory == 0 {
 		return fmt.Errorf("Memory must be greater than zero")
+	}
+
+	if err := validateCPUSet(config.CPUSet); err != nil {
+		return err
 	}
 
 	return nil
