@@ -37,9 +37,13 @@ const (
 	testNetworkUnix        = "unix"
 
 	// Container and annotation constants
-	testContainerIDProxy     = "123"
-	testAnnotationKeyProxy   = "aaa"
-	testAnnotationValueProxy = "111"
+	testContainerIDProxy             = "123"
+	testAnnotationKeyProxy           = "aaa"
+	testAnnotationValueProxy         = "111"
+	testAnnotationContainerTypeKey   = "io.kubernetes.cri.container-type"
+	testAnnotationContainerTypeValue = "container"
+	testAnnotationImageNameKey       = "io.kubernetes.cri.image-name"
+	testAnnotationImageNameValue     = "test-image"
 
 	// Image constants
 	testPauseImageLatest = "pause:latest"
@@ -123,7 +127,11 @@ func TestStartStop(t *testing.T) {
 	}
 
 	{
-		res, err := client.CreateContainer(context.Background(), &pb.CreateContainerRequest{ContainerId: testContainerIDProxy, OCI: &pb.Spec{Annotations: map[string]string{testAnnotationKeyProxy: testAnnotationValueProxy}}})
+		res, err := client.CreateContainer(context.Background(), &pb.CreateContainerRequest{ContainerId: testContainerIDProxy, OCI: &pb.Spec{Annotations: map[string]string{
+			testAnnotationKeyProxy:         testAnnotationValueProxy,
+			testAnnotationContainerTypeKey: testAnnotationContainerTypeValue,
+			testAnnotationImageNameKey:     testAnnotationImageNameValue,
+		}}})
 		assert.NoError(t, err, "expect no error creating container")
 		assert.NotNil(t, res, "expect non nil response")
 	}
