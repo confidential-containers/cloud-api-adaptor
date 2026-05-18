@@ -185,6 +185,48 @@ jobs:
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
+  # Build and push the peerpod-ctrl image (per-arch)
+  peerpod_ctrl_image_amd64:
+    uses: ./.github/workflows/peerpod-ctrl_build_and_push.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      image_tags: ${{ inputs.caa_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      arch: linux/amd64
+      runner: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write # Required to publish the image to ghcr
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
+  peerpod_ctrl_image_s390x:
+    uses: ./.github/workflows/peerpod-ctrl_build_and_push.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      image_tags: ${{ inputs.caa_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      arch: linux/s390x
+      runner: ubuntu-24.04-s390x
+    permissions:
+      contents: read
+      packages: write # Required to publish the image to ghcr
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
+  # Build and push the webhook image
+  webhook_image:
+    uses: ./.github/workflows/webhook_image.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      image_tags: ${{ inputs.caa_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+    permissions:
+      contents: read
+      packages: write # Required to publish the image to ghcr
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
   # Run AWS e2e tests if pull request labeled 'test_e2e_aws'
   aws:
     name: aws
@@ -192,7 +234,7 @@ jobs:
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_aws')
-    needs: [podvm_ubuntu_amd64, caa_image_amd64]
+    needs: [podvm_ubuntu_amd64, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
     strategy:
       fail-fast: false
       matrix:
@@ -207,6 +249,8 @@ jobs:
       container_runtime: ${{ matrix.container_runtime }}
       podvm_image: ${{ needs.podvm_ubuntu_amd64.outputs.qcow2_oras_image }}
       git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
     secrets:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
@@ -234,13 +278,15 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
-    needs: [podvm_mkosi_amd64, libvirt_e2e_arch_prep, caa_image_amd64]
+    needs: [podvm_mkosi_amd64, libvirt_e2e_arch_prep, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: ubuntu-24.04
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
       podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.qcow2_oras_image }}
       git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
@@ -252,13 +298,15 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
-    needs: [podvm_mkosi_s390x, libvirt_e2e_arch_prep, caa_image_s390x]
+    needs: [podvm_mkosi_s390x, libvirt_e2e_arch_prep, caa_image_s390x, peerpod_ctrl_image_s390x, webhook_image]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: s390x-large
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-s390x
       podvm_image: ${{ needs.podvm_mkosi_s390x.outputs.qcow2_oras_image }}
       git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-s390x
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
@@ -270,13 +318,15 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
-    needs: [podvm_ubuntu_amd64, libvirt_e2e_arch_prep, caa_image_amd64]
+    needs: [podvm_ubuntu_amd64, libvirt_e2e_arch_prep, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: ubuntu-24.04
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-amd64-dev
       podvm_image: ${{ needs.podvm_ubuntu_amd64.outputs.qcow2_oras_image }}
       git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
@@ -288,13 +338,15 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
-    needs: [podvm_ubuntu_s390x, libvirt_e2e_arch_prep, caa_image_s390x]
+    needs: [podvm_ubuntu_s390x, libvirt_e2e_arch_prep, caa_image_s390x, peerpod_ctrl_image_s390x, webhook_image]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: s390x-large
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-s390x-dev
       podvm_image: ${{ needs.podvm_ubuntu_s390x.outputs.qcow2_oras_image }}
       git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-s390x
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
@@ -305,7 +357,7 @@ jobs:
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_docker')
-    needs: [podvm_mkosi_amd64, caa_image_amd64]
+    needs: [podvm_mkosi_amd64, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
     strategy:
       fail-fast: false
       matrix:
@@ -323,6 +375,8 @@ jobs:
       container_runtime: ${{ matrix.container_runtime }}
       podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.docker_oci_image }}
       git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -333,9 +387,11 @@ jobs:
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_byom')
-    needs: [podvm_ubuntu_amd64, caa_image_amd64]
+    needs: [podvm_ubuntu_amd64, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
     uses: ./.github/workflows/e2e_byom.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
       podvm_image: ${{ needs.podvm_ubuntu_amd64.outputs.byom_e2e_image }}
       git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}

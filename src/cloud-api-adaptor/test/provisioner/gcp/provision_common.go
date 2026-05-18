@@ -138,6 +138,8 @@ func NewGCPInstallChart(installDir, provider string) (pv.InstallChart, error) {
 	}, nil
 }
 
+func (g *GCPInstallChart) GetHelm() *pv.Helm { return g.Helm }
+
 func (g *GCPInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
 	return g.Helm.Install(ctx, cfg)
 }

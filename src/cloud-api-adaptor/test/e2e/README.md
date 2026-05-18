@@ -89,6 +89,13 @@ Other options are provided via environment variables if you need to further cust
 - `TEST_CAA_NAMESPACE` - This option is available, primarily for running the e2e tests on a downstream version
 of confidential containers, where the cloud-api-adaptor pod is deployed to a different namespace than the default
  `confidential-containers-system`.
+- `PEERPOD_CTRL_IMAGE` - Override the peerpod-ctrl container image used by the Helm sub-chart
+(e.g. `ghcr.io/confidential-containers/peerpod-ctrl:latest`). When set, the provisioner overrides
+the Helm values `resourceCtrl.image.repository` and `resourceCtrl.image.tag`. If unset, the sub-chart
+defaults are used.
+- `WEBHOOK_IMAGE` - Override the peer-pods-webhook container image used by the Helm sub-chart
+(e.g. `ghcr.io/confidential-containers/peer-pods-webhook:latest`). When set, the provisioner overrides
+the Helm values `webhook.image.repository` and `webhook.image.tag`. If unset, the sub-chart defaults are used.
 
 # Running end-to-end tests against pre-configured cluster
 

@@ -257,6 +257,8 @@ func NewByomInstallChart(installDir, provider string) (pv.InstallChart, error) {
 	}, nil
 }
 
+func (b *ByomInstallChart) GetHelm() *pv.Helm { return b.Helm }
+
 func (b *ByomInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
 	// Create SSH key secret before installing Helm chart
 	if err := b.createSSHKeySecret(ctx, cfg); err != nil {
