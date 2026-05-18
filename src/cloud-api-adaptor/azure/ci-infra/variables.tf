@@ -79,3 +79,15 @@ variable "release_image_definition_debug" {
   description = "Image definition for release podvm images"
   default     = "peerpod-podvm-ubuntu-debug"
 }
+
+variable "podvm_storage_account" {
+  type        = string
+  default     = "azurecaapodvm"
+  description = "Prefix for the storage account hosting VHD page blobs backing podvm gallery image versions. Combined with var.ver to form a globally-unique name."
+}
+
+variable "podvm_storage_container" {
+  type        = string
+  default     = "vhd"
+  description = "Container in the podvm storage account that holds podvm VHDs"
+}
