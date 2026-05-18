@@ -220,6 +220,8 @@ func NewDockerInstallChart(installDir, provider string) (pv.InstallChart, error)
 	}, nil
 }
 
+func (d *DockerInstallChart) GetHelm() *pv.Helm { return d.Helm }
+
 func (d *DockerInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
 	return d.Helm.Install(ctx, cfg)
 }

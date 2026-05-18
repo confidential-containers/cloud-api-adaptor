@@ -28,6 +28,16 @@ on:
         description: Name of the container runtime. Either containerd or crio.
         required: false
         type: string
+      peerpod_ctrl_image:
+        description: The peerpod-ctrl OCI image (including tag)
+        required: false
+        default: ''
+        type: string
+      webhook_image:
+        description: The peer-pods-webhook OCI image (including tag)
+        required: false
+        default: ''
+        type: string
     secrets:
       REGISTRY_CREDENTIAL_ENCODED:
         required: true
@@ -162,10 +172,12 @@ jobs:
           CLOUD_PROVIDER: libvirt
           CONTAINER_RUNTIME: ${{ inputs.container_runtime }}
           DEPLOY_KBS: "true"
+          PEERPOD_CTRL_IMAGE: "${{ inputs.peerpod_ctrl_image }}"
           TEST_TEARDOWN: "no"
           TEST_PROVISION_FILE: ${{ github.workspace }}/src/cloud-api-adaptor/libvirt.properties
           TEST_PODVM_IMAGE: ${{ env.PODVM_QCOW2 }}
           TEST_E2E_TIMEOUT: "75m"
+          WEBHOOK_IMAGE: "${{ inputs.webhook_image }}"
         run: |
           # Default: provision cluster and install CAA
           export TEST_PROVISION="yes"
