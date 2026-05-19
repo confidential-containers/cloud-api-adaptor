@@ -131,7 +131,6 @@ Update the `dependencies.kata-deploy` version in [`Chart.yaml`](../src/cloud-api
 Revert `image.tag` back to `"latest"` in
 [`values.yaml`](../src/cloud-api-adaptor/install/charts/peerpods/values.yaml),
 [`providers/libvirt.yaml`](../src/cloud-api-adaptor/install/charts/peerpods/providers/libvirt.yaml),
-[`providers/docker.yaml`](../src/cloud-api-adaptor/install/charts/peerpods/providers/docker.yaml),
 [`peerpod-ctrl/chart/values.yaml`](../src/peerpod-ctrl/chart/values.yaml), and
 [`webhook/chart/values.yaml`](../src/webhook/chart/values.yaml).
 

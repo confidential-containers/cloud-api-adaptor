@@ -28,7 +28,7 @@ WEBHOOK_ENABLED ?= true
 ifeq ($(RELEASE_BUILD),true)
 	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom gcp ibmcloud ibmcloud_powervs
 else
-	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom gcp ibmcloud ibmcloud_powervs libvirt docker
+	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom gcp ibmcloud ibmcloud_powervs libvirt
 endif
 
 all: build
@@ -130,9 +130,7 @@ image: .git-commit ## Build and push docker image to $registry
 deploy: ## Deploy cloud-api-adaptor using Helm charts. Assumes provider secrets file exists at install/charts/peerpods/providers/$(CLOUD_PROVIDER)-secrets.yaml
 ifneq ($(CLOUD_PROVIDER),)
 	$(eval HELM_VALUES_FILES := install/charts/peerpods/providers/$(CLOUD_PROVIDER).yaml)
-ifeq ($(filter $(CLOUD_PROVIDER),docker),)
 	$(eval HELM_VALUES_FILES := $(HELM_VALUES_FILES) install/charts/peerpods/providers/$(CLOUD_PROVIDER)-secrets.yaml)
-endif
 
 ifeq ($(WEBHOOK_ENABLED),true)
 	@if ! kubectl get svc -n cert-manager cert-manager-webhook > /dev/null 2>&1; then \
