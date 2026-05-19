@@ -1,0 +1,17 @@
+[Unit]
+Description=Report Ready to the Azure Fabric WireServer
+Documentation=https://learn.microsoft.com/azure/virtual-machines/linux/no-agent
+After=network-online.target
+Wants=network-online.target
+ConditionVirtualization=microsoft
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/azure-ready
+RemainAfterExit=yes
+# WireServer can take a while to respond at first boot; let the binary
+# handle its own retries but don't let a hung Fabric block boot forever.
+TimeoutStartSec=5min
+
+[Install]
+WantedBy=multi-user.target
