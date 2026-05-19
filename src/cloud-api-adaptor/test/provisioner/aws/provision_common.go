@@ -1075,6 +1075,7 @@ func (i *AMIImage) registerImage(imageName string) error {
 		RootDeviceName:     aws.String(i.RootDeviceName),
 		TpmSupport:         ec2types.TpmSupportValuesV20,
 		VirtualizationType: aws.String("hvm"),
+		ImdsSupport:        ec2types.ImdsSupportValuesV20,
 		TagSpecifications:  defaultTagSpecifications(i.BaseName+"-img", ec2types.ResourceTypeImage),
 	})
 	if err != nil {
