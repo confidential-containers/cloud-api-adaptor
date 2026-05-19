@@ -109,9 +109,9 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 		}
 
 		req.Storages = append(req.Storages, vol)
-		s := req.Storages[len(req.Storages)-1]
+		storage := req.Storages[len(req.Storages)-1]
 		logger.Print("    storages added for guest_image_pull:")
-		logger.Printf("        mount_point:%s source:%s fstype:%s driver:%s", s.MountPoint, s.Source, s.Fstype, s.Driver)
+		logger.Printf("        mount_point:%s source:%s fstype:%s driver:%s", storage.MountPoint, storage.Source, storage.Fstype, storage.Driver)
 	}
 
 	res, err := s.Redirector.CreateContainer(ctx, req)
@@ -123,12 +123,12 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 	return res, err
 }
 
-// The flollowing fucntions are originally from kata_agent.go
+// The following fucntions are originally from https://github.com/kata-containers/kata-containers/blob/main/src/runtime/virtcontainers/kata_agent.go
 //   - handleVirtualVolumeStorageObject
 //   - handleImageGuestPullBlockVolume
 //   - getContainerTypeforCRI
 //
-// Modified kata-containers/src/runtime/virtualcontainers/kata_agent.go::handleVirtualVolumeStorageObject
+// Modified handleVirtualVolumeStorageObject
 func handleVirtualVolumeStorageObject(req *pb.CreateContainerRequest) (*pb.Storage, error) {
 	var vol *pb.Storage
 	virtVolume := &types.KataVirtualVolume{
@@ -148,7 +148,7 @@ func handleVirtualVolumeStorageObject(req *pb.CreateContainerRequest) (*pb.Stora
 	return vol, nil
 }
 
-// Modified kata-containers/src/runtime/virtualcontainers/kata_agent.go::handleImageGuestPullBlockVolume
+// Modified handleImageGuestPullBlockVolume
 func handleImageGuestPullBlockVolume(containerAnnotations map[string]string, virtualVolumeInfo *types.KataVirtualVolume, vol *pb.Storage) (*pb.Storage, error) {
 	containerType, criContainerType := getContainerTypeforCRI(containerAnnotations)
 
@@ -181,18 +181,18 @@ func handleImageGuestPullBlockVolume(containerAnnotations map[string]string, vir
 		virtualVolumeInfo.ImagePull.Metadata[k] = v
 	}
 
-	no, err := json.Marshal(virtualVolumeInfo.ImagePull)
+	imagePullBytes, err := json.Marshal(virtualVolumeInfo.ImagePull)
 	if err != nil {
 		return nil, err
 	}
 	vol.Driver = types.KataVirtualVolumeImageGuestPullType
-	vol.DriverOptions = append(vol.DriverOptions, types.KataVirtualVolumeImageGuestPullType+"="+string(no))
+	vol.DriverOptions = append(vol.DriverOptions, types.KataVirtualVolumeImageGuestPullType+"="+string(imagePullBytes))
 	vol.Source = virtualVolumeInfo.Source
 	vol.Fstype = "overlay"
 	return vol, nil
 }
 
-// Modified kata-containers/src/runtime/virtualcontainers/kata_agent.go::getContainerTypeforCRI
+// Modified getContainerTypeforCRI
 func getContainerTypeforCRI(containerAnnotations map[string]string) (string, string) {
 	CRIContainerTypeKeyList := []string{
 		"io.kubernetes.cri.container-type",
