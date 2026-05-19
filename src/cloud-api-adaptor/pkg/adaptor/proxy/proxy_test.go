@@ -37,13 +37,9 @@ const (
 	testNetworkUnix        = "unix"
 
 	// Container and annotation constants
-	testContainerIDProxy             = "123"
-	testAnnotationKeyProxy           = "aaa"
-	testAnnotationValueProxy         = "111"
-	testAnnotationContainerTypeKey   = "io.kubernetes.cri.container-type"
-	testAnnotationContainerTypeValue = "container"
-	testAnnotationImageNameKey       = "io.kubernetes.cri.image-name"
-	testAnnotationImageNameValue     = "test-image"
+	testContainerIDProxy     = "123"
+	testAnnotationKeyProxy   = "aaa"
+	testAnnotationValueProxy = "111"
 
 	// Image constants
 	testPauseImageLatest = "pause:latest"
