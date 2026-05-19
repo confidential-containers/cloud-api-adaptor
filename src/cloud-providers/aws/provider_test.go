@@ -232,6 +232,34 @@ func (m mockEC2Client) ModifyNetworkInterfaceAttribute(ctx context.Context,
 	return nil, nil
 }
 
+func (m mockEC2Client) AttachVolume(ctx context.Context,
+	params *ec2.AttachVolumeInput,
+	optFns ...func(*ec2.Options)) (*ec2.AttachVolumeOutput, error) {
+
+	return &ec2.AttachVolumeOutput{
+		State: types.VolumeAttachmentStateAttaching,
+	}, nil
+}
+
+func (m mockEC2Client) DescribeVolumes(ctx context.Context,
+	params *ec2.DescribeVolumesInput,
+	optFns ...func(*ec2.Options)) (*ec2.DescribeVolumesOutput, error) {
+
+	var vols []types.Volume
+	for _, id := range params.VolumeIds {
+		vols = append(vols, types.Volume{
+			VolumeId: aws.String(id),
+			State:    types.VolumeStateAvailable,
+			Attachments: []types.VolumeAttachment{
+				{
+					State: types.VolumeAttachmentStateAttached,
+				},
+			},
+		})
+	}
+	return &ec2.DescribeVolumesOutput{Volumes: vols}, nil
+}
+
 // Mock instanceRunningWaiter
 type MockAWSInstanceWaiter struct{}
 
@@ -678,6 +706,100 @@ func TestGetInstanceTypeInformation(t *testing.T) {
 				t.Errorf("awsProvider.getInstanceTypeInformation() gotGpu = %v, want %v", gotGpu, tt.wantGpu)
 			}
 		})
+	}
+}
+
+func TestEBSDeviceName(t *testing.T) {
+	tests := []struct {
+		index    int
+		expected string
+	}{
+		{0, "/dev/xvdb"},
+		{1, "/dev/xvdc"},
+		{24, "/dev/xvdz"},
+		{25, "/dev/xvdba"},
+		{26, "/dev/xvdbb"},
+		{50, "/dev/xvdbz"},
+		{51, "/dev/xvdca"},
+	}
+	for _, tt := range tests {
+		got := ebsDeviceName(tt.index)
+		if got != tt.expected {
+			t.Errorf("ebsDeviceName(%d) = %q, want %q", tt.index, got, tt.expected)
+		}
+	}
+}
+
+func TestAttachEBSVolumes(t *testing.T) {
+	t.Run("attaches single volume", func(t *testing.T) {
+		p := &awsProvider{
+			ec2Client:     newMockEC2Client(),
+			waiter:        newMockAWSInstanceWaiter(),
+			serviceConfig: serviceConfig,
+		}
+		vols := []provider.CloudVolume{
+			{DiskID: "vol-0abc1234def56789"},
+		}
+		err := p.attachEBSVolumes(context.Background(), "i-1234567890abcdef0", vols)
+		if err != nil {
+			t.Errorf("attachEBSVolumes single volume: unexpected error: %v", err)
+		}
+	})
+
+	t.Run("attaches multiple volumes", func(t *testing.T) {
+		p := &awsProvider{
+			ec2Client:     newMockEC2Client(),
+			waiter:        newMockAWSInstanceWaiter(),
+			serviceConfig: serviceConfig,
+		}
+		vols := []provider.CloudVolume{
+			{DiskID: "vol-0abc1234def56789"},
+			{DiskID: "vol-0def4567abc89012"},
+			{DiskID: "vol-0fedcba987654321"},
+		}
+		err := p.attachEBSVolumes(context.Background(), "i-1234567890abcdef0", vols)
+		if err != nil {
+			t.Errorf("attachEBSVolumes multiple volumes: unexpected error: %v", err)
+		}
+	})
+
+	t.Run("attaches no volumes", func(t *testing.T) {
+		p := &awsProvider{
+			ec2Client:     newMockEC2Client(),
+			waiter:        newMockAWSInstanceWaiter(),
+			serviceConfig: serviceConfig,
+		}
+		err := p.attachEBSVolumes(context.Background(), "i-1234567890abcdef0", nil)
+		if err != nil {
+			t.Errorf("attachEBSVolumes empty volumes: unexpected error: %v", err)
+		}
+	})
+}
+
+func TestCreateInstanceWithVolumes(t *testing.T) {
+	p := &awsProvider{
+		ec2Client:     newMockEC2Client(),
+		waiter:        newMockAWSInstanceWaiter(),
+		serviceConfig: serviceConfig,
+	}
+
+	spec := provider.InstanceTypeSpec{
+		InstanceType: "t2.small",
+		Volumes: []provider.CloudVolume{
+			{DiskID: "vol-0abc1234def56789"},
+			{DiskID: "vol-0def4567abc89012"},
+		},
+	}
+
+	instance, err := p.CreateInstance(context.Background(), "pod-with-vols", "sandbox-1", &mockCloudConfig{}, spec)
+	if err != nil {
+		t.Fatalf("CreateInstance with volumes: unexpected error: %v", err)
+	}
+	if instance == nil {
+		t.Fatal("CreateInstance with volumes: expected non-nil instance")
+	}
+	if instance.ID != "i-1234567890abcdef0" {
+		t.Errorf("CreateInstance with volumes: got ID %s, want i-1234567890abcdef0", instance.ID)
 	}
 }
 

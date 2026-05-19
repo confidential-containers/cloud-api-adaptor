@@ -7,3 +7,11 @@ set -euxo pipefail
   echo "IMAGE_VERSION=\"${IMAGE_VERSION-v0.0.0}\""
   echo "VARIANT_ID=\"${VARIANT_ID}\""
 } >> "${BUILDROOT}/etc/os-release"
+
+# Install Azure storage udev rules so /dev/disk/azure/data/by-lun/N symlinks
+# are created at boot without needing the full walinuxagent package.
+mkdir -p "${BUILDROOT}/etc/udev/rules.d"
+cat > "${BUILDROOT}/etc/udev/rules.d/66-azure-storage.rules" << 'UDEVRULES'
+# Azure data disk symlinks by LUN
+ACTION=="add|change", SUBSYSTEM=="block", ENV{ID_VENDOR}=="Msft", ENV{ID_MODEL}=="Virtual_Disk", PROGRAM="/bin/sh -c 'readlink /sys/block/%k/device 2>/dev/null | sed -n \"s/.*[:/]\\([0-9]*\\)$/\\1/p\"'", SYMLINK+="disk/azure/data/by-lun/%c"
+UDEVRULES
