@@ -27,6 +27,13 @@ optionals+=""
 # handled directly by Go code via FlagRegistrar in main.go and no longer need
 # env-to-arg conversion here.
 
+if [[ "${PEERPODS_DEVELOPER_MODE}" == "true" ]]; then
+    optionals+="-developer-mode "
+    if [[ -z "${PEERPODS_LIMIT_PER_NODE}" ]]; then
+        optionals+="-peerpods-limit-per-node 1 "
+    fi
+fi
+
 test_vars() {
     for i in "$@"; do
         [ -z "${!i}" ] && echo "\$$i is NOT set" && EXT=1

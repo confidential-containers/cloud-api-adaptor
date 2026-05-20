@@ -117,6 +117,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 		// Flags without environment variable support
 		flags.BoolVar(&disableTLS, "disable-tls", false, "Disable TLS encryption - use it only for testing")
+		flags.BoolVar(&cfg.serverConfig.DeveloperMode, "developer-mode", false, "Enable developer mode for disabling Peer Pod VM auto delete")
 		flags.StringVar(&cfg.networkConfig.HostInterface, "host-interface", "", "Host Interface")
 		flags.IntVar(&cfg.networkConfig.VXLAN.MinID, "vxlan-min-id", vxlan.DefaultVXLANMinID, "Minimum VXLAN ID (VXLAN tunnel mode only")
 
