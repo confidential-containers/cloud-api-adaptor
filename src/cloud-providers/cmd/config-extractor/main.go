@@ -127,15 +127,19 @@ func parseFile(path string) ([]FlagInfo, error) {
 func parsePackageConstants(dir string, fset *token.FileSet) map[string]string {
 	constants := make(map[string]string)
 
-	pkgs, err := parser.ParseDir(fset, dir, nil, parser.ParseComments)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return constants
 	}
-
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Files {
-			extractConstants(file, constants)
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".go" {
+			continue
 		}
+		file, err := parser.ParseFile(fset, filepath.Join(dir, entry.Name()), nil, parser.ParseComments)
+		if err != nil {
+			continue
+		}
+		extractConstants(file, constants)
 	}
 
 	return constants
