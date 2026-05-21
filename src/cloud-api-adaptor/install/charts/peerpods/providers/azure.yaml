@@ -12,15 +12,15 @@ providerConfigs:
 
     # Instance size
     # (default: "Standard_DC2as_v5")
-    # AZURE_INSTANCE_SIZE: "Standard_DC2as_v5"
+    AZURE_INSTANCE_SIZE: "Standard_DC2as_v5"
 
     # Instance sizes to be used for the Pod VMs, comma separated
     # (default: "")
-    # AZURE_INSTANCE_SIZES: ""
+    AZURE_INSTANCE_SIZES: ""
 
     # Security Group Id
     # (default: "")
-    # AZURE_NSG_ID: ""
+    AZURE_NSG_ID: ""
 
     # Region
     # (required)
@@ -40,93 +40,93 @@ providerConfigs:
 
     # CA certificate file for custom TLS (e.g. /etc/certificates/ca.crt)
     # (default: "")
-    # CACERT_FILE: ""
+    CACERT_FILE: ""
 
     # Client certificate file for custom TLS (e.g. /etc/certificates/client.crt)
     # (default: "")
-    # CERT_FILE: ""
+    CERT_FILE: ""
 
     # Client key file for custom TLS (e.g. /etc/certificates/client.key)
     # (default: "")
-    # CERT_KEY: ""
+    CERT_KEY: ""
 
     # Enable cloud config verify - should use it for production
     # (default: "false")
-    # CLOUD_CONFIG_VERIFY: "false"
+    CLOUD_CONFIG_VERIFY: "false"
 
     # Use non-CVMs for peer pods
     # (default: "false")
-    # DISABLECVM: "false"
+    DISABLECVM: "false"
 
     # Enable encrypted scratch space for pod VMs
     # (default: "false")
-    # ENABLE_SCRATCH_SPACE: "false"
+    ENABLE_SCRATCH_SPACE: "false"
 
     # Enable secure boot for the VMs
     # (default: "false")
-    # ENABLE_SECURE_BOOT: "false"
+    ENABLE_SECURE_BOOT: "false"
 
     # [EXPERIMENTAL] Enable external networking via pod VM
     # (default: "false")
-    # EXTERNAL_NETWORK_VIA_PODVM: "false"
+    EXTERNAL_NETWORK_VIA_PODVM: "false"
 
     # port number of agent protocol forwarder
     # (default: "")
-    # FORWARDER_PORT: ""
+    FORWARDER_PORT: ""
 
     # Default initdata for all Pods
     # (default: "")
-    # INITDATA: ""
+    INITDATA: ""
 
     # pause image to be used for the pods
     # (default: "")
-    # PAUSE_IMAGE: ""
+    PAUSE_IMAGE: ""
 
     # peer pods limit per node (default=10)
     # (default: "10")
-    # PEERPODS_LIMIT_PER_NODE: "10"
+    PEERPODS_LIMIT_PER_NODE: "10"
 
     # base directory for pod directories
     # (default: "")
-    # PODS_DIR: ""
+    PODS_DIR: ""
 
     # [EXPERIMENTAL] Comma separated CIDRs for local pod subnets
     # (default: "")
-    # POD_SUBNET_CIDRS: ""
+    POD_SUBNET_CIDRS: ""
 
     # Maximum timeout in minutes for establishing agent proxy connection
     # (default: "")
-    # PROXY_TIMEOUT: ""
+    PROXY_TIMEOUT: ""
 
     # Unix domain socket path of remote hypervisor service
     # (default: "")
-    # REMOTE_HYPERVISOR_ENDPOINT: ""
+    REMOTE_HYPERVISOR_ENDPOINT: ""
 
     # Root volume size in GB. Default is 0, which implies the default image disk size
     # (default: "0")
-    # ROOT_VOLUME_SIZE: "0"
+    ROOT_VOLUME_SIZE: "0"
 
     # SSH User Name
     # (default: "peerpod")
-    # SSH_USERNAME: "peerpod"
+    SSH_USERNAME: "peerpod"
 
     # Custom tags (key=value pairs) to be used for the Pod VMs, comma separated
     # (default: "")
-    # TAGS: ""
+    TAGS: ""
 
     # Skip TLS certificate verification - use it only for testing
     # (default: "false")
-    # TLS_SKIP_VERIFY: "false"
+    TLS_SKIP_VERIFY: "false"
 
     # Tunnel provider
     # (default: "")
-    # TUNNEL_TYPE: ""
+    TUNNEL_TYPE: ""
 
     # Assign public IP to the PoD VM and use to connect to kata-agent
     # (default: "false")
-    # USE_PUBLIC_IP: "false"
+    USE_PUBLIC_IP: "false"
 
     # VXLAN UDP port number (VXLAN tunnel mode only
     # (default: "")
-    # VXLAN_PORT: ""
+    VXLAN_PORT: ""
 

@@ -8,51 +8,51 @@ providerConfigs:
   ibmcloud:
     # CA certificate file for custom TLS (e.g. /etc/certificates/ca.crt)
     # (default: "")
-    # CACERT_FILE: ""
+    CACERT_FILE: ""
 
     # Client certificate file for custom TLS (e.g. /etc/certificates/client.crt)
     # (default: "")
-    # CERT_FILE: ""
+    CERT_FILE: ""
 
     # Client key file for custom TLS (e.g. /etc/certificates/client.key)
     # (default: "")
-    # CERT_KEY: ""
+    CERT_KEY: ""
 
     # Enable cloud config verify - should use it for production
     # (default: "false")
-    # CLOUD_CONFIG_VERIFY: "false"
+    CLOUD_CONFIG_VERIFY: "false"
 
     # Use non-CVMs for peer pods
     # (default: "true")
-    # DISABLECVM: "true"
+    DISABLECVM: "true"
 
     # Enable encrypted scratch space for pod VMs
     # (default: "false")
-    # ENABLE_SCRATCH_SPACE: "false"
+    ENABLE_SCRATCH_SPACE: "false"
 
     # [EXPERIMENTAL] Enable external networking via pod VM
     # (default: "false")
-    # EXTERNAL_NETWORK_VIA_PODVM: "false"
+    EXTERNAL_NETWORK_VIA_PODVM: "false"
 
     # port number of agent protocol forwarder
     # (default: "")
-    # FORWARDER_PORT: ""
+    FORWARDER_PORT: ""
 
     # Cluster ID
     # (default: "")
-    # IBMCLOUD_CLUSTER_ID: ""
+    IBMCLOUD_CLUSTER_ID: ""
 
     # List of Dedicated Host Group IDs, provide one from each Zone
     # (default: "")
-    # IBMCLOUD_DEDICATED_HOST_GROUP_IDS: ""
+    IBMCLOUD_DEDICATED_HOST_GROUP_IDS: ""
 
     # List of Dedicated Host IDs, provide one from each Zone
     # (default: "")
-    # IBMCLOUD_DEDICATED_HOST_IDS: ""
+    IBMCLOUD_DEDICATED_HOST_IDS: ""
 
     # IBM Cloud IAM Service URL
     # (default: "https://iam.cloud.ibm.com/identity/token")
-    # IBMCLOUD_IAM_ENDPOINT: "https://iam.cloud.ibm.com/identity/token"
+    IBMCLOUD_IAM_ENDPOINT: "https://iam.cloud.ibm.com/identity/token"
 
     # List of Image IDs, comma separated
     # (required)
@@ -60,81 +60,81 @@ providerConfigs:
 
     # List of instance profile names to be used for the Pod VMs, comma separated
     # (default: "")
-    # IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST: ""
+    IBMCLOUD_PODVM_INSTANCE_PROFILE_LIST: ""
 
     # Default instance profile name to be used for the Pod VMs
     # (default: "")
-    # IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME: ""
+    IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME: ""
 
     # Resource Group ID
     # (default: "")
-    # IBMCLOUD_RESOURCE_GROUP_ID: ""
+    IBMCLOUD_RESOURCE_GROUP_ID: ""
 
     # List of additional Security Group IDs to be used for the Pod VM, comma separated (cluster security group is automatically added)
     # (default: "")
-    # IBMCLOUD_SECURITY_GROUP_IDS: ""
+    IBMCLOUD_SECURITY_GROUP_IDS: ""
 
     # SSH Key ID
     # (default: "")
-    # IBMCLOUD_SSH_KEY_ID: ""
+    IBMCLOUD_SSH_KEY_ID: ""
 
     # IBM Cloud VPC Service URL
     # (default: "")
-    # IBMCLOUD_VPC_ENDPOINT: ""
+    IBMCLOUD_VPC_ENDPOINT: ""
 
     # VPC ID
     # (default: "")
-    # IBMCLOUD_VPC_ID: ""
+    IBMCLOUD_VPC_ID: ""
 
     # Primary subnet ID
     # (default: "")
-    # IBMCLOUD_VPC_SUBNET_ID: ""
+    IBMCLOUD_VPC_SUBNET_ID: ""
 
     # Zone name
     # (default: "")
-    # IBMCLOUD_ZONE: ""
+    IBMCLOUD_ZONE: ""
 
     # Default initdata for all Pods
     # (default: "")
-    # INITDATA: ""
+    INITDATA: ""
 
     # pause image to be used for the pods
     # (default: "")
-    # PAUSE_IMAGE: ""
+    PAUSE_IMAGE: ""
 
     # peer pods limit per node (default=10)
     # (default: "10")
-    # PEERPODS_LIMIT_PER_NODE: "10"
+    PEERPODS_LIMIT_PER_NODE: "10"
 
     # base directory for pod directories
     # (default: "")
-    # PODS_DIR: ""
+    PODS_DIR: ""
 
     # [EXPERIMENTAL] Comma separated CIDRs for local pod subnets
     # (default: "")
-    # POD_SUBNET_CIDRS: ""
+    POD_SUBNET_CIDRS: ""
 
     # Maximum timeout in minutes for establishing agent proxy connection
     # (default: "")
-    # PROXY_TIMEOUT: ""
+    PROXY_TIMEOUT: ""
 
     # Unix domain socket path of remote hypervisor service
     # (default: "")
-    # REMOTE_HYPERVISOR_ENDPOINT: ""
+    REMOTE_HYPERVISOR_ENDPOINT: ""
 
     # List of tags to attach to the Pod VMs, comma separated
     # (default: "")
-    # TAGS: ""
+    TAGS: ""
 
     # Skip TLS certificate verification - use it only for testing
     # (default: "false")
-    # TLS_SKIP_VERIFY: "false"
+    TLS_SKIP_VERIFY: "false"
 
     # Tunnel provider
     # (default: "")
-    # TUNNEL_TYPE: ""
+    TUNNEL_TYPE: ""
 
     # VXLAN UDP port number (VXLAN tunnel mode only
     # (default: "")
-    # VXLAN_PORT: ""
+    VXLAN_PORT: ""
 

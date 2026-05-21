@@ -23,11 +23,7 @@ define gen-provider-values
 			empty \
 		end), \
 		"providerConfigs:", \
-		(if ([.flags[] | select(.env_var != "" and .required)] | length) > 0 then \
-			"  \(.provider):" \
-		else \
-			"  \(.provider): {}" \
-		end), \
+		"  \(.provider):", \
 		(.flags[] | select(.env_var != "") | \
 			if .required then \
 				"    # \(.description)", \
@@ -36,7 +32,7 @@ define gen-provider-values
 			else \
 				"    # \(.description)", \
 				"    # (default: \"\(.default)\")", \
-				"    # \(.env_var): \"\(.default)\"" \
+				"    \(.env_var): \"\(.default)\"" \
 			end, \
 			"" \
 		)' > $(CHART_PROVIDERS_DIR)/$(1).yaml
