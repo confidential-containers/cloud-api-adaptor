@@ -106,8 +106,8 @@ jobs:
         run: |
           {
             echo "ORAS_VERSION=$(./hack/versions.py -q tools.oras)";
-            echo "KATA_AGENT_CTL_REF=$(./hack/versions.py -q oci.kata-agent-ctl.reference)";
-            echo "KATA_AGENT_CTL_REG=$(./hack/versions.py -q oci.kata-agent-ctl.registry)";
+            echo "KATA_REF=$(./hack/versions.py -q oci.kata-containers.reference)";
+            echo "KATA_REG=$(./hack/versions.py -q oci.kata-containers.registry)";
           } >> "$GITHUB_ENV"
 
       - uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
@@ -116,7 +116,7 @@ jobs:
 
       - name: Install kata-agent-ctl
         run: |
-          oras pull "${KATA_AGENT_CTL_REG}/agent-ctl:${KATA_AGENT_CTL_REF}-x86_64"
+          oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
           tar --zstd -xf kata-static-agent-ctl.tar.zst
           cp opt/kata/bin/kata-agent-ctl /usr/local/bin
 

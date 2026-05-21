@@ -63,6 +63,3 @@ oci:
   guest-components:
     registry: ghcr.io/confidential-containers/guest-components
     reference: de3f6ff62aa736619b80d99dfca5bc3d2c9a799d
-  kata-agent-ctl:
-    registry: ghcr.io/kata-containers/cached-artefacts
-    reference: 3.29.0
