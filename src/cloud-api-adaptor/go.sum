@@ -215,8 +215,8 @@ github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5 h1:6xNmx7iTtyBRev0+D/T
 github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5/go.mod h1:KdCmV+x/BuvyMxRnYBlmVaq4OLiKW6iRQfvC62cvdkI=
 github.com/containerd/cgroups/v3 v3.0.5 h1:44na7Ud+VwyE7LIoJ8JTNQOa549a8543BmzaJHo6Bzo=
 github.com/containerd/cgroups/v3 v3.0.5/go.mod h1:SA5DLYnXO8pTGYiAHXz94qvLQTKfVM5GEVisn4jpins=
-github.com/containerd/containerd v1.7.29 h1:90fWABQsaN9mJhGkoVnuzEY+o1XDPbg9BTC9QTAHnuE=
-github.com/containerd/containerd v1.7.29/go.mod h1:azUkWcOvHrWvaiUjSQH0fjzuHIwSPg1WL5PshGP4Szs=
+github.com/containerd/containerd v1.7.32 h1:S54xuVcPxeLaYgaRABtpJ2VyVUVsy0IGf7qHBs+sbY8=
+github.com/containerd/containerd v1.7.32/go.mod h1:jdwD6s/BhV4XVJGrvtziNPVA+83n66TwptVaPKprq4E=
 github.com/containerd/containerd/api v1.9.0 h1:HZ/licowTRazus+wt9fM6r/9BQO7S0vD5lMcWspGIg0=
 github.com/containerd/containerd/api v1.9.0/go.mod h1:GhghKFmTR3hNtyznBoQ0EMWr9ju5AqHjcZPsSpTKutI=
 github.com/containerd/continuity v0.4.4 h1:/fNVfTJ7wIl/YPMHjf+5H32uFhl63JucB34PlCpMKII=
@@ -527,8 +527,8 @@ github.com/opencontainers/runtime-spec v1.2.1 h1:S4k4ryNgEpxW1dzyqffOmhI1BHYcjzU
 github.com/opencontainers/runtime-spec v1.2.1/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
 github.com/opencontainers/runtime-tools v0.9.1-0.20250303011046-260e151b8552 h1:CkXngT0nixZqQUPDVfwVs3GiuhfTqCMk0V+OoHpxIvA=
 github.com/opencontainers/runtime-tools v0.9.1-0.20250303011046-260e151b8552/go.mod h1:T487Kf80NeF2i0OyVXHiylg217e0buz8pQsa0T791RA=
-github.com/opencontainers/selinux v1.13.0 h1:Zza88GWezyT7RLql12URvoxsbLfjFx988+LGaWfbL84=
-github.com/opencontainers/selinux v1.13.0/go.mod h1:XxWTed+A/s5NNq4GmYScVy+9jzXhGBVEOAyucdRUY8s=
+github.com/opencontainers/selinux v1.13.1 h1:A8nNeceYngH9Ow++M+VVEwJVpdFmrlxsN22F+ISDCJE=
+github.com/opencontainers/selinux v1.13.1/go.mod h1:S10WXZ/osk2kWOYKy1x2f/eXF5ZHJoUs8UU/2caNRbg=
 github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
 github.com/pelletier/go-toml/v2 v2.1.0 h1:FnwAJ4oYMvbT/34k9zzHuZNrhlz48GB3/s6at6/MHO4=
