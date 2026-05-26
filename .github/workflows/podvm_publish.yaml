@@ -102,6 +102,7 @@ jobs:
       packages: write # Required to publish the oras package to ghcr
       id-token: write # Required to publish the attestation provenance to ghcr
       attestations: write # Required to publish the attestation provenance to ghcr
+      artifact-metadata: write # Required by podvm_mkosi_ubuntu.yaml to write attestation metadata
     strategy:
       fail-fast: false
       matrix:
