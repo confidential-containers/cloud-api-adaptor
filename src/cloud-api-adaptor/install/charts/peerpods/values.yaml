@@ -80,7 +80,7 @@ secrets:
 # Note: libvirt/docker provider files override this with the dev image.
 image:
   name: quay.io/confidential-containers/cloud-api-adaptor
-  tag: "latest"
+  tag: "f5dd0b2657a76482c6acabe0285cc87eb5d49473"
 
 # Cloud provider: libvirt, aws, azure, byom, gcp, ibmcloud, vsphere
 provider: libvirt
