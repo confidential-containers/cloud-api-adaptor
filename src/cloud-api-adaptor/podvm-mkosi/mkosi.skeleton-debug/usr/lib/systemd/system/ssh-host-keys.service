@@ -1,0 +1,16 @@
+[Unit]
+Description=Generate SSH host keys for /run/ssh
+Documentation=man:sshd(8)
+DefaultDependencies=no
+Before=ssh.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=mkdir -p /run/ssh
+ExecStart=ssh-keygen -q -t rsa     -f /run/ssh/ssh_host_rsa_key     -N "" -C ""
+ExecStart=ssh-keygen -q -t ecdsa   -f /run/ssh/ssh_host_ecdsa_key   -N "" -C ""
+ExecStart=ssh-keygen -q -t ed25519 -f /run/ssh/ssh_host_ed25519_key -N "" -C ""
+
+[Install]
+WantedBy=ssh.service
