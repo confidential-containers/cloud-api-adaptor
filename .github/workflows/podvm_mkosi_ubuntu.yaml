@@ -163,6 +163,7 @@ jobs:
         run: make image-debug
         env:
           PODVM_DISTRO: ubuntu
+          MKOSI_VERSION: ${{ env.MKOSI_VERSION }}
 
       - name: Build mkosi image
         if: ${{ inputs.debug == false }}
@@ -170,6 +171,7 @@ jobs:
         run: make image
         env:
           PODVM_DISTRO: ubuntu
+          MKOSI_VERSION: ${{ env.MKOSI_VERSION }}
 
       - name: Upload the qcow2 with oras
         id: publish_oras_qcow2
