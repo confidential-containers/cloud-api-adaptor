@@ -18,7 +18,21 @@ rustup target add "$rustTarget"
 
 source /etc/os-release || source /usr/lib/os-release
 if [[ ${ID_LIKE:-} == *"debian"* ]]; then
-    apt install -y "qemu-system-$ARCH"
+    # Map architecture names to QEMU package names for Debian/Ubuntu
+    # Verified package names from: apt-cache search '^qemu-system-'
+    case "$ARCH" in
+        x86_64)
+            qemu_pkg="qemu-system-x86"
+            ;;
+        aarch64)
+            qemu_pkg="qemu-system-arm"
+            ;;
+        *)
+            # s390x and ppc64le match directly
+            qemu_pkg="qemu-system-$ARCH"
+            ;;
+    esac
+    apt install -y "$qemu_pkg"
     apt install -y "gcc-$ARCH-linux-$libc"
 elif [[ "${ID_LIKE:-}" =~ "fedora" ]] || [[ "${ID:-}" =~ "fedora" ]]; then
     dnf install -y "qemu-system-$ARCH"
