@@ -104,10 +104,10 @@ image: insecure-builder
 	rm -rf ./build
 	@echo "Building image..."
 ifeq ($(SE_BOOT),true)
-	$(call run_mkosi_in_container,--profile production --image system)
+	$(call run_mkosi_in_container,--profile production)
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
-	$(call run_mkosi_in_container,--profile production --image system)
+	$(call run_mkosi_in_container,--profile production)
 	sudo -E ../hack/build-s390x-image.sh
 else
 	mkdir -p build
