@@ -6,8 +6,9 @@
 # If ARCH is not set, exit
 [[ -z $ARCH ]] && exit 0
 
-# If ARCH is equal to HOST, exit
-[[ $ARCH = $(uname -m) ]] && exit 0
+# If ARCH is equal to HOST, exit (no cross-compilation needed)
+# Use replacement pattern to normalize arm64 to aarch64 for comparison
+[[ "${ARCH/arm64/aarch64}" = "$(uname -m)" ]] && exit 0
 
 # Only gnu is available for s390x and aarch64
 libc=$([[ $ARCH =~ s390x || $ARCH =~ aarch64 ]] && echo "gnu" || echo "musl")
