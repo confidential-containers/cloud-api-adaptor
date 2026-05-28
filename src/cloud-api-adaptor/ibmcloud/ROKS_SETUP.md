@@ -5,7 +5,7 @@ This guide describes how to set up a simple peer pod demo environment with a Red
 1. [Set up an OpenShift Kubernetes cluster for PeerPod VMs](#set-up-an-openshift-kubernetes-cluster-for-peerpod-vms)
 1. [Upload a PeerPod VM Custom Image](#upload-a-peerpod-vm-custom-image)
 1. [Deploy the PeerPod Webhook](#deploy-the-peerpod-webhook)
-1. [Deploy kata-deploy and cloud-api-adaptor ](#deploy-confidential-containers)
+1. [Deploy kata-deploy and cloud-api-adaptor](#deploy-confidential-containers)
 1. [Run a Helloworld sample](#run-a-helloworld-sample)
 
 ## Pre-reqs
@@ -13,19 +13,26 @@ This guide describes how to set up a simple peer pod demo environment with a Red
 Before proceeding you will need to install:
 
 1. [IBM Cloud CLI](https://cloud.ibm.com/docs/cli?topic=cli-install-ibmcloud-cli) and `container-service[kubernetes-service/ks]` and `vpc-infrastructure[infrastructure-service/is]` plugins
+
 > **Tips**
+>
 > - If you are using Ubuntu linux, you can run follow commands simply:
+>
 >     ```bash
->     $ curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
->     $ ibmcloud plugin install kubernetes-service
->     $ ibmcloud plugin install vpc-infrastructure
+>     curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+>     ibmcloud plugin install kubernetes-service
+>     ibmcloud plugin install vpc-infrastructure
 >     ```
-2. [`jq`](https://stedolan.github.io/jq/download/)
+>
+1. [`jq`](https://stedolan.github.io/jq/download/)
+
 > **Tip:** If you are using Ubuntu linux, you can run follow command:
+>
 > ```bash
-> $ sudo apt-get install jq
+> sudo apt-get install jq
 > ```
-3. [go](https://go.dev/doc/install)
+>
+1. [go](https://go.dev/doc/install)
 1. `make`
 1. the OpenShift [oc CLI](https://cloud.ibm.com/docs/openshift?topic=openshift-cli-install#install-kubectl-cli)
 1. [helm](https://helm.sh/docs/intro/install/)
@@ -140,19 +147,23 @@ By default, your Red Hat OpenShift cluster will not work with the peer pod compo
 
 A peer pod VM image needs to be available as a VPC custom image in IBM Cloud to create the peer pod instances with. If you want to run the full confidential containers end-to-end demo, including TDX attestation with a [Trustee](https://github.com/confidential-containers/trustee), you will need to make sure that your peer pod VM image is configured with the TDX attestation agent and kernel modules.
 
-If you don't have a suitable peer pod image, you will need to [build one](./README.md#peer-pod-vm-image). For example, you can use the following command to build a TDX enabled RHEL image:
+If you don't have a suitable peer pod image, you can either use a prebuilt image or build one yourself using mkosi. To build a custom Ubuntu image with TDX support:
+
 ```bash
 # Run this command in directory src/cloud-api-adaptor
-PODVM_DISTRO=rhel TEE_PLATFORM=tdx ACTIVATION_KEY=<key> ORG_ID=<org id> IMAGE_URL=<path to base kvm qcow2 image> make podvm-builder podvm-binaries podvm-image
+cd podvm-mkosi
+make ARCH=amd64 DISTRO=ubuntu MEASURED_ROOTFS=yes image
 ```
 
-This will create the RHEL image wrapped in a docker container image. You can then upload the RHEL image to IBM Cloud by running the following command from the root directory of the `cloud-api-adaptor` repository:
+This will create an Ubuntu image with TDX support. The resulting qcow2 image will be in `podvm-mkosi/output/qemu_qcow2/image.qcow2`. You can then upload the image to IBM Cloud by running the following command from the root directory of the `cloud-api-adaptor` repository:
+
 ```bash
-src/cloud-api-adaptor/ibmcloud/image/import.sh <built docker image>:<image tag> "$REGION" --pull never --os red-9-amd64
+src/cloud-api-adaptor/ibmcloud/image/import.sh podvm-mkosi/output/qemu_qcow2/image.qcow2 "$REGION"
 ```
 
 > [!TIP]
 > If you don't have a TDX enabled image and are unable to build one, you can still run the peer pod demo without attestation. Run the following command to import a prebuilt non-TDX demo image:
+>
 > ```bash
 > src/cloud-api-adaptor/ibmcloud/image/import.sh ghcr.io/confidential-containers/podvm-generic-ubuntu-amd64:latest "$REGION" --platform linux/amd64
 > ```
@@ -313,11 +324,14 @@ Hello version: v1, instance: helloworld
 > If you have a Trustee configured, you can also test that attestation is working by running curl inside the helloworld pod to retrieve a key from the confidential data hub (CDH).
 >
 > For example, if your Trustee is configured with the same example key as used in the [test Trustee](#deploy-a-test-trustee), you can retrieve the value of key1 using the following command:
+>
 > ```bash
 > oc exec -n default -it helloworld -- bash
 > curl http://127.0.0.1:8006/cdh/resource/default/kbsres1/key1
 > ```
+>
 > If it is working, this will output the key's configured value:
+>
 > ```
 > res1val1
 > ```
@@ -353,6 +367,7 @@ Otherwise:
 The following instructions can be used to set up a simple Trustee with an HTTP endpoint for testing attestation.
 
 1. Create a Ubuntu VSI in the same VPC as your ROKS cluster.
+
     ```
     ibmcloud is instance-create "$CLUSTER_NAME-trustee" "$VPC_ID" "$ZONE" "bx2-2x8" "$SUBNET_ID" --image "r014-85b1a9ec-369b-41d6-b921-39666d4139d1" --keys "$SSH_KEY_ID" --allow-ip-spoofing false
     ```
@@ -361,6 +376,7 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
     > Tip: you can SSH to the private IP of the VSI from a pod or node in your ROKS cluster, since they are running in the same VPC.
 
     First, run the following commands to install docker and oras:
+
     ```
     sudo apt-get update
     sudo apt-get install ca-certificates curl
@@ -377,6 +393,7 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
     ```
 
     Next, deploy the Trustee services:
+
     ```
     git clone https://github.com/confidential-containers/trustee.git
     cd trustee
@@ -386,6 +403,7 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
     ```
 
     Finally, configure an example key that can be used for CDH testing:
+
     ```
     oras pull ghcr.io/confidential-containers/staged-images/kbs-client:latest
     chmod +x kbs-client
@@ -398,11 +416,13 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
 1. Configure your confidential containers environment to use the Trustee.
 
     First, use the VSI IP to set the `KBS_SERVICE_ENDPOINT` environment variable to the URL of the Trustee:
+
     ```
     export KBS_SERVICE_ENDPOINT="http://$(ibmcloud is instance "$CLUSTER_NAME-trustee" --output JSON | jq -r '.network_interfaces[].primary_ip.address'):8080"
     ```
 
     Then, set the `INITDATA` environment variable to the compressed and encoded Trustee configuration:
+
     ```
     export INITDATA=$(cat <<EOF | gzip | base64 -w0
     algorithm = "sha256"
@@ -431,11 +451,13 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
     ```
 
     If you want to use this Trustee for all peer pods in the cluster, run the following command to configure the global `INITDATA` property in your `peerpods-cluster.properties` file:
+
     ```
     echo "INITDATA=\"$INITDATA\"" >> ~/peerpods-cluster.properties
     ```
 
     Alternatively, you can configure the Trustee for a specific peer pod, by including the `io.katacontainers.config.hypervisor.cc_init_data` annotation on the pod. For example:
+
     ```
     apiVersion: v1
     kind: Pod
