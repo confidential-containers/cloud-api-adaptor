@@ -34,7 +34,6 @@ tools:
   kcli: 99.0.202507200957
   mkosi: v26
   protoc: 3.16.0
-  packer: v1.9.4
   oras: 1.2.0
   helm:
     version: v4.0.4
