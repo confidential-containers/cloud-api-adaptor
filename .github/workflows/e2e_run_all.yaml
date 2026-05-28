@@ -18,7 +18,7 @@ on:
         required: false
         type: string
       podvm_image_tag:
-        description: set the podvm_builder/podvm_binaries/podvm image tag
+        description: set the podvm image tag
         required: true
         type: string
       registry:
@@ -48,44 +48,6 @@ defaults:
 permissions: {}
 
 jobs:
-  podvm_builder:
-    uses: ./.github/workflows/podvm_builder.yaml
-    with:
-      registry: ${{ inputs.registry }}
-      image_tag: ${{ inputs.podvm_image_tag }}
-      git_ref: ${{ inputs.git_ref }}
-    permissions:
-      contents: read
-      packages: write
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-
-  podvm_binaries:
-    needs: [podvm_builder]
-    uses: ./.github/workflows/podvm_binaries.yaml
-    with:
-      registry: ${{ inputs.registry }}
-      image_tag: ${{ inputs.podvm_image_tag }}
-      git_ref: ${{ inputs.git_ref }}
-    permissions:
-      contents: read
-      packages: write
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-
-  podvm:
-    needs: [podvm_binaries]
-    uses: ./.github/workflows/podvm.yaml
-    with:
-      registry: ${{ inputs.registry }}
-      image_tag: ${{ inputs.podvm_image_tag }}
-      git_ref: ${{ inputs.git_ref }}
-    permissions:
-      contents: read
-      packages: write
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-
   podvm_mkosi_amd64:
     uses: ./.github/workflows/podvm_mkosi.yaml
     with:
