@@ -10,7 +10,7 @@ As long as the cloud provider support is implemented on this framework, you can 
 as shown below for *libvirt*:
 
 ```
-$ CLOUD_PROVIDER=libvirt make test-e2e
+CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
 The above command run tests on an existing cluster. It will look for the kubeconf file exported on the
@@ -19,7 +19,7 @@ The above command run tests on an existing cluster. It will look for the kubecon
 You can instruct the tool to provision a test environment though, as shown below:
 
 ```
-$ TEST_PROVISION=yes CLOUD_PROVIDER=libvirt make test-e2e
+TEST_PROVISION=yes CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
 Each provider must have a provisioner implementation so that the framework is able to perform operations on the cluster. The provisioner will likely to need additional information (e.g. login credentials), and those are passed via a properties file with the following format:
@@ -33,13 +33,13 @@ key2 = "value2"
 You should use the `TEST_PROVISION_FILE` variable to specify the properties file path, as shown below (for libvirt provider look at [libvirt/README.md](../../libvirt/README.md) setup):
 
 ```
-$ TEST_PROVISION=yes TEST_PROVISION_FILE=/path/to/libvirt.properties CLOUD_PROVIDER=libvirt make test-e2e
+TEST_PROVISION=yes TEST_PROVISION_FILE=/path/to/libvirt.properties CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
 The `TEST_PODVM_IMAGE` is an optional variable which specifies the path to the podvm qcow2 image. If it is set then the image should be uploaded to the VPC storage. The following command, as an example, instructs the tool to upload `path/to/podvm-base.qcow2` after the provisioning of the test environment:
 
 ```
-$ TEST_PROVISION=yes TEST_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
+TEST_PROVISION=yes TEST_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
 By default it is given 20 minutes for the entire e2e execution to complete, otherwise the process is preempted. If you need to extend that timeout then export the `TEST_E2E_TIMEOUT` variable. For example, `TEST_E2E_TIMEOUT=30m` set the timeout to 30 minutes. See `-timeout` in [go test flags](https://pkg.go.dev/cmd/go#hdr-Testing_flags) for the values accepted.
@@ -50,8 +50,9 @@ To use existing cluster which have already installed Cloud API Adaptor, you shou
 
 While in development and/or debugging it's common that you want to run just a sub-set of tests rather than the entire suite. To accomplish that
 you should export an unanchored regular expression in the `RUN_TESTS` variable that matches the tests names (see `-run` in [go test flags](https://pkg.go.dev/cmd/go#hdr-Testing_flags) for the regular expression format accepted). For example, to run only the simple creation pod test:
+
 ```
-$ RUN_TESTS=CreateSimplePod TEST_PROVISION=yes TEST_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
+RUN_TESTS=CreateSimplePod TEST_PROVISION=yes TEST_PODVM_IMAGE="path/to/podvm-base.qcow2" CLOUD_PROVIDER=libvirt make test-e2e
 ```
 
 ## Attestation and KBS specific
@@ -62,20 +63,22 @@ To prepare trustee, execute the following helper script:
 ```sh
 ${cloud-api-adaptor-repo-dir}/src/cloud-api-adaptor/test/utils/checkout_kbs.sh
 ```
+
 > [!NOTE]
 > This script requires [oras](https://oras.land/docs/installation/) to be installed to pull down and verify
 the cached kbs-client.
 
-
-We need build and use the PodVM image:
+We need to build and use the PodVM image:
 
 ```sh
-pushd ${cloud-api-adaptor}
-make podvm-builder podvm-binaries podvm-image
+pushd ${cloud-api-adaptor}/podvm-mkosi
+make  # builds builder, binaries, and OS image
+# Convert to QCOW2 format if needed for your provider
+qemu-img convert -f raw -O qcow2 build/system.raw build/system.qcow2
 popd
 ```
 
-Then extract the PodVM image and use it following [extracting-the-qcow2-image](../../podvm/README.md#extracting-the-qcow2-image)
+The resulting image will be at `${cloud-api-adaptor}/podvm-mkosi/build/system.raw` (or `system.qcow2` after conversion). See [podvm-mkosi/README.md](../../podvm-mkosi/README.md) for detailed build instructions.
 
 To deploy the KBS service and test attestation related cases, export the following variable:
 
@@ -86,6 +89,7 @@ export DEPLOY_KBS=yes
 ## Other end-to-end test customizations
 
 Other options are provided via environment variables if you need to further customize the e2e test cases:
+
 - `TEST_CAA_NAMESPACE` - This option is available, primarily for running the e2e tests on a downstream version
 of confidential containers, where the cloud-api-adaptor pod is deployed to a different namespace than the default
  `confidential-containers-system`.
@@ -151,11 +155,12 @@ Use the properties on the table below for AWS:
 |vxlan_port|VXLAN port number||
 
 >Notes:
- * The AWS credentials are obtained from the CLI [configuration files](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html). **Important**: the access key and secret are recorded in plain-text in [install/charts/peerpods/providers/aws-secrets.yaml](../../install/charts/peerpods/providers/aws-secrets.yaml)
- * The subnet is created with CIDR IPv4 block 10.0.0.0/25. In case of deploying an EKS cluster,
+
+- The AWS credentials are obtained from the CLI [configuration files](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html). **Important**: the access key and secret are recorded in plain-text in [install/charts/peerpods/providers/aws-secrets.yaml](../../install/charts/peerpods/providers/aws-secrets.yaml)
+- The subnet is created with CIDR IPv4 block 10.0.0.0/25. In case of deploying an EKS cluster,
 a secondary (private) subnet is created with CIDR IPv4 block 10.0.0.128/25
- * The cluster type **onprem** assumes Kubernetes is already provisioned and its kubeconfig file path can be found at the `KUBECONFIG` environment variable or in the `~/.kube/config` file. Whereas **eks** type instructs to create an [AWS EKS](https://aws.amazon.com/eks/) cluster on the VPC
- * You must have `qemu-img` installed in your workstation or CI runner because it is used to convert an qcow2 disk to raw.
+- The cluster type **onprem** assumes Kubernetes is already provisioned and its kubeconfig file path can be found at the `KUBECONFIG` environment variable or in the `~/.kube/config` file. Whereas **eks** type instructs to create an [AWS EKS](https://aws.amazon.com/eks/) cluster on the VPC
+- You must have `qemu-img` installed in your workstation or CI runner because it is used to convert an qcow2 disk to raw.
 
 ### Libvirt provision properties
 
@@ -178,6 +183,7 @@ Use the properties on the table below for Libvirt:
 ## Running tests for PodVM with Authenticated Registry
 
 For running e2e test cases specifically for checking PodVM with Image from Authenticated Registry, we need to export following two variables
+
 - `AUTHENTICATED_REGISTRY_IMAGE` - Name of the image along with the tag from authenticated registry (example: quay.io/kata-containers/confidential-containers-auth:test)
 - `REGISTRY_CREDENTIAL_ENCODED` - Credentials of registry encrypted as BASE64ENCODED(USERNAME:PASSWORD). If you're using quay registry, we can get the encrypted credentials from Account Settings >> Generate Encrypted Password >> Docker Configuration
 
@@ -216,7 +222,9 @@ RUN_TESTS=TestAzureImageDecryption
 ```
 
 ### IBM Cloud
+
 Take region `jp-tok` for example.
+
 ```
 cd ../.. # go to project root
 cat <<EOF> skip-provisioning.properties
@@ -241,7 +249,7 @@ EOF
 
 - For `INSTANCE_PROFILE_NAME`, if it's not secure execution, the value is started with "bz2". If it's secure execution, the value is started with 'bz2e'. More values can be found through ibmcloud command `ibmcloud is instance-profiles`.
 - For `PODVM_IMAGE_ID`, the vpc image id uploaded to ibmcloud.
-- For `CAA_IMAGE_TAG`, the commit id of project. The commit id can be found here: https://github.com/confidential-containers/cloud-api-adaptor/commits/main/
+- For `CAA_IMAGE_TAG`, the commit id of project. The commit id can be found here: <https://github.com/confidential-containers/cloud-api-adaptor/commits/main/>
 
 # Adding support for a new cloud provider
 
