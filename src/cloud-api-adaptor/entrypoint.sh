@@ -42,7 +42,7 @@ one_of() {
 }
 
 aws() {
-    test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+    [ -z "${AWS_WEB_IDENTITY_TOKEN_FILE}" ] && test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY || test_vars AWS_WEB_IDENTITY_TOKEN_FILE AWS_ROLE_ARN
 
     set -x
     exec cloud-api-adaptor aws ${optionals}
