@@ -151,7 +151,7 @@ jobs:
       - name: Build binaries for Ubuntu
         id: build_binaries
         working-directory: src/cloud-api-adaptor/podvm-mkosi
-        run: make binaries
+        run: make podvm-binaries
         env:
           ARCH: ${{ inputs.arch }}
           PODVM_DISTRO: ubuntu
