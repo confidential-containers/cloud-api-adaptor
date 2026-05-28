@@ -96,7 +96,7 @@ jobs:
         TEE_PLATFORM: az-cvm-vtpm
         VERIFY_PROVENANCE: yes
       run: |
-        make binaries
+        make podvm-binaries
 
     - name: Build image
       if: inputs.image-variant == 'production'
