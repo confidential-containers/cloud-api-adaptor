@@ -372,7 +372,7 @@ func (p *AzureCloudProvisioner) GetProperties(ctx context.Context, cfg *envconf.
 
 func (p *AzureCloudProvisioner) UploadPodvm(imagePath string, ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("UploadPodvm()")
-	log.Trace("Image is uploaded via packer in case of azure")
+	log.Trace("Image is uploaded via mkosi in case of azure")
 	return nil
 }
 
