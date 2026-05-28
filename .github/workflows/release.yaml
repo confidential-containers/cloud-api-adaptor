@@ -23,17 +23,6 @@ jobs:
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
-  csi-wrapper:
-    uses: ./.github/workflows/csi_wrapper_images.yaml
-    with:
-      image_tags: ${{ github.event.release.tag_name }}
-      git_ref: ${{ github.ref }}
-    permissions:
-      contents: read
-      packages: write
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-
   peerpod-ctrl:
     uses: ./.github/workflows/peerpod-ctrl_build_and_push_all_arches.yaml
     with:
