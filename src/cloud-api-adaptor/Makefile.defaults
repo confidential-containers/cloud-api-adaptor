@@ -112,4 +112,3 @@ GUEST_COMPONENTS_REGISTRY := $(or $(GUEST_COMPONENTS_REGISTRY), $(call query,oci
 GUEST_COMPONENTS_REF := $(or $(GUEST_COMPONENTS_REF),$(call query,oci.guest-components.reference))
 PAUSE_REPO :=  $(or $(PAUSE_REPO),$(call query,oci.pause.registry))
 PAUSE_VERSION := $(or $(PAUSE_VERSION),$(call query,oci.pause.tag))
-PACKER_VERSION := $(or $(PACKER_VERSION),$(call query,tools.packer))
