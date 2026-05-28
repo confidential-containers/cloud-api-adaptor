@@ -1,5 +1,5 @@
 #!/bin/bash
-# import.sh takes a podvm docker image reference and a cloud region
+# import.sh takes a podvm oras artifact reference or qcow2 file and a cloud region
 # and creates a ibmcloud vpc image of the qcow2 image.
 # Requires IBMCLOUD_API_KEY to be set.
 # Will default to first bucket it can find, by specifying
@@ -12,7 +12,7 @@ error(){
 script_dir=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 
 function usage() {
-    echo "Usage: $0 <docker-image/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint> --os <operating-system> --pull always(default)|missing|never]"
+    echo "Usage: $0 <oras-artifact/qcow2-file> <vpc-region> [--bucket <name> --region <cos-region> --instance <cos-instance> --endpoint <cos-endpoint> --api <cloud-endpoint> --os <operating-system>]"
 }
 
 image_file=$1
@@ -22,9 +22,7 @@ bucket_region=$region
 instance=
 endpoint=
 api=${IBMCLOUD_API_ENDPOINT-https://cloud.ibm.com}
-platform=
 operating_system=
-pull=always
 
 shift 2
 while (( "$#" )); do
@@ -35,8 +33,6 @@ while (( "$#" )); do
         --region) bucket_region=$2 ;;
         --os) operating_system=$2 ;;
         --api) api=$2 ;;
-        --platform) platform=$2 ;;
-        --pull) pull=$2 ;;
         --help) usage; exit 0 ;;
         *)      usage 1>&2; exit 1;;
     esac
@@ -83,9 +79,12 @@ fi
 if [ -f ${image_file} ]; then
     file=${image_file}
 else
-    # Download image
     echo "Downloading file from image ${image_file}"
-    file=$($script_dir/../../podvm/hack/download-image.sh ${image_file} . --platform "${platform}" --pull "${pull}") || error "Unable to download ${image_file}"
+    # mkosi images are oras artifacts
+    oras pull ${image_file} || error "Unable to download ${image_file}"
+    tar xvJf podvm.tar.xz
+    file=$(ls podvm-*.qcow2 2>/dev/null | head -n1)
+    [ -z "$file" ] && error "No qcow2 file found in downloaded artifact"
 fi
 
 echo "Uploading file ${file}"
