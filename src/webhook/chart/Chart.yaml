@@ -2,8 +2,8 @@ apiVersion: v2
 name: peerpods-webhook
 description: Mutating webhook that modifies pod specs to use peer pods runtime and resources
 type: application
-version: 0.3.0
-appVersion: "v0.21.0"
+version: 0.3.1
+appVersion: "v0.21.1"
 
 keywords:
   - confidential-containers
