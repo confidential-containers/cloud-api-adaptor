@@ -72,20 +72,23 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push image
+        env:
+          IMAGE_TAGS: ${{ inputs.image_tags }}
+          REGISTRY: ${{ inputs.registry }}
         run: |
-          tags="${{ inputs.image_tags }}"
+          tags="${IMAGE_TAGS}"
           latest=0
           for t in ${tags/,/ }; do
             if [ "$t" = "latest" ]; then
               latest=1
             else
               echo "::group::Build and push tag ${t}"
-              make docker-load docker-push IMG="${{ inputs.registry }}/peer-pods-webhook:${t}"
+              make docker-load docker-push IMG="${REGISTRY}/peer-pods-webhook:${t}"
               echo "::endgroup::"
             fi
           done
           if [ $latest -eq 1 ]; then
             echo "::group::Push latest"
-            make docker-push IMG=${{ inputs.registry }}/peer-pods-webhook:latest
+            make docker-push IMG="${REGISTRY}/peer-pods-webhook:latest"
             echo "::endgroup::"
           fi
