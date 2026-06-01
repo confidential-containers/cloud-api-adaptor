@@ -42,7 +42,16 @@ one_of() {
 }
 
 aws() {
-    [ -z "${AWS_WEB_IDENTITY_TOKEN_FILE}" ] && test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY || test_vars AWS_WEB_IDENTITY_TOKEN_FILE AWS_ROLE_ARN
+    # Check that at least one authentication method is configured
+    one_of AWS_SECRET_ACCESS_KEY AWS_ROLE_ARN
+
+    # If using web identity, require role ARN and token file
+    if [ -n "${AWS_ROLE_ARN}" ]; then
+        test_vars AWS_WEB_IDENTITY_TOKEN_FILE AWS_ROLE_ARN
+    else
+        # If using access keys, require both key and secret
+        test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+    fi
 
     set -x
     exec cloud-api-adaptor aws ${optionals}
