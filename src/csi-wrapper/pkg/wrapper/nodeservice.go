@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"strings"
 
 	podvminfo "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/proto/podvminfo"
@@ -31,6 +32,10 @@ const (
 	DefaultKubeletLibDir  = "/var/lib/kubelet"
 	DefaultKubeletDataDir = "/var/data/kubelet"
 	DefaultMountInfo      = "{\"Device\": \"/dev/zero\", \"fstype\": \"ext4\"}"
+	// Block-mode mountInfo. volume-type=block tells kata-agent to
+	// passthrough the device without mounting a filesystem; the workload
+	// receives a raw block device at the bind-mount target.
+	BlockMountInfo = "{\"volume-type\": \"block\", \"device\": \"/dev/zero\", \"fstype\": \"\"}"
 )
 
 type NodeService struct {
@@ -42,7 +47,18 @@ type NodeService struct {
 
 // Leverage Kata’s mechanism of direct block device assignment to prevent CSI mount source from replacing by Kata shim code
 func addKataDirectVolume(volumePath string) {
-	err := volume.Add(volumePath, DefaultMountInfo)
+	addKataDirectVolumeWithMode(volumePath, false)
+}
+
+// addKataDirectVolumeWithMode lets callers register a passthrough block
+// volume by passing block=true, which sets MountInfo.volume-type=block
+// (vs the default filesystem-style mountInfo).
+func addKataDirectVolumeWithMode(volumePath string, block bool) {
+	mountInfo := DefaultMountInfo
+	if block {
+		mountInfo = BlockMountInfo
+	}
+	err := volume.Add(volumePath, mountInfo)
 	if err != nil {
 		glog.Warningf("Failed to add kata direct volume: %v", err.Error())
 	}
@@ -82,12 +98,43 @@ func (s *NodeService) redirect(ctx context.Context, req interface{}, fn func(con
 
 	return nil
 }
+// isBlockTargetPath returns true if the given CSI targetPath looks like
+// the block-mode layout that kubelet uses for volumeMode: Block PVCs:
+//   /var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/publish/<volname>/<podUID>
+// vs the filesystem-mode layout:
+//   /var/lib/kubelet/pods/<podUID>/volumes/kubernetes.io~csi/<volname>/mount
+func isBlockTargetPath(targetPath string) bool {
+	return strings.Contains(targetPath, "/volumeDevices/publish/")
+}
+
+// isBlockStagingPath mirrors isBlockTargetPath for the stagingTargetPath
+// that NodeStageVolume/NodeUnstageVolume see.
+//   block:      /var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/staging/<volname>
+//   filesystem: /var/lib/kubelet/plugins/kubernetes.io/csi/<plugin>/<sha>/globalmount
+func isBlockStagingPath(stagingPath string) bool {
+	return strings.Contains(stagingPath, "/volumeDevices/staging/")
+}
+
 func (s *NodeService) getPodUIDandVolumeName(targetPath string) (podUID, volumeName string) {
-	// /var/lib/kubelet/pods/69576836-28c2-447e-a726-fdf8866a0622/volumes/kubernetes.io~csi/pvc-e9d79b06-fd06-487f-ac93-ea6424819a7d/mount
 	paths := strings.Split(targetPath, "/")
 	glog.Infof("split paths is :%v", paths)
-	podUID = paths[5]
-	volumeName = paths[8]
+	if isBlockTargetPath(targetPath) {
+		// Block mode:
+		// /var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/publish/<volname>/<podUID>
+		// idx:       1   2   3       4         5            6    7              8        9          10
+		if len(paths) >= 11 {
+			podUID = paths[10]
+			volumeName = paths[9]
+		}
+	} else {
+		// Filesystem mode:
+		// /var/lib/kubelet/pods/<podUID>/volumes/kubernetes.io~csi/<volname>/mount
+		// idx:       1   2   3       4    5        6        7                  8        9
+		if len(paths) >= 9 {
+			podUID = paths[5]
+			volumeName = paths[8]
+		}
+	}
 	glog.Infof("podUid is :%v, volumeName is: %v", podUID, volumeName)
 	return
 }
@@ -107,15 +154,67 @@ func (s *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		publishContext := req.GetPublishContext()
 		stagingTargetPath := req.GetStagingTargetPath()
 		targetPath := req.GetTargetPath()
-		osErr := os.MkdirAll(targetPath, os.FileMode(0755))
-		if osErr != nil {
-			glog.Warningf("Failed to create fake targetPath, err is: %v", osErr)
+		// In block mode containerd's runtime spec generation calls
+		// stat() on targetPath and rejects it unless it's a device
+		// node. The actual EBS device lives in the peer-pod VM, so we
+		// give containerd a placeholder block device on the worker:
+		// create a 1 MiB sparse file, attach it to /dev/loopN via
+		// losetup, then bind-mount that loop device over targetPath.
+		// kata-agent recognises the kata-direct-volume entry we publish
+		// alongside and replaces the placeholder with the real EBS
+		// device when it builds the guest OCI spec.
+		if isBlockTargetPath(targetPath) {
+			parent := targetPath[:strings.LastIndex(targetPath, "/")]
+			if err := os.MkdirAll(parent, os.FileMode(0755)); err != nil {
+				glog.Warningf("Failed to create fake block targetPath parent, err is: %v", err)
+			}
+			// Idempotent: lazy-unmount any leftover bind-mount from a
+			// prior wrapper version (or a prior pod with the same uid).
+			_ = exec.Command("umount", "-l", targetPath).Run()
+			// Create sparse backing file at the targetPath so kubelet's
+			// MakeGlobalVolumePath (which propagates from this path to
+			// globalMapPath via shared mounts) also sees a regular file.
+			f, ferr := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.FileMode(0644))
+			if ferr != nil {
+				glog.Warningf("Failed to create fake block targetPath file, err is: %v", ferr)
+			} else {
+				if err := f.Truncate(1 << 20); err != nil {
+					glog.Warningf("Failed to truncate fake block targetPath file, err is: %v", err)
+				}
+				_ = f.Close()
+			}
+			// losetup -f --show <file> → /dev/loopN
+			loopOut, lerr := exec.Command("losetup", "-f", "--show", targetPath).CombinedOutput()
+			if lerr != nil {
+				glog.Warningf("losetup -f failed for block targetPath, err: %v, out: %s", lerr, string(loopOut))
+			} else {
+				loopDev := strings.TrimSpace(string(loopOut))
+				glog.Infof("attached %v to %v", targetPath, loopDev)
+				// Bind-mount the loop device over the targetPath so
+				// containerd's stat() on targetPath returns a block
+				// device. The original sparse file is still backing the
+				// loop device underneath.
+				if out, berr := exec.Command("mount", "--bind", loopDev, targetPath).CombinedOutput(); berr != nil {
+					if !strings.Contains(string(out), "already mounted") &&
+						!strings.Contains(string(out), "busy") {
+						glog.Warningf("bind-mount %v over %v failed, err: %v, out: %s", loopDev, targetPath, berr, string(out))
+					}
+				}
+			}
+		} else {
+			osErr := os.MkdirAll(targetPath, os.FileMode(0755))
+			if osErr != nil {
+				glog.Warningf("Failed to create fake targetPath, err is: %v", osErr)
+			}
 		}
 		glog.Infof("The stagingTargetPath is :%v", stagingTargetPath)
 		glog.Infof("The targetPath is :%v", targetPath)
 		glog.Infof("The publishContext is :%v", publishContext)
 
-		addKataDirectVolume(targetPath)
+		// Block-mode volumes register as volume-type=block so kata-agent
+		// passes the device through without mounting a filesystem.
+		blockMode := isBlockTargetPath(targetPath)
+		addKataDirectVolumeWithMode(targetPath, blockMode)
 
 		var reqBuf bytes.Buffer
 		if err := (&jsonpb.Marshaler{}).Marshal(&reqBuf, req); err != nil {
@@ -175,6 +274,24 @@ func (s *NodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		// Do fake action for NodeUnpublishVolume on worker node
 		targetPath := req.GetTargetPath()
 		glog.Infof("The targetPath is :%v", targetPath)
+		// In block mode we left a /dev/loopN bind-mounted over the
+		// targetPath (a sparse backing file). Tear down in the right
+		// order: unmount the bind, detach the loop device, then let
+		// RemoveAll clean up the file. Lazy-unmount with -l so we
+		// don't EBUSY if a CRI client still has a handle.
+		if isBlockTargetPath(targetPath) {
+			// Best-effort: query the loop device backing this file
+			// before we unmount, so we can `losetup -d` it cleanly.
+			loopOut, _ := exec.Command("losetup", "-j", targetPath).Output()
+			_ = exec.Command("umount", "-l", targetPath).Run()
+			for _, line := range strings.Split(strings.TrimSpace(string(loopOut)), "\n") {
+				if i := strings.Index(line, ":"); i > 0 {
+					if dev := strings.TrimSpace(line[:i]); strings.HasPrefix(dev, "/dev/loop") {
+						_ = exec.Command("losetup", "-d", dev).Run()
+					}
+				}
+			}
+		}
 		osErr := os.RemoveAll(targetPath)
 		if osErr != nil {
 			glog.Warningf("Failed to remove fake targetPath, err is: %v", osErr)
