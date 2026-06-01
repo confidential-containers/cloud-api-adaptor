@@ -282,7 +282,8 @@ func DoTestCreatePeerPodWithAuthenticatedImageWithoutCredentials(t *testing.T, e
 }
 
 func DoTestPodVMwithNoAnnotations(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
-
+	// sandbox allocation is not working. See #3117
+	SkipTestOnCI(t)
 	podName := "no-annotations"
 	containerName := "busybox"
 	imageName := getBusyboxTestImage(t)
@@ -302,6 +303,8 @@ func DoTestPodVMwithAnnotationsInstanceType(t *testing.T, e env.Environment, ass
 }
 
 func DoTestPodVMWithAnnotationsCPUMemory(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
+	// sandbox allocation is not working. See #3117
+	SkipTestOnCI(t)
 	podName := "annotations-cpu-mem"
 	containerName := "busybox"
 	imageName := getBusyboxTestImage(t)
@@ -787,7 +790,8 @@ func DoTestPodWithCPUMemLimitsAndRequests(t *testing.T, e env.Environment, asser
 
 // Test to create a peer pod with cpu request as annotation
 func DoTestPodVMWithAnnotationCPU(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
-
+	// sandbox allocation is not working. See #3117
+	SkipTestOnCI(t)
 	podName := "annotations-cpu"
 	containerName := "busybox"
 	imageName := getBusyboxTestImage(t)
@@ -800,7 +804,8 @@ func DoTestPodVMWithAnnotationCPU(t *testing.T, e env.Environment, assert CloudA
 
 // Test to create a peer pod with memory request as annotation
 func DoTestPodVMWithAnnotationMemory(t *testing.T, e env.Environment, assert CloudAssert, expectedType string) {
-
+	// sandbox allocation is not working. See #3117
+	SkipTestOnCI(t)
 	podName := "annotations-mem"
 	containerName := "busybox"
 	imageName := getBusyboxTestImage(t)
