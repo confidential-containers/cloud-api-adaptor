@@ -266,7 +266,10 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 			},
 			Emulator: guest.Arch.Emulator,
 			MemBalloon: &libvirtxml.DomainMemBalloon{
-				Model: "none",
+				Model: "virtio",
+				Driver: &libvirtxml.DomainMemBalloonDriver{
+					IOMMU: "on",
+				},
 			},
 			RNGs: []libvirtxml.DomainRNG{
 				{
