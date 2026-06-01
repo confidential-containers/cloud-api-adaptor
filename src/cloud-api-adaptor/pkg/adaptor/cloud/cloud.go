@@ -88,7 +88,8 @@ func (s *cloudService) removeSandbox(id sandboxID) error {
 }
 
 func NewService(provider provider.Provider, proxyFactory proxy.Factory, workerNode podnetwork.WorkerNode,
-	serverConfig *ServerConfig) Service {
+	serverConfig *ServerConfig,
+) Service {
 	var err error
 
 	s := &cloudService{
@@ -169,6 +170,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	}()
 
 	sid := sandboxID(req.Id)
+	logger.Printf("CreateVM request received for sandbox %s with annotations: %v", sid, req.Annotations)
 
 	if sid == "" {
 		return nil, fmt.Errorf("empty sandbox id")
@@ -189,6 +191,7 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	// Get Pod VM cpu, memory and gpu from annotations
 	vcpus, memory, gpus := util.GetPodvmResourcesFromAnnotation(req.Annotations)
+	logger.Printf("CreateVM for pod %s/%s: vCPUs=%d, memory=%d, GPUs=%d", namespace, pod, vcpus, memory, gpus)
 
 	// Get Pod VM image from annotations
 	image := util.GetImageFromAnnotation(req.Annotations)
