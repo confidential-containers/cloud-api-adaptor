@@ -232,6 +232,13 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		TLSClientCA:  string(agentProxy.ClientCA()),
 	}
 
+	if s.serverConfig.TLSConfig != nil {
+		// TLS profile is delivered to APF via cloud-init and is immutable after VM boot.
+		// Profile changes only apply to newly created peer pods.
+		daemonConfig.MinTLSVersion = s.serverConfig.TLSConfig.MinTLSVersion
+		daemonConfig.CipherSuites = s.serverConfig.TLSConfig.CipherSuites
+	}
+
 	if caService := agentProxy.CAService(); caService != nil {
 		certPEM, keyPEM, err := caService.Issue(serverName)
 		if err != nil {
