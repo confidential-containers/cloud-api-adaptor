@@ -85,12 +85,6 @@ spec:
         # - mountPath: /cloud-providers
         #   name: provider-dir
         # # setting for cloud provider external plugin
-{{- if eq .Values.provider "docker" }}
-        - mountPath: /var/run/docker.sock
-          name: docker-socket
-        - mountPath: /var/lib/docker
-          name: docker-dir
-{{- end }}
 {{- if eq .Values.provider "ibmcloud" }}
         - mountPath: /run/kata-containers/shared/direct-volumes
           name: kata-direct-volumes-dir
@@ -146,14 +140,6 @@ spec:
       #     type: Directory
       #   name: provider-dir
       # # setting for cloud provider external plugin
-{{- if eq .Values.provider "docker" }}
-      - name: docker-socket
-        hostPath:
-          path: /var/run/docker.sock
-      - name: docker-dir
-        hostPath:
-          path: /var/lib/docker
-{{- end }}
 {{- if eq .Values.provider "ibmcloud" }}
       - name: kata-direct-volumes-dir
         hostPath:

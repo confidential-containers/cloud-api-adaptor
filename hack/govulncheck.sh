@@ -81,6 +81,15 @@ fi
 statuscode=0
 
 for module in "${goModules[@]}"; do
+    # Check if the module has any Go packages before running govulncheck
+    # Some modules have go.mod but no Go source files
+    if go list -C "${module}" ./... 2>&1 | grep -q "matched no packages"; then
+        if [ "$verbose" = true ]; then
+            echo "Skipping ${module}: no Go packages found"
+        fi
+        continue
+    fi
+    
     govulncheck -C "${module}" ./... || statuscode=$?
 done
 

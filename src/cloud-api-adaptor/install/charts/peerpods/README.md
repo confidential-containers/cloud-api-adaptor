@@ -137,13 +137,13 @@ Two image variants are published:
 
 | Variant | Tag Format                 | Includes CGO | Used By                         |
 |---------|----------------------------|--------------|---------------------------------|
-| Dev     | `latest` or `dev-<commit>` | Yes          | libvirt, docker                 |
+| Dev     | `latest` or `dev-<commit>` | Yes          | libvirt                         |
 | Release | `<commit>`                 | No           | aws, azure, gcp, ibmcloud, etc. |
 
 - **During development**: `latest` works for all providers (default in values.yaml)
-- **At release**: `values.yaml` is updated to `<commit>`, and libvirt/docker provider files override with `dev-<commit>`
+- **At release**: `values.yaml` is updated to `<commit>`, and libvirt provider files override with `dev-<commit>`
 
-The libvirt and docker provider files automatically include an `image.tag` override
+The libvirt provider files automatically include an `image.tag` override
 since they require the dev image with CGO bindings.
 
 ### File Structure

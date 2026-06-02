@@ -24,7 +24,7 @@ help: ## Display this help.
 
  ## Run formatters and linters against the code.
 .PHONY: check
-check: fmt golangci-lint shellcheck tidy-check govulncheck packer-check terraform-check
+check: fmt golangci-lint shellcheck tidy-check govulncheck terraform-check
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -51,12 +51,6 @@ govulncheck:
 	./hack/govulncheck.sh
 
 .PHONY: packer-format
-packer-format:
-	./hack/packer-check.sh
-
-.PHONY: packer-check
-packer-check:
-	./hack/packer-check.sh --check
 
 .PHONY: terraform-format
 terraform-format:

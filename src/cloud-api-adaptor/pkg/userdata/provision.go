@@ -23,6 +23,9 @@ const (
 	// Ref: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
 	AWSImdsURL         = "http://169.254.169.254/latest/dynamic/instance-identity/document"
 	AWSUserDataImdsURL = "http://169.254.169.254/latest/user-data"
+	// Ref: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-use-IMDSv2.html
+	AWSIMDSv2TokenURL = "http://169.254.169.254/latest/api/token"
+	AWSIMDSv2TokenTTL = "60"
 	// Ref: https://docs.microsoft.com/en-us/azure/virtual-machines/linux/instance-metadata-service
 	AzureImdsURL         = "http://169.254.169.254/metadata/instance/compute?api-version=2021-01-01"
 	AzureUserDataImdsURL = "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text"
@@ -92,7 +95,7 @@ func (a AWSUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 	url := AWSUserDataImdsURL
 	logger.Printf("provider: AWS, userDataUrl: %s\n", url)
 	// aws user data is not base64 encoded
-	return imdsGet(ctx, url, false, nil)
+	return imdsGet(ctx, url, false, awsIMDSHeaders(ctx, AWSIMDSv2TokenURL))
 }
 
 type GCPUserDataProvider struct{ DefaultRetry }

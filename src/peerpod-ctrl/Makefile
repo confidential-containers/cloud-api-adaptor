@@ -19,7 +19,7 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
-BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom docker gcp ibmcloud libvirt
+BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom gcp ibmcloud libvirt
 # Build tags required to build cloud-api-adaptor are derived from BUILTIN_CLOUD_PROVIDERS.
 # When libvirt is specified, CGO_ENABLED is set to 1.
 space := $() $()

@@ -1,4 +1,5 @@
 include ../Makefile.defaults
+include ../podvm/Makefile.inc
 
 SE_BOOT   ?= false
 IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
@@ -25,16 +26,16 @@ export MKOSI_VERSION
 
 .DEFAULT_GOAL := all
 .PHONY: all
-all: binaries image
+all: podvm-binaries image
 
 .PHONY: debug
-debug:binaries image-debug
+debug: podvm-binaries image-debug
 
 .PHONY: sftp
-sftp:binaries image-sftp
+sftp: podvm-binaries image-sftp
 
 .PHONY: container
-container: binaries image-container
+container: podvm-binaries image-container
 
 .PHONY: byom-e2e-container
 byom-e2e-container: image-byom-e2e-container
@@ -61,8 +62,9 @@ define run_mkosi_in_container
 		bash -c "$(PKG_INSTALL) bubblewrap coreutils git python3; mkdir -p /build; git clone -b $(MKOSI_VERSION) https://github.com/systemd/mkosi /build/mkosi; export PATH="/build/mkosi/bin:$$PATH"; mkosi --tools-tree=default --tools-tree-release=$(DISTRO_RELEASE) --tools-tree-distribution=$(DISTRO_NAME) --distribution=$(DISTRO_NAME) --release=$(DISTRO_RELEASE) $(DISTRO_REPOS) $(1)"
 endef
 
-binaries:
-	@echo "Building binaries..."
+.PHONY: podvm-binaries
+podvm-binaries:
+	@echo "Building podvm binaries using Docker..."
 	rm -rf ./resources/binaries-tree
 ifeq ($(IS_DEBIAN),true)
 	docker buildx use default
@@ -90,7 +92,7 @@ endif
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		$(if $(filter $(PUSH),true),,-o type=local,dest="./resources/binaries-tree") \
 		$(DOCKER_OPTS) \
-		-f ../podvm/Dockerfile.podvm_binaries.$(PODVM_DISTRO) ../../
+		-f Dockerfile.podvm_binaries.$(PODVM_DISTRO) ../../
 
 PHONY: insecure-builder
 insecure-builder:
@@ -104,10 +106,10 @@ image: insecure-builder
 	rm -rf ./build
 	@echo "Building image..."
 ifeq ($(SE_BOOT),true)
-	$(call run_mkosi_in_container,--profile production --image system)
+	$(call run_mkosi_in_container,--profile production)
 	sudo -E ../hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
-	$(call run_mkosi_in_container,--profile production --image system)
+	$(call run_mkosi_in_container,--profile production)
 	sudo -E ../hack/build-s390x-image.sh
 else
 	mkdir -p build

@@ -157,17 +157,6 @@ jobs:
       - name: Run govulncheck
         run: make govulncheck
 
-  packer:
-    name: Packer check
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout the pull request code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: Run packer check
-        run: make packer-check
-
   terraform:
     name: Terraform check
     # The 24.04 image doesn't have terraform installed, so stick with 22.04 here

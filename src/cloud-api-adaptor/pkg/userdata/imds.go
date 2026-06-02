@@ -6,11 +6,48 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 type kvPair struct {
 	k string
 	v string
+}
+
+const awsIMDSv2TokenFetchTimeout = 5 * time.Second
+
+func awsIMDSv2Token(ctx context.Context, tokenURL string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, tokenURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create IMDSv2 token request: %w", err)
+	}
+	req.Header.Set("X-aws-ec2-metadata-token-ttl-seconds", AWSIMDSv2TokenTTL)
+
+	client := &http.Client{Timeout: awsIMDSv2TokenFetchTimeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send IMDSv2 token request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("IMDSv2 token endpoint returned %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read IMDSv2 token response: %w", err)
+	}
+	return string(body), nil
+}
+
+func awsIMDSHeaders(ctx context.Context, tokenURL string) []kvPair {
+	token, err := awsIMDSv2Token(ctx, tokenURL)
+	if err != nil {
+		logger.Printf("IMDSv2 token fetch failed (%v); falling back to IMDSv1\n", err)
+		return nil
+	}
+	return []kvPair{{"X-aws-ec2-metadata-token", token}}
 }
 
 func imdsGet(ctx context.Context, url string, b64 bool, headers []kvPair) ([]byte, error) {

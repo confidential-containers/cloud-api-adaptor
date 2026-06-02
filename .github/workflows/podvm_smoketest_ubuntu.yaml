@@ -49,10 +49,10 @@ jobs:
           version: ${{ env.ORAS_VERSION }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
       - name: Build binaries
-        run: make binaries
+        run: make podvm-binaries
         env:
           PODVM_DISTRO: ubuntu
 
@@ -106,8 +106,8 @@ jobs:
         run: |
           {
             echo "ORAS_VERSION=$(./hack/versions.py -q tools.oras)";
-            echo "KATA_AGENT_CTL_REF=$(./hack/versions.py -q oci.kata-agent-ctl.reference)";
-            echo "KATA_AGENT_CTL_REG=$(./hack/versions.py -q oci.kata-agent-ctl.registry)";
+            echo "KATA_REF=$(./hack/versions.py -q oci.kata-containers.reference)";
+            echo "KATA_REG=$(./hack/versions.py -q oci.kata-containers.registry)";
           } >> "$GITHUB_ENV"
 
       - uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
@@ -116,7 +116,7 @@ jobs:
 
       - name: Install kata-agent-ctl
         run: |
-          oras pull "${KATA_AGENT_CTL_REG}/agent-ctl:${KATA_AGENT_CTL_REF}-x86_64"
+          oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
           tar --zstd -xf kata-static-agent-ctl.tar.zst
           cp opt/kata/bin/kata-agent-ctl /usr/local/bin
 

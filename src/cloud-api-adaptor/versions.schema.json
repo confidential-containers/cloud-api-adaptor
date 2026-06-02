@@ -4,7 +4,11 @@
   "description": "Schema for src/cloud-api-adaptor/versions.yaml",
   "type": "object",
   "additionalProperties": false,
-  "required": ["tools", "git", "oci"],
+  "required": [
+    "tools",
+    "git",
+    "oci"
+  ],
   "properties": {
     "cloudimg": {
       "type": "object",
@@ -31,21 +35,37 @@
         "kcli",
         "mkosi",
         "protoc",
-        "packer",
         "oras",
         "helm"
       ],
       "properties": {
-        "cert-manager":     { "$ref": "#/$defs/tool" },
-        "bats":             { "$ref": "#/$defs/tool" },
-        "iptables-wrapper": { "$ref": "#/$defs/tool" },
-        "golang":           { "$ref": "#/$defs/tool" },
-        "kcli":             { "$ref": "#/$defs/tool" },
-        "mkosi":            { "$ref": "#/$defs/tool" },
-        "protoc":           { "$ref": "#/$defs/tool" },
-        "packer":           { "$ref": "#/$defs/tool" },
-        "oras":             { "$ref": "#/$defs/tool" },
-        "helm":             { "$ref": "#/$defs/tool" }
+        "cert-manager": {
+          "$ref": "#/$defs/tool"
+        },
+        "bats": {
+          "$ref": "#/$defs/tool"
+        },
+        "iptables-wrapper": {
+          "$ref": "#/$defs/tool"
+        },
+        "golang": {
+          "$ref": "#/$defs/tool"
+        },
+        "kcli": {
+          "$ref": "#/$defs/tool"
+        },
+        "mkosi": {
+          "$ref": "#/$defs/tool"
+        },
+        "protoc": {
+          "$ref": "#/$defs/tool"
+        },
+        "oras": {
+          "$ref": "#/$defs/tool"
+        },
+        "helm": {
+          "$ref": "#/$defs/tool"
+        }
       }
     },
     "git": {
@@ -54,10 +74,18 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["url", "reference"],
+        "required": [
+          "url",
+          "reference"
+        ],
         "properties": {
-          "url":       { "type": "string", "format": "uri" },
-          "reference": { "$ref": "#/$defs/nonEmptyString" }
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "reference": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
         }
       }
     },
@@ -67,15 +95,31 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["registry"],
+        "required": [
+          "registry"
+        ],
         "properties": {
-          "registry":  { "$ref": "#/$defs/nonEmptyString" },
-          "tag":       { "$ref": "#/$defs/nonEmptyString" },
-          "reference": { "$ref": "#/$defs/nonEmptyString" }
+          "registry": {
+            "$ref": "#/$defs/nonEmptyString"
+          },
+          "tag": {
+            "$ref": "#/$defs/nonEmptyString"
+          },
+          "reference": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
         },
         "oneOf": [
-          { "required": ["tag"] },
-          { "required": ["reference"] }
+          {
+            "required": [
+              "tag"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          }
         ]
       }
     }
@@ -91,14 +135,23 @@
     },
     "tool": {
       "oneOf": [
-        { "$ref": "#/$defs/nonEmptyString" },
+        {
+          "$ref": "#/$defs/nonEmptyString"
+        },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["version", "sha256"],
+          "required": [
+            "version",
+            "sha256"
+          ],
           "properties": {
-            "version": { "$ref": "#/$defs/nonEmptyString" },
-            "sha256":  { "$ref": "#/$defs/sha256Hex" }
+            "version": {
+              "$ref": "#/$defs/nonEmptyString"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256Hex"
+            }
           }
         }
       ]
@@ -106,9 +159,15 @@
     "imageSource": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["url", "checksum"],
+      "required": [
+        "url",
+        "checksum"
+      ],
       "properties": {
-        "url":      { "type": "string", "format": "uri" },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
         "checksum": {
           "type": "string",
           "description": "Algorithm-prefixed digest, e.g. sha256:<64 hex> or sha512:<128 hex>.",

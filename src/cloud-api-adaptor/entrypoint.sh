@@ -42,7 +42,16 @@ one_of() {
 }
 
 aws() {
-    test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+    # Check that at least one authentication method is configured
+    one_of AWS_SECRET_ACCESS_KEY AWS_ROLE_ARN
+
+    # If using web identity, require role ARN and token file
+    if [ -n "${AWS_ROLE_ARN}" ]; then
+        test_vars AWS_WEB_IDENTITY_TOKEN_FILE AWS_ROLE_ARN
+    else
+        # If using access keys, require both key and secret
+        test_vars AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+    fi
 
     set -x
     exec cloud-api-adaptor aws ${optionals}
@@ -101,12 +110,6 @@ libvirt() {
 
 }
 
-docker() {
-    set -x
-    exec cloud-api-adaptor docker ${optionals}
-
-}
-
 byom() {
     test_vars VM_POOL_IPS
 
@@ -118,9 +121,9 @@ byom() {
 help_msg() {
     cat <<EOF
 Usage:
-	CLOUD_PROVIDER=alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt|docker $0
+	CLOUD_PROVIDER=alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt $0
 or
-	$0 alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt|docker
+	$0 alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt
 
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
@@ -143,8 +146,6 @@ elif [[ "$CLOUD_PROVIDER" == "ibmcloud-powervs" ]]; then
     ibmcloud_powervs
 elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
     libvirt
-elif [[ "$CLOUD_PROVIDER" == "docker" ]]; then
-    docker
 else
     help_msg
 fi

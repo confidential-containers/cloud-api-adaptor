@@ -1,0 +1,4 @@
+# Ubuntu uses ssh.service (not sshd.service) for the OpenSSH daemon.
+# ssh-host-keys.service is enabled via WantedBy=ssh.service (no preset needed).
+# Explicitly enable ssh.service for Ubuntu debug images.
+enable ssh.service

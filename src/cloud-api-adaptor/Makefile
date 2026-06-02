@@ -28,7 +28,7 @@ WEBHOOK_ENABLED ?= true
 ifeq ($(RELEASE_BUILD),true)
 	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom gcp ibmcloud ibmcloud_powervs
 else
-	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom gcp ibmcloud ibmcloud_powervs libvirt docker
+	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom gcp ibmcloud ibmcloud_powervs libvirt
 endif
 
 all: build
@@ -130,9 +130,7 @@ image: .git-commit ## Build and push docker image to $registry
 deploy: ## Deploy cloud-api-adaptor using Helm charts. Assumes provider secrets file exists at install/charts/peerpods/providers/$(CLOUD_PROVIDER)-secrets.yaml
 ifneq ($(CLOUD_PROVIDER),)
 	$(eval HELM_VALUES_FILES := install/charts/peerpods/providers/$(CLOUD_PROVIDER).yaml)
-ifeq ($(filter $(CLOUD_PROVIDER),docker),)
 	$(eval HELM_VALUES_FILES := $(HELM_VALUES_FILES) install/charts/peerpods/providers/$(CLOUD_PROVIDER)-secrets.yaml)
-endif
 
 ifeq ($(WEBHOOK_ENABLED),true)
 	@if ! kubectl get svc -n cert-manager cert-manager-webhook > /dev/null 2>&1; then \
@@ -159,96 +157,6 @@ delete: ## Delete cloud-api-adaptor using Helm charts.
 	else \
 		echo "Release 'peerpods' not found in namespace 'confidential-containers-system'(either not installed or already uninstalled)"; \
 	fi
-
-### PODVM IMAGE BUILDING ###
-
-REGISTRY ?= quay.io/confidential-containers
-
-PODVM_DISTRO ?= ubuntu
-PODVM_TAG ?= $(VERSIONS_HASH)
-
-PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO):$(PODVM_TAG)
-PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
-PODVM_BYOM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-byom-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
-PODVM_IMAGE ?= $(REGISTRY)/podvm-$(or $(CLOUD_PROVIDER),generic)-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
-
-PUSH ?= false
-# If not pushing `--load` into the local docker cache
-DOCKER_OPTS := $(if $(filter $(PUSH),true),--push,--load) $(EXTRA_DOCKER_OPTS)
-
-DOCKERFILE_SUFFIX := $(if $(filter $(PODVM_DISTRO),ubuntu alinux),,.$(PODVM_DISTRO))
-BUILDER_DOCKERFILE := Dockerfile.podvm_builder$(DOCKERFILE_SUFFIX)
-BINARIES_DOCKERFILE := Dockerfile.podvm_binaries$(DOCKERFILE_SUFFIX)
-BYOM_BINARIES_DOCKERFILE := Dockerfile.podvm_byom_binaries$(DOCKERFILE_SUFFIX)
-PODVM_DOCKERFILE := Dockerfile.podvm$(DOCKERFILE_SUFFIX)
-
-podvm-builder:
-	docker buildx build -t $(PODVM_BUILDER_IMAGE) -f podvm/$(BUILDER_DOCKERFILE) \
-	--build-arg GO_VERSION=$(GO_VERSION) \
-	--build-arg ORG_ID=$(ORG_ID) \
-	--build-arg ACTIVATION_KEY=$(ACTIVATION_KEY) \
-	--build-arg ARCH=$(ARCH) \
-	--build-arg GO_ARCH=$(GO_ARCH) \
-	--build-arg DISTRO_ARCH=$(DISTRO_ARCH) \
-	--build-arg PROTOC_VERSION=$(PROTOC_VERSION) \
-	--build-arg YQ_VERSION=$(YQ_VERSION) \
-	--build-arg YQ_CHECKSUM=${YQ_CHECKSUM_$(GO_ARCH)} \
-	--build-arg YQ_ARCH=$(GO_ARCH) \
-	--build-arg PROTOC_ARCH=$(PROTOC_ARCH) \
-	--build-arg ORAS_VERSION=$(ORAS_VERSION) \
-	--build-arg PACKER_VERSION=$(PACKER_VERSION) \
-	$(DOCKER_OPTS) .
-
-podvm-binaries:
-	cp -rf ../../.git .git
-	cd ../ && docker buildx build -t $(PODVM_BINARIES_IMAGE) -f cloud-api-adaptor/podvm/$(BINARIES_DOCKERFILE) \
-	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
-	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
-	--build-arg ARCH=$(ARCH) \
-	--build-arg GO_ARCH=$(GO_ARCH) \
-	--build-arg DISTRO_ARCH=$(DISTRO_ARCH) \
-	--build-arg TEE_PLATFORM=$(TEE_PLATFORM) \
-	--build-arg PAUSE_REPO=$(PAUSE_REPO) \
-	--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
-	--build-arg PAUSE_BIN=$(PAUSE_BIN) \
-	$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
-	$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
-	$(DOCKER_OPTS) .
-	rm -rf .git
-
-podvm-image:
-ifeq ($(PODVM_DISTRO),rhel)
-ifeq ($(shell test -f $(IMAGE_URL) && echo 1 || echo 0),1)
-	cp ${IMAGE_URL} ./rhel.img
-	$(eval IMAGE_URL=cloud-api-adaptor/rhel.img)
-	@echo "### Copied IMAGE_URL file to $(IMAGE_URL) in order to suite the docker context"
-endif
-endif
-	cp -rf ../../.git .git
-	cd ../ && docker buildx build -t $(PODVM_IMAGE) -f cloud-api-adaptor/podvm/$(PODVM_DOCKERFILE) \
-	--build-arg BUILDER_IMG=$(PODVM_BUILDER_IMAGE) \
-	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
-	--build-arg PODVM_DISTRO=$(PODVM_DISTRO) \
-	--build-arg ORG_ID=$(ORG_ID) \
-	--build-arg ACTIVATION_KEY=$(ACTIVATION_KEY) \
-	--build-arg ARCH=$(ARCH) \
-	--build-arg CLOUD_PROVIDER=$(or $(CLOUD_PROVIDER),generic) \
-	--build-arg IMAGE_URL=$(IMAGE_URL) \
-	--build-arg IMAGE_CHECKSUM=$(IMAGE_CHECKSUM) \
-	--build-arg SE_BOOT=$(SE_BOOT) \
-	--build-arg SE_VERIFY=$(SE_VERIFY) \
-	--build-arg PAUSE_REPO=$(PAUSE_REPO) \
-	--build-arg PAUSE_VERSION=$(PAUSE_VERSION) \
-	--build-arg PAUSE_BIN=$(PAUSE_BIN) \
-	--build-arg PACKER_GITHUB_API_TOKEN=$(PACKER_GITHUB_API_TOKEN) \
-	$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
-	$(DOCKER_OPTS) .
-	rm -rf .git
-
-podvm-byom-binaries-image:
-	docker buildx build -t $(PODVM_BYOM_BINARIES_IMAGE) -f podvm-mkosi/$(BYOM_BINARIES_DOCKERFILE) \
-	--build-arg BINARIES_IMG=$(PODVM_BINARIES_IMAGE) \
-	$(DOCKER_OPTS) .
 
 ##@ Helm
 
