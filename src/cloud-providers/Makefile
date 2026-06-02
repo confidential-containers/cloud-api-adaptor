@@ -15,7 +15,7 @@ define gen-provider-values
 		"", \
 		(if .provider == "libvirt" or .provider == "docker" then \
 			"# Dev image required for this provider (includes CGO bindings)", \
-			"# Update to dev-<commit> at release time", \
+			"# Update to <commit>-dev at release time", \
 			"image:", \
 			"  tag: \"latest\"", \
 			"" \

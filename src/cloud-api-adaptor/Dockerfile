@@ -59,7 +59,7 @@ RUN echo "Building iptables-wrapper... " \
 FROM $BASE AS base-release
 
 RUN apt-get update && \
-    apt-get install -y iptables && \
+    apt-get install -y ca-certificates iptables && \
     rm -rf /var/lib/apt/lists/*
 RUN --mount=type=cache,target=/iptables,from=iptables,source=/iptables,readonly \
     cp /iptables/iptables-wrapper /usr/sbin \

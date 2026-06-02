@@ -61,6 +61,11 @@ func NewProvider(config *Config) (provider.Provider, error) {
 			return nil, fmt.Errorf("NewInstancesRESTClient error: %s", err)
 		}
 	}
+
+	if err := provider.updateInstanceSizeSpecList(); err != nil {
+		return nil, err
+	}
+
 	return provider, nil
 }
 
@@ -204,6 +209,45 @@ func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, 
 // Select a machine type based on the memory, vcpu, and GPU requirements
 func (p *gcpProvider) selectMachineType(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
 	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.MachineTypeSpecList, p.serviceConfig.MachineTypes, p.serviceConfig.MachineType)
+}
+
+func (p *gcpProvider) updateInstanceSizeSpecList() error {
+	machineTypeClient, err := compute.NewMachineTypesRESTClient(context.TODO())
+	if err != nil {
+		return err
+	}
+
+	machineTypes := p.serviceConfig.MachineTypes
+
+	if len(machineTypes) == 0 {
+		machineTypes = append(machineTypes, p.serviceConfig.MachineType)
+	}
+
+	var instanceTypeSpecList []provider.InstanceTypeSpec
+
+	for _, name := range machineTypes {
+		machineType, err := machineTypeClient.Get(
+			context.TODO(),
+			&computepb.GetMachineTypeRequest{
+				Project:     p.serviceConfig.ProjectID,
+				Zone:        p.serviceConfig.Zone,
+				MachineType: name,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("getting machine type(%s): %w", name, err)
+		}
+
+		instanceTypeSpecList = append(instanceTypeSpecList, provider.InstanceTypeSpec{
+			InstanceType: name,
+			VCPUs:        int64(*machineType.GuestCpus),
+			Memory:       int64(*machineType.MemoryMb),
+		})
+	}
+	p.serviceConfig.MachineTypeSpecList = instanceTypeSpecList
+	logger.Printf("instanceSizeSpecList (%v)", p.serviceConfig.MachineTypeSpecList)
+
+	return nil
 }
 
 func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (instance *provider.Instance, err error) {

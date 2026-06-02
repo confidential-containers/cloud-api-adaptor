@@ -77,7 +77,7 @@ permissions: {}
 jobs:
   build-image:
     name: Build mkosi Ubuntu image for ${{ inputs.arch }}
-    runs-on: ${{ inputs.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.arch == 's390x' && 's390x' || (inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04') }}
     permissions:
       contents: read # Required if we want to run on a fork?
       packages: write # Required to publish the oras package to ghcr
@@ -108,11 +108,11 @@ jobs:
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
       - name: Login to quay Container Registry
         if: ${{ startsWith(inputs.registry, 'quay.io') }}
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: quay.io
           username: ${{ vars.QUAY_USERNAME }}
@@ -120,7 +120,7 @@ jobs:
 
       - name: Login to the ghcr Container registry
         if: ${{ startsWith(inputs.registry, 'ghcr.io') }}
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -163,6 +163,7 @@ jobs:
         run: make image-debug
         env:
           PODVM_DISTRO: ubuntu
+          MKOSI_VERSION: ${{ env.MKOSI_VERSION }}
 
       - name: Build mkosi image
         if: ${{ inputs.debug == false }}
@@ -170,6 +171,7 @@ jobs:
         run: make image
         env:
           PODVM_DISTRO: ubuntu
+          MKOSI_VERSION: ${{ env.MKOSI_VERSION }}
 
       - name: Upload the qcow2 with oras
         id: publish_oras_qcow2

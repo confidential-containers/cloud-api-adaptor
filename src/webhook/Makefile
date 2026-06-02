@@ -165,11 +165,19 @@ kind-deploy: docker-build kind-load deploy ## deploy the webhook in the local ki
 deploy-cert-manager: ## Deploy cert-manager for webhook.
 	curl -fsSL -o cmctl https://github.com/cert-manager/cmctl/releases/latest/download/cmctl_${OS}_${ARCH}
 	chmod +x cmctl
-	# Deploy cert-manager
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
+	# Deploy cert-manager (retry to tolerate transient etcd timeouts)
+	@for i in 1 2 3; do \
+	  echo "Applying cert-manager manifest (attempt $$i)..."; \
+	  kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml && { \
+	    echo "cert-manager applied successfully"; break; }; \
+	  if [ $$i -eq 3 ]; then \
+	    echo "cert-manager apply failed after 3 attempts"; exit 1; \
+	  fi; \
+	  echo "Apply failed, retrying in 10s..."; sleep 10; \
+	done
 	# Wait for service to be up
-	kubectl wait --timeout=360s -n cert-manager endpoints/cert-manager --for=jsonpath='{.subsets[0].addresses[0].ip}'
-	kubectl wait --timeout=360s -n cert-manager endpoints/cert-manager-webhook --for=jsonpath='{.subsets[0].addresses[0].ip}'
+	kubectl wait --timeout=360s -n cert-manager --for=condition=Available deployment/cert-manager
+	kubectl wait --timeout=360s -n cert-manager --for=condition=Available deployment/cert-manager-webhook
 	# Wait for few seconds for the cert-manager API to be ready
 	# otherwise you'll hit the error "x509: certificate signed by unknown authority"
 	# Best is to use cmctl - https://cert-manager.io/docs/installation/kubectl/#2-optional-wait-for-cert-manager-webhook-to-be-ready
