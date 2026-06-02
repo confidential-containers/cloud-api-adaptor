@@ -50,6 +50,7 @@ spec:
           httpGet:
             path: /startup
             port: 8000
+            host: 127.0.0.1
           failureThreshold: 30
           periodSeconds: 20
           initialDelaySeconds: 20
