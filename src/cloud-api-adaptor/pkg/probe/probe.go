@@ -64,7 +64,7 @@ func Start(socketPath string) {
 		SocketPath:       socketPath,
 	}
 	http.HandleFunc("/startup", StartupHandler)
-	err = http.ListenAndServe(":"+port, nil)
+	err = http.ListenAndServe("127.0.0.1:"+port, nil)
 
 	if err != nil {
 		logger.Printf("failed to start startup probe server, error %s", err)
