@@ -9,6 +9,7 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/state"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
@@ -32,6 +33,7 @@ type cloudService struct {
 	mutex        sync.Mutex
 	ppService    *k8sops.PeerPodService
 	serverConfig *ServerConfig
+	stateManager *state.Manager
 }
 
 type sandboxID string
@@ -47,4 +49,5 @@ type sandbox struct {
 	instanceID   string
 	netNSPath    string
 	spec         provider.InstanceTypeSpec
+	restored     bool // True if sandbox was restored after CAA restart
 }

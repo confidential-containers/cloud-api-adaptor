@@ -159,7 +159,11 @@ func newServer(t *testing.T, socketPath, podsDir string) Server {
 		EnableCloudConfigVerify: false,
 		PeerPodsLimitPerNode:    -1,
 	}
-	return NewServer(provider, serverConfig, &mockWorkerNode{})
+	srv, err := NewServer(provider, serverConfig, &mockWorkerNode{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return srv
 }
 
 func testServerShutdown(t *testing.T, s Server, socketPath, dir string, serverErrCh chan error) {
@@ -170,8 +174,8 @@ func testServerShutdown(t *testing.T, s Server, socketPath, dir string, serverEr
 	if err := <-serverErrCh; err != nil {
 		t.Error(err)
 	}
-	if _, err := os.Stat(socketPath); err == nil {
-		t.Errorf("Unix domain socket %s still remains\n", socketPath)
+	if _, err := os.Stat(socketPath); err != nil {
+		t.Errorf("Unix domain socket %s should remain after shutdown (SetUnlinkOnClose(false))\n", socketPath)
 	}
 	if err := os.RemoveAll(dir); err != nil {
 		t.Error(err)

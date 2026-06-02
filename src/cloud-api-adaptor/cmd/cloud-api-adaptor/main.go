@@ -99,6 +99,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		// Common flags with environment variable support
 		reg.StringWithEnv(&cfg.serverConfig.SocketPath, "socket", adaptor.DefaultSocketPath, "REMOTE_HYPERVISOR_ENDPOINT", "Unix domain socket path of remote hypervisor service")
 		reg.StringWithEnv(&cfg.serverConfig.PodsDir, "pods-dir", adaptor.DefaultPodsDir, "PODS_DIR", "base directory for pod directories")
+		reg.StringWithEnv(&cfg.serverConfig.TLSMaterialPath, "tls-material-path", "/run/peerpod/tls-material.json", "TLS_MATERIAL_PATH", "Path to persist TLS material across CAA restarts")
 		reg.StringWithEnv(&cfg.serverConfig.PauseImage, "pause-image", "", "PAUSE_IMAGE", "pause image to be used for the pods")
 		reg.StringWithEnv(&cfg.serverConfig.ForwarderPort, "forwarder-port", daemon.DefaultListenPort, "FORWARDER_PORT", "port number of agent protocol forwarder")
 		reg.StringWithEnv(&tlsConfig.CAFile, "ca-cert-file", "", "CACERT_FILE", "CA certificate file for custom TLS (e.g. /etc/certificates/ca.crt)")
@@ -154,7 +155,10 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		}
 	}
 
-	server := adaptor.NewServer(provider, &cfg.serverConfig, workerNode)
+	server, err := adaptor.NewServer(provider, &cfg.serverConfig, workerNode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create server: %w", err)
+	}
 
 	return cmd.NewStarter(server), nil
 }
@@ -171,7 +175,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go probe.Start(config.serverConfig.SocketPath)
+	go probe.Start(ctx, config.serverConfig.SocketPath)
 
 	if err := starter.Start(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], err)

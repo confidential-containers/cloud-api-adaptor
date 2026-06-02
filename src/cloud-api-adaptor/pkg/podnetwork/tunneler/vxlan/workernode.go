@@ -56,6 +56,8 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, confi
 		dstAddr = podNodeIPs[0]
 	}
 
+	config.DestinationIP = dstAddr
+
 	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to get current network namespace: %w", err)
@@ -159,6 +161,11 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, confi
 
 func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunneler.Config) error {
 
+	if !config.DestinationIP.IsValid() {
+		logger.Printf("skipping teardown: Setup was never called (no destination IP)")
+		return nil
+	}
+
 	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {
 		return fmt.Errorf("failed to get current network namespace: %w", err)
@@ -169,9 +176,14 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 		}
 	}()
 
+	if err := iptablesTeardown(hostNS, config.DestinationIP, config.VXLANPort, config.VXLANID); err != nil {
+		return err
+	}
+
 	podNS, err := netops.OpenNamespace(nsPath)
 	if err != nil {
-		return fmt.Errorf("failed to get a network namespace: %s: %w", nsPath, err)
+		logger.Printf("pod netns %s gone, skipping interface cleanup (iptables already cleaned)", nsPath)
+		return nil
 	}
 	defer func() {
 		if e := podNS.Close(); e != nil {
@@ -196,26 +208,8 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 		return fmt.Errorf("failed to find vxlan interface %q on pod netns %s to %s: %w", secondPodInterface, podNS.Path(), secondPodInterface, err)
 	}
 
-	device, err := podVxlanInterface.GetDevice()
-	if err != nil {
-		return fmt.Errorf("failed to get device info of %s: %w", secondPodInterface, err)
-	}
-
-	vxlanDevice, ok := device.(*netops.VXLAN)
-	if !ok {
-		return fmt.Errorf("not a VXLAN interface: %s", secondPodInterface)
-	}
-
-	dstAddr := vxlanDevice.Group
-	dstPort := vxlanDevice.Port
-	vxlanID := vxlanDevice.ID
-
 	if err := podVxlanInterface.Delete(); err != nil {
 		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", secondPodInterface, podNS.Path(), err)
-	}
-
-	if err := iptablesTeardown(hostNS, dstAddr, dstPort, vxlanID); err != nil {
-		return err
 	}
 
 	return nil

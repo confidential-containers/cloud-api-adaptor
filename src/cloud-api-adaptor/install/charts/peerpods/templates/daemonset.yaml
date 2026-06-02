@@ -97,6 +97,9 @@ spec:
         - mountPath: /var/run/secrets/tokens
           name: vault-token
 {{- end }}
+      # On shutdown CAA drains each sandbox's agent proxy (up to 30s each).
+      # With up to 10 peer pods per node, draining can take ~300s total.
+      terminationGracePeriodSeconds: 360
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
@@ -128,6 +131,7 @@ spec:
 {{- end }}
       - hostPath:
           path: /run/peerpod
+          type: DirectoryOrCreate
         name: pods-dir
       - hostPath:
           path: /run/netns

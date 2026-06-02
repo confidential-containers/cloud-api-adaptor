@@ -25,8 +25,6 @@ type workerNode struct {
 	tunneler tunneler.TunnelerConfigurator
 }
 
-// TODO: Pod index is reset when this process restarts.
-// We need to manage a persistent unique index number for each pod VM
 var podIndexManager podIndex
 
 type podIndex struct {
@@ -43,8 +41,19 @@ func (p *podIndex) Get() int {
 	return index
 }
 
-func NewWorkerNode(networkConfig *tunneler.NetworkConfig) (WorkerNode, error) {
+func (p *podIndex) SetMin(min int) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if min > p.index {
+		p.index = min
+	}
+}
 
+func SetMinPodIndex(min int) {
+	podIndexManager.SetMin(min)
+}
+
+func NewWorkerNode(networkConfig *tunneler.NetworkConfig) (WorkerNode, error) {
 	t, err := tunneler.WorkerNodeTunneler(networkConfig.TunnelType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tunneler: %w", err)
@@ -232,6 +241,11 @@ func (n *workerNode) Setup(nsPath string, podNodeIPs []netip.Addr, config *tunne
 }
 
 func (n *workerNode) Teardown(nsPath string, config *tunneler.Config) error {
+	// Skip teardown if config is nil (e.g., restored sandbox with missing podNetwork)
+	if config == nil {
+		logger.Printf("skipping teardown for %s: no network config", nsPath)
+		return nil
+	}
 
 	hostNS, err := netops.OpenCurrentNamespace()
 	if err != nil {

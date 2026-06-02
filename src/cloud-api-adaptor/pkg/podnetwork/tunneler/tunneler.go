@@ -27,6 +27,7 @@ type Config struct {
 	Index               int          `json:"index"`
 	VXLANPort           int          `json:"vxlan-port,omitempty"`
 	VXLANID             int          `json:"vxlan-id,omitempty"`
+	DestinationIP       netip.Addr   `json:"destination-ip,omitempty"`
 	Dedicated           bool         `json:"dedicated"`
 	ExternalNetViaPodVM bool         `json:"external-net-via-pod-vm"`
 }

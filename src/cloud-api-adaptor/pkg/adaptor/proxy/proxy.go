@@ -25,6 +25,7 @@ import (
 const (
 	SocketName          = "agent.ttrpc"
 	DefaultProxyTimeout = 5 * time.Minute
+	DrainTimeout        = 30 * time.Second
 
 	// The server TLS certificate must have this as SAN
 	// TODO: Avoid hard coding of server name
@@ -51,6 +52,11 @@ type agentProxy struct {
 	pauseImage   string
 	proxyTimeout time.Duration
 	stopOnce     sync.Once
+
+	// For graceful shutdown with drain support
+	mu           sync.Mutex
+	ttrpcServer  *ttrpc.Server
+	proxyService *proxyService
 }
 
 func NewAgentProxy(serverName, socketPath, pauseImage string, tlsConfig *tlsutil.TLSConfig, caService tlsutil.CAService, proxyTimeout time.Duration) AgentProxy {
@@ -149,11 +155,6 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 	}
 
 	proxyService := newProxyService(dialer, p.pauseImage)
-	defer func() {
-		if err := proxyService.Close(); err != nil {
-			logger.Printf("error closing agent proxy connection: %v", err)
-		}
-	}()
 
 	if err := proxyService.Connect(ctx); err != nil {
 		return fmt.Errorf("error connecting to agent: %v", err)
@@ -161,8 +162,15 @@ func (p *agentProxy) Start(ctx context.Context, serverURL *url.URL) error {
 
 	ttrpcServer, err := ttrpc.NewServer()
 	if err != nil {
+		proxyService.Close()
 		return fmt.Errorf("failed to create TTRPC server: %w", err)
 	}
+
+	// Store references for graceful shutdown
+	p.mu.Lock()
+	p.ttrpcServer = ttrpcServer
+	p.proxyService = proxyService
+	p.mu.Unlock()
 
 	pb.RegisterAgentServiceService(ttrpcServer, proxyService)
 	pb.RegisterHealthService(ttrpcServer, proxyService)
@@ -206,6 +214,30 @@ func (p *agentProxy) Ready() chan struct{} {
 func (p *agentProxy) Shutdown() error {
 	logger.Print("shutting down socket forwarder")
 	p.stopOnce.Do(func() {
+		p.mu.Lock()
+		ttrpcServer := p.ttrpcServer
+		proxyService := p.proxyService
+		p.mu.Unlock()
+
+		// Drain: wait for pending requests to complete
+		if ttrpcServer != nil {
+			logger.Print("draining pending requests...")
+			ctx, cancel := context.WithTimeout(context.Background(), DrainTimeout)
+			if err := ttrpcServer.Shutdown(ctx); err != nil {
+				logger.Printf("drain timeout or error: %v", err)
+			} else {
+				logger.Print("drain complete")
+			}
+			cancel()
+		}
+
+		// Close the client connection to forwarder
+		if proxyService != nil {
+			if err := proxyService.Close(); err != nil {
+				logger.Printf("error closing agent proxy connection: %v", err)
+			}
+		}
+
 		close(p.stopCh)
 	})
 	return nil

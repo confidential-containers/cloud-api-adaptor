@@ -240,3 +240,37 @@ func TestPluginDetectHostInterface(t *testing.T) {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
 }
+
+func TestSetMinPodIndex(t *testing.T) {
+	var pi podIndex
+	pi.SetMin(10)
+	got := pi.Get()
+	require.Equal(t, 10, got)
+}
+
+func TestSetMinDoesNotGoBackwards(t *testing.T) {
+	var pi podIndex
+	pi.SetMin(10)
+	pi.SetMin(5)
+	got := pi.Get()
+	require.Equal(t, 10, got)
+}
+
+func TestSetMinConcurrent(t *testing.T) {
+	var pi podIndex
+	const goroutines = 100
+
+	done := make(chan struct{})
+	for i := 0; i < goroutines; i++ {
+		go func(val int) {
+			pi.SetMin(val)
+			done <- struct{}{}
+		}(i)
+	}
+	for i := 0; i < goroutines; i++ {
+		<-done
+	}
+
+	got := pi.Get()
+	require.Equal(t, goroutines-1, got)
+}
