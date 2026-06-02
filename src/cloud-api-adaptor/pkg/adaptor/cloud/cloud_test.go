@@ -5,14 +5,18 @@ package cloud
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/netip"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 
 	cri "github.com/containerd/containerd/pkg/cri/annotations"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
@@ -156,4 +160,76 @@ func TestCloudService(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, res3)
+}
+
+func TestCreateVMTLSProfilePropagation(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+
+	proxyFactory := &mockProxyFactory{podsDir: dir}
+
+	t.Run("TLS profile written to apf.json when TLSConfig is set", func(t *testing.T) {
+		cfg := &ServerConfig{
+			PodsDir:       dir,
+			ForwarderPort: forwarder.DefaultListenPort,
+			TLSConfig: &tlsutil.TLSConfig{
+				MinTLSVersion: "VersionTLS13",
+				CipherSuites:  []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+			},
+		}
+
+		s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, cfg)
+
+		req := &pb.CreateVMRequest{
+			Id: "tls-test-sandbox",
+			Annotations: map[string]string{
+				cri.SandboxNamespace: "default",
+				cri.SandboxName:      "tls-test-pod",
+			},
+		}
+
+		_, err := s.CreateVM(ctx, req)
+		require.NoError(t, err)
+
+		apfPath := filepath.Join(dir, "tls-test-sandbox", "apf.json")
+		data, err := os.ReadFile(apfPath)
+		require.NoError(t, err)
+
+		var daemonCfg forwarder.Config
+		require.NoError(t, json.Unmarshal(data, &daemonCfg))
+
+		assert.Equal(t, "VersionTLS13", daemonCfg.MinTLSVersion)
+		assert.Equal(t, []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}, daemonCfg.CipherSuites)
+	})
+
+	t.Run("TLS profile fields absent from apf.json when TLSConfig is nil", func(t *testing.T) {
+		cfg := &ServerConfig{
+			PodsDir:       dir,
+			ForwarderPort: forwarder.DefaultListenPort,
+			TLSConfig:     nil,
+		}
+
+		s := NewService(&mockProvider{}, proxyFactory, &mockWorkerNode{}, cfg)
+
+		req := &pb.CreateVMRequest{
+			Id: "notls-test-sandbox",
+			Annotations: map[string]string{
+				cri.SandboxNamespace: "default",
+				cri.SandboxName:      "notls-test-pod",
+			},
+		}
+
+		_, err := s.CreateVM(ctx, req)
+		require.NoError(t, err)
+
+		apfPath := filepath.Join(dir, "notls-test-sandbox", "apf.json")
+		data, err := os.ReadFile(apfPath)
+		require.NoError(t, err)
+
+		var daemonCfg forwarder.Config
+		require.NoError(t, json.Unmarshal(data, &daemonCfg))
+
+		assert.Empty(t, daemonCfg.MinTLSVersion)
+		assert.Empty(t, daemonCfg.CipherSuites)
+	})
 }
