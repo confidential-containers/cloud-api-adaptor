@@ -31,8 +31,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.35.2
 	k8s.io/client-go v0.35.2
-	libvirt.org/go/libvirt v1.11010.0
-	libvirt.org/go/libvirtxml v1.11010.0
+	libvirt.org/go/libvirt v1.12003.0
+	libvirt.org/go/libvirtxml v1.12002.0
 )
 
 require (

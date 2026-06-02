@@ -888,10 +888,10 @@ k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 h1:Y3gxNAuB0OBLImH611+UDZ
 k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912/go.mod h1:kdmbQkyfwUagLfXIad1y2TdrjPFWp2Q89B3qkRwf/pQ=
 k8s.io/utils v0.0.0-20251002143259-bc988d571ff4 h1:SjGebBtkBqHFOli+05xYbK8YF1Dzkbzn+gDM4X9T4Ck=
 k8s.io/utils v0.0.0-20251002143259-bc988d571ff4/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
-libvirt.org/go/libvirt v1.11010.0 h1:1EIh2x6qcRoIBBOvrgN62vq5FIpgUBrmGadprQ/4M0Y=
-libvirt.org/go/libvirt v1.11010.0/go.mod h1:1WiFE8EjZfq+FCVog+rvr1yatKbKZ9FaFMZgEqxEJqQ=
-libvirt.org/go/libvirtxml v1.11010.0 h1:lGUv6OQ4gz5Hm7F40G+swxmK/kcrMZGQ3M8/S+UyhME=
-libvirt.org/go/libvirtxml v1.11010.0/go.mod h1:7Oq2BLDstLr/XtoQD8Fr3mfDNrzlI3utYKySXF2xkng=
+libvirt.org/go/libvirt v1.12003.0 h1:3ek4ObakscdShZRloa9s8/mGhK7xVduqNmAkb15ZEDQ=
+libvirt.org/go/libvirt v1.12003.0/go.mod h1:1WiFE8EjZfq+FCVog+rvr1yatKbKZ9FaFMZgEqxEJqQ=
+libvirt.org/go/libvirtxml v1.12002.0 h1:NbEHw+R3IZE0vZF1deCQt+6tA+6Io4pAw9RjS7tM4fs=
+libvirt.org/go/libvirtxml v1.12002.0/go.mod h1:7Oq2BLDstLr/XtoQD8Fr3mfDNrzlI3utYKySXF2xkng=
 sigs.k8s.io/controller-runtime v0.23.1 h1:TjJSM80Nf43Mg21+RCy3J70aj/W6KyvDtOlpKf+PupE=
 sigs.k8s.io/controller-runtime v0.23.1/go.mod h1:B6COOxKptp+YaUT5q4l6LqUJTRpizbgf9KSRNdQGns0=
 sigs.k8s.io/e2e-framework v0.6.0 h1:p7hFzHnLKO7eNsWGI2AbC1Mo2IYxidg49BiT4njxkrM=
