@@ -103,6 +103,7 @@ define pull_agent_artifact
 	$(eval OCI_DIGEST := $(shell oras resolve $(OCI_IMAGE):${tag}))
 	$(eval OCI_REF := $(OCI_IMAGE)@$(OCI_DIGEST))
 	$(if $(filter yes,$(VERIFY_PROVENANCE)),$(ROOT_DIR)hack/verify-provenance.sh \
+		$(if $(filter $(DISTRO_ARCH),amd64 arm64),-s,) \
 		-a $(OCI_REF) \
 		-r $(KATA_REPO) \
 		-d $(KATA_REF))
@@ -117,6 +118,7 @@ define pull_gc_artifact
 	$(eval OCI_DIGEST := $(shell oras resolve $(OCI_IMAGE):${tag}))
 	$(eval OCI_REF := $(OCI_IMAGE)@$(OCI_DIGEST))
 	$(if $(filter yes,$(VERIFY_PROVENANCE)),$(ROOT_DIR)hack/verify-provenance.sh \
+		$(if $(filter $(DISTRO_ARCH),amd64 arm64),-s,) \
 		-a $(OCI_REF) \
 		-r $(GUEST_COMPONENTS_REPO) \
 		-d $(GUEST_COMPONENTS_REF))
