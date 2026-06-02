@@ -810,3 +810,20 @@ func DoTestPodVMWithAnnotationMemory(t *testing.T, e env.Environment, assert Clo
 	pod := NewPod(E2eNamespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData))
 	NewTestCase(t, e, "PodVMwithAnnotationMemory", assert, "PodVM with Annotation Memory is created").WithPod(pod).WithExpectedInstanceType(expectedType).Run()
 }
+
+// DoTestPodWithTLSMinVersion verifies that a peer pod starts successfully when
+// a TLS minimum version is configured via the TLS_MIN_VERSION env var on the
+// CAA DaemonSet. This proves the full config flow:
+//
+//	TLS_MIN_VERSION env var → TLSConfig → daemonConfig → cloud-init → APF TLS listener → handshake with CAA.
+//
+// Skipped when TLS_MIN_VERSION is not set in the test environment.
+func DoTestPodWithTLSMinVersion(t *testing.T, e env.Environment, assert CloudAssert) {
+	tlsMinVersion := os.Getenv("TLS_MIN_VERSION")
+	if tlsMinVersion == "" {
+		t.Skip("TLS_MIN_VERSION not set in environment, skipping TLS profile e2e test")
+	}
+
+	pod := NewBusyboxPodWithName(E2eNamespace, "tls-min-version-test").GetPodOrFatal(t)
+	NewTestCase(t, e, "PodWithTLSMinVersion", assert, "PodVM starts with TLS_MIN_VERSION="+tlsMinVersion).WithPod(pod).Run()
+}

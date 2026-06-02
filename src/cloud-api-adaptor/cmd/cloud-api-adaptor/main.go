@@ -82,8 +82,9 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	}
 
 	var (
-		disableTLS bool
-		tlsConfig  tlsutil.TLSConfig
+		disableTLS      bool
+		tlsConfig       tlsutil.TLSConfig
+		tlsCipherSuites string
 	)
 
 	cmd.Parse(programName, os.Args[1:], func(flags *flag.FlagSet) {
@@ -105,6 +106,8 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		reg.StringWithEnv(&tlsConfig.CertFile, "cert-file", "", "CERT_FILE", "Client certificate file for custom TLS (e.g. /etc/certificates/client.crt)")
 		reg.StringWithEnv(&tlsConfig.KeyFile, "cert-key", "", "CERT_KEY", "Client key file for custom TLS (e.g. /etc/certificates/client.key)")
 		reg.BoolWithEnv(&tlsConfig.SkipVerify, "tls-skip-verify", false, "TLS_SKIP_VERIFY", "Skip TLS certificate verification - use it only for testing")
+		reg.StringWithEnv(&tlsConfig.MinTLSVersion, "tls-min-version", "", "TLS_MIN_VERSION", "Minimum TLS version for peer pod connections (VersionTLS12 or VersionTLS13)")
+		reg.StringWithEnv(&tlsCipherSuites, "tls-cipher-suites", "", "TLS_CIPHER_SUITES", "Comma-separated IANA TLS cipher suite names for peer pod connections (not applicable for VersionTLS13)")
 		reg.DurationWithEnv(&cfg.serverConfig.ProxyTimeout, "proxy-timeout", proxy.DefaultProxyTimeout, "PROXY_TIMEOUT", "Maximum timeout in minutes for establishing agent proxy connection")
 		reg.StringWithEnv(&cfg.networkConfig.TunnelType, "tunnel-type", podnetwork.DefaultTunnelType, "TUNNEL_TYPE", "Tunnel provider")
 		reg.IntWithEnv(&cfg.networkConfig.VXLAN.Port, "vxlan-port", vxlan.DefaultVXLANPort, "VXLAN_PORT", "VXLAN UDP port number (VXLAN tunnel mode only")
@@ -127,8 +130,22 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 
 	fmt.Printf("%s: starting Cloud API Adaptor daemon for %q\n", programName, cloudName)
 
-	if !disableTLS {
+	if tlsCipherSuites != "" {
+		tlsConfig.CipherSuites = strings.Split(tlsCipherSuites, ",")
+	}
+
+	if disableTLS {
+		fmt.Printf("%s: WARNING: TLS disabled (--disable-tls). Use only for testing.\n", programName)
+	} else {
 		cfg.serverConfig.TLSConfig = &tlsConfig
+	}
+
+	if tlsConfig.SkipVerify {
+		fmt.Printf("%s: WARNING: TLS certificate verification disabled (--tls-skip-verify). Use only for testing.\n", programName)
+	}
+
+	if tlsConfig.MinTLSVersion != "" || len(tlsConfig.CipherSuites) > 0 {
+		fmt.Printf("%s: WARNING: TLS profile (TLS_MIN_VERSION=%s, TLS_CIPHER_SUITES=%s) is baked into peer pod VMs at creation time via cloud-init. Existing peer pods will not pick up profile changes until deleted and recreated.\n", programName, tlsConfig.MinTLSVersion, tlsCipherSuites)
 	}
 
 	// DEPRECATED: LoadEnv() is now a no-op for all providers.
