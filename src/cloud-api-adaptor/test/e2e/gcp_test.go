@@ -29,3 +29,8 @@ func TestCreatePodWithSecretGCP(t *testing.T) {
 	assert := GCPCloudAssert{}
 	DoTestCreatePodWithSecret(t, testEnv, assert)
 }
+
+func TestGCPSandboxPersistence(t *testing.T) {
+	assert := GCPCloudAssert{}
+	DoTestSandboxPersistence(t, testEnv, assert)
+}

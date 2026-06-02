@@ -246,3 +246,10 @@ func TestPodsMTLSCommunication(t *testing.T) {
 	}
 	DoTestPodsMTLSCommunication(t, testEnv, assert)
 }
+
+func TestIBMCloudSandboxPersistence(t *testing.T) {
+	assert := IBMCloudAssert{
+		VPC: pv.IBMCloudProps.VPC,
+	}
+	DoTestSandboxPersistence(t, testEnv, assert)
+}
