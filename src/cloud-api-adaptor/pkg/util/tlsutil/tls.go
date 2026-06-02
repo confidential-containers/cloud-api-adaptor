@@ -9,6 +9,8 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/tlsconfig"
 )
 
 // TLSConfig holds the information needed to set up a TLS transport.
@@ -21,6 +23,13 @@ type TLSConfig struct {
 	CAData   []byte // Bytes of the PEM-encoded server trusted root certificates. Supercedes CAFile.
 	CertData []byte // Bytes of the PEM-encoded client certificate. Supercedes CertFile.
 	KeyData  []byte // Bytes of the PEM-encoded client key. Supercedes KeyFile.
+
+	// MinTLSVersion sets the minimum TLS version. Accepts "VersionTLS12" or "VersionTLS13".
+	// Operator-injected via TLS_MIN_VERSION env var. Defaults to TLS 1.2 when empty.
+	MinTLSVersion string
+	// CipherSuites is the list of IANA TLS cipher suite names to allow.
+	// Operator-injected via TLS_CIPHER_SUITES env var. Must not be set when MinTLSVersion is VersionTLS13.
+	CipherSuites []string
 }
 
 // HasCA returns whether the configuration has a certificate authority or not.
@@ -31,6 +40,11 @@ func (t *TLSConfig) HasCA() bool {
 // HasCertAuth returns whether the configuration has certificate authentication or not.
 func (t *TLSConfig) HasCertAuth() bool {
 	return (len(t.CertData) != 0 || len(t.CertFile) != 0) && (len(t.KeyData) != 0 || len(t.KeyFile) != 0)
+}
+
+// HasTLSProfile returns whether a TLS version or cipher suite constraint is set.
+func (t *TLSConfig) HasTLSProfile() bool {
+	return t.MinTLSVersion != "" || len(t.CipherSuites) > 0
 }
 
 // loadTLSFiles copies the data from the CertFile, KeyFile, and CAFile fields into the CertData,
@@ -113,7 +127,7 @@ func createErrorParsingCAData(pemCerts []byte) error {
 // GetTLSConfigFor returns a tls.Config that will provide the transport level security defined
 // by the provided Config. Will return nil if no transport level security is requested.
 func GetTLSConfigFor(t *TLSConfig) (*tls.Config, error) {
-	if !t.HasCA() && !t.HasCertAuth() && !t.SkipVerify {
+	if !t.HasCA() && !t.HasCertAuth() && !t.SkipVerify && !t.HasTLSProfile() {
 		return nil, nil
 	}
 	if t.HasCA() && t.SkipVerify {
@@ -123,12 +137,27 @@ func GetTLSConfigFor(t *TLSConfig) (*tls.Config, error) {
 		return nil, err
 	}
 
+	parsed, err := tlsconfig.ParseTLSOptions(t.MinTLSVersion, t.CipherSuites)
+	if err != nil {
+		return nil, fmt.Errorf("invalid TLS profile: %w", err)
+	}
+
+	// Option B hard floor: always at least TLS 1.2 regardless of what was requested.
+	// Can't use SSLv3 because of POODLE and BEAST
+	// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+	// Can't use TLSv1.1 because of RC4 cipher usage
+	minVersion := uint16(tls.VersionTLS12)
+	if parsed != nil && parsed.MinVersion > minVersion {
+		minVersion = parsed.MinVersion
+	}
+
 	tlsConfig := &tls.Config{
-		// Can't use SSLv3 because of POODLE and BEAST
-		// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
-		// Can't use TLSv1.1 because of RC4 cipher usage
-		MinVersion:         tls.VersionTLS12,
+		MinVersion:         minVersion,
 		InsecureSkipVerify: t.SkipVerify,
+	}
+
+	if parsed != nil && len(parsed.CipherSuites) > 0 {
+		tlsConfig.CipherSuites = parsed.CipherSuites
 	}
 
 	if t.HasCA() {
