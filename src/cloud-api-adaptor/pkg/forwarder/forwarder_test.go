@@ -5,6 +5,7 @@ package forwarder
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"testing"
 	"time"
@@ -519,6 +520,91 @@ func TestDaemonConstants(t *testing.T) {
 		assert.Equal(t, "/run/kata-containers/agent.sock", DefaultKataAgentSocketPath)
 		assert.Equal(t, "/run/netns/podns", DefaultPodNamespace)
 		assert.Equal(t, "/agent", AgentURLPath)
+	})
+}
+
+func TestNewDaemonTLSProfile(t *testing.T) {
+	t.Run("copies MinTLSVersion from Config to tlsConfig", func(t *testing.T) {
+		config := &Config{
+			TLSServerCert: "cert",
+			TLSServerKey:  "key",
+			MinTLSVersion: "VersionTLS13",
+		}
+		tlsConfig := &tlsutil.TLSConfig{}
+
+		ret := NewDaemon(config, DefaultListenAddr, tlsConfig, agentproto.NewRedirector(dummyDialer), &mockPodNode{})
+		d := ret.(*daemon)
+		assert.Equal(t, "VersionTLS13", d.tlsConfig.MinTLSVersion)
+	})
+
+	t.Run("copies CipherSuites from Config to tlsConfig", func(t *testing.T) {
+		suites := []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}
+		config := &Config{
+			TLSServerCert: "cert",
+			TLSServerKey:  "key",
+			CipherSuites:  suites,
+		}
+		tlsConfig := &tlsutil.TLSConfig{}
+
+		ret := NewDaemon(config, DefaultListenAddr, tlsConfig, agentproto.NewRedirector(dummyDialer), &mockPodNode{})
+		d := ret.(*daemon)
+		assert.Equal(t, suites, d.tlsConfig.CipherSuites)
+	})
+
+	t.Run("does not overwrite MinTLSVersion already set on tlsConfig", func(t *testing.T) {
+		config := &Config{MinTLSVersion: "VersionTLS13"}
+		tlsConfig := &tlsutil.TLSConfig{MinTLSVersion: "VersionTLS12"}
+
+		ret := NewDaemon(config, DefaultListenAddr, tlsConfig, agentproto.NewRedirector(dummyDialer), &mockPodNode{})
+		d := ret.(*daemon)
+		assert.Equal(t, "VersionTLS12", d.tlsConfig.MinTLSVersion)
+	})
+
+	t.Run("does not overwrite CipherSuites already set on tlsConfig", func(t *testing.T) {
+		existing := []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"}
+		config := &Config{CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}}
+		tlsConfig := &tlsutil.TLSConfig{CipherSuites: existing}
+
+		ret := NewDaemon(config, DefaultListenAddr, tlsConfig, agentproto.NewRedirector(dummyDialer), &mockPodNode{})
+		d := ret.(*daemon)
+		assert.Equal(t, existing, d.tlsConfig.CipherSuites)
+	})
+
+	t.Run("nil tlsConfig skips profile copy", func(t *testing.T) {
+		config := &Config{MinTLSVersion: "VersionTLS13"}
+		ret := NewDaemon(config, DefaultListenAddr, nil, agentproto.NewRedirector(dummyDialer), &mockPodNode{})
+		d := ret.(*daemon)
+		assert.Nil(t, d.tlsConfig)
+	})
+}
+
+func TestConfigJSONRoundtrip(t *testing.T) {
+	t.Run("MinTLSVersion and CipherSuites survive JSON round-trip", func(t *testing.T) {
+		original := &Config{
+			PodNamespace:  "default",
+			PodName:       "test-pod",
+			MinTLSVersion: "VersionTLS13",
+			CipherSuites:  []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+		}
+
+		data, err := json.Marshal(original)
+		require.NoError(t, err)
+
+		var decoded Config
+		err = json.Unmarshal(data, &decoded)
+		require.NoError(t, err)
+
+		assert.Equal(t, original.MinTLSVersion, decoded.MinTLSVersion)
+		assert.Equal(t, original.CipherSuites, decoded.CipherSuites)
+	})
+
+	t.Run("empty TLS profile fields omitted from JSON", func(t *testing.T) {
+		config := &Config{PodName: "test-pod"}
+		data, err := json.Marshal(config)
+		require.NoError(t, err)
+
+		assert.NotContains(t, string(data), "tls-min-version")
+		assert.NotContains(t, string(data), "tls-cipher-suites")
 	})
 }
 
