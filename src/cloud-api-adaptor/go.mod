@@ -28,8 +28,8 @@ require (
 	google.golang.org/grpc v1.80.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/cri-api v0.33.0 // indirect
-	libvirt.org/go/libvirt v1.11010.0
-	libvirt.org/go/libvirtxml v1.11010.0
+	libvirt.org/go/libvirt v1.12003.0
+	libvirt.org/go/libvirtxml v1.12002.0
 )
 
 require (
