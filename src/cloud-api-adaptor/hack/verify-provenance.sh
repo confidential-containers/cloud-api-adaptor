@@ -23,6 +23,7 @@ usage() {
 	echo "  -d <expected git sha1 from which the artifact was built>"
 	echo "  -r <repository on which the artifact was built>"
 	echo "  [-g] (optional. fetch attestation using github api)"
+	echo "  [-s] (optional. deny attestations produced on self-hosted runners)"
 	exit 1
 }
 
@@ -30,9 +31,10 @@ oci_artifact=""
 expected_digest=""
 repository=""
 github="0"
+assert_runner="0"
 
 # Parse options using getopts
-while getopts ":a:d:r:g" opt; do
+while getopts ":a:d:r:gs" opt; do
 	case "${opt}" in
 	a)
 		oci_artifact="${OPTARG}"
@@ -45,6 +47,9 @@ while getopts ":a:d:r:g" opt; do
 		;;
 	g)
 		github="1"
+		;;
+	s)
+		assert_runner="1"
 		;;
 	*)
 		usage
@@ -104,6 +109,7 @@ claims=$(
 			workflowDigest:  .githubWorkflowSHA,
 			workflowTrigger: .githubWorkflowTrigger,
 			workflowRef:     .githubWorkflowRef,
+			runner:          .runnerEnvironment,
 		}'
 )
 
@@ -111,6 +117,7 @@ digest=$(echo "$claims" | jq -r '.digest')
 workflow_digest=$(echo "$claims" | jq -r '.workflowDigest')
 workflow_trigger=$(echo "$claims" | jq -r '.workflowTrigger')
 workflow_ref=$(echo "$claims" | jq -r '.workflowRef')
+runner=$(echo "$claims" | jq -r '.runner')
 
 verification_failed=""
 
@@ -131,6 +138,11 @@ fi
 
 if [ "$workflow_ref" != "refs/heads/main" ]; then
 	echo "Workflow ref mismatch: expected refs/heads/main, got $workflow_ref"
+	verification_failed="1"
+fi
+
+if [ "$assert_runner" == "1" ] && [ "$runner" != "github-hosted" ]; then
+	echo "Runner mismatch: expected github-hosted, got $runner"
 	verification_failed="1"
 fi
 
