@@ -17,8 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"crypto/tls"
 	"flag"
+	"fmt"
 	"os"
+	"strings"
 
 	mutating "github.com/confidential-containers/cloud-api-adaptor/src/webhook/pkg/mutating"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -48,6 +51,44 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+// tlsVersionFromString maps a TLS version string to the corresponding uint16.
+// Returns tls.VersionTLS12 for empty input. Rejects TLS 1.0 and 1.1.
+func tlsVersionFromString(v string) (uint16, error) {
+	switch v {
+	case "", "VersionTLS12":
+		return tls.VersionTLS12, nil
+	case "VersionTLS13":
+		return tls.VersionTLS13, nil
+	case "VersionTLS10", "VersionTLS11":
+		return 0, fmt.Errorf("invalid minVersion %q: TLS 1.0 and 1.1 are not supported, use VersionTLS12 or VersionTLS13", v)
+	default:
+		return 0, fmt.Errorf("unknown TLS version %q, use VersionTLS12 or VersionTLS13", v)
+	}
+}
+
+// tlsCipherSuitesFromNames maps IANA cipher suite names to their crypto/tls uint16 IDs.
+// Leading/trailing whitespace is trimmed and empty entries are ignored.
+func tlsCipherSuitesFromNames(names []string) ([]uint16, error) {
+	all := append(tls.CipherSuites(), tls.InsecureCipherSuites()...)
+	byName := make(map[string]uint16, len(all))
+	for _, cs := range all {
+		byName[cs.Name] = cs.ID
+	}
+	var ids []uint16
+	for _, n := range names {
+		n = strings.TrimSpace(n)
+		if n == "" {
+			continue
+		}
+		id, ok := byName[n]
+		if !ok {
+			return nil, fmt.Errorf("unknown cipher suite %q", n)
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -65,6 +106,39 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// Build TLS options from operator-injected env vars.
+	// The operator is the single source of truth for the cluster TLS profile.
+	var webhookTLSOpts []func(*tls.Config)
+	minVersionStr := strings.TrimSpace(os.Getenv("TLS_MIN_VERSION"))
+	cipherSuitesStr := strings.TrimSpace(os.Getenv("TLS_CIPHER_SUITES"))
+
+	if minVersionStr != "" || cipherSuitesStr != "" {
+		minVersion, err := tlsVersionFromString(minVersionStr)
+		if err != nil {
+			setupLog.Error(err, "invalid TLS_MIN_VERSION")
+			os.Exit(1)
+		}
+
+		var cipherSuiteIDs []uint16
+		if cipherSuitesStr != "" {
+			if minVersion == tls.VersionTLS13 {
+				setupLog.Error(fmt.Errorf("cipher suites may not be specified when TLS_MIN_VERSION is VersionTLS13"), "invalid TLS configuration")
+				os.Exit(1)
+			}
+			names := strings.Split(cipherSuitesStr, ",")
+			cipherSuiteIDs, err = tlsCipherSuitesFromNames(names)
+			if err != nil {
+				setupLog.Error(err, "invalid TLS_CIPHER_SUITES")
+				os.Exit(1)
+			}
+		}
+
+		webhookTLSOpts = append(webhookTLSOpts, func(c *tls.Config) {
+			c.MinVersion = minVersion
+			c.CipherSuites = cipherSuiteIDs
+		})
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -72,7 +146,8 @@ func main() {
 		},
 		WebhookServer: &webhook.DefaultServer{
 			Options: webhook.Options{
-				Port: 9443,
+				Port:    9443,
+				TLSOpts: webhookTLSOpts,
 			},
 		},
 		HealthProbeBindAddress: probeAddr,
