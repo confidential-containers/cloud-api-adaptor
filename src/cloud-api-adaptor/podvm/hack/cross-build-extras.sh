@@ -34,9 +34,6 @@ if [[ ${ID_LIKE:-} == *"debian"* ]]; then
     esac
     apt install -y "$qemu_pkg"
     apt install -y "gcc-$ARCH-linux-$libc"
-elif [[ "${ID_LIKE:-}" =~ "fedora" ]] || [[ "${ID:-}" =~ "fedora" ]]; then
-    dnf install -y "qemu-system-$ARCH"
-    dnf install -y "gcc-$ARCH-linux-$libc"
 else
     echo "Unsupported distro $ID"; exit 1
 fi

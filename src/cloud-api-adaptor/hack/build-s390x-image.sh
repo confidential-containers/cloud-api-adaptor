@@ -81,7 +81,7 @@ umount "${dst_mnt}"
 
 qemu-nbd --disconnect "${tmp_nbd}"
 
-output_img_name="podvm-fedora-s390x.qcow2"
+output_img_name="podvm-ubuntu-s390x.qcow2"
 qemu-img convert -O qcow2 -c "${tmp_img_path}" "${output_img_name}"
 chmod 644 "${output_img_name}"
 

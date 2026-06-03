@@ -45,7 +45,7 @@ Here is an example to create a libvirt VM using `virt-install` and capture it's 
 Copy the image to the libvirt image directory.
 
 ```bash
-cp ./build/podvm-fedora-amd64.qcow2 /var/lib/libvirt/images
+cp ./build/podvm-ubuntu-amd64.qcow2 /var/lib/libvirt/images
 ```
 
 Create VM.
@@ -57,9 +57,9 @@ virt-install \
    --memory 2048 \
    --vcpus 1 \
    --import \
-   --os-variant fedora41 \
+   --os-variant ubuntu24.04 \
    --network default \
-   --disk /var/lib/libvirt/images/podvm-fedora-amd64.qcow2 \
+   --disk /var/lib/libvirt/images/podvm-ubuntu-amd64.qcow2 \
    --noautoconsole
 ```
 

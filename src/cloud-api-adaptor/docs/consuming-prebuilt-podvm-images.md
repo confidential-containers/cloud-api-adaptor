@@ -21,6 +21,6 @@ The mkosi based images are OCI artifacts, so you'll need to use [oras](https://o
 
 ```sh
 export CAA_VERSION=v0.13.0
-oras pull quay.io/confidential-containers/podvm-generic-fedora-amd64:$CAA_VERSION
+oras pull quay.io/confidential-containers/podvm-generic-ubuntu-amd64:$CAA_VERSION
 tar xvJpf podvm.tar.xz
 ```
