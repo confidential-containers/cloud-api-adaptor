@@ -1,6 +1,6 @@
 # Build the manager binary
-# golang:1.25.10
-FROM --platform=$TARGETPLATFORM golang@sha256:3965b9511a9bed199f0b4eb146f99c31971a5c0adb3240d9f25e233cbd9e01c8 AS builder
+# golang:1.25.11
+FROM --platform=$TARGETPLATFORM golang@sha256:dd7d32e19b28621cd982082397fc0510d396805b717d5e77466aa2dd692340de AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG CGO_ENABLED=1
@@ -35,8 +35,8 @@ COPY peerpod-ctrl/controllers/ controllers/
 RUN CC=gcc CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build ${GOFLAGS} -a -o manager main.go
 
 # Target Image
-# debian:trixie-slim (matches golang:1.25.10 base for library compatibility)
-FROM --platform=$TARGETPLATFORM debian@sha256:109e2c65005bf160609e4ba6acf7783752f8502ad218e298253428690b9eaa4b
+# debian:trixie-slim (matches golang:1.25.11 base for library compatibility)
+FROM --platform=$TARGETPLATFORM debian@sha256:b6e2a152f22a40ff69d92cb397223c906017e1391a73c952b588e51af8883bf8
 ARG CGO_ENABLED=1
 
 RUN if [ "$CGO_ENABLED" = 1 ] ; then \
