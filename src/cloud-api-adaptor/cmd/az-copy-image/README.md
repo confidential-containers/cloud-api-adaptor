@@ -31,7 +31,7 @@ Copy a community image into gallery `mygallery`, definition `mydef` and create v
 
 ```bash
 AZURE_LOCATION=eastus az-copy-image \
-    -community-image-id "/CommunityGalleries/cococommunity-42d8482d-92cd-415b-b332-7648bd978eff/Images/peerpod-podvm-fedora-debug/Versions/0.12.0" \
+    -community-image-id "/CommunityGalleries/cococommunity-42d8482d-92cd-415b-b332-7648bd978eff/Images/peerpod-podvm-ubuntu-debug/Versions/0.12.0" \
     -image-gallery mygallery \
     -image-definition mydef \
     -resource-group myrg

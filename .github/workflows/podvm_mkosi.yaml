@@ -166,7 +166,7 @@ jobs:
           cd oras
           cp ../build/podvm-*.qcow2 .
           tar cJf podvm.tar.xz podvm-*.qcow2
-          image=${{ inputs.registry }}/podvm-generic-fedora
+          image=${{ inputs.registry }}/podvm-generic-ubuntu
           if [ "${DEBUG}" = "true" ]; then
             image=${image}-debug
           fi

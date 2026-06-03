@@ -71,11 +71,11 @@ variable "release_image_gallery" {
 variable "release_image_definition" {
   type        = string
   description = "Image definition for release podvm images"
-  default     = "peerpod-podvm-fedora"
+  default     = "peerpod-podvm-ubuntu"
 }
 
 variable "release_image_definition_debug" {
   type        = string
   description = "Image definition for release podvm images"
-  default     = "peerpod-podvm-fedora-debug"
+  default     = "peerpod-podvm-ubuntu-debug"
 }
