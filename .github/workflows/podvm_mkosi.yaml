@@ -166,17 +166,17 @@ jobs:
           cd oras
           cp ../build/podvm-*.qcow2 .
           tar cJf podvm.tar.xz podvm-*.qcow2
-          image=${{ inputs.registry }}/podvm-generic-fedora
+          image=${REGISTRY}/podvm-generic-fedora
           if [ "${DEBUG}" = "true" ]; then
             image=${image}-debug
           fi
-          image=${image}-${{ inputs.arch }}
+          image=${image}-${ARCH}
           tag=$(git rev-parse --short HEAD)
           oras push "${image}:${tag}" podvm.tar.xz
 
           # If the input has a different image-tag then also push it with that tag
-          if [ -n "${{ inputs.image_tag }}" ] && [ "${{ inputs.image_tag }}" != "${tag}" ];then
-            oras push "${image}:${{ inputs.image_tag }}" podvm.tar.xz
+          if [ -n "${IMAGE_TAG}" ] && [ "${IMAGE_TAG}" != "${tag}" ];then
+            oras push "${image}:${IMAGE_TAG}" podvm.tar.xz
           fi
 
           # add image and digest to output for attestation
@@ -186,6 +186,9 @@ jobs:
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
         env:
           DEBUG: ${{ inputs.debug == true && 'true' || 'false' }}
+          REGISTRY: ${{ inputs.registry }}
+          ARCH: ${{ inputs.arch }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
 
       - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
