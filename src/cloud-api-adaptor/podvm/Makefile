@@ -5,13 +5,12 @@ SE_BOOT   ?= false
 IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
 
 REGISTRY ?= quay.io/confidential-containers
-PODVM_DISTRO ?= fedora
 ifeq ($(PODVM_TAG),)
 	PODVM_TAG := $(VERSIONS_HASH)
 endif
-PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
-PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH):$(PODVM_TAG)
-PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-$(PODVM_DISTRO)$(if $(filter $(SE_BOOT),true),-se,)-$(DISTRO_ARCH):$(PODVM_TAG)
+PODVM_BUILDER_IMAGE ?= $(REGISTRY)/podvm-builder-ubuntu-$(DISTRO_ARCH):$(PODVM_TAG)
+PODVM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-binaries-ubuntu-$(DISTRO_ARCH):$(PODVM_TAG)
+PODVM_IMAGE ?= $(REGISTRY)/podvm-generic-ubuntu$(if $(filter $(SE_BOOT),true),-se,)-$(DISTRO_ARCH):$(PODVM_TAG)
 PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(DISTRO_ARCH)
 PODVM_BYOM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-byom-binaries-$(PODVM_DISTRO)-$(DISTRO_ARCH)
 PODVM_BYOM_E2E_CONTAINER_NAME ?= $(REGISTRY)/podvm-byom-e2e-image-$(DISTRO_ARCH)
@@ -41,19 +40,11 @@ container: podvm-binaries image-container
 .PHONY: byom-e2e-container
 byom-e2e-container: image-byom-e2e-container
 
-ifeq ($(PODVM_DISTRO),ubuntu)
 DISTRO_NAME := ubuntu
 DISTRO_IMAGE := ubuntu:24.04
 DISTRO_RELEASE := noble
 DISTRO_REPOS := --repositories=universe
 PKG_INSTALL := apt-get update && apt-get install -y debian-archive-keyring
-else
-DISTRO_NAME := fedora
-DISTRO_IMAGE := fedora:43
-DISTRO_RELEASE := 43
-DISTRO_REPOS :=
-PKG_INSTALL := dnf install -y distribution-gpg-keys libseccomp
-endif
 
 define run_mkosi_in_container
 	docker run --rm --privileged \
@@ -93,7 +84,7 @@ endif
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		$(if $(filter $(PUSH),true),,-o type=local,dest="./resources/binaries-tree") \
 		$(DOCKER_OPTS) \
-		-f Dockerfile.podvm_binaries.$(PODVM_DISTRO) ../../
+		-f Dockerfile.podvm_binaries ../../
 
 PHONY: insecure-builder
 insecure-builder:
@@ -115,7 +106,7 @@ else ifeq ($(ARCH),s390x)
 else
 	mkdir -p build
 	docker buildx build \
-		-f Dockerfile.mkosi$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) \
+		-f Dockerfile.mkosi \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=production \
 		--build-arg IMAGE_VERSION \
@@ -125,7 +116,7 @@ else
 		--builder insecure-builder \
 		--allow security.insecure \
 		.
-	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-ubuntu-$(DISTRO_ARCH).qcow2
 endif
 
 PHONY: image-debug
@@ -142,7 +133,7 @@ else
 
 	mkdir -p build
 	docker buildx build \
-		-f Dockerfile.mkosi$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) \
+		-f Dockerfile.mkosi \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=debug \
 		--build-arg IMAGE_VERSION \
@@ -152,7 +143,7 @@ else
 		--builder insecure-builder \
 		--allow security.insecure \
 		.
-	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-ubuntu-$(DISTRO_ARCH).qcow2
 endif
 
 PHONY: image-sftp
@@ -168,7 +159,7 @@ else ifeq ($(ARCH),s390x)
 else
 	mkdir -p build
 	docker buildx build \
-		-f Dockerfile.mkosi$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) \
+		-f Dockerfile.mkosi \
 		-t $(PODVM_IMAGE) \
 		--build-arg PROFILE=sftp \
 		--build-arg IMAGE_VERSION \
@@ -178,7 +169,7 @@ else
 		--builder insecure-builder \
 		--allow security.insecure \
 		.
-	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-$(PODVM_DISTRO)-$(DISTRO_ARCH).qcow2
+	qemu-img convert -f raw -O qcow2 build/system.raw build/podvm-ubuntu-$(DISTRO_ARCH).qcow2
 endif
 
 PHONY: image-container
@@ -187,7 +178,7 @@ image-container:
 	cd .. && docker buildx build \
 		-t $(PODVM_CONTAINER_NAME):$(PODVM_TAG) \
 		-t $(PODVM_CONTAINER_NAME):latest \
-		-f podvm/Dockerfile.podvm_docker_provider$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) .
+		-f podvm/Dockerfile.podvm_docker_provider .
 
 .PHONY: podvm-byom-binaries-image
 podvm-byom-binaries-image:
@@ -208,7 +199,7 @@ image-byom-e2e-container:
 		-t $(PODVM_BYOM_E2E_CONTAINER_NAME):$(PODVM_TAG) \
 		-t $(PODVM_BYOM_E2E_CONTAINER_NAME):latest \
 		--build-arg BASE_IMAGE=$(PODVM_CONTAINER_NAME):latest \
-		-f Dockerfile.podvm_byom_docker_provider$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) .
+		-f Dockerfile.podvm_byom_docker_provider .
 
 PHONY: push-image
 push-image:

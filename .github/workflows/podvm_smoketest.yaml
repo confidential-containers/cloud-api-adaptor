@@ -68,7 +68,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: podvm-build
-          path: src/cloud-api-adaptor/podvm/build/podvm-fedora-amd64.qcow2
+          path: src/cloud-api-adaptor/podvm/build/podvm-ubuntu-amd64.qcow2
 
   test:
     name: test
@@ -122,4 +122,4 @@ jobs:
       - name: Run smoke test (${{ matrix.test-mode.name }})
         env:
           TEST_MODE: ${{ matrix.test-mode.mode }}
-        run: src/cloud-api-adaptor/podvm/hack/smoke_test.sh -m "$TEST_MODE" podvm-fedora-amd64.qcow2
+        run: src/cloud-api-adaptor/podvm/hack/smoke_test.sh -m "$TEST_MODE" podvm-ubuntu-amd64.qcow2
