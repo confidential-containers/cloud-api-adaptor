@@ -22,7 +22,7 @@ RUN tar xvf /src/pause-bundle.tar.gz -C /src/files
 
 COPY . /src
 
-COPY podvm-mkosi/mkosi.skeleton-sftp/usr/lib/systemd/system /src/files/etc/systemd/system
+COPY podvm/mkosi.skeleton-sftp/usr/lib/systemd/system /src/files/etc/systemd/system
 COPY podvm/copy-files.sh /src/files/copy-files.sh
 
 RUN tar czvf /podvm-byom.tar.gz -C /src/files .

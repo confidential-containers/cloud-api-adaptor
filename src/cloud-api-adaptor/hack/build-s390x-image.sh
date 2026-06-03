@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-pushd ../podvm-mkosi/build
+pushd ../podvm/build
 
 workdir=.
 tmp_img_path="${workdir}/tmp.qcow2"

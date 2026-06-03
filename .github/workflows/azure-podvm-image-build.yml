@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: cloud-api-adaptor/src/cloud-api-adaptor/podvm-mkosi
+        working-directory: cloud-api-adaptor/src/cloud-api-adaptor/podvm
     outputs:
       image-id: "${{ steps.upload-image.outputs.image-id }}"
     permissions:

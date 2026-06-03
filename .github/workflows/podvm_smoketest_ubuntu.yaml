@@ -16,7 +16,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        working-directory: src/cloud-api-adaptor/podvm
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -71,7 +71,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: podvm-build-ubuntu
-          path: src/cloud-api-adaptor/podvm-mkosi/build/podvm-ubuntu-amd64.qcow2
+          path: src/cloud-api-adaptor/podvm/build/podvm-ubuntu-amd64.qcow2
 
   test:
     name: Test the image
@@ -83,9 +83,9 @@ jobs:
     strategy:
       matrix:
         test-mode:
-          - name: podvm-mkosi-ubuntu
+          - name: podvm-ubuntu
             mode: basic
-          - name: podvm-mkosi-with-scratch-space-ubuntu
+          - name: podvm-with-scratch-space-ubuntu
             mode: scratch-space
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

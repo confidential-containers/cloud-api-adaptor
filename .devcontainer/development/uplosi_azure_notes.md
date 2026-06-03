@@ -7,7 +7,7 @@ oci.guest-components.reference to desired tag found here (non sha) : [ghcr.io/co
 ## mkosi build debug podvm
 
 ```console
-cd /workspaces/cloud-api-adaptor/src/cloud-api-adaptor/podvm-mkosi
+cd /workspaces/cloud-api-adaptor/src/cloud-api-adaptor/podvm
 TEE_PLATFORM=az-cvm-vtpm make debug
 ```
 
