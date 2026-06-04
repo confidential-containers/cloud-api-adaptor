@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 360
 
     permissions:
-      security-events: write
+      security-events: write  # Required to upload CodeQL results
 
     steps:
     - name: Checkout repository

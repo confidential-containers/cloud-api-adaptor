@@ -13,10 +13,15 @@ defaults:
   run:
     working-directory: src/cloud-api-adaptor
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions: {}
 
 jobs:
   list-dockerfiles:
+    name: list-dockerfiles
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ env.MATRIX }}
@@ -30,14 +35,15 @@ jobs:
     name: Create Test Images
     needs: list-dockerfiles
     runs-on: ubuntu-24.04
+    environment: production
     strategy:
       fail-fast: false
       matrix:
         targets: ${{ fromJson(needs.list-dockerfiles.outputs.matrix) }}
         arch: [amd64, s390x, arm64]
     permissions:
-      contents: read
-      packages: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
     steps:
     - name: Checkout Code
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
