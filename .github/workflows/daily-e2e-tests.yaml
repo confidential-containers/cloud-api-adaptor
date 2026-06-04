@@ -33,11 +33,11 @@ jobs:
       podvm_image_tag: latest
       registry: ghcr.io/${{ github.repository_owner }}
     permissions:
-      id-token: write
-      contents: read
-      packages: write
-      attestations: write
-      artifact-metadata: write
+      id-token: write  # Required for OIDC authentication
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
+      attestations: write  # Required to write attestations
+      artifact-metadata: write  # Required to write artifact metadata
     secrets:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}

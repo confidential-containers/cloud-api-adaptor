@@ -3,10 +3,15 @@ name: smoke test
 on:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions: {}
 
 jobs:
   build:
+    name: build
     runs-on: 'ubuntu-24.04'
 
     defaults:
@@ -66,6 +71,7 @@ jobs:
           path: src/cloud-api-adaptor/podvm/build/podvm-fedora-amd64.qcow2
 
   test:
+    name: test
     # We're pinning the runner to 22.04 b/c libvirt struggles with the
     # OVMF_CODE_4M firmware that is default on 24.04.
     runs-on: 'ubuntu-22.04'

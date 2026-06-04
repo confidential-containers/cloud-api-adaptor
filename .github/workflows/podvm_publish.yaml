@@ -39,10 +39,10 @@ jobs:
   podvm:
     uses: ./.github/workflows/podvm_mkosi.yaml
     permissions:
-      contents: read
-      packages: write
-      id-token: write
-      attestations: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
+      id-token: write  # Required for OIDC authentication
+      attestations: write  # Required to write attestations
       artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
     strategy:
       fail-fast: false

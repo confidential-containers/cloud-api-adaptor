@@ -127,6 +127,7 @@ jobs:
         run: make docker-build
 
   webhook:
+    name: webhook
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -180,6 +181,7 @@ jobs:
           make test-e2e
 
   cloud-provider:
+    name: cloud-provider
     runs-on: ubuntu-24.04
     defaults:
       run:
