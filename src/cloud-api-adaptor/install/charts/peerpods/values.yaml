@@ -82,7 +82,7 @@ image:
   name: quay.io/confidential-containers/cloud-api-adaptor
   tag: "2d2e7c2c0736ec41c889cd98442a598b8b93bc0b"
 
-# Cloud provider: libvirt, aws, azure, gcp, ibmcloud, vsphere
+# Cloud provider: libvirt, aws, azure, gcp, ibmcloud, vsphere, kubevirt
 provider: libvirt
 
 # Maximum number of peer pods allowed to run simultaneously

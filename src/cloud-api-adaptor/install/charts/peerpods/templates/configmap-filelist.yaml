@@ -1,0 +1,17 @@
+{{- if include "peerpods.hasProviderConfiglist" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configlist
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: peerpods
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+{{- $currentScope := . }}
+{{- range $path, $_ := .Files.Glob (print "providers/" .Values.provider "/*") }}
+  {{ ( base $path ) }}: |
+{{- tpl ( $currentScope.Files.Get $path ) $currentScope | trim | nindent 4 }}
+{{- end }}
+{{- end }}

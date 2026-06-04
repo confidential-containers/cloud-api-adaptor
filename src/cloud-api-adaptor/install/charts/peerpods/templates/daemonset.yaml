@@ -97,6 +97,11 @@ spec:
         - mountPath: /var/run/secrets/tokens
           name: vault-token
 {{- end }}
+{{- if include "peerpods.hasProviderConfiglist" . }}
+        - mountPath: /etc/config/caa/{{ .Values.provider }}
+          name: config-volume
+          readOnly: true
+{{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
@@ -166,4 +171,9 @@ spec:
               path: vault-token
               expirationSeconds: 3600
               audience: iam
+{{- end }}
+{{- if include "peerpods.hasProviderConfiglist" . }}
+      - name: config-volume
+        configMap:
+          name: configlist
 {{- end }}

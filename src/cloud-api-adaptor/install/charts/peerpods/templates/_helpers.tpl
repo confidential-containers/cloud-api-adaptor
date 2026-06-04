@@ -53,6 +53,16 @@ true
 {{- end -}}
 
 {{/*
+If there is a directory named "provider" under the /providers directory, collect the files within it.
+Make the collected files accessible within Cloud-api-adaptor.
+*/}}
+{{- define "peerpods.hasProviderConfiglist" -}}
+{{- if .Files.Glob (print "providers/" .Values.provider "/*") -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
 Check if custom TLS certificates are configured.
 Returns "true" when CACERT_FILE is set in providerConfigs for the active
 provider AND a TLS secret name is available (either chart-managed or external).
