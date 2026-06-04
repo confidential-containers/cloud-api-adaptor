@@ -67,6 +67,14 @@ spec:
           value: {{ .Values.webhook.targetRuntimeClass }}
         - name: POD_VM_EXTENDED_RESOURCE
           value: {{ .Values.webhook.podVMExtendedResource }}
+{{- if .Values.tlsMinVersion }}
+        - name: TLS_MIN_VERSION
+          value: {{ .Values.tlsMinVersion }}
+{{- end }}
+{{- if .Values.tlsCipherSuites }}
+        - name: TLS_CIPHER_SUITES
+          value: {{ .Values.tlsCipherSuites }}
+{{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
