@@ -122,12 +122,20 @@ byom() {
 
 }
 
+kubevirt() {
+    set -x
+    exec cloud-api-adaptor kubevirt ${optionals}
+
+}
+
+
+
 help_msg() {
     cat <<EOF
 Usage:
-	CLOUD_PROVIDER=alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt $0
+	CLOUD_PROVIDER=alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt|kubevirt $0
 or
-	$0 alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt
+	$0 alibabacloud|aws|azure|byom|gcp|ibmcloud|ibmcloud-powervs|libvirt|kubevirt
 
 in addition all cloud provider specific env variables must be set and valid
 (CLOUD_PROVIDER is currently set to "$CLOUD_PROVIDER")
@@ -150,6 +158,8 @@ elif [[ "$CLOUD_PROVIDER" == "ibmcloud-powervs" ]]; then
     ibmcloud_powervs
 elif [[ "$CLOUD_PROVIDER" == "libvirt" ]]; then
     libvirt
+elif [[ "$CLOUD_PROVIDER" == "kubevirt" ]]; then
+    kubevirt
 else
     help_msg
 fi
