@@ -19,7 +19,7 @@ for i in "${HOST_KEYS_DIR}"/*.crt; do
 done
 [[ -z $host_keys ]] && echo "Didn't find host key files. Please download host key files to ${HOST_KEYS_DIR} folder " && exit 1
 
-pushd ../podvm-mkosi/build
+pushd ../podvm/build
 
 workdir=$(pwd)
 disksize=100G

@@ -94,9 +94,9 @@ ENV IMAGE_CHECKSUM="none"
 
 COPY . /src
 
-WORKDIR /src/cloud-api-adaptor/podvm-mkosi
+WORKDIR /src/cloud-api-adaptor/podvm
 # Installs add-ons for foreign target, if required
-RUN ../podvm/hack/cross-build-extras.sh
+RUN ./hack/cross-build-extras.sh
 
 RUN LIBC=gnu make binaries
 

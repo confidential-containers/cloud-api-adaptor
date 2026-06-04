@@ -50,15 +50,15 @@ RUN --mount=type=cache,target=/iptables,from=iptables,source=/iptables,readonly 
     && /usr/sbin/iptables-wrapper install
 
 # Add podvm resources
-COPY ./podvm-mkosi/resources/binaries-tree/etc/ /etc/
-COPY ./podvm-mkosi/resources/binaries-tree/usr/ /usr/
-COPY ./podvm-mkosi/resources/binaries-tree/pause_bundle/ /pause_bundle/
+COPY ./podvm/resources/binaries-tree/etc/ /etc/
+COPY ./podvm/resources/binaries-tree/usr/ /usr/
+COPY ./podvm/resources/binaries-tree/pause_bundle/ /pause_bundle/
 
 COPY ./podvm/misc-settings.sh /tmp/misc-settings.sh
 
 RUN PODVM_DISTRO=ubuntu CLOUD_PROVIDER=generic bash /tmp/misc-settings.sh
 
-COPY --chmod=0755 ./podvm-mkosi/entrypoint.sh  /usr/local/bin/
+COPY --chmod=0755 ./podvm/entrypoint.sh  /usr/local/bin/
 
 # https://systemd.io/CONTAINER_INTERFACE/
 ENV container=docker

@@ -36,7 +36,7 @@ on:
 permissions: {}
 
 jobs:
-  podvm-mkosi:
+  podvm:
     uses: ./.github/workflows/podvm_mkosi.yaml
     permissions:
       contents: read
@@ -57,7 +57,7 @@ jobs:
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
-  podvm-ubuntu-mkosi:
+  podvm-ubuntu:
     uses: ./.github/workflows/podvm_mkosi_ubuntu.yaml
     permissions:
       contents: read # Required if we want to run on a fork?

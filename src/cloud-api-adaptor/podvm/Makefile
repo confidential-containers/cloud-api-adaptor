@@ -1,5 +1,5 @@
 include ../Makefile.defaults
-include ../podvm/Makefile.inc
+include ./Makefile.inc
 
 SE_BOOT   ?= false
 IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
@@ -186,7 +186,7 @@ image-container:
 	cd .. && docker buildx build \
 		-t $(PODVM_CONTAINER_NAME):$(PODVM_TAG) \
 		-t $(PODVM_CONTAINER_NAME):latest \
-		-f podvm-mkosi/Dockerfile.podvm_docker_provider$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) .
+		-f podvm/Dockerfile.podvm_docker_provider$(if $(filter $(PODVM_DISTRO),ubuntu),.ubuntu,) .
 
 .PHONY: image-byom-e2e-container
 image-byom-e2e-container:
