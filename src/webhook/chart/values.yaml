@@ -50,6 +50,16 @@ authProxy:
       cpu: 5m
       memory: 64Mi
 
+# Minimum TLS version for the webhook server. Accepts "VersionTLS12" or "VersionTLS13".
+# Defaults to Go's TLS default (TLS 1.2) when empty.
+# Injected by the operator from the cluster TLS profile via TLS_MIN_VERSION env var.
+tlsMinVersion: ""
+
+# Comma-separated list of IANA TLS cipher suite names for the webhook server.
+# Not applicable when tlsMinVersion is VersionTLS13.
+# Injected by the operator from the cluster TLS profile via TLS_CIPHER_SUITES env var.
+tlsCipherSuites: ""
+
 # cert-manager integration for webhook TLS certificates
 # Required because Kubernetes admission webhooks must use TLS/HTTPS
 # cert-manager automates certificate generation, rotation, and trust configuration
