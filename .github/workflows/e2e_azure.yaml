@@ -1,0 +1,213 @@
+# (C) Copyright Confidential Containers Contributors 2025.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Provision an Azure AKS cluster via the existing e2e provisioner framework.
+name: (Callable) azure e2e tests
+
+on:
+  workflow_call:
+    inputs:
+      git_ref:
+        default: 'main'
+        description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
+        required: false
+        type: string
+      podvm_image:
+        required: true
+        description: The OCI image storing the qcow2 podmv image
+        type: string
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+
+permissions: {}
+
+env:
+  CLOUD_PROVIDER: azure
+  DEBIAN_FRONTEND: noninteractive
+
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
+jobs:
+  test:
+    name: Azure e2e tests
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
+    steps:    
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.git_ref }}
+          persist-credentials: false
+
+      - name: Read versions
+        run: |
+          {
+            echo "GO_VERSION=$(./hack/versions.py -q 'tools.golang')"
+            echo "ORAS_VERSION=$(./hack/versions.py -q 'tools.oras')"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
+          cache: false
+
+      - uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+        with:
+          version: ${{ env.ORAS_VERSION }}
+
+      - name: Download image
+        id: download-image
+        env:
+          PODVM_IMAGE: ${{ inputs.podvm_image }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y qemu-utils
+          oras pull "${PODVM_IMAGE}"
+          tar xvJpf podvm.tar.xz && rm -f podvm.tar.xz
+          qcow2_file="$(find ./*.qcow2)"
+          raw_file="${qcow2_file%.*}.raw"
+          qemu-img convert -f qcow2 -O raw "$qcow2_file" "$raw_file" && rm -f "$qcow2_file"
+          echo "raw-file=$(realpath $raw_file)" >> "$GITHUB_OUTPUT"
+
+      - name: Convert image
+        id: convert-image
+        env:
+          RAW_FILE: "${{ steps.download-image.outputs.raw-file }}"
+        run: |
+          mb="$((1024 * 1024))"
+          size="$(qemu-img info -f raw --output json "$RAW_FILE" | jq '.["virtual-size"]')"
+          rounded_size="$((($size/$mb + 1) * $mb))"
+          qemu-img resize -f raw "$RAW_FILE" "$rounded_size"
+          vhd_file="${RAW_FILE%.*}.vhd"
+          qemu-img convert -f raw -o subformat=fixed,force_size -O vpc "$RAW_FILE" "$vhd_file"
+          echo "vhd-file=$(realpath $vhd_file)" >> "$GITHUB_OUTPUT"
+
+      - name: Azure login
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          
+      - name: Publish image
+        id: publish-image
+        env:
+          IMAGE_VERSION: "0.${{ github.run_number }}.${{ github.run_attempt }}"
+          RESOURCE_GROUP: "${{ vars.AZURE_RESOURCE_GROUP }}"
+          IMAGE_GALLERY: "${{ vars.AZURE_PODVM_GALLERY_NAME }}"
+          IMAGE_DEFINITION: "${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
+          STORAGE_ACCOUNT: "${{ vars.AZURE_STORAGE_ACCOUNT }}"
+          CONTAINER: "${{ vars.AZURE_STORAGE_CONTAINER }}"
+          VHD_FILE: "${{ steps.convert-image.outputs.vhd-file }}"
+        run: |
+          vhd_name="podvm-${IMAGE_VERSION//./_}.vhd"
+          az storage blob upload \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$CONTAINER" \
+            --file "$VHD_FILE" \
+            --name "$vhd_name" \
+            --no-progress
+          storage_account_id="$(az storage account show \
+            --name "$STORAGE_ACCOUNT" \
+            --resource-group "$RESOURCE_GROUP" \
+            -o tsv --query id)"  
+          blob_url="$(az storage blob url \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$CONTAINER" \
+            --name "$vhd_name" \
+            -o tsv)"
+          az sig image-version create \
+            --resource-group "$RESOURCE_GROUP" \
+            --gallery-name "$IMAGE_GALLERY" \
+            --gallery-image-definition "$IMAGE_DEFINITION" \
+            --gallery-image-version "$IMAGE_VERSION" \
+            --os-vhd-storage-account "$storage_account_id" \
+            --os-vhd-uri "$blob_url" \
+            --replication-mode Shallow
+          image_id=$(az sig image-version show \
+            --resource-group "$RESOURCE_GROUP" \
+            --gallery-name "$IMAGE_GALLERY" \
+            --gallery-image-definition "$IMAGE_DEFINITION" \
+            --gallery-image-version "$IMAGE_VERSION" \
+            -o tsv --query id)
+          echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
+          echo "image-version=$IMAGE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "vhd-name=$vhd_name" >> "$GITHUB_OUTPUT"
+
+      - name: Build provisioner CLI
+        run: |
+          make -C test/tools BUILTIN_CLOUD_PROVIDERS=azure provisioner-cli
+
+      - name: Create properties file
+        id: create-properties-file
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          CLUSTER_NAME: "caa-e2e-${{ github.run_id }}-${{ github.run_attempt }}"
+          LOCATION: "eastus"
+          MANAGED_IDENTITY_NAME: ${{ vars.AZURE_MANAGED_IDENTITY_NAME }}
+          RESOURCE_GROUP_NAME: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_IMAGE_ID: ${{ steps.publish-image.outputs.image-id }}
+        run: |
+          cat <<EOF > azure.properties
+          AZURE_CLIENT_ID="${AZURE_CLIENT_ID}"
+          AZURE_SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
+          AZURE_IMAGE_ID="${AZURE_IMAGE_ID}"
+          CLUSTER_NAME="${CLUSTER_NAME}"
+          CONTAINER_RUNTIME="containerd"
+          FEDERATED_CREDENTIAL_NAME="${CLUSTER_NAME}"
+          IS_CI_MANAGED_CLUSTER="true"
+          LOCATION="${LOCATION}"
+          MANAGED_IDENTITY_NAME="${MANAGED_IDENTITY_NAME}"
+          RESOURCE_GROUP_NAME="${RESOURCE_GROUP_NAME}"
+          EOF
+          echo "::group::azure.properties"
+          cat azure.properties
+          echo "::endgroup::"
+          echo "properties-file=${PWD}/azure.properties" >> "$GITHUB_OUTPUT"
+
+      - name: Run tests
+        env:
+          TEST_PROVISION_FILE: ${{ steps.create-properties-file.outputs.properties-file }}
+          TEST_PROVISION: "yes"
+          RUN_TESTS: "^TestCreateSimplePodAzure$"
+        run: make test-e2e
+
+      - name: Deprovision AKS cluster
+        if: always()
+        env:
+          TEST_PROVISION_FILE: ${{ steps.create-properties-file.outputs.properties-file }}
+        run: ./test/tools/caa-provisioner-cli -action=deprovision || true
+          
+      - name: Cleanup image
+        if: always()
+        env:
+          RESOURCE_GROUP_NAME: "${{ vars.AZURE_RESOURCE_GROUP }}"
+          IMAGE_GALLERY: "${{ vars.AZURE_PODVM_GALLERY_NAME }}"
+          IMAGE_DEFINITION: "${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
+          IMAGE_VERSION: "${{ steps.publish-image.outputs.image-version }}"
+          STORAGE_ACCOUNT: "${{ vars.AZURE_STORAGE_ACCOUNT }}"
+          CONTAINER: "${{ vars.AZURE_STORAGE_CONTAINER }}"
+          VHD_NAME: "${{ steps.publish-image.outputs.vhd-name }}"
+        run: |
+          az sig image-version delete \
+            --resource-group "$RESOURCE_GROUP_NAME" \
+            --gallery-name "$IMAGE_GALLERY" \
+            --gallery-image-definition "$IMAGE_DEFINITION" \
+            --gallery-image-version "$IMAGE_VERSION" \
+            --no-wait || true
+          az storage blob delete \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$CONTAINER" \
+            --name "$VHD_NAME" || true
