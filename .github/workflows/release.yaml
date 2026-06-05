@@ -18,8 +18,8 @@ jobs:
       release_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
     permissions:
-      contents: read
-      packages: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -53,8 +53,8 @@ jobs:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
     permissions:
-      contents: read
-      packages: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 

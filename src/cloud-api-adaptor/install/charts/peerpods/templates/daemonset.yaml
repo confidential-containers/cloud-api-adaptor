@@ -85,9 +85,9 @@ spec:
         # - mountPath: /cloud-providers
         #   name: provider-dir
         # # setting for cloud provider external plugin
-{{- if eq .Values.provider "ibmcloud" }}
         - mountPath: /run/kata-containers/shared/direct-volumes
           name: kata-direct-volumes-dir
+{{- if eq .Values.provider "ibmcloud" }}
         - mountPath: /var/run/secrets/tokens
           name: vault-token
 {{- end }}
@@ -140,11 +140,11 @@ spec:
       #     type: Directory
       #   name: provider-dir
       # # setting for cloud provider external plugin
-{{- if eq .Values.provider "ibmcloud" }}
       - name: kata-direct-volumes-dir
         hostPath:
           path: /run/kata-containers/shared/direct-volumes
           type: DirectoryOrCreate
+{{- if eq .Values.provider "ibmcloud" }}
       - name: vault-token
         projected:
           sources:
