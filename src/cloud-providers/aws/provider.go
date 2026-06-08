@@ -889,3 +889,58 @@ func (p *awsProvider) getDeviceNameAndSize(imageID string) (string, int32, error
 
 	return *deviceName, *deviceSize, nil
 }
+
+func (p *awsProvider) ListInstances(ctx context.Context, input provider.ListInstancesInput) ([]*provider.Instance, error) {
+	if input.ClusterUID == "" {
+		return nil, fmt.Errorf("cluster UID is required")
+	}
+
+	describeInput := &ec2.DescribeInstancesInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("tag:" + provider.ClusterUIDTagKey),
+				Values: []string{input.ClusterUID},
+			},
+			{
+				Name:   aws.String("instance-state-name"),
+				Values: []string{"pending", "running", "stopping", "stopped"},
+			},
+		},
+	}
+
+	var instances []*provider.Instance
+	for {
+		result, err := p.ec2Client.DescribeInstances(ctx, describeInput)
+		if err != nil {
+			return nil, fmt.Errorf("failed to describe instances: %w", err)
+		}
+
+		for _, reservation := range result.Reservations {
+			for _, inst := range reservation.Instances {
+				if inst.InstanceId == nil {
+					continue
+				}
+				name := ""
+				for _, tag := range inst.Tags {
+					if tag.Key != nil && *tag.Key == "Name" && tag.Value != nil {
+						name = *tag.Value
+						break
+					}
+				}
+				instances = append(instances, &provider.Instance{
+					ID:        *inst.InstanceId,
+					Name:      name,
+					CreatedAt: aws.ToTime(inst.LaunchTime),
+				})
+			}
+		}
+
+		if result.NextToken == nil {
+			break
+		}
+		describeInput.NextToken = result.NextToken
+	}
+
+	logger.Printf("ListInstances: found %d instances for cluster UID %s", len(instances), input.ClusterUID)
+	return instances, nil
+}

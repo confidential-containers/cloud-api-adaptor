@@ -24,6 +24,10 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/probe"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const (
@@ -79,6 +83,28 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		fmt.Fprintf(os.Stderr, "%s: Unsupported cloud provider: %s\n\n", programName, cloudName)
 		printHelp(os.Stderr)
 		cmd.Exit(1)
+	}
+
+	// Fetch the kube-system namespace UID and append it to the TAGS env var
+	// so it gets parsed into Config.Tags by the existing flag logic.
+	if kubeConfig, err := rest.InClusterConfig(); err == nil {
+		if clientset, err := kubernetes.NewForConfig(kubeConfig); err == nil {
+			if ns, err := clientset.CoreV1().Namespaces().Get(context.Background(), "kube-system", metav1.GetOptions{}); err == nil {
+				tag := provider.ClusterUIDTagKey + "=" + string(ns.UID)
+				if existing := os.Getenv("TAGS"); existing != "" {
+					os.Setenv("TAGS", existing+","+tag)
+				} else {
+					os.Setenv("TAGS", tag)
+				}
+				fmt.Printf("%s: tagging VMs with cluster UID for GC: %s\n", programName, ns.UID)
+			} else {
+				fmt.Printf("%s: warning: VM tagging for GC skipped: failed to get kube-system namespace UID: %v\n", programName, err)
+			}
+		} else {
+			fmt.Printf("%s: warning: VM tagging for GC skipped: failed to create kubernetes client: %v\n", programName, err)
+		}
+	} else {
+		fmt.Printf("%s: warning: VM tagging for GC skipped: failed to load in-cluster config: %v\n", programName, err)
 	}
 
 	var (
