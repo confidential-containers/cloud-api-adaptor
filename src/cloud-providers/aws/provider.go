@@ -10,11 +10,14 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"golang.org/x/sync/errgroup"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
@@ -86,6 +89,12 @@ type ec2Client interface {
 	ModifyNetworkInterfaceAttribute(ctx context.Context,
 		params *ec2.ModifyNetworkInterfaceAttributeInput,
 		optFns ...func(*ec2.Options)) (*ec2.ModifyNetworkInterfaceAttributeOutput, error)
+	AttachVolume(ctx context.Context,
+		params *ec2.AttachVolumeInput,
+		optFns ...func(*ec2.Options)) (*ec2.AttachVolumeOutput, error)
+	DescribeVolumes(ctx context.Context,
+		params *ec2.DescribeVolumesInput,
+		optFns ...func(*ec2.Options)) (*ec2.DescribeVolumesOutput, error)
 }
 
 // Make instanceRunningWaiter as an interface
@@ -305,6 +314,12 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		}
 	}
 
+	if len(spec.Volumes) > 0 {
+		if err := p.validateVolumes(ctx, spec.Volumes); err != nil {
+			return nil, err
+		}
+	}
+
 	logger.Printf("Creating instance %s for sandbox %s", instanceName, sandboxID)
 
 	result, err := p.ec2Client.RunInstances(ctx, input)
@@ -339,6 +354,12 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 		ips[0] = publicIPAddr
 	}
 
+	if len(spec.Volumes) > 0 {
+		if err := p.attachEBSVolumes(ctx, instanceID, spec.Volumes); err != nil {
+			return instance, fmt.Errorf("attaching EBS volumes to %s: %w", instanceID, err)
+		}
+	}
+
 	if spec.MultiNic {
 		nIfaceID, err := p.createAddonNICforInstance(ctx, instanceID)
 		if err != nil {
@@ -358,6 +379,144 @@ func (p *awsProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	return instance, nil
 }
 
+const (
+	ebsAttachTimeout  = 60 * time.Second
+	ebsAttachPollRate = 3 * time.Second
+)
+
+// ebsDeviceName generates /dev/xvdb../dev/xvdz for indices 0-24, then
+// /dev/xvdba../dev/xvdbz for 25-50, etc. This avoids the 25-disk
+// limit of the previous single-letter scheme.
+func ebsDeviceName(index int) string {
+	if index < 25 {
+		return fmt.Sprintf("/dev/xvd%c", 'b'+rune(index))
+	}
+	first := 'b' + rune((index-25)/26)
+	second := 'a' + rune((index-25)%26)
+	return fmt.Sprintf("/dev/xvd%c%c", first, second)
+}
+
+var ebsVolumeIDRe = regexp.MustCompile(`^vol-[0-9a-f]{8,}$`)
+
+func isValidEBSVolumeID(id string) bool {
+	return ebsVolumeIDRe.MatchString(id)
+}
+
+// validateVolumes checks that all EBS volumes exist and are in the "available"
+// state before creating the PodVM instance.
+func (p *awsProvider) validateVolumes(ctx context.Context, volumes []provider.CloudVolume) error {
+	var volumeIDs []string
+	for _, vol := range volumes {
+		if !isValidEBSVolumeID(vol.DiskID) {
+			return fmt.Errorf("invalid EBS volume ID format: %q", vol.DiskID)
+		}
+		volumeIDs = append(volumeIDs, vol.DiskID)
+	}
+
+	result, err := p.ec2Client.DescribeVolumes(ctx, &ec2.DescribeVolumesInput{
+		VolumeIds: volumeIDs,
+	})
+	if err != nil {
+		return fmt.Errorf("validating EBS volumes: %w", err)
+	}
+
+	var errs []string
+	for _, v := range result.Volumes {
+		if v.State != types.VolumeStateAvailable {
+			attached := ""
+			for _, att := range v.Attachments {
+				if att.InstanceId != nil {
+					attached = fmt.Sprintf(" (attached to %s)", *att.InstanceId)
+				}
+			}
+			errs = append(errs, fmt.Sprintf("volume %s is in state %q%s",
+				*v.VolumeId, v.State, attached))
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("EBS volume pre-validation failed: %s", strings.Join(errs, "; "))
+	}
+	return nil
+}
+
+// attachEBSVolumes attaches the given EBS volumes to the instance.
+// IMPORTANT: EBS volumes can only be attached to instances in the same
+// Availability Zone. Ensure the PodVM instance and volumes are in the same AZ
+// (e.g. via subnet placement or StorageClass allowedTopologies).
+func (p *awsProvider) attachEBSVolumes(ctx context.Context, instanceID string, volumes []provider.CloudVolume) error {
+	if len(volumes) == 0 {
+		return nil
+	}
+
+	describeInput := &ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceID},
+	}
+	if err := p.waiter.Wait(ctx, describeInput, maxWaitTime); err != nil {
+		return fmt.Errorf("waiting for instance %s to be running: %w", instanceID, err)
+	}
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	for i, vol := range volumes {
+		idx := i
+		diskID := vol.DiskID
+		deviceName := ebsDeviceName(idx)
+
+		g.Go(func() error {
+			logger.Printf("Attaching EBS volume %s to instance %s as %s (index %d)", diskID, instanceID, deviceName, idx)
+
+			attachOutput, err := p.ec2Client.AttachVolume(gctx, &ec2.AttachVolumeInput{
+				Device:     aws.String(deviceName),
+				InstanceId: aws.String(instanceID),
+				VolumeId:   aws.String(diskID),
+			})
+			if err != nil {
+				return fmt.Errorf("attaching EBS volume %s: %w", diskID, err)
+			}
+
+			logger.Printf("AttachVolume request accepted for %s (state: %s)", diskID, attachOutput.State)
+
+			if err := p.waitForVolumeAttached(gctx, diskID); err != nil {
+				return fmt.Errorf("waiting for EBS volume %s to attach: %w", diskID, err)
+			}
+
+			logger.Printf("EBS volume %s attached successfully to %s as %s", diskID, instanceID, deviceName)
+			return nil
+		})
+	}
+
+	return g.Wait()
+}
+
+func (p *awsProvider) waitForVolumeAttached(ctx context.Context, volumeID string) error {
+	deadline := time.Now().Add(ebsAttachTimeout)
+	for time.Now().Before(deadline) {
+		result, err := p.ec2Client.DescribeVolumes(ctx, &ec2.DescribeVolumesInput{
+			VolumeIds: []string{volumeID},
+		})
+		if err != nil {
+			return fmt.Errorf("describing volume %s: %w", volumeID, err)
+		}
+		if len(result.Volumes) > 0 && len(result.Volumes[0].Attachments) > 0 {
+			state := result.Volumes[0].Attachments[0].State
+			if state == types.VolumeAttachmentStateAttached {
+				return nil
+			}
+			logger.Printf("Volume %s attachment state: %s, waiting...", volumeID, state)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(ebsAttachPollRate):
+		}
+	}
+	return fmt.Errorf("volume %s did not reach attached state within %v", volumeID, ebsAttachTimeout)
+}
+
+// DeleteInstance terminates the EC2 instance. EBS volumes attached after
+// launch (with DeleteOnTermination=false, the default) are automatically
+// detached by AWS when the instance terminates.
 func (p *awsProvider) DeleteInstance(ctx context.Context, instanceID string) error {
 
 	err := p.deleteElasticIPforInstance(ctx, instanceID)

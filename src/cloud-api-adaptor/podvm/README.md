@@ -1,4 +1,4 @@
-# Podvm images with mkosi
+# Pod VM images
 
 [mkosi](https://github.com/systemd/mkosi) builds a bootable OS image from scratch. This way, we have full control over every detail of the image, especially over the image format and boot process. On the long run, we will implement fully, bit-by-bit reproducible images with mkosi, and use measured boot and an immutable root FS to ensure the image integrity through remote attestation.
 
@@ -15,7 +15,7 @@ make # this will rebuild the builder, the binaries and the OS image
 ```
 
 > [!WARNING]
-> The `make` (and `make binaries`) targets will remove all customization made
+> The `make` (and `make podvm-binaries`) targets will remove all customization made
 > in the `./resources/binaries-tree` dirs
 
 ```sh
@@ -93,7 +93,7 @@ are set to `0400` for the `authorized_keys` file. SSH access is only possible fo
 ## Testing the image
 
 To verify the podvm image is bootable and responsive before deploying to
-cloud one can use a simple [smoketest](../podvm/hack/smoke_test.sh). It
+cloud one can use a simple [smoketest](./hack/smoke_test.sh). It
 uses libvirt to run the image and kata-agent-ctl to establish connection
 to the podvm.
 
@@ -112,7 +112,7 @@ to the podvm.
 ## Custom image configuration
 
 You can easily place additional files in `resources/binaries-tree` after it has been populated by the
-`make binaries` step. Notice that systemd units need to be enabled in the presets and links in the tree
+`make podvm-binaries` step. Notice that systemd units need to be enabled in the presets and links in the tree
 won't be copied into the image. You can use `./mkosi.postinst` script to create symlinks.
 
 If you want to add additional packages to the image, you can define distribution-specific config files:
@@ -161,7 +161,7 @@ Another issue is s390x does not support UEFI. Instead, we can first use **mkosi*
 
 It requires a **s390x host** to build s390x image with make commands:
 ```
-TEE_PLATFORM=se-attester make binaries
+TEE_PLATFORM=se-attester make podvm-binaries
 make image
 # SE_BOOT=true make image
 # make image-debug

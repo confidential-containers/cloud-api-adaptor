@@ -71,14 +71,14 @@ the cached kbs-client.
 We need to build and use the PodVM image:
 
 ```sh
-pushd ${cloud-api-adaptor}/podvm-mkosi
+pushd ${cloud-api-adaptor}/podvm
 make  # builds builder, binaries, and OS image
 # Convert to QCOW2 format if needed for your provider
 qemu-img convert -f raw -O qcow2 build/system.raw build/system.qcow2
 popd
 ```
 
-The resulting image will be at `${cloud-api-adaptor}/podvm-mkosi/build/system.raw` (or `system.qcow2` after conversion). See [podvm-mkosi/README.md](../../podvm-mkosi/README.md) for detailed build instructions.
+The resulting image will be at `${cloud-api-adaptor}/podvm/build/system.raw` (or `system.qcow2` after conversion). See [podvm/README.md](../../podvm/README.md) for detailed build instructions.
 
 To deploy the KBS service and test attestation related cases, export the following variable:
 

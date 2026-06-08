@@ -6,11 +6,14 @@ package proxy
 import (
 	"context"
 	b64 "encoding/base64"
+	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/agentproto"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -22,14 +25,12 @@ type proxyService struct {
 }
 
 const (
-	defaultPauseImage            = "registry.k8s.io/pause:3.7"
-	kataDirectVolumesDir         = "/run/kata-containers/shared/direct-volumes"
-	volumeTargetPathKey          = "io.confidentialcontainers.org.peerpodvolumes.target_path"
-	csiPluginEscapeQualifiedName = "kubernetes.io~csi"
-	imageGuestPull               = "image_guest_pull"
-	cdiAnnotationKey             = "cdi.k8s.io/peer-pods"
-	defaultCDIType               = "nvidia.com/gpu=all"
-	defaultGPUsAnnotation        = "io.katacontainers.config.hypervisor.default_gpus"
+	defaultPauseImage     = "registry.k8s.io/pause:3.7"
+	volumeTargetPathKey   = "io.confidentialcontainers.org.peerpodvolumes.target_path"
+	imageGuestPull        = "image_guest_pull"
+	cdiAnnotationKey      = "cdi.k8s.io/peer-pods"
+	defaultCDIType        = "nvidia.com/gpu=all"
+	defaultGPUsAnnotation = "io.katacontainers.config.hypervisor.default_gpus"
 )
 
 func newProxyService(dialer func(context.Context) (net.Conn, error), pauseImage string) *proxyService {
@@ -47,12 +48,16 @@ func newProxyService(dialer func(context.Context) (net.Conn, error), pauseImage 
 func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*emptypb.Empty, error) {
 	var pullImageInGuest bool
 	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
+	if req.OCI.Annotations == nil {
+		req.OCI.Annotations = make(map[string]string)
+	}
+
 	if len(req.OCI.Mounts) > 0 {
 		logger.Print("    mounts:")
 		for i, m := range req.OCI.Mounts {
 			logger.Printf("        destination:%s source:%s type:%s", m.Destination, m.Source, m.Type)
 
-			if isNodePublishVolumeTargetPath(m.Source, kataDirectVolumesDir) {
+			if isNodePublishVolumeTargetPath(m.Source, util.KataDirectVolumesDir) {
 				if i > 0 {
 					req.OCI.Annotations[volumeTargetPathKey] += ","
 				}
@@ -94,6 +99,101 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 		logger.Printf("Pulling image separately not support on main. It is required to use the nydus-snapshotter, which isn't configured properly here.")
 	}
 
+	// Detect cloud volumes by scanning the direct-volumes directory in canonical
+	// order. The scan order matches GetCSIVolumesForPod (os.ReadDir sorts by
+	// name), so the LUN index here is consistent with the cloud provider's
+	// disk attachment order.
+	cloudVolumes := make(map[string]util.CloudVolumeAnnotation)
+	podUID := req.OCI.Annotations["io.kubernetes.cri.sandbox-uid"]
+
+	dirEntries, dirErr := os.ReadDir(util.KataDirectVolumesDir)
+	if dirErr == nil {
+		canonicalIdx := 0
+		for _, entry := range dirEntries {
+			if !entry.IsDir() {
+				continue
+			}
+			decodedBytes, err := b64.URLEncoding.DecodeString(entry.Name())
+			if err != nil {
+				continue
+			}
+			decodedPath := string(decodedBytes)
+
+			if !strings.Contains(decodedPath, "/volumes/"+util.CSIPluginEscapeQualifiedName+"/") {
+				continue
+			}
+			if podUID != "" && !strings.Contains(decodedPath, "/pods/"+podUID+"/") {
+				continue
+			}
+
+			mountInfoPath := filepath.Join(util.KataDirectVolumesDir, entry.Name(), "mountInfo.json")
+			data, err := os.ReadFile(mountInfoPath)
+			if err != nil {
+				logger.Printf("could not read mountInfo.json for %s: %v", decodedPath, err)
+				continue
+			}
+			var mountInfo map[string]interface{}
+			if err := json.Unmarshal(data, &mountInfo); err != nil {
+				logger.Printf("could not parse mountInfo.json for %s: %v", decodedPath, err)
+				continue
+			}
+
+			diskID := ""
+			if md, ok := mountInfo["metadata"].(map[string]interface{}); ok {
+				if cp, ok := md["cloud-volume-path"].(string); ok && cp != "" {
+					diskID = cp
+				}
+			}
+			if diskID == "" {
+				if d, ok := mountInfo["device"].(string); ok {
+					diskID = d
+				}
+			}
+			if diskID == "" {
+				logger.Printf("cloud volume at %s has no disk ID, skipping", decodedPath)
+				continue
+			}
+
+			fsType := "ext4"
+			if ft, ok := mountInfo["fstype"].(string); ok && ft != "" {
+				fsType = ft
+			}
+
+			mountDest := ""
+			for _, m := range req.OCI.Mounts {
+				if m.Source == decodedPath {
+					mountDest = m.Destination
+					break
+				}
+			}
+			if mountDest == "" {
+				logger.Printf("cloud volume disk %s has no matching mount in container spec, skipping", diskID)
+				canonicalIdx++
+				continue
+			}
+
+			volKey := fmt.Sprintf("vol-%d", canonicalIdx)
+			cloudVolumes[volKey] = util.CloudVolumeAnnotation{
+				MountPoint: mountDest,
+				FSType:     fsType,
+				LUN:        fmt.Sprintf("%d", canonicalIdx),
+				DiskID:     diskID,
+			}
+			logger.Printf("Detected cloud volume %s -> %s (lun=%d, disk=%s, fs=%s)", volKey, mountDest, canonicalIdx, diskID, fsType)
+			canonicalIdx++
+		}
+	}
+
+	if len(cloudVolumes) > 0 {
+		cvJSON, err := json.Marshal(cloudVolumes)
+		if err != nil {
+			logger.Printf("failed to marshal cloud_volumes annotation: %v", err)
+		} else {
+			req.OCI.Annotations[util.CloudVolumesAnnotationKey] = string(cvJSON)
+			logger.Printf("Set cloud_volumes annotation: %s", string(cvJSON))
+		}
+	}
+
 	res, err := s.Redirector.CreateContainer(ctx, req)
 
 	if err != nil {
@@ -104,7 +204,7 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 }
 
 func isNodePublishVolumeTargetPath(volumePath, directVolumesDir string) bool {
-	if !strings.Contains(filepath.Clean(volumePath), "/volumes/"+csiPluginEscapeQualifiedName+"/") {
+	if !strings.Contains(filepath.Clean(volumePath), "/volumes/"+util.CSIPluginEscapeQualifiedName+"/") {
 		return false
 	}
 

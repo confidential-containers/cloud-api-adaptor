@@ -150,7 +150,7 @@ jobs:
 
       - name: Build binaries for Ubuntu
         id: build_binaries
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        working-directory: src/cloud-api-adaptor/podvm
         run: make podvm-binaries
         env:
           ARCH: ${{ inputs.arch }}
@@ -159,7 +159,7 @@ jobs:
 
       - name: Build mkosi debug image
         if: ${{ inputs.debug == true }}
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        working-directory: src/cloud-api-adaptor/podvm
         run: make image-debug
         env:
           PODVM_DISTRO: ubuntu
@@ -167,7 +167,7 @@ jobs:
 
       - name: Build mkosi image
         if: ${{ inputs.debug == false }}
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        working-directory: src/cloud-api-adaptor/podvm
         run: make image
         env:
           PODVM_DISTRO: ubuntu
@@ -175,7 +175,7 @@ jobs:
 
       - name: Upload the qcow2 with oras
         id: publish_oras_qcow2
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        working-directory: src/cloud-api-adaptor/podvm
         run: |
           mkdir oras
           cd oras
@@ -212,7 +212,7 @@ jobs:
           push-to-registry: true
 
       - name: Clean up some space for the docker podvm image build
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        working-directory: src/cloud-api-adaptor/podvm
         run: |
           sudo du --max-depth=2 /home/runner || true
           sudo du --max-depth=2 /var/lib || true
@@ -221,7 +221,7 @@ jobs:
 
       - name: Build and push image for docker podvm image
         id: build_docker_oci
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        working-directory: src/cloud-api-adaptor/podvm
         run: |
           tag=$(git rev-parse --short HEAD)
           PODVM_TAG=${tag} make image-container
@@ -235,7 +235,7 @@ jobs:
 
       - name: Build and push BYOM e2e image
         id: build_byom_e2e
-        working-directory: src/cloud-api-adaptor/podvm-mkosi
+        working-directory: src/cloud-api-adaptor/podvm
         run: |
           # Build BYOM e2e image (depends on docker image built in previous step)
           PODVM_TAG=${IMAGE_TAG} make image-byom-e2e-container

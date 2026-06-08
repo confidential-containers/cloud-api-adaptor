@@ -57,10 +57,10 @@ jobs:
       arch: amd64
       debug: true
     permissions:
-      contents: read
-      packages: write
-      id-token: write
-      attestations: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
+      id-token: write  # Required for OIDC authentication
+      attestations: write  # Required to write attestations
       artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
@@ -74,10 +74,10 @@ jobs:
       arch: s390x
       debug: true
     permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
+      attestations: write  # Required to write attestations
+      id-token: write  # Required for OIDC authentication
       artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
@@ -126,8 +126,8 @@ jobs:
       release_tags: ${{ inputs.caa_image_tag }}
       git_ref: ${{ inputs.git_ref }}
     permissions:
-      contents: read
-      packages: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -142,8 +142,8 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
       runner: 'ubuntu-24.04-s390x'
     permissions:
-      contents: read
-      packages: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -217,6 +217,7 @@ jobs:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
   libvirt_e2e_arch_prep:
+    name: libvirt_e2e_arch_prep
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code

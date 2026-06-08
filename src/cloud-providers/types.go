@@ -87,4 +87,9 @@ type InstanceTypeSpec struct {
 	GPUs         int64
 	Image        string
 	MultiNic     bool
+	Volumes      []CloudVolume
+}
+
+type CloudVolume struct {
+	DiskID string
 }
