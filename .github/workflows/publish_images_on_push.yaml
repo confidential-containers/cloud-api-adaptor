@@ -32,8 +32,8 @@ jobs:
       release_tags: ${{ github.sha }}
       registry: ${{ inputs.registry != '' && inputs.registry || (github.repository == 'confidential-containers/cloud-api-adaptor' && 'quay.io/confidential-containers' || format('ghcr.io/{0}', github.repository_owner)) }}
     permissions:
-      contents: read
-      packages: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -55,8 +55,8 @@ jobs:
       git_ref: ${{ github.sha }}
       registry: ${{ inputs.registry != '' && inputs.registry || (github.repository == 'confidential-containers/cloud-api-adaptor' && 'quay.io/confidential-containers' || format('ghcr.io/{0}', github.repository_owner)) }}
     permissions:
-      contents: read
-      packages: write
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
