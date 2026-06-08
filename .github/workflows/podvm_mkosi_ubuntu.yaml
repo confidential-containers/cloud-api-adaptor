@@ -65,7 +65,7 @@ on:
         value: ${{ jobs.build-image.outputs.byom_e2e_image }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-mkosi-ubuntu-${{ inputs.arch }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-mkosi-ubuntu-${{ toJSON(inputs) }}
   cancel-in-progress: true
 
 defaults:
