@@ -8,99 +8,99 @@ providerConfigs:
   byom:
     # CA certificate file for custom TLS (e.g. /etc/certificates/ca.crt)
     # (default: "")
-    # CACERT_FILE: ""
+    CACERT_FILE: ""
 
     # Client certificate file for custom TLS (e.g. /etc/certificates/client.crt)
     # (default: "")
-    # CERT_FILE: ""
+    CERT_FILE: ""
 
     # Client key file for custom TLS (e.g. /etc/certificates/client.key)
     # (default: "")
-    # CERT_KEY: ""
+    CERT_KEY: ""
 
     # Enable cloud config verify - should use it for production
     # (default: "false")
-    # CLOUD_CONFIG_VERIFY: "false"
+    CLOUD_CONFIG_VERIFY: "false"
 
     # Enable encrypted scratch space for pod VMs
     # (default: "false")
-    # ENABLE_SCRATCH_SPACE: "false"
+    ENABLE_SCRATCH_SPACE: "false"
 
     # [EXPERIMENTAL] Enable external networking via pod VM
     # (default: "false")
-    # EXTERNAL_NETWORK_VIA_PODVM: "false"
+    EXTERNAL_NETWORK_VIA_PODVM: "false"
 
     # port number of agent protocol forwarder
     # (default: "")
-    # FORWARDER_PORT: ""
+    FORWARDER_PORT: ""
 
     # Default initdata for all Pods
     # (default: "")
-    # INITDATA: ""
+    INITDATA: ""
 
     # Maximum number of IPs allowed in a range
     # (default: "100")
-    # MAX_RANGE_IPS: "100"
+    MAX_RANGE_IPS: "100"
 
     # pause image to be used for the pods
     # (default: "")
-    # PAUSE_IMAGE: ""
+    PAUSE_IMAGE: ""
 
     # peer pods limit per node (default=10)
     # (default: "10")
-    # PEERPODS_LIMIT_PER_NODE: "10"
+    PEERPODS_LIMIT_PER_NODE: "10"
 
     # base directory for pod directories
     # (default: "")
-    # PODS_DIR: ""
+    PODS_DIR: ""
 
     # [EXPERIMENTAL] Comma separated CIDRs for local pod subnets
     # (default: "")
-    # POD_SUBNET_CIDRS: ""
+    POD_SUBNET_CIDRS: ""
 
     # ConfigMap name for state storage
     # (default: "byom-ip-pool-state")
-    # POOL_CONFIGMAP_NAME: "byom-ip-pool-state"
+    POOL_CONFIGMAP_NAME: "byom-ip-pool-state"
 
     # Namespace for ConfigMap storage (default: auto-detect from running pod)
     # (default: "")
-    # POOL_NAMESPACE: ""
+    POOL_NAMESPACE: ""
 
     # Maximum timeout in minutes for establishing agent proxy connection
     # (default: "")
-    # PROXY_TIMEOUT: ""
+    PROXY_TIMEOUT: ""
 
     # Unix domain socket path of remote hypervisor service
     # (default: "")
-    # REMOTE_HYPERVISOR_ENDPOINT: ""
+    REMOTE_HYPERVISOR_ENDPOINT: ""
 
     # Directory containing allowed SSH host key files (enables allowlist mode if set)
     # (default: "")
-    # SSH_HOST_KEY_ALLOWLIST_DIR: ""
+    SSH_HOST_KEY_ALLOWLIST_DIR: ""
 
     # SSH private key file path
     # (default: "/root/.ssh/id_rsa")
-    # SSH_PRIV_KEY_PATH: "/root/.ssh/id_rsa"
+    SSH_PRIV_KEY_PATH: "/root/.ssh/id_rsa"
 
     # SSH public key file path
     # (default: "/root/.ssh/id_rsa.pub")
-    # SSH_PUB_KEY_PATH: "/root/.ssh/id_rsa.pub"
+    SSH_PUB_KEY_PATH: "/root/.ssh/id_rsa.pub"
 
     # SSH connection timeout in seconds
     # (default: "30")
-    # SSH_TIMEOUT: "30"
+    SSH_TIMEOUT: "30"
 
     # SSH username for VM access
     # (default: "peerpod")
-    # SSH_USERNAME: "peerpod"
+    SSH_USERNAME: "peerpod"
 
     # Skip TLS certificate verification - use it only for testing
     # (default: "false")
-    # TLS_SKIP_VERIFY: "false"
+    TLS_SKIP_VERIFY: "false"
 
     # Tunnel provider
     # (default: "")
-    # TUNNEL_TYPE: ""
+    TUNNEL_TYPE: ""
 
     # Comma-separated list of IP addresses for pre-created VMs
     # (required)
@@ -108,5 +108,5 @@ providerConfigs:
 
     # VXLAN UDP port number (VXLAN tunnel mode only
     # (default: "")
-    # VXLAN_PORT: ""
+    VXLAN_PORT: ""
 
