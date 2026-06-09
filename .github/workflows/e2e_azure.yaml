@@ -39,7 +39,7 @@ jobs:
     name: Azure e2e tests
     runs-on: ubuntu-22.04
     permissions:
-      id-token: write
+      id-token: write # Required for Azure login
       contents: read
     steps:
       - name: Checkout Code
