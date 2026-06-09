@@ -1,0 +1,103 @@
+# Copyright Confidential Containers Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build and push the BYOM binaries image.
+---
+name: Publish BYOM Binaries Image
+on:
+  workflow_dispatch:
+    inputs:
+      git_ref:
+        description: 'Git ref to build from'
+        required: false
+        type: string
+        default: ''
+      image_tag:
+        description: 'Image tag to use'
+        required: false
+        type: string
+        default: ''
+      arch:
+        description: 'Architecture to build for (e.g., amd64, arm64, s390x)'
+        required: false
+        type: string
+        default: 'amd64'
+      registry:
+        description: 'Container registry to push images to (e.g., quay.io/your-username)'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      git_ref:
+        description: 'Git ref to build from'
+        required: false
+        type: string
+        default: ''
+      image_tag:
+        description: 'Image tag to use'
+        required: false
+        type: string
+        default: ''
+      arch:
+        description: 'Architecture to build for (e.g., amd64, arm64, s390x)'
+        required: false
+        type: string
+        default: 'amd64'
+      registry:
+        description: 'Container registry to push images to (e.g., quay.io/your-username)'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      QUAY_PASSWORD:
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
+jobs:
+  build-and-push:
+    name: Build and push BYOM binaries image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read  # Required for checkout
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.git_ref || github.sha }}
+          persist-credentials: false
+
+      - name: Login to Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: quay.io
+          username: ${{ vars.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Build BYOM binaries image
+        working-directory: src/cloud-api-adaptor/podvm
+        run: make podvm-byom-binaries-image
+        env:
+          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'quay.io/confidential-containers' }}
+          PODVM_TAG: ${{ inputs.image_tag || github.sha }}
+          ARCH: ${{ inputs.arch }}
+          PODVM_DISTRO: ubuntu
+
+      - name: Push BYOM binaries image
+        working-directory: src/cloud-api-adaptor/podvm
+        run: make push-podvm-byom-binaries-image
+        env:
+          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'quay.io/confidential-containers' }}
+          PODVM_TAG: ${{ inputs.image_tag || github.sha }}
+          ARCH: ${{ inputs.arch }}
+          PODVM_DISTRO: ubuntu
