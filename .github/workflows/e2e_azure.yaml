@@ -41,7 +41,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    steps:    
+    steps:
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -63,35 +63,15 @@ jobs:
           cache-dependency-path: "**/go.sum"
           cache: false
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-utils
+
       - uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
         with:
           version: ${{ env.ORAS_VERSION }}
-
-      - name: Download image
-        id: download-image
-        env:
-          PODVM_IMAGE: ${{ inputs.podvm_image }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y qemu-utils
-          oras pull "${PODVM_IMAGE}"
-          tar xvJpf podvm.tar.xz && rm -f podvm.tar.xz
-          qcow2_file="$(find ./*.qcow2)"
-          raw_file="${qcow2_file%.*}.raw"
-          qemu-img convert -f qcow2 -O raw "$qcow2_file" "$raw_file" && rm -f "$qcow2_file"
-          echo "raw-file=$(realpath $raw_file)" >> "$GITHUB_OUTPUT"
-
-      - name: Convert image
-        id: convert-image
-        env:
-          RAW_FILE: "${{ steps.download-image.outputs.raw-file }}"
-        run: |
-          mb="$((1024 * 1024))"
-          size="$(qemu-img info -f raw --output json "$RAW_FILE" | jq '.["virtual-size"]')"
-          rounded_size="$((($size/$mb + 1) * $mb))"
-          qemu-img resize -f raw "$RAW_FILE" "$rounded_size"
-          vhd_file="${RAW_FILE%.*}.vhd"
-          qemu-img convert -f raw -o subformat=fixed,force_size -O vpc "$RAW_FILE" "$vhd_file"
-          echo "vhd-file=$(realpath $vhd_file)" >> "$GITHUB_OUTPUT"
 
       - name: Azure login
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
@@ -99,51 +79,22 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          
+
       - name: Publish image
         id: publish-image
         env:
+          PODVM_OCI_IMAGE: "${{ inputs.podvm_image }}"
           IMAGE_VERSION: "0.${{ github.run_number }}.${{ github.run_attempt }}"
           RESOURCE_GROUP: "${{ vars.AZURE_RESOURCE_GROUP }}"
           IMAGE_GALLERY: "${{ vars.AZURE_PODVM_GALLERY_NAME }}"
           IMAGE_DEFINITION: "${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
           STORAGE_ACCOUNT: "${{ vars.AZURE_STORAGE_ACCOUNT }}"
           CONTAINER: "${{ vars.AZURE_STORAGE_CONTAINER }}"
-          VHD_FILE: "${{ steps.convert-image.outputs.vhd-file }}"
+        working-directory: src/cloud-api-adaptor/azure
         run: |
-          vhd_name="podvm-${IMAGE_VERSION//./_}.vhd"
-          az storage blob upload \
-            --account-name "$STORAGE_ACCOUNT" \
-            --container-name "$CONTAINER" \
-            --file "$VHD_FILE" \
-            --name "$vhd_name" \
-            --no-progress
-          storage_account_id="$(az storage account show \
-            --name "$STORAGE_ACCOUNT" \
-            --resource-group "$RESOURCE_GROUP" \
-            -o tsv --query id)"  
-          blob_url="$(az storage blob url \
-            --account-name "$STORAGE_ACCOUNT" \
-            --container-name "$CONTAINER" \
-            --name "$vhd_name" \
-            -o tsv)"
-          az sig image-version create \
-            --resource-group "$RESOURCE_GROUP" \
-            --gallery-name "$IMAGE_GALLERY" \
-            --gallery-image-definition "$IMAGE_DEFINITION" \
-            --gallery-image-version "$IMAGE_VERSION" \
-            --os-vhd-storage-account "$storage_account_id" \
-            --os-vhd-uri "$blob_url" \
-            --replication-mode Shallow
-          image_id=$(az sig image-version show \
-            --resource-group "$RESOURCE_GROUP" \
-            --gallery-name "$IMAGE_GALLERY" \
-            --gallery-image-definition "$IMAGE_DEFINITION" \
-            --gallery-image-version "$IMAGE_VERSION" \
-            -o tsv --query id)
+          make check-tools
+          image_id=$(make publish-image)
           echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
-          echo "image-version=$IMAGE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "vhd-name=$vhd_name" >> "$GITHUB_OUTPUT"
 
       - name: Build provisioner CLI
         run: |
@@ -152,13 +103,13 @@ jobs:
       - name: Create properties file
         id: create-properties-file
         env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_CLIENT_ID: "${{ secrets.AZURE_CLIENT_ID }}"
+          AZURE_SUBSCRIPTION_ID: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           CLUSTER_NAME: "caa-e2e-${{ github.run_id }}-${{ github.run_attempt }}"
           LOCATION: "eastus"
-          MANAGED_IDENTITY_NAME: ${{ vars.AZURE_MANAGED_IDENTITY_NAME }}
-          RESOURCE_GROUP_NAME: ${{ vars.AZURE_RESOURCE_GROUP }}
-          AZURE_IMAGE_ID: ${{ steps.publish-image.outputs.image-id }}
+          MANAGED_IDENTITY_NAME: "${{ vars.AZURE_MANAGED_IDENTITY_NAME }}"
+          RESOURCE_GROUP_NAME: "${{ vars.AZURE_RESOURCE_GROUP }}"
+          AZURE_IMAGE_ID: "${{ steps.publish-image.outputs.image-id }}"
         run: |
           cat <<EOF > azure.properties
           AZURE_CLIENT_ID="${AZURE_CLIENT_ID}"
@@ -179,8 +130,8 @@ jobs:
 
       - name: Run tests
         env:
-          TEST_PROVISION_FILE: ${{ steps.create-properties-file.outputs.properties-file }}
           TEST_PROVISION: "yes"
+          TEST_PROVISION_FILE: "${{ steps.create-properties-file.outputs.properties-file }}"
           RUN_TESTS: "^None$"
         run: make test-e2e
 
@@ -189,25 +140,15 @@ jobs:
         env:
           TEST_PROVISION_FILE: ${{ steps.create-properties-file.outputs.properties-file }}
         run: ./test/tools/caa-provisioner-cli -action=deprovision || true
-          
+
       - name: Cleanup image
         if: always()
         env:
-          RESOURCE_GROUP_NAME: "${{ vars.AZURE_RESOURCE_GROUP }}"
+          IMAGE_VERSION: "0.${{ github.run_number }}.${{ github.run_attempt }}"
+          RESOURCE_GROUP: "${{ vars.AZURE_RESOURCE_GROUP }}"
           IMAGE_GALLERY: "${{ vars.AZURE_PODVM_GALLERY_NAME }}"
           IMAGE_DEFINITION: "${{ vars.AZURE_PODVM_IMAGE_DEF_NAME }}"
-          IMAGE_VERSION: "${{ steps.publish-image.outputs.image-version }}"
           STORAGE_ACCOUNT: "${{ vars.AZURE_STORAGE_ACCOUNT }}"
           CONTAINER: "${{ vars.AZURE_STORAGE_CONTAINER }}"
-          VHD_NAME: "${{ steps.publish-image.outputs.vhd-name }}"
-        run: |
-          az sig image-version delete \
-            --resource-group "$RESOURCE_GROUP_NAME" \
-            --gallery-name "$IMAGE_GALLERY" \
-            --gallery-image-definition "$IMAGE_DEFINITION" \
-            --gallery-image-version "$IMAGE_VERSION" \
-            --no-wait || true
-          az storage blob delete \
-            --account-name "$STORAGE_ACCOUNT" \
-            --container-name "$CONTAINER" \
-            --name "$VHD_NAME" || true
+        working-directory: src/cloud-api-adaptor/azure
+        run: make remove-image
