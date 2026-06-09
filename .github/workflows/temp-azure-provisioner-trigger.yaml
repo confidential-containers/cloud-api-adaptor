@@ -1,0 +1,46 @@
+# (C) Copyright Confidential Containers Contributors 2025.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Temporary trigger for the Azure provisioning workflow on the az-switch-to-ubuntu branch.
+name: Temp Azure provisioner trigger
+
+on:
+  push:
+    branches:
+    - mkulke/az-switch-to-ubuntu
+
+permissions: {}
+
+jobs:
+#  podvm_ubuntu_amd64:
+#    uses: ./.github/workflows/podvm_mkosi_ubuntu.yaml
+#    permissions:
+#      contents: read # Required if we want to run on a fork?
+#      packages: write # Required to publish the oras package to ghcr
+#      id-token: write # Required to publish the attestation provenance to ghcr
+#      attestations: write # Required to publish the attestation provenance to ghcr
+#      artifact-metadata: write # Required by podvm_mkosi_ubuntu.yaml to write attestation metadata
+#    with:
+#      registry: ghcr.io/${{ github.repository_owner }}
+#      image_tag: mgns-${{ github.sha }}
+#      git_ref: ${{ github.sha }}
+#      arch: amd64
+#      debug: true
+#    secrets:
+#      QUAY_PASSWORD: dummy
+
+  e2e-tests:
+    #needs:
+    #- podvm_ubuntu_amd64
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/e2e_azure.yaml
+    with:
+      git_ref: ${{ github.ref }}
+      #podvm_image: ${{ needs.podvm_ubuntu_amd64.outputs.qcow2_oras_image }}
+      podvm_image: ghcr.io/mkulke/podvm-generic-ubuntu-debug-amd64:07cf368c
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
