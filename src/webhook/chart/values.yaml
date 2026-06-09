@@ -35,6 +35,8 @@ webhook:
   podVMExtendedResource: kata.peerpods.io/vm
   # Webhook failure policy: Fail or Ignore
   failurePolicy: Fail
+  annotations: {}
+  labels: {}
 
 # kube-rbac-proxy: Sidecar container that protects the /metrics endpoint with RBAC authentication
 # When enabled, only authenticated clients with proper RBAC permissions can access metrics

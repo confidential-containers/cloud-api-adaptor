@@ -71,7 +71,9 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	@sed -i 's/namespace: system/namespace: {{ .Values.namespaceOverride | default .Release.Namespace }}/' chart/templates/webhook-config.yaml
 	@sed -i 's/failurePolicy: Fail/failurePolicy: {{ .Values.webhook.failurePolicy }}/' chart/templates/webhook-config.yaml
 	# Add cert-manager CA injection annotation (equivalent to webhookcainjection_patch.yaml)
-	@sed -i '/^metadata:/a\{{- if .Values.certManager.enabled }}\n  annotations:\n    cert-manager.io/inject-ca-from: {{ .Values.namespaceOverride | default .Release.Namespace }}/{{ .Values.namePrefix }}serving-cert\n{{- end }}' chart/templates/webhook-config.yaml
+	# plus support for provider-supplied webhook.annotations / webhook.labels (e.g. the
+	# azure admissions.enforcer/disabled annotation set in the peerpods provider values).
+	@sed -i '/^metadata:/a\{{- if or .Values.certManager.enabled .Values.webhook.annotations }}\n  annotations:\n    {{- if .Values.certManager.enabled }}\n    cert-manager.io/inject-ca-from: {{ .Values.namespaceOverride | default .Release.Namespace }}/{{ .Values.namePrefix }}serving-cert\n    {{- end }}\n    {{- with .Values.webhook.annotations }}\n    {{- toYaml . | nindent 4 }}\n    {{- end }}\n{{- end }}\n  {{- with .Values.webhook.labels }}\n  labels:\n    {{- toYaml . | nindent 4 }}\n  {{- end }}' chart/templates/webhook-config.yaml
 	# Add namespaceSelector to exclude webhook namespace and kube-system (equivalent to namespace_selector_patch.yaml)
 	@sed -i '/  name: mwebhook.peerpods.io/a\  namespaceSelector:\n    matchExpressions:\n    - key: kubernetes.io/metadata.name\n      operator: NotIn\n      values:\n      - {{ .Values.namespaceOverride | default .Release.Namespace }}\n      - kube-system' chart/templates/webhook-config.yaml
 	# Add scope to rules (equivalent to inline scope patch in kustomization.yaml)
