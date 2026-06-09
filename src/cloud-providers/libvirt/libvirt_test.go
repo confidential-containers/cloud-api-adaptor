@@ -839,7 +839,7 @@ func createMockCaps(arch, emulator string, machines ...libvirtxml.CapsGuestMachi
 	}
 }
 
-// TestCreateDomainXMLs390xWithMocks tests s390x domain XML generation using mocks
+// TestCreateDomainXMLArchitecturesWithMocks tests domain XML generation for s390x and aarch64 architectures using mocks
 func TestCreateDomainXMLArchitecturesWithMocks(t *testing.T) {
 	tests := []struct {
 		name                 string
@@ -854,6 +854,7 @@ func TestCreateDomainXMLArchitecturesWithMocks(t *testing.T) {
 		createFunc           func(*libvirtClient, *domainConfig, *vmConfig) (*libvirtxml.Domain, error)
 		expectedFirmware     string
 		expectSCSIController bool
+		expectedCPUMode      string
 	}{
 		{
 			name:             "s390x architecture",
@@ -866,6 +867,7 @@ func TestCreateDomainXMLArchitecturesWithMocks(t *testing.T) {
 			machineName:      "s390-ccw-virtio",
 			machineCanonical: "s390-ccw-virtio-rhel9.0.0",
 			createFunc:       createDomainXMLs390x,
+			expectedCPUMode:  "host-model",
 		},
 		{
 			name:                 "aarch64 architecture",
@@ -880,6 +882,7 @@ func TestCreateDomainXMLArchitecturesWithMocks(t *testing.T) {
 			createFunc:           createDomainXMLaarch64,
 			expectedFirmware:     "efi",
 			expectSCSIController: true,
+			expectedCPUMode:      "host-passthrough",
 		},
 	}
 
@@ -930,6 +933,12 @@ func TestCreateDomainXMLArchitecturesWithMocks(t *testing.T) {
 			if tt.expectSCSIController {
 				assert.Len(t, domain.Devices.Controllers, 1)
 				assert.Equal(t, "scsi", domain.Devices.Controllers[0].Type)
+			}
+
+			// Verify CPU mode is set as expected for the architecture
+			if tt.expectedCPUMode != "" {
+				require.NotNil(t, domain.CPU, "CPU configuration should be set")
+				assert.Equal(t, tt.expectedCPUMode, domain.CPU.Mode)
 			}
 		})
 	}

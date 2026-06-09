@@ -31,6 +31,14 @@ const (
 	GetDomainIPsRetries = 20
 	// The sleep time between retries to get the domain IP addresses
 	GetDomainIPsSleep = time.Second * 3
+
+	// cpuModeHostModel asks libvirt to select the closest named CPU model that
+	// the host supports and expose its full feature set to the guest.
+	cpuModeHostModel = "host-model"
+
+	// cpuModeHostPassthrough exposes the exact host CPU to the guest with no
+	// model abstraction.
+	cpuModeHostPassthrough = "host-passthrough"
 )
 
 // validateCPUSet validates the CPUSet format.
@@ -256,6 +264,7 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 			Value:  cfg.cpu,
 			CPUSet: vm.cpuset,
 		},
+		CPU: &libvirtxml.DomainCPU{Mode: cpuModeHostModel},
 		Clock: &libvirtxml.DomainClock{
 			Offset: "utc",
 		},
@@ -326,7 +335,7 @@ func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfi
 			APIC:   &libvirtxml.DomainFeatureAPIC{},
 			VMPort: &libvirtxml.DomainFeatureState{State: "off"},
 		},
-		CPU:      &libvirtxml.DomainCPU{Mode: "host-model"},
+		CPU:      &libvirtxml.DomainCPU{Mode: cpuModeHostModel},
 		OnReboot: "restart",
 		Devices: &libvirtxml.DomainDeviceList{
 			// Disks.
@@ -467,7 +476,7 @@ func createDomainXMLaarch64(client *libvirtClient, cfg *domainConfig, vm *vmConf
 		},
 		Memory: &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "MiB"},
 		VCPU:   &libvirtxml.DomainVCPU{Value: cfg.cpu, CPUSet: vm.cpuset},
-		CPU:    &libvirtxml.DomainCPU{Mode: "host-passthrough"},
+		CPU:    &libvirtxml.DomainCPU{Mode: cpuModeHostPassthrough},
 		Devices: &libvirtxml.DomainDeviceList{
 			Disks: []libvirtxml.DomainDisk{
 				bootDisk,
