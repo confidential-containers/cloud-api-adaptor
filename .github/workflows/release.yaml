@@ -47,6 +47,18 @@ jobs:
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
+  podvm-byom-binaries:
+    needs: podvm-images  # Depends on podvm-binaries-ubuntu-{arch} images
+    uses: ./.github/workflows/podvm_byom_binaries_publish.yaml
+    with:
+      git_ref: ${{ github.ref }}
+      image_tag: ${{ github.event.release.tag_name }}
+      arch: amd64
+    permissions:
+      contents: read  # Required for checkout
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
   webhook:
     uses: ./.github/workflows/webhook_image.yaml
     with:
