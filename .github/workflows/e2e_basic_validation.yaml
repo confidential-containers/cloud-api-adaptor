@@ -1,0 +1,244 @@
+# (C) Copyright Confidential Containers Contributors 2025.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Basic validation workflow: Runs on pull_request without secrets or private runners
+# This workflow provides fast feedback on PRs without requiring maintainer approval
+---
+name: Basic E2E validation
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - 'main'
+  workflow_call:
+    inputs:
+      git_ref:
+        default: 'main'
+        description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read  # Only needs to read code
+
+jobs:
+  # Build and validate without pushing images
+  build-validation:
+    name: Build validation (no push)
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - cloud-api-adaptor
+          - peerpod-ctrl
+          - webhook
+    defaults:
+      run:
+        working-directory: src/${{ matrix.component == 'cloud-api-adaptor' && 'cloud-api-adaptor' || matrix.component }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.git_ref || github.event.pull_request.head.sha || github.ref }}
+          persist-credentials: false
+
+      - name: Read properties from versions.yaml
+        run: |
+          go_version="$(yq '.tools.golang' ${{ matrix.component == 'cloud-api-adaptor' && 'versions.yaml' || '../cloud-api-adaptor/versions.yaml' }})"
+          [ -n "$go_version" ]
+          echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
+          cache: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Install build dependencies
+        if: matrix.component == 'cloud-api-adaptor' || matrix.component == 'peerpod-ctrl'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libvirt-dev
+
+      - name: Build cloud-api-adaptor
+        if: matrix.component == 'cloud-api-adaptor'
+        run: |
+          RELEASE_BUILD=false make build
+          # Build docker image without pushing
+          ARCHES=linux/amd64 RELEASE_BUILD=false make image-build
+
+      - name: Build peerpod-ctrl
+        if: matrix.component == 'peerpod-ctrl'
+        run: |
+          make verify
+          make build
+          make test
+          make docker-build
+
+      - name: Build webhook
+        if: matrix.component == 'webhook'
+        run: |
+          make verify
+          make build
+          make test
+
+  # Local libvirt e2e tests (no cloud resources, no image push)
+  libvirt-local-test:
+    name: Local libvirt E2E (basic validation)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src/cloud-api-adaptor
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.git_ref || github.event.pull_request.head.sha || github.ref }}
+          persist-credentials: false
+
+      - name: Remove unnecessary directories to free up space
+        working-directory: ./
+        run: |
+          sudo ./hack/ci-helper.sh clean-up-runner
+
+      - name: Read properties from versions.yaml
+        run: |
+          sudo snap install yq
+          go_version="$(yq '.tools.golang' versions.yaml)"
+          [ -n "$go_version" ]
+          {
+            echo "GO_VERSION=${go_version}"
+            echo "HELM_VERSION=$(yq -e '.tools.helm.version' versions.yaml)"
+            echo "HELM_CHECKSUM=$(yq -e '.tools.helm.sha256' versions.yaml)"
+            echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
+          cache: false
+
+      - name: Install Helm
+        run: |
+          curl -fsSL -o helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_CHECKSUM}  helm.tar.gz" | sha256sum --check --strict
+          tar -xzf helm.tar.gz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          rm -rf helm.tar.gz linux-amd64
+          helm version
+
+      - name: Config Libvirt
+        run: |
+          ./libvirt/config_libvirt.sh
+          echo 'container_runtime="containerd"' >> libvirt.properties
+          cat libvirt.properties
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install gh cli
+        run: |
+          sudo apt update -y
+          sudo apt install -y gh
+
+      - name: Double check that OVMF is installed
+        run: |
+          sudo apt update -y
+          sudo apt install -y ovmf
+
+      - name: Build PodVM image locally (no push)
+        working-directory: src/cloud-api-adaptor/podvm
+        run: |
+          # Un-restrict user namespaces for rootless mkosi
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          
+          # Install mkosi dependencies
+          sudo apt-get update
+          sudo apt-get install -y \
+            alien \
+            bubblewrap \
+            dnf \
+            qemu-utils \
+            uidmap
+          
+          # Build binaries and image locally
+          make podvm-binaries
+          make image
+          
+          # Set the path for tests
+          qcow2=$(find build/*.qcow2)
+          echo "PODVM_QCOW2=$(pwd)/${qcow2}" >> "$GITHUB_ENV"
+        env:
+          MKOSI_VERSION: ${{ env.MKOSI_VERSION }}
+
+      - name: Checkout KBS Repository
+        run: |
+          test/utils/checkout_kbs.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run basic smoke tests
+        id: runTests
+        env:
+          CLOUD_PROVIDER: libvirt
+          CONTAINER_RUNTIME: containerd
+          DEPLOY_KBS: "true"
+          TEST_PROVISION: "yes"
+          TEST_TEARDOWN: "no"
+          TEST_PROVISION_FILE: ${{ github.workspace }}/src/cloud-api-adaptor/libvirt.properties
+          TEST_PODVM_IMAGE: ${{ env.PODVM_QCOW2 }}
+          TEST_E2E_TIMEOUT: "45m"
+        run: |
+          # Run a subset of tests that don't require registry push
+          # Skip tests that need authenticated registries
+          export TEST_E2E_SKIP_TESTS="TestCreatePeerPodContainerWithAuthenticatedImagewithValidCredentials"
+          make test-e2e
+
+      - name: Debug tests failure
+        if: failure() && steps.runTests.outcome == 'failure'
+        timeout-minutes: 15
+        working-directory: ./
+        run: |
+          export KUBECONFIG="${HOME}/.kcli/clusters/peer-pods/auth/kubeconfig"
+          ./hack/ci-e2e-debug-fail.sh
+        shell: bash {0}
+
+      - name: Clean-up cluster
+        if: always()
+        run: ./libvirt/kcli_cluster.sh delete
+
+  # Summary job
+  basic-validation-summary:
+    name: Basic validation summary
+    runs-on: ubuntu-24.04
+    needs: [build-validation, libvirt-local-test]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "Build validation: ${{ needs.build-validation.result }}"
+          echo "Libvirt local test: ${{ needs.libvirt-local-test.result }}"
+          
+          if [ "${{ needs.build-validation.result }}" != "success" ] || \
+             [ "${{ needs.libvirt-local-test.result }}" != "success" ]; then
+            echo "::error::Some basic validations failed"
+            exit 1
+          fi
+          
+          echo "::notice::✅ All basic validations passed!"
+          echo "::notice::For full E2E tests with cloud providers, maintainer approval is required."
+          echo "::notice::Add labels: test_e2e_aws, test_e2e_libvirt, or test_e2e_byom"
+
