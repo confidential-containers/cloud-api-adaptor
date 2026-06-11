@@ -14,7 +14,7 @@ on:
   # is that, unlike the `pull_request` event, the checked pull request isn't necessarily
   # rebased to main (so it is up to users ensure the pull request is rebased **before*
   # triggering this workflow).
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] TODO fix in #2214
     types:
       # This workflow will be run if the pull request is labeled test_e2e_libvirt,
       # so adding 'labeled' to the list of activity types.
