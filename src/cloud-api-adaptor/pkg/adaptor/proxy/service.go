@@ -16,6 +16,7 @@ import (
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/agentproto"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
+	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/types"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -96,7 +97,24 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 	}
 
 	if !pullImageInGuest {
-		logger.Printf("Pulling image separately not support on main. It is required to use the nydus-snapshotter, which isn't configured properly here.")
+		// There is some issue with nydus(error unpacking image) when the image layers are missing due to
+		//  - discard_unpacked_layers set to true
+		//  - other reasons we don't know yet
+		// Run: ctr -n k8s.io image check
+		// to see whether the image is complete(all layers are present)
+		//
+		// nydus adds one mount that carries the image information which is then picked up
+		// by kata shim, then kata shim passes it to kata agent in the PodVM. Without nydus, we
+		// have to add the mount point manually.
+		vol, err := handleVirtualVolumeStorageObject(req)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Storages = append(req.Storages, vol)
+		storage := req.Storages[len(req.Storages)-1]
+		logger.Print("    storages added for guest_image_pull:")
+		logger.Printf("        mount_point:%s source:%s fstype:%s driver:%s", storage.MountPoint, storage.Source, storage.Fstype, storage.Driver)
 	}
 
 	// Detect cloud volumes by scanning the direct-volumes directory in canonical
@@ -201,6 +219,92 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 	}
 
 	return res, err
+}
+
+// The following fucntions are originally from https://github.com/kata-containers/kata-containers/blob/main/src/runtime/virtcontainers/kata_agent.go
+//   - handleVirtualVolumeStorageObject
+//   - handleImageGuestPullBlockVolume
+//   - getContainerTypeforCRI
+//
+// Modified handleVirtualVolumeStorageObject
+func handleVirtualVolumeStorageObject(req *pb.CreateContainerRequest) (*pb.Storage, error) {
+	var vol *pb.Storage
+	virtVolume := &types.KataVirtualVolume{
+		VolumeType: types.KataVirtualVolumeImageGuestPullType,
+		ImagePull: &types.ImagePullVolume{
+			Metadata: map[string]string{},
+		},
+	}
+
+	var err error
+	vol = &pb.Storage{}
+	vol, err = handleImageGuestPullBlockVolume(req.OCI.Annotations, virtVolume, vol)
+	if err != nil {
+		return nil, err
+	}
+	vol.MountPoint = filepath.Join("/run/kata-containers/", req.ContainerId, "rootfs")
+	return vol, nil
+}
+
+// Modified handleImageGuestPullBlockVolume
+func handleImageGuestPullBlockVolume(containerAnnotations map[string]string, virtualVolumeInfo *types.KataVirtualVolume, vol *pb.Storage) (*pb.Storage, error) {
+	containerType, criContainerType := getContainerTypeforCRI(containerAnnotations)
+
+	var imageRef string
+	if containerType == "pod_sandbox" {
+		imageRef = "pause"
+	} else {
+		const ctrContainerType = "io.kubernetes.cri.container-type"
+		const crioContainerType = "io.kubernetes.cri-o.ContainerType"
+		const kubernetesCRIImageName = "io.kubernetes.cri.image-name"
+		const kubernetesCRIOImageName = "io.kubernetes.cri-o.ImageName"
+
+		switch criContainerType {
+		case ctrContainerType:
+			imageRef = containerAnnotations[kubernetesCRIImageName]
+		case crioContainerType:
+			imageRef = containerAnnotations[kubernetesCRIOImageName]
+		default:
+			imageRef = containerAnnotations[kubernetesCRIImageName]
+		}
+
+		if imageRef == "" {
+			return nil, fmt.Errorf("Failed to get image name from annotations")
+		}
+	}
+	virtualVolumeInfo.Source = imageRef
+
+	//merge virtualVolumeInfo.ImagePull.Metadata and container_annotations
+	for k, v := range containerAnnotations {
+		virtualVolumeInfo.ImagePull.Metadata[k] = v
+	}
+
+	imagePullBytes, err := json.Marshal(virtualVolumeInfo.ImagePull)
+	if err != nil {
+		return nil, err
+	}
+	vol.Driver = types.KataVirtualVolumeImageGuestPullType
+	vol.DriverOptions = append(vol.DriverOptions, types.KataVirtualVolumeImageGuestPullType+"="+string(imagePullBytes))
+	vol.Source = virtualVolumeInfo.Source
+	vol.Fstype = "overlay"
+	return vol, nil
+}
+
+// Modified getContainerTypeforCRI
+func getContainerTypeforCRI(containerAnnotations map[string]string) (string, string) {
+	CRIContainerTypeKeyList := []string{
+		"io.kubernetes.cri.container-type",
+		"io.kubernetes.cri-o.ContainerType",
+	}
+
+	containerType := containerAnnotations["io.katacontainers.pkg.oci.container_type"]
+	for _, key := range CRIContainerTypeKeyList {
+		_, ok := containerAnnotations[key]
+		if ok {
+			return containerType, key
+		}
+	}
+	return "", ""
 }
 
 func isNodePublishVolumeTargetPath(volumePath, directVolumesDir string) bool {

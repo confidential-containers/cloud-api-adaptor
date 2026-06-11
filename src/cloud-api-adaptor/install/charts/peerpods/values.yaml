@@ -179,5 +179,11 @@ kata-deploy:
       enabled: false
     qemu-coco-dev-runtime-rs:
       enabled: false
+    qemu-snp-runtime-rs:
+      enabled: false
+    qemu-tdx-runtime-rs:
+      enabled: false
     remote:
       enabled: true
+      containerd:
+        snapshotter: "overlayfs"

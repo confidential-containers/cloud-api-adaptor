@@ -50,12 +50,16 @@ const (
 	testSandboxID456 = "sandbox-456"
 
 	// Annotation constants
-	testAnnotationKey1     = "key1"
-	testAnnotationValue1   = "value1"
-	testAnnotationGPUKey   = "io.katacontainers.config.hypervisor.default_gpus"
-	testAnnotationGPUValue = "1"
-	testAnnotationCDIKey   = "cdi.k8s.io/peer-pods"
-	testAnnotationCDIValue = "nvidia.com/gpu=all"
+	testAnnotationKey1               = "key1"
+	testAnnotationValue1             = "value1"
+	testAnnotationGPUKey             = "io.katacontainers.config.hypervisor.default_gpus"
+	testAnnotationGPUValue           = "1"
+	testAnnotationCDIKey             = "cdi.k8s.io/peer-pods"
+	testAnnotationCDIValue           = "nvidia.com/gpu=all"
+	testAnnotationContainerTypeKey   = "io.kubernetes.cri.container-type"
+	testAnnotationContainerTypeValue = "container"
+	testAnnotationImageNameKey       = "io.kubernetes.cri.image-name"
+	testAnnotationImageNameValue     = "test-image"
 
 	// Storage and filesystem constants
 	testFstypeExt4              = "ext4"
@@ -147,7 +151,10 @@ func newCreateContainerRequest(containerID string) *createContainerRequestBuilde
 		req: &pb.CreateContainerRequest{
 			ContainerId: containerID,
 			OCI: &pb.Spec{
-				Annotations: make(map[string]string),
+				Annotations: map[string]string{
+					testAnnotationContainerTypeKey: testAnnotationContainerTypeValue,
+					testAnnotationImageNameKey:     testAnnotationImageNameValue,
+				},
 			},
 		},
 	}
