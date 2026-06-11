@@ -92,6 +92,11 @@ limit: "10"
 
 # DaemonSet configuration
 daemonset:
+  # Command to run in the CAA container. Default uses the entrypoint script
+  # which validates required env vars per provider before exec'ing the binary.
+  # Override to bypass the entrypoint.
+  command:
+    - /usr/local/bin/entrypoint.sh
   # Update strategy controls how the CAA DaemonSet performs rolling updates
   updateStrategy:
     # maxUnavailable: Maximum number of pods that can be unavailable during update
