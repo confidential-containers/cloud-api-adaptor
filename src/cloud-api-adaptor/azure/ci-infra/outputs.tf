@@ -37,3 +37,11 @@ output "AZURE_MANAGED_IDENTITY_NAME" {
 output "AZURE_COMMUNITY_GALLERY_NAME" {
   value = azurerm_shared_image_gallery.podvm_image_gallery.sharing[0].community_gallery[0].name
 }
+
+output "AZURE_PODVM_STORAGE_ACCOUNT" {
+  value = azurerm_storage_account.podvm_storage.name
+}
+
+output "AZURE_PODVM_STORAGE_CONTAINER" {
+  value = azurerm_storage_container.podvm_vhd.name
+}
