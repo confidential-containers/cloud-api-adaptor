@@ -156,6 +156,20 @@ jobs:
           ARCH: ${{ inputs.arch }}
           PODVM_DISTRO: ubuntu
           VERIFY_PROVENANCE: yes
+          PUSH: "true"
+          REGISTRY: ${{ inputs.registry }}
+          PODVM_TAG: ${{ inputs.image_tag }}
+
+      - name: Build and push BYOM binaries image
+        working-directory: src/cloud-api-adaptor/podvm
+        run: |
+          make podvm-byom-binaries-image
+          make push-podvm-byom-binaries-image
+        env:
+          ARCH: ${{ inputs.arch }}
+          PODVM_DISTRO: ubuntu
+          REGISTRY: ${{ inputs.registry }}
+          PODVM_TAG: ${{ inputs.image_tag }}
 
       - name: Build mkosi debug image
         if: ${{ inputs.debug == true }}
