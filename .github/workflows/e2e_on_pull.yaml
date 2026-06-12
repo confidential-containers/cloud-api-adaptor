@@ -1,19 +1,27 @@
 # (C) Copyright Confidential Containers Contributors 2023.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Run end-to-end (e2e) tests on pull request.
+# Privileged E2E tests requiring secrets and private runners
+# This workflow uses pull_request_target and requires maintainer approval
+#
+# For basic validation without secrets, see e2e_basic_validation.yaml
 ---
-name: e2e tests
+name: Privileged E2E tests (requires approval)
 
 on:
-  # Note on repository checkout: pull_request_target sets `GITHUB_SHA` to the
-  # "last commit on the PR base branch", meaning that by default `actions/checkout`
-  # is going to checkout the repository main branch. In order to pick up the pull
-  # request code, this workflow uses the `github.event.pull_request.head.sha`
-  # property to get the last commit on the HEAD branch. One limitation of this approach
-  # is that, unlike the `pull_request` event, the checked pull request isn't necessarily
-  # rebased to main (so it is up to users ensure the pull request is rebased **before*
-  # triggering this workflow).
+  # SECURITY NOTE: This workflow uses pull_request_target which runs with write
+  # permissions and access to secrets. It is designed to run code from PRs on
+  # project infrastructure with the following security measures:
+  #
+  # 1. Security gate validates PR source and checks for maintainer approval
+  # 2. Fork PRs ALWAYS require maintainer approval before running
+  # 3. Same-repo PRs with workflow changes require maintainer approval
+  # 4. Code is rebased atop main branch before execution
+  #
+  # For basic validation tests that run without approval, see e2e_basic_validation.yaml
+  #
+  # Note: pull_request_target sets GITHUB_SHA to the base branch commit.
+  # We explicitly checkout the PR head SHA to test the actual PR code.
   pull_request_target:
     types:
       # This workflow will be run if the pull request is labeled test_e2e_libvirt,
@@ -33,17 +41,207 @@ concurrency:
 permissions: {}
 
 jobs:
-  authorize:
-    name: authorize
+  # Security gate: Validates PR source and checks for maintainer approval
+  # This job runs BEFORE any code checkout to prevent malicious code execution
+  security-gate:
+    name: security-gate
     runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: read
+      contents: read
+    outputs:
+      is-fork: ${{ steps.check-fork.outputs.is-fork }}
+      has-workflow-changes: ${{ steps.check-workflow-changes.outputs.has-changes }}
+      approved: ${{ steps.check-approval.outputs.approved }}
+      approved-by: ${{ steps.check-approval.outputs.approved_by }}
+    steps:
+      - name: Check if PR is from a fork
+        id: check-fork
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "is-fork=true" >> $GITHUB_OUTPUT
+            echo "::notice::PR is from fork: ${{ github.event.pull_request.head.repo.full_name }}"
+          else
+            echo "is-fork=false" >> $GITHUB_OUTPUT
+            echo "::notice::PR is from same repository"
+          fi
+
+      - name: Checkout base branch to check for workflow changes
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Check if PR modifies workflow files
+        id: check-workflow-changes
+        run: |
+          # Get list of changed files in the PR
+          git fetch origin ${{ github.event.pull_request.head.sha }}
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          
+          # Check if any workflow files are modified
+          if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/"; then
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "::warning::PR modifies workflow files - maintainer approval required"
+            echo "Changed workflow files:"
+            echo "$CHANGED_FILES" | grep "^\.github/workflows/" || true
+          else
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "::notice::No workflow files modified"
+          fi
+
+      - name: Check for maintainer approval
+        id: check-approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get all PR reviews
+          REVIEWS=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews)
+          
+          # Get list of users who approved
+          APPROVERS=$(echo "$REVIEWS" | jq -r '.[] | select(.state == "APPROVED") | .user.login' | sort -u)
+          
+          if [ -z "$APPROVERS" ]; then
+            echo "approved=false" >> $GITHUB_OUTPUT
+            echo "approved_by=" >> $GITHUB_OUTPUT
+            echo "::notice::No approvals found"
+            exit 0
+          fi
+          
+          # Get members of the peer-pod-maintainers team
+          # Team slug: peer-pod-maintainers, Org: confidential-containers
+          echo "::notice::Fetching maintainer team members..."
+          MAINTAINERS=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /orgs/confidential-containers/teams/peer-pod-maintainers/members \
+            --paginate | jq -r '.[].login' | sort -u)
+          
+          if [ -z "$MAINTAINERS" ]; then
+            echo "::error::Failed to fetch maintainer team members"
+            echo "approved=false" >> $GITHUB_OUTPUT
+            echo "approved_by=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "::notice::Maintainer team members: $(echo $MAINTAINERS | tr '\n' ', ')"
+          
+          # Check if any approver is a maintainer
+          MAINTAINER_APPROVED=""
+          for approver in $APPROVERS; do
+            if echo "$MAINTAINERS" | grep -q "^${approver}$"; then
+              MAINTAINER_APPROVED="$approver"
+              break
+            fi
+          done
+          
+          if [ -n "$MAINTAINER_APPROVED" ]; then
+            echo "approved=true" >> $GITHUB_OUTPUT
+            echo "approved_by=$MAINTAINER_APPROVED" >> $GITHUB_OUTPUT
+            echo "::notice::✅ PR approved by maintainer: $MAINTAINER_APPROVED"
+          else
+            echo "approved=false" >> $GITHUB_OUTPUT
+            echo "approved_by=" >> $GITHUB_OUTPUT
+            echo "::warning::PR has approvals but none from maintainers. Approvers: $(echo $APPROVERS | tr '\n' ', ')"
+          fi
+
+  # Validation: Ensures security requirements are met before proceeding
+  validate-security:
+    name: validate-security
+    runs-on: ubuntu-24.04
+    needs: [security-gate]
+    steps:
+      - name: Validate security requirements
+        run: |
+          echo "=== Privileged E2E Workflow Security Check ==="
+          echo ""
+          echo "This workflow runs with access to:"
+          echo "  • Repository secrets (AWS credentials, registry passwords)"
+          echo "  • Write permissions (push images, create resources)"
+          echo "  • Private/self-hosted runners"
+          echo ""
+          echo "Security Check Results:"
+          echo "- Is Fork: ${{ needs.security-gate.outputs.is-fork }}"
+          echo "- Has Workflow Changes: ${{ needs.security-gate.outputs.has-workflow-changes }}"
+          echo "- Maintainer Approved: ${{ needs.security-gate.outputs.approved }}"
+          if [ "${{ needs.security-gate.outputs.approved }}" == "true" ]; then
+            echo "- Approved By (Maintainer): ${{ needs.security-gate.outputs.approved-by }}"
+          fi
+          echo ""
+          
+          # Case 1: ALL fork PRs require maintainer approval (regardless of workflow changes)
+          # This is because fork PRs run with access to secrets and write permissions
+          if [ "${{ needs.security-gate.outputs.is-fork }}" == "true" ]; then
+            if [ "${{ needs.security-gate.outputs.approved }}" != "true" ]; then
+              echo "::error::❌ SECURITY: Fork PR requires maintainer approval before running with secrets"
+              echo "::notice::Basic validation tests run automatically via e2e_basic_validation.yaml workflow"
+              echo "::notice::For privileged tests, a maintainer must approve this PR"
+              exit 1
+            fi
+            
+            # Fork PR approved - log appropriate message
+            if [ "${{ needs.security-gate.outputs.has-workflow-changes }}" == "true" ]; then
+              echo "✅ Fork PR with workflow changes has maintainer approval"
+            else
+              echo "✅ Fork PR has maintainer approval"
+            fi
+          fi
+          
+          # Case 2: Same-repo PR with workflow changes requires approval
+          if [ "${{ needs.security-gate.outputs.is-fork }}" == "false" ] && \
+             [ "${{ needs.security-gate.outputs.has-workflow-changes }}" == "true" ]; then
+            if [ "${{ needs.security-gate.outputs.approved }}" != "true" ]; then
+              echo "::error::❌ SECURITY: Workflow changes require maintainer approval"
+              exit 1
+            fi
+            echo "✅ Workflow changes have maintainer approval"
+          fi
+          
+          # Case 3: Same-repo PR without workflow changes - safe to proceed
+          if [ "${{ needs.security-gate.outputs.is-fork }}" == "false" ] && \
+             [ "${{ needs.security-gate.outputs.has-workflow-changes }}" == "false" ]; then
+            echo "✅ Same-repo PR without workflow changes - proceeding"
+          fi
+          
+          echo ""
+          echo "::notice::✅ All security requirements met - proceeding with privileged tests"
+
+  authorize:
+    name: Check E2E labels
+    runs-on: ubuntu-24.04
+    needs: [validate-security]
     if: |
      contains(github.event.pull_request.labels.*.name, 'test_e2e_aws') ||
      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
      contains(github.event.pull_request.labels.*.name, 'test_e2e_byom')
     steps:
-      - run: "true"
+      - name: Confirm authorization
+        run: |
+          echo "::notice::Privileged E2E tests authorized via labels"
+          echo "Labels found:"
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_aws') }}" == "true" ]]; then
+            echo "  • test_e2e_aws - Will run AWS E2E tests"
+          fi
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') }}" == "true" ]]; then
+            echo "  • test_e2e_libvirt - Will run Libvirt E2E tests"
+          fi
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'test_e2e_byom') }}" == "true" ]]; then
+            echo "  • test_e2e_byom - Will run BYOM E2E tests"
+          fi
   e2e:
-    uses: ./.github/workflows/e2e_run_all.yaml
+    # This workflow now calls e2e_privileged_only.yaml instead of e2e_run_all.yaml
+    # because non-privileged tests (build, lint, basic libvirt) are handled by
+    # e2e_basic_validation.yaml which runs automatically without approval.
+    #
+    # This workflow ONLY runs tests that require:
+    # - Cloud provider credentials (AWS)
+    # - Registry push access (image building)
+    # - Self-hosted runners (s390x)
+    uses: ./.github/workflows/e2e_privileged_only.yaml
     needs: [authorize]
     with:
       caa_image_tag: ci-pr${{ github.event.number }}

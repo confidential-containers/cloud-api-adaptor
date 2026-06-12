@@ -25,11 +25,21 @@ concurrency:
 permissions: {}
 
 jobs:
+  # Run basic validation first (builds locally, smoke tests)
+  basic-validation:
+    uses: ./.github/workflows/e2e_basic_validation.yaml
+    with:
+      git_ref: "${{ inputs.git_ref || 'main' }}"
+    permissions:
+      contents: read
+
+  # Run privileged tests after basic validation passes
   e2e:
-    uses: ./.github/workflows/e2e_run_all.yaml
+    needs: [basic-validation]
+    uses: ./.github/workflows/e2e_privileged_only.yaml
     with:
       caa_image_tag: latest
-      git_ref: "${{ inputs.git_ref }}"
+      git_ref: "${{ inputs.git_ref || 'main' }}"
       podvm_image_tag: latest
       registry: ghcr.io/${{ github.repository_owner }}
     permissions:

@@ -1,9 +1,10 @@
-# (C) Copyright Confidential Containers Contributors 2023.
+# (C) Copyright Confidential Containers Contributors 2025.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Run end-to-end (e2e) tests.
+# Run ONLY privileged e2e tests that require secrets/private runners
+# This is called by e2e_on_pull.yaml after approval
 ---
-name: (Callable) Run all e2e tests
+name: (Callable) Privileged E2E tests only
 
 on:
   workflow_call:
@@ -34,11 +35,8 @@ on:
         required: true
 
 env:
-  # cloud-api-adaptor image registry
   E2E_IMG_REGISTRY: ${{ inputs.registry }}
-  # cloud-api-adaptor: image release tag
   E2E_IMG_RELEASE_TAG: ${{ inputs.caa_image_tag }}
-  # cloud-api-adaptor image dev tag
   E2E_IMG_DEV_TAG: ${{ inputs.caa_image_tag }}-dev
 
 defaults:
@@ -48,6 +46,7 @@ defaults:
 permissions: {}
 
 jobs:
+  # Build mkosi amd64 image (required for libvirt_amd64 tests)
   podvm_mkosi_amd64:
     uses: ./.github/workflows/podvm_mkosi.yaml
     with:
@@ -57,11 +56,29 @@ jobs:
       arch: amd64
       debug: true
     permissions:
-      contents: read  # Required to checkout code
-      packages: write  # Required to push container images
-      id-token: write  # Required for OIDC authentication
-      attestations: write  # Required to write attestations
-      artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
+  # Build and push images (requires secrets for registry push)
+  podvm_ubuntu_amd64:
+    uses: ./.github/workflows/podvm_mkosi_ubuntu.yaml
+    with:
+      registry: ${{ inputs.registry }}
+      image_tag: ${{ inputs.podvm_image_tag }}
+      git_ref: ${{ inputs.git_ref }}
+      arch: amd64
+      debug: true
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -74,28 +91,11 @@ jobs:
       arch: s390x
       debug: true
     permissions:
-      contents: read  # Required to checkout code
-      packages: write  # Required to push container images
-      attestations: write  # Required to write attestations
-      id-token: write  # Required for OIDC authentication
-      artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-
-  podvm_ubuntu_amd64:
-    uses: ./.github/workflows/podvm_mkosi_ubuntu.yaml
-    with:
-      registry: ${{ inputs.registry }}
-      image_tag: ${{ inputs.podvm_image_tag }}
-      git_ref: ${{ inputs.git_ref }}
-      arch: amd64
-      debug: true
-    permissions:
-      contents: read # Required if we want to run on a fork?
-      packages: write # Required to publish the oras package to ghcr
-      id-token: write # Required to publish the attestation provenance to ghcr
-      attestations: write # Required to publish the attestation provenance to ghcr
-      artifact-metadata: write # Required by podvm_mkosi_ubuntu.yaml to write attestation metadata
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+      artifact-metadata: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -108,11 +108,11 @@ jobs:
       arch: s390x
       debug: true
     permissions:
-      contents: read # Required if we want to run on a fork?
-      packages: write # Required to publish the oras package to ghcr
-      id-token: write # Required to publish the attestation provenance to ghcr
-      attestations: write # Required to publish the attestation provenance to ghcr
-      artifact-metadata: write # Required by podvm_mkosi_ubuntu.yaml to write attestation metadata
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -126,8 +126,8 @@ jobs:
       release_tags: ${{ inputs.caa_image_tag }}
       git_ref: ${{ inputs.git_ref }}
     permissions:
-      contents: read  # Required to checkout code
-      packages: write  # Required to push container images
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -142,12 +142,11 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
       runner: 'ubuntu-24.04-s390x'
     permissions:
-      contents: read  # Required to checkout code
-      packages: write  # Required to push container images
+      contents: read
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
-  # Build and push the peerpod-ctrl image (per-arch)
   peerpod_ctrl_image_amd64:
     uses: ./.github/workflows/peerpod-ctrl_build_and_push.yaml
     with:
@@ -158,7 +157,7 @@ jobs:
       runner: ubuntu-24.04
     permissions:
       contents: read
-      packages: write # Required to publish the image to ghcr
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -172,11 +171,10 @@ jobs:
       runner: ubuntu-24.04-s390x
     permissions:
       contents: read
-      packages: write # Required to publish the image to ghcr
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
-  # Build and push the webhook image
   webhook_image:
     uses: ./.github/workflows/webhook_image.yaml
     with:
@@ -185,11 +183,11 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
     permissions:
       contents: read
-      packages: write # Required to publish the image to ghcr
+      packages: write
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
-  # Run AWS e2e tests if pull request labeled 'test_e2e_aws'
+  # AWS E2E tests (requires AWS credentials)
   aws:
     name: aws
     if: |
@@ -203,8 +201,8 @@ jobs:
         container_runtime:
           - crio
     permissions:
-      id-token: write # Required by aws-actions/configure-aws-credentials
-      contents: read  # Required by aws-actions/configure-aws-credentials
+      id-token: write
+      contents: read
     uses: ./.github/workflows/e2e_aws.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
@@ -216,6 +214,8 @@ jobs:
     secrets:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
+
+  # Prep job for libvirt tests
   libvirt_e2e_arch_prep:
     name: libvirt_e2e_arch_prep
     runs-on: ubuntu-24.04
@@ -233,9 +233,9 @@ jobs:
         run: |
           ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
 
-  # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
+  # Run libvirt amd64 e2e tests with mkosi image
   libvirt_amd64:
-    name: E2E tests on libvirt for the amd64 architecture
+    name: Libvirt amd64 E2E (mkosi)
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
@@ -253,29 +253,9 @@ jobs:
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
-  # Run libvirt s390x e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
-  libvirt_s390x:
-    name: E2E tests on libvirt for the s390x architecture
-    if: |
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
-      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
-    needs: [podvm_mkosi_s390x, libvirt_e2e_arch_prep, caa_image_s390x, peerpod_ctrl_image_s390x, webhook_image]
-    uses: ./.github/workflows/e2e_libvirt.yaml
-    with:
-      runner: s390x-large
-      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-s390x
-      podvm_image: ${{ needs.podvm_mkosi_s390x.outputs.qcow2_oras_image }}
-      git_ref: ${{ inputs.git_ref }}
-      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-s390x
-      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
-    secrets:
-      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
-
-  # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
+  # Run libvirt amd64 e2e tests with Ubuntu image
   libvirt_ubuntu_amd64:
-    name: E2E tests on libvirt, with the mkosi_ubuntu podvm image for the amd64 architecture
+    name: Libvirt Ubuntu amd64 E2E
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
@@ -293,15 +273,34 @@ jobs:
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
-  # Run libvirt s390x e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
-  libvirt_ubuntu_s390x:
-    name: E2E tests on libvirt, with the mkosi_ubuntu podvm image for the s390x architecture
+  # Libvirt s390x E2E tests (requires self-hosted runner)
+  libvirt_s390x:
+    name: Libvirt s390x E2E (self-hosted)
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
-    needs: [podvm_ubuntu_s390x, libvirt_e2e_arch_prep, caa_image_s390x, peerpod_ctrl_image_s390x, webhook_image]
+    needs: [podvm_mkosi_s390x, caa_image_s390x, peerpod_ctrl_image_s390x, webhook_image]
+    uses: ./.github/workflows/e2e_libvirt.yaml
+    with:
+      runner: s390x-large
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-s390x
+      podvm_image: ${{ needs.podvm_mkosi_s390x.outputs.qcow2_oras_image }}
+      git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-s390x
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
+    secrets:
+      REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
+
+  libvirt_ubuntu_s390x:
+    name: Libvirt Ubuntu s390x E2E (self-hosted)
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
+    needs: [podvm_ubuntu_s390x, caa_image_s390x, peerpod_ctrl_image_s390x, webhook_image]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: s390x-large
@@ -313,7 +312,7 @@ jobs:
     secrets:
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
 
-  # Run BYOM e2e tests if pull request labeled 'test_e2e_byom'
+  # BYOM E2E tests
   byom:
     name: byom
     if: |
@@ -328,3 +327,4 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
       peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
       webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
+      
