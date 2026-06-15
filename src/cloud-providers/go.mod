@@ -10,9 +10,9 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2 v2.2.1
 	github.com/IBM-Cloud/power-go-client v1.15.0
-	github.com/IBM/go-sdk-core/v5 v5.21.2
-	github.com/IBM/platform-services-go-sdk v0.97.4
-	github.com/IBM/vpc-go-sdk v0.83.2
+	github.com/IBM/go-sdk-core/v5 v5.21.4
+	github.com/IBM/platform-services-go-sdk v0.99.0
+	github.com/IBM/vpc-go-sdk v0.84.0
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.10
 	github.com/alibabacloud-go/tea v1.3.8
 	github.com/alibabacloud-go/vpc-20160428/v6 v6.12.5
