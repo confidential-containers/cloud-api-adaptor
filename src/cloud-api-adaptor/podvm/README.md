@@ -36,9 +36,9 @@ Likewise `TEE_PLATFORM=az-cvm-vtpm` will enable support for Azure vTPM attesters
 
 Refer to the following [doc](https://github.com/confidential-containers/guest-components/tree/main?tab=readme-ov-file#build) for accepted values of TEE_PLATFORM.
 
-#### Building Ubuntu 24.04 images
+#### Building Ubuntu 26.04 images
 
-By default, Fedora images are built. To build Ubuntu 24.04 images:
+By default, Fedora images are built. To build Ubuntu 26.04 images:
 
 ```sh
 PODVM_DISTRO=ubuntu make # rebuild builder, binaries and OS image for Ubuntu
