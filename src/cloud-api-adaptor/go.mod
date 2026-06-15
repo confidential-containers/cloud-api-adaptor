@@ -7,9 +7,9 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20230120122421-afb48116b8f1
 	github.com/IBM-Cloud/power-go-client v1.15.0 // indirect
-	github.com/IBM/go-sdk-core/v5 v5.21.2
-	github.com/IBM/platform-services-go-sdk v0.97.4 // indirect
-	github.com/IBM/vpc-go-sdk v0.83.2
+	github.com/IBM/go-sdk-core/v5 v5.21.4
+	github.com/IBM/platform-services-go-sdk v0.99.0 // indirect
+	github.com/IBM/vpc-go-sdk v0.84.0
 	github.com/aws/aws-sdk-go-v2 v1.41.12
 	github.com/aws/aws-sdk-go-v2/config v1.32.23
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.22 // indirect
