@@ -170,7 +170,7 @@ jobs:
           cd oras
           cp ../build/podvm-*.qcow2 .
           tar cJf podvm.tar.xz podvm-*.qcow2
-          image=${REGISTRY}/podvm-generic-fedora
+          image=${REGISTRY}/podvm-generic-ubuntu
           if [ "${DEBUG}" = "true" ]; then
             image=${image}-debug
           fi
