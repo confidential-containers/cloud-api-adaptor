@@ -57,12 +57,6 @@ on:
       qcow2_oras_image:
         description: The location of the qcow2 oras container this workflow pushed
         value: ${{ jobs.build-image.outputs.qcow2_oras_image }}
-      docker_oci_image:
-        description: The location of the docker oci container image this workflow pushed
-        value: ${{ jobs.build-image.outputs.docker_oci_image }}
-      byom_e2e_image:
-        description: The location of the BYOM e2e container image
-        value: ${{ jobs.build-image.outputs.byom_e2e_image }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-mkosi-ubuntu-${{ toJSON(inputs) }}
@@ -86,8 +80,6 @@ jobs:
       artifact-metadata: write # Required by actions/attest to write attestation metadata
     outputs:
       qcow2_oras_image: ${{ steps.publish_oras_qcow2.outputs.image }}:${{ steps.publish_oras_qcow2.outputs.tag }}
-      docker_oci_image: ${{ steps.build_docker_oci.outputs.image }}
-      byom_e2e_image: ${{ steps.build_byom_e2e.outputs.image }}
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -160,17 +152,6 @@ jobs:
           REGISTRY: ${{ inputs.registry }}
           PODVM_TAG: ${{ inputs.image_tag }}
 
-      - name: Build and push BYOM binaries image
-        working-directory: src/cloud-api-adaptor/podvm
-        run: |
-          make podvm-byom-binaries-image
-          make push-podvm-byom-binaries-image
-        env:
-          ARCH: ${{ inputs.arch }}
-          PODVM_DISTRO: ubuntu
-          REGISTRY: ${{ inputs.registry }}
-          PODVM_TAG: ${{ inputs.image_tag }}
-
       - name: Build mkosi debug image
         if: ${{ inputs.debug == true }}
         working-directory: src/cloud-api-adaptor/podvm
@@ -224,40 +205,3 @@ jobs:
           subject-name: ${{ steps.publish_oras_qcow2.outputs.image }}
           subject-digest: ${{ steps.publish_oras_qcow2.outputs.digest }}
           push-to-registry: true
-
-      - name: Clean up some space for the docker podvm image build
-        working-directory: src/cloud-api-adaptor/podvm
-        run: |
-          sudo du --max-depth=2 /home/runner || true
-          sudo du --max-depth=2 /var/lib || true
-          sudo rm -rf ./build
-          sudo rm -rf ./mkosi.cache
-
-      - name: Build and push image for docker podvm image
-        id: build_docker_oci
-        working-directory: src/cloud-api-adaptor/podvm
-        run: |
-          tag=$(git rev-parse --short HEAD)
-          PODVM_TAG=${tag} make image-container
-          PODVM_TAG=${tag} make push-image-container
-          arch=$(uname -m)
-          arch=${arch/x86_64/amd64}
-          echo "image=${REGISTRY}/podvm-docker-image-${arch}:${tag}" >> "$GITHUB_OUTPUT"
-        env:
-          REGISTRY: ${{ inputs.registry }}
-          PODVM_DISTRO: ubuntu
-
-      - name: Build and push BYOM e2e image
-        id: build_byom_e2e
-        working-directory: src/cloud-api-adaptor/podvm
-        run: |
-          # Build BYOM e2e image (depends on docker image built in previous step)
-          PODVM_TAG=${IMAGE_TAG} make image-byom-e2e-container
-          PODVM_TAG=${IMAGE_TAG} make push-image-byom-e2e-container
-          arch=$(uname -m)
-          arch=${arch/x86_64/amd64}
-          echo "image=${REGISTRY}/podvm-byom-e2e-image-${arch}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-        env:
-          IMAGE_TAG: ${{ inputs.image_tag }}
-          REGISTRY: ${{ inputs.registry }}
-          PODVM_DISTRO: ubuntu

@@ -8,7 +8,9 @@ on:
   workflow_call:
     inputs:
       podvm_image:
-        required: true
+        description: The podvm image to use. If not provided, will build locally.
+        required: false
+        default: ''
         type: string
       caa_image:
         type: string
@@ -45,7 +47,6 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       CAA_IMAGE: "${{ inputs.caa_image }}"
-      BYOM_PODVM_IMAGE: "${{ inputs.podvm_image }}"
       PEERPOD_CTRL_IMAGE: "${{ inputs.peerpod_ctrl_image }}"
       WEBHOOK_IMAGE: "${{ inputs.webhook_image }}"
     steps:
@@ -91,6 +92,34 @@ jobs:
           sudo mv linux-amd64/helm /usr/local/bin/helm
           rm -rf helm.tar.gz linux-amd64
           helm version
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+
+      - name: Build podvm binaries
+        working-directory: src/cloud-api-adaptor/podvm
+        run: |
+          make podvm-binaries
+        env:
+          ARCH: amd64
+          PODVM_DISTRO: ubuntu
+
+      - name: Build docker podvm image
+        working-directory: src/cloud-api-adaptor/podvm
+        run: |
+          tag=$(git rev-parse --short HEAD)
+          PODVM_TAG=${tag} make image-container
+        env:
+          PODVM_DISTRO: ubuntu
+
+      - name: Build BYOM e2e image
+        working-directory: src/cloud-api-adaptor/podvm
+        run: |
+          tag=$(git rev-parse --short HEAD)
+          PODVM_TAG=${tag} make image-byom-e2e-container
+          echo "BYOM_PODVM_IMAGE=quay.io/confidential-containers/podvm-byom-e2e-image-amd64:${tag}" >> "$GITHUB_ENV"
+        env:
+          PODVM_DISTRO: ubuntu
 
       - name: Generate SSH keys for BYOM
         run: |
