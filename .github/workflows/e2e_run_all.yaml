@@ -320,11 +320,10 @@ jobs:
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_byom')
-    needs: [podvm_ubuntu_amd64, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
+    needs: [caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
     uses: ./.github/workflows/e2e_byom.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
-      podvm_image: ${{ needs.podvm_ubuntu_amd64.outputs.byom_e2e_image }}
       git_ref: ${{ inputs.git_ref }}
       peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
       webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
