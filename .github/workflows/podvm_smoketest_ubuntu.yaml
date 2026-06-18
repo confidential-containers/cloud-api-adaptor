@@ -79,6 +79,7 @@ jobs:
     needs: build
 
     strategy:
+      fail-fast: false
       matrix:
         test-mode:
           - name: podvm-ubuntu
