@@ -71,10 +71,10 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2 v2.2.1 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
-	github.com/IBM-Cloud/power-go-client v1.15.0 // indirect
-	github.com/IBM/go-sdk-core/v5 v5.21.2 // indirect
-	github.com/IBM/platform-services-go-sdk v0.97.4 // indirect
-	github.com/IBM/vpc-go-sdk v0.83.2 // indirect
+	github.com/IBM-Cloud/power-go-client v1.16.0 // indirect
+	github.com/IBM/go-sdk-core/v5 v5.21.4 // indirect
+	github.com/IBM/platform-services-go-sdk v0.99.1 // indirect
+	github.com/IBM/vpc-go-sdk v0.85.0 // indirect
 	github.com/avast/retry-go/v4 v4.6.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.12 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.23 // indirect
@@ -95,7 +95,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
-	github.com/go-openapi/errors v0.22.6 // indirect
+	github.com/go-openapi/errors v0.22.7 // indirect
 	github.com/go-openapi/jsonpointer v0.21.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/strfmt v0.25.0 // indirect
