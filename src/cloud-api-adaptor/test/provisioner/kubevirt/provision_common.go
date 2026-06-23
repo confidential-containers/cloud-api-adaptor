@@ -75,7 +75,7 @@ func NewKubeVirtProvisioner(properties map[string]string) (pv.CloudProvisioner, 
 	serPath, err := expandUser(properties["path_to_serviceconfig"])
 	if err != nil {
 		log.Infof("path_to_serviceconfig Path was not found")
-		return nil, nil
+		return nil, err
 	}
 	properties["path_to_serviceconfig"] = serPath
 

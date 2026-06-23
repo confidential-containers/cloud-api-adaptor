@@ -4,6 +4,7 @@
 package kubevirt
 
 import (
+	"context"
 	"fmt"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -296,7 +297,7 @@ func TestCreateVM(t *testing.T) {
 					},
 				}
 
-				createvm, err := providerClient.CreateVM(vm, "testvm")
+				createvm, err := providerClient.CreateVM(context.Background(), vm, "testvm")
 
 				if tt.wantError {
 					if err == nil {
@@ -388,7 +389,7 @@ func TestDeleteVM(t *testing.T) {
 
 				namespace := "default"
 
-				err = providerClient.DeleteVM(namespace, tt.vmname)
+				err = providerClient.DeleteVM(context.Background(), namespace, tt.vmname)
 
 				if tt.wantError {
 					if err == nil {
@@ -477,7 +478,7 @@ func TestGetPodVM(t *testing.T) {
 				namespace := "default"
 				vmname := "testvm"
 
-				createvmi, err := providerClient.GetPodVM(namespace, vmname)
+				createvmi, err := providerClient.GetPodVM(context.Background(), namespace, vmname)
 
 				if tt.wantError {
 					if err == nil {
@@ -564,7 +565,7 @@ func TestGetVM(t *testing.T) {
 
 				namespace := "default"
 
-				getvm, err := providerClient.GetVM(namespace, tt.targetuid)
+				getvm, err := providerClient.GetVM(context.Background(), namespace, tt.targetuid)
 
 				if tt.wantError {
 					if err == nil {
@@ -587,7 +588,7 @@ func TestGetVM(t *testing.T) {
 	}
 }
 
-func TestGetservice(t *testing.T) {
+func TestCreateService(t *testing.T) {
 	tests := []struct {
 		name              string
 		kubeconfigContent string
@@ -596,17 +597,17 @@ func TestGetservice(t *testing.T) {
 		wantError         bool
 	}{
 		{
-			name:              "GetServiceSuccess",
+			name:              "CreateServiceSuccess",
 			kubeconfigContent: validkubeconfig,
 			shouldCreateFile:  true,
-			handler:           HandleGetServiceSuccess,
+			handler:           HandleCreateServiceSuccess,
 			wantError:         false,
 		},
 		{
-			name:              "GetServiceFailed",
+			name:              "CreateServiceFailed",
 			kubeconfigContent: validkubeconfig,
 			shouldCreateFile:  true,
-			handler:           HandleGetServiceFailed,
+			handler:           HandleCreateServiceFailed,
 			wantError:         true,
 		},
 	}
@@ -650,7 +651,7 @@ func TestGetservice(t *testing.T) {
 
 				namespace := "default"
 
-				createservice, err := k8sClient.Getservice(namespace, service)
+				createservice, err := k8sClient.CreateService(context.Background(), namespace, service)
 
 				if tt.wantError {
 					if err == nil {
@@ -737,7 +738,7 @@ func TestDeleteService(t *testing.T) {
 
 				namespace := "default"
 
-				err = k8sClient.DeleteService(namespace, tt.servicename)
+				err = k8sClient.DeleteService(context.Background(), namespace, tt.servicename)
 
 				if tt.wantError {
 					if err == nil {
@@ -813,7 +814,7 @@ func TestCreateSecret(t *testing.T) {
 				namespace := "default"
 				instancename := "testvm"
 				cloudConfigData := "username: testname"
-				_, err = k8sClient.CreateSecret(namespace, instancename, cloudConfigData)
+				_, err = k8sClient.CreateSecret(context.Background(), namespace, instancename, cloudConfigData)
 
 				if tt.wantError {
 					if err == nil {
@@ -899,7 +900,7 @@ func TestDeleteSecret(t *testing.T) {
 
 				namespace := "default"
 
-				err = k8sClient.DeleteSecret(namespace, tt.vmname)
+				err = k8sClient.DeleteSecret(context.Background(), namespace, tt.vmname)
 
 				if tt.wantError {
 					if err == nil {
@@ -1313,7 +1314,7 @@ func HandleGetInstanceNotIPAddress(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func HandleGetServiceSuccess(w http.ResponseWriter, r *http.Request) {
+func HandleCreateServiceSuccess(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "POST" {
 		w.WriteHeader(http.StatusOK)
@@ -1370,7 +1371,7 @@ func HandleGetServiceSuccess(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func HandleGetServiceFailed(w http.ResponseWriter, r *http.Request) {
+func HandleCreateServiceFailed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "POST" {
 		w.WriteHeader(http.StatusUnauthorized)
