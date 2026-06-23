@@ -305,7 +305,7 @@ func TestCreateInstance(t *testing.T) {
 			secrethandler:        HandleCreateSecretSuccess,
 			createhandler:        HandleCreateVMSuccess,
 			podhandler:           HandleGetInstanceSuccess,
-			servicehandler:       HandleGetServiceSuccess,
+			servicehandler:       HandleCreateServiceSuccess,
 			wantError:            false,
 		},
 		{
@@ -321,7 +321,7 @@ func TestCreateInstance(t *testing.T) {
 			secrethandler:        HandleCreateSecretSuccess,
 			createhandler:        HandleCreateVMSuccess,
 			podhandler:           HandleGetInstanceSuccess,
-			servicehandler:       HandleGetServiceFailed,
+			servicehandler:       HandleCreateServiceFailed,
 			wantError:            true,
 		},
 	}

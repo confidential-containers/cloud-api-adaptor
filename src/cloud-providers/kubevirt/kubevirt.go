@@ -61,7 +61,7 @@ func NewKubernetesClient() (*K8sclient, error) {
 }
 
 // CreateVM creates a new VirtualMachine
-func (c *Virtclient) CreateVM(vm *kubevirtv1.VirtualMachine, vmname string) (*kubevirtv1.VirtualMachine, error) {
+func (c *Virtclient) CreateVM(ctx context.Context, vm *kubevirtv1.VirtualMachine, vmname string) (*kubevirtv1.VirtualMachine, error) {
 	vm.Name = vmname
 
 	cloudInitSource := kubevirtv1.CloudInitNoCloudSource{
@@ -90,7 +90,7 @@ func (c *Virtclient) CreateVM(vm *kubevirtv1.VirtualMachine, vmname string) (*ku
 
 	vm.Spec.Template.Spec.Domain.Devices.Disks = append(vm.Spec.Template.Spec.Domain.Devices.Disks, cloudInitDisk)
 
-	createvm, err := c.client.VirtualMachine(vm.Namespace).Create(context.Background(), vm, metav1.CreateOptions{})
+	createvm, err := c.client.VirtualMachine(vm.Namespace).Create(ctx, vm, metav1.CreateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create VirtualMachine: %w", err)
 	}
@@ -98,10 +98,10 @@ func (c *Virtclient) CreateVM(vm *kubevirtv1.VirtualMachine, vmname string) (*ku
 }
 
 // Used to retrieve PodVM information after the VirtualMachine is launched.
-func (c *Virtclient) GetPodVM(namespace string, vmname string) (*kubevirtv1.VirtualMachineInstance, error) {
+func (c *Virtclient) GetPodVM(ctx context.Context, namespace string, vmname string) (*kubevirtv1.VirtualMachineInstance, error) {
 	var currentvmi *kubevirtv1.VirtualMachineInstance
 
-	err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
 		vmi, err := c.client.VirtualMachineInstance(namespace).Get(ctx, vmname, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
@@ -125,8 +125,8 @@ func (c *Virtclient) GetPodVM(namespace string, vmname string) (*kubevirtv1.Virt
 }
 
 // Build the service and return its information.
-func (c *K8sclient) Getservice(namespace string, service *corev1.Service) (*corev1.Service, error) {
-	createservice, err := c.client.CoreV1().Services(namespace).Create(context.TODO(), service, metav1.CreateOptions{})
+func (c *K8sclient) CreateService(ctx context.Context, namespace string, service *corev1.Service) (*corev1.Service, error) {
+	createservice, err := c.client.CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create Service: %w", err)
 	}
@@ -134,8 +134,8 @@ func (c *K8sclient) Getservice(namespace string, service *corev1.Service) (*core
 }
 
 // GetVM verifies that the VirtualMachine to be deleted exists.
-func (c *Virtclient) GetVM(namespace string, targetUID string) (*kubevirtv1.VirtualMachine, error) {
-	vmlist, err := c.client.VirtualMachine(namespace).List(context.Background(), metav1.ListOptions{})
+func (c *Virtclient) GetVM(ctx context.Context, namespace string, targetUID string) (*kubevirtv1.VirtualMachine, error) {
+	vmlist, err := c.client.VirtualMachine(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to list VMs in Namespace '%s': %w", namespace, err)
 	}
@@ -148,8 +148,8 @@ func (c *Virtclient) GetVM(namespace string, targetUID string) (*kubevirtv1.Virt
 }
 
 // DeleteVM deletes the target VirtualMachine.
-func (c *Virtclient) DeleteVM(namespace string, vmname string) error {
-	err := c.client.VirtualMachine(namespace).Delete(context.Background(), vmname, metav1.DeleteOptions{})
+func (c *Virtclient) DeleteVM(ctx context.Context, namespace string, vmname string) error {
+	err := c.client.VirtualMachine(namespace).Delete(ctx, vmname, metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to delete VM: %w", err)
 	}
@@ -157,8 +157,8 @@ func (c *Virtclient) DeleteVM(namespace string, vmname string) error {
 }
 
 // Delete the target service.
-func (c *K8sclient) DeleteService(namespace string, servicename string) error {
-	err := c.client.CoreV1().Services(namespace).Delete(context.TODO(), servicename, metav1.DeleteOptions{})
+func (c *K8sclient) DeleteService(ctx context.Context, namespace string, servicename string) error {
+	err := c.client.CoreV1().Services(namespace).Delete(ctx, servicename, metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to delete Service: %w", err)
 	}
@@ -166,7 +166,7 @@ func (c *K8sclient) DeleteService(namespace string, servicename string) error {
 }
 
 // CreateSecret creates a new Secret in the specified namespace.
-func (c *K8sclient) CreateSecret(namespace string, vmname string, cloudConfigData string) (*corev1.Secret, error) {
+func (c *K8sclient) CreateSecret(ctx context.Context, namespace string, vmname string, cloudConfigData string) (*corev1.Secret, error) {
 
 	secretData := map[string][]byte{
 		"userdata": []byte(cloudConfigData),
@@ -181,7 +181,7 @@ func (c *K8sclient) CreateSecret(namespace string, vmname string, cloudConfigDat
 		Data: secretData,
 	}
 
-	createdSecret, err := c.client.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	createdSecret, err := c.client.CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create Secret: %w", err)
 	}
@@ -189,8 +189,8 @@ func (c *K8sclient) CreateSecret(namespace string, vmname string, cloudConfigDat
 }
 
 // DeleteSecret delete a Secret in the specified namespace.
-func (c *K8sclient) DeleteSecret(namespace string, vmname string) error {
-	err := c.client.CoreV1().Secrets(namespace).Delete(context.TODO(), secretName(vmname), metav1.DeleteOptions{})
+func (c *K8sclient) DeleteSecret(ctx context.Context, namespace string, vmname string) error {
+	err := c.client.CoreV1().Secrets(namespace).Delete(ctx, secretName(vmname), metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to delete Secret: %w", err)
 	}

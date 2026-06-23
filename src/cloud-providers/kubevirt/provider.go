@@ -80,7 +80,7 @@ func (p *kubevirtProvider) CreateInstance(ctx context.Context, podname, sandboxI
 
 	vm := p.vmtemplate.DeepCopy()
 
-	_, err = p.kubernetesClient.CreateSecret(vm.Namespace, instancename, cloudConfigData)
+	_, err = p.kubernetesClient.CreateSecret(ctx, vm.Namespace, instancename, cloudConfigData)
 	if err != nil {
 		logger.Printf("Failed to create cloud-init Secret: %v", err)
 		return nil, err
@@ -88,13 +88,13 @@ func (p *kubevirtProvider) CreateInstance(ctx context.Context, podname, sandboxI
 
 	logger.Printf("Successfully create Secret")
 
-	createvm, err := p.kubevirtClient.CreateVM(vm, instancename)
+	createvm, err := p.kubevirtClient.CreateVM(ctx, vm, instancename)
 	if err != nil {
 		logger.Printf("Failed to CreateVM %s: %v", instancename, err)
 		return nil, err
 	}
 
-	createvmi, err := p.kubevirtClient.GetPodVM(createvm.Namespace, createvm.Name)
+	createvmi, err := p.kubevirtClient.GetPodVM(ctx, createvm.Namespace, createvm.Name)
 	if err != nil {
 		logger.Printf("Failed to GetPodVM %s: %v", instancename, err)
 		return nil, err
@@ -116,7 +116,7 @@ func (p *kubevirtProvider) CreateInstance(ctx context.Context, podname, sandboxI
 	if p.serviceConfig.serviceconfigfile != "" {
 		service := p.servicetemplate.DeepCopy()
 
-		createservice, err := p.kubernetesClient.Getservice(service.Namespace, service)
+		createservice, err := p.kubernetesClient.CreateService(ctx, service.Namespace, service)
 		if err != nil {
 			logger.Printf("Failed to create Service %s: %v", service.Name, err)
 			return nil, err
@@ -150,27 +150,27 @@ func (p *kubevirtProvider) CreateInstance(ctx context.Context, podname, sandboxI
 func (p *kubevirtProvider) DeleteInstance(ctx context.Context, instanceID string) error {
 	logger.Printf("Deleting instance: %s", instanceID)
 
-	getvm, err := p.kubevirtClient.GetVM(p.vmtemplate.Namespace, instanceID)
+	getvm, err := p.kubevirtClient.GetVM(ctx, p.vmtemplate.Namespace, instanceID)
 	if err != nil {
 		logger.Printf("Failed to get VM %s: %v", instanceID, err)
 		return err
 	}
 
-	err = p.kubevirtClient.DeleteVM(getvm.Namespace, getvm.Name)
+	err = p.kubevirtClient.DeleteVM(ctx, getvm.Namespace, getvm.Name)
 	if err != nil {
 		logger.Printf("Failed to delete VM %s: %v", getvm.Name, err)
 		return err
 	}
 
 	if p.serviceConfig.serviceconfigfile != "" {
-		err = p.kubernetesClient.DeleteService(p.servicetemplate.Namespace, p.servicetemplate.Name)
+		err = p.kubernetesClient.DeleteService(ctx, p.servicetemplate.Namespace, p.servicetemplate.Name)
 		if err != nil {
 			logger.Printf("Failed to delete Service %s: %v", p.servicetemplate.Name, err)
 			return err
 		}
 	}
 
-	err = p.kubernetesClient.DeleteSecret(p.vmtemplate.Namespace, getvm.Name)
+	err = p.kubernetesClient.DeleteSecret(ctx, p.vmtemplate.Namespace, getvm.Name)
 	if err != nil {
 		logger.Printf("Failed to delete cloud-init Secret: %v", err)
 		return err
