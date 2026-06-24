@@ -255,6 +255,24 @@ func (r *FlagRegistrar) UintWithEnv(field *uint, flagName string, hardcodedDefau
 	r.flags.UintVar(field, flagName, *field, usage)
 }
 
+// Uint64WithEnv registers a uint64 flag with environment variable support.
+// Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
+func (r *FlagRegistrar) Uint64WithEnv(field *uint64, flagName string, hardcodedDefault uint64, envVarName, usage string, opts ...FlagOption) {
+	_ = applyOptions(opts) // metadata-only, used by config-extractor
+
+	*field = hardcodedDefault
+
+	if envVarName != "" {
+		if envValue, exists := os.LookupEnv(envVarName); exists && envValue != "" {
+			if uintVal, err := strconv.ParseUint(envValue, 10, 64); err == nil {
+				*field = uintVal
+			}
+		}
+	}
+
+	r.flags.Uint64Var(field, flagName, *field, usage)
+}
+
 // Float64WithEnv registers a float64 flag with environment variable support.
 // Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
 func (r *FlagRegistrar) Float64WithEnv(field *float64, flagName string, hardcodedDefault float64, envVarName, usage string, opts ...FlagOption) {

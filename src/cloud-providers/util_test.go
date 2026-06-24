@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"reflect"
@@ -755,6 +756,90 @@ func TestSelectInstanceTypeToUse(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("SelectInstanceTypeToUse() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUint64WithEnv(t *testing.T) {
+	tests := []struct {
+		name        string
+		envName     string
+		envValue    string
+		setEnv      bool
+		flagValue   string
+		setFlag     bool
+		hardDefault uint64
+		expectedVal uint64
+	}{
+		{
+			name:        "uses hardcoded default when no env or flag",
+			hardDefault: 10,
+			expectedVal: 10,
+		},
+		{
+			name:        "env var overrides hardcoded default",
+			envName:     "TEST_UINT64_SIZE",
+			envValue:    "20",
+			setEnv:      true,
+			hardDefault: 10,
+			expectedVal: 20,
+		},
+		{
+			name:        "invalid env var silently falls back to hardcoded default",
+			envName:     "TEST_UINT64_SIZE",
+			envValue:    "abc",
+			setEnv:      true,
+			hardDefault: 10,
+			expectedVal: 10,
+		},
+		{
+			name:        "empty env var uses hardcoded default",
+			envName:     "TEST_UINT64_SIZE",
+			envValue:    "",
+			setEnv:      true,
+			hardDefault: 10,
+			expectedVal: 10,
+		},
+		{
+			name:        "flag overrides env var",
+			envName:     "TEST_UINT64_SIZE",
+			envValue:    "20",
+			setEnv:      true,
+			flagValue:   "30",
+			setFlag:     true,
+			hardDefault: 10,
+			expectedVal: 30,
+		},
+		{
+			name:        "max uint64 value",
+			envName:     "TEST_UINT64_SIZE",
+			envValue:    "18446744073709551615",
+			setEnv:      true,
+			hardDefault: 10,
+			expectedVal: 18446744073709551615,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(tt.envName, tt.envValue)
+			}
+
+			var field uint64
+			flags := flag.NewFlagSet("test", flag.ContinueOnError)
+			reg := NewFlagRegistrar(flags)
+			reg.Uint64WithEnv(&field, "test-uint64", tt.hardDefault, tt.envName, "test flag")
+
+			if tt.setFlag {
+				if err := flags.Set("test-uint64", tt.flagValue); err != nil {
+					t.Fatalf("failed to set flag: %v", err)
+				}
+			}
+
+			if field != tt.expectedVal {
+				t.Errorf("Uint64WithEnv() = %d, want %d", field, tt.expectedVal)
 			}
 		})
 	}
