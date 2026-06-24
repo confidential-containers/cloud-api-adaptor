@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/bits"
 	"time"
 
 	libvirt "libvirt.org/go/libvirt"
@@ -182,7 +183,34 @@ func newCopier(conn *libvirt.Connect, volume *libvirt.StorageVol, size uint64) f
 	return copier
 }
 
-func createVolume(volName string, volSize uint64, baseVolName string, libvirtClient *libvirtClient) (err error) {
+const bytesPerGiB = uint64(1024 * 1024 * 1024)
+
+// volumeCapacityBytes returns the capacity in bytes to use for a new volume.
+// It takes the larger of the requested size (converted from GiB) and the
+// backing image's actual capacity.
+//
+// If volSizeGiB is smaller than the backing image, the backing image's size
+// is used instead. This means operators cannot shrink below the base podvm
+// image size — a value of e.g. 5 GiB on a 10 GiB backing image will
+// silently produce a 10 GiB volume. This is intentional: a qcow2 overlay
+// must always be at least as large as its backing store.
+//
+// Returns an error if the GiB→bytes conversion overflows uint64.
+//
+// Extracted as a pure function so the GiB→bytes conversion and the floor
+// guard can be unit-tested independently of libvirt.
+func volumeCapacityBytes(volSizeGiB, backingCapacityBytes uint64) (uint64, error) {
+	hi, requested := bits.Mul64(volSizeGiB, bytesPerGiB)
+	if hi != 0 {
+		return 0, fmt.Errorf("root-disk-size %d GiB overflows uint64 when converted to bytes", volSizeGiB)
+	}
+	return max(requested, backingCapacityBytes), nil
+}
+
+// createVolume creates a qcow2 volume backed by baseVolName.
+// volSizeGiB is the requested size in GiB; libvirt uses the larger of this
+// value and the backing image's actual capacity.
+func createVolume(volName string, volSizeGiB uint64, baseVolName string, libvirtClient *libvirtClient) (err error) {
 	volumeDef := newDefVolume(volName)
 	volumeDef.Target.Format.Type = "qcow2"
 
@@ -199,11 +227,11 @@ func createVolume(volName string, volSize uint64, baseVolName string, libvirtCli
 		return fmt.Errorf("Can't retrieve volume info %s", baseVolName)
 	}
 
-	if baseVolumeInfo.Capacity > volSize {
-		volumeDef.Capacity.Value = baseVolumeInfo.Capacity
-	} else {
-		volumeDef.Capacity.Value = volSize
+	capacityBytes, err := volumeCapacityBytes(volSizeGiB, baseVolumeInfo.Capacity)
+	if err != nil {
+		return fmt.Errorf("invalid volume size: %w", err)
 	}
+	volumeDef.Capacity.Value = capacityBytes
 
 	backingStoreDef, err := newDefBackingStoreFromLibvirt(baseVolume)
 	if err != nil {

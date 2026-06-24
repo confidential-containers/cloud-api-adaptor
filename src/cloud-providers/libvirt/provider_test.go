@@ -90,6 +90,19 @@ func withLaunchSecurity(security string) func(*Config) {
 	return func(c *Config) { c.LaunchSecurity = security }
 }
 
+func withRootDiskSize(size uint64) func(*Config) {
+	return func(c *Config) { c.RootDiskSize = size }
+}
+
+// TestProviderRootDiskSizeWired verifies that RootDiskSize flows from Config
+// into the provider's service config (and from there into vmConfig at CreateInstance time).
+func TestProviderRootDiskSizeWired(t *testing.T) {
+	cfg := newTestConfig(withRootDiskSize(30))
+	p := &libvirtProvider{serviceConfig: cfg}
+
+	assert.Equal(t, uint64(30), p.serviceConfig.RootDiskSize)
+}
+
 func TestNewProvider(t *testing.T) {
 	t.Run("invalid URI", func(t *testing.T) {
 		config := newTestConfig(withURI(testInvalidURI))

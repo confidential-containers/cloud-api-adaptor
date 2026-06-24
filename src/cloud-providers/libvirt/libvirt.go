@@ -557,9 +557,19 @@ func getDomainIPs(dom *libvirt.Domain) ([]netip.Addr, error) {
 	return ips, nil
 }
 
+// normalizeRootDiskSize returns size if non-zero, otherwise defaultRootDiskSize.
+// Extracted so the defaulting logic can be unit-tested without a live libvirt
+// connection.
+func normalizeRootDiskSize(size uint64) uint64 {
+	if size == 0 {
+		return defaultRootDiskSize
+	}
+	return size
+}
+
 func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig) (result *createDomainOutput, err error) {
 
-	v.rootDiskSize = uint64(10)
+	v.rootDiskSize = normalizeRootDiskSize(v.rootDiskSize)
 
 	exists, err := checkDomainExistsByName(v.name, libvirtClient)
 	if err != nil {

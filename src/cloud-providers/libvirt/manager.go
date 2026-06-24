@@ -25,6 +25,7 @@ const (
 	defaultFirmware       = "/usr/share/OVMF/OVMF_CODE_4M.fd"
 	defaultCPU            = "2"
 	defaultMemory         = "8192"
+	defaultRootDiskSize   = uint64(10)
 )
 
 func init() {
@@ -44,6 +45,7 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.UintWithEnv(&libvirtcfg.CPU, "cpu", 2, "LIBVIRT_CPU", "Number of processors allocated")
 	reg.UintWithEnv(&libvirtcfg.Memory, "memory", 8192, "LIBVIRT_MEMORY", "Amount of memory in MiB")
 	reg.StringWithEnv(&libvirtcfg.CPUSet, "cpuset", "", "LIBVIRT_CPUSET", "CPU set for pinning vCPUs to physical CPUs (e.g., \"0,2,4,6\" or \"0-3\" or \"0-3,8,10-12\")")
+	reg.Uint64WithEnv(&libvirtcfg.RootDiskSize, "root-disk-size", defaultRootDiskSize, "LIBVIRT_ROOT_DISK_SIZE", "Root disk size in GiB for the podVM")
 
 	// Flags without environment variable support (pass empty string for envVarName)
 	reg.StringWithEnv(&libvirtcfg.DataDir, "data-dir", defaultDataDir, "", "libvirt storage dir")
