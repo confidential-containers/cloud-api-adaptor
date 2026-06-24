@@ -23,6 +23,7 @@ func resetLibvirtConfig() {
 		CPU:            2,
 		Memory:         8192,
 		DisableCVM:     true,
+		RootDiskSize:   defaultRootDiskSize,
 	}
 }
 
@@ -47,6 +48,7 @@ func TestManagerParseCmdWithEnvVars(t *testing.T) {
 	t.Setenv("LIBVIRT_CPU", "8")
 	t.Setenv("LIBVIRT_MEMORY", "16384")
 	t.Setenv("DISABLECVM", "false")
+	t.Setenv("LIBVIRT_ROOT_DISK_SIZE", "20")
 
 	_, _ = setupManagerTest(t)
 
@@ -60,6 +62,7 @@ func TestManagerParseCmdWithEnvVars(t *testing.T) {
 	assert.Equal(t, uint(8), libvirtcfg.CPU)
 	assert.Equal(t, uint(16384), libvirtcfg.Memory)
 	assert.False(t, libvirtcfg.DisableCVM)
+	assert.Equal(t, uint64(20), libvirtcfg.RootDiskSize)
 }
 
 func TestManagerParseCmdFlagOverridesEnv(t *testing.T) {
@@ -120,6 +123,18 @@ func TestManagerParseCmdInvalidValues(t *testing.T) {
 			flagName:     "memory",
 			invalidValue: "-1",
 			description:  "negative memory value should be rejected",
+		},
+		{
+			name:         "invalid root-disk-size value",
+			flagName:     "root-disk-size",
+			invalidValue: "notanumber",
+			description:  "non-numeric root-disk-size should be rejected",
+		},
+		{
+			name:         "negative root-disk-size value",
+			flagName:     "root-disk-size",
+			invalidValue: "-5",
+			description:  "negative root-disk-size should be rejected",
 		},
 	}
 
@@ -229,6 +244,7 @@ func TestDefaultConstants(t *testing.T) {
 	assert.Equal(t, "/usr/share/OVMF/OVMF_CODE_4M.fd", defaultFirmware)
 	assert.Equal(t, "2", defaultCPU)
 	assert.Equal(t, "8192", defaultMemory)
+	assert.Equal(t, uint64(10), defaultRootDiskSize)
 }
 
 func TestManagerParseCmdFlags(t *testing.T) {
@@ -309,6 +325,13 @@ func TestManagerParseCmdFlags(t *testing.T) {
 			expectedValue: false,
 			getActual:     func() interface{} { return libvirtcfg.DisableCVM },
 		},
+		{
+			name:          "root-disk-size flag",
+			flagName:      "root-disk-size",
+			flagValue:     "20",
+			expectedValue: uint64(20),
+			getActual:     func() interface{} { return libvirtcfg.RootDiskSize },
+		},
 	}
 
 	for _, tc := range tests {
@@ -321,4 +344,15 @@ func TestManagerParseCmdFlags(t *testing.T) {
 			assert.Equal(t, tc.expectedValue, tc.getActual())
 		})
 	}
+}
+
+// TestManagerRootDiskSizeInvalidEnv is an integration-level guard that exercises the
+// full ParseCmd path (setupManagerTest → ParseCmd → libvirtcfg global) with an invalid
+// env var.  TestUint64WithEnv covers the util helper in isolation; this test verifies
+// that the wiring in manager.go also degrades gracefully.
+func TestManagerRootDiskSizeInvalidEnv(t *testing.T) {
+	t.Setenv("LIBVIRT_ROOT_DISK_SIZE", "notanumber")
+	_, _ = setupManagerTest(t)
+	assert.Equal(t, defaultRootDiskSize, libvirtcfg.RootDiskSize,
+		"invalid LIBVIRT_ROOT_DISK_SIZE env var must silently fall back to default (%d GiB)", defaultRootDiskSize)
 }

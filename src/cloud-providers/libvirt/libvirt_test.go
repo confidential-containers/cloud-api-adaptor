@@ -1181,3 +1181,115 @@ func TestVerifyDomainXMLIOMMU(t *testing.T) {
 		})
 	}
 }
+
+// TestNormalizeRootDiskSize calls the production helper directly so that any
+// change to the defaulting logic in CreateDomain is automatically caught here.
+func TestNormalizeRootDiskSize(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    uint64
+		expected uint64
+	}{
+		{"zero returns default", 0, defaultRootDiskSize},
+		{"explicit 20 GiB preserved", 20, 20},
+		{"minimum 1 GiB preserved", 1, 1},
+		{"large 500 GiB preserved", 500, 500},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, normalizeRootDiskSize(tc.input))
+		})
+	}
+}
+
+// TestVolumeCapacityBytes calls the production helper directly and covers the
+// GiB→bytes conversion, the backing-image floor guard, and overflow detection.
+func TestVolumeCapacityBytes(t *testing.T) {
+	const gib = uint64(1024 * 1024 * 1024)
+
+	testCases := []struct {
+		name                 string
+		volSizeGiB           uint64
+		backingCapacityBytes uint64
+		expectedBytes        uint64
+		wantErr              bool
+	}{
+		{
+			name:                 "requested size larger than backing image",
+			volSizeGiB:           20,
+			backingCapacityBytes: 10 * gib,
+			expectedBytes:        20 * gib,
+		},
+		{
+			name:                 "backing image larger than requested size",
+			volSizeGiB:           10,
+			backingCapacityBytes: 15 * gib,
+			expectedBytes:        15 * gib,
+		},
+		{
+			name:                 "requested size equal to backing image",
+			volSizeGiB:           10,
+			backingCapacityBytes: 10 * gib,
+			expectedBytes:        10 * gib,
+		},
+		{
+			name:                 "GiB to bytes conversion is correct",
+			volSizeGiB:           1,
+			backingCapacityBytes: 0,
+			expectedBytes:        gib,
+		},
+		{
+			// uint64 overflows at volSizeGiB >= 17179869184 (16 EiB).
+			// max uint64 (18446744073709551615) is well above that threshold.
+			name:       "max uint64 GiB overflows",
+			volSizeGiB: ^uint64(0),
+			wantErr:    true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := volumeCapacityBytes(tc.volSizeGiB, tc.backingCapacityBytes)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectedBytes, got)
+			}
+		})
+	}
+}
+
+// TestNewDefVolumeCapacity verifies that newDefVolume creates a volume definition
+// with the expected initial capacity.
+func TestNewDefVolumeCapacity(t *testing.T) {
+	testCases := []struct {
+		name         string
+		volName      string
+		expectedUnit string
+	}{
+		{
+			name:         "root volume has bytes capacity unit",
+			volName:      "podvm-root.qcow2",
+			expectedUnit: "bytes",
+		},
+		{
+			name:         "cloudinit volume has bytes capacity unit",
+			volName:      "podvm-cloudinit.iso",
+			expectedUnit: "bytes",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			vol := newDefVolume(tc.volName)
+
+			require.NotNil(t, vol.Capacity, "volume capacity should not be nil")
+			assert.Equal(t, tc.expectedUnit, vol.Capacity.Unit,
+				"volume capacity unit should be bytes")
+			assert.Equal(t, "qcow2", vol.Target.Format.Type,
+				"volume format should be qcow2")
+			assert.Equal(t, tc.volName, vol.Name,
+				"volume name should match input")
+		})
+	}
+}
