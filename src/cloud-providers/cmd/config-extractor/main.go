@@ -173,6 +173,11 @@ func exprToLiteral(expr ast.Expr) (string, bool) {
 				return "-" + val, true
 			}
 		}
+	case *ast.CallExpr:
+		// Handle type-conversion expressions like uint64(10) used in const declarations.
+		if len(e.Args) == 1 {
+			return exprToLiteral(e.Args[0])
+		}
 	}
 	return "", false
 }
@@ -207,6 +212,8 @@ func extractFlagRegistrarCall(call *ast.CallExpr, fset *token.FileSet, constants
 			flagType = "int"
 		case "UintWithEnv":
 			flagType = "uint"
+		case "Uint64WithEnv":
+			flagType = "uint64"
 		case "Float64WithEnv":
 			flagType = "float64"
 		case "BoolWithEnv":
@@ -300,6 +307,13 @@ func exprToString(expr ast.Expr, constants map[string]string) string {
 		// Handle negative numbers
 		if e.Op == token.SUB {
 			return "-" + exprToString(e.X, constants)
+		}
+	case *ast.CallExpr:
+		// Handle type-conversion expressions like uint64(10) or int(5).
+		// These appear when a const is declared as: defaultFoo = uint64(10)
+		// and passed directly as a flag default argument.
+		if len(e.Args) == 1 {
+			return exprToString(e.Args[0], constants)
 		}
 	}
 	return ""
