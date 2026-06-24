@@ -75,6 +75,10 @@ providerConfigs:
     # (default: "default")
     # LIBVIRT_POOL: "default"
 
+    # Root disk size in GiB for the podVM
+    # (default: "10")
+    # LIBVIRT_ROOT_DISK_SIZE: "10"
+
     # libvirt URI
     # (default: "qemu+ssh://root@192.168.122.1/system?no_verify=1")
     # LIBVIRT_URI: "qemu+ssh://root@192.168.122.1/system?no_verify=1"
