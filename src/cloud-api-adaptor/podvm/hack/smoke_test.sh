@@ -258,7 +258,7 @@ fi
 
 sudo virt-install \
 	--name "${VM_NAME}" \
-	--ram 1024 \
+	--ram 2048 \
 	--vcpus 2 \
 	--disk "path=${IMAGE},format=${FMT}" \
 	--disk "path=${WORKDIR}/cloud-init.iso,device=cdrom" \
