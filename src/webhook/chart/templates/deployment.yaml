@@ -25,40 +25,19 @@ spec:
       securityContext:
         runAsNonRoot: true
       containers:
-{{- if .Values.authProxy.enabled }}
-      - name: kube-rbac-proxy
-        image: {{ .Values.authProxy.image }}
-        args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=0
-        ports:
-        - containerPort: 8443
-          name: https
-          protocol: TCP
-        resources:
-{{- toYaml .Values.authProxy.resources | nindent 10 }}
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-{{- end }}
       - name: manager
         command:
         - /manager
         args:
         - --leader-elect
         - --health-probe-bind-address=:8081
-{{- if .Values.authProxy.enabled }}
-        - --metrics-bind-address=127.0.0.1:8080
-{{- else }}
-        - --metrics-bind-address=0.0.0.0:8080
-{{- end }}
+        - --metrics-bind-address=:8443
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
         - containerPort: 9443
           name: webhook-server
           protocol: TCP

@@ -93,18 +93,17 @@ subjects:
 - kind: ServiceAccount
   name: {{ .Values.namePrefix }}controller-manager
   namespace: {{ .Values.namespaceOverride | default .Release.Namespace }}
-{{- if .Values.authProxy.enabled }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: proxy-role
-    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/instance: metrics-auth-role
+    app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: peerpods-webhook
     app.kubernetes.io/part-of: peerpods-webhook
-  name: {{ .Values.namePrefix }}proxy-role
+  name: {{ .Values.namePrefix }}metrics-auth-role
 rules:
 - apiGroups:
   - authentication.k8s.io
@@ -124,15 +123,15 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     app.kubernetes.io/name: clusterrolebinding
-    app.kubernetes.io/instance: proxy-rolebinding
-    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/instance: metrics-auth-rolebinding
+    app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: peerpods-webhook
     app.kubernetes.io/part-of: peerpods-webhook
-  name: {{ .Values.namePrefix }}proxy-rolebinding
+  name: {{ .Values.namePrefix }}metrics-auth-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Values.namePrefix }}proxy-role
+  name: {{ .Values.namePrefix }}metrics-auth-role
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.namePrefix }}controller-manager
@@ -144,7 +143,7 @@ metadata:
   labels:
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/instance: metrics-reader
-    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: peerpods-webhook
     app.kubernetes.io/part-of: peerpods-webhook
   name: {{ .Values.namePrefix }}metrics-reader
@@ -153,4 +152,3 @@ rules:
   - "/metrics"
   verbs:
   - get
-{{- end }}

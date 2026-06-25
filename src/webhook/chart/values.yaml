@@ -36,20 +36,6 @@ webhook:
   # Webhook failure policy: Fail or Ignore
   failurePolicy: Fail
 
-# kube-rbac-proxy: Sidecar container that protects the /metrics endpoint with RBAC authentication
-# When enabled, only authenticated clients with proper RBAC permissions can access metrics
-# Set to false to expose metrics without authentication (not recommended for production)
-authProxy:
-  enabled: true
-  image: registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.14.0
-  resources:
-    limits:
-      cpu: 500m
-      memory: 128Mi
-    requests:
-      cpu: 5m
-      memory: 64Mi
-
 # Minimum TLS version for the webhook server. Accepts "VersionTLS12" or "VersionTLS13".
 # Defaults to Go's TLS default (TLS 1.2) when empty.
 # Injected by the operator from the cluster TLS profile via TLS_MIN_VERSION env var.
