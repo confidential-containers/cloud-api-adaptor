@@ -244,7 +244,18 @@ sudo qemu-img resize -f "${FMT}" "${IMAGE}" +1G
 echo "::debug:: Starting VM for test mode: $TEST_MODE"
 VM_NAME="smoketest_${IMAGE_SUFFIX}"
 # TODO: Add AAVMF for arm
-[ -e "/usr/share/OVMF/OVMF_CODE.fd" ] && OVMF="/usr/share/OVMF/OVMF_CODE.fd"
+# Set OVMF paths for UEFI boot
+if [ -e "/usr/share/OVMF/OVMF_CODE_4M.fd" ]; then
+	OVMF_CODE="/usr/share/OVMF/OVMF_CODE_4M.fd"
+	OVMF_VARS="/usr/share/OVMF/OVMF_VARS_4M.fd"
+	BOOT_OPTS="--boot loader=${OVMF_CODE},loader.readonly=yes,loader.type=pflash,nvram.template=${OVMF_VARS}"
+elif [ -e "/usr/share/OVMF/OVMF_CODE.fd" ]; then
+	OVMF_CODE="/usr/share/OVMF/OVMF_CODE.fd"
+	BOOT_OPTS="--boot loader=${OVMF_CODE}"
+else
+	BOOT_OPTS=""
+fi
+
 sudo virt-install \
 	--name "${VM_NAME}" \
 	--ram 1024 \
@@ -256,7 +267,7 @@ sudo virt-install \
 	--os-variant detect=on,require=off \
 	--graphics none \
 	--virt-type=kvm \
-	--boot loader="${OVMF}" \
+	${BOOT_OPTS} \
 	--transient \
 	--noautoconsole \
 	--channel unix,mode=bind,path=${WORKDIR}/${VM_NAME}.agent,target_type=virtio,name=org.qemu.guest_agent.0 \

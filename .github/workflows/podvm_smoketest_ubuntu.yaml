@@ -75,9 +75,7 @@ jobs:
 
   test:
     name: Test the image
-    # We're pinning the runner to 22.04 b/c libvirt struggles with the
-    # OVMF_CODE_4M firmware that is default on 24.04.
-    runs-on: 'ubuntu-22.04'
+    runs-on: 'ubuntu-24.04'
     needs: build
 
     strategy:
