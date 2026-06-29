@@ -139,9 +139,17 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 			}
 
 			diskID := ""
+			encryptType := ""
+			keyID := ""
 			if md, ok := mountInfo["metadata"].(map[string]interface{}); ok {
 				if cp, ok := md["cloud-volume-path"].(string); ok && cp != "" {
 					diskID = cp
+				}
+				if et, ok := md["encrypt-type"].(string); ok {
+					encryptType = et
+				}
+				if kid, ok := md["kbs-key-id"].(string); ok {
+					keyID = kid
 				}
 			}
 			if diskID == "" {
@@ -174,12 +182,14 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 
 			volKey := fmt.Sprintf("vol-%d", canonicalIdx)
 			cloudVolumes[volKey] = util.CloudVolumeAnnotation{
-				MountPoint: mountDest,
-				FSType:     fsType,
-				LUN:        fmt.Sprintf("%d", canonicalIdx),
-				DiskID:     diskID,
+				MountPoint:  mountDest,
+				FSType:      fsType,
+				LUN:         fmt.Sprintf("%d", canonicalIdx),
+				DiskID:      diskID,
+				EncryptType: encryptType,
+				KeyID:       keyID,
 			}
-			logger.Printf("Detected cloud volume %s -> %s (lun=%d, disk=%s, fs=%s)", volKey, mountDest, canonicalIdx, diskID, fsType)
+			logger.Printf("Detected cloud volume %s -> %s (lun=%d, disk=%s, fs=%s, encrypt=%s)", volKey, mountDest, canonicalIdx, diskID, fsType, encryptType)
 			canonicalIdx++
 		}
 	}
