@@ -4,10 +4,15 @@
 package probe
 
 import (
+	"context"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"syscall"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 var logger = log.New(log.Writer(), "[probe/probe] ", log.LstdFlags|log.Lmsgprefix)
@@ -43,7 +48,7 @@ func StartupHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func Start(socketPath string) {
+func Start(ctx context.Context, socketPath string) {
 	startTime = time.Now()
 
 	port := os.Getenv("PROBE_PORT")
@@ -63,10 +68,34 @@ func Start(socketPath string) {
 		RuntimeclassName: GetRuntimeclassName(),
 		SocketPath:       socketPath,
 	}
-	http.HandleFunc("/startup", StartupHandler)
-	err = http.ListenAndServe("127.0.0.1:"+port, nil)
-
+	lc := net.ListenConfig{
+		Control: func(network, address string, c syscall.RawConn) error {
+			return c.Control(func(fd uintptr) {
+				if err := unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1); err != nil {
+					logger.Printf("failed to set SO_REUSEPORT: %v", err)
+				}
+			})
+		},
+	}
+	ln, err := lc.Listen(ctx, "tcp", "127.0.0.1:"+port)
 	if err != nil {
+		logger.Printf("failed to listen on probe port: %s", err)
+		return
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/startup", StartupHandler)
+	server := &http.Server{Handler: mux}
+	serveCtx, serveCancel := context.WithCancel(ctx)
+	defer serveCancel()
+	go func() {
+		<-serveCtx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			logger.Printf("probe server shutdown error: %v", err)
+		}
+	}()
+	if err = server.Serve(ln); err != nil && err != http.ErrServerClosed {
 		logger.Printf("failed to start startup probe server, error %s", err)
 	}
 }
