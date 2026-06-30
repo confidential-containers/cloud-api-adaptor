@@ -47,10 +47,11 @@ type server struct {
 	stopOnce                sync.Once
 	enableCloudConfigVerify bool
 	PeerPodsLimitPerNode    int
+	ownerUID                string
+	isOwner                 bool
 }
 
 func NewServer(provider provider.Provider, cfg *cloud.ServerConfig, workerNode podnetwork.WorkerNode) Server {
-
 	logger.Printf("server config: %#v", cfg)
 
 	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout)
@@ -66,6 +67,7 @@ func NewServer(provider provider.Provider, cfg *cloud.ServerConfig, workerNode p
 		stopCh:                  make(chan struct{}),
 		enableCloudConfigVerify: cfg.EnableCloudConfigVerify,
 		PeerPodsLimitPerNode:    cfg.PeerPodsLimitPerNode,
+		ownerUID:                os.Getenv("POD_UID"),
 	}
 }
 
@@ -78,7 +80,7 @@ func (s *server) Start(ctx context.Context) (err error) {
 	}
 	// Advertise node resources
 	if k8sops.IsKubernetesEnvironment() {
-		err = k8sops.AdvertiseExtendedResources(s.PeerPodsLimitPerNode)
+		err = k8sops.AdvertiseExtendedResources(s.PeerPodsLimitPerNode, s.ownerUID)
 		if err != nil {
 			return err
 		}
@@ -138,7 +140,13 @@ func (s *server) Shutdown() error {
 		close(s.stopCh)
 	})
 
-	_ = k8sops.RemoveExtendedResources()
+	if k8sops.IsKubernetesEnvironment() {
+		isOwner, err := k8sops.RemoveExtendedResources(s.ownerUID)
+		if err != nil {
+			return err
+		}
+		s.isOwner = isOwner
+	}
 
 	return s.cloudService.Teardown()
 }
