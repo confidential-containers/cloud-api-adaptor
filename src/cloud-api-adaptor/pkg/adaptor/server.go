@@ -104,12 +104,24 @@ func (s *server) Start(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	if ul, ok := listener.(*net.UnixListener); ok {
+		ul.SetUnlinkOnClose(false)
+	}
 
 	ttRPCErr := make(chan error)
 	go func() {
 		defer close(ttRPCErr)
 		if err := s.ttRPC.Serve(ctx, listener); err != nil {
 			ttRPCErr <- err
+		}
+	}()
+	// Declared before the ttrpc shutdown defer so it runs after (defers are LIFO).
+	// Removes the socket only when this instance is still the current owner — skipped
+	// during rolling restarts where the new pod has already taken ownership, but runs
+	// on clean shutdown and uninstall so the file is not left on the node indefinitely.
+	defer func() {
+		if !k8sops.IsKubernetesEnvironment() || s.isOwner {
+			os.Remove(s.socketPath)
 		}
 	}()
 	defer func() {
@@ -131,6 +143,10 @@ func (s *server) Start(ctx context.Context) (err error) {
 		}
 	case <-s.stopCh:
 	case err = <-ttRPCErr:
+		shutdownErr := s.Shutdown()
+		if shutdownErr != nil && err == nil {
+			err = shutdownErr
+		}
 	}
 	return err
 }
