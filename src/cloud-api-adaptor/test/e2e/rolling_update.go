@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -282,6 +283,166 @@ func waitForCaaDaemonSetUpdated(t *testing.T, client klient.Client, ds *appsv1.D
 	}), wait.WithTimeout(WaitDeploymentAvailableTimeout)); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// DoTestExtendedResourcesAfterRollout verifies that node extended resources
+// (kata.peerpods.io/vm) survive a zero-workload CAA DaemonSet rollout restart.
+//
+// The race this exercises: the new CAA pod advertises the resource and becomes
+// Ready before the old pod finishes terminating. Without the owner-annotation
+// fix the old pod's Shutdown() removes the resource the new pod already set,
+// leaving the node with no capacity and preventing peer pod scheduling.
+func DoTestExtendedResourcesAfterRollout(t *testing.T, testEnv env.Environment) {
+	const (
+		caaDaemonSetName = "cloud-api-adaptor-daemonset"
+		extResourceName  = "kata.peerpods.io/vm"
+	)
+	caaNamespace := pv.GetCAANamespace()
+
+	feature := features.New("Extended resources survive CAA rollout restart").
+		Assess("Rollout CAA DaemonSet and verify extended resources remain on all nodes", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client, err := cfg.NewClient()
+			if err != nil {
+				t.Fatal(err)
+			}
+			clientset, err := kubernetes.NewForConfig(client.RESTConfig())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Get the DaemonSet and record the expected pod count.
+			ds := &appsv1.DaemonSet{}
+			if err = client.Resources().Get(ctx, caaDaemonSetName, caaNamespace, ds); err != nil {
+				t.Fatal(err)
+			}
+			rc := ds.Status.DesiredNumberScheduled
+			if rc == 0 {
+				t.Skip("No CAA pods scheduled; skipping test")
+			}
+
+			// List all current CAA pods to snapshot node names and pre-rollout pod UIDs.
+			caaPodList, err := clientset.CoreV1().Pods(caaNamespace).List(ctx, metav1.ListOptions{
+				LabelSelector: "app=cloud-api-adaptor",
+			})
+			if err != nil {
+				t.Fatalf("Failed to list CAA pods: %v", err)
+			}
+			if len(caaPodList.Items) == 0 {
+				t.Fatal("Expected at least one CAA pod but found none")
+			}
+
+			type nodeSnapshot struct {
+				nodeName  string
+				oldPodUID string
+			}
+			snapshots := make([]nodeSnapshot, 0, len(caaPodList.Items))
+			for _, pod := range caaPodList.Items {
+				snapshots = append(snapshots, nodeSnapshot{
+					nodeName:  pod.Spec.NodeName,
+					oldPodUID: string(pod.UID),
+				})
+				t.Logf("Pre-rollout: node=%s pod-uid=%s", pod.Spec.NodeName, pod.UID)
+			}
+
+			// Confirm extended resources are present before the rollout.
+			// If any node lacks the resource, extended resources are disabled
+			// (PeerPodsLimitPerNode < 0) and this test does not apply.
+			for _, snap := range snapshots {
+				node, err := clientset.CoreV1().Nodes().Get(ctx, snap.nodeName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatalf("Failed to get node %s: %v", snap.nodeName, err)
+				}
+				qty, ok := node.Status.Capacity[v1.ResourceName(extResourceName)]
+				if !ok || qty.IsZero() {
+					t.Skipf("Node %s has no %s capacity; extended resources disabled — skipping", snap.nodeName, extResourceName)
+				}
+				t.Logf("Pre-rollout: node=%s %s=%s owner=%q",
+					snap.nodeName, extResourceName, qty.String(), node.Annotations[k8sops.OwnerAnnotation])
+			}
+
+			// Trigger rollout via the same annotation kubectl rollout restart writes.
+			// This is a pure template hash bump with no functional side-effect.
+			t.Log("Triggering CAA DaemonSet rollout...")
+			if ds.Spec.Template.Annotations == nil {
+				ds.Spec.Template.Annotations = make(map[string]string)
+			}
+			ds.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
+			if err = client.Resources().Update(ctx, ds); err != nil {
+				t.Fatal(err)
+			}
+
+			waitForCaaDaemonSetUpdated(t, client, ds, rc)
+			t.Log("CAA DaemonSet rollout complete")
+
+			// Assert extended resources are still present on every node.
+			for _, snap := range snapshots {
+				node, err := clientset.CoreV1().Nodes().Get(ctx, snap.nodeName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatalf("Post-rollout: failed to get node %s: %v", snap.nodeName, err)
+				}
+
+				qty, ok := node.Status.Capacity[v1.ResourceName(extResourceName)]
+				if !ok || qty.IsZero() {
+					t.Errorf("Post-rollout: node %s lost %s — old CAA shutdown incorrectly removed the resource",
+						snap.nodeName, extResourceName)
+				} else {
+					t.Logf("Post-rollout: node=%s %s=%s (preserved)", snap.nodeName, extResourceName, qty.String())
+				}
+
+				// Verify the owner annotation was updated to the new pod's UID,
+				// confirming the new instance took ownership before the old one shut down.
+				currentOwner := node.Annotations[k8sops.OwnerAnnotation]
+				switch currentOwner {
+				case "":
+					t.Errorf("Post-rollout: node %s is missing the %s annotation", snap.nodeName, k8sops.OwnerAnnotation)
+				case snap.oldPodUID:
+					t.Errorf("Post-rollout: node %s owner annotation still points to the old pod %s — ownership handoff failed",
+						snap.nodeName, snap.oldPodUID)
+				default:
+					t.Logf("Post-rollout: node=%s owner updated from %s to %s (ownership handed off)",
+						snap.nodeName, snap.oldPodUID, currentOwner)
+				}
+			}
+
+			return ctx
+		}).
+		Assess("Create a peer pod to verify CAA is functional after rollout", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+			client, err := cfg.NewClient()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			podOrErr := NewBusyboxPodWithName(E2eNamespace, "caa-rollout-verify-pod")
+			if podOrErr.err != nil {
+				t.Fatalf("Failed to build peer pod spec: %v", podOrErr.err)
+			}
+			pod := podOrErr.pod
+
+			t.Logf("Creating peer pod %s in namespace %s...", pod.Name, E2eNamespace)
+			if err = client.Resources().Create(ctx, pod); err != nil {
+				t.Fatalf("Failed to create peer pod: %v", err)
+			}
+			defer func() {
+				if err = client.Resources().Delete(ctx, pod); err != nil {
+					t.Logf("Failed to delete peer pod: %v", err)
+				}
+			}()
+
+			if err = wait.For(conditions.New(client.Resources()).PodPhaseMatch(pod, v1.PodRunning),
+				wait.WithTimeout(WaitPodRunningTimeout)); err != nil {
+				t.Fatalf("Peer pod did not reach Running state: %v", err)
+			}
+			if err = wait.For(conditions.New(client.Resources()).ContainersReady(pod),
+				wait.WithTimeout(WaitPodRunningTimeout)); err != nil {
+				t.Fatalf("Peer pod containers not ready: %v", err)
+			}
+			t.Logf("Peer pod %s is Running — CAA is functional after rollout", pod.Name)
+
+			return ctx
+		}).
+		Feature()
+
+	testEnv.Test(t, feature)
 }
 
 func waitForDeploymentAvailable(t *testing.T, client klient.Client, deployment *appsv1.Deployment, rc int32) {
