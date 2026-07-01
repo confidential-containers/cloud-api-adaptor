@@ -16,11 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containerd/containerd/pkg/cri/annotations"
 	pb "github.com/kata-containers/kata-containers/src/runtime/protocols/hypervisor"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/k8sops"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cri"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
@@ -176,12 +176,12 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	pod := util.GetPodName(req.Annotations)
 	if pod == "" {
-		return nil, fmt.Errorf("pod name %s is missing in annotations", annotations.SandboxName)
+		return nil, fmt.Errorf("pod name %s is missing in annotations", cri.SandboxName)
 	}
 
 	namespace := util.GetPodNamespace(req.Annotations)
 	if namespace == "" {
-		return nil, fmt.Errorf("namespace name %s is missing in annotations", annotations.SandboxNamespace)
+		return nil, fmt.Errorf("namespace name %s is missing in annotations", cri.SandboxNamespace)
 	}
 
 	// Get Pod VM instance type from annotations

@@ -15,10 +15,10 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/cloud"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/adaptor/proxy"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cri"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/cloudinit"
-	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/ttrpc"
 	"github.com/google/uuid"
 
@@ -49,8 +49,8 @@ func TestCreateStartAndStop(t *testing.T) {
 		&pb.CreateVMRequest{
 			Id: id,
 			Annotations: map[string]string{
-				annotations.SandboxName:      "test",
-				annotations.SandboxNamespace: "test",
+				cri.SandboxName:      "test",
+				cri.SandboxNamespace: "test",
 			},
 		},
 	); err != nil {

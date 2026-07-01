@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cri"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
-	cri "github.com/containerd/containerd/pkg/cri/annotations"
 	hypannotations "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/annotations"
 )
 

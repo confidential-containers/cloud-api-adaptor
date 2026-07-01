@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/cri"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
-	cri "github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

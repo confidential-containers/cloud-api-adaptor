@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
-	"github.com/containerd/containerd/reference"
+	"github.com/distribution/reference"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
@@ -410,17 +410,31 @@ func (a *AzureInstallChart) Configure(ctx context.Context, cfg *envconf.Config, 
 	// Handle CAA image - parse it like kustomization does
 	// CAA_IMAGE might be a full image reference (name:tag@digest) or just the name
 	if AzureProps.CaaImage != "" {
-		spec, err := reference.Parse(AzureProps.CaaImage)
+		spec, err := reference.ParseAnyReference(AzureProps.CaaImage)
 		if err != nil {
 			return fmt.Errorf("parsing CAA image: %w", err)
 		}
 
-		log.Infof("Configuring helm: CAA image %q", spec.Locator)
-		a.Helm.OverrideValues["image.name"] = spec.Locator
+		locator := spec.String()
+		if named, ok := spec.(reference.Named); ok {
+			locator = named.Name()
+		}
+		log.Infof("Configuring helm: CAA image %q", locator)
+		a.Helm.OverrideValues["image.name"] = locator
 
 		// For Helm, pass tag and digest together in image.tag
-		// spec.Object contains the tag part (which may include @digest)
-		tag := spec.Object
+		tag := ""
+		if tagged, ok := spec.(reference.Tagged); ok {
+			tag = tagged.Tag()
+		}
+		if canonical, ok := spec.(reference.Canonical); ok {
+			if tag != "" {
+				tag += "@"
+			} else {
+				tag = "@"
+			}
+			tag += canonical.Digest().String()
+		}
 		if tag != "" {
 			log.Infof("Configuring helm: CAA image tag %q", tag)
 			a.Helm.OverrideValues["image.tag"] = tag
