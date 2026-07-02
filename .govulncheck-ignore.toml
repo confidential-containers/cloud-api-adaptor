@@ -1,0 +1,35 @@
+# .govulncheck-ignore.toml
+#
+# Ignore list for hack/govulncheck.sh.
+# Add [[IgnoredVulns]] entries to suppress specific govulncheck vulnerability
+# IDs that are known false-positives or have no upstream fix available yet.
+#
+# Format:
+#
+#   [[IgnoredVulns]]
+#   id = "GO-YYYY-NNNN"
+#   reason = "Why this is suppressed"
+#
+# Optionally add ignoreUntil (TOML local date). An expired entry still suppresses
+# the finding but prints a warning so the team knows to review it:
+#
+#   [[IgnoredVulns]]
+#   id = "GO-YYYY-NNNN"
+#   reason = "Waiting for upstream patch"
+#   ignoreUntil = 2026-12-31
+
+# All three vulns below affect github.com/containerd/containerd@v1.7.33 via the
+# CRI checkpoint/restore feature. CAA does not expose that feature, so they are
+# not exploitable in this codebase. No fix is available upstream at this time.
+
+[[IgnoredVulns]]
+id = "GO-2026-5622"
+reason = "Arbitrary host CRI log file read via symlink in containerd. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
+
+[[IgnoredVulns]]
+id = "GO-2026-5338"
+reason = "CRI checkpoint import allows local image tag poisoning in containerd. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
+
+[[IgnoredVulns]]
+id = "GO-2026-5064"
+reason = "containerd CRI checkpoint restore CDI annotation smuggling. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
