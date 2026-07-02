@@ -12,6 +12,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -72,10 +73,17 @@ func waitForPodCompletion(t *testing.T, cs *kubernetes.Clientset, ns, name strin
 	for time.Now().Before(deadline) {
 		pod, err := cs.CoreV1().Pods(ns).Get(ctx, name, metav1.GetOptions{})
 		if err == nil && (pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed) {
-			if pod.Status.Phase == corev1.PodFailed {
-				t.Fatalf("Pod %s failed", name)
-			}
 			logs, _ := cs.CoreV1().Pods(ns).GetLogs(name, &corev1.PodLogOptions{}).Do(ctx).Raw()
+			if pod.Status.Phase == corev1.PodFailed {
+				t.Logf("Pod %s/%s failed — logs:\n%s", ns, name, string(logs))
+				for _, cstat := range pod.Status.ContainerStatuses {
+					if cstat.State.Terminated != nil {
+						t.Logf("Container %s exit code: %d, reason: %s, message: %s",
+							cstat.Name, cstat.State.Terminated.ExitCode, cstat.State.Terminated.Reason, cstat.State.Terminated.Message)
+					}
+				}
+				t.Fatalf("Pod %s/%s failed (see logs above)", ns, name)
+			}
 			return string(logs)
 		}
 		time.Sleep(pollInterval)
@@ -87,7 +95,16 @@ func waitForPodCompletion(t *testing.T, cs *kubernetes.Clientset, ns, name strin
 func deletePodAndWait(t *testing.T, cs *kubernetes.Clientset, ns, name string) {
 	t.Helper()
 	ctx := context.Background()
-	cs.CoreV1().Pods(ns).Delete(ctx, name, metav1.DeleteOptions{}) //nolint:errcheck
+	gracePeriod := int64(0)
+	err := cs.CoreV1().Pods(ns).Delete(ctx, name, metav1.DeleteOptions{
+		GracePeriodSeconds: &gracePeriod,
+	})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return
+		}
+		t.Logf("Warning: failed to delete pod %s/%s: %v", ns, name, err)
+	}
 	deadline := time.Now().Add(podDeleteTimeout)
 	for time.Now().Before(deadline) {
 		_, err := cs.CoreV1().Pods(ns).Get(ctx, name, metav1.GetOptions{})
@@ -96,6 +113,7 @@ func deletePodAndWait(t *testing.T, cs *kubernetes.Clientset, ns, name string) {
 		}
 		time.Sleep(pollInterval)
 	}
+	t.Logf("Warning: pod %s/%s was not fully deleted within %v", ns, name, podDeleteTimeout)
 }
 
 func newCSIPVC(namespace, name, size string) *corev1.PersistentVolumeClaim {
