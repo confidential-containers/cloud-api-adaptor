@@ -82,7 +82,7 @@ done), \
 	$(error $(1) is not set, and could not be automatically set from $(VERSIONS_SRC)))
 endef
 
-ubuntu_RELEASE ?= noble
+ubuntu_RELEASE ?= resolute
 rhel_RELEASE ?= 9
 alinux_RELEASE ?= 3
 

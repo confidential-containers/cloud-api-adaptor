@@ -5,8 +5,8 @@
 #
 # Build binaries for mkosi podvm image
 #
-# ubuntu:24.04
-FROM ubuntu@sha256:0d39fcc8335d6d74d5502f6df2d30119ff4790ebbb60b364818d5112d9e3e932 AS builder
+# ubuntu:26.04
+FROM ubuntu@b7f48194d4d8b763a478a621cdc81c27be222ba2206ca3ca6bc42b49685f3d9e AS builder
 
 ARG ARCH="x86_64"
 ARG GO_ARCH="amd64"
@@ -24,7 +24,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y build-essential gnupg git perl pkg-config \
     libseccomp-dev libgpgme-dev libdevmapper-dev unzip libassuan-dev \
-    libssl-dev libtss2-dev clang xz-utils zstd jq curl ca-certificates && \
+    libssl-dev libtss2-dev clang xz-utils zstd jq curl ca-certificates skopeo && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -105,6 +105,9 @@ COPY . /src
 WORKDIR /src/cloud-api-adaptor/podvm
 # Installs add-ons for foreign target, if required
 RUN ./hack/cross-build-extras.sh
+
+# Use distro skopeo (vendored build may not match Ubuntu 26.04 shared libs)
+RUN mkdir -p skopeo/bin && ln -sf /usr/bin/skopeo skopeo/bin/skopeo
 
 RUN LIBC=gnu make binaries
 

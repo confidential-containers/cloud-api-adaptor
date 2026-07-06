@@ -8,7 +8,7 @@ include $(ROOT_DIR)podvm/Makefile.inc
 
 .PHONY: build push verify ubuntu clean
 
-UBUNTU_RELEASE     = noble
+UBUNTU_RELEASE     = resolute
 UBUNTU_IMAGE_URL  := https://cloud-images.ubuntu.com/$(UBUNTU_RELEASE)/current/$(UBUNTU_RELEASE)-server-cloudimg-$(DISTRO_ARCH).img
 UBUNTU_IMAGE_FILE := $(notdir $(UBUNTU_IMAGE_URL))
 

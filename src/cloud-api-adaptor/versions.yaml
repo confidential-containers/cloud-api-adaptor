@@ -2,10 +2,10 @@
 # Sources for a base cloud os images
 cloudimg:
   ubuntu:
-    noble:
+    resolute:
       amd64:
-        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-amd64.img
-        checksum: "sha256:28d2f9df3ac0d24440eaf6998507df3405142cf94a55e1f90802c78e43d2d9df"
+        url: https://cloud-images.ubuntu.com/releases/resolute/release-20260520/ubuntu-26.04-server-cloudimg-amd64.img
+        checksum: "sha256:dced94c031cc1f23dee14419a3723a5b110df9938de0ac31913a2bfd07c755b4"
       s390x:
         url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-s390x.img
         checksum: "sha256:367eef35e239ebd123bd00a1fb66cd048604b70bca362eccad1f95b0021d7458"

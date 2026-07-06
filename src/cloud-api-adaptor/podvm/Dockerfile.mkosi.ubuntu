@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.5.0-labs
-# ubuntu:24.04
-FROM ubuntu@sha256:0d39fcc8335d6d74d5502f6df2d30119ff4790ebbb60b364818d5112d9e3e932 AS builder
+# ubuntu:26.04
+FROM ubuntu@b7f48194d4d8b763a478a621cdc81c27be222ba2206ca3ca6bc42b49685f3d9e AS builder
 
 ARG MKOSI_VERSION="v26"
 ARG PROFILE="debug"
