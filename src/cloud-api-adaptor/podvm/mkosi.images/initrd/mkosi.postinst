@@ -16,3 +16,28 @@ ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase@.service"
 ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase-initrd.service"
 ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase-sysinit.service"
 ln -s /dev/null "${BUILDROOT}/etc/systemd/system/systemd-pcrphase.service"
+
+# mkosi MakeInitrd=yes omits dm-verity helpers needed to assemble /dev/mapper/root
+# from GPT discoverable partitions + roothash= on the kernel cmdline.
+if [[ -x /usr/lib/systemd/systemd-veritysetup ]] && \
+   [[ ! -x "${BUILDROOT}/usr/lib/systemd/systemd-veritysetup" ]]; then
+	install -D /usr/lib/systemd/systemd-veritysetup \
+		"${BUILDROOT}/usr/lib/systemd/systemd-veritysetup"
+	install -D /usr/lib/systemd/system-generators/systemd-veritysetup-generator \
+		"${BUILDROOT}/usr/lib/systemd/system-generators/systemd-veritysetup-generator"
+
+	for unit in veritysetup.target veritysetup-pre.target remote-veritysetup.target; do
+		install -D "/usr/lib/systemd/system/${unit}" \
+			"${BUILDROOT}/usr/lib/systemd/system/${unit}"
+	done
+	install -D '/usr/lib/systemd/system/system-systemd\x2dveritysetup.slice' \
+		"${BUILDROOT}/usr/lib/systemd/system/system-systemd\\x2dveritysetup.slice"
+
+	mkdir -p "${BUILDROOT}/usr/lib/systemd/system/sysinit.target.wants"
+	ln -sfn ../veritysetup.target \
+		"${BUILDROOT}/usr/lib/systemd/system/sysinit.target.wants/veritysetup.target"
+
+	mkdir -p "${BUILDROOT}/usr/lib/systemd/system/initrd-root-device.target.wants"
+	ln -sfn ../remote-veritysetup.target \
+		"${BUILDROOT}/usr/lib/systemd/system/initrd-root-device.target.wants/remote-veritysetup.target"
+fi
