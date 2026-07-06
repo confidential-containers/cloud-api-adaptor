@@ -148,9 +148,6 @@ jobs:
           ARCH: ${{ inputs.arch }}
           PODVM_DISTRO: ubuntu
           VERIFY_PROVENANCE: yes
-          PUSH: "true"
-          REGISTRY: ${{ inputs.registry }}
-          PODVM_TAG: ${{ inputs.image_tag }}
 
       - name: Build mkosi debug image
         if: ${{ inputs.debug == true }}
