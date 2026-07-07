@@ -35,8 +35,8 @@ qemu-nbd --connect="${tmp_nbd}" "${tmp_img_path}"
 
 echo "Creating boot-se and root partitions"
 parted -a optimal "${tmp_nbd}" mklabel gpt \
-        mkpart boot-se ext4 1MiB 256MiB \
-        mkpart root 256MiB 6400MiB \
+        mkpart boot-se ext4 1MiB 512MiB \
+        mkpart root 512MiB 6400MiB \
         mkpart data 6400MiB ${disksize} \
         set 1 boot on
 
