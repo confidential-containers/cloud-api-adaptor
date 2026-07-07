@@ -17,8 +17,8 @@ qemu-nbd --connect="${tmp_nbd}" "${tmp_img_path}"
 
 # Partition and format
 parted -a optimal "${tmp_nbd}" mklabel gpt \
-        mkpart boot ext4 1MiB 256MiB \
-        mkpart system 256MiB "${disksize}" \
+        mkpart boot ext4 1MiB 512MiB \
+        mkpart system 512MiB "${disksize}" \
         set 1 boot on
 
 echo "Waiting for the two nbd partitions to show up"
