@@ -13,6 +13,7 @@ import (
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	libvirt "libvirt.org/go/libvirt"
 )
 
 const (
@@ -158,10 +159,29 @@ func TestGetIPs(t *testing.T) {
 	}
 }
 
-func TestTeardown(t *testing.T) {
+func TestTeardownNilClient(t *testing.T) {
 	p := &libvirtProvider{}
-	err := p.Teardown()
-	assert.NoError(t, err)
+	assert.NoError(t, p.Teardown())
+}
+
+// TestTeardown verifies that Teardown() closes the underlying libvirt
+// connection and that any subsequent operation on it fails.
+func TestTeardown(t *testing.T) {
+	checkConfig(t)
+
+	conn, err := libvirt.NewConnect(testCfg.URI)
+	require.NoError(t, err)
+
+	p := &libvirtProvider{libvirtClient: &libvirtClient{connection: conn}}
+
+	_, err = conn.GetLibVersion()
+	require.NoError(t, err)
+
+	err = p.Teardown()
+	require.NoError(t, err)
+
+	_, err = conn.GetLibVersion()
+	assert.Error(t, err, "connection should be closed after Teardown")
 }
 
 func TestDeleteInstanceEmptyID(t *testing.T) {
