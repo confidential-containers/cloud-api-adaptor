@@ -154,6 +154,16 @@ func (p *libvirtProvider) DeleteInstance(ctx context.Context, instanceID string)
 }
 
 func (p *libvirtProvider) Teardown() error {
+	if p.libvirtClient == nil {
+		return nil
+	}
+	refCount, err := p.libvirtClient.connection.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close libvirt connection: %w", err)
+	}
+	if refCount > 0 {
+		return fmt.Errorf("libvirt connection still has %d remaining references after close", refCount)
+	}
 	return nil
 }
 
