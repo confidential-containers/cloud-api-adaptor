@@ -21,8 +21,6 @@ type cdhClient struct {
 	client *ttrpc.Client
 }
 
-// newCDHClient connects to CDH's TTRPC socket with retries, since CDH
-// may still be starting when the interceptor first needs it.
 func newCDHClient(socketPath string) (*cdhClient, error) {
 	const maxAttempts = 10
 	const retryDelay = 2 * time.Second

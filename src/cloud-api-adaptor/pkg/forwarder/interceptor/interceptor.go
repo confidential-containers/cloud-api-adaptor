@@ -66,8 +66,6 @@ type interceptor struct {
 	cloudMounts []cloudMount
 }
 
-// unmountCloudVolumes unmounts all cloud volume mount points in reverse order.
-// For encrypted volumes, also closes the LUKS mapping after unmount.
 func (i *interceptor) unmountCloudVolumes() {
 	for idx := len(i.cloudMounts) - 1; idx >= 0; idx-- {
 		cm := i.cloudMounts[idx]
@@ -95,8 +93,6 @@ func (i *interceptor) unmountCloudVolumes() {
 	i.cloudMounts = nil
 }
 
-// findMapperForMountPoint looks up /proc/mounts to find which
-// /dev/mapper/* device is mounted at the given path.
 func findMapperForMountPoint(mountPoint string) string {
 	data, err := os.ReadFile("/proc/mounts")
 	if err != nil {
@@ -156,7 +152,6 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 
 	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
 
-	// Specify the network namespace path in the container spec
 	req.OCI.Linux.Namespaces = append(req.OCI.Linux.Namespaces, &pb.LinuxNamespace{
 		Type: string(specs.NetworkNamespace),
 		Path: i.nsPath,
@@ -167,8 +162,6 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 		logger.Printf("    %s: %q", ns.Type, ns.Path)
 	}
 
-	// Handle cloud volumes: detect device, format if needed, mount, and
-	// bind-mount into the container's mount namespace.
 	if cvJSON, ok := req.OCI.Annotations[util.CloudVolumesAnnotationKey]; ok && cvJSON != "" {
 		var cloudVolumes map[string]util.CloudVolumeAnnotation
 		if err := json.Unmarshal([]byte(cvJSON), &cloudVolumes); err != nil {
@@ -831,14 +824,11 @@ func formatAndMount(device, mountPoint, fsType string) error {
 	return nil
 }
 
-// isLuks checks if a device already has a LUKS header.
 func isLuks(device string) bool {
 	err := exec.Command("cryptsetup", "isLuks", device).Run()
 	return err == nil
 }
 
-// validateEncryptParams checks that the encryption parameters are valid
-// before attempting to connect to CDH.
 func validateEncryptParams(encryptType, keyID string) (string, error) {
 	if keyID == "" {
 		return "", fmt.Errorf("encrypt_type %q requires a kbs-key-id but none was provided", encryptType)
@@ -850,12 +840,6 @@ func validateEncryptParams(encryptType, keyID string) (string, error) {
 	return normalized, nil
 }
 
-// secureMount delegates block device encryption and mounting to CDH's
-// secure_mount API. CDH handles LUKS formatting (for new disks) or opening
-// (for existing encrypted disks), fetches the key from KBS via remote
-// attestation, and mounts the plaintext filesystem at mountPoint.
-// The mapperName is passed to CDH so it uses a predictable dm-crypt
-// device name under /dev/mapper/, enabling reliable cleanup.
 func secureMount(ctx context.Context, device, mountPoint, fsType, encryptType, keyID, mapperName string) error {
 	normalized, err := validateEncryptParams(encryptType, keyID)
 	if err != nil {
