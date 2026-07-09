@@ -69,6 +69,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           ref: "${{ inputs.git_ref }}"
+          allow-unsafe-pr-checkout: true
 
       - name: Rebase the code
         if: github.event_name == 'pull_request_target'

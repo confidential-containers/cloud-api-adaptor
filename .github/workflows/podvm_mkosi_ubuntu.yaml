@@ -87,6 +87,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           ref: "${{ inputs.git_ref }}"
+          allow-unsafe-pr-checkout: true
 
       # Required by rootless mkosi
       - name: Un-restrict user namespaces
