@@ -1,6 +1,6 @@
 module github.com/confidential-containers/cloud-api-adaptor/src/webhook
 
-go 1.25.11
+go 1.25.12
 
 require (
 	github.com/stretchr/testify v1.11.1
