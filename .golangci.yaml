@@ -30,10 +30,6 @@ linters:
       - legacy
       - std-error-handling
     rules:
-      - linters:
-          - staticcheck
-        path: ^src/csi-wrapper/pkg/wrapper/
-        text: 'SA1019: "github.com/golang/protobuf/jsonpb" is deprecated: Use the "google.golang.org/protobuf/encoding/protojson" package instead.'
       - path: (.+)\.go$
         text: declaration of "(err|ctx)" shadows declaration at
     paths:
