@@ -6,8 +6,6 @@ src/cloud-api-adaptor/staticlib
 src/cloud-api-adaptor/pause
 src/cloud-api-adaptor/umoci
 src/cloud-api-adaptor/skopeo
-src/csi-wrapper/build
-src/csi-wrapper/vendor
 src/cloud-providers/bin
 
 # Binaries
