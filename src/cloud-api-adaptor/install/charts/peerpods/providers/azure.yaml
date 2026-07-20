@@ -130,3 +130,8 @@ providerConfigs:
     # (default: "")
     # VXLAN_PORT: ""
 
+webhook:
+  annotations:
+    # This is required to ensure the azure admission enforcer does not take
+    # ownership of the namespaceSelector field, completely preventing helm upgrade
+    admissions.enforcer/disabled: "true"
