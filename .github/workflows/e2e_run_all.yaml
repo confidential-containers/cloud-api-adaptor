@@ -182,24 +182,6 @@ jobs:
     secrets:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
-  libvirt_e2e_arch_prep:
-    name: libvirt_e2e_arch_prep
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          ref: ${{ inputs.git_ref }}
-          allow-unsafe-pr-checkout: true
-
-      - name: Rebase the code
-        if: github.event_name == 'pull_request_target'
-        working-directory: ./
-        run: |
-          ./hack/ci-helper.sh rebase-atop-of-the-latest-target-branch
-
   # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_amd64:
     name: E2E tests on libvirt for the amd64 architecture
@@ -208,7 +190,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
-    needs: [podvm_mkosi_amd64, libvirt_e2e_arch_prep, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
+    needs: [podvm_mkosi_amd64, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: ubuntu-24.04
@@ -228,7 +210,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
-    needs: [podvm_mkosi_s390x, libvirt_e2e_arch_prep, caa_image_s390x, peerpod_ctrl_image_s390x, webhook_image]
+    needs: [podvm_mkosi_s390x, caa_image_s390x, peerpod_ctrl_image_s390x, webhook_image]
     uses: ./.github/workflows/e2e_libvirt.yaml
     with:
       runner: s390x-large
