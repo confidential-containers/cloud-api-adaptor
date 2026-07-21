@@ -10,6 +10,10 @@ updates:
       day: "saturday"
     cooldown:
       default-days: 7
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action*"
   - package-ecosystem: "gomod"
     directories:
       - "src/cloud-api-adaptor"
