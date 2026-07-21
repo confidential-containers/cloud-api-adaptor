@@ -45,13 +45,9 @@ image using Docker to build the required components and create the image.
 To create a bootable image which can be imported into your provider of choice, you can use the mkosi-based build system in the `podvm/` directory.
 
 ```bash
-# Build Fedora-based image (default)
+# Build Ubuntu-based image
 cd podvm
 make  # builds builder, binaries, and OS image
-
-# Build Ubuntu 24.04 image
-cd podvm
-PODVM_DISTRO=ubuntu make
 
 # Build with specific TEE platform support (e.g., SNP)
 cd podvm
