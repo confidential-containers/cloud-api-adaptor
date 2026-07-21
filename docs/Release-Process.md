@@ -15,8 +15,7 @@ The flow of releases should roughly be:
    version is picked) and [trustee releases](https://github.com/confidential-containers/trustee/releases).
     - This triggers [kata-containers](https://github.com/kata-containers/kata-containers) to update to these new versions in
       [versions.yaml](https://github.com/kata-containers/kata-containers/blob/main/versions.yaml) under
-      `externals.coco-guest-components.version`, `externals.coco-trustee` and the `image-rs` crate in the agent's
-      [`Cargo.toml`](https://github.com/kata-containers/kata-containers/blob/main/src/agent/Cargo.toml).
+      `externals.coco-guest-components.version` and `externals.coco-trustee`.
     - At this point it makes sense for us to stay in sync, by updating the guest-components and kbs that we use in peer pods,
       by changing the `oci.guest-components.reference` and `git.kbs.tag`values in [versions.yaml](../src/cloud-api-adaptor/versions.yaml).
       We should also bump the kata agent to the latest commit hash by updating `oci.kata-containers.reference` in
