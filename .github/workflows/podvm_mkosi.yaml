@@ -1,4 +1,4 @@
-name: Create a Pod VM image with mkosi
+name: Create Pod VM image with mkosi
 
 on:
   workflow_dispatch:
@@ -71,7 +71,7 @@ permissions: {}
 jobs:
   build-image:
     name: Build mkosi image for ${{ inputs.arch }}
-    runs-on: ${{ inputs.arch == 's390x' && 's390x' || inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.arch == 's390x' && 's390x' || (inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04') }}
     permissions:
       contents: read  # Required for checkout on forks
       packages: write  # Required to publish the oras package to ghcr
