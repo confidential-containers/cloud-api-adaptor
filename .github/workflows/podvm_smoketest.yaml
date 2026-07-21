@@ -54,24 +54,20 @@ jobs:
 
       - name: Build binaries
         run: make podvm-binaries
-        env:
-          PODVM_DISTRO: ubuntu
 
       - name: Disable TLS for agent-protocol-forwarder
         run: |
           mkdir -p ./resources/binaries-tree/etc/default
           echo "TLS_OPTIONS=-disable-tls" > ./resources/binaries-tree/etc/default/agent-protocol-forwarder
 
-      - name: Build Ubuntu image
+      - name: Build image
         run: make image-debug
-        env:
-          PODVM_DISTRO: ubuntu
 
       # Upload the image to the artifacts
       - name: Upload qcow2 artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: podvm-build-ubuntu
+          name: podvm-build
           path: src/cloud-api-adaptor/podvm/build/podvm-ubuntu-amd64.qcow2
 
   test:
@@ -122,7 +118,7 @@ jobs:
       - name: Download qcow2 artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: podvm-build-ubuntu
+          name: podvm-build
           path: .
 
       - name: Run smoke test (${{ matrix.test-mode.name }})
