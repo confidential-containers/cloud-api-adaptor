@@ -1,6 +1,7 @@
-name: smoke test
+name: Ubuntu podvm smoke test
 
 on:
+  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -11,7 +12,7 @@ permissions: {}
 
 jobs:
   build:
-    name: build
+    name: Build the image
     runs-on: 'ubuntu-24.04'
 
     defaults:
@@ -33,16 +34,15 @@ jobs:
           sudo apt-get install -y \
             genisoimage \
             qemu-utils
-          sudo snap install yq
 
       - name: Read properties from versions.yaml
         working-directory: src/cloud-api-adaptor
         run: |
           {
-            echo "MKOSI_VERSION=$(yq -e '.tools.mkosi' versions.yaml)";
-            echo "ORAS_VERSION=$(yq -e '.tools.oras' versions.yaml)";
-            echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
-            echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
+            echo "MKOSI_VERSION=$(./hack/versions.py -q tools.mkosi)";
+            echo "ORAS_VERSION=$(./hack/versions.py -q tools.oras)";
+            echo "KATA_REF=$(./hack/versions.py -q oci.kata-containers.reference)";
+            echo "KATA_REG=$(./hack/versions.py -q oci.kata-containers.registry)";
           } >> "$GITHUB_ENV"
 
       - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
@@ -54,35 +54,37 @@ jobs:
 
       - name: Build binaries
         run: make podvm-binaries
+        env:
+          PODVM_DISTRO: ubuntu
 
       - name: Disable TLS for agent-protocol-forwarder
         run: |
           mkdir -p ./resources/binaries-tree/etc/default
           echo "TLS_OPTIONS=-disable-tls" > ./resources/binaries-tree/etc/default/agent-protocol-forwarder
 
-      - name: Build image
+      - name: Build Ubuntu image
         run: make image-debug
+        env:
+          PODVM_DISTRO: ubuntu
 
       # Upload the image to the artifacts
       - name: Upload qcow2 artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: podvm-build
+          name: podvm-build-ubuntu
           path: src/cloud-api-adaptor/podvm/build/podvm-ubuntu-amd64.qcow2
 
   test:
-    name: test
-    # We're pinning the runner to 22.04 b/c libvirt struggles with the
-    # OVMF_CODE_4M firmware that is default on 24.04.
-    runs-on: 'ubuntu-22.04'
+    name: Test the image
+    runs-on: 'ubuntu-24.04'
     needs: build
 
     strategy:
       matrix:
         test-mode:
-          - name: podvm
+          - name: podvm-ubuntu
             mode: basic
-          - name: podvm-with-scratch-space
+          - name: podvm-with-scratch-space-ubuntu
             mode: scratch-space
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -97,15 +99,19 @@ jobs:
             qemu-utils\
             socat \
             virt-manager
-          sudo snap install yq
 
       - name: Read properties from versions.yaml
         working-directory: src/cloud-api-adaptor
         run: |
           {
-            echo "KATA_REF=$(yq -e '.oci.kata-containers.reference' versions.yaml)";
-            echo "KATA_REG=$(yq -e '.oci.kata-containers.registry' versions.yaml)";
+            echo "ORAS_VERSION=$(./hack/versions.py -q tools.oras)";
+            echo "KATA_REF=$(./hack/versions.py -q oci.kata-containers.reference)";
+            echo "KATA_REG=$(./hack/versions.py -q oci.kata-containers.registry)";
           } >> "$GITHUB_ENV"
+
+      - uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+        with:
+          version: ${{ env.ORAS_VERSION }}
 
       - name: Install kata-agent-ctl
         run: |
@@ -116,7 +122,7 @@ jobs:
       - name: Download qcow2 artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: podvm-build
+          name: podvm-build-ubuntu
           path: .
 
       - name: Run smoke test (${{ matrix.test-mode.name }})
