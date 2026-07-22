@@ -23,8 +23,10 @@ import (
 const (
 	// architecture value for the s390x architecture
 	archS390x = "s390x"
-	// architecutre value for aarch64/arm64
+	// architecture value for aarch64/arm64
 	archAArch64 = "aarch64"
+	// architecture value for x86_64
+	archX86_64 = "x86_64"
 	// hvm indicates that the OS is one designed to run on bare metal, so requires full virtualization.
 	typeHardwareVirtualMachine = "hvm"
 	// The amount of retries to get the domain IP addresses
@@ -826,24 +828,17 @@ func freeDomain(domain *libvirt.Domain, errCtx *error) {
 	}
 }
 
-// Attempts to determine launchSecurity Type from domain capabilities and hardware
-// Currently only supports S390PV
-func GetLaunchSecurityType(uri string) (LaunchSecurityType, error) {
-	conn, err := libvirt.NewConnect(uri)
-	if err != nil {
-		return NoLaunchSecurity, fmt.Errorf("unable to get libvirt connection [%v]", err)
+// GetLaunchSecurityType determines the launch security type from the node info
+// already retrieved by the libvirt client, avoiding an extra connection.
+// Currently only supports S390PV.
+func GetLaunchSecurityType(client *libvirtClient) (LaunchSecurityType, error) {
+	if client.nodeInfo == nil {
+		return NoLaunchSecurity, fmt.Errorf("node info is not available in libvirt client")
 	}
 
-	nodeInfo, err := conn.GetNodeInfo()
-	if err != nil {
-		return NoLaunchSecurity, fmt.Errorf("error retrieving node info: %v", err)
-	}
-
-	switch nodeInfo.Model {
+	switch client.nodeInfo.Model {
 	case archS390x:
 		return S390PV, nil
-	case "x86_64":
-		return NoLaunchSecurity, nil
 	default:
 		return NoLaunchSecurity, nil
 	}

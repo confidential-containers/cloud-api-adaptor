@@ -83,7 +83,7 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 			return nil, fmt.Errorf("[%s] is not a known launch security setting", p.serviceConfig.LaunchSecurity)
 		}
 	} else {
-		vm.launchSecurityType, err = GetLaunchSecurityType(p.serviceConfig.URI)
+		vm.launchSecurityType, err = GetLaunchSecurityType(p.libvirtClient)
 		if err != nil {
 			logger.Printf("unable to determine launch security type [%v]", err)
 			return nil, err
