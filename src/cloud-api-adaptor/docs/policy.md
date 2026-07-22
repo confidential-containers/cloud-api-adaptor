@@ -30,7 +30,7 @@ can run the following command
 
 ```
 cd azure/image
-CLOUD_PROVIDER=azure PODVM_DISTRO=ubuntu DEFAULT_AGENT_POLICY_FILE=disallow-all-except-setpolicy.rego make image
+CLOUD_PROVIDER=azure DEFAULT_AGENT_POLICY_FILE=disallow-all-except-setpolicy.rego make image
 ```
 
 ## Specify Policy as a Kubernetes `YAML` annotation

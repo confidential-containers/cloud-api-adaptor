@@ -103,15 +103,12 @@ jobs:
           make podvm-binaries
         env:
           ARCH: amd64
-          PODVM_DISTRO: ubuntu
 
       - name: Build docker podvm image
         working-directory: src/cloud-api-adaptor/podvm
         run: |
           tag=$(git rev-parse --short HEAD)
           PODVM_TAG=${tag} make image-container
-        env:
-          PODVM_DISTRO: ubuntu
 
       - name: Build BYOM e2e image
         working-directory: src/cloud-api-adaptor/podvm
@@ -119,8 +116,6 @@ jobs:
           tag=$(git rev-parse --short HEAD)
           PODVM_TAG=${tag} make image-byom-e2e-container
           echo "BYOM_PODVM_IMAGE=quay.io/confidential-containers/podvm-byom-e2e-image-amd64:${tag}" >> "$GITHUB_ENV"
-        env:
-          PODVM_DISTRO: ubuntu
 
       - name: Generate SSH keys for BYOM
         run: |
