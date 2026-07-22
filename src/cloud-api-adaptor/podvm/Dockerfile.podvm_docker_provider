@@ -56,7 +56,7 @@ COPY ./podvm/resources/binaries-tree/pause_bundle/ /pause_bundle/
 
 COPY ./podvm/misc-settings.sh /tmp/misc-settings.sh
 
-RUN PODVM_DISTRO=ubuntu CLOUD_PROVIDER=generic bash /tmp/misc-settings.sh
+RUN CLOUD_PROVIDER=generic bash /tmp/misc-settings.sh
 
 COPY --chmod=0755 ./podvm/entrypoint.sh  /usr/local/bin/
 

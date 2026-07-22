@@ -152,7 +152,7 @@ If you don't have a suitable peer pod image, you can either use a prebuilt image
 ```bash
 # Run this command in directory src/cloud-api-adaptor
 cd podvm
-make ARCH=amd64 PODVM_DISTRO=ubuntu TEE_PLATFORM=tdx image
+make ARCH=amd64 TEE_PLATFORM=tdx image
 ```
 
 This will create an Ubuntu image with TDX support. The resulting qcow2 image will be in `podvm/build/podvm-ubuntu-amd64.qcow2`. You can then upload the image to IBM Cloud by running the following command from the root directory of the `cloud-api-adaptor` repository:
