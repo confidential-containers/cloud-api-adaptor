@@ -25,7 +25,7 @@ require (
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
 	golang.org/x/sys v0.46.0
-	google.golang.org/grpc v1.81.1
+	google.golang.org/grpc v1.82.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/cri-api v0.33.0 // indirect
 	libvirt.org/go/libvirt v1.12003.0
