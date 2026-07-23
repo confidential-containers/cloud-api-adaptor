@@ -16,9 +16,12 @@ import (
 	restclient "k8s.io/client-go/rest"
 )
 
-// AdvertiseExtendedResources sets up extended resources for the node
-func AdvertiseExtendedResources(peerPodsLimitPerNode int) error {
+const OwnerAnnotation = "kata.peerpods.io/caa-owner"
 
+// AdvertiseExtendedResources sets up extended resources for the node and records
+// ownerUID as the annotation owner so a concurrent shutdown from a previous instance
+// can detect it is no longer the current owner and skip removal.
+func AdvertiseExtendedResources(peerPodsLimitPerNode int, ownerUID string) error {
 	logger.Printf("set up extended resources")
 
 	if peerPodsLimitPerNode < 0 {
@@ -41,6 +44,13 @@ func AdvertiseExtendedResources(peerPodsLimitPerNode int) error {
 		return fmt.Errorf("failed to get k8s client: %v", err)
 	}
 
+	if ownerUID != "" {
+		if err := patchNodeAnnotation(cli, nodeName, OwnerAnnotation, ownerUID); err != nil {
+			logger.Printf("Failed to set owner annotation on node %s: %v", nodeName, err)
+			return err
+		}
+	}
+
 	err = patchNodeStatus(cli, nodeName, patch)
 	if err != nil {
 		logger.Printf("Failed to set extended resource for node %s", nodeName)
@@ -52,34 +62,50 @@ func AdvertiseExtendedResources(peerPodsLimitPerNode int) error {
 	return nil
 }
 
-// Patch the status of a node to remove extended resources
-func RemoveExtendedResources() error {
-
+// RemoveExtendedResources removes extended resources from the node. If ownerUID is
+// non-empty, it first checks the node's owner annotation; if another instance has
+// since taken ownership the removal is skipped to prevent stomping a live advertisement.
+// Returns true when this instance is the current owner (removal was performed or attempted),
+// false when ownership has passed to a newer instance and removal was skipped.
+func RemoveExtendedResources(ownerUID string) (bool, error) {
 	logger.Printf("remove extended resources")
 
 	nodeName := os.Getenv("NODE_NAME")
 
-	patch := append([]jsonPatch{}, newJSONPatch("remove", "/status/capacity", "kata.peerpods.io~1vm", ""))
-
 	config, err := getKubeConfig()
 	if err != nil {
-		return fmt.Errorf("failed to get k8s config: %v", err)
+		return false, fmt.Errorf("failed to get k8s config: %v", err)
 	}
 
 	cli, err := getClient(config)
 	if err != nil {
-		return fmt.Errorf("failed to get k8s client: %v", err)
+		return false, fmt.Errorf("failed to get k8s client: %v", err)
 	}
+
+	if ownerUID != "" {
+		node, err := cli.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		if err != nil {
+			return false, fmt.Errorf("failed to get node %s: %v", nodeName, err)
+		}
+		currentOwner := node.Annotations[OwnerAnnotation]
+		if currentOwner != ownerUID {
+			logger.Printf("Skipping extended resource removal on node %s: current owner is %q, this instance is %q",
+				nodeName, currentOwner, ownerUID)
+			return false, nil
+		}
+	}
+
+	patch := append([]jsonPatch{}, newJSONPatch("remove", "/status/capacity", "kata.peerpods.io~1vm", ""))
 
 	err = patchNodeStatus(cli, nodeName, patch)
 	if err != nil {
 		logger.Printf("Failed to remove extended resource for node %s", nodeName)
-		return err
+		return true, err
 	}
 
 	logger.Printf("Successfully removed extended resource for node %s", nodeName)
 
-	return nil
+	return true, nil
 }
 
 // Auths contains Registries with credentials
@@ -99,7 +125,6 @@ type Auth struct {
 
 // GetImagePullSecrets gets image pull secrets for the specified pod
 func GetImagePullSecrets(podName string, namespace string) ([]byte, error) {
-
 	config, err := getKubeConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get k8s config: %v", err)
@@ -183,6 +208,13 @@ func addAuths(cli *k8sclient.Clientset, namespace string, secretName string, aut
 		auths.Registries[registry] = creds
 	}
 	return nil
+}
+
+// patchNodeAnnotation sets a single annotation on a node via a merge patch.
+func patchNodeAnnotation(c *k8sclient.Clientset, nodeName, key, value string) error {
+	patch := fmt.Sprintf(`{"metadata":{"annotations":{%q:%q}}}`, key, value)
+	_, err := c.CoreV1().Nodes().Patch(context.TODO(), nodeName, types.MergePatchType, []byte(patch), metav1.PatchOptions{})
+	return err
 }
 
 // patchNodeStatus patches the status of a node

@@ -31,6 +31,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         envFrom:
 {{- if include "peerpods.secretName" . }}
         - secretRef:

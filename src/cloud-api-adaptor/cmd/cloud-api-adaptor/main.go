@@ -209,7 +209,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go probe.Start(config.serverConfig.SocketPath)
+	go probe.Start(ctx, config.serverConfig.SocketPath)
 
 	if err := starter.Start(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], err)
