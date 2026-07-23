@@ -592,63 +592,39 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 	return "", fmt.Errorf("Service %s not found", serviceName)
 }
 
-func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile string) error {
+// runKbsClientAdmin mints a fresh admin token, then runs kbs-client with the
+// supplied subcommand arguments under the standard config preamble.
+func (p *KeyBrokerService) runKbsClientAdmin(args ...string) error {
 	tokenFile, err := signAdminToken(p.privateKey)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(tokenFile)
 
-	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
-	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
-	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--admin-token-file", tokenFile, "set-resource-policy", "--policy-file", policyFile)
+	cmdArgs := append([]string{"--cert-file", certPath, "--url", p.endpoint, "config", "--admin-token-file", tokenFile}, args...)
+	cmd := exec.Command("./kbs-client", cmdArgs...)
 	cmd.Dir = trusteeRepoPath
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
 	log.Tracef("%v, output: %s", cmd, stdoutStderr)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
+}
+
+func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile string) error {
+	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
+	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
+	return p.runKbsClientAdmin("set-resource-policy", "--policy-file", policyFile)
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFile string) error {
-	tokenFile, err := signAdminToken(p.privateKey)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tokenFile)
-
 	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
 	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
-	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--admin-token-file", tokenFile, "set-attestation-policy", "--policy-file", policyFile)
-	cmd.Dir = trusteeRepoPath
-	cmd.Env = os.Environ()
-	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
-	if err != nil {
-		return err
-	}
-	return nil
+	return p.runKbsClientAdmin("set-attestation-policy", "--policy-file", policyFile)
 }
 
 func (p *KeyBrokerService) setSecretKey(resource string, path string) error {
-	tokenFile, err := signAdminToken(p.privateKey)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tokenFile)
-
 	log.Info("set key resource: ", resource)
-	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--admin-token-file", tokenFile, "set-resource", "--path", resource, "--resource-file", path)
-	cmd.Dir = trusteeRepoPath
-	cmd.Env = os.Environ()
-	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, status: %v, output: %s", cmd, err, stdoutStderr)
-	if err != nil {
-		return err
-	}
-	return nil
+	return p.runKbsClientAdmin("set-resource", "--path", resource, "--resource-file", path)
 }
 
 func (p *KeyBrokerService) SetSecret(resourcePath string, secret []byte) error {
