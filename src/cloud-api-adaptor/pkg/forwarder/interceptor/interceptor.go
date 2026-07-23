@@ -33,6 +33,7 @@ const (
 	cloudVolumeMountBase = "/run/cloud-volumes"
 	volumeCheckInterval  = 5 * time.Second
 	volumeCheckTimeout   = 3 * time.Minute
+	cdhSocketPath        = "/run/confidential-containers/cdh.sock"
 )
 
 var allowedFSTypes = map[string]bool{
@@ -47,25 +48,63 @@ type Interceptor interface {
 	agentproto.Redirector
 }
 
+var allowedEncryptTypes = map[string]bool{
+	"luks":  true,
+	"luks2": true,
+}
+
+type cloudMount struct {
+	path       string
+	encrypted  bool
+	mapperName string
+}
+
 type interceptor struct {
 	agentproto.Redirector
 
-	nsPath          string
-	cloudMountPaths []string
+	nsPath      string
+	cloudMounts []cloudMount
 }
 
-// unmountCloudVolumes unmounts all cloud volume mount points in reverse order.
-// Called during DestroySandbox to clean up before the PodVM is terminated.
 func (i *interceptor) unmountCloudVolumes() {
-	for idx := len(i.cloudMountPaths) - 1; idx >= 0; idx-- {
-		mp := i.cloudMountPaths[idx]
-		if err := syscall.Unmount(mp, 0); err != nil {
-			logger.Printf("WARNING: failed to unmount cloud volume %s: %v", mp, err)
+	for idx := len(i.cloudMounts) - 1; idx >= 0; idx-- {
+		cm := i.cloudMounts[idx]
+		if err := syscall.Unmount(cm.path, 0); err != nil {
+			logger.Printf("WARNING: failed to unmount cloud volume %s: %v", cm.path, err)
 		} else {
-			logger.Printf("Unmounted cloud volume %s", mp)
+			logger.Printf("Unmounted cloud volume %s", cm.path)
+		}
+		if cm.encrypted {
+			name := cm.mapperName
+			if name == "" {
+				name = findMapperForMountPoint(cm.path)
+			}
+			if name == "" {
+				logger.Printf("WARNING: cannot determine LUKS mapper name for %s, skipping cryptsetup close", cm.path)
+				continue
+			}
+			if out, err := exec.Command("cryptsetup", "close", name).CombinedOutput(); err != nil {
+				logger.Printf("WARNING: cryptsetup close %s failed: %v (%s)", name, err, string(out))
+			} else {
+				logger.Printf("Closed LUKS mapping %s", name)
+			}
 		}
 	}
-	i.cloudMountPaths = nil
+	i.cloudMounts = nil
+}
+
+func findMapperForMountPoint(mountPoint string) string {
+	data, err := os.ReadFile("/proc/mounts")
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[1] == mountPoint && strings.HasPrefix(fields[0], "/dev/mapper/") {
+			return strings.TrimPrefix(fields[0], "/dev/mapper/")
+		}
+	}
+	return ""
 }
 
 func dial(ctx context.Context, agentSocket string) (net.Conn, error) {
@@ -113,7 +152,6 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 
 	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
 
-	// Specify the network namespace path in the container spec
 	req.OCI.Linux.Namespaces = append(req.OCI.Linux.Namespaces, &pb.LinuxNamespace{
 		Type: string(specs.NetworkNamespace),
 		Path: i.nsPath,
@@ -124,8 +162,6 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 		logger.Printf("    %s: %q", ns.Type, ns.Path)
 	}
 
-	// Handle cloud volumes: detect device, format if needed, mount, and
-	// bind-mount into the container's mount namespace.
 	if cvJSON, ok := req.OCI.Annotations[util.CloudVolumesAnnotationKey]; ok && cvJSON != "" {
 		var cloudVolumes map[string]util.CloudVolumeAnnotation
 		if err := json.Unmarshal([]byte(cvJSON), &cloudVolumes); err != nil {
@@ -180,10 +216,18 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 				return nil, fmt.Errorf("cloud volume %s device %s not available: %w", volName, device, err)
 			}
 
-			if err := formatAndMount(device, hostMountPoint, fsType); err != nil {
-				return nil, fmt.Errorf("failed to mount cloud volume %s at %s: %w", volName, hostMountPoint, err)
+			if volInfo.EncryptType != "" {
+				mapperName := "caa-" + safeName
+				if err := secureMount(ctx, device, hostMountPoint, fsType, volInfo.EncryptType, volInfo.KeyID, mapperName); err != nil {
+					return nil, fmt.Errorf("failed to secure-mount cloud volume %s at %s: %w", volName, hostMountPoint, err)
+				}
+				i.cloudMounts = append(i.cloudMounts, cloudMount{path: hostMountPoint, encrypted: true, mapperName: mapperName})
+			} else {
+				if err := formatAndMount(device, hostMountPoint, fsType); err != nil {
+					return nil, fmt.Errorf("failed to mount cloud volume %s at %s: %w", volName, hostMountPoint, err)
+				}
+				i.cloudMounts = append(i.cloudMounts, cloudMount{path: hostMountPoint, encrypted: false})
 			}
-			i.cloudMountPaths = append(i.cloudMountPaths, hostMountPoint)
 
 			if fsGroupStr := volInfo.FSGroup; fsGroupStr != "" {
 				if gid, err := strconv.Atoi(fsGroupStr); err == nil {
@@ -777,5 +821,62 @@ func formatAndMount(device, mountPoint, fsType string) error {
 		return fmt.Errorf("mount after format %s -> %s failed: %s: %w", device, mountPoint, strings.TrimSpace(string(mountOut)), mountErr)
 	}
 	logger.Printf("Mounted %s at %s (type=%s)", device, mountPoint, fsType)
+	return nil
+}
+
+func isLuks(device string) bool {
+	err := exec.Command("cryptsetup", "isLuks", device).Run()
+	return err == nil
+}
+
+func validateEncryptParams(encryptType, keyID string) (string, error) {
+	if keyID == "" {
+		return "", fmt.Errorf("encrypt_type %q requires a kbs-key-id but none was provided", encryptType)
+	}
+	normalized := strings.ToLower(encryptType)
+	if !allowedEncryptTypes[normalized] {
+		return "", fmt.Errorf("unsupported encrypt_type %q (allowed: luks, luks2)", encryptType)
+	}
+	return normalized, nil
+}
+
+func secureMount(ctx context.Context, device, mountPoint, fsType, encryptType, keyID, mapperName string) error {
+	normalized, err := validateEncryptParams(encryptType, keyID)
+	if err != nil {
+		return err
+	}
+
+	sourceType := "empty"
+	if isLuks(device) {
+		sourceType = "encrypted"
+	}
+
+	logger.Printf("secureMount: device=%s mountPoint=%s sourceType=%s encryptType=%s mapperName=%s",
+		device, mountPoint, sourceType, normalized, mapperName)
+
+	client, err := newCDHClient(cdhSocketPath)
+	if err != nil {
+		return fmt.Errorf("connecting to CDH at %s: %w", cdhSocketPath, err)
+	}
+	defer client.close()
+
+	options := map[string]string{
+		"devicePath":     device,
+		"sourceType":     sourceType,
+		"targetType":     "fileSystem",
+		"encryptionType": normalized,
+		"filesystemType": fsType,
+		"key":            "kbs:///" + keyID,
+	}
+	if mapperName != "" {
+		options["mapperName"] = mapperName
+	}
+
+	mountPath, err := client.secureMount(ctx, "block-device", options, []string{}, mountPoint)
+	if err != nil {
+		return fmt.Errorf("CDH secure_mount failed for %s: %w", device, err)
+	}
+
+	logger.Printf("secureMount: CDH mounted %s at %s", device, mountPath)
 	return nil
 }
