@@ -182,7 +182,7 @@ jobs:
           cd oras
           cp ../build/podvm-*.qcow2 .
           tar cJf podvm.tar.xz podvm-*.qcow2
-          image="${REGISTRY}/podvm-generic-ubuntu-${ARCH}${TEE_PLATFORM:+-${TEE_PLATFORM}}${DEBUG:+-debug}"
+          image="${REGISTRY}/podvm-${ARCH}${TEE_PLATFORM:+-${TEE_PLATFORM}}${DEBUG:+-debug}"
           tag="$(git rev-parse --short HEAD)"
           oras push "${image}:${tag}" podvm.tar.xz
 
