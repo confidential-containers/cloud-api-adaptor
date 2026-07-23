@@ -19,6 +19,7 @@ import (
 	"text/template"
 	"time"
 
+	jwtv5 "github.com/golang-jwt/jwt/v5"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -187,6 +188,7 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		return nil, err
 	}
 
+	var privateKey ed25519.PrivateKey
 	kbsCert := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.pem")
 	if _, err := os.Stat(kbsCert); os.IsNotExist(err) {
 		kbsKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
@@ -198,7 +200,8 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 		}
 		defer keyOutputFile.Close()
 
-		pubKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+		var pubKey ed25519.PublicKey
+		pubKey, privateKey, err = ed25519.GenerateKey(rand.Reader)
 		if err != nil {
 			err = fmt.Errorf("generating Ed25519 key pair: %w\n", err)
 			log.Errorf("%v", err)
@@ -245,6 +248,25 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 			return nil, err
 		}
 
+	} else {
+		kbsKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
+		keyPEM, err := os.ReadFile(kbsKey)
+		if err != nil {
+			return nil, fmt.Errorf("reading existing kbs.key: %w", err)
+		}
+		block, _ := pem.Decode(keyPEM)
+		if block == nil {
+			return nil, fmt.Errorf("failed to decode PEM block from kbs.key")
+		}
+		raw, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parsing kbs.key: %w", err)
+		}
+		var ok bool
+		privateKey, ok = raw.(ed25519.PrivateKey)
+		if !ok {
+			return nil, fmt.Errorf("kbs.key is not an Ed25519 private key")
+		}
 	}
 
 	// IBM_SE_CREDS_DIR describe at https://github.com/confidential-containers/trustee/blob/main/kbs/config/kubernetes/README.md#deploy-kbs
@@ -285,7 +307,35 @@ func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerSer
 	return &KeyBrokerService{
 		installOverlay: overlay,
 		endpoint:       "",
+		privateKey:     privateKey,
 	}, nil
+}
+
+// signAdminToken mints a short-lived EdDSA JWT with role "admin" and writes
+// it to a temporary file. The caller is responsible for removing the file.
+func signAdminToken(privateKey ed25519.PrivateKey) (string, error) {
+	now := time.Now()
+	claims := jwtv5.MapClaims{
+		"role": "admin",
+		"iat":  now.Unix(),
+		"exp":  now.Add(2 * time.Hour).Unix(),
+	}
+	token := jwtv5.NewWithClaims(jwtv5.SigningMethodEdDSA, claims)
+	signed, err := token.SignedString(privateKey)
+	if err != nil {
+		return "", fmt.Errorf("signing admin token: %w", err)
+	}
+	f, err := os.CreateTemp("", "kbs-admin-token-*")
+	if err != nil {
+		return "", fmt.Errorf("creating admin token file: %w", err)
+	}
+	if _, err := f.WriteString(signed); err != nil {
+		f.Close()
+		os.Remove(f.Name())
+		return "", fmt.Errorf("writing admin token file: %w", err)
+	}
+	f.Close()
+	return f.Name(), nil
 }
 
 func saveToFile(filename string, content []byte) error {
@@ -543,10 +593,15 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile string) error {
-	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
+	tokenFile, err := signAdminToken(p.privateKey)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tokenFile)
+
 	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
 	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
-	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource-policy", "--policy-file", policyFile)
+	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--admin-token-file", tokenFile, "set-resource-policy", "--policy-file", policyFile)
 	cmd.Dir = trusteeRepoPath
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
@@ -558,10 +613,15 @@ func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile s
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFile string) error {
-	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
+	tokenFile, err := signAdminToken(p.privateKey)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tokenFile)
+
 	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
 	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
-	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-attestation-policy", "--policy-file", policyFile)
+	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--admin-token-file", tokenFile, "set-attestation-policy", "--policy-file", policyFile)
 	cmd.Dir = trusteeRepoPath
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()
@@ -573,9 +633,14 @@ func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFil
 }
 
 func (p *KeyBrokerService) setSecretKey(resource string, path string) error {
-	privateKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
+	tokenFile, err := signAdminToken(p.privateKey)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tokenFile)
+
 	log.Info("set key resource: ", resource)
-	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--auth-private-key", privateKey, "set-resource", "--path", resource, "--resource-file", path)
+	cmd := exec.Command("./kbs-client", "--cert-file", certPath, "--url", p.endpoint, "config", "--admin-token-file", tokenFile, "set-resource", "--path", resource, "--resource-file", path)
 	cmd.Dir = trusteeRepoPath
 	cmd.Env = os.Environ()
 	stdoutStderr, err := cmd.CombinedOutput()

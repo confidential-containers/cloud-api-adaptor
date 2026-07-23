@@ -5,6 +5,7 @@ package provisioner
 
 import (
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"os"
 	"os/exec"
@@ -61,8 +62,9 @@ type CloudAPIAdaptor struct {
 }
 
 type KeyBrokerService struct {
-	installOverlay InstallOverlay // Pointer to the kustomize overlay
-	endpoint       string         // KBS Service endpoint, such as: http://NodeIP:Port
+	installOverlay InstallOverlay     // Pointer to the kustomize overlay
+	endpoint       string             // KBS Service endpoint, such as: http://NodeIP:Port
+	privateKey     ed25519.PrivateKey // Admin signing key, used to mint KBS admin tokens
 }
 
 // InstallOverlay defines common operations to an install overlay (install/overlays/*)
