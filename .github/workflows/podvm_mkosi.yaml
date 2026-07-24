@@ -25,6 +25,11 @@ on:
         default: false
         required: false
         type: boolean
+      tee-platform:
+        description: Which TEE platform we are building the image for
+        default: 'none'
+        required: false
+        type: string
 
   workflow_call:
     inputs:
@@ -50,6 +55,11 @@ on:
         default: false
         required: false
         type: boolean
+      tee-platform:
+        description: Which TEE platform we are building the image for
+        default: 'none'
+        required: false
+        type: string
     secrets:
       QUAY_PASSWORD:
         required: true
@@ -147,6 +157,7 @@ jobs:
         run: make podvm-binaries
         env:
           ARCH: ${{ inputs.arch }}
+          TEE_PLATFORM: ${{ inputs.tee-platform }}
           VERIFY_PROVENANCE: yes
 
       - name: Build mkosi debug image
@@ -171,12 +182,8 @@ jobs:
           cd oras
           cp ../build/podvm-*.qcow2 .
           tar cJf podvm.tar.xz podvm-*.qcow2
-          image=${REGISTRY}/podvm-generic-ubuntu
-          if [ "${DEBUG}" = "true" ]; then
-            image=${image}-debug
-          fi
-          image=${image}-${ARCH}
-          tag=$(git rev-parse --short HEAD)
+          image="${REGISTRY}/podvm-${ARCH}${TEE_PLATFORM:+-${TEE_PLATFORM}}${DEBUG:+-debug}"
+          tag="$(git rev-parse --short HEAD)"
           oras push "${image}:${tag}" podvm.tar.xz
 
           # If the input has a different image-tag then also push it with that tag
@@ -190,10 +197,11 @@ jobs:
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
         env:
-          DEBUG: ${{ inputs.debug == true && 'true' || 'false' }}
+          DEBUG: ${{ inputs.debug == true && '1' || '' }}
           REGISTRY: ${{ inputs.registry }}
           ARCH: ${{ inputs.arch }}
           IMAGE_TAG: ${{ inputs.image_tag }}
+          TEE_PLATFORM: ${{ inputs.tee-platform || '' }}
 
       - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
