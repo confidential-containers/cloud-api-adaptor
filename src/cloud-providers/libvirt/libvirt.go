@@ -607,6 +607,10 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}
 
 	rootVolFile, err := rootVol.GetPath()
+	freeErr := rootVol.Free()
+	if freeErr != nil {
+		logger.Printf("Warning: failed to free root volume handle: %v", freeErr)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("Error retrieving volume path: %s", err)
 	}
