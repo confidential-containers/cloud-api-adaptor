@@ -19,7 +19,7 @@ require (
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0
-	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20260519201048-cec98e0d976b
+	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20260720141120-cf82bb35c803
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/stretchr/testify v1.11.1
 	github.com/vishvananda/netlink v1.3.1
@@ -44,7 +44,7 @@ require (
 	github.com/IBM/ibm-cos-sdk-go v1.14.1
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
-	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/moby/sys/mountinfo v0.7.2
 	github.com/pelletier/go-toml/v2 v2.1.0
