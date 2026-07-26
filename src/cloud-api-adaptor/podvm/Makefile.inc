@@ -100,7 +100,8 @@ PAUSE_BUNDLE  ?= pause_bundle
 define pull_agent_artifact
 	$(eval $(call generate_tag,tag,$(KATA_REF),$(ARCH)))
 	$(eval OCI_IMAGE := $(KATA_REGISTRY)/agent)
-	$(eval OCI_DIGEST := $(shell oras resolve $(OCI_IMAGE):${tag}))
+	$(eval OCI_DIGEST := $(strip $(shell oras resolve $(OCI_IMAGE):${tag})))
+	$(if $(OCI_DIGEST),,$(error oras resolve returned empty digest for $(OCI_IMAGE):${tag}))
 	$(eval OCI_REF := $(OCI_IMAGE)@$(OCI_DIGEST))
 	$(if $(filter yes,$(VERIFY_PROVENANCE)),$(ROOT_DIR)hack/verify-provenance.sh \
 		$(if $(filter $(DISTRO_ARCH),amd64 arm64),-s,) \
@@ -115,7 +116,8 @@ endef
 define pull_gc_artifact
 	$(eval $(call generate_tag,tag,$(GUEST_COMPONENTS_REF),$(2)))
 	$(eval OCI_IMAGE := $(GUEST_COMPONENTS_REGISTRY)/$(1))
-	$(eval OCI_DIGEST := $(shell oras resolve $(OCI_IMAGE):${tag}))
+	$(eval OCI_DIGEST := $(strip $(shell oras resolve $(OCI_IMAGE):${tag})))
+	$(if $(OCI_DIGEST),,$(error oras resolve returned empty digest for $(OCI_IMAGE):${tag}))
 	$(eval OCI_REF := $(OCI_IMAGE)@$(OCI_DIGEST))
 	$(if $(filter yes,$(VERIFY_PROVENANCE)),$(ROOT_DIR)hack/verify-provenance.sh \
 		$(if $(filter $(DISTRO_ARCH),amd64 arm64),-s,) \
