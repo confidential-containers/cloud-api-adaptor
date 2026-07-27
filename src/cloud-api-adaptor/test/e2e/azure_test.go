@@ -30,6 +30,40 @@ func TestCreateSimplePodAzure(t *testing.T) {
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
+// Azure exposes two flavours of confidential VM, distinguished only by the VM
+// size: the DCasv5 family is backed by AMD SEV-SNP and the DCesv6 family by
+// Intel TDX. The pod VM image carries attesters for both, and the provider
+// applies an identical security profile either way, so running the same simple
+// pod on each size is enough to cover both TEEs.
+//
+// Both sizes must be listed in AZURE_INSTANCE_SIZES for the machine_type
+// annotation to be accepted.
+var azureTeeInstanceSizes = []struct {
+	tee  string
+	size string
+}{
+	{tee: "snp", size: "Standard_DC2as_v5"},
+	{tee: "tdx", size: "Standard_DC2es_v6"},
+}
+
+func TestCreateSimplePodOnTeeAzure(t *testing.T) {
+	for _, tc := range azureTeeInstanceSizes {
+		t.Run(tc.tee, func(t *testing.T) {
+			t.Parallel()
+			annotations := map[string]string{
+				"io.katacontainers.config.hypervisor.machine_type": tc.size,
+			}
+			pod := NewPod(E2eNamespace, "simple-test-"+tc.tee, "busybox", getBusyboxTestImage(t),
+				WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}),
+				WithAnnotations(annotations))
+			NewTestCase(t, testEnv, "SimplePeerPodOnTee", assert, "PodVM is created on "+tc.tee).
+				WithPod(pod).
+				WithExpectedInstanceType(tc.size).
+				Run()
+		})
+	}
+}
+
 func TestCreatePodWithConfigMapAzure(t *testing.T) {
 	t.Parallel()
 	DoTestCreatePodWithConfigMap(t, testEnv, assert)
