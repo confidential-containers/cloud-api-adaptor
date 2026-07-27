@@ -75,6 +75,10 @@ update_provider_charts() {
         echo "Updated ${provider_file} -> ${image_tag}-dev"
     fi
 
+    cloud_providers_makefile="src/cloud-providers/Makefile"
+    sed "${sed_inplace[@]}" 's/"  tag: \\"latest\\"/"  tag: \\"'"${image_tag}-dev"'\\"/' "${cloud_providers_makefile}"
+    echo "Updated ${cloud_providers_makefile} -> ${image_tag}-dev"
+
     # Pin peerpod-ctrl and webhook image tags
     peerpodctrl_values="src/peerpod-ctrl/chart/values.yaml"
     webhook_values="src/webhook/chart/values.yaml"
@@ -102,7 +106,7 @@ usage() {
         "caa-image-tag": Updates the Helm chart values to a specific image
         tag of the cloud-api-adaptor, peerpod-ctrl and webhook to use for
         the release, to provide a pinned and stable version.
-        Provider libvirt gets the dev- prefix.
+        Provider libvirt and src/cloud-providers/Makefile get the -dev suffix.
             - Parameters: <image_tag> where
                 - image_tag corresponds to the tag of the pre-release tested version
                 of the quay.io/confidential-containers/cloud-api-adaptor image
