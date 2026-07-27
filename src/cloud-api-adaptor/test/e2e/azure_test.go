@@ -30,6 +30,8 @@ func TestCreateSimplePodAzure(t *testing.T) {
 	DoTestCreateSimplePod(t, testEnv, assert)
 }
 
+const machineTypeAnnotation = "io.katacontainers.config.hypervisor.machine_type"
+
 // Azure exposes two flavours of confidential VM, distinguished only by the VM
 // size: the DCasv5 family is backed by AMD SEV-SNP and the DCesv6 family by
 // Intel TDX. The pod VM image carries attesters for both, and the provider
@@ -46,17 +48,17 @@ var azureTeeInstanceSizes = []struct {
 	{tee: "tdx", size: "Standard_DC2es_v6"},
 }
 
-func TestCreateSimplePodOnTeeAzure(t *testing.T) {
+func TestPodOnSpecificTeeAzure(t *testing.T) {
 	for _, tc := range azureTeeInstanceSizes {
 		t.Run(tc.tee, func(t *testing.T) {
 			t.Parallel()
 			annotations := map[string]string{
-				"io.katacontainers.config.hypervisor.machine_type": tc.size,
+				machineTypeAnnotation: tc.size,
 			}
-			pod := NewPod(E2eNamespace, "simple-test-"+tc.tee, "busybox", getBusyboxTestImage(t),
+			pod := NewPod(E2eNamespace, "specific-tee-"+tc.tee, "busybox", getBusyboxTestImage(t),
 				WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}),
 				WithAnnotations(annotations))
-			NewTestCase(t, testEnv, "SimplePeerPodOnTee", assert, "PodVM is created on "+tc.tee).
+			NewTestCase(t, testEnv, "PodOnSpecificTee", assert, "PodVM is created on "+tc.tee).
 				WithPod(pod).
 				WithExpectedInstanceType(tc.size).
 				Run()
@@ -180,7 +182,10 @@ func TestKbsKeyRelease(t *testing.T) {
 	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, resourcePath, testSecret)
 }
 
-func TestRemoteAttestation(t *testing.T) {
+// TestRemoteAttestationAzure retrieves a KBS token from inside the pod VM to
+// verify a successful remote attestation, once per TEE. The pod VM is pinned
+// to an instance type since that is what selects the TEE on Azure.
+func TestRemoteAttestationAzure(t *testing.T) {
 	t.Parallel()
 	var kbsEndpoint string
 	if ep := os.Getenv("KBS_ENDPOINT"); ep != "" {
@@ -194,7 +199,27 @@ func TestRemoteAttestation(t *testing.T) {
 			t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
 		}
 	}
-	DoTestRemoteAttestation(t, testEnv, assert, kbsEndpoint)
+	initdata, err := buildInitdataAnnotation(kbsEndpoint)
+	if err != nil {
+		t.Fatalf("failed to build initdata: %v", err)
+	}
+	image := "quay.io/confidential-containers/test-images:curl-jq"
+	// fail on non 200 code, silent, but output on failure
+	cmd := []string{"curl", "-f", "-s", "-S", "-o", "/dev/null", "http://127.0.0.1:8006/aa/token?token_type=kbs"}
+	for _, tc := range azureTeeInstanceSizes {
+		t.Run(tc.tee, func(t *testing.T) {
+			t.Parallel()
+			annotations := map[string]string{
+				InitdataAnnotation:    initdata,
+				machineTypeAnnotation: tc.size,
+			}
+			job := NewJob(E2eNamespace, "remote-attestation-"+tc.tee, 0, image,
+				WithJobCommand(cmd), WithJobAnnotations(annotations))
+			NewTestCase(t, testEnv, "RemoteAttestationAzure", assert, "Received KBS token").
+				WithJob(job).
+				Run()
+		})
+	}
 }
 
 func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
