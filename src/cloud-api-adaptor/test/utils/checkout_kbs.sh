@@ -9,9 +9,10 @@ set -euo pipefail
 TEST_DIR=$(cd "$(dirname "$(realpath "$0")")/../"; pwd)
 
 VERSIONS_YAML_PATH=$(realpath "${TEST_DIR}/../versions.yaml")
+VERSIONS_PY=$(realpath "${TEST_DIR}/../hack/versions.py")
 
-KBS_REPO=$(yq -e '.git.kbs.url' "${VERSIONS_YAML_PATH}")
-KBS_VERSION=$(yq -e '.git.kbs.reference' "${VERSIONS_YAML_PATH}")
+KBS_REPO=$("${VERSIONS_PY}" -f "${VERSIONS_YAML_PATH}" -q 'git.kbs.url')
+KBS_VERSION=$("${VERSIONS_PY}" -f "${VERSIONS_YAML_PATH}" -q 'git.kbs.reference')
 
 install_kbs_client() {
     kbs_sha=$1
