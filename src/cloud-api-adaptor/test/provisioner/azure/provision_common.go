@@ -638,6 +638,7 @@ func getPropertiesImpl() map[string]string {
 		"AZURE_IMAGE_ID":        AzureProps.ImageID,
 		"AZURE_SUBNET_ID":       AzureProps.SubnetID,
 		"AZURE_INSTANCE_SIZE":   AzureProps.InstanceSize,
+		"AZURE_INSTANCE_SIZES":  AzureProps.InstanceSizes,
 		"TAGS":                  AzureProps.Tags,
 		"CONTAINER_RUNTIME":     AzureProps.ContainerRuntime,
 		"TUNNEL_TYPE":           AzureProps.TunnelType,
@@ -721,7 +722,7 @@ func (a *AzureInstallChart) Configure(ctx context.Context, cfg *envconf.Config, 
 
 	for k, v := range properties {
 		switch k {
-		case "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID", "INITDATA", "TAGS", "TUNNEL_TYPE", "VXLAN_PORT":
+		case "AZURE_SUBSCRIPTION_ID", "AZURE_REGION", "AZURE_INSTANCE_SIZE", "AZURE_INSTANCE_SIZES", "AZURE_RESOURCE_GROUP", "AZURE_SUBNET_ID", "AZURE_IMAGE_ID", "INITDATA", "TAGS", "TUNNEL_TYPE", "VXLAN_PORT":
 			log.Infof("Configuring helm: override value (%s)", k)
 			a.Helm.OverrideProviderValues[k] = v
 		case "AZURE_CLIENT_SECRET", "AZURE_TENANT_ID":

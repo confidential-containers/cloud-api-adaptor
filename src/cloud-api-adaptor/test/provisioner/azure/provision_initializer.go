@@ -35,9 +35,10 @@ type AzureProperties struct {
 	TunnelType          string
 	VxlanPort           string
 
-	InstanceSize string
-	NodeName     string
-	OsType       string
+	InstanceSize  string
+	InstanceSizes string
+	NodeName      string
+	OsType        string
 
 	ResourceGroupClient                *armresources.ResourceGroupsClient
 	ManagedVnetClient                  *armnetwork.VirtualNetworksClient
@@ -68,6 +69,7 @@ func initAzureProperties(properties map[string]string) error {
 		ManagedIdentityName:     properties["MANAGED_IDENTITY_NAME"],
 		CaaImage:                properties["CAA_IMAGE"],
 		InstanceSize:            properties["AZURE_INSTANCE_SIZE"],
+		InstanceSizes:           properties["AZURE_INSTANCE_SIZES"],
 		Tags:                    properties["TAGS"],
 		FederatedCredentialName: properties["FEDERATED_CREDENTIAL_NAME"],
 		ContainerRuntime:        properties["CONTAINER_RUNTIME"],
