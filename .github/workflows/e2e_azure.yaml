@@ -110,11 +110,13 @@ jobs:
           MANAGED_IDENTITY_NAME: "${{ vars.AZURE_MANAGED_IDENTITY_NAME }}"
           RESOURCE_GROUP_NAME: "${{ vars.AZURE_RESOURCE_GROUP }}"
           AZURE_IMAGE_ID: "${{ steps.publish-image.outputs.image-id }}"
+          AZURE_INSTANCE_SIZES: "Standard_DC2as_v5,Standard_DC2es_v6"
         run: |
           cat <<EOF > azure.properties
           AZURE_CLIENT_ID="${AZURE_CLIENT_ID}"
           AZURE_SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
           AZURE_IMAGE_ID="${AZURE_IMAGE_ID}"
+          AZURE_INSTANCE_SIZES="${AZURE_INSTANCE_SIZES}"
           CLUSTER_NAME="${CLUSTER_NAME}"
           CONTAINER_RUNTIME="containerd"
           FEDERATED_CREDENTIAL_NAME="${CLUSTER_NAME}"
@@ -131,7 +133,12 @@ jobs:
       - name: Run tests
         env:
           TEST_PROVISION: "yes"
-          RUN_TESTS: "^TestCreateSimplePodAzure$"
+          # Each parallel test creates a pod VM, so cap concurrency to stay
+          # within the confidential VM family vCPU quotas.
+          TEST_E2E_PARALLEL: "2"
+          # Backslashes escape the shell metacharacters; the Makefile expands
+          # RUN_TESTS unquoted, so go test receives ^Test(A|B)$
+          RUN_TESTS: '^Test\(CreateSimplePodAzure\|CreateSimplePodOnTeeAzure\)$'
           TEST_PROVISION_FILE: "${{ steps.create-properties-file.outputs.properties-file }}"
         run: make test-e2e
 
