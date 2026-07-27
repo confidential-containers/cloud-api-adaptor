@@ -15,7 +15,7 @@ replicas: 2
 # Webhook image
 image:
   repository: quay.io/confidential-containers/peer-pods-webhook
-  tag: latest
+  tag: 61b1aba91df646a663e60ab6b55c6a7dc93cd167
   pullPolicy: IfNotPresent
 
 # Manager container resource limits and requests
