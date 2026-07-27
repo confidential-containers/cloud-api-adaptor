@@ -42,6 +42,8 @@ type AzureProperties struct {
 	ResourceGroupClient                *armresources.ResourceGroupsClient
 	ManagedVnetClient                  *armnetwork.VirtualNetworksClient
 	ManagedSubnetClient                *armnetwork.SubnetsClient
+	ManagedPublicIPClient              *armnetwork.PublicIPAddressesClient
+	ManagedNatGatewayClient            *armnetwork.NatGatewaysClient
 	ManagedAksClient                   *armcontainerservice.ManagedClustersClient
 	ManagedVMClient                    *armcompute.VirtualMachinesClient
 	FederatedIdentityCredentialsClient *armmsi.FederatedIdentityCredentialsClient
@@ -145,6 +147,8 @@ func initManagedClients() error {
 	}
 	AzureProps.ManagedVnetClient = networkClientFactory.NewVirtualNetworksClient()
 	AzureProps.ManagedSubnetClient = networkClientFactory.NewSubnetsClient()
+	AzureProps.ManagedPublicIPClient = networkClientFactory.NewPublicIPAddressesClient()
+	AzureProps.ManagedNatGatewayClient = networkClientFactory.NewNatGatewaysClient()
 
 	AzureProps.ManagedVMClient, err = armcompute.NewVirtualMachinesClient(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {

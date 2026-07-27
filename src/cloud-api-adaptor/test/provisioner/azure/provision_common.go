@@ -5,11 +5,14 @@ package azure
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -22,6 +25,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/go-autorest/autorest"
 )
@@ -212,6 +216,137 @@ func deleteFederatedIdentityCredential() error {
 	return nil
 }
 
+const peerPodNetworkName = "peerpod"
+
+// nextPrefix returns the network that directly follows prefix, keeping the same
+// mask length, e.g. 10.224.0.0/16 -> 10.225.0.0/16.
+func nextPrefix(prefix netip.Prefix) (netip.Prefix, error) {
+	addr := prefix.Masked().Addr()
+	if !addr.Is4() {
+		return netip.Prefix{}, fmt.Errorf("only IPv4 prefixes are supported, got %q", prefix)
+	}
+
+	next := binary.BigEndian.Uint32(addr.AsSlice()[:]) + 1<<(32-uint(prefix.Bits()))
+	if next == 0 {
+		return netip.Prefix{}, fmt.Errorf("no address space left after %q", prefix)
+	}
+
+	var buf [4]byte
+	binary.BigEndian.PutUint32(buf[:], next)
+
+	return netip.PrefixFrom(netip.AddrFrom4(buf), prefix.Bits()), nil
+}
+
+// peerPodPrefix picks a free network for the peer pod subnet, adjacent to the
+// AKS node subnet and with the same size.
+func peerPodPrefix(subnets []*armnetwork.Subnet) (netip.Prefix, error) {
+	used := make([]netip.Prefix, 0, len(subnets))
+	for _, subnet := range subnets {
+		if subnet.Properties == nil || subnet.Properties.AddressPrefix == nil {
+			continue
+		}
+		prefix, err := netip.ParsePrefix(*subnet.Properties.AddressPrefix)
+		if err != nil {
+			return netip.Prefix{}, fmt.Errorf("parsing address prefix of subnet %q: %w", *subnet.Name, err)
+		}
+		// Keep the prefix stable if the subnet is already there, so that
+		// re-provisioning an existing cluster does not try to renumber it.
+		if subnet.Name != nil && *subnet.Name == peerPodNetworkName {
+			return prefix, nil
+		}
+		used = append(used, prefix)
+	}
+
+	if len(used) == 0 {
+		return netip.Prefix{}, fmt.Errorf("no subnet with an address prefix found")
+	}
+
+	// Walk forward from the node subnet until we find a block that is free. The
+	// VNET usually has spare space right after it, but a cluster may add subnets.
+	candidate := used[0]
+	for range len(used) + 1 {
+		var err error
+		if candidate, err = nextPrefix(candidate); err != nil {
+			return netip.Prefix{}, err
+		}
+
+		if !slices.ContainsFunc(used, candidate.Overlaps) {
+			return candidate, nil
+		}
+	}
+
+	return netip.Prefix{}, fmt.Errorf("no free address space adjacent to %q", used[0])
+}
+
+// createPeerPodSubnet creates a subnet dedicated to peer pod VMs, with a NAT
+// gateway attached so that the VMs can reach public OCI registries. It returns
+// the ID of the subnet.
+func createPeerPodSubnet(ctx context.Context, aksRg, vnetName string, subnets []*armnetwork.Subnet) (string, error) {
+	prefix, err := peerPodPrefix(subnets)
+	if err != nil {
+		return "", fmt.Errorf("determining peer pod address prefix: %w", err)
+	}
+
+	log.Infof("Creating public IP %q in resource group %q", peerPodNetworkName, aksRg)
+	ipPoller, err := AzureProps.ManagedPublicIPClient.BeginCreateOrUpdate(ctx, aksRg, peerPodNetworkName, armnetwork.PublicIPAddress{
+		Location: to.Ptr(AzureProps.Location),
+		SKU: &armnetwork.PublicIPAddressSKU{
+			Name: to.Ptr(armnetwork.PublicIPAddressSKUNameStandard),
+		},
+		Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+			PublicIPAddressVersion:   to.Ptr(armnetwork.IPVersionIPv4),
+			PublicIPAllocationMethod: to.Ptr(armnetwork.IPAllocationMethodStatic),
+		},
+	}, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating public IP %q: %w", peerPodNetworkName, err)
+	}
+
+	publicIP, err := ipPoller.PollUntilDone(ctx, nil)
+	if err != nil {
+		return "", fmt.Errorf("waiting for public IP %q: %w", peerPodNetworkName, err)
+	}
+
+	log.Infof("Creating NAT gateway %q in resource group %q", peerPodNetworkName, aksRg)
+	natPoller, err := AzureProps.ManagedNatGatewayClient.BeginCreateOrUpdate(ctx, aksRg, peerPodNetworkName, armnetwork.NatGateway{
+		Location: to.Ptr(AzureProps.Location),
+		SKU: &armnetwork.NatGatewaySKU{
+			Name: to.Ptr(armnetwork.NatGatewaySKUNameStandard),
+		},
+		Properties: &armnetwork.NatGatewayPropertiesFormat{
+			PublicIPAddresses: []*armnetwork.SubResource{{ID: publicIP.ID}},
+		},
+	}, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating NAT gateway %q: %w", peerPodNetworkName, err)
+	}
+
+	natGateway, err := natPoller.PollUntilDone(ctx, nil)
+	if err != nil {
+		return "", fmt.Errorf("waiting for NAT gateway %q: %w", peerPodNetworkName, err)
+	}
+
+	log.Infof("Creating subnet %q (%s) in VNET %q", peerPodNetworkName, prefix, vnetName)
+	subnetPoller, err := AzureProps.ManagedSubnetClient.BeginCreateOrUpdate(ctx, aksRg, vnetName, peerPodNetworkName, armnetwork.Subnet{
+		Properties: &armnetwork.SubnetPropertiesFormat{
+			AddressPrefix: to.Ptr(prefix.String()),
+			NatGateway:    &armnetwork.SubResource{ID: natGateway.ID},
+		},
+	}, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating subnet %q: %w", peerPodNetworkName, err)
+	}
+
+	subnet, err := subnetPoller.PollUntilDone(ctx, nil)
+	if err != nil {
+		return "", fmt.Errorf("waiting for subnet %q: %w", peerPodNetworkName, err)
+	}
+
+	log.Infof("Successfully created peer pod subnet %q (%s) with NAT gateway", peerPodNetworkName, prefix)
+
+	return *subnet.ID, nil
+}
+
 func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("CreateCluster()")
 
@@ -295,14 +430,18 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 		return fmt.Errorf("failed to fetch vnet: %q: %v", vnetName, err)
 	}
 
-	SubnetsPtr := &virtualNetwork.Properties.Subnets
-	if SubnetsPtr == nil || len(*SubnetsPtr) == 0 {
-		return fmt.Errorf("no subnet found in the specified VNET: %q: %v", vnetName, err)
+	subnets := virtualNetwork.Properties.Subnets
+	if len(subnets) == 0 {
+		return fmt.Errorf("no subnet found in the specified VNET: %q", vnetName)
 	}
 
-	// Get the ID of the first subnet
-	subnetID := (*SubnetsPtr)[0].ID
-	AzureProps.SubnetID = *subnetID
+	// podvms need their own subnet which has outbound access to the internet
+	// to pull images from public OCI registries
+	peerPodSubnetID, err := createPeerPodSubnet(ctx, aksRg, vnetName, subnets)
+	if err != nil {
+		return fmt.Errorf("creating peer pod subnet: %w", err)
+	}
+	AzureProps.SubnetID = peerPodSubnetID
 
 	home, err := os.UserHomeDir()
 	if err != nil {
