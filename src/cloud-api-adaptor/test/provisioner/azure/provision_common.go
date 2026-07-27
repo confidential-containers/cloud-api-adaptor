@@ -13,16 +13,20 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
 	"github.com/containerd/containerd/reference"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
@@ -218,6 +222,29 @@ func deleteFederatedIdentityCredential() error {
 
 const peerPodNetworkName = "peerpod"
 
+// clusterVnet returns the VNET that AKS created for the cluster in its node
+// resource group.
+func clusterVnet(ctx context.Context, aksRg string) (*armnetwork.VirtualNetwork, error) {
+	var vnet *armnetwork.VirtualNetwork
+
+	pager := AzureProps.ManagedVnetClient.NewListPager(aksRg, nil)
+	for pager.More() {
+		nextResult, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("getting VNETs of AKS %q: %w", AzureProps.ClusterName, err)
+		}
+		for _, v := range nextResult.Value {
+			vnet = v
+		}
+	}
+
+	if vnet == nil || vnet.ID == nil {
+		return nil, fmt.Errorf("no VNET found in resource group %q", aksRg)
+	}
+
+	return vnet, nil
+}
+
 // nextPrefix returns the network that directly follows prefix, keeping the same
 // mask length, e.g. 10.224.0.0/16 -> 10.225.0.0/16.
 func nextPrefix(prefix netip.Prefix) (netip.Prefix, error) {
@@ -347,6 +374,134 @@ func createPeerPodSubnet(ctx context.Context, aksRg, vnetName string, subnets []
 	return *subnet.ID, nil
 }
 
+// podVMNamePrefix is the prefix of the name of every pod VM instance, including
+// the separator that GenerateInstanceName puts after it.
+var podVMNamePrefix = util.PodVMNamePrefix + "-"
+
+// vmAttachedToVnet reports whether any of the NICs of vm lives in the given VNET.
+func vmAttachedToVnet(ctx context.Context, vm *armcompute.VirtualMachine, vnetID string) (bool, error) {
+	if vm.Properties == nil || vm.Properties.NetworkProfile == nil {
+		return false, nil
+	}
+
+	subnetPrefix := vnetID + "/subnets/"
+	for _, nicRef := range vm.Properties.NetworkProfile.NetworkInterfaces {
+		if nicRef.ID == nil {
+			continue
+		}
+		// The last segment of a NIC id is its name. The NIC is created along
+		// with the VM, so it lives in the same resource group.
+		nicName := (*nicRef.ID)[strings.LastIndex(*nicRef.ID, "/")+1:]
+		nic, err := AzureProps.ManagedNicClient.Get(ctx, AzureProps.ResourceGroupName, nicName, nil)
+		if err != nil {
+			return false, fmt.Errorf("getting network interface %q: %w", nicName, err)
+		}
+
+		if nic.Properties == nil {
+			continue
+		}
+		for _, ipConfig := range nic.Properties.IPConfigurations {
+			if ipConfig.Properties == nil || ipConfig.Properties.Subnet == nil || ipConfig.Properties.Subnet.ID == nil {
+				continue
+			}
+			if strings.HasPrefix(*ipConfig.Properties.Subnet.ID, subnetPrefix) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// clusterPodVMs lists the pod VMs that belong to this cluster. Pod VMs are
+// created in the shared resource group, which may be used by more than one
+// cluster at a time, so they are matched on the VNET their NIC is attached to
+// rather than on their name alone.
+func clusterPodVMs(ctx context.Context, vnetID string) ([]string, error) {
+	var names []string
+
+	pager := AzureProps.ManagedVMClient.NewListPager(AzureProps.ResourceGroupName, nil)
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("listing VMs in resource group %q: %w", AzureProps.ResourceGroupName, err)
+		}
+
+		for _, vm := range page.Value {
+			if vm.Name == nil || !strings.HasPrefix(*vm.Name, podVMNamePrefix) {
+				continue
+			}
+
+			attached, err := vmAttachedToVnet(ctx, vm, vnetID)
+			if err != nil {
+				return nil, err
+			}
+			if attached {
+				names = append(names, *vm.Name)
+			}
+		}
+	}
+
+	return names, nil
+}
+
+// CreatePodVMInstance is a no-op. Pod VMs are created on demand by the
+// cloud-api-adaptor when a peer pod is scheduled.
+func (p *AzureCloudProvisioner) CreatePodVMInstance(ctx context.Context, cfg *envconf.Config) error {
+	return nil
+}
+
+// DeletePodVMInstance deletes pod VMs that the cloud-api-adaptor left behind.
+// They are created in the shared resource group, which outlives the cluster, so
+// they would leak if they were not cleaned up explicitly. This has to run before
+// the cluster is deleted: the pod VM NICs are attached to the cluster VNET, which
+// blocks the deletion of the node resource group while they still exist.
+func (p *AzureCloudProvisioner) DeletePodVMInstance(ctx context.Context, cfg *envconf.Config) error {
+	log.Trace("DeletePodVMInstance()")
+
+	cluster, err := AzureProps.ManagedAksClient.Get(ctx, AzureProps.ResourceGroupName, AzureProps.ClusterName, nil)
+	if err != nil {
+		return fmt.Errorf("getting cluster %q: %w", AzureProps.ClusterName, err)
+	}
+
+	vnet, err := clusterVnet(ctx, *cluster.Properties.NodeResourceGroup)
+	if err != nil {
+		return fmt.Errorf("fetching cluster vnet: %w", err)
+	}
+
+	names, err := clusterPodVMs(ctx, *vnet.ID)
+	if err != nil {
+		return fmt.Errorf("listing pod VMs: %w", err)
+	}
+
+	if len(names) == 0 {
+		log.Info("No pod VM instances left behind")
+		return nil
+	}
+
+	// Delete the VMs concurrently, they are independent of each other and each
+	// deletion takes a while. Their NICs and disks are configured to be deleted
+	// along with the VM.
+	log.Infof("Deleting %d pod VM instance(s): %v", len(names), names)
+	pollers := make([]*runtime.Poller[armcompute.VirtualMachinesClientDeleteResponse], 0, len(names))
+	for _, name := range names {
+		poller, err := AzureProps.ManagedVMClient.BeginDelete(ctx, AzureProps.ResourceGroupName, name, nil)
+		if err != nil {
+			return fmt.Errorf("deleting pod VM %q: %w", name, err)
+		}
+		pollers = append(pollers, poller)
+	}
+
+	for i, poller := range pollers {
+		if _, err := poller.PollUntilDone(ctx, nil); err != nil {
+			return fmt.Errorf("waiting for pod VM %q to be deleted: %w", names[i], err)
+		}
+		log.Infof("Successfully deleted pod VM %q", names[i])
+	}
+
+	return nil
+}
+
 func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
 	log.Trace("CreateCluster()")
 
@@ -412,23 +567,11 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 	// Fetch aks-rg details
 	aksRg := *cluster.Properties.NodeResourceGroup
 
-	// Fetch default vnet name
-	vnetName := ""
-	pager := AzureProps.ManagedVnetClient.NewListPager(aksRg, nil)
-	for pager.More() {
-		nextResult, err := pager.NextPage(ctx)
-		if err != nil {
-			return fmt.Errorf("getting VNETs of AKS: %q: %w", AzureProps.ClusterName, err)
-		}
-		for _, v := range nextResult.Value {
-			vnetName = *v.Name
-		}
-	}
-
-	virtualNetwork, err := AzureProps.ManagedVnetClient.Get(ctx, aksRg, vnetName, nil)
+	virtualNetwork, err := clusterVnet(ctx, aksRg)
 	if err != nil {
-		return fmt.Errorf("failed to fetch vnet: %q: %v", vnetName, err)
+		return fmt.Errorf("fetching cluster vnet: %w", err)
 	}
+	vnetName := *virtualNetwork.Name
 
 	subnets := virtualNetwork.Properties.Subnets
 	if len(subnets) == 0 {
