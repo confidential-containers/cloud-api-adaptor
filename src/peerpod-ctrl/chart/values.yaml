@@ -4,7 +4,7 @@ namePrefix: peerpodctrl-
 # PeerPod controller image
 image:
   repository: quay.io/confidential-containers/peerpod-ctrl
-  tag: 61b1aba91df646a663e60ab6b55c6a7dc93cd167
+  tag: latest
   pullPolicy: IfNotPresent
 
 # kube-rbac-proxy: Sidecar container that protects the /metrics endpoint with RBAC authentication
