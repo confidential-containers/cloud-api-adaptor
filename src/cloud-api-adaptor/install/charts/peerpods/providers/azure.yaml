@@ -114,6 +114,14 @@ providerConfigs:
     # (default: "")
     # TAGS: ""
 
+    # Comma-separated IANA TLS cipher suite names for peer pod connections (not applicable for VersionTLS13)
+    # (default: "")
+    # TLS_CIPHER_SUITES: ""
+
+    # Minimum TLS version for peer pod connections (VersionTLS12 or VersionTLS13)
+    # (default: "")
+    # TLS_MIN_VERSION: ""
+
     # Skip TLS certificate verification - use it only for testing
     # (default: "false")
     # TLS_SKIP_VERIFY: "false"
