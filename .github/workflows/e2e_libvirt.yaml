@@ -121,9 +121,11 @@ jobs:
       - name: Config Libvirt
         env:
           CONTAINER_RUNTIME: ${{ inputs.container_runtime }}
+          CAA_IMAGE: ${{ inputs.caa_image }}
         run: |
           ./libvirt/config_libvirt.sh
           echo "container_runtime=\"${CONTAINER_RUNTIME}\"" >> libvirt.properties
+          echo "CAA_IMAGE=\"${CAA_IMAGE}\"" >> libvirt.properties
           # For debugging
           cat libvirt.properties
           # Add the kcli install directory to PATH for later steps
