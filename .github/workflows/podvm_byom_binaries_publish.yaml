@@ -77,12 +77,29 @@ jobs:
           ref: ${{ inputs.git_ref || github.sha }}
           persist-credentials: false
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Install build dependencies
+        run: |
+          command -v yq || sudo snap install yq
+          yq --version | grep -qE 'v4\.[0-9]+' || { echo "yq version is not 4.x, please install yq 4.x"; exit 1; }
+
       - name: Login to Container Registry
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
           registry: quay.io
           username: ${{ vars.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Build podvm binaries image
+        working-directory: src/cloud-api-adaptor/podvm
+        run: make podvm-binaries
+        env:
+          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'quay.io/confidential-containers' }}
+          PODVM_TAG: ${{ inputs.image_tag || github.sha }}
+          ARCH: ${{ inputs.arch }}
+          PUSH: "true"
 
       - name: Build BYOM binaries image
         working-directory: src/cloud-api-adaptor/podvm
