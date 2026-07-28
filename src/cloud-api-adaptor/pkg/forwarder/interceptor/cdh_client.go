@@ -21,20 +21,27 @@ type cdhClient struct {
 	client *ttrpc.Client
 }
 
-func newCDHClient(socketPath string) (*cdhClient, error) {
+func newCDHClient(ctx context.Context, socketPath string) (*cdhClient, error) {
 	const maxAttempts = 10
 	const retryDelay = 2 * time.Second
+
+	dialer := &net.Dialer{Timeout: 5 * time.Second}
 
 	var conn net.Conn
 	var err error
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		conn, err = net.DialTimeout("unix", socketPath, 5*time.Second)
+		conn, err = dialer.DialContext(ctx, "unix", socketPath)
 		if err == nil {
 			break
 		}
-		if attempt < maxAttempts {
-			logger.Printf("CDH socket %s not ready (attempt %d/%d): %v", socketPath, attempt, maxAttempts, err)
-			time.Sleep(retryDelay)
+		if attempt == maxAttempts {
+			break
+		}
+		logger.Printf("CDH socket %s not ready (attempt %d/%d): %v", socketPath, attempt, maxAttempts, err)
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("dialing CDH socket %s: %w", socketPath, ctx.Err())
+		case <-time.After(retryDelay):
 		}
 	}
 	if err != nil {
@@ -54,7 +61,7 @@ func (c *cdhClient) close() {
 	}
 }
 
-func (c *cdhClient) secureMount(ctx context.Context, volumeType string, options map[string]string, flags []string, mountPoint string) (string, error) {
+func (c *cdhClient) secureMount(ctx context.Context, volumeType string, options map[string]string, flags []string, mountPoint string) error {
 	req := &cdhpb.SecureMountRequest{
 		VolumeType: volumeType,
 		Options:    options,
@@ -64,8 +71,8 @@ func (c *cdhClient) secureMount(ctx context.Context, volumeType string, options 
 	resp := &cdhpb.SecureMountResponse{}
 
 	if err := c.client.Call(ctx, cdhServiceName, "SecureMount", req, resp); err != nil {
-		return "", fmt.Errorf("CDH SecureMount RPC failed: %w", err)
+		return fmt.Errorf("CDH SecureMount RPC failed: %w", err)
 	}
 
-	return resp.GetMountPath(), nil
+	return nil
 }

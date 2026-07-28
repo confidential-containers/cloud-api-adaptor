@@ -1362,7 +1362,7 @@ func TestValidateEncryptParams_AcceptsValidTypes(t *testing.T) {
 	for _, et := range []string{"luks", "LUKS", "luks2", "LUKS2"} {
 		normalized, err := validateEncryptParams(et, "default/key/k")
 		require.NoError(t, err, "encrypt type %q should be accepted", et)
-		assert.Equal(t, strings.ToLower(et), normalized)
+		assert.Equal(t, "luks2", normalized, "CDH requires encryptionType luks2; %q should map to luks2", et)
 	}
 }
 

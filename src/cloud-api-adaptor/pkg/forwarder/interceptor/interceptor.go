@@ -48,11 +48,6 @@ type Interceptor interface {
 	agentproto.Redirector
 }
 
-var allowedEncryptTypes = map[string]bool{
-	"luks":  true,
-	"luks2": true,
-}
-
 type cloudMount struct {
 	path       string
 	encrypted  bool
@@ -69,25 +64,26 @@ type interceptor struct {
 func (i *interceptor) unmountCloudVolumes() {
 	for idx := len(i.cloudMounts) - 1; idx >= 0; idx-- {
 		cm := i.cloudMounts[idx]
+		mapperName := cm.mapperName
+		if cm.encrypted && mapperName == "" {
+			mapperName = findMapperForMountPoint(cm.path)
+		}
 		if err := syscall.Unmount(cm.path, 0); err != nil {
 			logger.Printf("WARNING: failed to unmount cloud volume %s: %v", cm.path, err)
-		} else {
-			logger.Printf("Unmounted cloud volume %s", cm.path)
+			continue
 		}
-		if cm.encrypted {
-			name := cm.mapperName
-			if name == "" {
-				name = findMapperForMountPoint(cm.path)
-			}
-			if name == "" {
-				logger.Printf("WARNING: cannot determine LUKS mapper name for %s, skipping cryptsetup close", cm.path)
-				continue
-			}
-			if out, err := exec.Command("cryptsetup", "close", name).CombinedOutput(); err != nil {
-				logger.Printf("WARNING: cryptsetup close %s failed: %v (%s)", name, err, string(out))
-			} else {
-				logger.Printf("Closed LUKS mapping %s", name)
-			}
+		logger.Printf("Unmounted cloud volume %s", cm.path)
+		if !cm.encrypted {
+			continue
+		}
+		if mapperName == "" {
+			logger.Printf("WARNING: cannot determine LUKS mapper name for %s, skipping cryptsetup close", cm.path)
+			continue
+		}
+		if out, err := exec.Command("cryptsetup", "close", mapperName).CombinedOutput(); err != nil {
+			logger.Printf("WARNING: cryptsetup close %s failed: %v (%s)", mapperName, err, string(out))
+		} else {
+			logger.Printf("Closed LUKS mapping %s", mapperName)
 		}
 	}
 	i.cloudMounts = nil
@@ -856,11 +852,12 @@ func validateEncryptParams(encryptType, keyID string) (string, error) {
 	if keyID == "" {
 		return "", fmt.Errorf("encrypt_type %q requires a kbs-key-id but none was provided", encryptType)
 	}
-	normalized := strings.ToLower(encryptType)
-	if !allowedEncryptTypes[normalized] {
+	switch strings.ToLower(encryptType) {
+	case "luks", "luks2":
+		return "luks2", nil
+	default:
 		return "", fmt.Errorf("unsupported encrypt_type %q (allowed: luks, luks2)", encryptType)
 	}
-	return normalized, nil
 }
 
 func secureMount(ctx context.Context, device, mountPoint, fsType, encryptType, keyID, mapperName string) error {
@@ -880,7 +877,7 @@ func secureMount(ctx context.Context, device, mountPoint, fsType, encryptType, k
 	logger.Printf("secureMount: device=%s mountPoint=%s sourceType=%s encryptType=%s mapperName=%s",
 		device, mountPoint, sourceType, normalized, mapperName)
 
-	client, err := newCDHClient(cdhSocketPath)
+	client, err := newCDHClient(ctx, cdhSocketPath)
 	if err != nil {
 		return fmt.Errorf("connecting to CDH at %s: %w", cdhSocketPath, err)
 	}
@@ -898,11 +895,11 @@ func secureMount(ctx context.Context, device, mountPoint, fsType, encryptType, k
 		options["mapperName"] = mapperName
 	}
 
-	mountPath, err := client.secureMount(ctx, "block-device", options, []string{}, mountPoint)
-	if err != nil {
+	// Upstream SecureMountResponse is empty; mount point is the path we requested.
+	if err := client.secureMount(ctx, "block-device", options, []string{}, mountPoint); err != nil {
 		return fmt.Errorf("CDH secure_mount failed for %s: %w", device, err)
 	}
 
-	logger.Printf("secureMount: CDH mounted %s at %s", device, mountPath)
+	logger.Printf("secureMount: CDH mounted %s at %s", device, mountPoint)
 	return nil
 }
