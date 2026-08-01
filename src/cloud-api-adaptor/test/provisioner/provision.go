@@ -22,6 +22,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"sigs.k8s.io/e2e-framework/klient"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
+	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -95,6 +96,8 @@ var NewInstallChartFunctions = make(map[string]NewInstallChartFunc)
 
 // Waiting timeout for bringing up the pod
 const PodWaitTimeout = time.Second * 30
+
+const kataRuntimeNodeLabel = "katacontainers.io/kata-runtime"
 
 func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, error) {
 	namespace := GetCAANamespace()
@@ -187,8 +190,31 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		return fmt.Errorf("peerpod-ctrl deployment wait failed: %w", err)
 	}
 
+	// The first test could run without kata-deploy being ready, so we wait for it to be installed on at least one node.
+	if err := waitForKataDeploy(ctx, cfg, time.Minute*5); err != nil {
+		return fmt.Errorf("kata-deploy wait failed: %w", err)
+	}
+
 	return nil
 
+}
+
+// waitForKataDeploy blocks until kata is installed on at least one node.
+func waitForKataDeploy(ctx context.Context, cfg *envconf.Config, timeout time.Duration) error {
+	client, err := cfg.NewClient()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Wait for a node labeled %s=true", kataRuntimeNodeLabel)
+
+	nodes := &corev1.NodeList{}
+	if err := wait.For(conditions.New(client.Resources()).ResourceListN(nodes, 1, resources.WithLabelSelector(kataRuntimeNodeLabel+"=true")),
+		wait.WithTimeout(timeout)); err != nil {
+		return fmt.Errorf("no node labeled %s=true: %w", kataRuntimeNodeLabel, err)
+	}
+
+	return nil
 }
 
 // TODO: convert this into a klient/wait/conditions

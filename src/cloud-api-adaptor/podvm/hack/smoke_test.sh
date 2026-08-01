@@ -237,8 +237,16 @@ chmod a+rwx "${WORKDIR}"
 sudo chown -R libvirt-qemu "${WORKDIR}" || sudo chown -R qemu "${WORKDIR}" || true
 sudo chmod +x "${WORKDIR}"
 
-# Resize the VM disk image to add free space
+# Resize the VM disk image to add free space, then fix the GPT backup
+# header which qemu-img resize leaves at the wrong position. Without
+# this, systemd-repart silently skips partition creation (no trusted_store
+# partition appears) and scratch-storage.service cannot find its device.
+# sgdisk requires a block device, so expose the qcow2 via NBD first.
 sudo qemu-img resize -f "${FMT}" "${IMAGE}" +1G
+sudo modprobe nbd max_part=8
+sudo qemu-nbd --connect=/dev/nbd0 "${IMAGE}"
+sudo sgdisk -e /dev/nbd0
+sudo qemu-nbd --disconnect /dev/nbd0
 
 # Start the VM
 echo "::debug:: Starting VM for test mode: $TEST_MODE"
@@ -258,7 +266,7 @@ fi
 
 sudo virt-install \
 	--name "${VM_NAME}" \
-	--ram 1024 \
+	--ram 2048 \
 	--vcpus 2 \
 	--disk "path=${IMAGE},format=${FMT}" \
 	--disk "path=${WORKDIR}/cloud-init.iso,device=cdrom" \
