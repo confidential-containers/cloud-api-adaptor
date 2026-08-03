@@ -251,6 +251,114 @@ EOF
 - For `PODVM_IMAGE_ID`, the vpc image id uploaded to ibmcloud.
 - For `CAA_IMAGE_TAG`, the commit id of project. The commit id can be found here: <https://github.com/confidential-containers/cloud-api-adaptor/commits/main/>
 
+# Running CSI Volume Lifecycle E2E Tests
+
+The lifecycle tests verify the full cloud-native volume passthrough flow: PVC creation → pod write → detach → reattach → read → PVC deletion → cloud disk cleanup verification. They prove that no orphan cloud resources (EBS volumes / Azure Disks) are left behind after the full lifecycle.
+
+These tests are **opt-in** (gated by `CSI_LIFECYCLE_E2E=true`) and do not interfere with existing CI pipelines.
+
+## Prerequisites
+
+1. A Kubernetes cluster (EKS / AKS) with:
+   - **Kata Containers** installed (RuntimeClass `kata-remote` available)
+   - **Cloud API Adaptor (CAA)** deployed and healthy
+   - **caa-csi-block-driver** deployed (CSI driver registered)
+   - **fuse** package installed on worker nodes (required for nydus image guest-pull)
+2. Cloud credentials configured locally (AWS CLI profile or Azure identity)
+3. `KUBECONFIG` pointing to your cluster
+4. Go 1.22+ installed
+
+### Cluster setup notes
+
+- The **PodVM subnet** and the **StorageClass AZ** must match. If EBS volumes are created in `us-east-2b`, the CAA must launch PodVMs in `us-east-2b` as well (via `AWS_SUBNET_ID`).
+- The **security group** must allow inbound TCP/15150 (agent proxy) and UDP/4789 (VXLAN) from the cluster to PodVMs.
+- Worker nodes need the `fuse` package for the nydus-for-kata-tee snapshotter to work (`yum install -y fuse` or `dnf install -y fuse` on Amazon Linux).
+
+## Running on AWS
+
+### Single disk test
+
+```bash
+export CSI_LIFECYCLE_E2E=true
+export CLOUD_PROVIDER=aws
+export AWS_REGION=us-east-2
+export AWS_AVAILABILITY_ZONE=us-east-2b        # must match CAA subnet AZ
+export TEST_PROVISION=no
+export TEST_INSTALL_CAA=no
+export TEST_TEARDOWN=no
+export TEST_PROVISION_FILE=/tmp/dummy.properties  # can be empty, required by test framework
+
+# Single disk lifecycle
+go test -v -tags=aws -timeout 25m -run "TestCSIFullLifecycle$" -count=1 ./test/e2e/
+
+# Multi-disk lifecycle (2 volumes on one pod)
+go test -v -tags=aws -timeout 30m -run "TestCSIFullLifecycleMultiDisk" -count=1 ./test/e2e/
+```
+
+### What the flags mean
+
+| Flag | Why it's needed |
+|------|----------------|
+| `-tags=aws` | Compiles the AWS provider code |
+| `TEST_PROVISION=no` | Skips cluster provisioning (you already have one) |
+| `TEST_INSTALL_CAA=no` | Skips CAA installation (already deployed) |
+| `TEST_TEARDOWN=no` | Skips cluster teardown after test |
+| `TEST_PROVISION_FILE` | Required by test framework's TestMain; can point to any file |
+
+## Running on Azure
+
+```bash
+export CSI_LIFECYCLE_E2E=true
+export CLOUD_PROVIDER=azure
+export AZURE_SUBSCRIPTION_ID=<your-subscription-id>
+export AZURE_RESOURCE_GROUP=<your-resource-group>
+export AZURE_TENANT_ID=<your-tenant-id>
+export AZURE_CLIENT_ID=<your-client-id>
+export AZURE_LOCATION=eastus
+export TEST_PROVISION=no
+export TEST_INSTALL_CAA=no
+export TEST_TEARDOWN=no
+export TEST_PROVISION_FILE=/tmp/dummy.properties
+
+# Single disk lifecycle
+go test -v -tags=azure -timeout 25m -run "TestCSIFullLifecycle$" -count=1 ./test/e2e/
+
+# Multi-disk lifecycle
+go test -v -tags=azure -timeout 30m -run "TestCSIFullLifecycleMultiDisk" -count=1 ./test/e2e/
+```
+
+## What the tests verify
+
+| Test | Coverage |
+|------|----------|
+| `TestCSIFullLifecycle` | Single disk: PVC create → write data → pod delete (verify disk detaches) → reattach to new pod → read data back → PVC delete → verify cloud disk is gone |
+| `TestCSIFullLifecycleMultiDisk` | Same flow with 2 PVCs attached to a single pod — proves multi-volume passthrough works |
+
+The tests create a StorageClass with `reclaimPolicy: Delete` so that PVC deletion triggers cloud disk cleanup. The final phase calls the cloud provider API directly to confirm the disk no longer exists.
+
+## Environment variables
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `CSI_LIFECYCLE_E2E` | Yes | Set to `true` to enable these tests |
+| `CLOUD_PROVIDER` | Yes | `aws` or `azure` |
+| `AWS_REGION` | AWS | Region for EBS API calls |
+| `AWS_AVAILABILITY_ZONE` | AWS (optional) | AZ for StorageClass; must match CAA subnet |
+| `AZURE_SUBSCRIPTION_ID` | Azure | Subscription for Disk API calls |
+| `AZURE_RESOURCE_GROUP` | Azure | Resource group for Disk API calls |
+| `AZURE_TENANT_ID` | Azure (optional) | Used in StorageClass parameters |
+| `AZURE_CLIENT_ID` | Azure (optional) | Used in StorageClass parameters |
+| `AZURE_LOCATION` | Azure (optional) | Used in StorageClass parameters |
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `InvalidVolume.ZoneMismatch` | EBS volume in different AZ than PodVM | Set `AWS_AVAILABILITY_ZONE` to match CAA's `AWS_SUBNET_ID` AZ |
+| `mount.fuse: executable file not found` | Worker node missing fuse package | Install fuse: `yum install -y fuse` on the node |
+| `dial tcp ...:15150: connection timed out` | Security group blocks PodVM traffic | Open TCP/15150 and UDP/4789 in the SG used by PodVMs |
+| `Pod did not complete within 8m` | PodVM boot too slow or image pull issue | Check CAA logs and pod events for specific errors |
+
 # Adding support for a new cloud provider
 
 In order to add a test pipeline for a new cloud provider, you will need to implement some
