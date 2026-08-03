@@ -15,6 +15,7 @@ PODVM_CONTAINER_NAME ?= $(REGISTRY)/podvm-docker-image-$(DISTRO_ARCH)
 PODVM_BYOM_BINARIES_IMAGE ?= $(REGISTRY)/podvm-byom-binaries-ubuntu-$(DISTRO_ARCH)
 PODVM_BYOM_E2E_CONTAINER_NAME ?= $(REGISTRY)/podvm-byom-e2e-image-$(DISTRO_ARCH)
 VERIFY_PROVENANCE ?= no
+EXPORT_BINARIES ?= true
 MKOSI_VERSION ?= v26
 
 _SHA := $(shell git rev-parse --short HEAD)
@@ -82,7 +83,7 @@ endif
 		--build-arg VERIFY_PROVENANCE=$(VERIFY_PROVENANCE) \
 		$(if $(AUTHFILE),--build-arg AUTHFILE=$(AUTHFILE),) \
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
-		$(if $(filter $(PUSH),true),,-o type=local,dest="./resources/binaries-tree") \
+		$(if $(filter $(EXPORT_BINARIES),false),,-o type=local,dest="./resources/binaries-tree") \
 		$(DOCKER_OPTS) \
 		-f Dockerfile.podvm_binaries ../../
 
