@@ -286,25 +286,7 @@ func (b *ByomInstallChart) Install(ctx context.Context, cfg *envconf.Config) err
 		return fmt.Errorf("failed to create SSH key secret: %w", err)
 	}
 
-	if err := b.Helm.Install(ctx, cfg); err != nil {
-		return err
-	}
-
-	// Wait for the worker node and heck for kata-runtime label
-	log.Info("Waiting for worker node to be labeled with kata-runtime...")
-	timeout := time.Now().Add(3 * time.Minute)
-	for time.Now().Before(timeout) {
-		checkLabel := exec.Command("kubectl", "get", "node", ByomProps.WorkerNodeName, "--show-labels")
-		checkLabel.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
-		out, err := checkLabel.Output()
-		if err == nil && strings.Contains(string(out), "katacontainers.io/kata-runtime=true") {
-			log.Info("Worker node is labeled with kata-runtime and ready!")
-			return nil
-		}
-		time.Sleep(15 * time.Second)
-	}
-
-	return fmt.Errorf("kata-runtime label not found - node may not be ready for deployment")
+	return b.Helm.Install(ctx, cfg)
 }
 
 func (b *ByomInstallChart) createSSHKeySecret(ctx context.Context, cfg *envconf.Config) error {
