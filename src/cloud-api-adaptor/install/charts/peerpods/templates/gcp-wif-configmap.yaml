@@ -1,0 +1,36 @@
+{{/*
+GCP direct Workload Identity Federation credentials config.
+
+Rendered when .Values.gcp.workloadIdentityFederation.enable is true.
+Mounted by the cloud-api-adaptor daemonset at /var/run/secrets/gcp-creds/
+and referenced by the GOOGLE_APPLICATION_CREDENTIALS env var, so the
+Google Cloud SDK reads it on every API call: exchange the projected
+K8s SA token at STS, then impersonate the configured GSA via the IAM
+Credentials API.
+
+This is the only way to use GKE Workload Identity from a pod with
+hostNetwork: true (which CAA requires). See:
+https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#use_workload_identity_for_a_pod_using_hostnetwork
+*/}}
+{{- if include "peerpods.gcpWifEnabled" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gcp-direct-wi-creds-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: cloud-api-adaptor
+data:
+  credentials.json: |
+    {
+      "type": "external_account",
+      "audience": "identitynamespace:{{ required "gcp.workloadIdentityFederation.workloadPool is required" .Values.gcp.workloadIdentityFederation.workloadPool }}:{{ required "gcp.workloadIdentityFederation.cluster is required" .Values.gcp.workloadIdentityFederation.cluster }}",
+      "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+      "token_url": "https://sts.googleapis.com/v1/token",
+      "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{{ required "gcp.workloadIdentityFederation.serviceAccount is required" .Values.gcp.workloadIdentityFederation.serviceAccount }}:generateAccessToken",
+      "credential_source": {
+        "file": "/var/run/secrets/tokens/gcp-ksa/token",
+        "format": { "type": "text" }
+      }
+    }
+{{- end }}

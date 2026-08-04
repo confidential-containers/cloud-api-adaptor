@@ -103,6 +103,28 @@ tlsProfile:
 # Set to "0" for unlimited (not recommended for production)
 limit: "10"
 
+# GCP-specific configuration. Only consulted when provider: gcp.
+#
+# Direct Workload Identity Federation:
+# The cloud-api-adaptor daemonset runs with hostNetwork: true, which
+# bypasses the GKE metadata-server-based Workload Identity proxy. To
+# authenticate as a Google service account without distributing a
+# static key, enable direct WIF — the chart will mount a projected
+# K8s SA token and a credentials-config JSON, and set
+# GOOGLE_APPLICATION_CREDENTIALS on the container.
+#
+# The cloud-api-adaptor KSA must have roles/iam.workloadIdentityUser
+# on the configured GSA before installing.
+#
+# Example:
+# gcp:
+#   workloadIdentityFederation:
+#     enable: true
+#     serviceAccount: "peerpods@my-project.iam.gserviceaccount.com"
+#     workloadPool: "my-project.svc.id.goog"
+#     cluster: "https://container.googleapis.com/v1/projects/my-project/locations/us-central1-a/clusters/my-cluster"
+gcp: {}
+
 # DaemonSet configuration
 daemonset:
   # Update strategy controls how the CAA DaemonSet performs rolling updates

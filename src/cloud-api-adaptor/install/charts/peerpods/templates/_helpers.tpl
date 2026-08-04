@@ -53,6 +53,24 @@ true
 {{- end -}}
 
 {{/*
+GCP direct Workload Identity Federation: mount a projected K8s SA token
+and an external-account credentials config so the cloud-api-adaptor
+authenticates to GCP as .Values.gcp.workloadIdentityFederation.serviceAccount.
+
+This path is required on GKE when the daemonset runs with hostNetwork: true,
+because the metadata-server-based Workload Identity proxy is bypassed in
+that case. See:
+https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#use_workload_identity_for_a_pod_using_hostnetwork
+
+Returns non-empty "true" when WIF should be wired up.
+*/}}
+{{- define "peerpods.gcpWifEnabled" -}}
+{{- if and (eq .Values.provider "gcp") .Values.gcp .Values.gcp.workloadIdentityFederation .Values.gcp.workloadIdentityFederation.enable -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
 Check if custom TLS certificates are configured.
 Returns "true" when CACERT_FILE is set in providerConfigs for the active
 provider AND a TLS secret name is available (either chart-managed or external).
