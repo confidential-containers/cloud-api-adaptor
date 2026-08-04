@@ -118,6 +118,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		c = openapi.Config{
 			AccessKeyId:     tea.String(config.AccessKeyID),
 			AccessKeySecret: tea.String(config.SecretKey),
+			SecurityToken:   tea.String(config.SecurityToken),
 			RegionId:        tea.String(config.Region),
 		}
 	}
