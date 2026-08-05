@@ -365,3 +365,94 @@ func TestCloudVolumes_SkipsInvalidMountInfoJSON(t *testing.T) {
 	_, ok := req.OCI.Annotations["io.confidentialcontainers.org.cloud_volumes"]
 	assert.False(t, ok, "annotation should not be set with invalid JSON")
 }
+
+func TestCloudVolumes_EncryptionAnnotation(t *testing.T) {
+	dir := t.TempDir()
+	overrideKataDirectVolumesDir(t, dir)
+
+	service, cleanup := setupMockAgentAndService(t)
+	defer cleanup()
+
+	podUID := "pod-uid-enc-333"
+	volPath := "/var/lib/kubelet/pods/" + podUID + "/volumes/kubernetes.io~csi/pvc-encrypted/mount"
+
+	writeTestMountInfo(t, dir, volPath, map[string]interface{}{
+		"device": "/subscriptions/sub/disks/csi-vol-pvc-encrypted",
+		"fstype": "ext4",
+		"metadata": map[string]interface{}{
+			"cloud-volume-path": "/subscriptions/sub/disks/csi-vol-pvc-encrypted",
+			"encrypt-type":      "LUKS",
+			"kbs-key-id":        "default/key/volume-enc-key",
+		},
+	})
+
+	req := newCreateContainerRequest("test-encrypted-vol").
+		withAnnotations(map[string]string{
+			"io.kubernetes.cri.sandbox-uid": podUID,
+		}).
+		withMounts(&pb.Mount{
+			Destination: "/mnt/secret",
+			Source:      volPath,
+			Type:        "bind",
+		}).
+		build()
+
+	_, err := service.CreateContainer(context.Background(), req)
+	require.NoError(t, err)
+
+	cvJSON, ok := req.OCI.Annotations[util.CloudVolumesAnnotationKey]
+	require.True(t, ok, "cloud_volumes annotation should be set")
+
+	var cloudVolumes map[string]util.CloudVolumeAnnotation
+	require.NoError(t, json.Unmarshal([]byte(cvJSON), &cloudVolumes))
+
+	require.Contains(t, cloudVolumes, "vol-0")
+	vol := cloudVolumes["vol-0"]
+	assert.Equal(t, "/mnt/secret", vol.MountPoint)
+	assert.Equal(t, "ext4", vol.FSType)
+	assert.Equal(t, "0", vol.LUN)
+	assert.Equal(t, "/subscriptions/sub/disks/csi-vol-pvc-encrypted", vol.DiskID)
+	assert.Equal(t, "LUKS", vol.EncryptType)
+	assert.Equal(t, "default/key/volume-enc-key", vol.KeyID)
+}
+
+func TestCloudVolumes_NoEncryptionParamsWhenAbsent(t *testing.T) {
+	dir := t.TempDir()
+	overrideKataDirectVolumesDir(t, dir)
+
+	service, cleanup := setupMockAgentAndService(t)
+	defer cleanup()
+
+	podUID := "pod-uid-plain-444"
+	volPath := "/var/lib/kubelet/pods/" + podUID + "/volumes/kubernetes.io~csi/pvc-plain/mount"
+
+	writeTestMountInfo(t, dir, volPath, map[string]interface{}{
+		"device": "vol-abc123def",
+		"fstype": "xfs",
+	})
+
+	req := newCreateContainerRequest("test-plain-vol").
+		withAnnotations(map[string]string{
+			"io.kubernetes.cri.sandbox-uid": podUID,
+		}).
+		withMounts(&pb.Mount{
+			Destination: "/mnt/data",
+			Source:      volPath,
+			Type:        "bind",
+		}).
+		build()
+
+	_, err := service.CreateContainer(context.Background(), req)
+	require.NoError(t, err)
+
+	cvJSON, ok := req.OCI.Annotations[util.CloudVolumesAnnotationKey]
+	require.True(t, ok, "cloud_volumes annotation should be set")
+
+	var cloudVolumes map[string]util.CloudVolumeAnnotation
+	require.NoError(t, json.Unmarshal([]byte(cvJSON), &cloudVolumes))
+
+	require.Contains(t, cloudVolumes, "vol-0")
+	vol := cloudVolumes["vol-0"]
+	assert.Equal(t, "", vol.EncryptType)
+	assert.Equal(t, "", vol.KeyID)
+}
