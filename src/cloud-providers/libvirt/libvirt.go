@@ -585,7 +585,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}
 
 	rootVolName := v.name + "-root.qcow2"
-	err = createVolume(rootVolName, v.rootDiskSize, libvirtClient.volName, libvirtClient)
+	err = createVolume(rootVolName, v.rootDiskSize, v.volName, libvirtClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error in creating volume: %s", err)
 	}
