@@ -24,6 +24,9 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	// Register cloud providers so the GC can instantiate them.
+	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/aws"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -93,6 +96,7 @@ func main() {
 				DisableFor: []client.Object{
 					&corev1.Secret{},
 					&corev1.ConfigMap{},
+					&corev1.Namespace{},
 				},
 			},
 		},
@@ -111,6 +115,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "PeerPod")
 		os.Exit(1)
 	}
+	if err = mgr.Add(&controllers.GarbageCollector{
+		KubeClient: mgr.GetClient(),
+		Namespace:  os.Getenv("PEERPODS_NAMESPACE"),
+	}); err != nil {
+		setupLog.Error(err, "unable to add garbage collector")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
