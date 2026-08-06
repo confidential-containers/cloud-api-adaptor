@@ -30,6 +30,10 @@ providerConfigs:
     # (required)
     AZURE_RESOURCE_GROUP: ""
 
+    # Secondary Network Subnet Id used for the Pod VM's secondary NIC in multi-NIC mode
+    # (default: "")
+    # AZURE_SECONDARY_SUBNET_ID: ""
+
     # Network Subnet Id
     # (required)
     AZURE_SUBNET_ID: ""
