@@ -47,6 +47,14 @@ func getIPs(instance *vmConfig) ([]netip.Addr, error) {
 	return instance.ips, nil
 }
 
+// resolveVolName returns specImage if non-empty, otherwise defaultVol.
+func resolveVolName(defaultVol, specImage string) string {
+	if specImage != "" {
+		return specImage
+	}
+	return defaultVol
+}
+
 func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
 
 	var instanceMemory uint
@@ -70,8 +78,11 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		instanceVCPUs = uint(p.serviceConfig.CPU)
 	}
 
+	volName := resolveVolName(p.serviceConfig.VolName, spec.Image)
+	logger.Printf("Choosing %s as libvirt volume for the PodVM image", volName)
+
 	// TODO: Specify the maximum instance name length in Libvirt
-	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, rootDiskSize: p.serviceConfig.RootDiskSize, userData: userData, firmware: p.serviceConfig.Firmware, cpuset: p.serviceConfig.CPUSet}
+	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, rootDiskSize: p.serviceConfig.RootDiskSize, userData: userData, firmware: p.serviceConfig.Firmware, cpuset: p.serviceConfig.CPUSet, volName: volName}
 
 	if p.serviceConfig.DisableCVM {
 		vm.launchSecurityType = NoLaunchSecurity
@@ -90,14 +101,6 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 		}
 	}
 	logger.Printf("LaunchSecurityType: %s", vm.launchSecurityType.String())
-
-	if spec.Image != "" {
-		logger.Printf("Choosing %s as libvirt volume for the PodVM image", spec.Image)
-		p.libvirtClient.volName = spec.Image
-	} else if spec.Image == "" && p.serviceConfig.VolName != p.libvirtClient.volName {
-		logger.Printf("Choosing the default %s as libvirt volume for the PodVM image", p.serviceConfig.VolName)
-		p.libvirtClient.volName = p.serviceConfig.VolName
-	}
 
 	result, err := CreateDomain(ctx, p.libvirtClient, vm)
 	if err != nil {
