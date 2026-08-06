@@ -49,6 +49,10 @@ git:
   kbs:
     url: https://github.com/confidential-containers/trustee
     reference: 258ea4acb7b9bd865fce5c63a539f2120dba8298
+    images:
+      kbs: ghcr.io/confidential-containers/staged-images/kbs-grpc-as
+      as: ghcr.io/confidential-containers/staged-images/coco-as-grpc
+      rvps: ghcr.io/confidential-containers/staged-images/rvps
 # If a tag is given it will attempt to pull the oci image by tag. if a
 # reference is specified the corresponding tag will be constructed using
 # the reference and suffixes like architecture or tee.

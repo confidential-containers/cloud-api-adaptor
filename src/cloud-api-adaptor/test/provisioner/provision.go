@@ -5,7 +5,6 @@ package provisioner
 
 import (
 	"context"
-	"crypto/ed25519"
 	"fmt"
 	"os"
 	"os/exec"
@@ -46,11 +45,6 @@ type PodVMInstanceHandler interface {
 
 type NewProvisionerFunc func(properties map[string]string) (CloudProvisioner, error)
 
-// KbsInstallOverlay implements the InstallOverlay interface
-type KbsInstallOverlay struct {
-	overlay *KustomizeOverlay
-}
-
 var NewProvisionerFunctions = make(map[string]NewProvisionerFunc)
 
 type CloudAPIAdaptor struct {
@@ -63,9 +57,8 @@ type CloudAPIAdaptor struct {
 }
 
 type KeyBrokerService struct {
-	installOverlay InstallOverlay     // Pointer to the kustomize overlay
-	endpoint       string             // KBS Service endpoint, such as: http://NodeIP:Port
-	privateKey     ed25519.PrivateKey // Admin signing key, used to mint KBS admin tokens
+	endpoint   string // KBS Service endpoint, such as: http://NodeIP:Port
+	adminToken string // JWT from the Helm bootstrap Secret
 }
 
 // InstallOverlay defines common operations to an install overlay (install/overlays/*)
