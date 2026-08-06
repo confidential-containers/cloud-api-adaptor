@@ -137,11 +137,19 @@ func TestSetupExternalNetworkCrossSubnet(t *testing.T) {
 	tuntest.AddrAdd(t, hostNS, "eth0", "10.129.2.111/23")
 	tuntest.RouteAdd(t, hostNS, "", "10.129.2.1", "eth0")
 
-	tuntest.BridgeAdd(t, hostNS, "eth1")
-	tuntest.AddrAdd(t, hostNS, "eth1", "192.168.1.4/24")
-
 	podNS, _ := tuntest.NewNamedNS(t, "test-extnet-pod")
 	defer tuntest.DeleteNamedNS(t, podNS)
+
+	// eth1 must be a veth endpoint, not a bridge: Linux bridge master
+	// devices cannot be moved between network namespaces (SetNamespace
+	// fails with EINVAL), whereas a veth endpoint can, matching how real
+	// NICs behave. peerNS just anchors the other end of the pair and is
+	// otherwise unused.
+	peerNS, _ := tuntest.NewNamedNS(t, "test-extnet-peer")
+	defer tuntest.DeleteNamedNS(t, peerNS)
+
+	tuntest.VethAdd(t, hostNS, "eth1", peerNS, "peer0")
+	tuntest.AddrAdd(t, hostNS, "eth1", "192.168.1.4/24")
 
 	err := hostNS.Run(func() error {
 		return setupExternalNetwork(hostNS, "eth0", podNS)
