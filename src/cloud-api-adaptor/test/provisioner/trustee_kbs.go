@@ -4,22 +4,16 @@
 package provisioner
 
 import (
-	"bytes"
 	"context"
-	"crypto/ed25519"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
-	"text/template"
 	"time"
 
-	jwtv5 "github.com/golang-jwt/jwt/v5"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,360 +23,229 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
-var trusteeRepoPath string
-var certPath string
+const (
+	kbsNamespace       = "coco-trustee"
+	kbsReleaseName     = "trustee"
+	kbsNodePortSvcName = "trustee-kbs-nodeport"
+	kbsDeploymentName  = "trustee-kbs"
+	kbsPodAppLabel     = "kbs"
+	kbsBootstrapSecret = "trustee-bootstrap-user-keys"
+)
 
-func generateCert(ip string) (string, string, error) {
-	configTemplate := `[req]
-default_bits       = 2048
-default_keyfile    = localhost.key
-distinguished_name = req_distinguished_name
-req_extensions     = req_ext
-x509_extensions    = v3_ca
-
-[req_distinguished_name]
-countryName                 = Country Name (2 letter code)
-countryName_default         = CN
-stateOrProvinceName         = State or Province Name (full name)
-stateOrProvinceName_default = Beijing
-localityName                = Locality Name (eg, city)
-localityName_default        = Beijing
-organizationName            = Organization Name (eg, company)
-organizationName_default    = localhost
-organizationalUnitName      = organizationalunit
-organizationalUnitName_default = Development
-commonName                  = Common Name (e.g. server FQDN or YOUR name)
-commonName_default          = localhost
-commonName_max              = 64
-
-[req_ext]
-subjectAltName = @alt_names
-
-[v3_ca]
-subjectAltName = @alt_names
-
-[alt_names]
-IP.1    = {{.IP}}
-DNS.1   = localhost
-DNS.2   = 127.0.0.1
-`
-
-	// Generate OpenSSL config dynamically
-	var configBuffer bytes.Buffer
-	tmpl, err := template.New("opensslConfig").Parse(configTemplate)
+// cloneTrusteeRepo clones the trustee repo at the pinned SHA into a temp
+// directory and returns its path. The caller is responsible for removing it.
+func cloneTrusteeRepo() (string, error) {
+	versions, err := utils.GetVersions()
 	if err != nil {
-		return "", "", err
+		return "", fmt.Errorf("reading versions.yaml: %w", err)
 	}
-	if err := tmpl.Execute(&configBuffer, struct{ IP string }{IP: ip}); err != nil {
-		return "", "", err
-	}
-
-	cmd := exec.Command("openssl", "req", "-x509", "-nodes", "-days", "365",
-		"-newkey", "rsa:2048",
-		"-keyout", "/dev/stdout",
-		"-out", "/dev/stdout",
-		"-config", "/dev/stdin",
-		"-subj", "/C=CN/ST=Beijing/L=Beijing/O=localhost/OU=Development/CN=localhost",
-		"-passin", "pass:")
-
-	cmd.Stdin = &configBuffer
-
-	var outputBuffer bytes.Buffer
-	cmd.Stdout = &outputBuffer
-	cmd.Stderr = &outputBuffer
-
-	if err := cmd.Run(); err != nil {
-		return "", "", fmt.Errorf("OpenSSL error: %v\n%s", err, outputBuffer.String())
+	kbs, ok := versions.Git["kbs"]
+	if !ok {
+		return "", fmt.Errorf("git.kbs not found in versions.yaml")
 	}
 
-	output := outputBuffer.String()
-	keyStart := "-----BEGIN PRIVATE KEY-----"
-	certStart := "-----BEGIN CERTIFICATE-----"
-
-	keyIndex := strings.Index(output, keyStart)
-	certIndex := strings.Index(output, certStart)
-
-	if keyIndex == -1 && certIndex == -1 {
-		return "", "", fmt.Errorf("failed to parse OpenSSL output: no key or certificate found")
+	dir, err := os.MkdirTemp("", "trustee-")
+	if err != nil {
+		return "", fmt.Errorf("creating temp dir: %w", err)
 	}
 
-	var keyContent, certContent string
-
-	// Extract Private Key if present
-	if keyIndex != -1 {
-		endKeyIndex := strings.Index(output[keyIndex:], "-----END PRIVATE KEY-----")
-		if endKeyIndex == -1 {
-			return "", "", fmt.Errorf("failed to parse private key")
+	for _, args := range [][]string{
+		{"git", "clone", "--depth", "1", kbs.URL, dir},
+		{"git", "-C", dir, "fetch", "--depth=1", "origin", kbs.Ref},
+		{"git", "-C", dir, "checkout", "FETCH_HEAD"},
+	} {
+		cmd := exec.Command(args[0], args[1:]...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return "", fmt.Errorf("running %v: %w\n%s", args, err, out)
 		}
-		endKeyIndex += keyIndex + len("-----END PRIVATE KEY-----")
-		keyContent = strings.TrimSpace(output[keyIndex:endKeyIndex])
 	}
-
-	// Extract Certificate if present
-	if certIndex != -1 {
-		endCertIndex := strings.Index(output[certIndex:], "-----END CERTIFICATE-----")
-		if endCertIndex == -1 {
-			return "", "", fmt.Errorf("failed to parse certificate")
-		}
-		endCertIndex += certIndex + len("-----END CERTIFICATE-----")
-		certContent = strings.TrimSpace(output[certIndex:endCertIndex])
-	}
-
-	keyPath := filepath.Join("../trustee", "kbs", "config", "kubernetes", "base", "https-key.pem")
-	certPath = filepath.Join("../trustee", "kbs", "config", "kubernetes", "base", "https-cert.pem")
-
-	if err := os.WriteFile(certPath, []byte(certContent), 0640); err != nil {
-		return "", "", fmt.Errorf("Failed to write cert file: %v", err)
-	}
-
-	if err := os.WriteFile(keyPath, []byte(keyContent), 0600); err != nil {
-		return "", "", fmt.Errorf("Failed to write cert file: %v", err)
-	}
-	return keyContent, certContent, nil
+	return dir, nil
 }
 
-func getHardwarePlatform() (string, error) {
-	out, err := exec.Command("uname", "-m").Output()
-	return strings.TrimSuffix(string(out), "\n"), err
-}
+// buildTrusteeValues writes a temporary Helm values override file and returns
+// its path. The caller is responsible for removing it.
+func buildTrusteeValues(ibmseCredsDir, workerNodeName string) (string, error) {
+	versions, err := utils.GetVersions()
+	if err != nil {
+		return "", fmt.Errorf("reading versions.yaml: %w", err)
+	}
+	kbs := versions.Git["kbs"]
+	tag := kbs.Ref
+	kbsRepo := kbs.Images["kbs"]
+	asRepo := kbs.Images["as"]
+	rvpsRepo := kbs.Images["rvps"]
 
-func getOverlaysPath() (string, error) {
-	platform, err := getHardwarePlatform()
+	// The IBM SE block is inlined into the `as:` stanza so there is only one
+	// top-level `as:` key in the output YAML.
+	var ibmseBlock string
+	if ibmseCredsDir != "" {
+		ibmseBlock = fmt.Sprintf(
+			"  verifier:\n    se:\n      credsDir: %q\n      nodeName: %q\n  podSecurityContext:\n    fsGroup: 1000\n",
+			ibmseCredsDir, workerNodeName)
+	}
+
+	content := fmt.Sprintf(`log_level: debug
+kbs:
+  image:
+    repository: %q
+    tag: %q
+  service:
+    exposeLoadBalancer: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+as:
+  image:
+    repository: %q
+    tag: %q
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+%srvps:
+  image:
+    repository: %q
+    tag: %q
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+nodePort:
+  enabled: true
+`, kbsRepo, tag, asRepo, tag, ibmseBlock, rvpsRepo, tag)
+
+	f, err := os.CreateTemp("", "trustee-values-*.yaml")
 	if err != nil {
 		return "", err
 	}
-
-	overlaysPath := "overlays"
-	if platform == "s390x" && os.Getenv("IBM_SE_CREDS_DIR") != "" {
-		overlaysPath += "/ibm-se"
-	}
-	return overlaysPath, nil
-}
-
-func getKbsKubernetesFilePath() string {
-	return filepath.Join(trusteeRepoPath, "/kbs/config/kubernetes/")
-}
-
-func NewKeyBrokerService(clusterName string, cfg *envconf.Config) (*KeyBrokerService, error) {
-	e2eDir, err := os.Getwd()
-	if err != nil {
-		err = fmt.Errorf("getting the current working directory: %w\n", err)
-		log.Errorf("%v", err)
-		return nil, err
-	}
-	trusteeRepoPath = filepath.Join(e2eDir, "../trustee")
-
-	log.Info("creating key.bin")
-
-	// Create secret
-	content := []byte("This is my cluster name: " + clusterName)
-	overlaysPath, err := getOverlaysPath()
-	if err != nil {
-		return nil, err
-	}
-
-	filePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "key.bin")
-
-	err = os.WriteFile(filePath, content, 0o644)
-	if err != nil {
-		return nil, err
-	}
-
-	var privateKey ed25519.PrivateKey
-	kbsCert := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.pem")
-	if _, err := os.Stat(kbsCert); os.IsNotExist(err) {
-		kbsKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
-		keyOutputFile, err := os.Create(kbsKey)
-		if err != nil {
-			err = fmt.Errorf("creating key file: %w\n", err)
-			log.Errorf("%v", err)
-			return nil, err
-		}
-		defer keyOutputFile.Close()
-
-		var pubKey ed25519.PublicKey
-		pubKey, privateKey, err = ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			err = fmt.Errorf("generating Ed25519 key pair: %w\n", err)
-			log.Errorf("%v", err)
-			return nil, err
-		}
-
-		b, err := x509.MarshalPKCS8PrivateKey(privateKey)
-		if err != nil {
-			err = fmt.Errorf("MarshalPKCS8PrivateKey private key: %w\n", err)
-			log.Errorf("%v", err)
-			return nil, err
-		}
-
-		privateKeyPEM := pem.EncodeToMemory(&pem.Block{
-			Type:  "PRIVATE KEY",
-			Bytes: b,
-		})
-
-		// Save private key to file
-		err = saveToFile(kbsKey, privateKeyPEM)
-		if err != nil {
-			err = fmt.Errorf("saving private key to file: %w\n", err)
-			log.Errorf("%v", err)
-			return nil, err
-		}
-
-		b, err = x509.MarshalPKIXPublicKey(pubKey)
-		if err != nil {
-			err = fmt.Errorf("MarshalPKIXPublicKey Ed25519 public key: %w\n", err)
-			log.Errorf("%v", err)
-			return nil, err
-		}
-
-		publicKeyPEM := pem.EncodeToMemory(&pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: b,
-		})
-
-		// Save public key to file
-		err = saveToFile(kbsCert, publicKeyPEM)
-		if err != nil {
-			err = fmt.Errorf("saving public key to file: %w\n", err)
-			log.Errorf("%v", err)
-			return nil, err
-		}
-
-	} else {
-		kbsKey := filepath.Join(getKbsKubernetesFilePath(), "base/kbs.key")
-		keyPEM, err := os.ReadFile(kbsKey)
-		if err != nil {
-			return nil, fmt.Errorf("reading existing kbs.key: %w", err)
-		}
-		block, _ := pem.Decode(keyPEM)
-		if block == nil {
-			return nil, fmt.Errorf("failed to decode PEM block from kbs.key")
-		}
-		raw, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("parsing kbs.key: %w", err)
-		}
-		var ok bool
-		privateKey, ok = raw.(ed25519.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("kbs.key is not an Ed25519 private key")
-		}
-	}
-
-	// IBM_SE_CREDS_DIR describe at https://github.com/confidential-containers/trustee/blob/main/kbs/config/kubernetes/README.md#deploy-kbs
-	ibmseCredsDir := os.Getenv("IBM_SE_CREDS_DIR")
-	if ibmseCredsDir != "" {
-		log.Info("IBM_SE_CREDS_DIR is providered, deploy KBS with IBM SE verifier")
-		// We always deploy the KBS pod to first worker node
-		workerNodeIP, workerNodeName, _ := getFirstWorkerNodeIPAndName(cfg)
-		log.Infof("Copying IBM_SE_CREDS files to first worker node: %s", workerNodeIP)
-		err := copyGivenFilesToWorkerNode(ibmseCredsDir, workerNodeIP)
-		if err != nil {
-			return nil, err
-		}
-		log.Infof("Creating PV for kbs with ibm-se")
-
-		overlaysPath, err := getOverlaysPath()
-		if err != nil {
-			return nil, err
-		}
-		pvFilePath := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "pv.yaml")
-		err = createPVonTargetWorkerNode(pvFilePath, workerNodeName, cfg)
-		if err != nil {
-			return nil, err
-		}
-		patchFile := filepath.Join(getKbsKubernetesFilePath(), overlaysPath, "patch.yaml")
-		// skip the SE related certs check as we are running the test case on a dev machine
-		err = skipSeCertsVerification(patchFile)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	overlay, err := NewHTTPSKbsInstallOverlay(trusteeRepoPath, cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return &KeyBrokerService{
-		installOverlay: overlay,
-		endpoint:       "",
-		privateKey:     privateKey,
-	}, nil
-}
-
-// signAdminToken mints a short-lived EdDSA JWT with role "admin" and writes
-// it to a temporary file. The caller is responsible for removing the file.
-func signAdminToken(privateKey ed25519.PrivateKey) (string, error) {
-	now := time.Now()
-	claims := jwtv5.MapClaims{
-		"role": "admin",
-		"iat":  now.Unix(),
-		"exp":  now.Add(2 * time.Hour).Unix(),
-	}
-	token := jwtv5.NewWithClaims(jwtv5.SigningMethodEdDSA, claims)
-	signed, err := token.SignedString(privateKey)
-	if err != nil {
-		return "", fmt.Errorf("signing admin token: %w", err)
-	}
-	f, err := os.CreateTemp("", "kbs-admin-token-*")
-	if err != nil {
-		return "", fmt.Errorf("creating admin token file: %w", err)
-	}
-	if _, err := f.WriteString(signed); err != nil {
-		f.Close()
+	defer f.Close()
+	if _, err := f.WriteString(content); err != nil {
 		os.Remove(f.Name())
-		return "", fmt.Errorf("writing admin token file: %w", err)
+		return "", fmt.Errorf("writing values file: %w", err)
 	}
-	f.Close()
 	return f.Name(), nil
 }
 
-func saveToFile(filename string, content []byte) error {
-	// Save contents to file
-	err := os.WriteFile(filename, content, 0o644)
+// helmInstallTrustee builds chart dependencies and runs helm upgrade --install.
+func helmInstallTrustee(chartDir, valuesFile string, cfg *envconf.Config) error {
+	depCmd := exec.Command("helm", "dependency", "build", chartDir)
+	depCmd.Env = os.Environ()
+	if out, err := depCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("helm dependency build: %w\n%s", err, out)
+	}
+
+	args := []string{
+		"upgrade", "--install", kbsReleaseName, chartDir,
+		"--namespace", kbsNamespace,
+		"--create-namespace",
+		"--kubeconfig", cfg.KubeconfigFile(),
+		"-f", valuesFile,
+		"--wait", "--timeout", "10m",
+	}
+	cmd := exec.Command("helm", args...)
+	cmd.Env = os.Environ()
+	out, err := cmd.CombinedOutput()
+	log.Info("helm install output:\n", string(out))
 	if err != nil {
-		return fmt.Errorf("writing contents to file: %w", err)
+		return fmt.Errorf("helm upgrade --install: %w\n%s", err, out)
 	}
 	return nil
 }
 
-func skipSeCertsVerification(patchFile string) error {
-	data, err := os.ReadFile(patchFile)
-	if err != nil {
-		return fmt.Errorf("failed to read file: %v", err)
+// helmUninstallTrustee runs helm uninstall for the Trustee release.
+func helmUninstallTrustee(cfg *envconf.Config) error {
+	args := []string{
+		"uninstall", kbsReleaseName,
+		"--namespace", kbsNamespace,
+		"--kubeconfig", cfg.KubeconfigFile(),
+		"--wait",
 	}
-	content := string(data)
-	content = strings.ReplaceAll(content, "false", "true")
-	err = os.WriteFile(patchFile, []byte(content), 0o644)
+	cmd := exec.Command("helm", args...)
+	cmd.Env = os.Environ()
+	out, err := cmd.CombinedOutput()
+	log.Info("helm uninstall output:\n", string(out))
 	if err != nil {
-		return fmt.Errorf("failed to write file: %v", err)
+		return fmt.Errorf("helm uninstall: %w\n%s", err, out)
 	}
 	return nil
 }
 
-func createPVonTargetWorkerNode(pvFilePath, nodeName string, cfg *envconf.Config) error {
-	data, err := os.ReadFile(pvFilePath)
-	if err != nil {
-		return fmt.Errorf("failed to read file: %v", err)
+// extractAdminToken reads KBS_ADMIN_TOKEN from the Helm bootstrap Secret.
+func extractAdminToken(cfg *envconf.Config) (string, error) {
+	args := []string{
+		"get", "secret", kbsBootstrapSecret,
+		"-n", kbsNamespace,
+		"--kubeconfig", cfg.KubeconfigFile(),
+		"-o", "jsonpath={.data.KBS_ADMIN_TOKEN}",
 	}
-	content := string(data)
-	content = strings.ReplaceAll(content, "${IBM_SE_CREDS_DIR}", "/root/ibmse")
-	content = strings.ReplaceAll(content, "${NODE_NAME}", nodeName)
-	err = os.WriteFile(pvFilePath, []byte(content), 0o644)
+	cmd := exec.Command("kubectl", args...)
+	cmd.Env = os.Environ()
+	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to write file: %v", err)
+		return "", fmt.Errorf("kubectl get secret %s: %w", kbsBootstrapSecret, err)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(out)))
+	if err != nil {
+		return "", fmt.Errorf("base64 decode admin token: %w", err)
+	}
+	return string(decoded), nil
+}
+
+func NewKeyBrokerService(cfg *envconf.Config) (*KeyBrokerService, error) {
+	ibmseCredsDir := os.Getenv("IBM_SE_CREDS_DIR")
+	var workerNodeName string
+
+	if ibmseCredsDir != "" {
+		log.Info("IBM_SE_CREDS_DIR set, will configure IBM SE verifier")
+		workerNodeIP, name, err := getFirstWorkerNodeIPAndName(cfg)
+		if err != nil {
+			return nil, err
+		}
+		workerNodeName = name
+		log.Infof("Copying IBM SE creds to worker node %s (%s)", name, workerNodeIP)
+		if err := copyGivenFilesToWorkerNode(ibmseCredsDir, workerNodeIP); err != nil {
+			return nil, err
+		}
 	}
 
-	cmd := exec.Command("kubectl", "apply", "-f", pvFilePath)
-	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
-	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	log.Info("Cloning trustee repo")
+	repoDir, err := cloneTrusteeRepo()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	valuesFile, err := buildTrusteeValues(ibmseCredsDir, workerNodeName)
+	if err != nil {
+		os.RemoveAll(repoDir)
+		return nil, err
+	}
+	defer os.Remove(valuesFile)
+
+	chartDir := filepath.Join(repoDir, "deployment/helm-chart")
+	log.Info("Installing Trustee via Helm")
+	if err := helmInstallTrustee(chartDir, valuesFile, cfg); err != nil {
+		os.RemoveAll(repoDir)
+		return nil, err
+	}
+
+	log.Info("Extracting admin token from bootstrap Secret")
+	adminToken, err := extractAdminToken(cfg)
+	if err != nil {
+		os.RemoveAll(repoDir)
+		return nil, err
+	}
+
+	return &KeyBrokerService{adminToken: adminToken, repoDir: repoDir}, nil
 }
 
 func getFirstWorkerNodeIPAndName(cfg *envconf.Config) (string, string, error) {
@@ -394,7 +257,6 @@ func getFirstWorkerNodeIPAndName(cfg *envconf.Config) (string, string, error) {
 	if err := client.Resources("").List(context.TODO(), nodeList); err != nil {
 		return "", "", err
 	}
-	// Filter out control plane nodes and get the IP of the first worker node
 	for _, node := range nodeList.Items {
 		if isWorkerNode(&node) {
 			return node.Status.Addresses[0].Address, node.Name, nil
@@ -404,36 +266,26 @@ func getFirstWorkerNodeIPAndName(cfg *envconf.Config) (string, string, error) {
 }
 
 func isWorkerNode(node *corev1.Node) bool {
-	// Check for the existence of the label or taint that identifies control plane nodes
 	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
 	_, isControlPlane := node.Labels["node-role.kubernetes.io/control-plane"]
-	if isMaster || isControlPlane {
-		return false
-	}
-	return true
+	return !isMaster && !isControlPlane
 }
 
 func copyGivenFilesToWorkerNode(sourceDir, targetNodeIP string) error {
-	// Step 1: Compress the source directory using tar
 	tarFilePath, err := compressDirectory(sourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to compress directory: %v", err)
 	}
-	defer os.Remove(tarFilePath) // Clean up the temporary tar file
+	defer os.Remove(tarFilePath)
 
-	// Step 2: Transfer the compressed file to the target node using SCP
 	targetFilePath := "/tmp/" + filepath.Base(tarFilePath)
-	err = transferFile(tarFilePath, targetNodeIP, targetFilePath)
-	if err != nil {
+	if err = transferFile(tarFilePath, targetNodeIP, targetFilePath); err != nil {
 		return fmt.Errorf("failed to transfer file: %v", err)
 	}
 
-	// Step 3: Decompress the file on the target node
-	err = decompressFileOnTargetNode(targetNodeIP, targetFilePath, "/root")
-	if err != nil {
+	if err = decompressFileOnTargetNode(targetNodeIP, targetFilePath, "/root"); err != nil {
 		return fmt.Errorf("failed to decompress file on target node: %v", err)
 	}
-
 	return nil
 }
 
@@ -442,62 +294,23 @@ func compressDirectory(sourceDir string) (string, error) {
 	cmd := exec.Command("tar", "-czf", tarFilePath, "-C", filepath.Dir(sourceDir), filepath.Base(sourceDir))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		return "", err
-	}
-	return tarFilePath, nil
+	return tarFilePath, cmd.Run()
 }
 
 func transferFile(localFilePath, targetNodeIP, remoteFilePath string) error {
-	cmd := exec.Command("scp", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", localFilePath, fmt.Sprintf("root@%s:%s", targetNodeIP, remoteFilePath))
+	cmd := exec.Command("scp", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+		localFilePath, fmt.Sprintf("root@%s:%s", targetNodeIP, remoteFilePath))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
 func decompressFileOnTargetNode(targetNodeIP, remoteFilePath, targetDir string) error {
-	cmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", fmt.Sprintf("root@%s", targetNodeIP), fmt.Sprintf("tar -xzf %s -C %s", remoteFilePath, targetDir))
+	cmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+		fmt.Sprintf("root@%s", targetNodeIP), fmt.Sprintf("tar -xzf %s -C %s", remoteFilePath, targetDir))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
-}
-
-func NewHTTPSKbsInstallOverlay(installDir string, cfg *envconf.Config) (InstallOverlay, error) {
-	log.Info("Creating https kbs install overlay")
-	workerNodeIP, _, _ := getFirstWorkerNodeIPAndName(cfg)
-	keyContent, certContent, err := generateCert(workerNodeIP)
-	fmt.Println("Certificate Content:")
-	fmt.Println(certContent)
-	fmt.Println("Key Content:")
-	fmt.Println(keyContent)
-
-	if err != nil {
-		fmt.Println("Error generating certificate and key:", err)
-	}
-
-	overlayFolder := "kbs/config/kubernetes/nodeport/"
-	overlay, err := NewKustomizeOverlay(filepath.Join(installDir, overlayFolder))
-	if err != nil {
-		return nil, err
-	}
-
-	return &KbsInstallOverlay{
-		overlay: overlay,
-	}, nil
-}
-
-func (lio *KbsInstallOverlay) Apply(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Apply(ctx, cfg)
-}
-
-func (lio *KbsInstallOverlay) Delete(ctx context.Context, cfg *envconf.Config) error {
-	return lio.overlay.Delete(ctx, cfg)
-}
-
-func (lio *KbsInstallOverlay) Edit(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
-	// No edits needed here at the moment
-	return nil
 }
 
 func getNodeIPForSvc(deploymentName string, service corev1.Service, cfg *envconf.Config) (string, error) {
@@ -518,10 +331,13 @@ func getNodeIPForSvc(deploymentName string, service corev1.Service, cfg *envconf
 	var matchingPod *corev1.Pod
 	for i := range podList.Items {
 		pod := &podList.Items[i]
-		if pod.Labels["app"] == deploymentName {
+		if pod.Labels["app"] == kbsPodAppLabel {
 			matchingPod = pod
 			break
 		}
+	}
+	if matchingPod == nil {
+		return "", fmt.Errorf("no pod with app=%s found", deploymentName)
 	}
 
 	for _, node := range nodeList.Items {
@@ -529,15 +345,14 @@ func getNodeIPForSvc(deploymentName string, service corev1.Service, cfg *envconf
 			return node.Status.Addresses[0].Address, nil
 		}
 	}
-
-	return "", fmt.Errorf("Node IP not found for Service %s", service.Name)
+	return "", fmt.Errorf("node IP not found for service %s", service.Name)
 }
 
 func (p *KeyBrokerService) GetCachedKbsEndpoint() (string, error) {
 	if p.endpoint != "" {
 		return p.endpoint, nil
 	}
-	return "", fmt.Errorf("KeyBrokerService not found")
+	return "", fmt.Errorf("KeyBrokerService endpoint not set")
 }
 
 func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Config) (string, error) {
@@ -546,79 +361,73 @@ func (p *KeyBrokerService) GetKbsEndpoint(ctx context.Context, cfg *envconf.Conf
 		return "", err
 	}
 
-	namespace := "coco-tenant"
-	serviceName := "kbs"
-	deploymentName := "kbs"
-
-	resources := client.Resources(namespace)
-
-	kbsDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: namespace}}
-	fmt.Printf("Wait for the %s deployment be available\n", deploymentName)
-	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(kbsDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
+	resources := client.Resources(kbsNamespace)
+	kbsDeployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: kbsDeploymentName, Namespace: kbsNamespace},
+	}
+	fmt.Printf("Wait for the %s deployment to be available\n", kbsDeploymentName)
+	if err = wait.For(conditions.New(resources).DeploymentConditionMatch(
+		kbsDeployment, appsv1.DeploymentAvailable, corev1.ConditionTrue),
 		wait.WithTimeout(time.Minute*5)); err != nil {
 		return "", err
 	}
 
 	services := &corev1.ServiceList{}
-	if err := resources.List(context.TODO(), services); err != nil {
+	if err := resources.List(ctx, services); err != nil {
 		return "", err
 	}
 
-	for _, service := range services.Items {
-		if service.Name == serviceName {
-			// Ensure the service is of type NodePort
-			if service.Spec.Type != corev1.ServiceTypeNodePort {
-				return "", fmt.Errorf("Service %s is not of type NodePort", "kbs")
+	for _, svc := range services.Items {
+		if svc.Name == kbsNodePortSvcName {
+			if svc.Spec.Type != corev1.ServiceTypeNodePort {
+				return "", fmt.Errorf("service %s is not of type NodePort", kbsNodePortSvcName)
 			}
-
-			var nodePort int32
-			// Extract NodePort
-			if len(service.Spec.Ports) > 0 {
-				nodePort = service.Spec.Ports[0].NodePort
-			} else {
-				return "", fmt.Errorf("NodePort is not configured for Service %s", "kbs")
+			if len(svc.Spec.Ports) == 0 {
+				return "", fmt.Errorf("service %s has no ports", kbsNodePortSvcName)
 			}
-
-			nodeIP, err := getNodeIPForSvc(deploymentName, service, cfg)
+			nodePort := svc.Spec.Ports[0].NodePort
+			nodeIP, err := getNodeIPForSvc(kbsDeploymentName, svc, cfg)
 			if err != nil {
 				return "", err
 			}
-
-			p.endpoint = fmt.Sprintf("https://%s:%d", nodeIP, nodePort)
+			p.endpoint = fmt.Sprintf("http://%s:%d", nodeIP, nodePort)
 			return p.endpoint, nil
 		}
 	}
-
-	return "", fmt.Errorf("Service %s not found", serviceName)
+	return "", fmt.Errorf("service %s not found in namespace %s", kbsNodePortSvcName, kbsNamespace)
 }
 
-// runKbsClientAdmin mints a fresh admin token, then runs kbs-client with the
-// supplied subcommand arguments under the standard config preamble.
+// runKbsClientAdmin writes the stored admin token to a temp file and runs
+// kbs-client with the supplied config subcommand arguments.
 func (p *KeyBrokerService) runKbsClientAdmin(args ...string) error {
-	tokenFile, err := signAdminToken(p.privateKey)
+	f, err := os.CreateTemp("", "kbs-admin-token-*")
 	if err != nil {
-		return err
+		return fmt.Errorf("creating admin token file: %w", err)
 	}
-	defer os.Remove(tokenFile)
+	defer os.Remove(f.Name())
+	if _, err := f.WriteString(p.adminToken); err != nil {
+		f.Close()
+		return fmt.Errorf("writing admin token: %w", err)
+	}
+	f.Close()
 
-	cmdArgs := append([]string{"--cert-file", certPath, "--url", p.endpoint, "config", "--admin-token-file", tokenFile}, args...)
-	cmd := exec.Command("./kbs-client", cmdArgs...)
-	cmd.Dir = trusteeRepoPath
+	cmdArgs := append([]string{"--url", p.endpoint, "config", "--admin-token-file", f.Name()}, args...)
+	cmd := exec.Command("kbs-client", cmdArgs...)
 	cmd.Env = os.Environ()
-	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	out, err := cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, out)
 	return err
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedResourcePolicy(customizedOpaFile string) error {
-	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
-	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
+	policyFile := filepath.Join(p.repoDir, "kbs/sample_policies", customizedOpaFile)
+	log.Info("EnableKbsCustomizedResourcePolicy: ", policyFile)
 	return p.runKbsClientAdmin("set-resource-policy", "--policy-file", policyFile)
 }
 
 func (p *KeyBrokerService) EnableKbsCustomizedAttestationPolicy(customizedOpaFile string) error {
-	policyFile := filepath.Join(trusteeRepoPath, "kbs/sample_policies", customizedOpaFile)
-	log.Info("EnableKbsCustomizedPolicy: ", policyFile)
+	policyFile := filepath.Join(p.repoDir, "kbs/sample_policies", customizedOpaFile)
+	log.Info("EnableKbsCustomizedAttestationPolicy: ", policyFile)
 	return p.runKbsClientAdmin("set-attestation-policy", "--policy-file", policyFile)
 }
 
@@ -628,16 +437,16 @@ func (p *KeyBrokerService) setSecretKey(resource string, path string) error {
 }
 
 func (p *KeyBrokerService) SetSecret(resourcePath string, secret []byte) error {
-	tempDir, _ := os.MkdirTemp("", "kbs_resource_files")
-
-	defer os.RemoveAll(tempDir)
-
-	secretFilePath := filepath.Join(tempDir, path.Base(resourcePath))
-	err := os.WriteFile(secretFilePath, secret, 0o644)
+	tempDir, err := os.MkdirTemp("", "kbs_resource_files")
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(tempDir)
 
+	secretFilePath := filepath.Join(tempDir, filepath.Base(resourcePath))
+	if err := os.WriteFile(secretFilePath, secret, 0o644); err != nil {
+		return err
+	}
 	return p.setSecretKey(resourcePath, secretFilePath)
 }
 
@@ -645,47 +454,34 @@ func (p *KeyBrokerService) SetImageDecryptionKey(keyID string, key []byte) error
 	if len(key) != 32 {
 		return fmt.Errorf("image decryption key must be 32 bytes")
 	}
-	path, err := os.CreateTemp("", "image-decryption-*.key")
+	f, err := os.CreateTemp("", "image-decryption-*.key")
 	if err != nil {
 		return err
 	}
-	defer os.Remove(path.Name())
-
-	if _, err := path.Write(key); err != nil {
+	defer f.Close()
+	defer os.Remove(f.Name())
+	if _, err := f.Write(key); err != nil {
 		return err
 	}
-	return p.setSecretKey(keyID, path.Name())
-}
-
-func (p *KeyBrokerService) Deploy(ctx context.Context, cfg *envconf.Config, props map[string]string) error {
-	log.Info("Customize the overlay yaml file")
-	if err := p.installOverlay.Edit(ctx, cfg, props); err != nil {
-		return err
-	}
-
-	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewHTTPSKbsInstallOverlay(trusteeRepoPath, cfg)
-	if err != nil {
-		return err
-	}
-
-	log.Info("Install Kbs")
-	if err := tmpoverlay.Apply(ctx, cfg); err != nil {
-		return err
-	}
-	return nil
+	return p.setSecretKey(keyID, f.Name())
 }
 
 func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) error {
-	// Create kustomize pointer for overlay directory with updated changes
-	tmpoverlay, err := NewHTTPSKbsInstallOverlay(trusteeRepoPath, cfg)
-	if err != nil {
-		return err
+	log.Info("Uninstalling Trustee via Helm")
+	if err := helmUninstallTrustee(cfg); err != nil {
+		log.Warnf("helm uninstall failed (may already be gone): %v", err)
 	}
 
-	log.Info("Uninstall the cloud-api-adaptor")
-	if err = tmpoverlay.Delete(ctx, cfg); err != nil {
-		return err
+	if p.repoDir != "" {
+		os.RemoveAll(p.repoDir)
 	}
-	return nil
+
+	log.Info("Deleting namespace ", kbsNamespace)
+	cmd := exec.Command("kubectl", "delete", "ns", kbsNamespace,
+		"--ignore-not-found",
+		"--kubeconfig", cfg.KubeconfigFile())
+	cmd.Env = os.Environ()
+	out, err := cmd.CombinedOutput()
+	log.Tracef("%v, output: %s", cmd, out)
+	return err
 }
