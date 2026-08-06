@@ -35,6 +35,8 @@ webhook:
   podVMExtendedResource: kata.peerpods.io/vm
   # Webhook failure policy: Fail or Ignore
   failurePolicy: Fail
+  annotations: {}
+  labels: {}
 
 # Minimum TLS version for the webhook server. Accepts "VersionTLS12" or "VersionTLS13".
 # Defaults to Go's TLS default (TLS 1.2) when empty.
