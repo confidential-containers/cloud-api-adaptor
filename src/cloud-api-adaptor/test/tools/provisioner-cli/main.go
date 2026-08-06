@@ -101,12 +101,8 @@ func main() {
 		if shouldDeployKbs {
 			log.Info("Deploying kbs")
 
-			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg)
+			keyBrokerService, err := pv.NewKeyBrokerService(cfg)
 			if err != nil {
-				log.Fatal(err)
-			}
-
-			if err = keyBrokerService.Deploy(context.TODO(), cfg, props); err != nil {
 				log.Fatal(err)
 			}
 
@@ -199,8 +195,7 @@ func main() {
 		}
 
 		if shouldDeployKbs {
-			props := provisioner.GetProperties(context.TODO(), cfg)
-			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg)
+			keyBrokerService, err := pv.NewKeyBrokerService(cfg)
 			if err != nil {
 				log.Fatal(err)
 			}
