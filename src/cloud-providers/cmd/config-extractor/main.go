@@ -51,7 +51,21 @@ func main() {
 	}
 	execDir := filepath.Dir(execPath)
 
-	config := &ProviderConfig{Provider: provider, Flags: []FlagInfo{}}
+	// Parse provider-specific flags from manager.go
+	managerPath := filepath.Join(execDir, "..", provider, "manager.go")
+	providerFlags, err := parseFile(managerPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Use the registered name from AddCloudProvider() as the canonical provider name.
+	registeredName := extractProviderName(managerPath)
+	if registeredName == "" {
+		registeredName = provider
+	}
+
+	config := &ProviderConfig{Provider: registeredName, Flags: []FlagInfo{}}
 
 	// Parse common flags if -include-shared is set
 	if *includeAll {
@@ -64,13 +78,6 @@ func main() {
 		}
 	}
 
-	// Parse provider-specific flags from manager.go
-	managerPath := filepath.Join(execDir, "..", provider, "manager.go")
-	providerFlags, err := parseFile(managerPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
 	config.Flags = append(config.Flags, providerFlags...)
 
 	// Filter secrets
@@ -95,6 +102,41 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Invalid output format: %s (use json or table)\n", *outputFormat)
 		os.Exit(1)
 	}
+}
+
+// extractProviderName reads manager.go and returns the string literal passed to
+// AddCloudProvider(). Returns an empty string if the call is not found.
+func extractProviderName(managerPath string) string {
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, managerPath, nil, 0)
+	if err != nil {
+		return ""
+	}
+	var name string
+	ast.Inspect(node, func(n ast.Node) bool {
+		if name != "" {
+			return false
+		}
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		// Match provider.AddCloudProvider("name", ...) or AddCloudProvider("name", ...)
+		var fn string
+		switch f := call.Fun.(type) {
+		case *ast.SelectorExpr:
+			fn = f.Sel.Name
+		case *ast.Ident:
+			fn = f.Name
+		}
+		if fn == "AddCloudProvider" && len(call.Args) >= 1 {
+			if lit, ok := call.Args[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				name = strings.Trim(lit.Value, `"`)
+			}
+		}
+		return true
+	})
+	return name
 }
 
 func parseFile(path string) ([]FlagInfo, error) {
