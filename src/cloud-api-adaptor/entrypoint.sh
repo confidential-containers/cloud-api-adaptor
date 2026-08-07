@@ -76,11 +76,17 @@ alibabacloud() {
 }
 
 gcp() {
-    test_vars GCP_CREDENTIALS GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
+    test_vars GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
 
-    # Avoid using node's metadata service credentials for GCP authentication
-    echo "$GCP_CREDENTIALS" > /tmp/gcp-creds.json
-    export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-creds.json
+    if [[ -n "$GCP_CREDENTIALS" ]]; then
+        # Static service-account key: write to disk and point the SDK at it.
+        # This bypasses the node's metadata service.
+        echo "$GCP_CREDENTIALS" > /tmp/gcp-creds.json
+        export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-creds.json
+    fi
+    # If GCP_CREDENTIALS is unset, the Google SDK falls back to Application
+    # Default Credentials — i.e. the GKE metadata server, which is how
+    # Workload Identity delivers a token for the pod's bound service account.
 
     set -x
     exec cloud-api-adaptor gcp ${optionals}
