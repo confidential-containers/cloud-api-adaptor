@@ -12,6 +12,9 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
         required: false
         type: string
+      caa_image:
+        required: true
+        type: string
       podvm_image:
         required: true
         description: The OCI image storing the qcow2 podmv image
@@ -163,6 +166,7 @@ jobs:
           TEST_PROVISION_FILE: "${{ steps.create-properties-file.outputs.properties-file }}"
           PEERPOD_CTRL_IMAGE: "${{ inputs.peerpod_ctrl_image }}"
           WEBHOOK_IMAGE: "${{ inputs.webhook_image }}"
+          CAA_IMAGE: "${{ inputs.caa_image }}"
         run: make test-e2e
 
       - name: Deprovision AKS cluster
