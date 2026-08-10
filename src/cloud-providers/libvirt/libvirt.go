@@ -95,7 +95,7 @@ func checkDomainExistsByName(name string, libvirtClient *libvirtClient) (exist b
 
 }
 
-func uploadIso(isoData []byte, isoVolName string, libvirtClient *libvirtClient) (string, error) {
+func uploadIso(ctx context.Context, isoData []byte, isoVolName string, libvirtClient *libvirtClient) (string, error) {
 
 	logger.Printf("Uploading iso file: %s\n", isoVolName)
 	volumeDef := newDefVolume(isoVolName)
@@ -114,7 +114,7 @@ func uploadIso(isoData []byte, isoVolName string, libvirtClient *libvirtClient) 
 	volumeDef.Capacity.Value = size
 	volumeDef.Target.Format.Type = "raw"
 
-	return uploadVolume(libvirtClient, volumeDef, img)
+	return uploadVolume(ctx, libvirtClient, volumeDef, img)
 
 }
 
@@ -585,7 +585,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}
 
 	rootVolName := v.name + "-root.qcow2"
-	err = createVolume(rootVolName, v.rootDiskSize, v.volName, libvirtClient)
+	err = createVolume(ctx, rootVolName, v.rootDiskSize, v.volName, libvirtClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error in creating volume: %s", err)
 	}
@@ -596,7 +596,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}
 
 	isoVolName := v.name + "-cloudinit.iso"
-	isoVolFile, err := uploadIso(cloudInitIso, isoVolName, libvirtClient)
+	isoVolFile, err := uploadIso(ctx, cloudInitIso, isoVolName, libvirtClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error in uploading iso volume: %s", err)
 	}
@@ -739,7 +739,7 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID 
 		} else {
 			logger.Printf("domainDef %v", domainDef.Devices.Disks)
 			for _, diskPath := range getDeletableDiskPaths(&domainDef) {
-				err = deleteVolumeByPath(libvirtClient, diskPath)
+				err = deleteVolumeByPath(ctx, libvirtClient, diskPath)
 				if err != nil {
 					logger.Printf("Deleting volume (%s) returned error: %s", diskPath, err)
 					cleanupErrs = append(cleanupErrs, fmt.Sprintf("delete volume %s: %v", diskPath, err))
