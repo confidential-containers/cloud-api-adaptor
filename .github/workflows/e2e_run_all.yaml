@@ -28,6 +28,10 @@ on:
     secrets:
       AWS_IAM_ROLE_ARN:
         required: true
+      ALIBABA_CLOUD_ROLE_ARN:
+        required: false
+      ALIBABA_CLOUD_OIDC_PROVIDER_ARN:
+        required: false
       QUAY_PASSWORD:
         required: true
       REGISTRY_CREDENTIAL_ENCODED:
@@ -181,6 +185,34 @@ jobs:
       webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
     secrets:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
+
+  # Run Alibaba Cloud e2e tests if pull request labeled 'test_e2e_alibabacloud'
+  alibabacloud:
+    name: alibabacloud
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_alibabacloud')
+    needs: [podvm_mkosi_amd64, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
+    strategy:
+      fail-fast: false
+      matrix:
+        container_runtime:
+          - containerd
+    permissions:
+      id-token: write # Required by aliyun/configure-aliyun-credentials-action
+      contents: read
+    uses: ./.github/workflows/e2e_alibabacloud.yaml
+    with:
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
+      container_runtime: ${{ matrix.container_runtime }}
+      podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.qcow2_oras_image }}
+      git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
+    secrets:
+      ALIBABA_CLOUD_ROLE_ARN: ${{ secrets.ALIBABA_CLOUD_ROLE_ARN }}
+      ALIBABA_CLOUD_OIDC_PROVIDER_ARN: ${{ secrets.ALIBABA_CLOUD_OIDC_PROVIDER_ARN }}
 
   # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_amd64:

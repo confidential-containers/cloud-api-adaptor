@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-24.04
     if: |
      contains(github.event.pull_request.labels.*.name, 'test_e2e_aws') ||
+     contains(github.event.pull_request.labels.*.name, 'test_e2e_alibabacloud') ||
      contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
      contains(github.event.pull_request.labels.*.name, 'test_e2e_byom')
     steps:
@@ -58,5 +59,7 @@ jobs:
       artifact-metadata: write  # Required to write artifact metadata
     secrets:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
+      ALIBABA_CLOUD_ROLE_ARN: ${{ secrets.ALIBABA_CLOUD_ROLE_ARN }}
+      ALIBABA_CLOUD_OIDC_PROVIDER_ARN: ${{ secrets.ALIBABA_CLOUD_OIDC_PROVIDER_ARN }}
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
       REGISTRY_CREDENTIAL_ENCODED: ${{ secrets.REGISTRY_CREDENTIAL_ENCODED }}
