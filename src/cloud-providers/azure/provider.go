@@ -423,6 +423,11 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 	return nil
 }
 
+func isConfidentialVMSize(size string) bool {
+	s := strings.ToLower(strings.TrimPrefix(strings.ToLower(size), "standard_"))
+	return strings.HasPrefix(s, "dc") || strings.HasPrefix(s, "ec") || strings.HasPrefix(s, "ncc")
+}
+
 // validateDiskCount checks that the requested number of data disks does not
 // exceed the maximum supported by the target VM size.
 func (p *azureProvider) validateDiskCount(ctx context.Context, instanceSize string, diskCount int) error {
@@ -544,29 +549,23 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 	if len(userDataB64) > 64*1024 {
 		return nil, fmt.Errorf("base64 encoded userData is greater than 64KB")
 	}
-	var managedDiskParams *armcompute.ManagedDiskParameters
-	var securityProfile *armcompute.SecurityProfile
-	if !p.serviceConfig.DisableCVM {
-		managedDiskParams = &armcompute.ManagedDiskParameters{
-			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesPremiumLRS),
-			SecurityProfile: &armcompute.VMDiskSecurityProfile{
-				SecurityEncryptionType: to.Ptr(armcompute.SecurityEncryptionTypesVMGuestStateOnly),
-			},
+	securityType := armcompute.SecurityTypesTrustedLaunch
+	managedDiskParams := &armcompute.ManagedDiskParameters{
+		StorageAccountType: to.Ptr(armcompute.StorageAccountTypesPremiumLRS),
+	}
+	// Essentially DISABLECVM is not really a hard blocker anymore
+	if !p.serviceConfig.DisableCVM || isConfidentialVMSize(instanceSize) {
+		securityType = armcompute.SecurityTypesConfidentialVM
+		managedDiskParams.SecurityProfile = &armcompute.VMDiskSecurityProfile{
+			SecurityEncryptionType: to.Ptr(armcompute.SecurityEncryptionTypesVMGuestStateOnly),
 		}
-
-		securityProfile = &armcompute.SecurityProfile{
-			SecurityType: to.Ptr(armcompute.SecurityTypesConfidentialVM),
-			UefiSettings: &armcompute.UefiSettings{
-				SecureBootEnabled: to.Ptr(p.serviceConfig.EnableSecureBoot),
-				VTpmEnabled:       to.Ptr(true),
-			},
-		}
-	} else {
-		managedDiskParams = &armcompute.ManagedDiskParameters{
-			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesPremiumLRS),
-		}
-
-		securityProfile = nil
+	}
+	securityProfile := &armcompute.SecurityProfile{
+		SecurityType: to.Ptr(securityType),
+		UefiSettings: &armcompute.UefiSettings{
+			SecureBootEnabled: to.Ptr(p.serviceConfig.EnableSecureBoot),
+			VTpmEnabled:       to.Ptr(true),
+		},
 	}
 
 	imgRef := &armcompute.ImageReference{
