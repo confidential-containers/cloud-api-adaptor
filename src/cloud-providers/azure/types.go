@@ -34,11 +34,11 @@ type Config struct {
 	Zone              string
 	Region            string
 	SubnetID          string
-	// SecondarySubnetID is the subnet used for the secondary NIC attached to
+	// ExternalSubnetID is the subnet used for the secondary NIC attached to
 	// the Pod VM when multi-NIC pod networking is requested
 	// (EXTERNAL_NETWORK_VIA_PODVM). It must be a different subnet than
 	// SubnetID, in the same VNet. Leave empty to disable multi-NIC support.
-	SecondarySubnetID    string
+	ExternalSubnetID     string
 	SecurityGroupName    string
 	SecurityGroupID      string
 	Size                 string

@@ -278,7 +278,7 @@ func (p *azureProvider) buildNetworkConfig(nicName, subnetID string, isPrimary, 
 //
 // In multi-NIC mode the primary NIC (on SubnetID) carries pod/cluster
 // traffic over the VXLAN tunnel and never gets a public IP; the secondary
-// NIC (on SecondarySubnetID) carries the Pod VM's external traffic and
+// NIC (on ExternalSubnetID) carries the Pod VM's external traffic and
 // optionally gets a public IP if UsePublicIP is set.
 func (p *azureProvider) buildNetworkConfigs(instanceName string, multiNic bool) []*armcompute.VirtualMachineNetworkInterfaceConfiguration {
 	primary := p.buildNetworkConfig(fmt.Sprintf("%s-net", instanceName), p.serviceConfig.SubnetID, true, p.serviceConfig.UsePublicIP && !multiNic)
@@ -287,7 +287,7 @@ func (p *azureProvider) buildNetworkConfigs(instanceName string, multiNic bool) 
 		return []*armcompute.VirtualMachineNetworkInterfaceConfiguration{primary}
 	}
 
-	secondary := p.buildNetworkConfig(fmt.Sprintf("%s-ext", instanceName), p.serviceConfig.SecondarySubnetID, false, p.serviceConfig.UsePublicIP)
+	secondary := p.buildNetworkConfig(fmt.Sprintf("%s-ext", instanceName), p.serviceConfig.ExternalSubnetID, false, p.serviceConfig.UsePublicIP)
 
 	return []*armcompute.VirtualMachineNetworkInterfaceConfiguration{primary, secondary}
 }
@@ -308,8 +308,8 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 
 	diskName := fmt.Sprintf("%s-disk", instanceName)
 
-	if spec.MultiNic && p.serviceConfig.SecondarySubnetID == "" {
-		return nil, fmt.Errorf("multi-NIC pod networking was requested but AZURE_SECONDARY_SUBNET_ID is not configured")
+	if spec.MultiNic && p.serviceConfig.ExternalSubnetID == "" {
+		return nil, fmt.Errorf("multi-NIC pod networking was requested but AZURE_EXTERNAL_SUBNET_ID is not configured")
 	}
 
 	sshPublicKeyPath := os.ExpandEnv(p.serviceConfig.SSHKeyPath)
@@ -428,8 +428,8 @@ func (p *azureProvider) ConfigVerifier() error {
 		}
 	}
 
-	if p.serviceConfig.SecondarySubnetID != "" && p.serviceConfig.SecondarySubnetID == p.serviceConfig.SubnetID {
-		return fmt.Errorf("AZURE_SECONDARY_SUBNET_ID must differ from AZURE_SUBNET_ID")
+	if p.serviceConfig.ExternalSubnetID != "" && p.serviceConfig.ExternalSubnetID == p.serviceConfig.SubnetID {
+		return fmt.Errorf("AZURE_EXTERNAL_SUBNET_ID must differ from AZURE_SUBNET_ID")
 	}
 
 	return nil
