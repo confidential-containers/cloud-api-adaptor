@@ -89,10 +89,10 @@ jobs:
           echo "Regenerating chart values to check for drift..."
           make sync-chart-values
 
-          # Check if any files changed
-          if git diff --exit-code ../cloud-api-adaptor/install/charts/peerpods/providers/; then
-            echo "[OK] Generated files are up to date"
-          else
+          providers_dir="../cloud-api-adaptor/install/charts/peerpods/providers/"
+
+          # Check for modifications to already-tracked files
+          git diff --exit-code "$providers_dir" || {
             echo "::error::Generated chart values are out of sync!"
             echo ""
             echo "The provider YAML files in install/charts/peerpods/providers/ do not match"
@@ -103,4 +103,20 @@ jobs:
             echo ""
             echo "Then commit the updated files."
             exit 1
+          }
+
+          # Check for newly generated files that are not yet tracked by git
+          untracked=$(git ls-files --others --exclude-standard "$providers_dir")
+          if [ -n "$untracked" ]; then
+            echo "::error::Untracked provider files found — generated filename differs from committed filename:"
+            echo "$untracked"
+            echo ""
+            echo "This usually means a provider's registered name differs from its directory name."
+            echo "To fix, remove the old files, regenerate, and commit everything:"
+            echo "  git rm \$(git ls-files src/cloud-api-adaptor/install/charts/peerpods/providers/)"
+            echo "  cd src/cloud-providers && make sync-chart-values"
+            echo "  git add ../cloud-api-adaptor/install/charts/peerpods/providers/"
+            exit 1
           fi
+
+          echo "[OK] Generated files are up to date"
