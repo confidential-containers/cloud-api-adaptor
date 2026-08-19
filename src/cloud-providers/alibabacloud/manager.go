@@ -23,6 +23,7 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	// Flags with environment variable support
 	reg.StringWithEnv(&alibabacloudcfg.AccessKeyID, "alibabacloud-access-key-id", "", "ALIBABACLOUD_ACCESS_KEY_ID", "Access Key ID", provider.Secret())
 	reg.StringWithEnv(&alibabacloudcfg.SecretKey, "alibabacloud-secret-access-key", "", "ALIBABACLOUD_ACCESS_KEY_SECRET", "Secret Key", provider.Secret())
+	reg.StringWithEnv(&alibabacloudcfg.SecurityToken, "alibabacloud-security-token", "", "ALIBABACLOUD_SECURITY_TOKEN", "Security Token", provider.Secret())
 	reg.StringWithEnv(&alibabacloudcfg.Region, "region", "cn-beijing", "REGION", "Region")
 	reg.StringWithEnv(&alibabacloudcfg.ImageID, "imageid", "", "IMAGEID", "Pod VM image id", provider.Required())
 	reg.StringWithEnv(&alibabacloudcfg.InstanceType, "instance-type", "ecs.g8i.xlarge", "PODVM_INSTANCE_TYPE", "Pod VM instance type")
