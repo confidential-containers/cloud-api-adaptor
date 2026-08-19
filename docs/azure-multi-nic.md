@@ -27,12 +27,12 @@ metadata:
   namespace: confidential-containers-system
 data:
   AZURE_SUBNET_ID: "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>/subnets/<primary-subnet>"
-  AZURE_SECONDARY_SUBNET_ID: "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>/subnets/<secondary-subnet>"
+  AZURE_EXTERNAL_SUBNET_ID: "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>/subnets/<secondary-subnet>"
   EXTERNAL_NETWORK_VIA_PODVM: "true"
   POD_SUBNET_CIDRS: "10.128.0.0/14,172.30.0.0/16,100.64.0.0/16"
 ```
 
-- `AZURE_SECONDARY_SUBNET_ID` is required to enable multi-NIC. It must be a
+- `AZURE_EXTERNAL_SUBNET_ID` is required to enable multi-NIC. It must be a
   different subnet than `AZURE_SUBNET_ID`, in the same VNet — Azure requires
   all NICs on a VM to share a VNet.
 - `EXTERNAL_NETWORK_VIA_PODVM` is the existing flag (shared with other
@@ -42,7 +42,7 @@ data:
   These stay routed over the VXLAN tunnel (`eth0`); everything else follows
   the pod's default route, which points at the secondary NIC (`eth1`).
 
-If `EXTERNAL_NETWORK_VIA_PODVM` is enabled without `AZURE_SECONDARY_SUBNET_ID`
+If `EXTERNAL_NETWORK_VIA_PODVM` is enabled without `AZURE_EXTERNAL_SUBNET_ID`
 set, `CreateInstance` fails fast with a clear error instead of creating a
 single-NIC VM that would later fail pod networking setup.
 
@@ -81,6 +81,10 @@ interface with a valid IPv4 address using, in order:
 - `AZURE_USE_PUBLIC_IP`, if enabled together with multi-NIC, attaches the
   public IP to the secondary (external) NIC rather than the primary
   (control-plane) NIC.
+- Traffic routed via the secondary NIC bypasses the CNI plugin on the worker
+  node, so Kubernetes `NetworkPolicy` egress rules do not apply to it — see
+  the [security considerations](../src/cloud-api-adaptor/docs/external-network.md#security-considerations)
+  in the shared external-network doc.
 
 ## Troubleshooting
 

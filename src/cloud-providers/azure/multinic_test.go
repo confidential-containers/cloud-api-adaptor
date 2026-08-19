@@ -38,9 +38,9 @@ func TestBuildNetworkConfigsSingleNIC(t *testing.T) {
 
 func TestBuildNetworkConfigsMultiNIC(t *testing.T) {
 	p := &azureProvider{serviceConfig: &Config{
-		SubnetID:          "/subscriptions/sub/.../subnets/primary",
-		SecondarySubnetID: "/subscriptions/sub/.../subnets/secondary",
-		UsePublicIP:       true,
+		SubnetID:         "/subscriptions/sub/.../subnets/primary",
+		ExternalSubnetID: "/subscriptions/sub/.../subnets/secondary",
+		UsePublicIP:      true,
 	}}
 
 	configs := p.buildNetworkConfigs("instance1", true)
@@ -69,8 +69,8 @@ func TestBuildNetworkConfigsMultiNIC(t *testing.T) {
 	if *secondary.Properties.Primary {
 		t.Errorf("expected the second NIC to not be marked primary")
 	}
-	if *secondary.Properties.IPConfigurations[0].Properties.Subnet.ID != p.serviceConfig.SecondarySubnetID {
-		t.Errorf("expected secondary NIC on subnet %q, got %q", p.serviceConfig.SecondarySubnetID, *secondary.Properties.IPConfigurations[0].Properties.Subnet.ID)
+	if *secondary.Properties.IPConfigurations[0].Properties.Subnet.ID != p.serviceConfig.ExternalSubnetID {
+		t.Errorf("expected secondary NIC on subnet %q, got %q", p.serviceConfig.ExternalSubnetID, *secondary.Properties.IPConfigurations[0].Properties.Subnet.ID)
 	}
 	if secondary.Properties.IPConfigurations[0].Properties.PublicIPAddressConfiguration == nil {
 		t.Errorf("expected a public IP on the secondary (external) NIC since UsePublicIP is true")
@@ -79,9 +79,9 @@ func TestBuildNetworkConfigsMultiNIC(t *testing.T) {
 
 func TestBuildNetworkConfigsMultiNICNoPublicIP(t *testing.T) {
 	p := &azureProvider{serviceConfig: &Config{
-		SubnetID:          "/subscriptions/sub/.../subnets/primary",
-		SecondarySubnetID: "/subscriptions/sub/.../subnets/secondary",
-		UsePublicIP:       false,
+		SubnetID:         "/subscriptions/sub/.../subnets/primary",
+		ExternalSubnetID: "/subscriptions/sub/.../subnets/secondary",
+		UsePublicIP:      false,
 	}}
 
 	configs := p.buildNetworkConfigs("instance1", true)
@@ -153,9 +153,9 @@ func TestConfigVerifierSecondarySubnet(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			p := &azureProvider{serviceConfig: &Config{
-				ImageID:           "image-1",
-				SubnetID:          tc.subnet,
-				SecondarySubnetID: tc.secondary,
+				ImageID:          "image-1",
+				SubnetID:         tc.subnet,
+				ExternalSubnetID: tc.secondary,
 			}}
 			err := p.ConfigVerifier()
 			if tc.wantErr && err == nil {

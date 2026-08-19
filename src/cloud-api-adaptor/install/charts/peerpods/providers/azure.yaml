@@ -6,6 +6,10 @@ provider: azure
 
 providerConfigs:
   azure:
+    # Network Subnet Id used for the Pod VM's secondary NIC when external pod networking (EXTERNAL_NETWORK_VIA_PODVM) is enabled
+    # (default: "")
+    # AZURE_EXTERNAL_SUBNET_ID: ""
+
     # Image Id
     # (required)
     AZURE_IMAGE_ID: ""
@@ -29,10 +33,6 @@ providerConfigs:
     # Resource Group
     # (required)
     AZURE_RESOURCE_GROUP: ""
-
-    # Secondary Network Subnet Id used for the Pod VM's secondary NIC in multi-NIC mode
-    # (default: "")
-    # AZURE_SECONDARY_SUBNET_ID: ""
 
     # Network Subnet Id
     # (required)
