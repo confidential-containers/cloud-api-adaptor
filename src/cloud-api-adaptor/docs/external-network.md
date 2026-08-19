@@ -15,7 +15,18 @@ option `ext-network-via-podvm` in cloud-api-adaptor. The equivalent option in th
 
 The prerequisite is for the pod VM to have a secondary interface with an IP. This interface will be moved to the pod network namespace and default routes adjusted so that pod network traverses via worker node, and any other traffic uses the secondary interface.
 
-**This is experimental feature and currently only available for AWS and Alibaba Cloud**
+**This is experimental feature and currently only available for AWS, Alibaba Cloud, and Azure**
+
+## Security considerations
+
+Traffic that goes out via the secondary interface bypasses the worker node
+entirely, so it also bypasses whatever CNI plugin enforces the cluster's
+`NetworkPolicy` objects there. In particular, egress `NetworkPolicy` rules
+that would normally restrict what a pod can reach are **not** applied to
+this traffic. If you rely on egress policies for isolation, either avoid
+enabling this feature on those pods or use provider-level controls (e.g.
+security groups / NSGs restricting the secondary NIC's subnet) to enforce
+equivalent restrictions.
 
 ## Specifying Pod subnet CIDRs
 

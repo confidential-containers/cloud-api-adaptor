@@ -32,7 +32,7 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	// Flags without environment variable support (pass empty string for envVarName)
 	reg.StringWithEnv(&azurecfg.Zone, "zone", "", "", "Zone")
 	reg.StringWithEnv(&azurecfg.SubnetID, "subnetid", "", "AZURE_SUBNET_ID", "Network Subnet Id", provider.Required())
-	reg.StringWithEnv(&azurecfg.SecondarySubnetID, "secondary-subnetid", "", "AZURE_SECONDARY_SUBNET_ID", "Secondary Network Subnet Id used for the Pod VM's secondary NIC in multi-NIC mode")
+	reg.StringWithEnv(&azurecfg.ExternalSubnetID, "external-subnetid", "", "AZURE_EXTERNAL_SUBNET_ID", "Network Subnet Id used for the Pod VM's secondary NIC when external pod networking (EXTERNAL_NETWORK_VIA_PODVM) is enabled")
 	reg.StringWithEnv(&azurecfg.SecurityGroupID, "securitygroupid", "", "AZURE_NSG_ID", "Security Group Id")
 	reg.StringWithEnv(&azurecfg.ImageID, "imageid", "", "AZURE_IMAGE_ID", "Image Id", provider.Required())
 	reg.StringWithEnv(&azurecfg.SSHKeyPath, "ssh-key-path", "", "", "Path to SSH public key")
