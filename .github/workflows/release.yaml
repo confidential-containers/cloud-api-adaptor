@@ -44,6 +44,8 @@ jobs:
       id-token: write          # Required for attestation signing
       attestations: write      # Required for persisting attestations
       artifact-metadata: write # Required by podvm_mkosi.yaml to write attestation metadata
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm-byom-binaries:
     needs: podvm-images  # Depends on podvm-binaries-ubuntu-{arch} images

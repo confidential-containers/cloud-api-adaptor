@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       registry:
-        description: 'Container registry to push images to (e.g., quay.io/your-username)'
+        description: 'Alternative container registry to push images to (e.g., quay.io/your-username)'
         required: false
         type: string
         default: ''
@@ -25,12 +25,19 @@ on:
         type: string
         default: ''
       registry:
-        description: 'Container registry to push images to (e.g., quay.io/your-username)'
+        description: 'Alternative container registry to push images to (e.g., quay.io/your-username)'
         required: false
         type: string
         default: ''
+    secrets:
+      QUAY_PASSWORD:
+        required: false
 
 permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.git_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   podvm:
@@ -50,3 +57,42 @@ jobs:
       image_tag: ${{ inputs.image_tag || github.sha }}
       arch: ${{ matrix.arch}}
       debug: false
+
+  push-to-quay:
+    name: Push podvm image to quay.io
+    permissions:
+      packages: read # Required to copy container images
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, s390x, arm64]
+    needs: podvm
+    if: ${{ startsWith(inputs.registry, 'quay.io') }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Login to ghcr.io container registry
+      uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Login to quay.io container registry
+      uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+      with:
+        registry: quay.io
+        username: ${{ vars.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+    - name: Push podvm image to quay.io
+      env:
+        QUAY_REGISTRY: ${{ inputs.registry }}
+        GHCR_REGISTRY: ghcr.io/${{ github.repository_owner }}
+        ARCH: ${{ matrix.arch }}
+        IMAGE_TAG: ${{ inputs.image_tag || github.sha }}
+      run: |
+        ghcr_image="${GHCR_REGISTRY}/podvm-${ARCH}:${IMAGE_TAG}"
+        quay_image="${QUAY_REGISTRY}/$(basename "$ghcr_image")"
+        oras cp "$GHCR_IMAGE" "$quay_image"
