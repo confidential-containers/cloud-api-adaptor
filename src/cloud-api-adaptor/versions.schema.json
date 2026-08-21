@@ -85,6 +85,13 @@
           },
           "reference": {
             "$ref": "#/$defs/nonEmptyString"
+          },
+          "images": {
+            "type": "object",
+            "description": "Container image registries built from this repo. Keys are component names; values are registry paths. The image tag is always the 'reference' value above.",
+            "additionalProperties": {
+              "$ref": "#/$defs/nonEmptyString"
+            }
           }
         }
       }
