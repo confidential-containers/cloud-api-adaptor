@@ -136,7 +136,15 @@ nodePort:
 	return f.Name(), nil
 }
 
-// helmInstallTrustee builds chart dependencies and runs helm upgrade --install.
+// helmInstallTrustee builds chart dependencies and deploys the Trustee Helm
+// chart. It uses a two-phase install to work around clusters where Pod DNS
+// cannot resolve *.svc.cluster.local FQDNs (e.g. the CAA mkosi CI cluster):
+//
+//  1. helm upgrade --install without --wait: creates all Services immediately
+//     so their ClusterIPs exist when the next render runs.
+//  2. helm upgrade with --wait and dnsHostAliasWorkaround=true: Helm lookup
+//     now finds the live ClusterIPs and injects hostAliases into every Pod
+//     spec, bypassing DNS for in-cluster FQDNs.
 func helmInstallTrustee(chartDir, valuesFile string, cfg *envconf.Config) error {
 	depCmd := exec.Command("helm", "dependency", "build", chartDir)
 	depCmd.Env = os.Environ()
@@ -144,21 +152,35 @@ func helmInstallTrustee(chartDir, valuesFile string, cfg *envconf.Config) error 
 		return fmt.Errorf("helm dependency build: %w\n%s", err, out)
 	}
 
-	args := []string{
+	baseArgs := []string{
 		"upgrade", "--install", kbsReleaseName, chartDir,
 		"--namespace", kbsNamespace,
 		"--create-namespace",
 		"--kubeconfig", cfg.KubeconfigFile(),
 		"-f", valuesFile,
-		"--wait", "--timeout", "10m",
 	}
-	cmd := exec.Command("helm", args...)
+
+	// Phase 1: install without waiting — creates Services so ClusterIPs exist.
+	cmd := exec.Command("helm", baseArgs...)
+	cmd.Env = os.Environ()
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("helm upgrade --install (phase 1): %w\n%s", err, out)
+	}
+
+	// Phase 2: upgrade with dnsHostAliasWorkaround=true and --wait.
+	// Helm lookup now resolves each Service ClusterIP and injects hostAliases
+	// into Pod specs so *.svc.cluster.local FQDNs resolve without Pod DNS.
+	upgradeArgs := append(baseArgs,
+		"--set", "dnsHostAliasWorkaround=true",
+		"--wait", "--timeout", "10m",
+	)
+	cmd = exec.Command("helm", upgradeArgs...)
 	cmd.Env = os.Environ()
 	out, err := cmd.CombinedOutput()
 	log.Info("helm install output:\n", string(out))
 	if err != nil {
 		logTrusteePodsOnFailure(cfg.KubeconfigFile())
-		return fmt.Errorf("helm upgrade --install: %w\n%s", err, out)
+		return fmt.Errorf("helm upgrade --install (phase 2): %w\n%s", err, out)
 	}
 	return nil
 }
