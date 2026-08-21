@@ -157,9 +157,39 @@ func helmInstallTrustee(chartDir, valuesFile string, cfg *envconf.Config) error 
 	out, err := cmd.CombinedOutput()
 	log.Info("helm install output:\n", string(out))
 	if err != nil {
+		logTrusteePodsOnFailure(cfg.KubeconfigFile())
 		return fmt.Errorf("helm upgrade --install: %w\n%s", err, out)
 	}
 	return nil
+}
+
+// logTrusteePodsOnFailure dumps pod descriptions and current+previous container
+// logs for all three Trustee components immediately after a Helm failure, while
+// the crashing containers are still present in the cluster.
+func logTrusteePodsOnFailure(kubeconfig string) {
+	kubeArgs := []string{"--kubeconfig", kubeconfig, "-n", kbsNamespace}
+
+	run := func(label string, args ...string) {
+		cmd := exec.Command("kubectl", args...)
+		cmd.Env = os.Environ()
+		out, _ := cmd.CombinedOutput()
+		log.Infof("=== %s ===\n%s", label, string(out))
+	}
+
+	run("pod summary", append(kubeArgs, "get", "pods", "-o", "wide")...)
+	run("describe pods", append(kubeArgs, "describe", "pods")...)
+	run("events", append(kubeArgs, "get", "events", "--sort-by=.lastTimestamp")...)
+
+	for _, app := range []struct{ label, selector string }{
+		{"kbs", "app=kbs"},
+		{"attestation-service", "app=attestation-service"},
+		{"rvps", "app=reference-value-provider-service"},
+	} {
+		run(app.label+" logs",
+			append(kubeArgs, "logs", "-l", app.selector, "--all-containers", "--tail=-1")...)
+		run(app.label+" logs (previous)",
+			append(kubeArgs, "logs", "-l", app.selector, "--all-containers", "--previous", "--tail=-1")...)
+	}
 }
 
 // helmUninstallTrustee runs helm uninstall for the Trustee release.
