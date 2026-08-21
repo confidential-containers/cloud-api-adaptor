@@ -112,6 +112,29 @@ func generateSSHPublicKey() ([]byte, error) {
 	return publicKeyBytes, nil
 }
 
+// orderByPrimary returns the IP configurations of the given NICs with the
+// primary NIC's configurations first, followed by any secondary NICs'.
+// Azure does not guarantee the order in which
+// vm.Properties.NetworkProfile.NetworkInterfaces is returned, so callers
+// that depend on a stable "primary IP first" ordering (e.g. the worker node
+// connecting back to the Pod VM) must not rely on API response order alone.
+func orderByPrimary(nics []*armnetwork.Interface) []*armnetwork.InterfaceIPConfiguration {
+	var primary, secondary []*armnetwork.InterfaceIPConfiguration
+
+	for _, nic := range nics {
+		if nic.Properties == nil {
+			continue
+		}
+		if nic.Properties.Primary != nil && *nic.Properties.Primary {
+			primary = append(primary, nic.Properties.IPConfigurations...)
+		} else {
+			secondary = append(secondary, nic.Properties.IPConfigurations...)
+		}
+	}
+
+	return append(primary, secondary...)
+}
+
 func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachine) ([]netip.Addr, error) {
 	nicClient, err := armnetwork.NewInterfacesClient(p.serviceConfig.SubscriptionID, p.azureClient, nil)
 	if err != nil {
@@ -121,7 +144,7 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 	nicRefs := vm.Properties.NetworkProfile.NetworkInterfaces
 
 	var ips []netip.Addr
-	var ipcs []*armnetwork.InterfaceIPConfiguration
+	var nics []*armnetwork.Interface
 
 	for _, nicRef := range nicRefs {
 		nicID := *nicRef.ID
@@ -131,8 +154,12 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 		if err != nil {
 			return nil, fmt.Errorf("get network interface: %w", err)
 		}
-		ipcs = append(ipcs, nic.Properties.IPConfigurations...)
+		nics = append(nics, &nic.Interface)
 	}
+
+	// With a single NIC this is a no-op; with multiple NICs it guarantees
+	// the primary (control-plane) NIC's IPs come first.
+	ipcs := orderByPrimary(nics)
 
 	// we add the public ip addresses as first elements, if available
 	if p.serviceConfig.UsePublicIP {
@@ -202,17 +229,21 @@ func (p *azureProvider) create(ctx context.Context, parameters *armcompute.Virtu
 	return &resp.VirtualMachine, nil
 }
 
-func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMachineNetworkInterfaceConfiguration {
+// buildNetworkConfig builds a single NIC configuration for the given subnet.
+// isPrimary marks the NIC (and its IP configuration) as the VM's primary
+// NIC; withPublicIP attaches a public IP configuration to it.
+func (p *azureProvider) buildNetworkConfig(nicName, subnetID string, isPrimary, withPublicIP bool) *armcompute.VirtualMachineNetworkInterfaceConfiguration {
 	ipConfig := armcompute.VirtualMachineNetworkInterfaceIPConfiguration{
 		Name: to.Ptr("ip-config"),
 		Properties: &armcompute.VirtualMachineNetworkInterfaceIPConfigurationProperties{
 			Subnet: &armcompute.SubResource{
-				ID: to.Ptr(p.serviceConfig.SubnetID),
+				ID: to.Ptr(subnetID),
 			},
+			Primary: to.Ptr(isPrimary),
 		},
 	}
 
-	if p.serviceConfig.UsePublicIP {
+	if withPublicIP {
 		publicIPConfig := armcompute.VirtualMachinePublicIPAddressConfiguration{
 			Name: to.Ptr(nicName),
 			Properties: &armcompute.VirtualMachinePublicIPAddressConfigurationProperties{
@@ -225,6 +256,7 @@ func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMa
 	config := armcompute.VirtualMachineNetworkInterfaceConfiguration{
 		Name: to.Ptr(nicName),
 		Properties: &armcompute.VirtualMachineNetworkInterfaceConfigurationProperties{
+			Primary:          to.Ptr(isPrimary),
 			DeleteOption:     to.Ptr(armcompute.DeleteOptionsDelete),
 			IPConfigurations: []*armcompute.VirtualMachineNetworkInterfaceIPConfiguration{&ipConfig},
 		},
@@ -237,6 +269,27 @@ func (p *azureProvider) buildNetworkConfig(nicName string) *armcompute.VirtualMa
 	}
 
 	return &config
+}
+
+// buildNetworkConfigs returns the NIC configurations to attach to the VM at
+// creation time. Azure requires all NICs to be declared upfront in the VM
+// create request (unlike AWS, which attaches the secondary ENI after the
+// instance is running), so both NICs are built here when multiNic is set.
+//
+// In multi-NIC mode the primary NIC (on SubnetID) carries pod/cluster
+// traffic over the VXLAN tunnel and never gets a public IP; the secondary
+// NIC (on ExternalSubnetID) carries the Pod VM's external traffic and
+// optionally gets a public IP if UsePublicIP is set.
+func (p *azureProvider) buildNetworkConfigs(instanceName string, multiNic bool) []*armcompute.VirtualMachineNetworkInterfaceConfiguration {
+	primary := p.buildNetworkConfig(fmt.Sprintf("%s-net", instanceName), p.serviceConfig.SubnetID, true, p.serviceConfig.UsePublicIP && !multiNic)
+
+	if !multiNic {
+		return []*armcompute.VirtualMachineNetworkInterfaceConfiguration{primary}
+	}
+
+	secondary := p.buildNetworkConfig(fmt.Sprintf("%s-ext", instanceName), p.serviceConfig.ExternalSubnetID, false, p.serviceConfig.UsePublicIP)
+
+	return []*armcompute.VirtualMachineNetworkInterfaceConfiguration{primary, secondary}
 }
 
 func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (instance *provider.Instance, err error) {
@@ -254,7 +307,10 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 	}
 
 	diskName := fmt.Sprintf("%s-disk", instanceName)
-	nicName := fmt.Sprintf("%s-net", instanceName)
+
+	if spec.MultiNic && p.serviceConfig.ExternalSubnetID == "" {
+		return nil, fmt.Errorf("multi-NIC pod networking was requested but AZURE_EXTERNAL_SUBNET_ID is not configured")
+	}
 
 	sshPublicKeyPath := os.ExpandEnv(p.serviceConfig.SSHKeyPath)
 	var sshBytes []byte
@@ -294,12 +350,12 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 		}
 	}
 
-	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, nicName, imageID, spec.Volumes)
+	vmParameters, err := p.getVMParameters(instanceSize, diskName, cloudConfigData, sshBytes, instanceName, imageID, spec.Volumes, spec.MultiNic)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Printf("CreateInstance: name: %q", instanceName)
+	logger.Printf("CreateInstance: name: %q, multi-NIC: %v", instanceName, spec.MultiNic)
 
 	vm, err := p.create(ctx, vmParameters)
 	if err != nil {
@@ -371,6 +427,11 @@ func (p *azureProvider) ConfigVerifier() error {
 			return fmt.Errorf("SSH key is invalid: %s", err)
 		}
 	}
+
+	if p.serviceConfig.ExternalSubnetID != "" && p.serviceConfig.ExternalSubnetID == p.serviceConfig.SubnetID {
+		return fmt.Errorf("AZURE_EXTERNAL_SUBNET_ID must differ from AZURE_SUBNET_ID")
+	}
+
 	return nil
 }
 
@@ -535,7 +596,7 @@ func (p *azureProvider) getResourceTags() map[string]*string {
 	return tags
 }
 
-func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, nicName string, imageID string, csiVolumes []provider.CloudVolume) (*armcompute.VirtualMachine, error) {
+func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig string, sshBytes []byte, instanceName, imageID string, csiVolumes []provider.CloudVolume, multiNic bool) (*armcompute.VirtualMachine, error) {
 	userDataB64 := base64.StdEncoding.EncodeToString([]byte(cloudConfig))
 
 	// Azure limits the base64 encrypted userData to 64KB.
@@ -578,7 +639,7 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 		}
 	}
 
-	networkConfig := p.buildNetworkConfig(nicName)
+	networkConfigs := p.buildNetworkConfigs(instanceName, multiNic)
 
 	// Configure OS disk with optional root volume size
 	osDisk := &armcompute.OSDisk{
@@ -636,7 +697,7 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 			},
 			NetworkProfile: &armcompute.NetworkProfile{
 				NetworkAPIVersion:              to.Ptr(armcompute.NetworkAPIVersionTwoThousandTwenty1101),
-				NetworkInterfaceConfigurations: []*armcompute.VirtualMachineNetworkInterfaceConfiguration{networkConfig},
+				NetworkInterfaceConfigurations: networkConfigs,
 			},
 			SecurityProfile: securityProfile,
 			DiagnosticsProfile: &armcompute.DiagnosticsProfile{
