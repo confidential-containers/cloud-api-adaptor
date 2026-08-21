@@ -79,22 +79,6 @@ func createCloudInitISO(v *vmConfig) ([]byte, error) {
 	return createCloudInit([]byte(userData), []byte(metaData))
 }
 
-func checkDomainExistsByName(name string, libvirtClient *libvirtClient) (exist bool, err error) {
-
-	logger.Printf("Checking if instance (%s) exists", name)
-	domain, err := libvirtClient.connection.LookupDomainByName(name)
-	if err != nil {
-		if err.(libvirt.Error).Code == libvirt.ERR_NO_DOMAIN {
-			return false, nil
-		}
-		return false, err
-	}
-	defer freeDomain(domain, &err)
-
-	return true, nil
-
-}
-
 func uploadIso(ctx context.Context, isoData []byte, isoVolName string, libvirtClient *libvirtClient) (string, error) {
 
 	logger.Printf("Uploading iso file: %s\n", isoVolName)
@@ -573,15 +557,31 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 
 	v.rootDiskSize = normalizeRootDiskSize(v.rootDiskSize)
 
-	exists, err := checkDomainExistsByName(v.name, libvirtClient)
-	if err != nil {
-		return nil, fmt.Errorf("Error in checking instance: %s", err)
+	logger.Printf("Checking if instance (%s) exists", v.name)
+	domain, err := libvirtClient.connection.LookupDomainByName(v.name)
+	if err == nil {
+		// Domain already exists. Populate instanceID and ips so the caller
+		// has a valid UUID for cleanup if anything goes wrong subsequently.
+		defer freeDomain(domain, &err)
+		uuid, uuidErr := domain.GetUUIDString()
+		if uuidErr != nil {
+			return nil, fmt.Errorf("existing domain UUID retrieval failed: %w", uuidErr)
+		}
+		v.instanceID = uuid
+		ips, ipsErr := getDomainIPs(domain)
+		if ipsErr != nil {
+			// UUID is valid; return the instance so the caller can clean up
+			// even if IP retrieval fails (e.g. domain is shut off).
+			logger.Printf("existing domain IP retrieval failed (uuid=%s): %v", uuid, ipsErr)
+			return &createDomainOutput{instance: v}, fmt.Errorf("existing domain IP retrieval failed: %w", ipsErr)
+		}
+		v.ips = ips
+		logger.Printf("Instance already exists (uuid=%s)", uuid)
+		return &createDomainOutput{instance: v}, nil
 	}
-	if exists {
-		logger.Printf("Instance already exists ")
-		return &createDomainOutput{
-			instance: v,
-		}, nil
+	var libvirtErr libvirt.Error
+	if !errors.As(err, &libvirtErr) || libvirtErr.Code != libvirt.ERR_NO_DOMAIN {
+		return nil, fmt.Errorf("error checking instance: %w", err)
 	}
 
 	rootVolName := v.name + "-root.qcow2"
