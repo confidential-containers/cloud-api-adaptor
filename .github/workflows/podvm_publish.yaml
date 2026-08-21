@@ -29,9 +29,6 @@ on:
         required: false
         type: string
         default: ''
-    secrets:
-      QUAY_PASSWORD:
-        required: true
 
 permissions: {}
 
@@ -53,6 +50,3 @@ jobs:
       image_tag: ${{ inputs.image_tag || github.sha }}
       arch: ${{ matrix.arch}}
       debug: false
-      registry: ${{ inputs.registry != '' && inputs.registry || (github.repository == 'confidential-containers/cloud-api-adaptor' && 'quay.io/confidential-containers' || format('ghcr.io/{0}', github.repository_owner)) }}
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
