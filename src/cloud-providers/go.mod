@@ -12,7 +12,7 @@ require (
 	github.com/IBM-Cloud/power-go-client v1.16.2
 	github.com/IBM/go-sdk-core/v5 v5.23.2
 	github.com/IBM/platform-services-go-sdk v0.103.0
-	github.com/IBM/vpc-go-sdk v0.88.0
+	github.com/IBM/vpc-go-sdk v0.89.0
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.10
 	github.com/alibabacloud-go/tea v1.3.8
 	github.com/alibabacloud-go/vpc-20160428/v6 v6.12.5

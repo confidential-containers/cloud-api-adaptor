@@ -81,8 +81,8 @@ github.com/IBM/ibm-cos-sdk-go v1.15.0 h1:ZS1eK8QxFIN9EwhHcfwsoBxCGokEfjcp1A4VL11
 github.com/IBM/ibm-cos-sdk-go v1.15.0/go.mod h1:+20NRVNOvdC86EUGryJzQYIgrz+LwQaEcNa/Poq6NXE=
 github.com/IBM/platform-services-go-sdk v0.103.0 h1:qQK9DYWD2kR201uwKaXxT2F/WY3uj2YFcTxD6wrldI0=
 github.com/IBM/platform-services-go-sdk v0.103.0/go.mod h1:1isdll9kcFRZT9o3McwdvfrQafL4/K61uFbKzueDkEg=
-github.com/IBM/vpc-go-sdk v0.88.0 h1:Doe1Bz3icxlgThQYj3ZNLhvGR0VaBKebZN0rjzq9hpY=
-github.com/IBM/vpc-go-sdk v0.88.0/go.mod h1:y014nUi5rUn3sOs48MgW4tDtpQ1tmWGtAPMfAqTfwxE=
+github.com/IBM/vpc-go-sdk v0.89.0 h1:IYCeW3kmY9XHoY4hmxJuyxNXIOXpY0iXs3LMDEWucrI=
+github.com/IBM/vpc-go-sdk v0.89.0/go.mod h1:y014nUi5rUn3sOs48MgW4tDtpQ1tmWGtAPMfAqTfwxE=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
