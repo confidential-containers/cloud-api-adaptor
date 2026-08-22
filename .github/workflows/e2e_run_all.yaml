@@ -61,7 +61,6 @@ jobs:
   podvm_mkosi_amd64:
     uses: ./.github/workflows/podvm_mkosi.yaml
     with:
-      registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       arch: amd64
@@ -72,13 +71,10 @@ jobs:
       id-token: write  # Required for OIDC authentication
       attestations: write  # Required to write attestations
       artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm_mkosi_s390x:
     uses: ./.github/workflows/podvm_mkosi.yaml
     with:
-      registry: ${{ inputs.registry }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       arch: s390x
@@ -89,8 +85,6 @@ jobs:
       attestations: write  # Required to write attestations
       id-token: write  # Required for OIDC authentication
       artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm_mkosi_azure:
     uses: ./.github/workflows/podvm_mkosi.yaml
@@ -101,14 +95,11 @@ jobs:
       attestations: write # Required to publish the attestation provenance to ghcr
       artifact-metadata: write # Required by podvm_mkosi_ubuntu.yaml to write attestation metadata
     with:
-      registry: ghcr.io/${{ github.repository_owner }}
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ github.sha }}
       arch: amd64
       debug: true
       tee-platform: az-cvm-vtpm
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   caa_image_amd64:
     uses: ./.github/workflows/caa_build_and_push.yaml
