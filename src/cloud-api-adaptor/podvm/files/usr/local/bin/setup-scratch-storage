@@ -22,6 +22,13 @@ die() {
     exit 1
 }
 
+# Wait for udev to settle, even if a device node is present
+# a device may not be fully initialized yet
+if ! udevadm settle --timeout=5; then
+	echo "udev has not settled yet. Exiting."
+	exit 1
+fi
+
 # Check if the trusted_store device exists
 DISK_LABEL="trusted_store"
 DEV_PATH="/dev/disk/by-label/$DISK_LABEL"
