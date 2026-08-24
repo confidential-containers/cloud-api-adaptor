@@ -48,6 +48,10 @@ func newProxyService(dialer func(context.Context) (net.Conn, error), pauseImage 
 func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContainerRequest) (*emptypb.Empty, error) {
 	var pullImageInGuest bool
 	logger.Printf("CreateContainer: containerID:%s", req.ContainerId)
+	if err := ctx.Err(); err != nil {
+		logger.Printf("CreateContainer cancelled before forwarding: %v", err)
+		return nil, err
+	}
 	if req.OCI.Annotations == nil {
 		req.OCI.Annotations = make(map[string]string)
 	}
