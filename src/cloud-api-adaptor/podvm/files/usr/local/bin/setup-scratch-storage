@@ -51,13 +51,33 @@ mkdir -p "$MOUNT_POINT"
 
 # Get device number for the encryption script
 # Using xargs to strip leading/trailing whitespace
-DEV_NUM=$(lsblk -no MAJ:MIN "$DEV_PATH" | xargs)
+# DEV_NUM=$(lsblk -no MAJ:MIN "$DEV_PATH" | xargs)
 
+STORAGE_KEY_PATH="/run/encrypt_storage.key"
 # Generate encryption key and use LUKS encryption
 echo "Setting up LUKS encrypted scratch storage"
-touch /run/encrypt_storage.key
-chmod 600 /run/encrypt_storage.key
-head -c 4096 /dev/urandom > /run/encrypt_storage.key
-/usr/local/bin/luks-encrypt-storage "$DEV_NUM" false "$MOUNT_POINT" /run/encrypt_storage.key
+touch "$STORAGE_KEY_PATH"
+chmod 600 "$STORAGE_KEY_PATH"
+head -c 4096 /dev/urandom > "$STORAGE_KEY_PATH"
+
+cryptsetup \
+	--batch-mode luksFormat \
+	--type luks2 \
+	"$DEV_PATH" \
+	--sector-size 4096 \
+	--cipher aes-xts-plain64 \
+	--integrity hmac-sha256 \
+	"$STORAGE_KEY_PATH"
+
+LUKS_NAME="scratch_storage"
+cryptsetup open --type luks2 -d "$STORAGE_KEY_PATH" "$DEV_PATH" "$LUKS_NAME"
+
+# Remove the key file after use
+rm "$STORAGE_KEY_PATH"
+
+LUKS_PATH="/dev/mapper/$LUKS_NAME"
+mkfs.ext4 "$LUKS_PATH" -E lazy_journal_init
+
+mount "$LUKS_PATH" "$MOUNT_POINT"
 
 echo "Scratch storage setup completed"
