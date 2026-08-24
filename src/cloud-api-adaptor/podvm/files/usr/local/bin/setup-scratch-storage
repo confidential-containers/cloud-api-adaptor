@@ -55,7 +55,9 @@ DEV_NUM=$(lsblk -no MAJ:MIN "$DEV_PATH" | xargs)
 
 # Generate encryption key and use LUKS encryption
 echo "Setting up LUKS encrypted scratch storage"
-head -c 4096 /dev/urandom >/run/encrypt_storage.key
+touch /run/encrypt_storage.key
+chmod 600 /run/encrypt_storage.key
+head -c 4096 /dev/urandom > /run/encrypt_storage.key
 /usr/local/bin/luks-encrypt-storage "$DEV_NUM" false "$MOUNT_POINT" /run/encrypt_storage.key
 
 echo "Scratch storage setup completed"
