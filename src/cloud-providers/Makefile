@@ -39,7 +39,16 @@ define gen-provider-values
 				"    # \(.env_var): \"\(.default)\"" \
 			end, \
 			"" \
-		)' > $(CHART_PROVIDERS_DIR)/$(1).yaml
+		), \
+		(if .provider == "azure" then \
+			"webhook:", \
+			"  annotations:", \
+			"    # This is required to ensure the azure admission enforcer does not take", \
+			"    # ownership of the namespaceSelector field, completely preventing helm upgrade", \
+			"    admissions.enforcer/disabled: \"true\"" \
+		else \
+			empty \
+		end)' > $(CHART_PROVIDERS_DIR)/$(1).yaml
 endef
 
 define gen-provider-secrets
