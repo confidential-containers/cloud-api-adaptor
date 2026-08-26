@@ -69,21 +69,27 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 	// If machine type is set in annotations then use it (ie. shape <system_type>-<cpu>x<memoery>)
 	// vCPU and Memory gets higher priority than instance type from annotation
 	if spec.VCPUs != 0 && spec.Memory != 0 {
-		memory = float64(spec.Memory / 1024)
+		memory = float64(spec.Memory) / 1024.0
 		processors = float64(spec.VCPUs)
 		logger.Printf("Instance type selected by the cloud provider based on vCPU and memory annotations: %s-%gx%g", systemType, processors, memory)
 	} else if spec.InstanceType != "" {
 		typeAndSize := strings.Split(spec.InstanceType, "-")
+		if len(typeAndSize) != 2 {
+			return nil, fmt.Errorf("invalid instance type format %q: expected <sys_type>-<cpu>x<memory>", spec.InstanceType)
+		}
 		systemType = typeAndSize[0]
 		size := strings.Split(typeAndSize[1], "x")
+		if len(size) != 2 {
+			return nil, fmt.Errorf("invalid instance type format %q: expected <sys_type>-<cpu>x<memory>", spec.InstanceType)
+		}
 		f, err := strconv.Atoi(size[0])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid cpu value in instance type %q: %w", spec.InstanceType, err)
 		}
 		processors = float64(f)
 		m, err := strconv.Atoi(size[1])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid memory value in instance type %q: %w", spec.InstanceType, err)
 		}
 		memory = float64(m)
 		logger.Printf("Instance type selected by the cloud provider based on instance type annotation: %s", spec.InstanceType)
