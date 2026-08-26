@@ -34,6 +34,7 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.Float64WithEnv(&ibmcloudPowerVSConfig.Processors, "cpu", 0.5, "POWERVS_PROCESSORS", "Number of processors allocated")
 	reg.BoolWithEnv(&ibmcloudPowerVSConfig.UsePublicIP, "use-public-ip", false, "USE_PUBLIC_IP", "Use Public IP for connecting to the agent-protocol-forwarder inside the Pod VM")
 	reg.DurationWithEnv(&ibmcloudPowerVSConfig.BuildTimeout, "build-timeout", 150*time.Second, "POWERVS_BUILD_TIMEOUT", "Maximum timeout to build the VM")
+	reg.DurationWithEnv(&ibmcloudPowerVSConfig.DHCPTimeout, "dhcp-timeout", 750*time.Second, "POWERVS_DHCP_TIMEOUT", "Maximum timeout to wait for DHCP IP assignment")
 }
 
 func (*Manager) LoadEnv() {
