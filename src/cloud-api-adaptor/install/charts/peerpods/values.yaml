@@ -27,6 +27,14 @@ secrets:
   # - byom: must contain id_rsa (private key) and id_rsa.pub (public key)
   existingSshKeySecretName: ""
 
+  # Name of a pre-existing Secret containing SSH host public keys for BYOM allowlist mode.
+  # Only used when mode: "reference" and provider is "byom".
+  # In create mode, supply host keys via providerSecrets.byom.hostKeys instead —
+  # Helm will create the Secret automatically.
+  # When configured (either mode), the chart mounts the Secret at /etc/byom/ssh-host-keys
+  # and automatically injects SSH_HOST_KEY_ALLOWLIST_DIR — no manual env var needed.
+  existingByomHostKeySecretName: ""
+
   # TLS certificates for CAA-to-peer-pod communication.
   #
   # TLS between CAA and agent-protocol-forwarder is always enabled. By default,
