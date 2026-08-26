@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -201,9 +202,32 @@ func (p *ibmcloudPowerVSProvider) Teardown() error {
 }
 
 func (p *ibmcloudPowerVSProvider) ConfigVerifier() error {
-	imageID := p.serviceConfig.ImageID
-	if len(imageID) == 0 {
-		return fmt.Errorf("ImageId is empty")
+	validProcessorTypes := []string{"shared", "dedicated", "capped"}
+	validSystemTypes := []string{"s922", "s1022", "s1122", "e980", "e1080"}
+
+	var errs []string
+
+	if len(p.serviceConfig.ImageID) == 0 {
+		errs = append(errs, "ImageID is empty")
+	}
+	if len(p.serviceConfig.NetworkID) == 0 {
+		errs = append(errs, "NetworkID is empty")
+	}
+	if len(p.serviceConfig.ServiceInstanceID) == 0 {
+		errs = append(errs, "ServiceInstanceID is empty")
+	}
+	if len(p.serviceConfig.Zone) == 0 {
+		errs = append(errs, "Zone is empty")
+	}
+	if !slices.Contains(validProcessorTypes, p.serviceConfig.ProcessorType) {
+		errs = append(errs, fmt.Sprintf("ProcessorType %q is invalid, must be one of %v", p.serviceConfig.ProcessorType, validProcessorTypes))
+	}
+	if !slices.Contains(validSystemTypes, p.serviceConfig.SystemType) {
+		errs = append(errs, fmt.Sprintf("SystemType %q is invalid, must be one of %v", p.serviceConfig.SystemType, validSystemTypes))
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("invalid PowerVS config: %s", strings.Join(errs, "; "))
 	}
 	return nil
 }
