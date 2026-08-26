@@ -58,6 +58,10 @@ providerConfigs:
     # (default: "")
     # POWERVS_BUILD_TIMEOUT: ""
 
+    # Maximum timeout to wait for DHCP IP assignment
+    # (default: "")
+    # POWERVS_DHCP_TIMEOUT: ""
+
     # ID of the boot image
     # (required)
     POWERVS_IMAGE_ID: ""

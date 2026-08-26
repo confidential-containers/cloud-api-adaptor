@@ -236,19 +236,19 @@ func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instanceID strin
 		return ips, nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 750*time.Second)
-	defer cancel()
-
 	// If IP is not assigned to the instance, fetch it from DHCP server
-	logger.Printf("Trying to fetch IP from DHCP server..")
+	dhcpCtx, dhcpCancel := context.WithTimeout(ctx, p.serviceConfig.DHCPTimeout)
+	defer dhcpCancel()
+
+	logger.Printf("Trying to fetch IP from DHCP server (timeout: %s)..", p.serviceConfig.DHCPTimeout)
 	err = retry.Do(func() error {
-		ip, err := p.getIPFromDHCPServer(ctx, ins)
+		ip, err := p.getIPFromDHCPServer(dhcpCtx, ins)
 		if err != nil {
 			logger.Print(err)
 			return err
 		}
 		if ip == nil {
-			return fmt.Errorf("failed to get IP from DHCP server: %v", err)
+			return fmt.Errorf("DHCP lease not yet assigned for instance (will retry)")
 		}
 
 		addr, err := netip.ParseAddr(*ip)
@@ -260,7 +260,7 @@ func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instanceID strin
 		logger.Printf("podNodeIP=%s", addr.String())
 		return nil
 	},
-		retry.Context(ctx),
+		retry.Context(dhcpCtx),
 		retry.Attempts(0),
 		retry.MaxDelay(10*time.Second),
 	)
