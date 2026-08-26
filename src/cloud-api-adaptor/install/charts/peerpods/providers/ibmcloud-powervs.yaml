@@ -91,8 +91,8 @@ providerConfigs:
     # POWERVS_SSH_KEY_NAME: ""
 
     # Name of the system type
-    # (default: "s922")
-    # POWERVS_SYSTEM_TYPE: "s922"
+    # (default: "s1022")
+    # POWERVS_SYSTEM_TYPE: "s1022"
 
     # PowerVS zone name
     # (required)
