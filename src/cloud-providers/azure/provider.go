@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -38,8 +39,9 @@ const (
 )
 
 type azureProvider struct {
-	azureClient   azcore.TokenCredential
-	serviceConfig *Config
+	azureClient       azcore.TokenCredential
+	serviceConfig     *Config
+	confidentialSizes map[string]bool
 }
 
 func NewProvider(config *Config) (provider.Provider, error) {
@@ -384,11 +386,6 @@ func (p *azureProvider) selectInstanceType(ctx context.Context, spec provider.In
 // available in Azure
 func (p *azureProvider) updateInstanceSizeSpecList() error {
 
-	// Create a new instance of the Virtual Machine Sizes client
-	vmSizesClient, err := armcompute.NewVirtualMachineSizesClient(p.serviceConfig.SubscriptionID, p.azureClient, nil)
-	if err != nil {
-		return fmt.Errorf("creating VM sizes client: %w", err)
-	}
 	// Get the instance sizes from the service config
 	instanceSizes := p.serviceConfig.InstanceSizes
 
@@ -397,30 +394,69 @@ func (p *azureProvider) updateInstanceSizeSpecList() error {
 		instanceSizes = append(instanceSizes, p.serviceConfig.Size)
 	}
 
-	// Create a list of instancesizespec
+	wantedSizes := make(map[string]bool, len(instanceSizes))
+	for _, s := range instanceSizes {
+		wantedSizes[s] = true
+	}
+
+	skuClient, err := armcompute.NewResourceSKUsClient(p.serviceConfig.SubscriptionID, p.azureClient, nil)
+	if err != nil {
+		return fmt.Errorf("creating resource SKUs client: %w", err)
+	}
+
+	filter := fmt.Sprintf("location eq '%s'", p.serviceConfig.Region)
+	pager := skuClient.NewListPager(&armcompute.ResourceSKUsClientListOptions{Filter: &filter})
+
 	var instanceSizeSpecList []provider.InstanceTypeSpec
+	p.confidentialSizes = make(map[string]bool)
 
-	// TODO: Is there an optimal method for this?
-	// Create NewListPager to iterate over the instance types
-	pager := vmSizesClient.NewListPager(p.serviceConfig.Region, &armcompute.VirtualMachineSizesClientListOptions{})
-
-	// Iterate over the page and populate the instanceSizeSpecList for all the instanceSizes
+	// Iterate through the resource SKUs and populate the instanceSizeSpecList
 	for pager.More() {
-		nextResult, err := pager.NextPage(context.Background())
+		page, err := pager.NextPage(context.Background())
 		if err != nil {
-			return fmt.Errorf("getting next page of VM sizes: %w", err)
+			return fmt.Errorf("getting next page of resource SKUs: %w", err)
 		}
-		for _, vmSize := range nextResult.Value {
-			if util.Contains(instanceSizes, *vmSize.Name) {
-				instanceSizeSpecList = append(instanceSizeSpecList, provider.InstanceTypeSpec{InstanceType: *vmSize.Name, VCPUs: int64(*vmSize.NumberOfCores), Memory: int64(*vmSize.MemoryInMB)})
+		for _, sku := range page.Value {
+			if sku.ResourceType == nil || *sku.ResourceType != "virtualMachines" {
+				continue
 			}
+			if sku.Name == nil || !wantedSizes[*sku.Name] {
+				continue
+			}
+
+			var vcpus, memory int64
+			var isConfidential bool
+			for _, cap := range sku.Capabilities {
+				if cap.Name == nil || cap.Value == nil {
+					continue
+				}
+				switch *cap.Name {
+				case "vCPUs":
+					vcpus, _ = strconv.ParseInt(*cap.Value, 10, 64)
+				case "MemoryGB":
+					mem, _ := strconv.ParseFloat(*cap.Value, 64)
+					memory = int64(mem * 1024)
+				case "ConfidentialComputingType":
+					isConfidential = *cap.Value != ""
+				}
+			}
+
+			p.confidentialSizes[*sku.Name] = isConfidential
+			instanceSizeSpecList = append(instanceSizeSpecList, provider.InstanceTypeSpec{
+				InstanceType: *sku.Name,
+				VCPUs:        vcpus,
+				Memory:       memory,
+			})
 		}
 	}
 
-	// Sort the InstanceSizeSpecList and update the serviceConfig
 	p.serviceConfig.InstanceSizeSpecList = provider.SortInstanceTypesOnResources(instanceSizeSpecList)
 	logger.Printf("instanceSizeSpecList (%v)", p.serviceConfig.InstanceSizeSpecList)
 	return nil
+}
+
+func (p *azureProvider) isConfidentialVMSize(size string) bool {
+	return p.confidentialSizes[size]
 }
 
 // validateDiskCount checks that the requested number of data disks does not
