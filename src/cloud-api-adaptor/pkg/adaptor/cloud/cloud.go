@@ -195,6 +195,9 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	// Get Pod VM image from annotations
 	image := util.GetImageFromAnnotation(req.Annotations)
 
+	// Get confidential VM preference from annotations
+	confidentialVM := util.GetConfidentialVMFromAnnotation(req.Annotations)
+
 	// Get CSI volumes that need to be attached to the PodVM
 	csiVolumes := util.GetCSIVolumesForPod(req.Annotations)
 	if len(csiVolumes) > 0 {
@@ -214,13 +217,14 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 
 	// Pod VM spec
 	vmSpec := provider.InstanceTypeSpec{
-		InstanceType: instanceType,
-		VCPUs:        vcpus,
-		Memory:       memory,
-		GPUs:         gpus,
-		Image:        image,
-		MultiNic:     podNetworkConfig.ExternalNetViaPodVM,
-		Volumes:      csiVolumes,
+		InstanceType:   instanceType,
+		VCPUs:          vcpus,
+		Memory:         memory,
+		GPUs:           gpus,
+		Image:          image,
+		MultiNic:       podNetworkConfig.ExternalNetViaPodVM,
+		Volumes:        csiVolumes,
+		ConfidentialVM: confidentialVM,
 	}
 
 	// TODO: server name is also generated in each cloud provider, and possibly inconsistent

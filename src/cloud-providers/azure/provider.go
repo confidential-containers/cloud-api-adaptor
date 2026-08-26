@@ -376,10 +376,53 @@ func (p *azureProvider) ConfigVerifier() error {
 	return nil
 }
 
+func (p *azureProvider) isCVMRequested(annotation *bool) bool {
+	if p.serviceConfig.DisableCVM {
+		return false
+	}
+	if annotation != nil {
+		return *annotation
+	}
+	return true
+}
+
 // Add SelectInstanceType method to select an instance type based on the memory and vcpu requirements
 func (p *azureProvider) selectInstanceType(ctx context.Context, spec provider.InstanceTypeSpec) (string, error) {
+	cvmRequested := p.isCVMRequested(spec.ConfidentialVM)
+	specList := p.filterInstanceTypeSpecsByConfidentiality(cvmRequested)
+	validSizes := p.filterValidSizesByConfidentiality(cvmRequested)
+	chosenSize := p.serviceConfig.Size
 
-	return provider.SelectInstanceTypeToUse(spec, p.serviceConfig.InstanceSizeSpecList, p.serviceConfig.InstanceSizes, p.serviceConfig.Size)
+	if p.isConfidentialVMSize(chosenSize) != cvmRequested {
+		if len(validSizes) == 0 {
+			return "", fmt.Errorf("no instance sizes are configured (requested confidential_vm=%t, default size %q is %s)",
+				cvmRequested, chosenSize, map[bool]string{true: "confidential", false: "non-confidential"}[p.isConfidentialVMSize(chosenSize)])
+		}
+		chosenSize = validSizes[0]
+		logger.Printf("Default size %q does not match confidential_vm=%t, using %q instead", p.serviceConfig.Size, cvmRequested, chosenSize)
+	}
+
+	return provider.SelectInstanceTypeToUse(spec, specList, validSizes, chosenSize)
+}
+
+func (p *azureProvider) filterInstanceTypeSpecsByConfidentiality(cvmRequested bool) []provider.InstanceTypeSpec {
+	var filtered []provider.InstanceTypeSpec
+	for _, s := range p.serviceConfig.InstanceSizeSpecList {
+		if p.isConfidentialVMSize(s.InstanceType) == cvmRequested {
+			filtered = append(filtered, s)
+		}
+	}
+	return filtered
+}
+
+func (p *azureProvider) filterValidSizesByConfidentiality(cvmRequested bool) []string {
+	var filtered []string
+	for _, s := range p.serviceConfig.InstanceSizes {
+		if p.isConfidentialVMSize(s) == cvmRequested {
+			filtered = append(filtered, s)
+		}
+	}
+	return filtered
 }
 
 // Add a method to populate InstanceSizeSpecList for all the instanceSizes
@@ -587,7 +630,7 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 		StorageAccountType: to.Ptr(armcompute.StorageAccountTypesPremiumLRS),
 	}
 
-	if !p.serviceConfig.DisableCVM {
+	if p.isConfidentialVMSize(instanceSize) {
 		securityType = armcompute.SecurityTypesConfidentialVM
 		managedDiskParams.SecurityProfile = &armcompute.VMDiskSecurityProfile{
 			SecurityEncryptionType: to.Ptr(armcompute.SecurityEncryptionTypesVMGuestStateOnly),
