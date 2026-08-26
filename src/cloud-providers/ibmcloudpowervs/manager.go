@@ -29,7 +29,7 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.StringWithEnv(&ibmcloudPowerVSConfig.ImageID, "image-id", "", "POWERVS_IMAGE_ID", "ID of the boot image", provider.Required())
 	reg.StringWithEnv(&ibmcloudPowerVSConfig.SSHKey, "ssh-key", "", "POWERVS_SSH_KEY_NAME", "Name of the SSH Key")
 	reg.StringWithEnv(&ibmcloudPowerVSConfig.ProcessorType, "proc-type", "shared", "POWERVS_PROCESSOR_TYPE", "Name of the processor type")
-	reg.StringWithEnv(&ibmcloudPowerVSConfig.SystemType, "sys-type", "s922", "POWERVS_SYSTEM_TYPE", "Name of the system type")
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.SystemType, "sys-type", "s1022", "POWERVS_SYSTEM_TYPE", "Name of the system type")
 	reg.Float64WithEnv(&ibmcloudPowerVSConfig.Memory, "memory", 2, "POWERVS_MEMORY", "Amount of memory in GB")
 	reg.Float64WithEnv(&ibmcloudPowerVSConfig.Processors, "cpu", 0.5, "POWERVS_PROCESSORS", "Number of processors allocated")
 	reg.BoolWithEnv(&ibmcloudPowerVSConfig.UsePublicIP, "use-public-ip", false, "USE_PUBLIC_IP", "Use Public IP for connecting to the agent-protocol-forwarder inside the Pod VM")
