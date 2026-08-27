@@ -62,16 +62,6 @@ type KeyBrokerService struct {
 	repoDir    string // path to the cloned trustee repo; removed on Delete
 }
 
-// InstallOverlay defines common operations to an install overlay (install/overlays/*)
-type InstallOverlay interface {
-	// Apply applies the overlay. Equivalent to the `kubectl apply -k` command
-	Apply(ctx context.Context, cfg *envconf.Config) error
-	// Delete deletes the overlay. Equivalent to the `kubectl delete -k` command
-	Delete(ctx context.Context, cfg *envconf.Config) error
-	// Edit changes overlay files
-	Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
-}
-
 // InstallChart defines common operations to an install chart (install/charts/*)
 type InstallChart interface {
 	// Install installs the chart. Equivalent to the `helm install` command
