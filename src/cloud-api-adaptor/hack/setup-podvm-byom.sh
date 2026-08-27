@@ -91,15 +91,7 @@ tar xvf ./${PODVM_BYOM_TAR_NAME} -C /tmp/files
 # Run the helper scripts from /tmp/files
 source /tmp/files/copy-files.sh
 
-# Change mount point of kata-containers to type tmpfs.
-KATA_MOUNT_FILE=/etc/systemd/system/'run-kata\x2dcontainers.mount'
-
-if grep -q '^Type=none' "$KATA_MOUNT_FILE" && grep -q '^Options=bind' "$KATA_MOUNT_FILE"; then
-  sudo sed -i 's/^Type=none/Type=tmpfs/; s/^Options=bind/Options=mode=0755,uid=root,gid=root/' "$KATA_MOUNT_FILE"
-  echo "Updated $KATA_MOUNT_FILE to Type=tmpfs and Options=mode=755"
-fi
-
-# Reload services 
+# Reload services
 systemctl daemon-reload
 systemctl enable process-user-data.path
 systemctl disable process-user-data.service
@@ -115,7 +107,6 @@ services=(
     media-cidata.mount
     process-user-data.path
     reboot-watcher.path
-    'run-kata\x2dcontainers.mount'
     sftp-dir.service
 )
 
