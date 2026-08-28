@@ -8,7 +8,7 @@ package e2e
 import (
 	"testing"
 
-	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/byom"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/byom"
 )
 
 func TestByomCreateSimplePod(t *testing.T) {
@@ -85,4 +85,16 @@ func TestByomPodsMTLSCommunication(t *testing.T) {
 func TestByomCreateWithCpuAndMemRequestLimit(t *testing.T) {
 	assert := ByomAssert{}
 	DoTestPodWithCPUMemLimitsAndRequests(t, testEnv, assert, "100m", "100Mi", "200m", "200Mi")
+}
+
+func TestByomSSHHostKeysAllowlist(t *testing.T) {
+	if !byom.ByomProps.VerifyHostKeys {
+		t.Skip("Skipping host keys allowlist test as VERIFY_HOST_KEYS is not enabled in provision properties")
+	}
+
+	pod := NewBusyboxPodWithName(E2eNamespace, "host-keys-test").GetPodOrFatal(t)
+	NewTestCase(t, testEnv, "ByomHostKeyAllowlist", ByomAssert{}, "PodVM created with host key allowlist active").
+		WithPod(pod).
+		WithExpectedCaaPodLogStrings("SSH: Loaded", "SSH: Accepted allowlisted key").
+		Run()
 }

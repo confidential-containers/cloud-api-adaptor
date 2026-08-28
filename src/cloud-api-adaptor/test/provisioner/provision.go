@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	nodev1 "k8s.io/api/node/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -315,7 +316,10 @@ func CreateAndWaitForNamespace(ctx context.Context, client klient.Client, namesp
 	nsObj := corev1.Namespace{}
 	nsObj.Name = namespaceName
 	if err := client.Resources().Create(ctx, &nsObj); err != nil {
-		return err
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+		log.Infof("Namespace '%s' already exists, reusing it", namespaceName)
 	}
 
 	if err := waitForNamespaceToBeUseable(ctx, client, namespaceName); err != nil {
