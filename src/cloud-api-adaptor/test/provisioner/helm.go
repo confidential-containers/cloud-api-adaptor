@@ -83,11 +83,11 @@ func NewHelm(chartPath, namespace, releaseName, provider string, debug bool) (*H
 	}, nil
 }
 
-// Install installs the Helm chart. Equivalent to the `helm install` command
+// Install installs or upgrades the Helm chart. Equivalent to the `helm upgrade --install` command
 func (h *Helm) Install(ctx context.Context, cfg *envconf.Config) error {
 	providerValuesFile := fmt.Sprintf("%s/providers/%s.yaml", h.ChartPath, h.Provider)
 
-	args := []string{"install", h.ReleaseName, h.ChartPath,
+	args := []string{"upgrade", "--install", h.ReleaseName, h.ChartPath,
 		"--namespace", h.Namespace,
 		"--create-namespace",
 		"--wait", "--timeout", "15m",
