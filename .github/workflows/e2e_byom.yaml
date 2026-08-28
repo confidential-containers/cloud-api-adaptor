@@ -145,7 +145,7 @@ jobs:
           cat byom.properties
           echo "::endgroup::"
 
-      - name: Run tests
+      - name: Run tests (TOFU mode)
         id: runTests
         run: |
           export CLOUD_PROVIDER=byom
@@ -157,8 +157,28 @@ jobs:
 
           make test-e2e
 
+      - name: Run tests (SSH Host Key Allowlist mode)
+        id: runHostKeysTests
+        if: steps.runTests.outcome == 'success'
+        run: |
+          # Enable host keys allowlist verification in properties file
+          # Only one VM is needed for the single-pod host keys test
+          sed -i 's|^VERIFY_HOST_KEYS=.*|VERIFY_HOST_KEYS="true"|' byom.properties
+          sed -i 's|^POOL_SIZE=.*|POOL_SIZE="1"|' byom.properties
+
+          export CLOUD_PROVIDER=byom
+          export DEPLOY_KBS=false
+          export TEST_PROVISION=no
+          export TEST_TEARDOWN=yes
+          export TEST_INSTALL_CAA=yes
+          export TEST_PROVISION_FILE="$PWD/byom.properties"
+          export TEST_E2E_TIMEOUT="20m"
+          export RUN_TESTS="TestByomSSHHostKeysAllowlist"
+
+          make test-e2e
+
       - name: Debug tests failure
-        if: failure() && steps.runTests.outcome == 'failure'
+        if: failure() && (steps.runTests.outcome == 'failure' || steps.runHostKeysTests.outcome == 'failure')
         working-directory: ./
         run: |
           export KUBECONFIG="${HOME}/kube_peer-pods"
@@ -166,4 +186,3 @@ jobs:
           ./hack/ci-e2e-debug-fail.sh
         # Avoid running with `set -e` as command fails should be allowed
         shell: bash {0}
-
