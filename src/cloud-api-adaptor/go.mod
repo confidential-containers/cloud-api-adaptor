@@ -9,7 +9,7 @@ require (
 	github.com/IBM-Cloud/power-go-client v1.16.2 // indirect
 	github.com/IBM/go-sdk-core/v5 v5.23.2
 	github.com/IBM/platform-services-go-sdk v0.103.0 // indirect
-	github.com/IBM/vpc-go-sdk v0.89.0
+	github.com/IBM/vpc-go-sdk v0.90.0
 	github.com/aws/aws-sdk-go-v2 v1.43.6
 	github.com/aws/aws-sdk-go-v2/config v1.32.37
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.36 // indirect
@@ -41,7 +41,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
 	github.com/Azure/go-autorest/autorest v0.11.30
 	github.com/BurntSushi/toml v1.6.0
-	github.com/IBM/ibm-cos-sdk-go v1.15.0
+	github.com/IBM/ibm-cos-sdk-go v1.15.1
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
