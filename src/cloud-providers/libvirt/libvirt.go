@@ -228,7 +228,7 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 		},
 	}
 
-	return &libvirtxml.Domain{
+	domain := &libvirtxml.Domain{
 		Type:        "kvm",
 		Name:        cfg.name,
 		Description: "This Virtual Machine is the peer-pod VM",
@@ -300,7 +300,19 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 				},
 			},
 		},
-	}, nil
+	}
+
+	switch vm.launchSecurityType {
+	case S390PV:
+		domain.LaunchSecurity = &libvirtxml.DomainLaunchSecurity{
+			S390PV: &libvirtxml.DomainLaunchSecurityS390PV{},
+		}
+		return domain, nil
+	case NoLaunchSecurity:
+		return domain, nil
+	default:
+		return nil, fmt.Errorf("launch security type %s is not supported for s390x", vm.launchSecurityType)
+	}
 }
 
 func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfig) (*libvirtxml.Domain, error) {

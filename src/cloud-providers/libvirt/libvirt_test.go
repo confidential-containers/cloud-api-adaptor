@@ -968,6 +968,64 @@ func TestCreateDomainXMLArchitecturesWithMocks(t *testing.T) {
 	}
 }
 
+func TestCreateDomainXMLs390xLaunchSecurity(t *testing.T) {
+	mockCaps := createMockCaps(archS390x, "/usr/bin/qemu-system-s390x", libvirtxml.CapsGuestMachine{
+		Name:      "s390-ccw-virtio",
+		Canonical: "s390-ccw-virtio-rhel9.0.0",
+	})
+	mockClient := &libvirtClient{
+		caps:        mockCaps,
+		networkName: testNetworkName,
+	}
+	cfg := createTestDomainConfig("test-s390x-sec", 2, 2048, testNetworkName, testCiDataISO)
+
+	tests := []struct {
+		name           string
+		launchSecurity LaunchSecurityType
+		expectedError  string
+		expectS390PV   bool
+	}{
+		{
+			name:           "S390PV emits launchSecurity element",
+			launchSecurity: S390PV,
+			expectS390PV:   true,
+		},
+		{
+			name:           "NoLaunchSecurity omits launchSecurity element",
+			launchSecurity: NoLaunchSecurity,
+			expectS390PV:   false,
+		},
+		{
+			name:           "unknown security type returns error",
+			launchSecurity: LaunchSecurityType(99),
+			expectedError:  "launch security type unknown is not supported for s390x",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vm := &vmConfig{launchSecurityType: tt.launchSecurity}
+			domain, err := createDomainXMLs390x(mockClient, cfg, vm)
+
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+				assert.Nil(t, domain)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, domain)
+
+			if tt.expectS390PV {
+				require.NotNil(t, domain.LaunchSecurity, "LaunchSecurity should be set for S390PV")
+				assert.NotNil(t, domain.LaunchSecurity.S390PV, "S390PV field should be non-nil")
+			} else {
+				assert.Nil(t, domain.LaunchSecurity, "LaunchSecurity should be nil for NoLaunchSecurity")
+			}
+		})
+	}
+}
+
 // TestCreateDomainXMLx86_64 tests x86_64 domain XML generation
 func TestCreateDomainXMLx86_64(t *testing.T) {
 	mockCaps := createMockCaps(archX86_64, "/usr/bin/qemu-system-x86_64")
