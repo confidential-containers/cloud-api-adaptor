@@ -70,6 +70,10 @@ providerConfigs:
     # (required)
     PODVM_AMI_ID: ""
 
+    # Enable developer mode for disabling Peer Pod VM auto delete
+    # (default: "false")
+    # PODVM_DEVELOPER_MODE: "false"
+
     # Pod VM instance type
     # (default: "m6a.large")
     # PODVM_INSTANCE_TYPE: "m6a.large"
