@@ -11,11 +11,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
+
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/e2e/cloudutil"
 )
 
 func init() {
@@ -56,14 +57,14 @@ func isAzureNotFound(err error) bool {
 }
 
 func (v *azureDiskVerifier) resourceGroupForDisk(diskID string) string {
-	if rg := extractAzureResourceGroup(diskID); rg != "" {
+	if rg := cloudutil.ExtractAzureResourceGroup(diskID); rg != "" {
 		return rg
 	}
 	return v.resourceGroup
 }
 
 func (v *azureDiskVerifier) DiskExists(ctx context.Context, diskID string) (bool, error) {
-	diskName := extractAzureDiskName(diskID)
+	diskName := cloudutil.ExtractAzureDiskName(diskID)
 	rg := v.resourceGroupForDisk(diskID)
 	_, err := v.client.Get(ctx, rg, diskName, nil)
 	if err != nil {
@@ -76,7 +77,7 @@ func (v *azureDiskVerifier) DiskExists(ctx context.Context, diskID string) (bool
 }
 
 func (v *azureDiskVerifier) DiskState(ctx context.Context, diskID string) (string, error) {
-	diskName := extractAzureDiskName(diskID)
+	diskName := cloudutil.ExtractAzureDiskName(diskID)
 	rg := v.resourceGroupForDisk(diskID)
 	disk, err := v.client.Get(ctx, rg, diskName, nil)
 	if err != nil {
@@ -91,29 +92,3 @@ func (v *azureDiskVerifier) DiskState(ctx context.Context, diskID string) (strin
 	return string(*disk.Properties.DiskState), nil
 }
 
-// extractAzureResourceGroup extracts the resource group from a full ARM resource ID.
-// Returns empty string if the input is not a full ARM path.
-// Example: /subscriptions/.../resourceGroups/MC_mygroup/providers/Microsoft.Compute/disks/mydisk
-func extractAzureResourceGroup(diskID string) string {
-	const rgSegment = "/resourcegroups/"
-	lower := strings.ToLower(diskID)
-	idx := strings.Index(lower, rgSegment)
-	if idx == -1 {
-		return ""
-	}
-	rest := diskID[idx+len(rgSegment):]
-	if slashIdx := strings.Index(rest, "/"); slashIdx != -1 {
-		return rest[:slashIdx]
-	}
-	return rest
-}
-
-// extractAzureDiskName extracts the disk name from a full Azure resource ID
-// or returns the input as-is if it's already just a name.
-func extractAzureDiskName(diskID string) string {
-	parts := strings.Split(diskID, "/")
-	if len(parts) > 1 {
-		return parts[len(parts)-1]
-	}
-	return diskID
-}

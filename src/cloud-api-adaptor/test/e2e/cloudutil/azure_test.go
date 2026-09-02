@@ -1,9 +1,7 @@
-//go:build azure
-
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package e2e
+package cloudutil
 
 import "testing"
 
@@ -46,9 +44,9 @@ func TestExtractAzureResourceGroup(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractAzureResourceGroup(tt.diskID)
+			got := ExtractAzureResourceGroup(tt.diskID)
 			if got != tt.want {
-				t.Errorf("extractAzureResourceGroup(%q) = %q, want %q", tt.diskID, got, tt.want)
+				t.Errorf("ExtractAzureResourceGroup(%q) = %q, want %q", tt.diskID, got, tt.want)
 			}
 		})
 	}
@@ -83,9 +81,9 @@ func TestExtractAzureDiskName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractAzureDiskName(tt.diskID)
+			got := ExtractAzureDiskName(tt.diskID)
 			if got != tt.want {
-				t.Errorf("extractAzureDiskName(%q) = %q, want %q", tt.diskID, got, tt.want)
+				t.Errorf("ExtractAzureDiskName(%q) = %q, want %q", tt.diskID, got, tt.want)
 			}
 		})
 	}

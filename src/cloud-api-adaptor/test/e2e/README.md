@@ -320,7 +320,7 @@ export AWS_AVAILABILITY_ZONE=us-east-2b        # must match CAA subnet AZ
 export TEST_PROVISION=no
 export TEST_INSTALL_CAA=no
 export TEST_TEARDOWN=no
-export TEST_PROVISION_FILE=/tmp/dummy.properties  # can be empty, required by test framework
+export TEST_PROVISION_FILE=/tmp/dummy.properties  # must be valid TOML or empty; required by test framework
 
 # Single disk lifecycle
 go test -v -tags=aws -timeout 25m -run "TestCSIFullLifecycle$" -count=1 ./test/e2e/
@@ -337,7 +337,7 @@ go test -v -tags=aws -timeout 30m -run "TestCSIFullLifecycleMultiDisk" -count=1 
 | `TEST_PROVISION=no` | Skips cluster provisioning (you already have one) |
 | `TEST_INSTALL_CAA=no` | Skips CAA installation (already deployed) |
 | `TEST_TEARDOWN=no` | Skips cluster teardown after test |
-| `TEST_PROVISION_FILE` | Required by test framework's TestMain; can point to any file |
+| `TEST_PROVISION_FILE` | Required by test framework's TestMain; must be valid TOML (`key = "value"`) or an empty file |
 
 ## Running on Azure
 
@@ -352,7 +352,7 @@ export AZURE_LOCATION=eastus
 export TEST_PROVISION=no
 export TEST_INSTALL_CAA=no
 export TEST_TEARDOWN=no
-export TEST_PROVISION_FILE=/tmp/dummy.properties
+export TEST_PROVISION_FILE=/tmp/dummy.properties  # must be valid TOML or empty
 
 # Single disk lifecycle
 go test -v -tags=azure -timeout 25m -run "TestCSIFullLifecycle$" -count=1 ./test/e2e/
