@@ -8,11 +8,13 @@ name: validate-config-extractor
 on:
   pull_request:
     paths:
+      - '.github/workflows/validate-config-extractor.yaml'
       - 'src/cloud-providers/**/manager.go'
       - 'src/cloud-providers/util.go'
       - 'src/cloud-providers/cmd/config-extractor/**'
       - 'src/cloud-providers/Makefile'
       - 'src/cloud-api-adaptor/install/charts/peerpods/providers/**'
+      - 'src/cloud-api-adaptor/cmd/cloud-api-adaptor/main.go'
   workflow_dispatch:
 
 concurrency:
