@@ -5,6 +5,7 @@ package ibmcloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -240,6 +241,53 @@ func TestCreateInstance(t *testing.T) {
 		assert.Equal(t, "192.0.1.1", instance.IPs[0].String())
 		assert.Equal(t, "192.0.2.1", instance.IPs[1].String())
 		assert.Equal(t, 2, vpc.getCalls)
+	})
+}
+
+func TestPickIDInZone(t *testing.T) {
+
+	zones := map[string]string{
+		"host-a": "eu-gb-1",
+		"host-b": "eu-gb-2",
+		"host-c": "eu-gb-2",
+	}
+	getZone := func(id string) (string, error) {
+		zone, ok := zones[id]
+		if !ok {
+			return "", fmt.Errorf("unknown id %s", id)
+		}
+		return zone, nil
+	}
+
+	t.Run("returns the id in the zone", func(t *testing.T) {
+		id, err := pickIDInZone([]string{"host-a", "host-b"}, "eu-gb-1", getZone, "Dedicated Host")
+
+		require.NoError(t, err)
+		assert.Equal(t, "host-a", id)
+	})
+
+	t.Run("returns the first of several ids in the zone", func(t *testing.T) {
+		id, err := pickIDInZone([]string{"host-a", "host-b", "host-c"}, "eu-gb-2", getZone, "Dedicated Host")
+
+		require.NoError(t, err)
+		assert.Equal(t, "host-b", id)
+	})
+
+	t.Run("fails when no id is in the zone", func(t *testing.T) {
+		id, err := pickIDInZone([]string{"host-a", "host-b"}, "eu-de-1", getZone, "Dedicated Host")
+
+		require.ErrorContains(t, err, "no Dedicated Host in zone eu-de-1")
+		assert.Equal(t, "", id)
+	})
+
+	t.Run("fails when a zone lookup fails", func(t *testing.T) {
+		errLookup := errors.New("lookup failed")
+		failing := func(string) (string, error) { return "", errLookup }
+
+		id, err := pickIDInZone([]string{"host-a"}, "eu-gb-1", failing, "Dedicated Host")
+
+		require.ErrorIs(t, err, errLookup)
+		assert.Equal(t, "", id)
 	})
 }
 
