@@ -22,6 +22,9 @@ import (
 
 type mockVPC struct {
 	prototype vpcv1.InstancePrototypeIntf
+	// createErr, when set, decides whether each CreateInstanceWithContext call fails
+	createErr   func(call int, prototype *vpcv1.InstancePrototype) error
+	createCalls int
 	// getInstance, when set, replaces the default GetInstanceWithContext response
 	getInstance func(call int) *vpcv1.Instance
 	getCalls    int
@@ -41,6 +44,12 @@ func ptr(s string) *string {
 func (v *mockVPC) CreateInstanceWithContext(ctx context.Context, opt *vpcv1.CreateInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error) {
 
 	v.prototype = opt.InstancePrototype
+	v.createCalls++
+	if v.createErr != nil {
+		if err := v.createErr(v.createCalls, opt.InstancePrototype.(*vpcv1.InstancePrototype)); err != nil {
+			return nil, &core.DetailedResponse{StatusCode: http.StatusBadRequest}, err
+		}
+	}
 
 	instance := &vpcv1.Instance{
 		ID:  ptr("123"),
@@ -241,6 +250,90 @@ func TestCreateInstance(t *testing.T) {
 		assert.Equal(t, "192.0.1.1", instance.IPs[0].String())
 		assert.Equal(t, "192.0.2.1", instance.IPs[1].String())
 		assert.Equal(t, 2, vpc.getCalls)
+	})
+}
+
+func TestCreateInstanceWithFallback(t *testing.T) {
+
+	errHost := errors.New("dedicated host is full")
+	errGroup := errors.New("dedicated host group is full")
+
+	newProvider := func(vpc *mockVPC, hostID, groupID string) *ibmcloudVPCProvider {
+		return &ibmcloudVPCProvider{
+			vpc: vpc,
+			serviceConfig: &Config{
+				selectedDedicatedHostID:      hostID,
+				selectedDedicatedHostGroupID: groupID,
+			},
+		}
+	}
+	prototype := func(p *ibmcloudVPCProvider) *vpcv1.InstancePrototype {
+		return p.getInstancePrototype("podvm-pod1-999", "cloud config", "bx2-2x8", "image-1")
+	}
+	groupTarget := func(proto *vpcv1.InstancePrototype) (string, bool) {
+		target, ok := proto.PlacementTarget.(*vpcv1.InstancePlacementTargetPrototypeDedicatedHostGroupIdentityDedicatedHostGroupIdentityByID)
+		if !ok {
+			return "", false
+		}
+		return *target.ID, true
+	}
+
+	t.Run("does not retry when creation succeeds", func(t *testing.T) {
+		vpc := &mockVPC{}
+		p := newProvider(vpc, "host-1", "group-1")
+
+		instance, err := p.createInstanceWithFallback(context.Background(), prototype(p))
+
+		require.NoError(t, err)
+		assert.Equal(t, "123", *instance.ID)
+		assert.Equal(t, 1, vpc.createCalls)
+	})
+
+	t.Run("does not retry without a dedicated host group", func(t *testing.T) {
+		vpc := &mockVPC{createErr: func(int, *vpcv1.InstancePrototype) error { return errHost }}
+		p := newProvider(vpc, "host-1", "")
+
+		instance, err := p.createInstanceWithFallback(context.Background(), prototype(p))
+
+		require.ErrorIs(t, err, errHost)
+		assert.Nil(t, instance)
+		assert.Equal(t, 1, vpc.createCalls)
+	})
+
+	t.Run("retries on the dedicated host group when the host fails", func(t *testing.T) {
+		var retryTarget string
+		vpc := &mockVPC{createErr: func(call int, proto *vpcv1.InstancePrototype) error {
+			if call == 1 {
+				return errHost
+			}
+			retryTarget, _ = groupTarget(proto)
+			return nil
+		}}
+		p := newProvider(vpc, "host-1", "group-1")
+
+		instance, err := p.createInstanceWithFallback(context.Background(), prototype(p))
+
+		require.NoError(t, err)
+		assert.Equal(t, "123", *instance.ID)
+		assert.Equal(t, 2, vpc.createCalls)
+		assert.Equal(t, "group-1", retryTarget)
+	})
+
+	t.Run("reports both errors when the fallback also fails", func(t *testing.T) {
+		vpc := &mockVPC{createErr: func(call int, _ *vpcv1.InstancePrototype) error {
+			if call == 1 {
+				return errHost
+			}
+			return errGroup
+		}}
+		p := newProvider(vpc, "host-1", "group-1")
+
+		instance, err := p.createInstanceWithFallback(context.Background(), prototype(p))
+
+		require.ErrorIs(t, err, errHost)
+		require.ErrorIs(t, err, errGroup)
+		assert.Nil(t, instance)
+		assert.Equal(t, 2, vpc.createCalls)
 	})
 }
 
