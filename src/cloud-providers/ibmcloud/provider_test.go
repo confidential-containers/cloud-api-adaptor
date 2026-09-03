@@ -9,16 +9,28 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/platform-services-go-sdk/globaltaggingv1"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type mockVPC struct {
 	prototype vpcv1.InstancePrototypeIntf
+	// getInstance, when set, replaces the default GetInstanceWithContext response
+	getInstance func(call int) *vpcv1.Instance
+	getCalls    int
+}
+
+func readyNIC(id, address string) *vpcv1.NetworkInterfaceInstanceContextReference {
+	return &vpcv1.NetworkInterfaceInstanceContextReference{
+		ID:        ptr(id),
+		PrimaryIP: &vpcv1.ReservedIPReference{Address: ptr(address)},
+	}
 }
 
 func ptr(s string) *string {
@@ -47,6 +59,11 @@ func (v *mockVPC) CreateInstanceWithContext(ctx context.Context, opt *vpcv1.Crea
 }
 
 func (v *mockVPC) GetInstanceWithContext(ctx context.Context, opt *vpcv1.GetInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error) {
+
+	v.getCalls++
+	if v.getInstance != nil {
+		return v.getInstance(v.getCalls), nil, nil
+	}
 
 	instance := &vpcv1.Instance{
 		ID:  ptr("123"),
@@ -148,40 +165,60 @@ func (t *mockTagging) AttachTagWithContext(ctx context.Context, attachTagOptions
 }
 func TestCreateInstance(t *testing.T) {
 
-	vpc := &mockVPC{}
-	globalTagging := &mockTagging{}
+	// keep the readiness polling fast
+	savedInterval := queryInterval
+	queryInterval = time.Millisecond
+	t.Cleanup(func() { queryInterval = savedInterval })
 
-	images := make(Images, 0)
-	err := images.Set("valid-image-id")
-	if err != nil {
-		t.Errorf("Images.Set() error %v", err)
+	newProvider := func(vpc *mockVPC, config *Config) *ibmcloudVPCProvider {
+		images := make(Images, 0)
+		require.NoError(t, images.Set("valid-image-id"))
+		config.ProfileName = "bx2-2x8"
+		config.Images = images
+		return &ibmcloudVPCProvider{
+			vpc:           vpc,
+			globalTagging: &mockTagging{},
+			serviceConfig: config,
+		}
 	}
-	mockProvider := &ibmcloudVPCProvider{
-		vpc:           vpc,
-		globalTagging: globalTagging,
-		serviceConfig: &Config{
-			ProfileName: "bx2-2x8",
-			Images:      images,
-			DisableCVM:  true,
-		},
-	}
+	spec := provider.InstanceTypeSpec{InstanceType: "bx2-2x8"}
 
-	instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, provider.InstanceTypeSpec{InstanceType: "bx2-2x8"})
+	t.Run("returns the instance and its addresses once ready", func(t *testing.T) {
+		vpc := &mockVPC{}
+		mockProvider := newProvider(vpc, &Config{DisableCVM: true})
 
-	assert.NoError(t, err)
-	assert.NotNil(t, instance)
-	assert.Equal(t, "123", instance.ID)
-	assert.Equal(t, "podvm-pod1-999", instance.Name)
-	assert.Len(t, instance.IPs, 2)
-	assert.Equal(t, "192.0.1.1", instance.IPs[0].String())
-	assert.Equal(t, "192.0.2.1", instance.IPs[1].String())
+		instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, spec)
 
-	assert.NotNil(t, vpc.prototype)
-	p, ok := vpc.prototype.(*vpcv1.InstancePrototype)
-	assert.True(t, ok)
-	assert.Equal(t, "cloud config", *p.UserData)
-	assert.Equal(t, false, *p.EnableSecureBoot)
-	assert.Equal(t, "disabled", *p.ConfidentialComputeMode)
+		require.NoError(t, err)
+		require.NotNil(t, instance)
+		assert.Equal(t, "123", instance.ID)
+		assert.Equal(t, "podvm-pod1-999", instance.Name)
+		require.Len(t, instance.IPs, 2)
+		assert.Equal(t, "192.0.1.1", instance.IPs[0].String())
+		assert.Equal(t, "192.0.2.1", instance.IPs[1].String())
+
+		p, ok := vpc.prototype.(*vpcv1.InstancePrototype)
+		require.True(t, ok)
+		assert.Equal(t, "cloud config", *p.UserData)
+		assert.Equal(t, false, *p.EnableSecureBoot)
+		assert.Equal(t, "disabled", *p.ConfidentialComputeMode)
+	})
+
+	t.Run("fails when addresses never become ready", func(t *testing.T) {
+		vpc := &mockVPC{getInstance: func(int) *vpcv1.Instance {
+			return &vpcv1.Instance{ID: ptr("123"), CRN: ptr("crn-123"), PrimaryNetworkInterface: readyNIC("111", "0.0.0.0")}
+		}}
+		mockProvider := newProvider(vpc, &Config{})
+
+		instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, spec)
+
+		require.ErrorIs(t, err, errNotReady)
+		// the partial instance lets the caller delete the VM
+		require.NotNil(t, instance)
+		assert.Equal(t, "123", instance.ID)
+		assert.Equal(t, maxRetries, vpc.getCalls)
+	})
+
 }
 
 func TestDeleteInstance(t *testing.T) {
