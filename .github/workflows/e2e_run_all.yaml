@@ -28,9 +28,19 @@ on:
     secrets:
       AWS_IAM_ROLE_ARN:
         required: true
+      ALIBABA_CLOUD_ROLE_ARN:
+        required: false
+      ALIBABA_CLOUD_OIDC_PROVIDER_ARN:
+        required: false
       QUAY_PASSWORD:
         required: true
       REGISTRY_CREDENTIAL_ENCODED:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_CLIENT_ID:
         required: true
 
 env:
@@ -79,6 +89,24 @@ jobs:
       attestations: write  # Required to write attestations
       id-token: write  # Required for OIDC authentication
       artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
+    secrets:
+      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+
+  podvm_mkosi_azure:
+    uses: ./.github/workflows/podvm_mkosi.yaml
+    permissions:
+      contents: read # Required if we want to run on a fork?
+      packages: write # Required to publish the oras package to ghcr
+      id-token: write # Required to publish the attestation provenance to ghcr
+      attestations: write # Required to publish the attestation provenance to ghcr
+      artifact-metadata: write # Required by podvm_mkosi_ubuntu.yaml to write attestation metadata
+    with:
+      registry: ghcr.io/${{ github.repository_owner }}
+      image_tag: ${{ inputs.podvm_image_tag }}
+      git_ref: ${{ github.sha }}
+      arch: amd64
+      debug: true
+      tee-platform: az-cvm-vtpm
     secrets:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
@@ -182,6 +210,34 @@ jobs:
     secrets:
       AWS_IAM_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
+  # Run Alibaba Cloud e2e tests if pull request labeled 'test_e2e_alibabacloud'
+  alibabacloud:
+    name: alibabacloud
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test_e2e_alibabacloud')
+    needs: [podvm_mkosi_amd64, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
+    strategy:
+      fail-fast: false
+      matrix:
+        container_runtime:
+          - containerd
+    permissions:
+      id-token: write # Required by aliyun/configure-aliyun-credentials-action
+      contents: read
+    uses: ./.github/workflows/e2e_alibabacloud.yaml
+    with:
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
+      container_runtime: ${{ matrix.container_runtime }}
+      podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.qcow2_oras_image }}
+      git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
+    secrets:
+      ALIBABA_CLOUD_ROLE_ARN: ${{ secrets.ALIBABA_CLOUD_ROLE_ARN }}
+      ALIBABA_CLOUD_OIDC_PROVIDER_ARN: ${{ secrets.ALIBABA_CLOUD_OIDC_PROVIDER_ARN }}
+
   # Run libvirt amd64 e2e tests, based on the mkosi image, if pull request labeled 'test_e2e_libvirt'
   libvirt_amd64:
     name: E2E tests on libvirt for the amd64 architecture
@@ -236,3 +292,24 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
       peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
       webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
+
+  # Run Azure e2e tests when triggered by schedule or workflow dispatch
+  azure:
+    name: azure
+    permissions:
+      contents: read
+      id-token: write # required for Azure login
+    # The azure e2e test must not run untrusted code via pull_request_target, even if gated by a label.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: [podvm_mkosi_azure, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
+    uses: ./.github/workflows/e2e_azure.yaml
+    with:
+      caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
+      podvm_image: ${{ needs.podvm_mkosi_azure.outputs.qcow2_oras_image }}
+      git_ref: ${{ inputs.git_ref }}
+      peerpod_ctrl_image: ${{ inputs.registry }}/peerpod-ctrl:${{ inputs.caa_image_tag }}-amd64
+      webhook_image: ${{ inputs.registry }}/peer-pods-webhook:${{ inputs.caa_image_tag }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

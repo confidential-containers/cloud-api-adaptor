@@ -1,0 +1,17 @@
+[Unit]
+Description=Report Ready to the Azure Fabric WireServer
+Documentation=https://learn.microsoft.com/azure/virtual-machines/linux/no-agent
+After=network-online.target
+Wants=network-online.target
+ConditionVirtualization=microsoft
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/azure-ready
+RemainAfterExit=yes
+TimeoutStartSec=5min
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

@@ -39,6 +39,7 @@ type vmConfig struct {
 	launchSecurityType LaunchSecurityType
 	firmware           string
 	cpuset             string // CPU set for pinning vCPUs (e.g., "0,2,4,6" or "0-3")
+	volName            string
 }
 
 type createDomainOutput struct {
