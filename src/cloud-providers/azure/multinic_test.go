@@ -59,8 +59,8 @@ func TestBuildNetworkConfigsMultiNIC(t *testing.T) {
 	if *primary.Properties.IPConfigurations[0].Properties.Subnet.ID != p.serviceConfig.SubnetID {
 		t.Errorf("expected primary NIC on subnet %q, got %q", p.serviceConfig.SubnetID, *primary.Properties.IPConfigurations[0].Properties.Subnet.ID)
 	}
-	if primary.Properties.IPConfigurations[0].Properties.PublicIPAddressConfiguration != nil {
-		t.Errorf("did not expect a public IP on the primary (control-plane) NIC in multi-NIC mode")
+	if primary.Properties.IPConfigurations[0].Properties.PublicIPAddressConfiguration == nil {
+		t.Errorf("expected a public IP on the primary (control-plane) NIC since UsePublicIP is true: the worker node dials instance.IPs[0], which must stay on the primary NIC")
 	}
 
 	if *secondary.Name != "instance1-ext" {
@@ -72,8 +72,8 @@ func TestBuildNetworkConfigsMultiNIC(t *testing.T) {
 	if *secondary.Properties.IPConfigurations[0].Properties.Subnet.ID != p.serviceConfig.ExternalSubnetID {
 		t.Errorf("expected secondary NIC on subnet %q, got %q", p.serviceConfig.ExternalSubnetID, *secondary.Properties.IPConfigurations[0].Properties.Subnet.ID)
 	}
-	if secondary.Properties.IPConfigurations[0].Properties.PublicIPAddressConfiguration == nil {
-		t.Errorf("expected a public IP on the secondary (external) NIC since UsePublicIP is true")
+	if secondary.Properties.IPConfigurations[0].Properties.PublicIPAddressConfiguration != nil {
+		t.Errorf("did not expect a public IP on the secondary (external) NIC: UsePublicIP only applies to the primary NIC")
 	}
 }
 
