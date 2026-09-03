@@ -56,6 +56,7 @@ func (ic *IBMCloudPowerVSInstallChart) Configure(ctx context.Context, cfg *envco
 
 	// Set PowerVS-specific provider config values from properties along with the ones required for e2e.
 	providerKeys := []string{
+		"IBMCLOUD_ACCOUNT_ID",
 		"POWERVS_ZONE",
 		"POWERVS_SERVICE_INSTANCE_ID",
 		"POWERVS_IMAGE_ID",
