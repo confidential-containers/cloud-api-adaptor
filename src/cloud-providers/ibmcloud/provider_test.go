@@ -219,6 +219,28 @@ func TestCreateInstance(t *testing.T) {
 		assert.Equal(t, maxRetries, vpc.getCalls)
 	})
 
+	t.Run("waits for the secondary interface address", func(t *testing.T) {
+		vpc := &mockVPC{getInstance: func(call int) *vpcv1.Instance {
+			instance := &vpcv1.Instance{ID: ptr("123"), CRN: ptr("crn-123"), PrimaryNetworkInterface: readyNIC("111", "192.0.1.1")}
+			// the secondary interface only shows up on the second poll
+			if call > 1 {
+				instance.NetworkInterfaces = []vpcv1.NetworkInterfaceInstanceContextReference{
+					*readyNIC("111", "192.0.1.1"),
+					*readyNIC("222", "192.0.2.1"),
+				}
+			}
+			return instance
+		}}
+		mockProvider := newProvider(vpc, &Config{SecondarySubnetID: "subnet-2", SecondarySecurityGroupID: "sg-2"})
+
+		instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, spec)
+
+		require.NoError(t, err)
+		require.Len(t, instance.IPs, 2)
+		assert.Equal(t, "192.0.1.1", instance.IPs[0].String())
+		assert.Equal(t, "192.0.2.1", instance.IPs[1].String())
+		assert.Equal(t, 2, vpc.getCalls)
+	})
 }
 
 func TestDeleteInstance(t *testing.T) {
