@@ -276,18 +276,20 @@ func (p *azureProvider) buildNetworkConfig(nicName, subnetID string, isPrimary, 
 // create request (unlike AWS, which attaches the secondary ENI after the
 // instance is running), so both NICs are built here when multiNic is set.
 //
-// In multi-NIC mode the primary NIC (on SubnetID) carries pod/cluster
-// traffic over the VXLAN tunnel and never gets a public IP; the secondary
-// NIC (on ExternalSubnetID) carries the Pod VM's external traffic and
-// optionally gets a public IP if UsePublicIP is set.
+// The primary NIC (on SubnetID) always gets the public IP when UsePublicIP
+// is set, multi-NIC or not: the worker node dials instance.IPs[0] (see
+// getIPs/orderByPrimary) to reach the Pod VM's forwarder, so that address
+// must stay on the primary NIC. The secondary NIC (on ExternalSubnetID),
+// when present, carries the Pod VM's own external traffic and never gets a
+// public IP from this flag.
 func (p *azureProvider) buildNetworkConfigs(instanceName string, multiNic bool) []*armcompute.VirtualMachineNetworkInterfaceConfiguration {
-	primary := p.buildNetworkConfig(fmt.Sprintf("%s-net", instanceName), p.serviceConfig.SubnetID, true, p.serviceConfig.UsePublicIP && !multiNic)
+	primary := p.buildNetworkConfig(fmt.Sprintf("%s-net", instanceName), p.serviceConfig.SubnetID, true, p.serviceConfig.UsePublicIP)
 
 	if !multiNic {
 		return []*armcompute.VirtualMachineNetworkInterfaceConfiguration{primary}
 	}
 
-	secondary := p.buildNetworkConfig(fmt.Sprintf("%s-ext", instanceName), p.serviceConfig.ExternalSubnetID, false, p.serviceConfig.UsePublicIP)
+	secondary := p.buildNetworkConfig(fmt.Sprintf("%s-ext", instanceName), p.serviceConfig.ExternalSubnetID, false, false)
 
 	return []*armcompute.VirtualMachineNetworkInterfaceConfiguration{primary, secondary}
 }

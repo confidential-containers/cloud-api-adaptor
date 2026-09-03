@@ -78,12 +78,16 @@ interface with a valid IPv4 address using, in order:
   support attaching a NIC to a running VM without first deallocating it, so
   the secondary NIC can't be added after the fact the way AWS attaches its
   addon ENI post-launch.
-- `AZURE_USE_PUBLIC_IP`, if enabled together with multi-NIC, attaches the
-  public IP to the secondary (external) NIC rather than the primary
-  (control-plane) NIC.
+- `AZURE_USE_PUBLIC_IP`, if enabled together with multi-NIC, still attaches
+  the public IP to the primary (control-plane) NIC only, exactly as in
+  single-NIC mode — the worker node dials `instance.IPs[0]` to reach the Pod
+  VM's forwarder, so that address must stay on the primary NIC. The
+  secondary (external) NIC never gets a public IP from this flag; if the
+  external subnet needs outbound internet access, provision that at the
+  Azure networking level (e.g. a NAT gateway on the secondary subnet).
 - Traffic routed via the secondary NIC bypasses the CNI plugin on the worker
   node, so Kubernetes `NetworkPolicy` egress rules do not apply to it — see
-  the [security considerations](../src/cloud-api-adaptor/docs/external-network.md#security-considerations)
+  the [security considerations](external-network.md#security-considerations)
   in the shared external-network doc.
 
 ## Troubleshooting
