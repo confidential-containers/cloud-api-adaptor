@@ -491,7 +491,8 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	}
 
 	instanceID := *vpcInstance.ID
-	numInterfaces := len(prototype.NetworkInterfaces)
+	// the primary interface plus any secondary interfaces in the prototype
+	numInterfaces := 1 + len(prototype.NetworkInterfaces)
 
 	// Create partial instance to return on error (allows caller to cleanup)
 	instance = &provider.Instance{
