@@ -14,6 +14,7 @@ func newIBMCloudPowerVSProvisioner(properties map[string]string) (*IBMCloudPower
 	if strings.EqualFold(needProvisionStr, "yes") || strings.EqualFold(needProvisionStr, "true") {
 		required := []string{
 			"IBMCLOUD_API_KEY",
+			"IBMCLOUD_ACCOUNT_ID",
 			"POWERVS_ZONE",
 			"POWERVS_SERVICE_INSTANCE_ID",
 			"POWERVS_IMAGE_ID",
@@ -29,6 +30,7 @@ func newIBMCloudPowerVSProvisioner(properties map[string]string) (*IBMCloudPower
 
 	return &IBMCloudPowerVSProvisioner{
 		IBMCloudPowerVSAPIKey:    properties["IBMCLOUD_API_KEY"],
+		IBMCloudAccountID:        properties["IBMCLOUD_ACCOUNT_ID"],
 		PowerVSZone:              properties["POWERVS_ZONE"],
 		PowerVSServiceInstanceID: properties["POWERVS_SERVICE_INSTANCE_ID"],
 		PowerVSImageID:           properties["POWERVS_IMAGE_ID"],

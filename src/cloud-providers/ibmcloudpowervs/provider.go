@@ -35,7 +35,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 
 	logger.Printf("ibmcloud-powervs config: %#v", config.Redact())
 
-	powervs, err := newPowervsClient(config.APIKey, config.ServiceInstanceID, config.Zone)
+	powervs, err := newPowervsClient(config.APIKey, config.AccountID, config.ServiceInstanceID, config.Zone)
 	if err != nil {
 		return nil, err
 	}
