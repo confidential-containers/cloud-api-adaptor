@@ -23,6 +23,7 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 
 	// Flags with environment variable support
 	reg.StringWithEnv(&ibmcloudPowerVSConfig.APIKey, "api-key", "", "IBMCLOUD_API_KEY", "IBM Cloud API key", provider.Secret(), provider.Required())
+	reg.StringWithEnv(&ibmcloudPowerVSConfig.AccountID, "account-id", "", "IBMCLOUD_ACCOUNT_ID", "IBM Cloud account ID", provider.Required())
 	reg.StringWithEnv(&ibmcloudPowerVSConfig.Zone, "zone", "", "POWERVS_ZONE", "PowerVS zone name", provider.Required())
 	reg.StringWithEnv(&ibmcloudPowerVSConfig.ServiceInstanceID, "service-instance-id", "", "POWERVS_SERVICE_INSTANCE_ID", "ID of the PowerVS Service Instance", provider.Required())
 	reg.StringWithEnv(&ibmcloudPowerVSConfig.NetworkID, "network-id", "", "POWERVS_NETWORK_ID", "ID of the network instance", provider.Required())

@@ -26,6 +26,7 @@ type IBMCloudPowerVSProvisioner struct {
 	kind *KindCluster
 
 	IBMCloudPowerVSAPIKey    string
+	IBMCloudAccountID        string
 	PowerVSZone              string
 	PowerVSServiceInstanceID string
 	PowerVSImageID           string
@@ -54,6 +55,12 @@ type KindCluster struct {
 }
 
 func (p *IBMCloudPowerVSProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
+	log.Infof("IBMCloudPowerVS: checking podvm image %s exists and is active", p.PowerVSImageID)
+	if err := p.CheckImageExistsAndActive(ctx); err != nil {
+		return fmt.Errorf("podvm image check failed: %w", err)
+	}
+	log.Infof("IBMCloudPowerVS: podvm image %s is active", p.PowerVSImageID)
+
 	log.Info("IBMCloudPowerVS: provisioning local kind cluster for e2e tests")
 	if err := p.kind.CreateCluster(ctx, cfg); err != nil {
 		return err
@@ -82,6 +89,7 @@ func (p *IBMCloudPowerVSProvisioner) DeleteVPC(ctx context.Context, cfg *envconf
 func (p *IBMCloudPowerVSProvisioner) GetProperties(ctx context.Context, cfg *envconf.Config) map[string]string {
 	return map[string]string{
 		"IBMCLOUD_API_KEY":            p.IBMCloudPowerVSAPIKey,
+		"IBMCLOUD_ACCOUNT_ID":         p.IBMCloudAccountID,
 		"POWERVS_ZONE":                p.PowerVSZone,
 		"POWERVS_SERVICE_INSTANCE_ID": p.PowerVSServiceInstanceID,
 		"POWERVS_IMAGE_ID":            p.PowerVSImageID,
