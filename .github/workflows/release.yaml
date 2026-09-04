@@ -60,9 +60,9 @@ jobs:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   webhook:
-    uses: ./.github/workflows/webhook_image.yaml
+    uses: ./.github/workflows/webhook_image_publish.yaml
     with:
-      image_tags: ${{ github.event.release.tag_name }}
+      image_tag: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
     permissions:
       contents: read  # Required to checkout code

@@ -1,0 +1,85 @@
+# Copyright Confidential Containers Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build and push the pod VM images.
+---
+name: Publish peerpod webhook images
+on:
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: 'Alternative container registry to push images to (e.g., quay.io/your-username)'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      git_ref:
+        description: 'Git ref to build from'
+        required: false
+        type: string
+        default: ''
+      image_tag:
+        description: 'Image tag to use'
+        required: false
+        type: string
+        default: ''
+      registry:
+        description: 'Alternative container registry to push images to (e.g., quay.io/your-username)'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      QUAY_PASSWORD:
+        required: false
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.git_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  webhook:
+    uses: ./.github/workflows/webhook_image.yaml
+    with:
+      image_tag: ${{ inputs.image_tag || github.sha }}
+      git_ref: ${{ inputs.git_ref || github.sha }}
+    permissions:
+      contents: read  # Required to checkout code
+      packages: write  # Required to push container images
+
+  push-to-quay:
+    name: Push webhook image to quay.io
+    permissions:
+      packages: read # Required to copy container images
+    needs: webhook
+    if: ${{ startsWith(inputs.registry, 'quay.io') }}
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Login to ghcr.io container registry
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Login to quay.io container registry
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      with:
+        registry: quay.io
+        username: ${{ vars.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+    - name: Push webhook image to quay.io
+      env:
+        QUAY_REGISTRY: ${{ inputs.registry }}
+        GHCR_REGISTRY: ghcr.io/${{ github.repository_owner }}
+        IMAGE_TAG: ${{ inputs.image_tag || github.sha }}
+        IMAGE_NAME: ${{ needs.webhook.outputs.image-name }}
+      run: |
+        ghcr_image="${GHCR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+        quay_image="${QUAY_REGISTRY}/$(basename "$ghcr_image")"
+        oras cp "$ghcr_image" "$quay_image"
