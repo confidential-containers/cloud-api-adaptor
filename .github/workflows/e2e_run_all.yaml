@@ -165,14 +165,11 @@ jobs:
   webhook_image:
     uses: ./.github/workflows/webhook_image.yaml
     with:
-      registry: ${{ inputs.registry }}
-      image_tags: ${{ inputs.caa_image_tag }}
+      image_tag: ${{ inputs.caa_image_tag }}
       git_ref: ${{ inputs.git_ref }}
     permissions:
       contents: read
       packages: write # Required to publish the image to ghcr
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   # Run AWS e2e tests if pull request labeled 'test_e2e_aws'
   aws:
