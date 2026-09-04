@@ -89,24 +89,25 @@ Once you have your VMs ready with IPs, proceed to [deployment](#deployment-confi
 
 If you have existing VMs and want to configure them automatically, follow these steps.
 
-1. Prerequisites
-Ensure the following tools are installed and available in your environment:
-- yq 
-- Golang
-- Docker
+1. Ensure [Docker is installed](https://docs.docker.com/engine/install/ubuntu/) and running on the VM.
 
-2. Save your public SSH key at a known path. The BYOM provider will use this key for verification, and you will need it later when running the setup script.
+2. Save your public SSH key at a known path. The BYOM provider will use this key for verification.
 
-3. Clone the CAA repository
+3. Run the setup script directly on the VM:
+
+```bash
+curl -fsSL https://github.com/confidential-containers/cloud-api-adaptor/releases/latest/download/setup-podvm-byom.sh \
+  | sudo SSH_PUBLIC_KEY_PATH=/home/$USER/.ssh/id_rsa.pub PODVM_BYOM_BINARIES_IMAGE=<image>:<tag> bash
 ```
-git clone https://github.com/confidential-containers/cloud-api-adaptor.git
-cd cloud-api-adaptor/src/cloud-api-adaptor
-```
-4. Execute the setup script
-> You can build your own image with `make podvm-byom-binaries-image`, or skip this step to use a published image.
-```
-SSH_PUBLIC_KEY_PATH=<path-to-public-key> ./hack/setup-podvm-byom.sh
-```
+
+> **Tip:** To inspect the script before running it, download it first:
+> ```bash
+> curl -fsSL -o setup-podvm-byom.sh https://github.com/confidential-containers/cloud-api-adaptor/releases/latest/download/setup-podvm-byom.sh
+> sudo SSH_PUBLIC_KEY_PATH=/home/$USER/.ssh/id_rsa.pub PODVM_BYOM_BINARIES_IMAGE=<image>:<tag> bash setup-podvm-byom.sh
+> ```
+
+> **Custom image:** You can build your own binaries image with `make podvm-byom-binaries-image`
+> and pass it via `PODVM_BYOM_BINARIES_IMAGE=<image>:<tag>`.
 
 Once your VMs are configured, proceed to [deployment](#deployment-configuration).
 
