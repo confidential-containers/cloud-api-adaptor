@@ -95,4 +95,4 @@ jobs:
       run: |
         ghcr_image="${GHCR_REGISTRY}/podvm-${ARCH}:${IMAGE_TAG}"
         quay_image="${QUAY_REGISTRY}/$(basename "$ghcr_image")"
-        oras cp "$GHCR_IMAGE" "$quay_image"
+        oras cp "$ghcr_image" "$quay_image"
