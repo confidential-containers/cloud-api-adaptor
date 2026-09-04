@@ -111,6 +111,18 @@ func GetInitdataFromAnnotation(annotations map[string]string) (string, error) {
 	return initdataEnc, nil
 }
 
+const ConfidentialVMAnnotation = "io.katacontainers.config.hypervisor.confidential_vm"
+
+func GetConfidentialVMFromAnnotation(annotations map[string]string) *bool {
+	val, ok := annotations[ConfidentialVMAnnotation]
+	if !ok {
+		return nil
+	}
+	lowerVal := strings.ToLower(val)
+	result := lowerVal == "true" || lowerVal == "1"
+	return &result
+}
+
 // Method to check if a string exists in a slice
 func Contains(slice []string, s string) bool {
 	for _, item := range slice {
