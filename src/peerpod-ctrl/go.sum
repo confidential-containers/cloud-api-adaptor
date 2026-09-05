@@ -28,8 +28,8 @@ github.com/IBM/go-sdk-core/v5 v5.23.2 h1:wY+XtK9xnnaqwdOWE2m+1sn9sxfYrNbm9fcrB4u
 github.com/IBM/go-sdk-core/v5 v5.23.2/go.mod h1:NOPMhrdMNec7QBzY50gI0G7K1Y4O8lBrjjjO6C5eJ4A=
 github.com/IBM/platform-services-go-sdk v0.103.0 h1:qQK9DYWD2kR201uwKaXxT2F/WY3uj2YFcTxD6wrldI0=
 github.com/IBM/platform-services-go-sdk v0.103.0/go.mod h1:1isdll9kcFRZT9o3McwdvfrQafL4/K61uFbKzueDkEg=
-github.com/IBM/vpc-go-sdk v0.89.0 h1:IYCeW3kmY9XHoY4hmxJuyxNXIOXpY0iXs3LMDEWucrI=
-github.com/IBM/vpc-go-sdk v0.89.0/go.mod h1:y014nUi5rUn3sOs48MgW4tDtpQ1tmWGtAPMfAqTfwxE=
+github.com/IBM/vpc-go-sdk v0.90.0 h1:YE6IgADlmjyx7Na6M41737rSFEZDNzhzX7kZvQUYUeE=
+github.com/IBM/vpc-go-sdk v0.90.0/go.mod h1:y014nUi5rUn3sOs48MgW4tDtpQ1tmWGtAPMfAqTfwxE=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/alibabacloud-go/alibabacloud-gateway-pop v0.0.6 h1:eIf+iGJxdU4U9ypaUfbtOWCsZSbTb8AUHvyPrxu6mAA=
