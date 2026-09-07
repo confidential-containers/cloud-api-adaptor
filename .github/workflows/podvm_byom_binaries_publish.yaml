@@ -99,7 +99,8 @@ jobs:
           REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'quay.io/confidential-containers' }}
           PODVM_TAG: ${{ inputs.image_tag || github.sha }}
           ARCH: ${{ inputs.arch }}
-          PUSH: "true"
+          # Load the binaries image locally for the BYOM build to use as base.
+          EXPORT_BINARIES: "false"
 
       - name: Build BYOM binaries image
         working-directory: src/cloud-api-adaptor/podvm
