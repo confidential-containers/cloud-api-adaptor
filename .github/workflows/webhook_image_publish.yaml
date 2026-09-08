@@ -77,11 +77,28 @@ jobs:
       env:
         QUAY_REGISTRY: ${{ inputs.registry }}
         GHCR_REGISTRY: ghcr.io/${{ github.repository_owner }}
-        IMAGE_TAG: ${{ inputs.image_tags || github.sha }}
+        IMAGE_TAGS: ${{ inputs.image_tags || github.sha }}
         IMAGE_NAME: ${{ needs.webhook.outputs.image-name }}
       run: |
-        ghcr_image="${GHCR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-        quay_image="${QUAY_REGISTRY}/$(basename "$ghcr_image")"
-        oras cp "$ghcr_image" "$quay_image"
+        tags="${IMAGE_TAGS}"
+        latest=0
+        for t in ${tags/,/ }; do
+          if [ "$t" = "latest" ]; then
+            latest=1
+          else
+            echo "::group::Copy tag ${t}"
+            ghcr_image="${GHCR_REGISTRY}/${IMAGE_NAME}:${t}"
+            quay_image="${QUAY_REGISTRY}/$(basename "$ghcr_image")"
+            oras cp "$ghcr_image" "$quay_image"
+            echo "::endgroup::"
+          fi
+        done
+        if [ $latest -eq 1 ]; then
+          echo "::group::Copy latest"
+          ghcr_image="${GHCR_REGISTRY}/${IMAGE_NAME}:latest"
+          quay_image="${QUAY_REGISTRY}/$(basename "$ghcr_image")"
+          oras cp "$ghcr_image" "$quay_image"
+          echo "::endgroup::"
+        fi
         # wip delete tag from quay.io
         oras tag delete "$quay_image"
