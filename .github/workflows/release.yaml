@@ -7,12 +7,16 @@ name: Release project images
 on:
   release:
     types: [created]
+  push:
+    branches:
+    - mkulke/webhook-wo-quay-test
 
 permissions: {}
 
 jobs:
   caa:
     uses: ./.github/workflows/caa_build_and_push_all_arches.yaml
+    if: false
     with:
       dev_tags: ${{ github.event.release.tag_name }}-dev
       release_tags: ${{ github.event.release.tag_name }}
@@ -25,6 +29,7 @@ jobs:
 
   peerpod-ctrl:
     uses: ./.github/workflows/peerpod-ctrl_build_and_push_all_arches.yaml
+    if: false
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
@@ -35,6 +40,7 @@ jobs:
 
   podvm-images:
     uses: ./.github/workflows/podvm_publish.yaml
+    if: false
     with:
       git_ref: ${{ github.ref }}
       image_tag: ${{ github.event.release.tag_name }}
@@ -49,6 +55,7 @@ jobs:
 
   podvm-byom-binaries:
     needs: podvm-images  # Depends on podvm-binaries-ubuntu-{arch} images
+    if: false
     uses: ./.github/workflows/podvm_byom_binaries_publish.yaml
     with:
       git_ref: ${{ github.ref }}
@@ -62,7 +69,8 @@ jobs:
   webhook:
     uses: ./.github/workflows/webhook_image_publish.yaml
     with:
-      image_tags: ${{ github.event.release.tag_name }}
+      #image_tags: ${{ github.event.release.tag_name }}
+      image_tags: mkulke-delete-me
       git_ref: ${{ github.ref }}
       registry: quay.io/confidential-containers
     permissions:
@@ -73,6 +81,7 @@ jobs:
 
   peerpods-chart:
     uses: ./.github/workflows/peerpods-chart_image.yaml
+    if: false
     with:
       git_ref: ${{ github.event.release.tag_name }}
     permissions:
