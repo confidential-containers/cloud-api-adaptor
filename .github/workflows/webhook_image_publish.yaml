@@ -100,5 +100,3 @@ jobs:
           oras cp "$ghcr_image" "$quay_image"
           echo "::endgroup::"
         fi
-        # wip delete tag from quay.io
-        oras tag delete "$quay_image"
