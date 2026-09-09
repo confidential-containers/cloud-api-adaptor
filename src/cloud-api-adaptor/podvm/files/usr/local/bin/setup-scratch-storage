@@ -32,6 +32,9 @@ fi
 # Check if the trusted_store device exists
 DISK_LABEL="trusted_store"
 DEV_PATH="/dev/disk/by-label/$DISK_LABEL"
+MAPPER_NAME="scratch_storage"
+MAPPER_PATH="/dev/mapper/${MAPPER_NAME}"
+MOUNT_POINT="/run/kata-containers/image"
 
 if [ ! -L "$DEV_PATH" ]; then
     echo "Device for label $DISK_LABEL not found. Exiting."
@@ -39,45 +42,27 @@ if [ ! -L "$DEV_PATH" ]; then
 fi
 
 # Resolve the device path
-DEV_PATH=$(readlink -f "$DEV_PATH")
-if [ ! -b "$DEV_PATH" ]; then
-    echo "Device $DEV_PATH is not a block device. Exiting."
+resolved_dev_path=$(readlink -f "$DEV_PATH")
+if [ ! -b "$resolved_dev_path" ]; then
+    echo "Device $resolved_dev_path is not a block device. Exiting."
     exit 1
 fi
 
-# Create mount point
-MOUNT_POINT="/run/kata-containers/image"
-mkdir -p "$MOUNT_POINT"
-
-# Get device number for the encryption script
-# Using xargs to strip leading/trailing whitespace
-# DEV_NUM=$(lsblk -no MAJ:MIN "$DEV_PATH" | xargs)
-
-STORAGE_KEY_PATH="/run/encrypt_storage.key"
-# Generate encryption key and use LUKS encryption
-echo "Setting up LUKS encrypted scratch storage"
-touch "$STORAGE_KEY_PATH"
-chmod 600 "$STORAGE_KEY_PATH"
-head -c 4096 /dev/urandom > "$STORAGE_KEY_PATH"
-
-cryptsetup \
-	--batch-mode luksFormat \
-	--type luks2 \
-	"$DEV_PATH" \
-	--sector-size 4096 \
+cryptsetup open "$resolved_dev_path" "$MAPPER_NAME" \
+	--type plain \
+	--key-file /dev/urandom \
 	--cipher aes-xts-plain64 \
 	--integrity hmac-sha256 \
-	"$STORAGE_KEY_PATH"
+	--integrity-no-wipe \
+	--integrity-no-journal \
+	--allow-discards
 
-LUKS_NAME="scratch_storage"
-cryptsetup open --type luks2 -d "$STORAGE_KEY_PATH" "$DEV_PATH" "$LUKS_NAME"
+mkfs.ext4 \
+	-E lazy_itable_init=1,lazy_journal_init=1,discard \
+	-O ^has_journal \
+	"$MAPPER_PATH"
 
-# Remove the key file after use
-rm "$STORAGE_KEY_PATH"
-
-LUKS_PATH="/dev/mapper/$LUKS_NAME"
-mkfs.ext4 "$LUKS_PATH" -E lazy_journal_init
-
-mount "$LUKS_PATH" "$MOUNT_POINT"
+mkdir -p "$MOUNT_POINT"
+mount -o discard,relatime "$MAPPER_PATH" "$MOUNT_POINT"
 
 echo "Scratch storage setup completed"
