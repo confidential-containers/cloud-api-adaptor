@@ -38,5 +38,5 @@ This project uses [the Apache 2.0 license](./LICENSE). Contribution to this proj
 ## Collaborations
 
 * Slack: [#confidential-containers-peerpod](https://cloud-native.slack.com/archives/C04A2EJ70BX) in [CNCF](https://communityinviter.com/apps/cloud-native/cncf)
-* Zoom meeting: <https://zoom.us/j/94601737867?pwd=MEF5NkN5ZkRDcUtCV09SQllMWWtzUT09>
+* Zoom meeting: <https://zoom-lfx.platform.linuxfoundation.org/meeting/98394123719?password=81f308af-8a01-4ee1-857c-9b060fcca144>
   * 14:00 - 15:00 UTC on each `Wednesday`
