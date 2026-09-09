@@ -4,6 +4,7 @@
 package azure
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -88,4 +89,102 @@ func TestBuildDataDisks(t *testing.T) {
 			}
 		}
 	})
+}
+
+func newTestProvider(size string, instanceSizes []string, instanceSizeSpecList []provider.InstanceTypeSpec, confidentialSizes map[string]bool) *azureProvider {
+	return &azureProvider{
+		serviceConfig: &Config{
+			Size:                 size,
+			InstanceSizes:        instanceSizes,
+			InstanceSizeSpecList: instanceSizeSpecList,
+		},
+		confidentialSizes: confidentialSizes,
+	}
+}
+
+func TestSelectInstanceType_DefaultMatchesConfidentiality(t *testing.T) {
+	p := newTestProvider("Standard_DC2as_v5",
+		[]string{"Standard_DC2as_v5", "Standard_DC4as_v5"},
+		[]provider.InstanceTypeSpec{
+			{InstanceType: "Standard_DC2as_v5", VCPUs: 2, Memory: 8192},
+			{InstanceType: "Standard_DC4as_v5", VCPUs: 4, Memory: 16384},
+		},
+		map[string]bool{
+			"Standard_DC2as_v5": true,
+			"Standard_DC4as_v5": true,
+		},
+	)
+
+	result, err := p.selectInstanceType(context.Background(), provider.InstanceTypeSpec{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != "Standard_DC2as_v5" {
+		t.Errorf("expected Standard_DC2as_v5, got %s", result)
+	}
+}
+
+func TestSelectInstanceType_DefaultMismatchFallsBackToFilteredSize(t *testing.T) {
+	p := newTestProvider("Standard_DC2as_v5",
+		[]string{"Standard_DC2as_v5", "Standard_D2as_v5", "Standard_D4as_v5"},
+		[]provider.InstanceTypeSpec{
+			{InstanceType: "Standard_DC2as_v5", VCPUs: 2, Memory: 8192},
+			{InstanceType: "Standard_D2as_v5", VCPUs: 2, Memory: 8192},
+			{InstanceType: "Standard_D4as_v5", VCPUs: 4, Memory: 16384},
+		},
+		map[string]bool{
+			"Standard_DC2as_v5": true,
+			"Standard_D2as_v5":  false,
+			"Standard_D4as_v5":  false,
+		},
+	)
+
+	result, err := p.selectInstanceType(context.Background(), provider.InstanceTypeSpec{ConfidentialVM: to.Ptr(false)})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != "Standard_D2as_v5" {
+		t.Errorf("expected Standard_D2as_v5, got %s", result)
+	}
+}
+
+func TestSelectInstanceType_NoMatchingSizesReturnsError(t *testing.T) {
+	p := newTestProvider("Standard_DC2as_v5",
+		[]string{"Standard_DC2as_v5", "Standard_DC4as_v5"},
+		[]provider.InstanceTypeSpec{
+			{InstanceType: "Standard_DC2as_v5", VCPUs: 2, Memory: 8192},
+			{InstanceType: "Standard_DC4as_v5", VCPUs: 4, Memory: 16384},
+		},
+		map[string]bool{
+			"Standard_DC2as_v5": true,
+			"Standard_DC4as_v5": true,
+		},
+	)
+
+	_, err := p.selectInstanceType(context.Background(), provider.InstanceTypeSpec{ConfidentialVM: to.Ptr(false)})
+	if err == nil {
+		t.Fatal("expected error when no non-confidential sizes are configured, got nil")
+	}
+}
+
+func TestSelectInstanceType_NonConfidentialDefaultWithConfidentialRequest(t *testing.T) {
+	p := newTestProvider("Standard_D2as_v5",
+		[]string{"Standard_D2as_v5", "Standard_DC2as_v5"},
+		[]provider.InstanceTypeSpec{
+			{InstanceType: "Standard_D2as_v5", VCPUs: 2, Memory: 8192},
+			{InstanceType: "Standard_DC2as_v5", VCPUs: 2, Memory: 8192},
+		},
+		map[string]bool{
+			"Standard_D2as_v5":  false,
+			"Standard_DC2as_v5": true,
+		},
+	)
+
+	result, err := p.selectInstanceType(context.Background(), provider.InstanceTypeSpec{ConfidentialVM: to.Ptr(true)})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != "Standard_DC2as_v5" {
+		t.Errorf("expected Standard_DC2as_v5, got %s", result)
+	}
 }
