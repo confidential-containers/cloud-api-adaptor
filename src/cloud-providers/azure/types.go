@@ -26,14 +26,19 @@ func (i *instanceSizes) Set(value string) error {
 }
 
 type Config struct {
-	SubscriptionID       string
-	ClientID             string
-	ClientSecret         string
-	TenantID             string
-	ResourceGroupName    string
-	Zone                 string
-	Region               string
-	SubnetID             string
+	SubscriptionID    string
+	ClientID          string
+	ClientSecret      string
+	TenantID          string
+	ResourceGroupName string
+	Zone              string
+	Region            string
+	SubnetID          string
+	// ExternalSubnetID is the subnet used for the secondary NIC attached to
+	// the Pod VM when multi-NIC pod networking is requested
+	// (EXTERNAL_NETWORK_VIA_PODVM). It must be a different subnet than
+	// SubnetID, in the same VNet. Leave empty to disable multi-NIC support.
+	ExternalSubnetID     string
 	SecurityGroupName    string
 	SecurityGroupID      string
 	Size                 string
