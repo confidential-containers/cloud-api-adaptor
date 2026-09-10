@@ -16,22 +16,51 @@ import (
 	hypannotations "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/annotations"
 )
 
-func GetPodName(annotations map[string]string) string {
+// crioSandboxNameKey is the annotation cri-o sets on each container with the
+// name of its sandbox.
+const crioSandboxNameKey = "io.kubernetes.cri-o.SandboxName"
 
-	sandboxName := annotations[cri.SandboxName]
-
-	// cri-o stores the sandbox name in the form of k8s_<pod name>_<namespace>_<uid>_0
-	// Extract the pod name from it.
-	if tmp := strings.Split(sandboxName, "_"); len(tmp) > 1 && tmp[0] == "k8s" {
-		return tmp[1]
+// crioSandboxFields splits a cri-o sandbox name,
+// k8s_<pod name>_<namespace>_<uid>_<attempt>, into its fields, or returns nil
+// when neither annotation holds one. kata passes the name to CreateVM as
+// cri.SandboxName, and cri-o sets crioSandboxNameKey on each container.
+func crioSandboxFields(annotations map[string]string) []string {
+	for _, key := range []string{cri.SandboxName, crioSandboxNameKey} {
+		if fields := strings.Split(annotations[key], "_"); len(fields) > 1 && fields[0] == "k8s" {
+			return fields
+		}
 	}
 
-	return sandboxName
+	return nil
+}
+
+func GetPodName(annotations map[string]string) string {
+
+	if fields := crioSandboxFields(annotations); fields != nil {
+		return fields[1]
+	}
+
+	return annotations[cri.SandboxName]
 }
 
 func GetPodNamespace(annotations map[string]string) string {
 
 	return annotations[cri.SandboxNamespace]
+}
+
+// GetPodUID returns the UID of the pod that owns the sandbox, or "" when the
+// annotations do not identify it.
+func GetPodUID(annotations map[string]string) string {
+	if uid := annotations[cri.SandboxUID]; uid != "" {
+		return uid
+	}
+
+	// cri-o never sets cri.SandboxUID, but its sandbox name carries the UID
+	if fields := crioSandboxFields(annotations); len(fields) == 5 {
+		return fields[3]
+	}
+
+	return ""
 }
 
 // Method to get instance type from annotation
@@ -157,7 +186,7 @@ type CloudVolumeAnnotation struct {
 func GetCSIVolumesForPod(annotations map[string]string) []provider.CloudVolume {
 	var volumes []provider.CloudVolume
 
-	podUID := annotations[cri.SandboxUID]
+	podUID := GetPodUID(annotations)
 
 	entries, err := os.ReadDir(KataDirectVolumesDir)
 	if err != nil {
