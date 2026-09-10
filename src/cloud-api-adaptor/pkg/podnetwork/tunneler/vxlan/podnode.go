@@ -137,7 +137,7 @@ func (t *podNodeTunneler) Teardown(nsPath, hostInterface string, config *tunnele
 	vxlanID := vxlanDevice.ID
 
 	if err := vxlan.Delete(); err != nil {
-		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", secondPodInterface, podNS.Path(), err)
+		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", PodInterfaceName, podNS.Path(), err)
 	}
 
 	if err := iptablesTeardown(hostNS, dstAddr, dstPort, vxlanID); err != nil {

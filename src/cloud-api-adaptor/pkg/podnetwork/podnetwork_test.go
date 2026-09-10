@@ -6,14 +6,19 @@ package podnetwork
 import (
 	"fmt"
 	"net/netip"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	testutils "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/internal/testing"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tunneler/vxlan"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork/tuntest"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/netops"
 )
 
 type mockWorkerNodeTunneler struct{}
@@ -239,4 +244,91 @@ func TestPluginDetectHostInterface(t *testing.T) {
 	if e, a := ip.String(), "192.168.0.2"; e != a {
 		t.Fatalf("Expect %q, got %q", e, a)
 	}
+}
+
+func TestPodIndex(t *testing.T) {
+	t.Run("returns consecutive indices", func(t *testing.T) {
+		var p podIndex
+		for want := range 3 {
+			assert.Equal(t, want, p.Get())
+		}
+	})
+
+	t.Run("skips indices still in use", func(t *testing.T) {
+		var p podIndex
+		p.SetMin(3)
+		assert.Equal(t, 3, p.Get())
+	})
+
+	t.Run("never moves backwards", func(t *testing.T) {
+		var p podIndex
+		p.SetMin(5)
+		p.SetMin(2)
+		assert.Equal(t, 5, p.Get())
+	})
+}
+
+// namespaceDir links test namespaces under an isolated directory.
+func namespaceDir(t *testing.T, namespaces ...netops.Namespace) string {
+	t.Helper()
+	dir := t.TempDir()
+	for i, ns := range namespaces {
+		require.NoError(t, os.Symlink(ns.Path(), filepath.Join(dir, fmt.Sprintf("ns%d", i))))
+	}
+	return dir
+}
+
+func TestNextPodIndex(t *testing.T) {
+	const minID, port = 700000, 4799
+	remote := netip.MustParseAddr("192.0.2.1")
+
+	t.Run("a missing directory holds no namespaces", func(t *testing.T) {
+		next, err := nextPodIndex(filepath.Join(t.TempDir(), "none"), minID, port)
+		require.NoError(t, err)
+		assert.Equal(t, 0, next)
+	})
+
+	t.Run("a non-directory path is an error", func(t *testing.T) {
+		file := filepath.Join(t.TempDir(), "file")
+		require.NoError(t, os.WriteFile(file, nil, 0o600))
+		_, err := nextPodIndex(file, minID, port)
+		assert.Error(t, err)
+	})
+
+	t.Run("a minimum ID outside the field is an error", func(t *testing.T) {
+		_, err := nextPodIndex(t.TempDir(), vxlan.MaxVXLANID+1, port)
+		assert.Error(t, err)
+	})
+
+	t.Run("counts only pod vxlan devices on the adaptor's port and range", func(t *testing.T) {
+		testutils.SkipTestIfNotRoot(t)
+
+		var namespaces []netops.Namespace
+		for _, devices := range []map[string]netops.Device{
+			{vxlan.PodInterfaceName: &netops.VXLAN{Group: remote, ID: minID + 7, Port: port}, "vxlan9": &netops.VXLAN{Group: remote, ID: minID + 20, Port: port}},
+			{vxlan.PodInterfaceName: &netops.VXLAN{Group: remote, ID: minID + 30, Port: port + 1}},
+			{vxlan.PodInterfaceName: &netops.VXLAN{Group: remote, ID: minID - 1, Port: port}},
+			{vxlan.PodInterfaceName: &netops.Bridge{}},
+		} {
+			ns, _ := tuntest.NewNamedNS(t, "test-podindex")
+			defer tuntest.DeleteNamedNS(t, ns)
+			for name, device := range devices {
+				_, err := ns.LinkAdd(name, device)
+				require.NoError(t, err, name)
+			}
+			namespaces = append(namespaces, ns)
+		}
+
+		next, err := nextPodIndex(namespaceDir(t, namespaces...), minID, port)
+		require.NoError(t, err)
+		assert.Equal(t, 8, next)
+	})
+
+	t.Run("skips an entry that is not a namespace", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "cni-stale"), nil, 0o600))
+		next, err := nextPodIndex(dir, minID, port)
+		require.NoError(t, err)
+		assert.Equal(t, 0, next)
+	})
 }
