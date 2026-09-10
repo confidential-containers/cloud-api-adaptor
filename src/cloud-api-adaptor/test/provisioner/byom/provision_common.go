@@ -121,9 +121,7 @@ func (b *ByomProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config
 	log.Infof("Using BYOM kind config from: %s", kindConfigPath)
 	os.Setenv("KIND_CONFIG_FILE", kindConfigPath)
 
-	workingDir := filepath.Dir(kindConfigPath)
-
-	if err := b.createKindCluster(workingDir); err != nil {
+	if err := b.createKindCluster(); err != nil {
 		log.Errorf("Error creating Kind cluster: %v", err)
 		return err
 	}
@@ -224,12 +222,7 @@ func (b *ByomProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) er
 }
 
 func (b *ByomProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
-	kindConfigPath, err := filepath.Abs(ByomProps.KindConfigFile)
-	if err != nil {
-		return fmt.Errorf("error getting absolute path of kind config file: %w", err)
-	}
-
-	return b.deleteKindCluster(filepath.Dir(kindConfigPath))
+	return b.deleteKindCluster()
 }
 
 func (b *ByomProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
@@ -530,18 +523,19 @@ func (b *ByomProvisioner) destroyContainer(containerName string) error {
 	return nil
 }
 
-func (b *ByomProvisioner) createKindCluster(workingDir string) error {
-	// Create kind cluster by executing the script on the node
-	cmd := exec.Command("/bin/bash", "-c", "./kind_cluster.sh create")
-	cmd.Dir = workingDir
+func (b *ByomProvisioner) createKindCluster() error {
+	scriptPath, err := pv.KindClusterScriptPath()
+	if err != nil {
+		return fmt.Errorf("failed to locate kind_cluster.sh: %w", err)
+	}
+	cmd := exec.Command("/bin/bash", scriptPath, "create")
 	cmd.Stdout = os.Stdout
 	// TODO: better handle stderr. Messages getting out of order.
 	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
-	// Set CLUSTER_NAME and CONTAINER_RUNTIME if available. Also unset KUBECONFIG so that the default path is used.
+	// Set CLUSTER_NAME and CONTAINER_RUNTIME. Unset KUBECONFIG so the default path is used.
 	cmd.Env = append(cmd.Env, "CLUSTER_NAME="+ByomProps.ClusterName, "KUBECONFIG=", "CONTAINER_RUNTIME="+ByomProps.ContainerRuntime)
-	err := cmd.Run()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		log.Errorf("Error creating Kind cluster: %v", err)
 		return err
 	}
@@ -549,15 +543,18 @@ func (b *ByomProvisioner) createKindCluster(workingDir string) error {
 	return nil
 }
 
-func (b *ByomProvisioner) deleteKindCluster(workingDir string) error {
-	// Delete kind cluster by executing the script on the node
-	cmd := exec.Command("/bin/bash", "-c", "./kind_cluster.sh delete")
-	cmd.Dir = workingDir
+func (b *ByomProvisioner) deleteKindCluster() error {
+	scriptPath, err := pv.KindClusterScriptPath()
+	if err != nil {
+		return fmt.Errorf("failed to locate kind_cluster.sh: %w", err)
+	}
+	cmd := exec.Command("/bin/bash", scriptPath, "delete")
 	cmd.Stdout = os.Stdout
 	// TODO: better handle stderr. Messages getting out of order.
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "CLUSTER_NAME="+ByomProps.ClusterName)
+	if err := cmd.Run(); err != nil {
 		log.Errorf("Error deleting Kind cluster: %v", err)
 		return err
 	}
