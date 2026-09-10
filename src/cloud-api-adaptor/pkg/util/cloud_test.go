@@ -3,7 +3,9 @@ package util
 import (
 	"testing"
 
+	cri "github.com/containerd/containerd/pkg/cri/annotations"
 	hypannotations "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/annotations"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetPodvmResourcesFromAnnotation(t *testing.T) {
@@ -186,6 +188,57 @@ func TestGetImageFromAnnotation(t *testing.T) {
 			if got := GetImageFromAnnotation(tt.args.annotations); got != tt.want {
 				t.Errorf("GetImageFromAnnotation() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestGetPodUID(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		want        string
+	}{
+		{
+			name: "containerd sandbox uid",
+			annotations: map[string]string{
+				cri.SandboxUID:  "3f2b6c1e-8d4a-4f7b-9a2e-5c1d0e7f8a9b",
+				cri.SandboxName: "my-pod",
+			},
+			want: "3f2b6c1e-8d4a-4f7b-9a2e-5c1d0e7f8a9b",
+		},
+		{
+			name: "cri-o sandbox name passed to CreateVM",
+			annotations: map[string]string{
+				cri.SandboxName: "k8s_my-pod_default_3f2b6c1e-8d4a-4f7b-9a2e-5c1d0e7f8a9b_0",
+			},
+			want: "3f2b6c1e-8d4a-4f7b-9a2e-5c1d0e7f8a9b",
+		},
+		{
+			name: "cri-o sandbox name on a container",
+			annotations: map[string]string{
+				"io.kubernetes.cri-o.SandboxName": "k8s_my-pod_default_3f2b6c1e-8d4a-4f7b-9a2e-5c1d0e7f8a9b_1",
+			},
+			want: "3f2b6c1e-8d4a-4f7b-9a2e-5c1d0e7f8a9b",
+		},
+		{
+			name:        "containerd sandbox name without uid",
+			annotations: map[string]string{cri.SandboxName: "my-pod"},
+			want:        "",
+		},
+		{
+			name:        "truncated cri-o sandbox name",
+			annotations: map[string]string{cri.SandboxName: "k8s_my-pod_default"},
+			want:        "",
+		},
+		{
+			name:        "no annotations",
+			annotations: map[string]string{},
+			want:        "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, GetPodUID(tt.annotations))
 		})
 	}
 }
