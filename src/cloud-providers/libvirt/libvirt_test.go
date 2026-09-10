@@ -4,6 +4,7 @@
 package libvirt
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -967,6 +968,64 @@ func TestCreateDomainXMLArchitecturesWithMocks(t *testing.T) {
 	}
 }
 
+func TestCreateDomainXMLs390xLaunchSecurity(t *testing.T) {
+	mockCaps := createMockCaps(archS390x, "/usr/bin/qemu-system-s390x", libvirtxml.CapsGuestMachine{
+		Name:      "s390-ccw-virtio",
+		Canonical: "s390-ccw-virtio-rhel9.0.0",
+	})
+	mockClient := &libvirtClient{
+		caps:        mockCaps,
+		networkName: testNetworkName,
+	}
+	cfg := createTestDomainConfig("test-s390x-sec", 2, 2048, testNetworkName, testCiDataISO)
+
+	tests := []struct {
+		name           string
+		launchSecurity LaunchSecurityType
+		expectedError  string
+		expectS390PV   bool
+	}{
+		{
+			name:           "S390PV emits launchSecurity element",
+			launchSecurity: S390PV,
+			expectS390PV:   true,
+		},
+		{
+			name:           "NoLaunchSecurity omits launchSecurity element",
+			launchSecurity: NoLaunchSecurity,
+			expectS390PV:   false,
+		},
+		{
+			name:           "unknown security type returns error",
+			launchSecurity: LaunchSecurityType(99),
+			expectedError:  "launch security type unknown is not supported for s390x",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vm := &vmConfig{launchSecurityType: tt.launchSecurity}
+			domain, err := createDomainXMLs390x(mockClient, cfg, vm)
+
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+				assert.Nil(t, domain)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, domain)
+
+			if tt.expectS390PV {
+				require.NotNil(t, domain.LaunchSecurity, "LaunchSecurity should be set for S390PV")
+				assert.NotNil(t, domain.LaunchSecurity.S390PV, "S390PV field should be non-nil")
+			} else {
+				assert.Nil(t, domain.LaunchSecurity, "LaunchSecurity should be nil for NoLaunchSecurity")
+			}
+		})
+	}
+}
+
 // TestCreateDomainXMLx86_64 tests x86_64 domain XML generation
 func TestCreateDomainXMLx86_64(t *testing.T) {
 	mockCaps := createMockCaps(archX86_64, "/usr/bin/qemu-system-x86_64")
@@ -1315,4 +1374,73 @@ func TestNewDefVolumeCapacity(t *testing.T) {
 				"volume name should match input")
 		})
 	}
+}
+
+// TestCreateDomainExistingDomain verifies that an already-existing domain returns a populated instanceID equal to its UUID.
+// It pre-creates a domain via DomainDefineXML, then calls CreateDomain twice; both calls hit the existing-domain path and must return the same UUID.
+func TestCreateDomainExistingDomain(t *testing.T) {
+	checkConfig(t)
+
+	client, err := NewLibvirtClient(testCfg)
+	require.NoError(t, err)
+	defer client.connection.Close()
+
+	const domName = "TestCreateDomainExisting"
+
+	minimalXML := `<domain type='kvm'><name>` + domName + `</name>` +
+		`<memory unit='MiB'>64</memory><vcpu>1</vcpu>` +
+		`<os><type arch='x86_64'>hvm</type></os></domain>`
+	dom, err := client.connection.DomainDefineXML(minimalXML)
+	require.NoError(t, err, "failed to pre-create domain for test")
+
+	expectedUUID, err := dom.GetUUIDString()
+	require.NoError(t, err)
+	require.NoError(t, dom.Free())
+
+	defer func() {
+		d, lookupErr := client.connection.LookupDomainByName(domName)
+		if lookupErr != nil {
+			return
+		}
+		_ = d.Undefine()
+		_ = d.Free()
+	}()
+
+	// Both calls hit the existing-domain path since the domain was pre-created above.
+	v := &vmConfig{name: domName}
+	result, err := CreateDomain(context.Background(), client, v)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, result.instance)
+	assert.Equal(t, expectedUUID, result.instance.instanceID,
+		"instanceID must equal the existing domain's UUID on first call")
+
+	// Second call: same domain still exists, must return the same UUID.
+	v2 := &vmConfig{name: domName}
+	result2, err := CreateDomain(context.Background(), client, v2)
+
+	require.NoError(t, err)
+	require.NotNil(t, result2)
+	require.NotNil(t, result2.instance)
+	assert.Equal(t, expectedUUID, result2.instance.instanceID,
+		"instanceID must equal the existing domain's UUID on second call")
+}
+
+// TestCreateDomainNoExistingDomain verifies that a missing domain falls through to the normal create path.
+func TestCreateDomainNoExistingDomain(t *testing.T) {
+	checkConfig(t)
+
+	client, err := NewLibvirtClient(testCfg)
+	require.NoError(t, err)
+	defer client.connection.Close()
+
+	v := &vmConfig{
+		name:    "TestCreateDomainNonExistent",
+		volName: "nonexistent-backing.qcow2",
+	}
+
+	_, err = CreateDomain(context.Background(), client, v)
+	require.Error(t, err, "expected error from missing volume, not from domain lookup")
+	assert.ErrorContains(t, err, "volume")
 }

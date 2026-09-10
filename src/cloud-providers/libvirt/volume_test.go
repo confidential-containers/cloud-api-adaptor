@@ -6,6 +6,7 @@
 package libvirt
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -214,9 +215,8 @@ func TestWaitForSuccess(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			setWaitTimers(t, tt.timeout, tt.interval)
-
 			callCount := 0
-			err := waitForSuccess(testOperation, func() error {
+			err := waitForSuccess(context.Background(), testOperation, func() error {
 				callCount++
 				if tt.failCount == alwaysFails {
 					return errors.New(errPersistent)
@@ -235,6 +235,46 @@ func TestWaitForSuccess(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWaitForSuccess_ContextCancellation(t *testing.T) {
+	t.Run("pre-cancelled context returns context.Canceled without calling f", func(t *testing.T) {
+		setWaitTimers(t, 5*time.Second, 100*time.Millisecond)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // cancel before calling waitForSuccess
+
+		callCount := 0
+		err := waitForSuccess(ctx, testOperation, func() error {
+			callCount++
+			return errors.New(errPersistent)
+		})
+
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.ErrorContains(t, err, testOperation)
+		assert.Equal(t, 0, callCount)
+	})
+
+	t.Run("mid-flight cancellation stops retries and returns context.Canceled", func(t *testing.T) {
+		setWaitTimers(t, 5*time.Second, 50*time.Millisecond)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		callCount := 0
+		err := waitForSuccess(ctx, testOperation, func() error {
+			callCount++
+			if callCount == 2 {
+				cancel() // cancel on the second call, while f is running
+			}
+			return errors.New(errPersistent)
+		})
+
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.ErrorContains(t, err, testOperation)
+		// f was called at least twice (once before cancel, once to trigger it)
+		assert.GreaterOrEqual(t, callCount, 2)
+	})
 }
 
 func TestVolumeCapacityBytesTable(t *testing.T) {

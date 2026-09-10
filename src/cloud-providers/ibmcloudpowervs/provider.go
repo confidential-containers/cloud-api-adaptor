@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -69,21 +70,27 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 	// If machine type is set in annotations then use it (ie. shape <system_type>-<cpu>x<memoery>)
 	// vCPU and Memory gets higher priority than instance type from annotation
 	if spec.VCPUs != 0 && spec.Memory != 0 {
-		memory = float64(spec.Memory / 1024)
+		memory = float64(spec.Memory) / 1024.0
 		processors = float64(spec.VCPUs)
 		logger.Printf("Instance type selected by the cloud provider based on vCPU and memory annotations: %s-%gx%g", systemType, processors, memory)
 	} else if spec.InstanceType != "" {
 		typeAndSize := strings.Split(spec.InstanceType, "-")
+		if len(typeAndSize) != 2 {
+			return nil, fmt.Errorf("invalid instance type format %q: expected <sys_type>-<cpu>x<memory>", spec.InstanceType)
+		}
 		systemType = typeAndSize[0]
 		size := strings.Split(typeAndSize[1], "x")
+		if len(size) != 2 {
+			return nil, fmt.Errorf("invalid instance type format %q: expected <sys_type>-<cpu>x<memory>", spec.InstanceType)
+		}
 		f, err := strconv.Atoi(size[0])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid cpu value in instance type %q: %w", spec.InstanceType, err)
 		}
 		processors = float64(f)
 		m, err := strconv.Atoi(size[1])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid memory value in instance type %q: %w", spec.InstanceType, err)
 		}
 		memory = float64(m)
 		logger.Printf("Instance type selected by the cloud provider based on instance type annotation: %s", spec.InstanceType)
@@ -195,9 +202,32 @@ func (p *ibmcloudPowerVSProvider) Teardown() error {
 }
 
 func (p *ibmcloudPowerVSProvider) ConfigVerifier() error {
-	imageID := p.serviceConfig.ImageID
-	if len(imageID) == 0 {
-		return fmt.Errorf("ImageId is empty")
+	validProcessorTypes := []string{"shared", "dedicated", "capped"}
+	validSystemTypes := []string{"s922", "s1022", "s1122", "e980", "e1080"}
+
+	var errs []string
+
+	if len(p.serviceConfig.ImageID) == 0 {
+		errs = append(errs, "ImageID is empty")
+	}
+	if len(p.serviceConfig.NetworkID) == 0 {
+		errs = append(errs, "NetworkID is empty")
+	}
+	if len(p.serviceConfig.ServiceInstanceID) == 0 {
+		errs = append(errs, "ServiceInstanceID is empty")
+	}
+	if len(p.serviceConfig.Zone) == 0 {
+		errs = append(errs, "Zone is empty")
+	}
+	if !slices.Contains(validProcessorTypes, p.serviceConfig.ProcessorType) {
+		errs = append(errs, fmt.Sprintf("ProcessorType %q is invalid, must be one of %v", p.serviceConfig.ProcessorType, validProcessorTypes))
+	}
+	if !slices.Contains(validSystemTypes, p.serviceConfig.SystemType) {
+		errs = append(errs, fmt.Sprintf("SystemType %q is invalid, must be one of %v", p.serviceConfig.SystemType, validSystemTypes))
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("invalid PowerVS config: %s", strings.Join(errs, "; "))
 	}
 	return nil
 }
@@ -230,19 +260,19 @@ func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instanceID strin
 		return ips, nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 750*time.Second)
-	defer cancel()
-
 	// If IP is not assigned to the instance, fetch it from DHCP server
-	logger.Printf("Trying to fetch IP from DHCP server..")
+	dhcpCtx, dhcpCancel := context.WithTimeout(ctx, p.serviceConfig.DHCPTimeout)
+	defer dhcpCancel()
+
+	logger.Printf("Trying to fetch IP from DHCP server (timeout: %s)..", p.serviceConfig.DHCPTimeout)
 	err = retry.Do(func() error {
-		ip, err := p.getIPFromDHCPServer(ctx, ins)
+		ip, err := p.getIPFromDHCPServer(dhcpCtx, ins)
 		if err != nil {
 			logger.Print(err)
 			return err
 		}
 		if ip == nil {
-			return fmt.Errorf("failed to get IP from DHCP server: %v", err)
+			return fmt.Errorf("DHCP lease not yet assigned for instance (will retry)")
 		}
 
 		addr, err := netip.ParseAddr(*ip)
@@ -254,7 +284,7 @@ func (p *ibmcloudPowerVSProvider) getVMIPs(ctx context.Context, instanceID strin
 		logger.Printf("podNodeIP=%s", addr.String())
 		return nil
 	},
-		retry.Context(ctx),
+		retry.Context(dhcpCtx),
 		retry.Attempts(0),
 		retry.MaxDelay(10*time.Second),
 	)

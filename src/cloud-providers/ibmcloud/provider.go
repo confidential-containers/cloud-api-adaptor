@@ -26,8 +26,7 @@ import (
 )
 
 const (
-	maxRetries    = 10
-	queryInterval = 2
+	maxRetries = 10
 
 	clusterInfoCMName      = "cluster-info"
 	clusterInfoCMNamespace = "kube-system"
@@ -35,6 +34,9 @@ const (
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/ibmcloud] ", log.LstdFlags|log.Lmsgprefix)
 var errNotReady = errors.New("address not ready")
+
+// queryInterval is a variable so tests can shorten the wait between polls
+var queryInterval = 2 * time.Second
 
 const maxInstanceNameLen = 63
 
@@ -489,7 +491,8 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	}
 
 	instanceID := *vpcInstance.ID
-	numInterfaces := len(prototype.NetworkInterfaces)
+	// the primary interface plus any secondary interfaces in the prototype
+	numInterfaces := 1 + len(prototype.NetworkInterfaces)
 
 	// Create partial instance to return on error (allows caller to cleanup)
 	instance = &provider.Instance{
@@ -510,14 +513,17 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 			return instance, err
 		}
 
-		time.Sleep(time.Duration(queryInterval) * time.Second)
+		time.Sleep(queryInterval)
 
-		result, response, err := p.vpc.GetInstanceWithContext(ctx, &vpcv1.GetInstanceOptions{ID: &instanceID})
-		if err != nil {
-			logger.Printf("failed to get an instance : %v and the response is %s", err, response)
-			return instance, err
+		result, response, getErr := p.vpc.GetInstanceWithContext(ctx, &vpcv1.GetInstanceOptions{ID: &instanceID})
+		if getErr != nil {
+			logger.Printf("failed to get an instance : %v and the response is %s", getErr, response)
+			return instance, getErr
 		}
 		vpcInstance = result
+	}
+	if err != nil {
+		return instance, fmt.Errorf("instance %s network addresses not ready after %d attempts: %w", instanceID, maxRetries, err)
 	}
 
 	instance.IPs = ips

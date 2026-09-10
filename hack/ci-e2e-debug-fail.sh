@@ -20,9 +20,42 @@ debug_common() {
     kubectl get pods -A
     echo "::endgroup::"
 
-    echo "::group::KBS installation"
-    kubectl get pods -n coco-tenant
-    kubectl describe pods -n coco-tenant
+    echo "::group::KBS installation - pod summary"
+    kubectl get pods -n coco-trustee -o wide
+    echo "::endgroup::"
+
+    echo "::group::KBS installation - bootstrap jobs"
+    kubectl get jobs -n coco-trustee
+    kubectl describe jobs -n coco-trustee
+    echo "::endgroup::"
+
+    echo "::group::KBS installation - bootstrap job logs"
+    for job_pod in $(kubectl get pods -n coco-trustee -o name 2>/dev/null | grep -E 'bootstrap|hook'); do
+        echo "=== ${job_pod#pod/} ==="
+        kubectl logs "$job_pod" -n coco-trustee --all-containers 2>/dev/null || true
+        kubectl logs "$job_pod" -n coco-trustee --all-containers --previous 2>/dev/null || true
+    done
+    echo "::endgroup::"
+
+    echo "::group::KBS installation - secrets"
+    kubectl get secrets -n coco-trustee
+    # List keys present in bootstrap secret without exposing values
+    kubectl get secret trustee-bootstrap-user-keys -n coco-trustee \
+        -o go-template='{{range $k,$v := .data}}{{$k}}{{"\n"}}{{end}}' 2>/dev/null || true
+    echo "::endgroup::"
+
+    echo "::group::KBS installation - configmaps"
+    kubectl get configmaps -n coco-trustee
+    kubectl get configmap trustee-as-config -n coco-trustee -o yaml 2>/dev/null || true
+    kubectl get configmap trustee-kbs-config -n coco-trustee -o yaml 2>/dev/null || true
+    echo "::endgroup::"
+
+    echo "::group::KBS installation - events"
+    kubectl get events -n coco-trustee --sort-by='.lastTimestamp'
+    echo "::endgroup::"
+
+    echo "::group::KBS installation - describe pods"
+    kubectl describe pods -n coco-trustee
     echo "::endgroup::"
 
     echo "::group::CoCo and Peer Pods installation"
@@ -52,7 +85,18 @@ debug_common() {
     echo "::endgroup::"
 
     echo "::group::kbs logs"
-    kubectl logs deployment/kbs -n coco-tenant
+    kubectl logs -l app=kbs --tail=-1 -n coco-trustee --all-containers
+    kubectl logs -l app=kbs --tail=-1 -n coco-trustee --all-containers --previous 2>/dev/null || true
+    echo "::endgroup::"
+
+    echo "::group::attestation-service logs"
+    kubectl logs -l app=attestation-service --tail=-1 -n coco-trustee --all-containers
+    kubectl logs -l app=attestation-service --tail=-1 -n coco-trustee --all-containers --previous 2>/dev/null || true
+    echo "::endgroup::"
+
+    echo "::group::rvps logs"
+    kubectl logs -l app=reference-value-provider-service --tail=-1 -n coco-trustee --all-containers
+    kubectl logs -l app=reference-value-provider-service --tail=-1 -n coco-trustee --all-containers --previous 2>/dev/null || true
     echo "::endgroup::"
 
     for ns in $(kubectl get ns -o name 2>/dev/null | sed 's#namespace/##' | grep "^coco-pp-"); do

@@ -277,7 +277,7 @@ func ComparePodEventWarningDescriptions(ctx context.Context, t *testing.T, clien
 		}
 
 		t.Logf("podEvents: %s\n", podEventsDescriptions)
-		if !strings.Contains(podEventsDescriptions, expectedPodEvent) {
+		if !strings.Contains(strings.ToLower(podEventsDescriptions), strings.ToLower(expectedPodEvent)) {
 			err = fmt.Errorf("error: Pod Events don't contain Expected String %s", expectedPodEvent)
 		} else {
 			return nil

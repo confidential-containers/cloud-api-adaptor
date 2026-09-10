@@ -8,11 +8,13 @@ name: validate-config-extractor
 on:
   pull_request:
     paths:
+      - '.github/workflows/validate-config-extractor.yaml'
       - 'src/cloud-providers/**/manager.go'
       - 'src/cloud-providers/util.go'
       - 'src/cloud-providers/cmd/config-extractor/**'
       - 'src/cloud-providers/Makefile'
       - 'src/cloud-api-adaptor/install/charts/peerpods/providers/**'
+      - 'src/cloud-api-adaptor/cmd/cloud-api-adaptor/main.go'
   workflow_dispatch:
 
 concurrency:
@@ -41,7 +43,7 @@ jobs:
           echo "GO_VERSION=${go_version}" >> "$GITHUB_ENV"
 
       - name: Setup Golang version ${{ env.GO_VERSION }}
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/go.sum"
@@ -89,10 +91,10 @@ jobs:
           echo "Regenerating chart values to check for drift..."
           make sync-chart-values
 
-          # Check if any files changed
-          if git diff --exit-code ../cloud-api-adaptor/install/charts/peerpods/providers/; then
-            echo "[OK] Generated files are up to date"
-          else
+          providers_dir="../cloud-api-adaptor/install/charts/peerpods/providers/"
+
+          # Check for modifications to already-tracked files
+          git diff --exit-code "$providers_dir" || {
             echo "::error::Generated chart values are out of sync!"
             echo ""
             echo "The provider YAML files in install/charts/peerpods/providers/ do not match"
@@ -103,4 +105,20 @@ jobs:
             echo ""
             echo "Then commit the updated files."
             exit 1
+          }
+
+          # Check for newly generated files that are not yet tracked by git
+          untracked=$(git ls-files --others --exclude-standard "$providers_dir")
+          if [ -n "$untracked" ]; then
+            echo "::error::Untracked provider files found — generated filename differs from committed filename:"
+            echo "$untracked"
+            echo ""
+            echo "This usually means a provider's registered name differs from its directory name."
+            echo "To fix, remove the old files, regenerate, and commit everything:"
+            echo "  git rm \$(git ls-files src/cloud-api-adaptor/install/charts/peerpods/providers/)"
+            echo "  cd src/cloud-providers && make sync-chart-values"
+            echo "  git add ../cloud-api-adaptor/install/charts/peerpods/providers/"
+            exit 1
           fi
+
+          echo "[OK] Generated files are up to date"

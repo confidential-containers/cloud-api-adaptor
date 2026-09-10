@@ -5,20 +5,36 @@ package ibmcloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/platform-services-go-sdk/globaltaggingv1"
 	"github.com/IBM/vpc-go-sdk/vpcv1"
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type mockVPC struct {
 	prototype vpcv1.InstancePrototypeIntf
+	// createErr, when set, decides whether each CreateInstanceWithContext call fails
+	createErr   func(call int, prototype *vpcv1.InstancePrototype) error
+	createCalls int
+	// getInstance, when set, replaces the default GetInstanceWithContext response
+	getInstance func(call int) *vpcv1.Instance
+	getCalls    int
+}
+
+func readyNIC(id, address string) *vpcv1.NetworkInterfaceInstanceContextReference {
+	return &vpcv1.NetworkInterfaceInstanceContextReference{
+		ID:        ptr(id),
+		PrimaryIP: &vpcv1.ReservedIPReference{Address: ptr(address)},
+	}
 }
 
 func ptr(s string) *string {
@@ -28,6 +44,12 @@ func ptr(s string) *string {
 func (v *mockVPC) CreateInstanceWithContext(ctx context.Context, opt *vpcv1.CreateInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error) {
 
 	v.prototype = opt.InstancePrototype
+	v.createCalls++
+	if v.createErr != nil {
+		if err := v.createErr(v.createCalls, opt.InstancePrototype.(*vpcv1.InstancePrototype)); err != nil {
+			return nil, &core.DetailedResponse{StatusCode: http.StatusBadRequest}, err
+		}
+	}
 
 	instance := &vpcv1.Instance{
 		ID:  ptr("123"),
@@ -47,6 +69,11 @@ func (v *mockVPC) CreateInstanceWithContext(ctx context.Context, opt *vpcv1.Crea
 }
 
 func (v *mockVPC) GetInstanceWithContext(ctx context.Context, opt *vpcv1.GetInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error) {
+
+	v.getCalls++
+	if v.getInstance != nil {
+		return v.getInstance(v.getCalls), nil, nil
+	}
 
 	instance := &vpcv1.Instance{
 		ID:  ptr("123"),
@@ -148,40 +175,213 @@ func (t *mockTagging) AttachTagWithContext(ctx context.Context, attachTagOptions
 }
 func TestCreateInstance(t *testing.T) {
 
-	vpc := &mockVPC{}
-	globalTagging := &mockTagging{}
+	// keep the readiness polling fast
+	savedInterval := queryInterval
+	queryInterval = time.Millisecond
+	t.Cleanup(func() { queryInterval = savedInterval })
 
-	images := make(Images, 0)
-	err := images.Set("valid-image-id")
-	if err != nil {
-		t.Errorf("Images.Set() error %v", err)
+	newProvider := func(vpc *mockVPC, config *Config) *ibmcloudVPCProvider {
+		images := make(Images, 0)
+		require.NoError(t, images.Set("valid-image-id"))
+		config.ProfileName = "bx2-2x8"
+		config.Images = images
+		return &ibmcloudVPCProvider{
+			vpc:           vpc,
+			globalTagging: &mockTagging{},
+			serviceConfig: config,
+		}
 	}
-	mockProvider := &ibmcloudVPCProvider{
-		vpc:           vpc,
-		globalTagging: globalTagging,
-		serviceConfig: &Config{
-			ProfileName: "bx2-2x8",
-			Images:      images,
-			DisableCVM:  true,
-		},
+	spec := provider.InstanceTypeSpec{InstanceType: "bx2-2x8"}
+
+	t.Run("returns the instance and its addresses once ready", func(t *testing.T) {
+		vpc := &mockVPC{}
+		mockProvider := newProvider(vpc, &Config{DisableCVM: true})
+
+		instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, spec)
+
+		require.NoError(t, err)
+		require.NotNil(t, instance)
+		assert.Equal(t, "123", instance.ID)
+		assert.Equal(t, "podvm-pod1-999", instance.Name)
+		require.Len(t, instance.IPs, 2)
+		assert.Equal(t, "192.0.1.1", instance.IPs[0].String())
+		assert.Equal(t, "192.0.2.1", instance.IPs[1].String())
+
+		p, ok := vpc.prototype.(*vpcv1.InstancePrototype)
+		require.True(t, ok)
+		assert.Equal(t, "cloud config", *p.UserData)
+		assert.Equal(t, false, *p.EnableSecureBoot)
+		assert.Equal(t, "disabled", *p.ConfidentialComputeMode)
+	})
+
+	t.Run("fails when addresses never become ready", func(t *testing.T) {
+		vpc := &mockVPC{getInstance: func(int) *vpcv1.Instance {
+			return &vpcv1.Instance{ID: ptr("123"), CRN: ptr("crn-123"), PrimaryNetworkInterface: readyNIC("111", "0.0.0.0")}
+		}}
+		mockProvider := newProvider(vpc, &Config{})
+
+		instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, spec)
+
+		require.ErrorIs(t, err, errNotReady)
+		// the partial instance lets the caller delete the VM
+		require.NotNil(t, instance)
+		assert.Equal(t, "123", instance.ID)
+		assert.Equal(t, maxRetries, vpc.getCalls)
+	})
+
+	t.Run("waits for the secondary interface address", func(t *testing.T) {
+		vpc := &mockVPC{getInstance: func(call int) *vpcv1.Instance {
+			instance := &vpcv1.Instance{ID: ptr("123"), CRN: ptr("crn-123"), PrimaryNetworkInterface: readyNIC("111", "192.0.1.1")}
+			// the secondary interface only shows up on the second poll
+			if call > 1 {
+				instance.NetworkInterfaces = []vpcv1.NetworkInterfaceInstanceContextReference{
+					*readyNIC("111", "192.0.1.1"),
+					*readyNIC("222", "192.0.2.1"),
+				}
+			}
+			return instance
+		}}
+		mockProvider := newProvider(vpc, &Config{SecondarySubnetID: "subnet-2", SecondarySecurityGroupID: "sg-2"})
+
+		instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, spec)
+
+		require.NoError(t, err)
+		require.Len(t, instance.IPs, 2)
+		assert.Equal(t, "192.0.1.1", instance.IPs[0].String())
+		assert.Equal(t, "192.0.2.1", instance.IPs[1].String())
+		assert.Equal(t, 2, vpc.getCalls)
+	})
+}
+
+func TestCreateInstanceWithFallback(t *testing.T) {
+
+	errHost := errors.New("dedicated host is full")
+	errGroup := errors.New("dedicated host group is full")
+
+	newProvider := func(vpc *mockVPC, hostID, groupID string) *ibmcloudVPCProvider {
+		return &ibmcloudVPCProvider{
+			vpc: vpc,
+			serviceConfig: &Config{
+				selectedDedicatedHostID:      hostID,
+				selectedDedicatedHostGroupID: groupID,
+			},
+		}
+	}
+	prototype := func(p *ibmcloudVPCProvider) *vpcv1.InstancePrototype {
+		return p.getInstancePrototype("podvm-pod1-999", "cloud config", "bx2-2x8", "image-1")
+	}
+	groupTarget := func(proto *vpcv1.InstancePrototype) (string, bool) {
+		target, ok := proto.PlacementTarget.(*vpcv1.InstancePlacementTargetPrototypeDedicatedHostGroupIdentityDedicatedHostGroupIdentityByID)
+		if !ok {
+			return "", false
+		}
+		return *target.ID, true
 	}
 
-	instance, err := mockProvider.CreateInstance(context.Background(), "pod1", "999", &mockCloudConfig{}, provider.InstanceTypeSpec{InstanceType: "bx2-2x8"})
+	t.Run("does not retry when creation succeeds", func(t *testing.T) {
+		vpc := &mockVPC{}
+		p := newProvider(vpc, "host-1", "group-1")
 
-	assert.NoError(t, err)
-	assert.NotNil(t, instance)
-	assert.Equal(t, "123", instance.ID)
-	assert.Equal(t, "podvm-pod1-999", instance.Name)
-	assert.Len(t, instance.IPs, 2)
-	assert.Equal(t, "192.0.1.1", instance.IPs[0].String())
-	assert.Equal(t, "192.0.2.1", instance.IPs[1].String())
+		instance, err := p.createInstanceWithFallback(context.Background(), prototype(p))
 
-	assert.NotNil(t, vpc.prototype)
-	p, ok := vpc.prototype.(*vpcv1.InstancePrototype)
-	assert.True(t, ok)
-	assert.Equal(t, "cloud config", *p.UserData)
-	assert.Equal(t, false, *p.EnableSecureBoot)
-	assert.Equal(t, "disabled", *p.ConfidentialComputeMode)
+		require.NoError(t, err)
+		assert.Equal(t, "123", *instance.ID)
+		assert.Equal(t, 1, vpc.createCalls)
+	})
+
+	t.Run("does not retry without a dedicated host group", func(t *testing.T) {
+		vpc := &mockVPC{createErr: func(int, *vpcv1.InstancePrototype) error { return errHost }}
+		p := newProvider(vpc, "host-1", "")
+
+		instance, err := p.createInstanceWithFallback(context.Background(), prototype(p))
+
+		require.ErrorIs(t, err, errHost)
+		assert.Nil(t, instance)
+		assert.Equal(t, 1, vpc.createCalls)
+	})
+
+	t.Run("retries on the dedicated host group when the host fails", func(t *testing.T) {
+		var retryTarget string
+		vpc := &mockVPC{createErr: func(call int, proto *vpcv1.InstancePrototype) error {
+			if call == 1 {
+				return errHost
+			}
+			retryTarget, _ = groupTarget(proto)
+			return nil
+		}}
+		p := newProvider(vpc, "host-1", "group-1")
+
+		instance, err := p.createInstanceWithFallback(context.Background(), prototype(p))
+
+		require.NoError(t, err)
+		assert.Equal(t, "123", *instance.ID)
+		assert.Equal(t, 2, vpc.createCalls)
+		assert.Equal(t, "group-1", retryTarget)
+	})
+
+	t.Run("reports both errors when the fallback also fails", func(t *testing.T) {
+		vpc := &mockVPC{createErr: func(call int, _ *vpcv1.InstancePrototype) error {
+			if call == 1 {
+				return errHost
+			}
+			return errGroup
+		}}
+		p := newProvider(vpc, "host-1", "group-1")
+
+		instance, err := p.createInstanceWithFallback(context.Background(), prototype(p))
+
+		require.ErrorIs(t, err, errHost)
+		require.ErrorIs(t, err, errGroup)
+		assert.Nil(t, instance)
+		assert.Equal(t, 2, vpc.createCalls)
+	})
+}
+
+func TestPickIDInZone(t *testing.T) {
+
+	zones := map[string]string{
+		"host-a": "eu-gb-1",
+		"host-b": "eu-gb-2",
+		"host-c": "eu-gb-2",
+	}
+	getZone := func(id string) (string, error) {
+		zone, ok := zones[id]
+		if !ok {
+			return "", fmt.Errorf("unknown id %s", id)
+		}
+		return zone, nil
+	}
+
+	t.Run("returns the id in the zone", func(t *testing.T) {
+		id, err := pickIDInZone([]string{"host-a", "host-b"}, "eu-gb-1", getZone, "Dedicated Host")
+
+		require.NoError(t, err)
+		assert.Equal(t, "host-a", id)
+	})
+
+	t.Run("returns the first of several ids in the zone", func(t *testing.T) {
+		id, err := pickIDInZone([]string{"host-a", "host-b", "host-c"}, "eu-gb-2", getZone, "Dedicated Host")
+
+		require.NoError(t, err)
+		assert.Equal(t, "host-b", id)
+	})
+
+	t.Run("fails when no id is in the zone", func(t *testing.T) {
+		id, err := pickIDInZone([]string{"host-a", "host-b"}, "eu-de-1", getZone, "Dedicated Host")
+
+		require.ErrorContains(t, err, "no Dedicated Host in zone eu-de-1")
+		assert.Equal(t, "", id)
+	})
+
+	t.Run("fails when a zone lookup fails", func(t *testing.T) {
+		errLookup := errors.New("lookup failed")
+		failing := func(string) (string, error) { return "", errLookup }
+
+		id, err := pickIDInZone([]string{"host-a"}, "eu-gb-1", failing, "Dedicated Host")
+
+		require.ErrorIs(t, err, errLookup)
+		assert.Equal(t, "", id)
+	})
 }
 
 func TestDeleteInstance(t *testing.T) {

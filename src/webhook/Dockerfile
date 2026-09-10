@@ -1,6 +1,6 @@
 # Build the manager binary
-# golang:1.25.13
-FROM --platform=$BUILDPLATFORM golang@sha256:cbff9d1a9041b316010f2da6b701b6c0d597718cb90928c85eb597334a0d23d4 AS builder
+# golang:1.26.7
+FROM --platform=$BUILDPLATFORM golang@sha256:45a5f7a810238aabcbad211d70b9ae082022d96f7c7259e94041ad1b933575ac AS builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests

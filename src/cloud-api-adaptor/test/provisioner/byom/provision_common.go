@@ -5,6 +5,7 @@ package byom
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -43,6 +44,8 @@ type ByomProperties struct {
 	CaaImage             string
 	CaaImageTag          string
 	KindConfigFile       string
+	VerifyHostKeys       bool
+	HostKeys             map[string]string
 }
 
 var ByomProps = &ByomProperties{}
@@ -51,6 +54,11 @@ func initByomProperties(properties map[string]string) error {
 	poolSize, err := strconv.Atoi(properties["POOL_SIZE"])
 	if err != nil || poolSize <= 0 {
 		return fmt.Errorf("invalid POOL_SIZE value: %s", properties["POOL_SIZE"])
+	}
+
+	verifyHostKeys := false
+	if val, ok := properties["VERIFY_HOST_KEYS"]; ok {
+		verifyHostKeys = val == "true"
 	}
 
 	ByomProps = &ByomProperties{
@@ -68,6 +76,8 @@ func initByomProperties(properties map[string]string) error {
 		CaaImage:             properties["CAA_IMAGE"],
 		CaaImageTag:          properties["CAA_IMAGE_TAG"],
 		KindConfigFile:       properties["KIND_CONFIG_FILE"],
+		VerifyHostKeys:       verifyHostKeys,
+		HostKeys:             make(map[string]string),
 	}
 
 	// Set defaults
@@ -189,6 +199,17 @@ func (b *ByomProvisioner) CreatePodVMInstance(ctx context.Context, cfg *envconf.
 
 		poolIPs = append(poolIPs, ip)
 		log.Infof("Created container %d/%d: %s with IP: %s", i+1, ByomProps.PoolSize, containerName, ip)
+		if ByomProps.VerifyHostKeys {
+			hostKeys, err := b.getContainerHostKeys(containerName)
+			if err != nil {
+				return fmt.Errorf("failed to get host keys for container %s: %w", containerName, err)
+			}
+			for keyType, keyContent := range hostKeys {
+				keyFilename := fmt.Sprintf("%s_%s.pub", containerName, keyType)
+				ByomProps.HostKeys[keyFilename] = keyContent
+				log.Infof("Captured %s host key for container %s", keyType, containerName)
+			}
+		}
 	}
 
 	ByomProps.VMPoolIPs = strings.Join(poolIPs, ",")
@@ -302,19 +323,28 @@ func (b *ByomInstallChart) createSSHKeySecret(ctx context.Context, cfg *envconf.
 	secretName := "ssh-key-secret"
 	log.Infof("Creating SSH key secret from %s and %s", ByomProps.SSHSecretPrivKeyPath, ByomProps.SSHSecretPubKeyPath)
 
-	// Create the secret using kubectl
+	// Create or replace the secret using kubectl
 	args := []string{
 		"create", "secret", "generic", secretName,
 		"--from-file=id_rsa=" + ByomProps.SSHSecretPrivKeyPath,
 		"--from-file=id_rsa.pub=" + ByomProps.SSHSecretPubKeyPath,
 		"-n", b.Helm.Namespace,
+		"--dry-run=client", "-o", "yaml",
 	}
 	cmd := exec.Command("kubectl", args...)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
-	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	yamlOutput, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to create ssh-key-secret: %w, output: %s", err, string(stdoutStderr))
+		return fmt.Errorf("failed to generate ssh-key-secret yaml: %w, output: %s", err, string(yamlOutput))
+	}
+
+	applyCmd := exec.Command("kubectl", "apply", "-f", "-")
+	applyCmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
+	applyCmd.Stdin = strings.NewReader(string(yamlOutput))
+	stdoutStderr, err := applyCmd.CombinedOutput()
+	log.Tracef("%v, output: %s", applyCmd, stdoutStderr)
+	if err != nil {
+		return fmt.Errorf("failed to apply ssh-key-secret: %w, output: %s", err, string(stdoutStderr))
 	}
 	log.Infof("Created ssh-key-secret from SSH key files")
 	return nil
@@ -348,6 +378,16 @@ func (b *ByomInstallChart) Configure(ctx context.Context, cfg *envconf.Config, p
 		if properties[k] != "" {
 			b.Helm.OverrideProviderValues[v] = properties[k]
 		}
+	}
+
+	// If host keys are collected/enabled, pass them as providerSecrets.byom.hostKeys using JSON override
+	// to properly support filenames with dots (e.g. "vm1.pub")
+	if ByomProps.VerifyHostKeys && len(ByomProps.HostKeys) > 0 {
+		hostKeysJSON, err := json.Marshal(ByomProps.HostKeys)
+		if err != nil {
+			return fmt.Errorf("failed to marshal hostKeys to JSON: %w", err)
+		}
+		b.Helm.OverrideValueMap["providerSecrets.byom.hostKeys"] = string(hostKeysJSON)
 	}
 
 	return nil
@@ -442,6 +482,37 @@ func (b *ByomProvisioner) getContainerIPAddress(containerName string) (string, e
 	}
 
 	return "", fmt.Errorf("timeout waiting for container %s to get IP address", containerName)
+}
+
+func (b *ByomProvisioner) getContainerHostKeys(containerName string) (map[string]string, error) {
+	log.Infof("Getting SSH host keys for container %s", containerName)
+
+	hostKeys := make(map[string]string)
+	// In BYOM podvm container images, host keys are in /etc/ssh/
+	keyTypes := map[string]string{
+		"ed25519": "ssh_host_ed25519_key.pub",
+		"ecdsa":   "ssh_host_ecdsa_key.pub",
+		"rsa":     "ssh_host_rsa_key.pub",
+	}
+	for keyType, keyFile := range keyTypes {
+		cmd := exec.Command("docker", "exec", containerName, "cat", fmt.Sprintf("/etc/ssh/%s", keyFile))
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Warnf("Failed to read %s from container %s: %v", keyFile, containerName, err)
+			continue
+		}
+		keyContent := strings.TrimSpace(string(output))
+		if keyContent != "" {
+			log.Infof("Retrieved %s for container %s", keyFile, containerName)
+			hostKeys[keyType] = keyContent
+		}
+	}
+
+	if len(hostKeys) == 0 {
+		return nil, fmt.Errorf("no SSH host keys found in container %s", containerName)
+	}
+
+	return hostKeys, nil
 }
 
 func (b *ByomProvisioner) destroyContainer(containerName string) error {

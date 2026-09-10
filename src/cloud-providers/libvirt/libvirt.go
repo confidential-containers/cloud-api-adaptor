@@ -79,23 +79,7 @@ func createCloudInitISO(v *vmConfig) ([]byte, error) {
 	return createCloudInit([]byte(userData), []byte(metaData))
 }
 
-func checkDomainExistsByName(name string, libvirtClient *libvirtClient) (exist bool, err error) {
-
-	logger.Printf("Checking if instance (%s) exists", name)
-	domain, err := libvirtClient.connection.LookupDomainByName(name)
-	if err != nil {
-		if err.(libvirt.Error).Code == libvirt.ERR_NO_DOMAIN {
-			return false, nil
-		}
-		return false, err
-	}
-	defer freeDomain(domain, &err)
-
-	return true, nil
-
-}
-
-func uploadIso(isoData []byte, isoVolName string, libvirtClient *libvirtClient) (string, error) {
+func uploadIso(ctx context.Context, isoData []byte, isoVolName string, libvirtClient *libvirtClient) (string, error) {
 
 	logger.Printf("Uploading iso file: %s\n", isoVolName)
 	volumeDef := newDefVolume(isoVolName)
@@ -114,7 +98,7 @@ func uploadIso(isoData []byte, isoVolName string, libvirtClient *libvirtClient) 
 	volumeDef.Capacity.Value = size
 	volumeDef.Target.Format.Type = "raw"
 
-	return uploadVolume(libvirtClient, volumeDef, img)
+	return uploadVolume(ctx, libvirtClient, volumeDef, img)
 
 }
 
@@ -244,7 +228,7 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 		},
 	}
 
-	return &libvirtxml.Domain{
+	domain := &libvirtxml.Domain{
 		Type:        "kvm",
 		Name:        cfg.name,
 		Description: "This Virtual Machine is the peer-pod VM",
@@ -316,7 +300,19 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 				},
 			},
 		},
-	}, nil
+	}
+
+	switch vm.launchSecurityType {
+	case S390PV:
+		domain.LaunchSecurity = &libvirtxml.DomainLaunchSecurity{
+			S390PV: &libvirtxml.DomainLaunchSecurityS390PV{},
+		}
+		return domain, nil
+	case NoLaunchSecurity:
+		return domain, nil
+	default:
+		return nil, fmt.Errorf("launch security type %s is not supported for s390x", vm.launchSecurityType)
+	}
 }
 
 func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfig) (*libvirtxml.Domain, error) {
@@ -573,19 +569,35 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 
 	v.rootDiskSize = normalizeRootDiskSize(v.rootDiskSize)
 
-	exists, err := checkDomainExistsByName(v.name, libvirtClient)
-	if err != nil {
-		return nil, fmt.Errorf("Error in checking instance: %s", err)
+	logger.Printf("Checking if instance (%s) exists", v.name)
+	domain, err := libvirtClient.connection.LookupDomainByName(v.name)
+	if err == nil {
+		// Domain already exists. Populate instanceID and ips so the caller
+		// has a valid UUID for cleanup if anything goes wrong subsequently.
+		defer freeDomain(domain, &err)
+		uuid, uuidErr := domain.GetUUIDString()
+		if uuidErr != nil {
+			return nil, fmt.Errorf("existing domain UUID retrieval failed: %w", uuidErr)
+		}
+		v.instanceID = uuid
+		ips, ipsErr := getDomainIPs(domain)
+		if ipsErr != nil {
+			// UUID is valid; return the instance so the caller can clean up
+			// even if IP retrieval fails (e.g. domain is shut off).
+			logger.Printf("existing domain IP retrieval failed (uuid=%s): %v", uuid, ipsErr)
+			return &createDomainOutput{instance: v}, fmt.Errorf("existing domain IP retrieval failed: %w", ipsErr)
+		}
+		v.ips = ips
+		logger.Printf("Instance already exists (uuid=%s)", uuid)
+		return &createDomainOutput{instance: v}, nil
 	}
-	if exists {
-		logger.Printf("Instance already exists ")
-		return &createDomainOutput{
-			instance: v,
-		}, nil
+	var libvirtErr libvirt.Error
+	if !errors.As(err, &libvirtErr) || libvirtErr.Code != libvirt.ERR_NO_DOMAIN {
+		return nil, fmt.Errorf("error checking instance: %w", err)
 	}
 
 	rootVolName := v.name + "-root.qcow2"
-	err = createVolume(rootVolName, v.rootDiskSize, v.volName, libvirtClient)
+	err = createVolume(ctx, rootVolName, v.rootDiskSize, v.volName, libvirtClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error in creating volume: %s", err)
 	}
@@ -596,7 +608,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}
 
 	isoVolName := v.name + "-cloudinit.iso"
-	isoVolFile, err := uploadIso(cloudInitIso, isoVolName, libvirtClient)
+	isoVolFile, err := uploadIso(ctx, cloudInitIso, isoVolName, libvirtClient)
 	if err != nil {
 		return nil, fmt.Errorf("Error in uploading iso volume: %s", err)
 	}
@@ -739,7 +751,7 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID 
 		} else {
 			logger.Printf("domainDef %v", domainDef.Devices.Disks)
 			for _, diskPath := range getDeletableDiskPaths(&domainDef) {
-				err = deleteVolumeByPath(libvirtClient, diskPath)
+				err = deleteVolumeByPath(ctx, libvirtClient, diskPath)
 				if err != nil {
 					logger.Printf("Deleting volume (%s) returned error: %s", diskPath, err)
 					cleanupErrs = append(cleanupErrs, fmt.Sprintf("delete volume %s: %v", diskPath, err))

@@ -48,7 +48,8 @@ func formatTLSWarnings(tlsConfig *tlsutil.TLSConfig, disableTLS bool, tlsCipherS
 			warnings = append(warnings, fmt.Sprintf(
 				"TLS profile (TLS_MIN_VERSION=%s, TLS_CIPHER_SUITES=%s) is baked into peer pod VMs at creation time via user-data. "+
 					"Existing peer pods will not pick up profile changes until deleted and recreated.",
-				tlsConfig.MinTLSVersion, tlsCipherSuites))
+				tlsConfig.MinTLSVersion, tlsCipherSuites,
+			))
 		}
 	}
 	return warnings
@@ -67,13 +68,12 @@ func printHelp(out io.Writer) {
 }
 
 func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
-
 	if len(os.Args) < 2 {
 		printHelp(os.Stderr)
 		cmd.Exit(1)
 	}
 
-	//TODO: transition to better CLI library
+	// TODO: transition to better CLI library
 
 	cloudName := os.Args[1]
 
@@ -107,7 +107,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 	)
 
 	cmd.Parse(programName, os.Args[1:], func(flags *flag.FlagSet) {
-
 		flags.Usage = func() {
 			fmt.Fprintf(flags.Output(), "Usage: %s %s [options]\n\n", programName, cloudName)
 			fmt.Fprintf(flags.Output(), "The options for %q are:\n", cloudName)
@@ -136,6 +135,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		reg.BoolWithEnv(&cfg.serverConfig.EnableScratchSpace, "enable-scratch-space", false, "ENABLE_SCRATCH_SPACE", "Enable encrypted scratch space for pod VMs")
 		reg.BoolWithEnv(&cfg.networkConfig.ExternalNetViaPodVM, "ext-network-via-podvm", false, "EXTERNAL_NETWORK_VIA_PODVM", "[EXPERIMENTAL] Enable external networking via pod VM")
 		reg.CustomTypeWithEnv(&cfg.networkConfig.PodSubnetCIDRs, "pod-subnet-cidrs", "", "POD_SUBNET_CIDRS", "[EXPERIMENTAL] Comma separated CIDRs for local pod subnets")
+		reg.BoolWithEnv(&cfg.serverConfig.DeveloperMode, "developer-mode", false, "PODVM_DEVELOPER_MODE", "Enable developer mode for disabling Peer Pod VM auto delete")
 
 		// Flags without environment variable support
 		flags.BoolVar(&disableTLS, "disable-tls", false, "Disable TLS encryption - use it only for testing")

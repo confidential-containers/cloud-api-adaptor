@@ -86,6 +86,10 @@ providerConfigs:
     # (default: "")
     # PODS_DIR: ""
 
+    # Enable developer mode for disabling Peer Pod VM auto delete
+    # (default: "false")
+    # PODVM_DEVELOPER_MODE: "false"
+
     # Pod VM image name
     # (default: "")
     # PODVM_IMAGE_NAME: ""

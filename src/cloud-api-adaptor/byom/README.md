@@ -128,6 +128,9 @@ Configure **SSH_HOST_KEY_ALLOWLIST_DIR** to enable allowlist mode:
 - Only accepts pre-approved SSH host keys
 - Rejects connections from VMs not in the allowlist
 
+When deploying with Helm, see [step 3 of the Deployment Configuration](#deployment-configuration)
+— the chart sets `SSH_HOST_KEY_ALLOWLIST_DIR` automatically when host keys are configured.
+
 ## SSH Host Key Management
 
 ### Getting SSH Host Keys from pre-create VMs
@@ -207,6 +210,41 @@ providerSecrets:
 ```yaml
 VM_POOL_IPS: "<add your IPs here>"
 ```
+**Note:** Changes to `VM_POOL_IPS` require a restart of the Cloud API Adaptor (CAA) daemonset to take effect.
+
+3. *(Optional)* Configure the SSH host key allowlist.
+See [SSH Host Key Management](#ssh-host-key-management) for how to collect the keys.
+
+   **create mode** — add the collected host key files under `hostKeys` in `byom-secrets.yaml`:
+   ```yaml
+   providerSecrets:
+     byom:
+       id_rsa: |
+         -----BEGIN OPENSSH PRIVATE KEY-----
+         ...
+         -----END OPENSSH PRIVATE KEY-----
+       id_rsa_pub: |
+         ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@host
+       hostKeys:
+         vm1_ecdsa.pub: |
+           ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNT...
+         vm1_ed25519.pub: |
+           ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...
+   ```
+   **reference mode** — if you manage secrets externally, create the Secret yourself
+   and reference it by name in your values:
+   ```bash
+   kubectl create secret generic byom-ssh-host-keys \
+     --from-file=vm1_ecdsa.pub \
+     --from-file=vm1_ed25519.pub \
+     -n confidential-containers-system
+   ```
+   ```yaml
+   secrets:
+     mode: reference
+     existingByomHostKeySecretName: byom-ssh-host-keys
+   ```
+   The chart will mount the Secret and inject `SSH_HOST_KEY_ALLOWLIST_DIR` automatically.
 
 ## Deploy
 

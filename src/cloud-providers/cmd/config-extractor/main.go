@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 )
@@ -51,12 +52,26 @@ func main() {
 	}
 	execDir := filepath.Dir(execPath)
 
-	config := &ProviderConfig{Provider: provider, Flags: []FlagInfo{}}
+	// Parse provider-specific flags from manager.go
+	managerPath := filepath.Join(execDir, "..", provider, "manager.go")
+	managerNode, providerFlags, err := parseFile(managerPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Use the registered name from AddCloudProvider() as the canonical provider name.
+	registeredName := extractProviderName(managerNode)
+	if registeredName == "" {
+		registeredName = provider
+	}
+
+	config := &ProviderConfig{Provider: registeredName, Flags: []FlagInfo{}}
 
 	// Parse common flags if -include-shared is set
 	if *includeAll {
 		commonPath := filepath.Join(execDir, "..", "..", "cloud-api-adaptor", "cmd", "cloud-api-adaptor", "main.go")
-		commonFlags, err := parseFile(commonPath)
+		_, commonFlags, err := parseFile(commonPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: could not parse common flags: %v\n", err)
 		} else {
@@ -64,13 +79,6 @@ func main() {
 		}
 	}
 
-	// Parse provider-specific flags from manager.go
-	managerPath := filepath.Join(execDir, "..", provider, "manager.go")
-	providerFlags, err := parseFile(managerPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
 	config.Flags = append(config.Flags, providerFlags...)
 
 	// Filter secrets
@@ -97,11 +105,43 @@ func main() {
 	}
 }
 
-func parseFile(path string) ([]FlagInfo, error) {
+// extractProviderName inspects a parsed manager.go AST and returns the string
+// literal passed to AddCloudProvider(). Returns an empty string if not found.
+func extractProviderName(node *ast.File) string {
+	var name string
+	ast.Inspect(node, func(n ast.Node) bool {
+		if name != "" {
+			return false
+		}
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		// Match provider.AddCloudProvider("name", ...) or AddCloudProvider("name", ...)
+		var fn string
+		switch f := call.Fun.(type) {
+		case *ast.SelectorExpr:
+			fn = f.Sel.Name
+		case *ast.Ident:
+			fn = f.Name
+		}
+		if fn == "AddCloudProvider" && len(call.Args) >= 1 {
+			if lit, ok := call.Args[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				if unquoted, err := strconv.Unquote(lit.Value); err == nil {
+					name = unquoted
+				}
+			}
+		}
+		return true
+	})
+	return name
+}
+
+func parseFile(path string) (*ast.File, []FlagInfo, error) {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Parse all constants from the package directory
@@ -120,7 +160,7 @@ func parseFile(path string) ([]FlagInfo, error) {
 		return true
 	})
 
-	return flags, nil
+	return node, flags, nil
 }
 
 // parsePackageConstants extracts all const declarations from all .go files in the directory

@@ -71,6 +71,11 @@ spec:
           name: certs
           readOnly: true
 {{- end }}
+{{- if include "peerpods.hasByomHostKeys" . }}
+        - mountPath: /etc/byom/ssh-host-keys
+          name: byom-host-keys
+          readOnly: true
+{{- end }}
 {{- if include "peerpods.alibabacloudRrsaEnabled" . }}
         - mountPath: /var/run/secrets/ack.alibabacloud.com/rrsa-tokens
           name: rrsa-oidc-token
@@ -114,6 +119,12 @@ spec:
           defaultMode: 384
           optional: true
           secretName: {{ include "peerpods.tlsSecretName" . }}
+{{- end }}
+{{- if include "peerpods.hasByomHostKeys" . }}
+      - name: byom-host-keys
+        secret:
+          defaultMode: 292
+          secretName: {{ include "peerpods.byomHostKeySecretName" . }}
 {{- end }}
 {{- if include "peerpods.alibabacloudRrsaEnabled" . }}
       - name: rrsa-oidc-token

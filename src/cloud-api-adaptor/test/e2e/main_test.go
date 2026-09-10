@@ -139,13 +139,10 @@ func TestMain(m *testing.M) {
 
 		if shouldDeployKbs {
 			log.Info("Deploying kbs")
-			if keyBrokerService, err = pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg); err != nil {
+			if keyBrokerService, err = pv.NewKeyBrokerService(cfg); err != nil {
 				return ctx, err
 			}
 
-			if err = keyBrokerService.Deploy(ctx, cfg, props); err != nil {
-				return ctx, err
-			}
 			var kbsEndpoint string
 			if kbsEndpoint, err = keyBrokerService.GetKbsEndpoint(ctx, cfg); err != nil {
 				return ctx, err
