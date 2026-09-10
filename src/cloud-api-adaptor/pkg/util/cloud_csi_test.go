@@ -84,30 +84,44 @@ func TestGetCSIVolumesForPod_CloudVolumePathTakesPrecedence(t *testing.T) {
 }
 
 func TestGetCSIVolumesForPod_PodUIDFiltering(t *testing.T) {
-	dir := setupDirectVolumesDir(t)
-
-	writeMountInfo(t, dir,
-		"/var/lib/kubelet/pods/pod-uid-AAA/volumes/kubernetes.io~csi/pvc-1/mount",
-		map[string]interface{}{"device": "disk-A", "fstype": "ext4"})
-
-	writeMountInfo(t, dir,
-		"/var/lib/kubelet/pods/pod-uid-BBB/volumes/kubernetes.io~csi/pvc-2/mount",
-		map[string]interface{}{"device": "disk-B", "fstype": "ext4"})
-
-	writeMountInfo(t, dir,
-		"/var/lib/kubelet/pods/pod-uid-AAA/volumes/kubernetes.io~csi/pvc-3/mount",
-		map[string]interface{}{"device": "disk-C", "fstype": "ext4"})
-
-	annotations := map[string]string{
-		cri.SandboxUID: "pod-uid-AAA",
+	tests := []struct {
+		name        string
+		annotations map[string]string
+	}{
+		{
+			name:        "containerd sandbox uid",
+			annotations: map[string]string{cri.SandboxUID: "pod-uid-AAA"},
+		},
+		{
+			name:        "cri-o sandbox name",
+			annotations: map[string]string{cri.SandboxName: "k8s_my-pod_default_pod-uid-AAA_0"},
+		},
 	}
-	volumes := GetCSIVolumesForPod(annotations)
-	require.Len(t, volumes, 2)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := setupDirectVolumesDir(t)
 
-	diskIDs := []string{volumes[0].DiskID, volumes[1].DiskID}
-	assert.Contains(t, diskIDs, "disk-A")
-	assert.Contains(t, diskIDs, "disk-C")
-	assert.NotContains(t, diskIDs, "disk-B")
+			writeMountInfo(t, dir,
+				"/var/lib/kubelet/pods/pod-uid-AAA/volumes/kubernetes.io~csi/pvc-1/mount",
+				map[string]interface{}{"device": "disk-A", "fstype": "ext4"})
+
+			writeMountInfo(t, dir,
+				"/var/lib/kubelet/pods/pod-uid-BBB/volumes/kubernetes.io~csi/pvc-2/mount",
+				map[string]interface{}{"device": "disk-B", "fstype": "ext4"})
+
+			writeMountInfo(t, dir,
+				"/var/lib/kubelet/pods/pod-uid-AAA/volumes/kubernetes.io~csi/pvc-3/mount",
+				map[string]interface{}{"device": "disk-C", "fstype": "ext4"})
+
+			volumes := GetCSIVolumesForPod(tt.annotations)
+			require.Len(t, volumes, 2)
+
+			diskIDs := []string{volumes[0].DiskID, volumes[1].DiskID}
+			assert.Contains(t, diskIDs, "disk-A")
+			assert.Contains(t, diskIDs, "disk-C")
+			assert.NotContains(t, diskIDs, "disk-B")
+		})
+	}
 }
 
 func TestGetCSIVolumesForPod_EmptyPodUIDReturnsAll(t *testing.T) {
