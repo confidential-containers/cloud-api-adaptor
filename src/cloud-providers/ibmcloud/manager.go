@@ -5,6 +5,7 @@ package ibmcloud
 
 import (
 	"flag"
+	"time"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 )
@@ -47,6 +48,8 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.SecurityGroupIds, "security-group-ids", "", "IBMCLOUD_SECURITY_GROUP_IDS", "List of additional Security Group IDs to be used for the Pod VM, comma separated (cluster security group is automatically added)")
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.DedicatedHostIDs, "dedicated-host-ids", "", "IBMCLOUD_DEDICATED_HOST_IDS", "List of Dedicated Host IDs, provide one from each Zone")
 	reg.CustomTypeWithEnv(&ibmcloudVPCConfig.DedicatedHostGroupIDs, "dedicated-host-group-ids", "", "IBMCLOUD_DEDICATED_HOST_GROUP_IDS", "List of Dedicated Host Group IDs, provide one from each Zone")
+
+	reg.DurationWithEnv(&ibmcloudVPCConfig.VolumeAttachTimeout, "volume-attach-timeout", 2*time.Minute, "IBMCLOUD_VOLUME_ATTACH_TIMEOUT", "Time to wait for a persistent volume to detach from the previous Pod VM and attach to the new one")
 }
 
 func (*Manager) LoadEnv() {

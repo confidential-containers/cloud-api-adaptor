@@ -81,7 +81,7 @@ func (cfg *Config) Setup() (cmd.Starter, error) {
 		cfg.tlsConfig = &tlsConfig
 	}
 
-	interceptor := interceptor.NewInterceptor(cfg.kataAgentSocketPath, cfg.podNamespace)
+	interceptor := interceptor.NewInterceptor(cfg.kataAgentSocketPath, cfg.podNamespace, cfg.daemonConfig.CloudProvider)
 
 	podNode := podnetwork.NewPodNode(cfg.podNamespace, cfg.HostInterface, cfg.daemonConfig.PodNetwork)
 
