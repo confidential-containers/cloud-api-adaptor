@@ -78,6 +78,10 @@ providerConfigs:
     # (default: "")
     # IBMCLOUD_SSH_KEY_ID: ""
 
+    # Time to wait for a persistent volume to detach from the previous Pod VM and attach to the new one
+    # (default: "")
+    # IBMCLOUD_VOLUME_ATTACH_TIMEOUT: ""
+
     # IBM Cloud VPC Service URL
     # (default: "")
     # IBMCLOUD_VPC_ENDPOINT: ""
