@@ -108,7 +108,7 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 	// name), so the LUN index here is consistent with the cloud provider's
 	// disk attachment order.
 	cloudVolumes := make(map[string]util.CloudVolumeAnnotation)
-	podUID := req.OCI.Annotations["io.kubernetes.cri.sandbox-uid"]
+	podUID := util.GetPodUID(req.OCI.Annotations)
 
 	dirEntries, dirErr := os.ReadDir(util.KataDirectVolumesDir)
 	if dirErr == nil {
