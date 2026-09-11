@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"strings"
 
+	"cloud.google.com/go/auth"
 	"cloud.google.com/go/auth/credentials"
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
@@ -31,10 +32,24 @@ const maxInstanceNameLen = 63
 type gcpProvider struct {
 	serviceConfig   *Config
 	instancesClient *compute.InstancesClient
+	authCreds       *auth.Credentials
 }
 
 func (p *gcpProvider) ConfigVerifier() error {
 	return nil
+}
+
+// authOptions returns the client options needed for GCP API clients to use
+// the explicit credentials from GCP_CREDENTIALS, if any were configured.
+// Without this, clients silently fall back to Application Default
+// Credentials (the node's own service account), which can fail with
+// "insufficient authentication scopes" when that account lacks compute
+// scope.
+func (p *gcpProvider) authOptions() []option.ClientOption {
+	if p.authCreds == nil {
+		return nil
+	}
+	return []option.ClientOption{option.WithAuthCredentials(p.authCreds)}
 }
 
 func NewProvider(config *Config) (provider.Provider, error) {
@@ -50,16 +65,13 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		if err != nil {
 			return nil, fmt.Errorf("configuration error when using creds: %s", err)
 		}
-		provider.instancesClient, err = compute.NewInstancesRESTClient(context.TODO(), option.WithAuthCredentials(creds))
-		if err != nil {
-			return nil, fmt.Errorf("NewInstancesRESTClient with credentials error: %s", err)
-		}
-	} else {
-		var err error
-		provider.instancesClient, err = compute.NewInstancesRESTClient(context.TODO())
-		if err != nil {
-			return nil, fmt.Errorf("NewInstancesRESTClient error: %s", err)
-		}
+		provider.authCreds = creds
+	}
+
+	var err error
+	provider.instancesClient, err = compute.NewInstancesRESTClient(context.TODO(), provider.authOptions()...)
+	if err != nil {
+		return nil, fmt.Errorf("NewInstancesRESTClient error: %s", err)
 	}
 
 	if err := provider.updateInstanceSizeSpecList(); err != nil {
@@ -160,7 +172,7 @@ func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*r
 }
 
 func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, error) {
-	client, err := compute.NewImagesRESTClient(ctx)
+	client, err := compute.NewImagesRESTClient(ctx, p.authOptions()...)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create compute client: %w", err)
 	}
@@ -212,7 +224,7 @@ func (p *gcpProvider) selectMachineType(ctx context.Context, spec provider.Insta
 }
 
 func (p *gcpProvider) updateInstanceSizeSpecList() error {
-	machineTypeClient, err := compute.NewMachineTypesRESTClient(context.TODO())
+	machineTypeClient, err := compute.NewMachineTypesRESTClient(context.TODO(), p.authOptions()...)
 	if err != nil {
 		return err
 	}
@@ -452,9 +464,10 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	// Binding all the tagValues to the instance that was already created
 	// Specific endpoint is needed for tag bindings because global endpoint
 	// doesn't work for zonal resources.
-	tagBindingsClient, err := crm.NewTagBindingsClient(ctx,
+	tagBindingsOpts := append(p.authOptions(),
 		option.WithEndpoint(fmt.Sprintf("%s-cloudresourcemanager.googleapis.com:443", p.serviceConfig.Zone)),
 	)
+	tagBindingsClient, err := crm.NewTagBindingsClient(ctx, tagBindingsOpts...)
 	if err != nil {
 		return instance, fmt.Errorf("failed to create bind client: %w", err)
 	}
