@@ -70,7 +70,7 @@ func TestNewInterceptor(t *testing.T) {
 	t.Run("creates interceptor with valid socket name", func(t *testing.T) {
 		socketName := "dummy.sock"
 
-		i := NewInterceptor(socketName, "")
+		i := NewInterceptor(socketName, "", "")
 		require.NotNil(t, i, "Expected non-nil interceptor")
 
 		// Verify the interceptor is properly initialized
@@ -81,7 +81,7 @@ func TestNewInterceptor(t *testing.T) {
 		socketName := "agent.sock"
 		nsPath := "/run/netns/test"
 
-		i := NewInterceptor(socketName, nsPath)
+		i := NewInterceptor(socketName, nsPath, "")
 		require.NotNil(t, i, "Expected non-nil interceptor")
 
 		// Verify the interceptor is properly initialized
@@ -93,7 +93,7 @@ func TestNewInterceptor(t *testing.T) {
 	t.Run("creates interceptor with empty namespace path", func(t *testing.T) {
 		socketName := "agent.sock"
 
-		i := NewInterceptor(socketName, "")
+		i := NewInterceptor(socketName, "", "")
 		require.NotNil(t, i, "Expected non-nil interceptor")
 
 		interceptorImpl, ok := i.(*interceptor)
@@ -1214,6 +1214,99 @@ func TestFindLibvirtDataDisk(t *testing.T) {
 		if err != nil {
 			assert.Contains(t, err.Error(), "not found")
 		}
+	})
+}
+
+// fakeBlockDevices points the device guards at a sysfs tree holding the given
+// whole disks (with their partitions) and a mounts table with the given lines.
+func fakeBlockDevices(t *testing.T, disks map[string][]string, mounts ...string) {
+	t.Helper()
+	dir := t.TempDir()
+	sysBlock := filepath.Join(dir, "block")
+	for disk, partitions := range disks {
+		require.NoError(t, os.MkdirAll(filepath.Join(sysBlock, disk, "queue"), 0o755))
+		for _, partition := range partitions {
+			require.NoError(t, os.MkdirAll(filepath.Join(sysBlock, disk, partition), 0o755))
+		}
+	}
+	mountsPath := filepath.Join(dir, "mounts")
+	require.NoError(t, os.WriteFile(mountsPath, []byte(strings.Join(mounts, "\n")+"\n"), 0o644))
+
+	origSysBlock, origMounts := sysBlockDir, procMountsPath
+	sysBlockDir, procMountsPath = sysBlock, mountsPath
+	t.Cleanup(func() { sysBlockDir, procMountsPath = origSysBlock, origMounts })
+}
+
+func TestCheckDataDiskTarget(t *testing.T) {
+	fakeBlockDevices(t,
+		map[string][]string{
+			"vda": {"vda1", "vda2"},
+			"vdb": nil,
+			"vdc": nil,
+			"vdd": {"vdd1"},
+		},
+		"/dev/vda2 / ext4 rw 0 0",
+		"/dev/vda1 /boot ext4 rw 0 0",
+		"/dev/vdb /run/cloud-volumes/vol-0 ext4 rw 0 0",
+	)
+
+	t.Run("accepts an unused whole disk", func(t *testing.T) {
+		assert.NoError(t, checkDataDiskTarget("/dev/vdc"))
+	})
+
+	t.Run("accepts a disk already mounted as a cloud volume", func(t *testing.T) {
+		assert.NoError(t, checkDataDiskTarget("/dev/vdb"))
+	})
+
+	t.Run("rejects the disk holding the root filesystem", func(t *testing.T) {
+		assert.ErrorContains(t, checkDataDiskTarget("/dev/vda"), "/dev/vda is mounted at /")
+	})
+
+	t.Run("rejects a partitioned disk", func(t *testing.T) {
+		assert.ErrorContains(t, checkDataDiskTarget("/dev/vdd"), "/dev/vdd has partitions")
+	})
+
+	t.Run("rejects a partition or an unknown device", func(t *testing.T) {
+		for _, target := range []string{"/dev/vda1", "/dev/vdz", "/dev/null"} {
+			assert.ErrorContains(t, checkDataDiskTarget(target), target+" is not a whole disk")
+		}
+	})
+}
+
+func TestFindDataDiskByPath(t *testing.T) {
+	t.Run("resolves an existing device", func(t *testing.T) {
+		fakeBlockDevices(t, map[string][]string{"null": nil})
+		device, err := findDataDiskByPath(t.Context(), "/dev/null")
+		require.NoError(t, err)
+		assert.Equal(t, "/dev/null", device)
+	})
+
+	t.Run("refuses a resolved device that is not a data disk", func(t *testing.T) {
+		fakeBlockDevices(t, map[string][]string{"null": nil}, "/dev/null / ext4 rw 0 0")
+		_, err := findDataDiskByPath(t.Context(), "/dev/null")
+		require.ErrorContains(t, err, "device /dev/null -> /dev/null: /dev/null is mounted at /")
+	})
+
+	t.Run("rejects paths outside /dev", func(t *testing.T) {
+		for _, path := range []string{"", "disk", "/etc/passwd", "/dev/../etc/passwd", "/dev/disk/by-id/../../vda"} {
+			_, err := findDataDiskByPath(t.Context(), path)
+			assert.ErrorContains(t, err, "invalid device path", path)
+		}
+	})
+
+	t.Run("fails without positional fallback when the link is missing", func(t *testing.T) {
+		t.Setenv("CAA_DISK_DETECT_MAX_ATTEMPTS", "1")
+		_, err := findDataDiskByPath(t.Context(), "/dev/disk/by-id/virtio-does-not-exist")
+		require.ErrorContains(t, err, "not found after 1 attempts")
+	})
+
+	t.Run("honors cancellation between attempts", func(t *testing.T) {
+		t.Setenv("CAA_DISK_DETECT_MAX_ATTEMPTS", "2")
+		t.Setenv("CAA_DISK_DETECT_RETRY_DELAY", "10s")
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		_, err := findDataDiskByPath(ctx, "/dev/disk/by-id/virtio-does-not-exist")
+		require.ErrorIs(t, err, context.Canceled)
 	})
 }
 

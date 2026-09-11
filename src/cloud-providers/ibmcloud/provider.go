@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"net/netip"
 	"os"
 	"time"
@@ -33,12 +34,23 @@ const (
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/ibmcloud] ", log.LstdFlags|log.Lmsgprefix)
-var errNotReady = errors.New("address not ready")
+var (
+	errNotReady       = errors.New("address not ready")
+	errVolumeNotReady = errors.New("volume not attached")
+)
 
 // queryInterval is a variable so tests can shorten the wait between polls
 var queryInterval = 2 * time.Second
 
 const maxInstanceNameLen = 63
+
+// VPC exposes the first 20 characters of an attachment's device ID as the
+// virtio serial, so the guest sees /dev/disk/by-id/virtio-<20 chars>; this is
+// the same derivation the IBM block CSI driver relies on.
+const (
+	virtioDiskByIDPrefix = "/dev/disk/by-id/virtio-"
+	virtioSerialLen      = 20
+)
 
 type vpcV1 interface {
 	CreateInstanceWithContext(context.Context, *vpcv1.CreateInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error)
@@ -46,6 +58,7 @@ type vpcV1 interface {
 	DeleteInstanceWithContext(context.Context, *vpcv1.DeleteInstanceOptions) (*core.DetailedResponse, error)
 	GetInstanceProfileWithContext(context.Context, *vpcv1.GetInstanceProfileOptions) (*vpcv1.InstanceProfile, *core.DetailedResponse, error)
 	GetImageWithContext(ctx context.Context, getImageOptions *vpcv1.GetImageOptions) (*vpcv1.Image, *core.DetailedResponse, error)
+	GetVolumeWithContext(ctx context.Context, getVolumeOptions *vpcv1.GetVolumeOptions) (*vpcv1.Volume, *core.DetailedResponse, error)
 }
 
 type globalTaggingV1 interface {
@@ -351,7 +364,7 @@ func (p *ibmcloudVPCProvider) getAttachTagOptions(vpcInstanceCRN *string) (*glob
 	return options, nil
 }
 
-func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageID string) *vpcv1.InstancePrototype {
+func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, instanceProfile, imageID string, volumes []provider.CloudVolume) *vpcv1.InstancePrototype {
 
 	securityGroups := make([]vpcv1.SecurityGroupIdentityIntf, 0, len(p.serviceConfig.SecurityGroupIds))
 	for i := range p.serviceConfig.SecurityGroupIds {
@@ -408,6 +421,16 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 		}
 	}
 
+	// the volume belongs to the PVC, so it must outlive the pod VM
+	for _, volume := range volumes {
+		prototype.VolumeAttachments = append(prototype.VolumeAttachments, vpcv1.VolumeAttachmentPrototype{
+			DeleteVolumeOnInstanceDelete: core.BoolPtr(false),
+			Volume: &vpcv1.VolumeAttachmentPrototypeVolumeVolumeIdentity{
+				ID: core.StringPtr(volume.DiskID),
+			},
+		})
+	}
+
 	// When both dedicated host id and group id provided the (more specific) dedicated host id will be used as the placement target
 	if p.serviceConfig.selectedDedicatedHostGroupID != "" {
 		prototype.PlacementTarget = &vpcv1.InstancePlacementTargetPrototypeDedicatedHostGroupIdentityDedicatedHostGroupIdentityByID{ID: &p.serviceConfig.selectedDedicatedHostGroupID}
@@ -418,6 +441,38 @@ func (p *ibmcloudVPCProvider) getInstancePrototype(instanceName, userData, insta
 	}
 
 	return prototype
+}
+
+// getVolumeDevices maps each requested volume to its device path in the guest.
+// The attachment carries no device until it reaches the attached state, so
+// errVolumeNotReady asks the caller to poll again.
+func getVolumeDevices(instance *vpcv1.Instance, volumes []provider.CloudVolume) (map[string]string, error) {
+
+	if len(volumes) == 0 {
+		return nil, nil
+	}
+
+	deviceIDs := make(map[string]string, len(instance.VolumeAttachments))
+	for _, va := range instance.VolumeAttachments {
+		if va.Volume == nil || va.Volume.ID == nil || va.Device == nil || va.Device.ID == nil {
+			continue
+		}
+		deviceIDs[*va.Volume.ID] = *va.Device.ID
+	}
+
+	devices := make(map[string]string, len(volumes))
+	for _, v := range volumes {
+		deviceID, ok := deviceIDs[v.DiskID]
+		if !ok {
+			return nil, errVolumeNotReady
+		}
+		if len(deviceID) < virtioSerialLen {
+			return nil, fmt.Errorf("volume %q has an unexpected device ID %q", v.DiskID, deviceID)
+		}
+		devices[v.DiskID] = virtioDiskByIDPrefix + deviceID[:virtioSerialLen]
+	}
+
+	return devices, nil
 }
 
 func getIPs(instance *vpcv1.Instance, instanceID string, numInterfaces int) ([]netip.Addr, error) {
@@ -471,6 +526,10 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		return nil, err
 	}
 
+	if err := p.validateVolumes(ctx, spec.Volumes); err != nil {
+		return nil, err
+	}
+
 	imageID := spec.Image
 	if imageID != "" {
 		logger.Printf("Choosing %s from annotation as the IBM Cloud Image for the PodVM image", imageID)
@@ -481,7 +540,7 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		}
 	}
 
-	prototype := p.getInstancePrototype(instanceName, userData, instanceProfile, imageID)
+	prototype := p.getInstancePrototype(instanceName, userData, instanceProfile, imageID, spec.Volumes)
 
 	logger.Printf("CreateInstance: name: %q", instanceName)
 
@@ -501,19 +560,40 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	}
 
 	var ips []netip.Addr
+	var volumeDevices map[string]string
 
-	for retries := 0; retries < maxRetries; retries++ {
+	// addresses are assigned within a few polls; attaching a volume can take
+	// longer, so it gets its own budget
+	attachDeadline := time.Now().Add(p.serviceConfig.VolumeAttachTimeout)
 
-		ips, err = getIPs(vpcInstance, instanceID, numInterfaces)
+	for retries := 0; ; retries++ {
 
+		err = nil
+		if ips == nil {
+			ips, err = getIPs(vpcInstance, instanceID, numInterfaces)
+		}
+		if err == nil {
+			volumeDevices, err = getVolumeDevices(vpcInstance, spec.Volumes)
+		}
 		if err == nil {
 			break
 		}
-		if err != errNotReady {
+		switch {
+		case errors.Is(err, errNotReady):
+			if retries == maxRetries {
+				return instance, fmt.Errorf("instance %s network addresses not ready after %d attempts: %w", instanceID, maxRetries, err)
+			}
+		case errors.Is(err, errVolumeNotReady):
+			if !time.Now().Before(attachDeadline) {
+				return instance, fmt.Errorf("instance %s volumes not attached after %s: %w", instanceID, p.serviceConfig.VolumeAttachTimeout, err)
+			}
+		default:
 			return instance, err
 		}
 
-		time.Sleep(queryInterval)
+		if err := sleepCtx(ctx, queryInterval); err != nil {
+			return instance, err
+		}
 
 		result, response, getErr := p.vpc.GetInstanceWithContext(ctx, &vpcv1.GetInstanceOptions{ID: &instanceID})
 		if getErr != nil {
@@ -522,11 +602,9 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 		}
 		vpcInstance = result
 	}
-	if err != nil {
-		return instance, fmt.Errorf("instance %s network addresses not ready after %d attempts: %w", instanceID, maxRetries, err)
-	}
 
 	instance.IPs = ips
+	instance.VolumeDevices = volumeDevices
 
 	options, err := p.getAttachTagOptions(vpcInstance.CRN)
 	if err != nil {
@@ -542,6 +620,66 @@ func (p *ibmcloudVPCProvider) CreateInstance(ctx context.Context, podName, sandb
 	return instance, nil
 }
 
+// validateVolumes checks that every volume exists, is in the instance zone,
+// and is unattached. DeleteInstance returns before VPC releases the volumes
+// of the old pod VM, so a volume that is still attached is polled for up to
+// VolumeAttachTimeout before it is reported as an error.
+func (p *ibmcloudVPCProvider) validateVolumes(ctx context.Context, volumes []provider.CloudVolume) error {
+
+	deadline := time.Now().Add(p.serviceConfig.VolumeAttachTimeout)
+
+	for _, v := range volumes {
+		if v.DiskID == "" {
+			return fmt.Errorf("volume %q has an empty ID", v.DiskID)
+		}
+
+		for {
+			volume, resp, err := p.vpc.GetVolumeWithContext(ctx, &vpcv1.GetVolumeOptions{ID: core.StringPtr(v.DiskID)})
+			if err != nil {
+				return fmt.Errorf("failed to get volume %q: %w and the response is %s", v.DiskID, err, resp)
+			}
+
+			zone := ""
+			if volume.Zone != nil && volume.Zone.Name != nil {
+				zone = *volume.Zone.Name
+			}
+			if zone != p.serviceConfig.ZoneName {
+				return fmt.Errorf("volume %q is in zone %q, expected %q", v.DiskID, zone, p.serviceConfig.ZoneName)
+			}
+
+			state := ""
+			if volume.AttachmentState != nil {
+				state = *volume.AttachmentState
+			}
+			if state == vpcv1.VolumeAttachmentStateUnattachedConst {
+				break
+			}
+			if !time.Now().Before(deadline) {
+				return fmt.Errorf("volume %q has attachment state %q, expected %q", v.DiskID, state, vpcv1.VolumeAttachmentStateUnattachedConst)
+			}
+
+			logger.Printf("volume %q has attachment state %q, waiting for it to detach", v.DiskID, state)
+			if err := sleepCtx(ctx, queryInterval); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// sleepCtx waits for d, returning early with ctx.Err() when ctx ends first.
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
 func (p *ibmcloudVPCProvider) createInstanceWithFallback(ctx context.Context, prototype *vpcv1.InstancePrototype) (*vpcv1.Instance, error) {
 
 	dedicatedHostID := p.serviceConfig.selectedDedicatedHostID
@@ -554,8 +692,10 @@ func (p *ibmcloudVPCProvider) createInstanceWithFallback(ctx context.Context, pr
 		return inst, nil
 	}
 
-	// Fallback if both IDs exist
-	if dedicatedHostID != "" && dedicatedHostGroupID != "" {
+	// a 4xx response means VPC rejected the request without creating anything;
+	// a transport or server error can leave an instance running with the
+	// volumes attached, which the fallback create would then fail on
+	if dedicatedHostID != "" && dedicatedHostGroupID != "" && isClientError(resp) && ctx.Err() == nil {
 		logger.Printf("warning, creation failed on dedicated host %q: %v; retrying on dedicated host group %q", dedicatedHostID, err, dedicatedHostGroupID)
 
 		prototype.PlacementTarget =
@@ -578,6 +718,10 @@ func (p *ibmcloudVPCProvider) createInstanceWithFallback(ctx context.Context, pr
 	}
 
 	return nil, fmt.Errorf("failed to create an instance: %w and the response is %s", err, resp)
+}
+
+func isClientError(resp *core.DetailedResponse) bool {
+	return resp != nil && resp.StatusCode >= http.StatusBadRequest && resp.StatusCode < http.StatusInternalServerError
 }
 
 // Select an instance profile based on the memory and vcpu requirements

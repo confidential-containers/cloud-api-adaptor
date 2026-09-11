@@ -36,6 +36,7 @@ const (
 )
 
 type ServerConfig struct {
+	CloudProvider           string
 	TLSConfig               *tlsutil.TLSConfig
 	SocketPath              string
 	PauseImage              string
@@ -235,10 +236,11 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 	agentProxy := s.proxyFactory.New(serverName, socketPath)
 
 	daemonConfig := forwarder.Config{
-		PodNamespace: namespace,
-		PodName:      pod,
-		PodNetwork:   podNetworkConfig,
-		TLSClientCA:  string(agentProxy.ClientCA()),
+		PodNamespace:  namespace,
+		PodName:       pod,
+		PodNetwork:    podNetworkConfig,
+		TLSClientCA:   string(agentProxy.ClientCA()),
+		CloudProvider: s.serverConfig.CloudProvider,
 	}
 
 	if s.serverConfig.TLSConfig != nil {
@@ -412,7 +414,7 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	go func() {
 		defer close(errCh)
 
-		if err := sandbox.agentProxy.Start(context.Background(), serverURL); err != nil {
+		if err := sandbox.agentProxy.Start(context.Background(), serverURL, instance.VolumeDevices); err != nil {
 			logger.Printf("error running agent proxy: %v", err)
 			errCh <- err
 		}

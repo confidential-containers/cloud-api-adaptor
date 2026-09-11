@@ -41,6 +41,9 @@ func TestCloudVolumes_SingleVolumeAnnotation(t *testing.T) {
 
 	service, cleanup := setupMockAgentAndService(t)
 	defer cleanup()
+	service.volumeDevices = map[string]string{
+		"/subscriptions/sub/disks/csi-vol-pvc-test": "/dev/disk/by-id/virtio-0757-9c534b6c-b446-4",
+	}
 
 	podUID := "pod-uid-111"
 	volPath := "/var/lib/kubelet/pods/" + podUID + "/volumes/kubernetes.io~csi/pvc-test/mount"
@@ -77,6 +80,7 @@ func TestCloudVolumes_SingleVolumeAnnotation(t *testing.T) {
 	assert.Equal(t, "/mnt/data", cloudVolumes["vol-0"]["mount_point"])
 	assert.Equal(t, "ext4", cloudVolumes["vol-0"]["fs_type"])
 	assert.Equal(t, "0", cloudVolumes["vol-0"]["lun"])
+	assert.Equal(t, "/dev/disk/by-id/virtio-0757-9c534b6c-b446-4", cloudVolumes["vol-0"]["device"])
 	assert.Equal(t, "/subscriptions/sub/disks/csi-vol-pvc-test", cloudVolumes["vol-0"]["disk_id"])
 }
 
@@ -331,6 +335,42 @@ func TestCloudVolumes_SkipsVolumeWithNoDiskID(t *testing.T) {
 
 	_, ok := req.OCI.Annotations["io.confidentialcontainers.org.cloud_volumes"]
 	assert.False(t, ok, "annotation should not be set when volume has no disk ID")
+}
+
+func TestCloudVolumes_FailsWhenProviderReportsNoDevice(t *testing.T) {
+	dir := t.TempDir()
+	overrideKataDirectVolumesDir(t, dir)
+
+	service, cleanup := setupMockAgentAndService(t)
+	defer cleanup()
+	service.volumeDevices = map[string]string{
+		"r006-other-volume": "/dev/disk/by-id/virtio-0757-9c534b6c-b446-4",
+	}
+
+	podUID := "pod-uid-777"
+	volPath := "/var/lib/kubelet/pods/" + podUID + "/volumes/kubernetes.io~csi/pvc-unmapped/mount"
+
+	writeTestMountInfo(t, dir, volPath, map[string]interface{}{
+		"device": "r006-unmapped-volume",
+		"fstype": "ext4",
+	})
+
+	req := newCreateContainerRequest("test-unmapped-device").
+		withAnnotations(map[string]string{
+			"io.kubernetes.cri.sandbox-uid": podUID,
+		}).
+		withMounts(&pb.Mount{
+			Destination: "/mnt/data",
+			Source:      volPath,
+			Type:        "bind",
+		}).
+		build()
+
+	_, err := service.CreateContainer(context.Background(), req)
+	require.ErrorContains(t, err, "did not report a device for volume r006-unmapped-volume")
+
+	_, ok := req.OCI.Annotations["io.confidentialcontainers.org.cloud_volumes"]
+	assert.False(t, ok, "annotation should not be set when a device is missing")
 }
 
 func TestCloudVolumes_SkipsInvalidMountInfoJSON(t *testing.T) {

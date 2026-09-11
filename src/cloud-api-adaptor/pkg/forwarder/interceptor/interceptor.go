@@ -37,6 +37,12 @@ const (
 	cdhSocketPath        = "/run/confidential-containers/cdh.sock"
 )
 
+// kernel views of block devices and mounts; tests point these at fixtures
+var (
+	sysBlockDir    = "/sys/block"
+	procMountsPath = "/proc/mounts"
+)
+
 var allowedFSTypes = map[string]bool{
 	"ext4": true,
 	"ext3": true,
@@ -58,8 +64,9 @@ type cloudMount struct {
 type interceptor struct {
 	agentproto.Redirector
 
-	nsPath      string
-	cloudMounts []cloudMount
+	nsPath        string
+	cloudProvider string
+	cloudMounts   []cloudMount
 }
 
 func (i *interceptor) unmountCloudVolumes() {
@@ -131,7 +138,10 @@ func dial(ctx context.Context, agentSocket string) (net.Conn, error) {
 	return conn, nil
 }
 
-func NewInterceptor(agentSocket, nsPath string) Interceptor {
+// NewInterceptor wraps the kata agent at agentSocket. cloudProvider is the
+// cloud-api-adaptor provider name; leave it empty to detect the cloud from
+// device paths when locating attached volumes.
+func NewInterceptor(agentSocket, nsPath, cloudProvider string) Interceptor {
 
 	agentDialer := func(ctx context.Context) (net.Conn, error) {
 		return dial(ctx, agentSocket)
@@ -140,8 +150,9 @@ func NewInterceptor(agentSocket, nsPath string) Interceptor {
 	redirector := agentproto.NewRedirector(agentDialer)
 
 	return &interceptor{
-		Redirector: redirector,
-		nsPath:     nsPath,
+		Redirector:    redirector,
+		nsPath:        nsPath,
+		cloudProvider: cloudProvider,
 	}
 }
 
@@ -197,8 +208,12 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 				return nil, fmt.Errorf("cloud volume %s has invalid lun %q: %w", volName, lunStr, err)
 			}
 
-			diskID := volInfo.DiskID
-			device, err := findDataDiskDevice(lunIdx, diskID)
+			var device string
+			if volInfo.Device != "" {
+				device, err = findDataDiskByPath(ctx, volInfo.Device)
+			} else {
+				device, err = findDataDiskDevice(ctx, i.cloudProvider, lunIdx, volInfo.DiskID)
+			}
 			if err != nil {
 				return nil, fmt.Errorf("cloud volume %s: %w", volName, err)
 			}
@@ -414,20 +429,11 @@ func detectCloudProvider() string {
 	return "generic"
 }
 
-// findDataDiskDevice locates the block device for the given LUN index.
-// It auto-detects the cloud provider and uses provider-specific paths,
-// then falls back to sysfs HCTL-based LUN matching.
-// diskID is the cloud-provider volume identifier (e.g. EBS vol-xxx); it
-// may be empty for providers that rely purely on LUN-index matching.
-//
-// Data disks may take several seconds to appear in the PodVM after boot
-// (SCSI rescan, udev rules), so the entire detection is retried.
-func findDataDiskDevice(lunIdx int, diskID string) (string, error) {
-	provider := detectCloudProvider()
-	logger.Printf("Cloud provider detected: %s (LUN %d, diskID %s)", provider, lunIdx, diskID)
-
-	maxAttempts := 15
-	retryDelay := 2 * time.Second
+// diskDetectRetry returns the attempt budget for locating a data disk. Disks
+// may take several seconds to appear after boot (SCSI rescan, udev rules).
+func diskDetectRetry() (maxAttempts int, retryDelay time.Duration) {
+	maxAttempts = 15
+	retryDelay = 2 * time.Second
 	if v := os.Getenv("CAA_DISK_DETECT_MAX_ATTEMPTS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			maxAttempts = n
@@ -438,17 +444,97 @@ func findDataDiskDevice(lunIdx int, diskID string) (string, error) {
 			retryDelay = d
 		}
 	}
+	return maxAttempts, retryDelay
+}
+
+// retryDiskDetect calls probe until it returns a device, giving up after the
+// diskDetectRetry budget or when ctx ends. what names the disk in log lines
+// and in the final error, which wraps the last probe error.
+func retryDiskDetect(ctx context.Context, what string, probe func() (string, error)) (string, error) {
+	maxAttempts, retryDelay := diskDetectRetry()
+
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			logger.Printf("Retry %d/%d for %s...", attempt, maxAttempts, what)
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(retryDelay):
+			}
+		}
+		dev, err := probe()
+		if err == nil {
+			return dev, nil
+		}
+		lastErr = err
+	}
+
+	dumpBlockDeviceDiagnostics()
+	return "", fmt.Errorf("%s not found after %d attempts: %w", what, maxAttempts, lastErr)
+}
+
+// findDataDiskByPath resolves a device path the cloud provider reported for the
+// volume, typically a /dev/disk/by-id symlink. The link can lag udev by a few
+// seconds, so resolution is retried, but there is no positional fallback: a
+// missing link must fail rather than mount a different disk.
+func findDataDiskByPath(ctx context.Context, path string) (string, error) {
+	if !strings.HasPrefix(path, "/dev/") || filepath.Clean(path) != path {
+		return "", fmt.Errorf("invalid device path %q", path)
+	}
+
+	target, err := retryDiskDetect(ctx, "device "+path, func() (string, error) {
+		return filepath.EvalSymlinks(path)
+	})
+	if err != nil {
+		return "", err
+	}
+	if err := checkDataDiskTarget(target); err != nil {
+		return "", fmt.Errorf("device %s -> %s: %w", path, target, err)
+	}
+	logger.Printf("Found data disk by path: %s -> %s", path, target)
+	return target, nil
+}
+
+// checkDataDiskTarget refuses a resolved device that cannot be a data disk.
+// The path comes from the untrusted host, so a whole disk is required and the
+// root or boot disk is rejected by the same signs the LUN finders use: a
+// filesystem mounted outside the cloud volume directory, or a partition table.
+func checkDataDiskTarget(target string) error {
+	devName := filepath.Base(target)
+	if _, err := os.Stat(sysBlockDir); err == nil {
+		if _, err := os.Stat(filepath.Join(sysBlockDir, devName)); err != nil {
+			return fmt.Errorf("%s is not a whole disk", target)
+		}
+	}
+	for _, mountPoint := range mountPointsOf(devName) {
+		if !strings.HasPrefix(mountPoint, cloudVolumeMountBase+"/") {
+			return fmt.Errorf("%s is mounted at %s", target, mountPoint)
+		}
+	}
+	if hasPartitions(devName) {
+		return fmt.Errorf("%s has partitions", target)
+	}
+	return nil
+}
+
+// findDataDiskDevice locates the block device for the given LUN index using
+// provider-specific paths, then falls back to sysfs HCTL-based LUN matching.
+// provider is the cloud-api-adaptor provider name; when empty the cloud is
+// detected from device paths. diskID is the cloud-provider volume identifier
+// (e.g. EBS vol-xxx); it may be empty for providers that rely purely on
+// LUN-index matching.
+func findDataDiskDevice(ctx context.Context, provider string, lunIdx int, diskID string) (string, error) {
+	if provider == "" {
+		provider = detectCloudProvider()
+	}
+	logger.Printf("Cloud provider: %s (LUN %d, diskID %s)", provider, lunIdx, diskID)
 
 	if provider == "azure" {
 		triggerUdevRescan()
 	}
 
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if attempt > 1 {
-			logger.Printf("Retry %d/%d for LUN %d...", attempt, maxAttempts, lunIdx)
-			time.Sleep(retryDelay)
-		}
-
+	return retryDiskDetect(ctx, fmt.Sprintf("data disk for LUN %d (provider=%s)", lunIdx, provider), func() (string, error) {
 		switch provider {
 		case "azure":
 			if dev, err := findAzureDataDisk(lunIdx); err == nil {
@@ -463,14 +549,8 @@ func findDataDiskDevice(lunIdx int, diskID string) (string, error) {
 				return dev, nil
 			}
 		}
-
-		if dev, err := findDataDiskBySysfsHCTL(lunIdx); err == nil {
-			return dev, nil
-		}
-	}
-
-	dumpBlockDeviceDiagnostics()
-	return "", fmt.Errorf("no data disk found for LUN %d (provider=%s) after %d attempts", lunIdx, provider, maxAttempts)
+		return findDataDiskBySysfsHCTL(lunIdx)
+	})
 }
 
 // triggerUdevRescan triggers udev to process pending block device events and
@@ -681,7 +761,7 @@ func findDataDiskBySysfsHCTL(lunIdx int) (string, error) {
 // hasPartitions checks whether a block device has any partition sub-devices
 // in /sys/block/<dev>/<dev>N (e.g. sda1, sda2).
 func hasPartitions(devName string) bool {
-	entries, err := os.ReadDir(filepath.Join("/sys/block", devName))
+	entries, err := os.ReadDir(filepath.Join(sysBlockDir, devName))
 	if err != nil {
 		return false
 	}
@@ -698,21 +778,26 @@ func hasPartitions(devName string) bool {
 // accidentally selecting the OS disk as a data disk when HCTL host
 // numbering doesn't match expectations.
 func isRootOrMountedDevice(devName string) bool {
-	data, err := os.ReadFile("/proc/mounts")
+	return len(mountPointsOf(devName)) > 0
+}
+
+// mountPointsOf lists where the device or any of its partitions is mounted.
+func mountPointsOf(devName string) []string {
+	data, err := os.ReadFile(procMountsPath)
 	if err != nil {
-		return false
+		return nil
 	}
+	var mountPoints []string
 	for _, line := range strings.Split(string(data), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
 		}
-		mountDev := fields[0]
-		if strings.HasPrefix(mountDev, "/dev/"+devName) {
-			return true
+		if strings.HasPrefix(fields[0], "/dev/"+devName) {
+			mountPoints = append(mountPoints, fields[1])
 		}
 	}
-	return false
+	return mountPoints
 }
 
 func dumpBlockDeviceDiagnostics() {
