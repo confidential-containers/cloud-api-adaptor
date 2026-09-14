@@ -101,6 +101,11 @@ spec:
         - mountPath: /var/run/secrets/tokens
           name: vault-token
 {{- end }}
+{{- if include "peerpods.gcpWifEnabled" . }}
+        - mountPath: /var/run/secrets/tokens/gcp-ksa
+          name: gcp-wif-token
+          readOnly: true
+{{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
@@ -168,4 +173,14 @@ spec:
               path: vault-token
               expirationSeconds: 3600
               audience: iam
+{{- end }}
+{{- if include "peerpods.gcpWifEnabled" . }}
+      - name: gcp-wif-token
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: "{{ .Values.gcp.workloadIdentityFederation.workloadPool }}"
+              expirationSeconds: 3600
+              path: token
 {{- end }}
