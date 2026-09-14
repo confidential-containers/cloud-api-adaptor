@@ -60,25 +60,25 @@ func (p *podIndex) SetMin(index int) {
 }
 
 // nextPodIndex returns the index after the highest one whose vxlan device
-// still exists in a namespace under dir, or 0 when there is none. The kernel
-// keys a VNI on the underlay namespace the device was created in, so a pod
-// that outlives a restart of this process keeps its VNI taken on the host.
+// still exists on the host or in a namespace under dir, or 0 when there is
+// none. The kernel keys a VNI on the underlay namespace the device was created
+// in, so a pod that outlives a restart keeps its VNI taken on the host.
 // An entry that cannot be opened or listed is skipped, since a stale mount
 // point left behind by a crashed teardown holds no VNI.
-func nextPodIndex(dir string, minID, port int) (int, error) {
+func nextPodIndex(dir string, hostLinks []netops.Link, minID, port int) (int, error) {
 	if minID < 0 || minID > vxlan.MaxVXLANID {
 		return 0, fmt.Errorf("vxlan minimum ID %d is not between 0 and %d", minID, vxlan.MaxVXLANID)
 	}
 
 	entries, err := os.ReadDir(dir)
-	if errors.Is(err, fs.ErrNotExist) {
-		return 0, nil
-	}
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return 0, fmt.Errorf("failed to list network namespaces under %s: %w", dir, err)
 	}
 
-	next := 0
+	next, err := nextVXLANIndex(hostLinks, minID, port)
+	if err != nil {
+		return 0, fmt.Errorf("failed to inspect host interfaces: %w", err)
+	}
 	for _, entry := range entries {
 		nsPath := filepath.Join(dir, entry.Name())
 		ns, err := netops.OpenNamespace(nsPath)
@@ -94,22 +94,32 @@ func nextPodIndex(dir string, minID, port int) (int, error) {
 			logger.Printf("skipping %s: %v", nsPath, err)
 			continue
 		}
-		for _, link := range links {
-			if link.Name() != vxlan.PodInterfaceName || link.Type() != "vxlan" {
-				continue
-			}
-			device, err := link.GetDevice()
-			if err != nil {
-				return 0, fmt.Errorf("failed to inspect %s in %s: %w", link.Name(), nsPath, err)
-			}
-			v, ok := device.(*netops.VXLAN)
-			if !ok || v.Port != port || v.ID < minID {
-				continue
-			}
-			next = max(next, v.ID-minID+1)
+		nsNext, err := nextVXLANIndex(links, minID, port)
+		if err != nil {
+			return 0, fmt.Errorf("failed to inspect interfaces in %s: %w", nsPath, err)
 		}
+		next = max(next, nsNext)
 	}
 
+	return next, nil
+}
+
+func nextVXLANIndex(links []netops.Link, minID, port int) (int, error) {
+	next := 0
+	for _, link := range links {
+		if link.Type() != "vxlan" {
+			continue
+		}
+		device, err := link.GetDevice()
+		if err != nil {
+			return 0, fmt.Errorf("failed to inspect %s: %w", link.Name(), err)
+		}
+		v, ok := device.(*netops.VXLAN)
+		if !ok || v.Port != port || v.ID < minID {
+			continue
+		}
+		next = max(next, v.ID-minID+1)
+	}
 	return next, nil
 }
 
@@ -130,13 +140,24 @@ func NewWorkerNode(networkConfig *tunneler.NetworkConfig) (WorkerNode, error) {
 		tunneler:      tun,
 	}
 
-	if networkConfig.TunnelType == "vxlan" {
-		next, err := nextPodIndex(netnsDir, networkConfig.VXLAN.MinID, networkConfig.VXLAN.Port)
+	if networkConfig.TunnelType == DefaultTunnelType {
+		hostNS, err := netops.OpenCurrentNamespace()
+		if err != nil {
+			return nil, fmt.Errorf("failed to open the host network namespace: %w", err)
+		}
+		links, err := hostNS.LinkList()
+		if closeErr := hostNS.Close(); closeErr != nil {
+			logger.Printf("failed to close the host network namespace: %v", closeErr)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to list host interfaces: %w", err)
+		}
+		next, err := nextPodIndex(netnsDir, links, networkConfig.VXLAN.MinID, networkConfig.VXLAN.Port)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find the vxlan VNIs in use: %w", err)
 		}
 		if next > 0 {
-			logger.Printf("pod index starts at %d: VNI %d is still in use under %s", next, networkConfig.VXLAN.MinID+next-1, netnsDir)
+			logger.Printf("pod index starts at %d: VNI %d is still in use", next, networkConfig.VXLAN.MinID+next-1)
 		}
 		podIndexManager.SetMin(next)
 	}
