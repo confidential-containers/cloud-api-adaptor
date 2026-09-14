@@ -26,6 +26,12 @@ rules:
   verbs:
   - get
 - apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
   - confidentialcontainers.org
   resources:
   - peerpods
