@@ -55,7 +55,7 @@ jobs:
   # secrets it should skip the execution of the test job.
   alibabacloud-credentials:
     name: Check Alibaba Cloud credentials
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       has_secrets: ${{ steps.check_secrets.outputs.has_secrets }}
     steps:
@@ -75,7 +75,7 @@ jobs:
     name: "Alibaba Cloud e2e tests: (${{ inputs.cluster_type }}, ${{ inputs.container_runtime }})"
     needs: alibabacloud-credentials
     if: needs.alibabacloud-credentials.outputs.has_secrets == 'true'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: src/cloud-api-adaptor
