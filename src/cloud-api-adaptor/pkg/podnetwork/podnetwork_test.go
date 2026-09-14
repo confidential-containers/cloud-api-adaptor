@@ -91,7 +91,6 @@ func TestWorkerNode(t *testing.T) {
 	} {
 
 		err := workerNodeNS.Run(func() error {
-
 			workerNode, err := NewWorkerNode(&tunneler.NetworkConfig{TunnelType: mockTunnelType, HostInterface: hostInterface})
 			require.NotNil(t, workerNode, "hostInterface=%q", hostInterface)
 			require.Nil(t, err, "hostInterface=%q", hostInterface)
@@ -168,7 +167,6 @@ func TestPodNode(t *testing.T) {
 			tuntest.AddrAdd(t, podNS, "eth0", "172.16.0.2/24")
 
 			err := podNodeNS.Run(func() error {
-
 				config := &tunneler.Config{
 					PodIP: netip.MustParsePrefix("172.16.0.2/24"),
 					Routes: []*tunneler.Route{
@@ -283,7 +281,7 @@ func TestNextPodIndex(t *testing.T) {
 	remote := netip.MustParseAddr("192.0.2.1")
 
 	t.Run("a missing directory holds no namespaces", func(t *testing.T) {
-		next, err := nextPodIndex(filepath.Join(t.TempDir(), "none"), minID, port)
+		next, err := nextPodIndex(filepath.Join(t.TempDir(), "none"), nil, minID, port)
 		require.NoError(t, err)
 		assert.Equal(t, 0, next)
 	})
@@ -291,21 +289,21 @@ func TestNextPodIndex(t *testing.T) {
 	t.Run("a non-directory path is an error", func(t *testing.T) {
 		file := filepath.Join(t.TempDir(), "file")
 		require.NoError(t, os.WriteFile(file, nil, 0o600))
-		_, err := nextPodIndex(file, minID, port)
+		_, err := nextPodIndex(file, nil, minID, port)
 		assert.Error(t, err)
 	})
 
 	t.Run("a minimum ID outside the field is an error", func(t *testing.T) {
-		_, err := nextPodIndex(t.TempDir(), vxlan.MaxVXLANID+1, port)
+		_, err := nextPodIndex(t.TempDir(), nil, vxlan.MaxVXLANID+1, port)
 		assert.Error(t, err)
 	})
 
-	t.Run("counts only pod vxlan devices on the adaptor's port and range", func(t *testing.T) {
+	t.Run("counts vxlan devices on the adaptor's port and range regardless of name", func(t *testing.T) {
 		testutils.SkipTestIfNotRoot(t)
 
 		var namespaces []netops.Namespace
 		for _, devices := range []map[string]netops.Device{
-			{vxlan.PodInterfaceName: &netops.VXLAN{Group: remote, ID: minID + 7, Port: port}, "vxlan9": &netops.VXLAN{Group: remote, ID: minID + 20, Port: port}},
+			{vxlan.PodInterfaceName: &netops.VXLAN{Group: remote, ID: minID + 7, Port: port}, "ppvxlan1": &netops.VXLAN{Group: remote, ID: minID + 20, Port: port}},
 			{vxlan.PodInterfaceName: &netops.VXLAN{Group: remote, ID: minID + 30, Port: port + 1}},
 			{vxlan.PodInterfaceName: &netops.VXLAN{Group: remote, ID: minID - 1, Port: port}},
 			{vxlan.PodInterfaceName: &netops.Bridge{}},
@@ -319,16 +317,57 @@ func TestNextPodIndex(t *testing.T) {
 			namespaces = append(namespaces, ns)
 		}
 
-		next, err := nextPodIndex(namespaceDir(t, namespaces...), minID, port)
+		next, err := nextPodIndex(namespaceDir(t, namespaces...), nil, minID, port)
 		require.NoError(t, err)
-		assert.Equal(t, 8, next)
+		assert.Equal(t, 21, next)
 	})
 
 	t.Run("skips an entry that is not a namespace", func(t *testing.T) {
 		dir := t.TempDir()
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "cni-stale"), nil, 0o600))
-		next, err := nextPodIndex(dir, minID, port)
+		next, err := nextPodIndex(dir, nil, minID, port)
 		require.NoError(t, err)
 		assert.Equal(t, 0, next)
+	})
+
+	t.Run("includes host devices even without a namespace directory", func(t *testing.T) {
+		testutils.SkipTestIfNotRoot(t)
+
+		hostNS, _ := tuntest.NewNamedNS(t, "test-indexhost")
+		defer tuntest.DeleteNamedNS(t, hostNS)
+		link, err := hostNS.LinkAdd(
+			"ppvxlan1",
+			&netops.VXLAN{Group: remote, ID: minID + 40, Port: port},
+		)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, link.Delete()) }()
+		hostLinks, err := hostNS.LinkList()
+		require.NoError(t, err)
+
+		next, err := nextPodIndex(filepath.Join(t.TempDir(), "none"), hostLinks, minID, port)
+		require.NoError(t, err)
+		assert.Equal(t, 41, next)
+
+		podNS, _ := tuntest.NewNamedNS(t, "test-indexpod")
+		defer tuntest.DeleteNamedNS(t, podNS)
+		podLink, err := podNS.LinkAdd(
+			vxlan.PodInterfaceName,
+			&netops.VXLAN{Group: remote, ID: minID + 7, Port: port},
+		)
+		require.NoError(t, err)
+		dir := namespaceDir(t, podNS)
+		next, err = nextPodIndex(dir, hostLinks, minID, port)
+		require.NoError(t, err)
+		assert.Equal(t, 41, next)
+
+		require.NoError(t, podLink.Delete())
+		_, err = podNS.LinkAdd(
+			vxlan.PodInterfaceName,
+			&netops.VXLAN{Group: remote, ID: minID + 50, Port: port},
+		)
+		require.NoError(t, err)
+		next, err = nextPodIndex(dir, hostLinks, minID, port)
+		require.NoError(t, err)
+		assert.Equal(t, 51, next)
 	})
 }
