@@ -43,7 +43,7 @@ jobs:
           { arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
           { arch: linux/s390x,   runner: ubuntu-24.04-s390x },
         ]
-    uses: ./.github/workflows/caa_build_and_push.yaml
+    uses: $/.github/workflows/caa_build_and_push.yaml
     with:
       dev_arches: ${{ matrix.types.arch }}
       dev_tags: ${{ inputs.dev_tags }}

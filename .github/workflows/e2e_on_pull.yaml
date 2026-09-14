@@ -44,7 +44,7 @@ jobs:
     steps:
       - run: "true"
   e2e:
-    uses: ./.github/workflows/e2e_run_all.yaml
+    uses: $/.github/workflows/e2e_run_all.yaml
     needs: [authorize]
     with:
       caa_image_tag: ci-pr${{ github.event.number }}

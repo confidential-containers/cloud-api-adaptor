@@ -59,7 +59,7 @@ permissions: {}
 
 jobs:
   podvm_mkosi_amd64:
-    uses: ./.github/workflows/podvm_mkosi.yaml
+    uses: $/.github/workflows/podvm_mkosi.yaml
     with:
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
@@ -73,7 +73,7 @@ jobs:
       artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
 
   podvm_mkosi_s390x:
-    uses: ./.github/workflows/podvm_mkosi.yaml
+    uses: $/.github/workflows/podvm_mkosi.yaml
     with:
       image_tag: ${{ inputs.podvm_image_tag }}
       git_ref: ${{ inputs.git_ref }}
@@ -87,7 +87,7 @@ jobs:
       artifact-metadata: write  # Required by podvm_mkosi.yaml to write attestation metadata
 
   podvm_mkosi_azure:
-    uses: ./.github/workflows/podvm_mkosi.yaml
+    uses: $/.github/workflows/podvm_mkosi.yaml
     permissions:
       contents: read # Required if we want to run on a fork?
       packages: write # Required to publish the oras package to ghcr
@@ -102,7 +102,7 @@ jobs:
       tee-platform: az-cvm-vtpm
 
   caa_image_amd64:
-    uses: ./.github/workflows/caa_build_and_push.yaml
+    uses: $/.github/workflows/caa_build_and_push.yaml
     with:
       registry: ${{ inputs.registry }}
       dev_arches: 'linux/amd64'
@@ -117,7 +117,7 @@ jobs:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   caa_image_s390x:
-    uses: ./.github/workflows/caa_build_and_push.yaml
+    uses: $/.github/workflows/caa_build_and_push.yaml
     with:
       registry: ${{ inputs.registry }}
       dev_arches: 'linux/s390x'
@@ -134,7 +134,7 @@ jobs:
 
   # Build and push the peerpod-ctrl image (per-arch)
   peerpod_ctrl_image_amd64:
-    uses: ./.github/workflows/peerpod-ctrl_build_and_push.yaml
+    uses: $/.github/workflows/peerpod-ctrl_build_and_push.yaml
     with:
       registry: ${{ inputs.registry }}
       image_tags: ${{ inputs.caa_image_tag }}
@@ -148,7 +148,7 @@ jobs:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   peerpod_ctrl_image_s390x:
-    uses: ./.github/workflows/peerpod-ctrl_build_and_push.yaml
+    uses: $/.github/workflows/peerpod-ctrl_build_and_push.yaml
     with:
       registry: ${{ inputs.registry }}
       image_tags: ${{ inputs.caa_image_tag }}
@@ -163,7 +163,7 @@ jobs:
 
   # Build and push the webhook image
   webhook_image:
-    uses: ./.github/workflows/webhook_image.yaml
+    uses: $/.github/workflows/webhook_image.yaml
     with:
       image_tags: ${{ inputs.caa_image_tag }}
       git_ref: ${{ inputs.git_ref }}
@@ -187,7 +187,7 @@ jobs:
     permissions:
       id-token: write # Required by aws-actions/configure-aws-credentials
       contents: read  # Required by aws-actions/configure-aws-credentials
-    uses: ./.github/workflows/e2e_aws.yaml
+    uses: $/.github/workflows/e2e_aws.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
       container_runtime: ${{ matrix.container_runtime }}
@@ -214,7 +214,7 @@ jobs:
     permissions:
       id-token: write # Required by aliyun/configure-aliyun-credentials-action
       contents: read
-    uses: ./.github/workflows/e2e_alibabacloud.yaml
+    uses: $/.github/workflows/e2e_alibabacloud.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
       container_runtime: ${{ matrix.container_runtime }}
@@ -235,7 +235,7 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_amd64')
     needs: [podvm_mkosi_amd64, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
-    uses: ./.github/workflows/e2e_libvirt.yaml
+    uses: $/.github/workflows/e2e_libvirt.yaml
     with:
       runner: ubuntu-24.04
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
@@ -255,7 +255,7 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt') ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_libvirt_s390x')
     needs: [podvm_mkosi_s390x, caa_image_s390x, peerpod_ctrl_image_s390x, webhook_image]
-    uses: ./.github/workflows/e2e_libvirt.yaml
+    uses: $/.github/workflows/e2e_libvirt.yaml
     with:
       runner: s390x-large
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-s390x
@@ -274,7 +274,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test_e2e_byom')
     needs: [caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
-    uses: ./.github/workflows/e2e_byom.yaml
+    uses: $/.github/workflows/e2e_byom.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
       git_ref: ${{ inputs.git_ref }}
@@ -290,7 +290,7 @@ jobs:
     # The azure e2e test must not run untrusted code via pull_request_target, even if gated by a label.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: [podvm_mkosi_azure, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
-    uses: ./.github/workflows/e2e_azure.yaml
+    uses: $/.github/workflows/e2e_azure.yaml
     with:
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
       podvm_image: ${{ needs.podvm_mkosi_azure.outputs.qcow2_oras_image }}
