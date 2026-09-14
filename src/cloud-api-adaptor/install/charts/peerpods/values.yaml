@@ -154,6 +154,30 @@ resourceCtrl:
 webhook:
   enabled: true
 
+# GCP-specific configuration
+gcp:
+  # Workload Identity Federation (WIF) for GCP direct authentication
+  # Enables the cloud-api-adaptor daemonset to authenticate to GCP without static JSON keys,
+  # even when running with hostNetwork: true (which bypasses GKE's metadata server proxy).
+  #
+  # Set enable: true and fill in serviceAccount/workloadPool/cluster below.
+  # The chart auto-generates GCP_WIF_CREDENTIALS (contains no secrets, only public config).
+  #
+  # NOTE: WIF is intended for secrets.mode: "create" only. In "reference" mode you
+  # must create the secret manually with GCP_WIF_CREDENTIALS set to the WIF JSON
+  # (not officially suggested).
+  workloadIdentityFederation:
+    # Enable GCP Workload Identity Federation (mounts K8s SA token volume)
+    enable: false
+    # GCP service account email to impersonate (e.g., "caa@my-project.iam.gserviceaccount.com")
+    serviceAccount: ""
+    # GCP project workload identity pool (e.g., "my-project.svc.id.goog")
+    # Used for the projected token audience.
+    workloadPool: ""
+    # Workload identity pool cluster identifier (e.g., "//iam.googleapis.com/projects/123.../providers/...")
+    # Used for the credentials JSON audience field.
+    cluster: ""
+
 # kata-deploy subchart configuration
 kata-deploy:
   # Installs kata and the kata-remote RuntimeClass required by peer pods.

@@ -80,11 +80,24 @@ alibabacloud() {
 }
 
 gcp() {
-    test_vars GCP_CREDENTIALS GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
+    # Check that at least one authentication method is configured
+    one_of GCP_CREDENTIALS GCP_WIF_CREDENTIALS
 
-    # Avoid using node's metadata service credentials for GCP authentication
-    echo "$GCP_CREDENTIALS" > /tmp/gcp-creds.json
-    export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-creds.json
+    test_vars GCP_PROJECT_ID GCP_ZONE PODVM_IMAGE_NAME
+
+    # Handle GCP authentication
+    if [ -n "${GCP_WIF_CREDENTIALS}" ]; then
+        # Workload Identity Federation: credentials JSON from Secret
+        # Write the external account credentials config to a file
+        mkdir -p /run/secrets/gcp-creds
+        echo "$GCP_WIF_CREDENTIALS" > /run/secrets/gcp-creds/credentials.json
+        export GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/gcp-creds/credentials.json
+    else
+        # Traditional static credentials
+        # Avoid using node's metadata service credentials for GCP authentication
+        echo "$GCP_CREDENTIALS" > /tmp/gcp-creds.json
+        export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-creds.json
+    fi
 
     set -x
     exec cloud-api-adaptor gcp ${optionals}

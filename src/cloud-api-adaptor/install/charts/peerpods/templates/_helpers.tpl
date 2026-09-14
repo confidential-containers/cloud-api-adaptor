@@ -107,3 +107,14 @@ true
   {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+GCP Workload Identity Federation: mount projected service account token when enabled.
+Uses chained `and` (short-circuit) so missing .Values.gcp / .workloadIdentityFederation is safe.
+Returns non-empty "true" when the GCP WIF volume should be rendered.
+*/}}
+{{- define "peerpods.gcpWifEnabled" -}}
+{{- if and (eq .Values.provider "gcp") .Values.gcp .Values.gcp.workloadIdentityFederation .Values.gcp.workloadIdentityFederation.enable -}}
+true
+{{- end -}}
+{{- end -}}
