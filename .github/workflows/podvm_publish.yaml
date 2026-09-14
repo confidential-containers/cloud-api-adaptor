@@ -41,7 +41,7 @@ concurrency:
 
 jobs:
   podvm:
-    uses: ./.github/workflows/podvm_mkosi.yaml
+    uses: $/.github/workflows/podvm_mkosi.yaml
     permissions:
       contents: read  # Required to checkout code
       packages: write  # Required to push container images

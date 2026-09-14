@@ -92,7 +92,7 @@ jobs:
       security-events: write  # Required to upload CodeQL results
     needs:
       - vet-and-fmt
-    uses: "./.github/workflows/lib-codeql.yaml"
+    uses: "$/.github/workflows/lib-codeql.yaml"
 
   shellcheck:
     name: shellcheck
