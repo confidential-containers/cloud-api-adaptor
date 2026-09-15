@@ -211,27 +211,61 @@ func TestCloudVolumes_NoAnnotationWhenNoCSIVolumes(t *testing.T) {
 }
 
 func TestCloudVolumes_SkipsVolumesFromOtherPods(t *testing.T) {
-	dir := t.TempDir()
-	overrideKataDirectVolumesDir(t, dir)
+	const (
+		podUID    = "pod-uid-BBB"
+		volPath   = "/var/lib/kubelet/pods/" + podUID + "/volumes/kubernetes.io~csi/pvc-mine/mount"
+		otherPath = "/var/lib/kubelet/pods/pod-uid-AAA/volumes/kubernetes.io~csi/pvc-other/mount"
+	)
 
-	service, cleanup := setupMockAgentAndService(t)
-	defer cleanup()
+	// counting the other pod's entry, which sorts first, would move this pod's volume to LUN 1
+	require.Less(t, b64.URLEncoding.EncodeToString([]byte(otherPath)), b64.URLEncoding.EncodeToString([]byte(volPath)))
 
-	writeTestMountInfo(t, dir,
-		"/var/lib/kubelet/pods/other-pod-uid/volumes/kubernetes.io~csi/pvc-other/mount",
-		map[string]interface{}{"device": "other-disk", "fstype": "ext4"})
+	tests := []struct {
+		name        string
+		annotations map[string]string
+	}{
+		{
+			name:        "containerd sandbox uid",
+			annotations: map[string]string{"io.kubernetes.cri.sandbox-uid": podUID},
+		},
+		{
+			name: "cri-o sandbox name",
+			annotations: map[string]string{
+				"io.kubernetes.cri-o.SandboxName": "k8s_test-pod_default_" + podUID + "_0",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			overrideKataDirectVolumesDir(t, dir)
 
-	req := newCreateContainerRequest("test-other-pod").
-		withAnnotations(map[string]string{
-			"io.kubernetes.cri.sandbox-uid": "my-pod-uid",
-		}).
-		build()
+			service, cleanup := setupMockAgentAndService(t)
+			defer cleanup()
 
-	_, err := service.CreateContainer(context.Background(), req)
-	require.NoError(t, err)
+			writeTestMountInfo(t, dir, otherPath, map[string]interface{}{"device": "other-disk", "fstype": "ext4"})
+			writeTestMountInfo(t, dir, volPath, map[string]interface{}{"device": "my-disk", "fstype": "ext4"})
 
-	_, ok := req.OCI.Annotations["io.confidentialcontainers.org.cloud_volumes"]
-	assert.False(t, ok, "should not include volumes from other pods")
+			req := newCreateContainerRequest("test-other-pod").
+				withAnnotations(tt.annotations).
+				withMounts(&pb.Mount{Destination: "/data", Source: volPath, Type: "bind"}).
+				build()
+
+			_, err := service.CreateContainer(context.Background(), req)
+			require.NoError(t, err)
+
+			cvJSON := req.OCI.Annotations["io.confidentialcontainers.org.cloud_volumes"]
+			require.NotEmpty(t, cvJSON)
+
+			var cloudVolumes map[string]map[string]string
+			require.NoError(t, json.Unmarshal([]byte(cvJSON), &cloudVolumes))
+
+			require.Len(t, cloudVolumes, 1)
+			require.Contains(t, cloudVolumes, "vol-0")
+			assert.Equal(t, "my-disk", cloudVolumes["vol-0"]["disk_id"])
+			assert.Equal(t, "0", cloudVolumes["vol-0"]["lun"])
+		})
+	}
 }
 
 func TestCloudVolumes_LUNIndexSkippedVolumeConsistency(t *testing.T) {
