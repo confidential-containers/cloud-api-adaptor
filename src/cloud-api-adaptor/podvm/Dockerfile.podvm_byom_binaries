@@ -13,12 +13,7 @@ FROM ${BINARIES_IMG} AS podvm_binaries
 # ubuntu:24.04
 FROM ubuntu@sha256:0d39fcc8335d6d74d5502f6df2d30119ff4790ebbb60b364818d5112d9e3e932 AS builder
 
-COPY --from=podvm_binaries /podvm-binaries.tar.gz /src/podvm-binaries.tar.gz
-RUN mkdir /src/files && tar xvf /src/podvm-binaries.tar.gz -C /src/files
-
-# Copy the pause_bundle to podvm/files folder
-COPY --from=podvm_binaries /pause-bundle.tar.gz /src/pause-bundle.tar.gz
-RUN tar xvf /src/pause-bundle.tar.gz -C /src/files
+COPY --from=podvm_binaries / /src/files
 
 COPY . /src
 
