@@ -140,9 +140,12 @@ const CloudVolumesAnnotationKey = "io.confidentialcontainers.org.cloud_volumes"
 // CloudVolumeAnnotation is the schema for each entry in the cloud_volumes
 // annotation. It is serialized by the proxy and deserialized by the interceptor.
 type CloudVolumeAnnotation struct {
-	MountPoint  string `json:"mount_point"`
-	FSType      string `json:"fs_type"`
-	LUN         string `json:"lun"`
+	MountPoint string `json:"mount_point"`
+	FSType     string `json:"fs_type"`
+	LUN        string `json:"lun"`
+	// Device is the absolute device path in the pod VM when the cloud provider
+	// reported one at attach time. It takes precedence over LUN-based discovery.
+	Device      string `json:"device,omitempty"`
 	DiskID      string `json:"disk_id"`
 	FSGroup     string `json:"fs_group,omitempty"`
 	EncryptType string `json:"encrypt_type,omitempty"`
