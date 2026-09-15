@@ -36,6 +36,9 @@ type PeerPodStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Cloud Provider",type="string",JSONPath=".spec.cloudProvider"
+//+kubebuilder:printcolumn:name="Instance ID",type="string",JSONPath=".spec.instanceID"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // PeerPod is the Schema for the peerpods API
 type PeerPod struct {
