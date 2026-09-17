@@ -165,7 +165,7 @@ func startDaemon(t *testing.T, ctx context.Context, agentSocketPath string, port
 	config := &daemon.Config{}
 
 	nsPath := os.Getenv("AGENT_PROTOCOL_FORWARDER_NAMESPACE")
-	interceptor := interceptor.NewInterceptor(agentSocketPath, nsPath)
+	interceptor := interceptor.NewInterceptor(agentSocketPath, nsPath, "")
 
 	d := daemon.NewDaemon(config, "127.0.0.1:0", nil, interceptor, &mockPodNode{})
 

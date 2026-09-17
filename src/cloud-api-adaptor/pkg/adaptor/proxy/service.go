@@ -21,7 +21,8 @@ import (
 
 type proxyService struct {
 	agentproto.Redirector
-	pauseImage string
+	pauseImage    string
+	volumeDevices map[string]string
 }
 
 const (
@@ -33,13 +34,14 @@ const (
 	defaultGPUsAnnotation = "io.katacontainers.config.hypervisor.default_gpus"
 )
 
-func newProxyService(dialer func(context.Context) (net.Conn, error), pauseImage string) *proxyService {
+func newProxyService(dialer func(context.Context) (net.Conn, error), pauseImage string, volumeDevices map[string]string) *proxyService {
 
 	redirector := agentproto.NewRedirector(dialer)
 
 	return &proxyService{
-		Redirector: redirector,
-		pauseImage: pauseImage,
+		Redirector:    redirector,
+		pauseImage:    pauseImage,
+		volumeDevices: volumeDevices,
 	}
 }
 
@@ -184,11 +186,23 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 				continue
 			}
 
+			// a provider that reports devices reports one for every volume it
+			// attached; a missing entry means the guest would fall back to
+			// LUN matching and fail much later with a misleading error
+			device := ""
+			if s.volumeDevices != nil {
+				device = s.volumeDevices[diskID]
+				if device == "" {
+					return nil, fmt.Errorf("cloud provider did not report a device for volume %s", diskID)
+				}
+			}
+
 			volKey := fmt.Sprintf("vol-%d", canonicalIdx)
 			cloudVolumes[volKey] = util.CloudVolumeAnnotation{
 				MountPoint:  mountDest,
 				FSType:      fsType,
 				LUN:         fmt.Sprintf("%d", canonicalIdx),
+				Device:      device,
 				DiskID:      diskID,
 				EncryptType: encryptType,
 				KeyID:       keyID,

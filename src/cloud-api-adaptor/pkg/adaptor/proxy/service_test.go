@@ -132,7 +132,7 @@ func TestNewProxyService(t *testing.T) {
 		return nil, nil
 	}
 
-	service := newProxyService(dialer, testPauseImage)
+	service := newProxyService(dialer, testPauseImage, nil)
 	assert.NotNil(t, service, "expected non-nil service")
 	assert.Equal(t, testPauseImage, service.pauseImage, "expected pause:3.9")
 }
@@ -300,7 +300,7 @@ func TestProxyServiceCreateContainer(t *testing.T) {
 					return net.Dial(testNetworkTCP, errorAgentListener.Addr().String())
 				}
 
-				errorService := newProxyService(errorDialer, "")
+				errorService := newProxyService(errorDialer, "", nil)
 				err = errorService.Connect(context.Background())
 				require.NoError(t, err, "failed to connect")
 
@@ -466,7 +466,7 @@ func setupMockAgentAndService(t *testing.T) (*proxyService, func()) {
 		return net.Dial(testNetworkTCP, agentListener.Addr().String())
 	}
 
-	service := newProxyService(dialer, "")
+	service := newProxyService(dialer, "", nil)
 	err := service.Connect(context.Background())
 	require.NoError(t, err)
 
