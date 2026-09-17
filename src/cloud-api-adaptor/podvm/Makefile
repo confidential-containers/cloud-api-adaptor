@@ -222,6 +222,7 @@ push-image-container:
 push-podvm-byom-binaries-image:
 	@echo "Push BYOM binaries image to remote repository..."
 	docker push $(PODVM_BYOM_BINARIES_IMAGE):$(PODVM_TAG)
+	docker push $(PODVM_BYOM_BINARIES_IMAGE):latest
 
 .PHONY: push-image-byom-e2e-container
 push-image-byom-e2e-container:
