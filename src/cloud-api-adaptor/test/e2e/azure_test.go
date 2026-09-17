@@ -16,6 +16,7 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 	_ "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/azure"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
@@ -203,7 +204,10 @@ func TestRemoteAttestationAzure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to build initdata: %v", err)
 	}
-	image := "quay.io/confidential-containers/test-images:curl-jq"
+	image, err := utils.GetImage("curl")
+	if err != nil {
+		t.Fatal(err)
+	}
 	// fail on non 200 code, silent, but output on failure
 	cmd := []string{"curl", "-f", "-s", "-S", "-o", "/dev/null", "http://127.0.0.1:8006/aa/token?token_type=kbs"}
 	for _, tc := range azureTeeInstanceSizes {
@@ -267,7 +271,10 @@ func TestInitDataMeasurement(t *testing.T) {
 	msmt := hasher.Sum(nil)
 
 	name := "initdata-msmt"
-	image := "quay.io/confidential-containers/test-images:curl-jq"
+	image, err := utils.GetImage("curl")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// truncate the measurement to 32 bytes
 	strValues := make([]string, len(msmt))
