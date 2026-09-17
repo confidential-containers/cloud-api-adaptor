@@ -10,6 +10,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.release.tag_name || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   caa:
     uses: $/.github/workflows/caa_build_and_push_all_arches.yaml
@@ -55,9 +59,29 @@ jobs:
       image_tag: ${{ github.event.release.tag_name }}
       arch: amd64
     permissions:
-      contents: read  # Required for checkout
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+      contents: read   # Required for checkout
+      packages: write  # Required for pushing to GHCR
+
+  upload-setup-script:
+    name: Upload setup-podvm-byom.sh as release asset
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write  # Required to upload release assets
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      - name: Upload setup script to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "$TAG_NAME" \
+            src/cloud-api-adaptor/hack/setup-podvm-byom.sh \
+            --clobber
 
   webhook:
     uses: $/.github/workflows/webhook_image_publish.yaml
