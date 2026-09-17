@@ -23,7 +23,7 @@ on:
         type: string
         default: 'amd64'
       registry:
-        description: 'Container registry to push images to (e.g., quay.io/your-username)'
+        description: 'Container registry to push images to (e.g., ghcr.io/your-username)'
         required: false
         type: string
         default: ''
@@ -45,13 +45,10 @@ on:
         type: string
         default: 'amd64'
       registry:
-        description: 'Container registry to push images to (e.g., quay.io/your-username)'
+        description: 'Container registry to push images to (e.g., ghcr.io/your-username)'
         required: false
         type: string
         default: ''
-    secrets:
-      QUAY_PASSWORD:
-        required: true
 
 permissions: {}
 
@@ -68,7 +65,8 @@ jobs:
     name: Build and push BYOM binaries image
     runs-on: ubuntu-24.04
     permissions:
-      contents: read  # Required for checkout
+      contents: read   # Required for checkout
+      packages: write  # Required for pushing to GHCR
     steps:
       - name: Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -88,15 +86,15 @@ jobs:
       - name: Login to Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
-          registry: quay.io
-          username: ${{ vars.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build podvm binaries image
         working-directory: src/cloud-api-adaptor/podvm
         run: make podvm-binaries
         env:
-          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'quay.io/confidential-containers' }}
+          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'ghcr.io/confidential-containers' }}
           PODVM_TAG: ${{ inputs.image_tag || github.sha }}
           ARCH: ${{ inputs.arch }}
           # Load the binaries image locally for the BYOM build to use as base.
@@ -106,7 +104,7 @@ jobs:
         working-directory: src/cloud-api-adaptor/podvm
         run: make podvm-byom-binaries-image
         env:
-          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'quay.io/confidential-containers' }}
+          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'ghcr.io/confidential-containers' }}
           PODVM_TAG: ${{ inputs.image_tag || github.sha }}
           ARCH: ${{ inputs.arch }}
 
@@ -114,6 +112,6 @@ jobs:
         working-directory: src/cloud-api-adaptor/podvm
         run: make push-podvm-byom-binaries-image
         env:
-          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'quay.io/confidential-containers' }}
+          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'ghcr.io/confidential-containers' }}
           PODVM_TAG: ${{ inputs.image_tag || github.sha }}
           ARCH: ${{ inputs.arch }}
