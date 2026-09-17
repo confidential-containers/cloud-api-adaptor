@@ -694,7 +694,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 		retry.Attempts(GetDomainIPsRetries),
 		retry.Delay(GetDomainIPsSleep),
 	); err != nil {
-		logger.Printf("Unable to get IP addresses after %d retries (sleep time=%ds): %s",
+		logger.Printf("Unable to get IP addresses after %d retries (sleep time=%v): %s",
 			GetDomainIPsRetries, GetDomainIPsSleep, err)
 		// Returning the instance with UUID allows the caller to clean it up properly.
 		return &createDomainOutput{
