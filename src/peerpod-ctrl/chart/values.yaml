@@ -4,7 +4,7 @@ namePrefix: peerpodctrl-
 # PeerPod controller image
 image:
   repository: quay.io/confidential-containers/peerpod-ctrl
-  tag: latest
+  tag: 9b608e60b032222488adec09e61dbf40f3c71e8f
   pullPolicy: IfNotPresent
 
 # Metrics are served by the manager over TLS on port 8443. Scrapers must present
