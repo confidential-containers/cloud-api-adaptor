@@ -652,6 +652,11 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	if err != nil {
 		return nil, fmt.Errorf("Failed to define domain: %s", err)
 	}
+	defer func() {
+		if freeErr := dom.Free(); freeErr != nil {
+			logger.Printf("Warning: failed to free domain handle: %v", freeErr)
+		}
+	}()
 
 	// Start Domain.
 	logger.Printf("Starting VM '%s'", v.name)
