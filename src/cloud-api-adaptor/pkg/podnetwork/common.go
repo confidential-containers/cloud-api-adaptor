@@ -141,9 +141,31 @@ func getInterfaceDetails(ns netops.Namespace, iface string) (
 		}
 	}
 
-	fmt.Printf("Interface %q IPv4 address %q and default route %v\n", iface, addrCIDR, defRoute)
+	logger.Printf("Interface %q IPv4 address %q and default route %v", iface, addrCIDR, defRoute)
 
 	return addrCIDR, defRoute, nil
+}
+
+// inferGatewayFromSubnet infers a subnet's default gateway as the first
+// usable address (x.x.x.1), which is the convention used by Azure (and
+// several other clouds) for subnets it manages. This is only used as a
+// last-resort fallback when a secondary interface has no default route of
+// its own and is not on the same subnet as the primary interface, so no
+// gateway can otherwise be discovered.
+func inferGatewayFromSubnet(addrCIDR netip.Prefix) (netip.Addr, error) {
+	if !addrCIDR.IsValid() {
+		return netip.Addr{}, fmt.Errorf("cannot infer gateway from invalid prefix")
+	}
+
+	addr := addrCIDR.Addr()
+	if !addr.Is4() {
+		return netip.Addr{}, fmt.Errorf("cannot infer gateway from non-IPv4 prefix %q", addrCIDR)
+	}
+
+	network := addrCIDR.Masked().Addr().As4()
+	network[3] = 1
+
+	return netip.AddrFrom4(network), nil
 }
 
 func getSecondaryInterfaceDetails(ns netops.Namespace, primaryInterface string) (
@@ -173,34 +195,52 @@ func getSecondaryInterfaceDetails(ns netops.Namespace, primaryInterface string) 
 			return "", netip.Prefix{}, nil, err
 		}
 
-		// The first interface other than the primary having an IPv4 address and a default route
-		// or an IPv4 address in the same subnet as the primary interface with no default route
+		// The first interface other than the primary having an IPv4 address and:
+		//  1. its own default route, or
+		//  2. no default route, but in the same subnet as the primary interface
+		//     (the primary's gateway is reused), or
+		//  3. no default route, in a different subnet than the primary, but
+		//     with a gateway that can be inferred (see inferGatewayFromSubnet)
 		// is considered the secondary interface.
 
 		if !addr.IsValid() {
-			fmt.Printf("Skipping interface %q as it has no valid IPv4 address\n", link.Name())
+			logger.Printf("Skipping interface %q as it has no valid IPv4 address", link.Name())
 			continue
 		}
 
 		if route != nil {
-			fmt.Printf("Secondary interface %q found with IPv4 address %q and route %v\n", link.Name(), addr, route)
+			logger.Printf("Secondary interface %q found with IPv4 address %q and route %v", link.Name(), addr, route)
 			return link.Name(), addr, route, nil
 		}
 
-		fmt.Printf("Route is nil, checking if %q is in the same subnet as %q\n", addr, primaryInterface)
+		logger.Printf("Interface %q has IPv4 address %q but no default route; checking if it is in the same subnet as primary interface %q", link.Name(), addr, primaryInterface)
 
 		if priAddrCIDR.Masked() == addr.Masked() {
 			secIface = link.Name()
 			secRoute = &netops.Route{
 				Destination: defRoute.Destination,
 				Gateway:     defRoute.Gateway,
-				Device:      secIface,
 				// Change the Route.Device to the secondary interface
+				Device: secIface,
 			}
-			fmt.Printf("Secondary interface %q found with IPv4 address %q and inferred route %v\n", link.Name(), addr, secRoute)
+			logger.Printf("Secondary interface %q found with IPv4 address %q and inferred same-subnet route %v", link.Name(), addr, secRoute)
 			return link.Name(), addr, secRoute, nil
 		}
 
+		gateway, err := inferGatewayFromSubnet(addr)
+		if err != nil {
+			logger.Printf("Skipping interface %q: could not infer a gateway on subnet %q: %v", link.Name(), addr, err)
+			continue
+		}
+
+		secIface = link.Name()
+		secRoute = &netops.Route{
+			Destination: defRoute.Destination,
+			Gateway:     gateway,
+			Device:      secIface,
+		}
+		logger.Printf("Secondary interface %q found with IPv4 address %q and inferred cross-subnet route %v", link.Name(), addr, secRoute)
+		return link.Name(), addr, secRoute, nil
 	}
 
 	return "", netip.Prefix{}, nil, ErrNoSecondaryInterface
