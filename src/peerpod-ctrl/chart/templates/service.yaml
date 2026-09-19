@@ -1,9 +1,8 @@
-{{- if .Values.authProxy.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: peerpodctrl
     app.kubernetes.io/instance: controller-manager-metrics-service
     app.kubernetes.io/name: service
@@ -19,4 +18,3 @@ spec:
     targetPort: https
   selector:
     control-plane: controller-manager
-{{- end }}

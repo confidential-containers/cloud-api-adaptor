@@ -266,7 +266,7 @@ cloud-api-adaptor-daemonset-nt4h7                 1/1     Running   0          5
 cloud-api-adaptor-daemonset-txssq                 1/1     Running   0          5m45s
 kata-deploy-7ncjq                                 1/1     Running   0          5m45s
 kata-deploy-w5kfp                                 1/1     Running   0          5m45s
-peerpodctrl-controller-manager-7d94b54bc9-266bw   2/2     Running   0          5m45s
+peerpodctrl-controller-manager-7d94b54bc9-266bw   1/1     Running   0          5m45s
 ```
 
 ## Run a Helloworld sample
