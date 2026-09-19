@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +21,21 @@ type PatchLabel struct {
 	Op    string `json:"op"`
 	Path  string `json:"path"`
 	Value string `json:"value"`
+}
+
+// KindClusterScriptPath returns the absolute path to the canonical
+// kind_cluster.sh script located in test/provisioner/common/.
+// Using runtime.Caller(0) anchors the path to this source file's location,
+// so callers receive the correct path regardless of the working directory.
+func KindClusterScriptPath() (string, error) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("runtime.Caller failed to determine source path")
+	}
+	// thisFile is .../test/provisioner/common.go
+	// kind_cluster.sh lives in .../test/provisioner/common/kind_cluster.sh
+	script := filepath.Join(filepath.Dir(thisFile), "common", "kind_cluster.sh")
+	return script, nil
 }
 
 var Action string
