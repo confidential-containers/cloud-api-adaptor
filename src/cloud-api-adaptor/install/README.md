@@ -71,15 +71,15 @@ pinned to the release version.
   NAME                                              READY   STATUS     RESTARTS    AGE
   cloud-api-adaptor-daemonset-wklbv                 1/1     Running    0           15m
   kata-deploy-b5pz2                                 1/1     Running    0           15m
-  peerpodctrl-controller-manager-74b5bb8c8b-f2zmm   2/2     Running    0           15m
+  peerpodctrl-controller-manager-74b5bb8c8b-f2zmm   1/1     Running    0           15m
   ```
 
   Also the webhook controllers PODs are all "Runnning" under the `peer-pods-webhook-system` namespace.
 
   ```sh
   NAME                                                    READY   STATUS    RESTARTS   AGE
-  peer-pods-webhook-controller-manager-565b98769c-sm78h   2/2     Running   0          18m
-  peer-pods-webhook-controller-manager-565b98769c-vrv52   2/2     Running   0          18m
+  peer-pods-webhook-controller-manager-565b98769c-sm78h   1/1     Running   0          18m
+  peer-pods-webhook-controller-manager-565b98769c-vrv52   1/1     Running   0          18m
   ```
 
 - View cloud-api-adaptor logs
