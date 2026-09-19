@@ -10,6 +10,8 @@ ConditionPathExists=/run/peerpod/scratch-space.marker
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/local/bin/setup-scratch-storage
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
