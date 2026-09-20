@@ -3,10 +3,21 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-{{- if .Values.certManager.enabled }}
+{{- if or .Values.certManager.enabled .Values.webhook.annotations }}
   annotations:
+    {{- if .Values.certManager.enabled }}
     cert-manager.io/inject-ca-from: {{ .Values.namespaceOverride | default .Release.Namespace }}/{{ .Values.namePrefix }}serving-cert
+    {{- end }}
+    {{- range $k, $v := .Values.webhook.annotations }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
 {{- end }}
+  {{- with .Values.webhook.labels }}
+  labels:
+    {{- range $k, $v := . }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+  {{- end }}
   name: {{ .Values.namePrefix }}mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
