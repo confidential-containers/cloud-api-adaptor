@@ -1,3 +1,5 @@
+//go:build cgo
+
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -5,8 +7,11 @@ package libvirt
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/netip"
 	"testing"
+	"time"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/stretchr/testify/assert"
@@ -1443,4 +1448,130 @@ func TestCreateDomainNoExistingDomain(t *testing.T) {
 	_, err = CreateDomain(context.Background(), client, v)
 	require.Error(t, err, "expected error from missing volume, not from domain lookup")
 	assert.ErrorContains(t, err, "volume")
+}
+
+func TestWaitForDomainIPs(t *testing.T) {
+	testIP := netip.MustParseAddr("192.168.122.50")
+
+	tests := []struct {
+		name          string
+		retries       uint
+		delay         time.Duration
+		failCount     int // number of attempts returning empty IPs before success; set > retries to never succeed
+		returnErr     error
+		wantErr       bool
+		expectedError string
+		wantCallCount int
+		wantIPs       []netip.Addr
+	}{
+		{
+			name:          "succeeds on first attempt",
+			retries:       5,
+			delay:         10 * time.Millisecond,
+			failCount:     0,
+			wantErr:       false,
+			wantCallCount: 1,
+			wantIPs:       []netip.Addr{testIP},
+		},
+		{
+			name:          "succeeds after retries",
+			retries:       5,
+			delay:         10 * time.Millisecond,
+			failCount:     2,
+			wantErr:       false,
+			wantCallCount: 3,
+			wantIPs:       []netip.Addr{testIP},
+		},
+		{
+			name:          "fails when retries exhausted",
+			retries:       3,
+			delay:         10 * time.Millisecond,
+			failCount:     4, // greater than retries — never succeeds within the budget
+			wantErr:       true,
+			expectedError: "domain has no IPs assigned yet",
+			wantCallCount: 3,
+		},
+		{
+			name:          "fails immediately on unrecoverable error without retrying",
+			retries:       5,
+			delay:         10 * time.Millisecond,
+			returnErr:     errors.New("fatal libvirt query failure"),
+			wantErr:       true,
+			expectedError: "internal error on getting domain IPs: fatal libvirt query failure",
+			wantCallCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			callCount := 0
+			getIPs := func() ([]netip.Addr, error) {
+				callCount++
+				if tt.returnErr != nil {
+					return nil, tt.returnErr
+				}
+				if callCount <= tt.failCount {
+					return []netip.Addr{}, nil
+				}
+				return []netip.Addr{testIP}, nil
+			}
+
+			ips, err := waitForDomainIPs(context.Background(), getIPs, tt.retries, tt.delay)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, ips)
+				if tt.expectedError != "" {
+					assert.ErrorContains(t, err, tt.expectedError)
+				}
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantIPs, ips)
+			}
+			assert.Equal(t, tt.wantCallCount, callCount)
+		})
+	}
+}
+
+// TestWaitForDomainIPs_ContextCancellation verifies that context cancellation
+// aborts domain IP polling promptly.
+func TestWaitForDomainIPs_ContextCancellation(t *testing.T) {
+	testIP := netip.MustParseAddr("192.168.122.50")
+
+	t.Run("pre-cancelled context aborts without calling getIPs", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		callCount := 0
+		getIPs := func() ([]netip.Addr, error) {
+			callCount++
+			return []netip.Addr{testIP}, nil
+		}
+
+		ips, err := waitForDomainIPs(ctx, getIPs, 5, 10*time.Millisecond)
+		require.Error(t, err)
+		assert.Nil(t, ips)
+		assert.Equal(t, 0, callCount, "should not call getIPs if context is already cancelled")
+		assert.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("mid-flight cancellation stops retries", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		callCount := 0
+		getIPs := func() ([]netip.Addr, error) {
+			callCount++
+			if callCount == 2 {
+				cancel()
+			}
+			return []netip.Addr{}, nil
+		}
+
+		ips, err := waitForDomainIPs(ctx, getIPs, 10, 20*time.Millisecond)
+		require.Error(t, err)
+		assert.Nil(t, ips)
+		assert.LessOrEqual(t, callCount, 3, "retries must stop promptly after cancellation")
+		assert.ErrorIs(t, err, context.Canceled)
+	})
 }

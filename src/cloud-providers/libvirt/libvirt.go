@@ -555,6 +555,36 @@ func getDomainIPs(dom *libvirt.Domain) ([]netip.Addr, error) {
 	return ips, nil
 }
 
+// waitForDomainIPs polls getIPs until at least one IP is returned, retries are
+// exhausted, or ctx is cancelled. Uses FixedDelay so the interval between
+// retries is constant.
+func waitForDomainIPs(ctx context.Context, getIPs func() ([]netip.Addr, error), retries uint, sleep time.Duration) ([]netip.Addr, error) {
+	var ips []netip.Addr
+	err := retry.Do(
+		func() error {
+			var err error
+			ips, err = getIPs()
+			if err != nil {
+				// Something went completely wrong so it should return immediately
+				return retry.Unrecoverable(fmt.Errorf("internal error on getting domain IPs: %w", err))
+			}
+
+			if len(ips) > 0 {
+				return nil
+			}
+			return errors.New("domain has no IPs assigned yet")
+		},
+		retry.Context(ctx),
+		retry.Attempts(retries),
+		retry.Delay(sleep),
+		retry.DelayType(retry.FixedDelay),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return ips, nil
+}
+
 // normalizeRootDiskSize returns size if non-zero, otherwise defaultRootDiskSize.
 // Extracted so the defaulting logic can be unit-tested without a live libvirt
 // connection.
@@ -678,37 +708,19 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	logger.Printf("VM created: name=%s, uuid=%s", v.name, uuid)
 
 	// Wait for sometime for the IP to be visible
-	if err := retry.Do(
-		func() error {
-			ips, err := getDomainIPs(dom)
-			if err != nil {
-				// Something went completely wrong so it should return immediately
-				return retry.Unrecoverable(fmt.Errorf("Internal error on getting domain IPs: %s", err))
-			}
-
-			if len(ips) > 0 {
-				return nil
-			}
-			return fmt.Errorf("Domain has not IPs assigned yet")
-		},
-		retry.Attempts(GetDomainIPsRetries),
-		retry.Delay(GetDomainIPsSleep),
-	); err != nil {
+	ips, err := waitForDomainIPs(ctx, func() ([]netip.Addr, error) {
+		return getDomainIPs(dom)
+	}, GetDomainIPsRetries, GetDomainIPsSleep)
+	if err != nil {
 		logger.Printf("Unable to get IP addresses after %d retries (sleep time=%v): %s",
 			GetDomainIPsRetries, GetDomainIPsSleep, err)
 		// Returning the instance with UUID allows the caller to clean it up properly.
 		return &createDomainOutput{
 			instance: v,
-		}, fmt.Errorf("Domain (uuid=%s) IP addresses not found", uuid)
+		}, fmt.Errorf("domain (uuid=%s) IP addresses not found: %w", uuid, err)
 	}
 
-	if v.ips, err = getDomainIPs(dom); err != nil {
-		// Return the instance even on error so cleanup can happen
-		return &createDomainOutput{
-			instance: v,
-		}, fmt.Errorf("Internal error on getting domain IPs: %s", err)
-	}
-
+	v.ips = ips
 	logger.Printf("Instance created successfully")
 	return &createDomainOutput{
 		instance: v,
