@@ -1,22 +1,28 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+// Package tlsconfig reads the cluster TLS profile that the operator injects
+// into peer pods components.
+package tlsconfig
 
 import (
 	"crypto/tls"
 	"fmt"
+	"os"
 	"strings"
 
 	cliflag "k8s.io/component-base/cli/flag"
 )
 
-type tlsProfile struct {
+// Profile is a parsed TLS profile.
+type Profile struct {
 	MinVersion   uint16
 	CipherSuites []uint16
 }
 
-func parseTLSOptions(minVersion string, cipherSuites []string) (*tlsProfile, error) {
+// Parse validates a minimum TLS version and cipher suite names. It returns nil
+// when both are empty, so callers keep Go's defaults.
+func Parse(minVersion string, cipherSuites []string) (*Profile, error) {
 	minVersion = strings.TrimSpace(minVersion)
 
 	var cleaned []string
@@ -44,7 +50,7 @@ func parseTLSOptions(minVersion string, cipherSuites []string) (*tlsProfile, err
 		return nil, fmt.Errorf("cipherSuites may not be specified when minVersion is VersionTLS13: Go's crypto/tls does not allow configuring TLS 1.3 cipher suites")
 	}
 
-	p := &tlsProfile{MinVersion: version}
+	p := &Profile{MinVersion: version}
 
 	if len(cipherSuites) > 0 {
 		ids, err := cliflag.TLSCipherSuites(cipherSuites)
@@ -55,4 +61,24 @@ func parseTLSOptions(minVersion string, cipherSuites []string) (*tlsProfile, err
 	}
 
 	return p, nil
+}
+
+// OptionsFromEnv builds TLS options from the TLS_MIN_VERSION and
+// TLS_CIPHER_SUITES environment variables. It returns no options when both are
+// unset.
+func OptionsFromEnv() ([]func(*tls.Config), error) {
+	var cipherSuites []string
+	if cs := os.Getenv("TLS_CIPHER_SUITES"); cs != "" {
+		cipherSuites = strings.Split(cs, ",")
+	}
+
+	profile, err := Parse(os.Getenv("TLS_MIN_VERSION"), cipherSuites)
+	if err != nil || profile == nil {
+		return nil, err
+	}
+
+	return []func(*tls.Config){func(c *tls.Config) {
+		c.MinVersion = profile.MinVersion
+		c.CipherSuites = profile.CipherSuites
+	}}, nil
 }

@@ -17,11 +17,10 @@ limitations under the License.
 package main
 
 import (
-	"crypto/tls"
 	"flag"
 	"os"
-	"strings"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/tlsconfig"
 	mutating "github.com/confidential-containers/cloud-api-adaptor/src/webhook/pkg/mutating"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -70,22 +69,10 @@ func main() {
 
 	// Build TLS options from operator-injected env vars.
 	// The operator is the single source of truth for the cluster TLS profile.
-	var webhookTLSOpts []func(*tls.Config)
-	var cipherSuiteNames []string
-	if cs := os.Getenv("TLS_CIPHER_SUITES"); cs != "" {
-		cipherSuiteNames = strings.Split(cs, ",")
-	}
-
-	profile, err := parseTLSOptions(os.Getenv("TLS_MIN_VERSION"), cipherSuiteNames)
+	webhookTLSOpts, err := tlsconfig.OptionsFromEnv()
 	if err != nil {
 		setupLog.Error(err, "invalid TLS configuration")
 		os.Exit(1)
-	}
-	if profile != nil {
-		webhookTLSOpts = append(webhookTLSOpts, func(c *tls.Config) {
-			c.MinVersion = profile.MinVersion
-			c.CipherSuites = profile.CipherSuites
-		})
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

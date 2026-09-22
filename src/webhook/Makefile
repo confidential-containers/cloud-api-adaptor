@@ -110,15 +110,15 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: test ## Build multi-arch docker image with the manager.
-	docker buildx build --platform $(ARCHES) -t ${IMG} .
+	cd .. && docker buildx build --platform $(ARCHES) -t ${IMG} -f webhook/Dockerfile .
 
 .PHONY: docker-load
 docker-load: ## Load the docker image of current platform only
-	docker buildx build -t ${IMG} --load .
+	cd .. && docker buildx build -t ${IMG} --load -f webhook/Dockerfile .
 
 .PHONY: docker-push
 docker-push: ## Push multi-arch docker image with the manager.
-	docker buildx build --platform $(ARCHES) -t ${IMG} --push .
+	cd .. && docker buildx build --platform $(ARCHES) -t ${IMG} --push -f webhook/Dockerfile .
 
 ##@ Deployment
 
