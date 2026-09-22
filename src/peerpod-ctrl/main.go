@@ -36,6 +36,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util/tlsconfig"
 	confidentialcontainersorgv1alpha1 "github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl/api/v1alpha1"
 	"github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl/controllers"
 	//+kubebuilder:scaffold:imports
@@ -70,12 +71,22 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// The metrics server follows the cluster TLS profile the same way the
+	// webhook does: TLS_MIN_VERSION and TLS_CIPHER_SUITES are injected by the
+	// operator, and Go's defaults apply when they are unset.
+	metricsTLSOpts, err := tlsconfig.OptionsFromEnv()
+	if err != nil {
+		setupLog.Error(err, "invalid TLS configuration")
+		os.Exit(1)
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress:    metricsAddr,
 			SecureServing:  true,
 			FilterProvider: filters.WithAuthenticationAndAuthorization,
+			TLSOpts:        metricsTLSOpts,
 		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,

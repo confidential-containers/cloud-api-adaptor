@@ -52,6 +52,10 @@ helm install my-controller . \
   --create-namespace
 ```
 
+## TLS profile for the metrics server
+
+The manager serves metrics over TLS on port 8443. `tlsMinVersion` and `tlsCipherSuites` set the minimum TLS version and the allowed cipher suites, using the same names and rules as the webhook chart (`VersionTLS12` or `VersionTLS13`; IANA cipher suite names; no cipher suites with TLS 1.3). Both are optional and Go's defaults apply when they are empty.
+
 ## Auto-Generated Manifests
 
 This chart includes auto-generated resources:
