@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/confidential-containers/peerpod-ctrl:latest
+IMG ?= ghcr.io/confidential-containers/peerpod-ctrl:latest
 IMG_REPO ?= $(shell echo '$(IMG)' | cut -d: -f1)
 IMG_TAG ?= $(shell echo '$(IMG)' | cut -d: -f2-)
 PEERPODCTRL_HELM_RELEASE ?= peerpodctrl
