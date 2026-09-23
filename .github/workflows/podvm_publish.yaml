@@ -36,7 +36,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.git_ref || github.run_id }}
+  group: publish-podvm-${{ github.event.pull_request.number || inputs.git_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:

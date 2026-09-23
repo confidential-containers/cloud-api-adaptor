@@ -62,7 +62,7 @@ defaults:
     working-directory: src/cloud-api-adaptor
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-mkosi-${{ toJSON(inputs) }}
+  group: build-podvm-mkosi-${{ github.event.pull_request.number || github.ref }}-${{ toJSON(inputs) }}
   cancel-in-progress: true
 
 permissions: {}
