@@ -7,7 +7,7 @@ provider: libvirt
 # Dev image required for this provider (includes CGO bindings)
 # Update to <commit>-dev at release time
 image:
-  tag: "9b608e60b032222488adec09e61dbf40f3c71e8f-dev"
+  tag: "latest"
 
 providerConfigs:
   libvirt: {}
