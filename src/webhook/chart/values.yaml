@@ -14,7 +14,7 @@ replicas: 2
 
 # Webhook image
 image:
-  repository: quay.io/confidential-containers/peer-pods-webhook
+  repository: ghcr.io/confidential-containers/peer-pods-webhook
   tag: latest
   pullPolicy: IfNotPresent
 
