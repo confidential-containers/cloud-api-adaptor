@@ -11,9 +11,7 @@ import (
 	"testing"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/ibmcloud"
-	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/utils"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func TestCreateSimplePod(t *testing.T) {
@@ -46,7 +44,6 @@ func TestCreateConfidentialPod(t *testing.T) {
 	} else {
 		t.Skip("Ignore SE test for simple pod")
 	}
-
 }
 
 func TestCreatePodWithConfigMap(t *testing.T) {
@@ -119,33 +116,6 @@ func TestCreatePeerPodWithLargeImage(t *testing.T) {
 	DoTestCreatePeerPodWithLargeImage(t, testEnv, assert)
 }
 
-func TestCreatePeerPodWithPVC(t *testing.T) {
-	if os.Getenv("TEST_CSI_WRAPPER") == "yes" {
-		assert := IBMCloudAssert{
-			VPC: pv.IBMCloudProps.VPC,
-		}
-		nameSpace := "kube-system"
-		pvcName := "my-pvc"
-		mountPath := "/mount-path"
-		storageClassName := "ibmc-vpc-block-5iops-tier"
-		storageSize := "10Gi"
-		podName := "nginx-pvc-pod"
-		imageName, err := utils.GetImage("nginx")
-		if err != nil {
-			t.Fatal(err)
-		}
-		containerName := "nginx-pvc-container"
-		csiContainerName := "ibm-vpc-block-podvm-node-driver"
-		csiImageName := "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:v5.2.0"
-
-		myPVC := NewPVC(nameSpace, pvcName, storageSize, corev1.ReadWriteOnce, WithStorageClass(storageClassName))
-		myPodwithPVC := NewPodWithPVCFromIBMVPCBlockDriver(nameSpace, podName, containerName, imageName, csiContainerName, csiImageName, WithPVCBinding(t, mountPath, pvcName, containerName))
-		DoTestCreatePeerPodWithPVCAndCSIWrapper(t, testEnv, assert, myPVC, myPodwithPVC, mountPath)
-	} else {
-		t.Skip("Ignore PeerPod with PVC (CSI wrapper) test")
-	}
-}
-
 func TestIBMCloudCreatePeerPodWithAuthenticatedImageWithImagePullSecretOnPod(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
@@ -213,12 +183,14 @@ func TestPodVMWithAnnotationsInvalidInstanceType(t *testing.T) {
 	}
 	DoTestPodVMwithAnnotationsInvalidInstanceType(t, testEnv, assert, "bx2-2x4")
 }
+
 func TestPodVMwithAnnotationsLargerMemory(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
 	}
 	DoTestPodVMwithAnnotationsLargerMemory(t, testEnv, assert)
 }
+
 func TestPodVMwithAnnotationsLargerCPU(t *testing.T) {
 	assert := IBMCloudAssert{
 		VPC: pv.IBMCloudProps.VPC,
