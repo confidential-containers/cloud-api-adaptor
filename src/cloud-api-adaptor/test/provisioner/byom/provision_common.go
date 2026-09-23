@@ -15,6 +15,7 @@ import (
 	"time"
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
+	kindutils "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner/common/kind"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
@@ -22,6 +23,7 @@ import (
 // ByomProvisioner implements BYOM e2e provisioning
 type ByomProvisioner struct {
 	provisionerCreatedVMs []string // Track VMs created by this provisioner instance
+	kind                  *kindutils.KindCluster
 }
 
 // ByomInstallChart implements the InstallChart interface
@@ -109,70 +111,21 @@ func NewByomProvisioner(properties map[string]string) (pv.CloudProvisioner, erro
 		os.Setenv("DOCKER_HOST", ByomProps.DockerHost)
 	}
 
-	return &ByomProvisioner{}, nil
+	kind, err := kindutils.NewKindCluster(map[string]string{
+		"CLUSTER_NAME":      ByomProps.ClusterName,
+		"CONTAINER_RUNTIME": ByomProps.ContainerRuntime,
+		"KIND_CONFIG_FILE":  ByomProps.KindConfigFile,
+		"WORKER_NODE_NAME":  ByomProps.WorkerNodeName,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ByomProvisioner{kind: kind}, nil
 }
 
 func (b *ByomProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Config) error {
-	kindConfigPath, err := filepath.Abs(ByomProps.KindConfigFile)
-	if err != nil {
-		return fmt.Errorf("error getting absolute path of kind config file: %w", err)
-	}
-
-	log.Infof("Using BYOM kind config from: %s", kindConfigPath)
-	os.Setenv("KIND_CONFIG_FILE", kindConfigPath)
-
-	workingDir := filepath.Dir(kindConfigPath)
-
-	if err := b.createKindCluster(workingDir); err != nil {
-		log.Errorf("Error creating Kind cluster: %v", err)
-		return err
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get user home directory: %w", err)
-	}
-	cfg.WithKubeconfigFile(filepath.Join(home, ".kube/config"))
-
-	if err := pv.AddNodeRoleWorkerLabel(context.Background(), ByomProps.ClusterName, cfg); err != nil {
-
-		return fmt.Errorf("failed to label nodes: %w", err)
-	}
-
-	// Update containerd configuration to not discard unpacked layers
-	log.Info("Configuring containerd on worker node to keep unpacked layers...")
-
-	cmd := exec.Command("docker", "exec", ByomProps.WorkerNodeName, "sed", "-i",
-		"s/discard_unpacked_layers = true/discard_unpacked_layers = false/g",
-		"/etc/containerd/config.toml")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Warnf("Failed to update containerd config: %v, output: %s", err, string(output))
-	} else {
-		log.Info("Updated containerd config to keep unpacked layers")
-
-		// Restart containerd to apply the change
-		cmd = exec.Command("docker", "exec", ByomProps.WorkerNodeName, "systemctl", "restart", "containerd")
-		output, err = cmd.CombinedOutput()
-		if err != nil {
-			log.Warnf("Failed to restart containerd: %v, output: %s", err, string(output))
-		} else {
-			log.Info("Restarted containerd, waiting for it to be ready...")
-			time.Sleep(5 * time.Second)
-
-			// Verify if containerd is running
-			cmd = exec.Command("docker", "exec", ByomProps.WorkerNodeName, "systemctl", "is-active", "containerd")
-			output, err = cmd.CombinedOutput()
-			status := strings.TrimSpace(string(output))
-			if err != nil || status != "active" {
-				log.Warnf("Containerd may not be running properly: status=%s, err=%v", status, err)
-			} else {
-				log.Info("Containerd is active and running")
-			}
-		}
-	}
-
-	return nil
+	return b.kind.CreateCluster(ctx, cfg)
 }
 
 // CreatePodVMInstance creates new containers from the uploaded image and use their IPs for the pool.
@@ -224,12 +177,7 @@ func (b *ByomProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) er
 }
 
 func (b *ByomProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
-	kindConfigPath, err := filepath.Abs(ByomProps.KindConfigFile)
-	if err != nil {
-		return fmt.Errorf("error getting absolute path of kind config file: %w", err)
-	}
-
-	return b.deleteKindCluster(filepath.Dir(kindConfigPath))
+	return b.kind.DeleteCluster(ctx, cfg)
 }
 
 func (b *ByomProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
@@ -530,36 +478,3 @@ func (b *ByomProvisioner) destroyContainer(containerName string) error {
 	return nil
 }
 
-func (b *ByomProvisioner) createKindCluster(workingDir string) error {
-	// Create kind cluster by executing the script on the node
-	cmd := exec.Command("/bin/bash", "-c", "./kind_cluster.sh create")
-	cmd.Dir = workingDir
-	cmd.Stdout = os.Stdout
-	// TODO: better handle stderr. Messages getting out of order.
-	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
-	// Set CLUSTER_NAME and CONTAINER_RUNTIME if available. Also unset KUBECONFIG so that the default path is used.
-	cmd.Env = append(cmd.Env, "CLUSTER_NAME="+ByomProps.ClusterName, "KUBECONFIG=", "CONTAINER_RUNTIME="+ByomProps.ContainerRuntime)
-	err := cmd.Run()
-	if err != nil {
-		log.Errorf("Error creating Kind cluster: %v", err)
-		return err
-	}
-
-	return nil
-}
-
-func (b *ByomProvisioner) deleteKindCluster(workingDir string) error {
-	// Delete kind cluster by executing the script on the node
-	cmd := exec.Command("/bin/bash", "-c", "./kind_cluster.sh delete")
-	cmd.Dir = workingDir
-	cmd.Stdout = os.Stdout
-	// TODO: better handle stderr. Messages getting out of order.
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		log.Errorf("Error deleting Kind cluster: %v", err)
-		return err
-	}
-	return nil
-}
