@@ -4,7 +4,7 @@ include ./Makefile.inc
 SE_BOOT   ?= false
 IS_DEBIAN := $(shell if grep -q 'ID_LIKE=debian' /etc/os-release; then echo "true"; else echo "false"; fi)
 
-REGISTRY ?= quay.io/confidential-containers
+REGISTRY ?= ghcr.io/confidential-containers
 ifeq ($(PODVM_TAG),)
 	PODVM_TAG := $(VERSIONS_HASH)
 endif
