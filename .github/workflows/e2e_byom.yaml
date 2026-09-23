@@ -115,7 +115,7 @@ jobs:
         run: |
           tag=$(git rev-parse --short HEAD)
           PODVM_TAG=${tag} make image-byom-e2e-container
-          echo "BYOM_PODVM_IMAGE=quay.io/confidential-containers/podvm-byom-e2e-image-amd64:${tag}" >> "$GITHUB_ENV"
+          echo "BYOM_PODVM_IMAGE=ghcr.io/confidential-containers/podvm-byom-e2e-image-amd64:${tag}" >> "$GITHUB_ENV"
 
       - name: Generate SSH keys for BYOM
         run: |
