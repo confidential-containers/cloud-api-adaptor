@@ -32,8 +32,6 @@ on:
         required: false
       ALIBABA_CLOUD_OIDC_PROVIDER_ARN:
         required: false
-      QUAY_PASSWORD:
-        required: true
       REGISTRY_CREDENTIAL_ENCODED:
         required: true
       AZURE_SUBSCRIPTION_ID:
@@ -113,8 +111,6 @@ jobs:
     permissions:
       contents: read  # Required to checkout code
       packages: write  # Required to push container images
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   caa_image_s390x:
     uses: $/.github/workflows/caa_build_and_push.yaml
@@ -129,8 +125,6 @@ jobs:
     permissions:
       contents: read  # Required to checkout code
       packages: write  # Required to push container images
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   # Build and push the peerpod-ctrl image (per-arch)
   peerpod_ctrl_image_amd64:
@@ -144,8 +138,6 @@ jobs:
     permissions:
       contents: read
       packages: write # Required to publish the image to ghcr
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   peerpod_ctrl_image_s390x:
     uses: $/.github/workflows/peerpod-ctrl_build_and_push.yaml
@@ -158,8 +150,6 @@ jobs:
     permissions:
       contents: read
       packages: write # Required to publish the image to ghcr
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   # Build and push the webhook image
   webhook_image:
