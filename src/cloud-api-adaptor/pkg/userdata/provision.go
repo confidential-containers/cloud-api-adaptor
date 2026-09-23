@@ -39,7 +39,7 @@ const (
 
 var logger = log.New(log.Writer(), "[userdata/provision] ", log.LstdFlags|log.Lmsgprefix)
 var WriteFilesList = []string{paths.AACfgPath, paths.CDHCfgPath, paths.ForwarderCfgPath, paths.AuthFilePath, paths.InitDataPath, paths.ScratchSpacePath}
-var InitdDataFilesList = []string{paths.AACfgPath, paths.CDHCfgPath, PolicyPath}
+var InitdDataFilesList = []string{paths.AACfgPath, paths.CDHCfgPath, PolicyPath, paths.StoragePolicyPath}
 
 type Config struct {
 	fetchTimeout  int
