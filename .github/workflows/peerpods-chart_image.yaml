@@ -33,7 +33,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.chart_version || github.ref }}-peerpods-chart-image
+  group: release-peerpods-chart-${{ inputs.chart_version || github.ref }}
   cancel-in-progress: true
 
 jobs:
