@@ -210,7 +210,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: quay.io/confidential-containers/peer-pods-webhook:latest
+        image: ghcr.io/confidential-containers/peer-pods-webhook:latest
         livenessProbe:
           httpGet:
             path: /healthz

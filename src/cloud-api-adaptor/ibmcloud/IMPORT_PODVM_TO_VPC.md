@@ -1,6 +1,6 @@
 # Importing Public PODVM images into IBM Cloud VPC
 
-As part of the release process pre-built images are published as OCI artifacts using oras to the confidential-containers quay repository. e.g. `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`. Alternatively images can be built and distributed directly as qcow2 files. These qcow2 files need to be uploaded to IBM Cloud to use as a VPC image.
+As part of the release process pre-built images are published as OCI artifacts using oras to the confidential-containers ghcr.io repository. e.g. `ghcr.io/confidential-containers/podvm-amd64`. Alternatively images can be built and distributed directly as qcow2 files. These qcow2 files need to be uploaded to IBM Cloud to use as a VPC image.
 
 To simplify this process a script has been created to aid this: `ibmcloud/image/import.sh`.
 
@@ -47,7 +47,7 @@ The script will sanitise `.` and `_` into `-` and lowercase the image name. Only
 
 - Extracting and uploading a qcow2 image from an OCI artifact:
 
-`./import.sh quay.io/confidential-containers/podvm-generic-ubuntu-amd64 ca-tor --instance jt-cos-instance --bucket podvm-image-cos-bucket-jt --region jp-tok`
+`./import.sh ghcr.io/confidential-containers/podvm-amd64 ca-tor --instance jt-cos-instance --bucket podvm-image-cos-bucket-jt --region jp-tok`
 
 - Uploading a qcow2 file directly:
 

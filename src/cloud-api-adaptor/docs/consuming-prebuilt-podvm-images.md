@@ -8,12 +8,12 @@ Pod VM images are generated using mkosi.
 >Note: The published images doesn't have any TEE support. For specific TEE support, you'll need to build your own pod VM image or used the published Azure, AWS and GCP images.
 Refer to the coco [website](https://confidentialcontainers.org/docs/examples/) for more details.
 
-You can find the mkosi images available at <https://quay.io/organization/confidential-containers> with the *podvm-generic-ubuntu-[ARCH]* name pattern.
+You can find the mkosi images available at <https://ghcr.io/confidential-containers/> with the *podvm-[ARCH]* name pattern.
 
 For example:
 
-- <https://quay.io/repository/confidential-containers/podvm-generic-ubuntu-amd64> hosts the Ubuntu images that can be used with all providers.
-- <https://quay.io/repository/confidential-containers/podvm-generic-ubuntu-s390x> hosts the Ubuntu images that can be used for s390x architecture.
+- <https://ghcr.io/confidential-containers/podvm-amd64> hosts the Ubuntu images that can be used with all providers.
+- <https://ghcr.io/confidential-containers/podvm-s390x> hosts the Ubuntu images that can be used for s390x architecture.
 
 ## Downloading the mkosi based images
 
@@ -21,6 +21,6 @@ The mkosi based images are OCI artifacts, so you'll need to use [oras](https://o
 
 ```sh
 export CAA_VERSION=v0.13.0
-oras pull quay.io/confidential-containers/podvm-generic-ubuntu-amd64:$CAA_VERSION
+oras pull ghcr.io/confidential-containers/podvm-amd64:$CAA_VERSION
 tar xvJpf podvm.tar.xz
 ```

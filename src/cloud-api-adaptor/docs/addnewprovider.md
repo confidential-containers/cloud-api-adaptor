@@ -235,7 +235,7 @@ COPY --from=builder /work/libvirt/libvirt.so /libvirt.so
 EOF
 
 cd ../ && docker buildx build --platform "linux/amd64" \
- -t quay.io/confidential-containers/libvirt \
+ -t ghcr.io/confidential-containers/libvirt \
  -f libvirt/Dockerfile \
  -o type=local,dest="./libvirt/build" \
  .

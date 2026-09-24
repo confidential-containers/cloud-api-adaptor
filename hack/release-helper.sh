@@ -51,7 +51,7 @@ update_provider_charts() {
     if [ $# -eq 0 ]; then
         echo "Usage: $script_name caa-image-tag <image_tag>"
         echo 'Please provide a image_tag of the pre-release tested CAA image from
-        quay.io/confidential-containers/cloud-api-adaptor'
+        ghcr.io/confidential-containers/cloud-api-adaptor'
         exit 1
     fi
 
@@ -109,7 +109,7 @@ usage() {
         Provider libvirt and src/cloud-providers/Makefile get the -dev suffix.
             - Parameters: <image_tag> where
                 - image_tag corresponds to the tag of the pre-release tested version
-                of the quay.io/confidential-containers/cloud-api-adaptor image
+                of the ghcr.io/confidential-containers/cloud-api-adaptor image
 EOF
 }
 

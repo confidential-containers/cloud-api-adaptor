@@ -42,7 +42,7 @@ make kind-cluster
 ```
 Deploy the webhook in the kind cluster
 ```
-make kind-deploy IMG=quay.io/confidential-containers/peer-pods-webhook
+make kind-deploy IMG=ghcr.io/confidential-containers/peer-pods-webhook
 ```
 
 ### Using a remote cluster

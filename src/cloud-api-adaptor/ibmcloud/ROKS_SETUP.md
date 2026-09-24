@@ -165,7 +165,7 @@ src/cloud-api-adaptor/ibmcloud/image/import.sh podvm/build/podvm-ubuntu-amd64.qc
 > If you don't have a TDX enabled image and are unable to build one, you can still run the peer pod demo without attestation. Run the following command to import a prebuilt non-TDX demo image:
 >
 > ```bash
-> src/cloud-api-adaptor/ibmcloud/image/import.sh ghcr.io/confidential-containers/podvm-generic-ubuntu-amd64:latest "$REGION" --platform linux/amd64
+> src/cloud-api-adaptor/ibmcloud/image/import.sh ghcr.io/confidential-containers/podvm-amd64:latest "$REGION" --platform linux/amd64
 > ```
 
 The import script will end with the line: `Image <image-name> with id <image-id> is available`. Make note of the `image-id`, which will be
