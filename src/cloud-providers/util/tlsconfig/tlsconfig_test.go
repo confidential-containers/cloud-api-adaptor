@@ -1,7 +1,7 @@
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package tlsconfig
 
 import (
 	"crypto/tls"
@@ -104,7 +104,7 @@ func TestParseTLSOptions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseTLSOptions(tt.minVersion, tt.cipherSuites)
+			result, err := Parse(tt.minVersion, tt.cipherSuites)
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -134,4 +134,40 @@ func TestParseTLSOptions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestOptionsFromEnv(t *testing.T) {
+	t.Run("unset keeps Go defaults", func(t *testing.T) {
+		t.Setenv("TLS_MIN_VERSION", "")
+		t.Setenv("TLS_CIPHER_SUITES", "")
+
+		opts, err := OptionsFromEnv()
+		require.NoError(t, err)
+		assert.Empty(t, opts)
+	})
+
+	t.Run("applies the profile", func(t *testing.T) {
+		t.Setenv("TLS_MIN_VERSION", "VersionTLS12")
+		t.Setenv("TLS_CIPHER_SUITES", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
+
+		opts, err := OptionsFromEnv()
+		require.NoError(t, err)
+		require.Len(t, opts, 1)
+
+		var c tls.Config
+		opts[0](&c)
+		assert.Equal(t, uint16(tls.VersionTLS12), c.MinVersion)
+		assert.Equal(t, []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+		}, c.CipherSuites)
+	})
+
+	t.Run("invalid value is an error", func(t *testing.T) {
+		t.Setenv("TLS_MIN_VERSION", "VersionTLS11")
+		t.Setenv("TLS_CIPHER_SUITES", "")
+
+		_, err := OptionsFromEnv()
+		assert.Error(t, err)
+	})
 }
