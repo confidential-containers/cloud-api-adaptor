@@ -9,8 +9,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/hex"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -276,15 +276,13 @@ func TestInitDataMeasurement(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// truncate the measurement to 32 bytes
-	strValues := make([]string, len(msmt))
-	for i, v := range msmt {
-		strValues[i] = strconv.Itoa(int(v))
-	}
-	// json array string
-	msStr := "[" + strings.Join(strValues, ",") + "]"
+	// The expected measurement as a lowercase hex string.
+	msStr := hex.EncodeToString(msmt)
 
-	shCmd := "curl -s \"http://127.0.0.1:8006/aa/evidence?runtime_data=test\" | jq -c '(.quote // .tpm_quote).pcrs[8]'"
+	// V1 and V2 evidence carry the PCRs as lowercase hex strings under
+	// "tpm_quote". The pre-V1 "quote" key, which held them as JSON integer
+	// arrays, is no longer supported.
+	shCmd := `curl -s "http://127.0.0.1:8006/aa/evidence?runtime_data=test" | jq -r '.tpm_quote.pcrs[8]'`
 	cmd := []string{"sh", "-c", shCmd}
 
 	annotations := map[string]string{
