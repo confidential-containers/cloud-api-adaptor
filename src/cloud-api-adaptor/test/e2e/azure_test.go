@@ -173,10 +173,13 @@ func TestKbsKeyRelease(t *testing.T) {
 		t.Skip("Skipping kbs related test as kbs is not deployed")
 	}
 	t.Parallel()
-	kbsEndpoint, _ := keyBrokerService.GetCachedKbsEndpoint()
+	kbsEndpoint, err := getKbsEndpoint(t)
+	if err != nil {
+		t.Fatalf("getting KBS endpoint: %v", err)
+	}
 	testSecret := envconf.RandomName("coco-pp-e2e-secret", 25)
 	resourcePath := "caa/workload_key/test_key.bin"
-	err := keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
+	err = keyBrokerService.SetSecret(resourcePath, []byte(testSecret))
 	if err != nil {
 		t.Fatalf("SetSecret failed with: %v", err)
 	}
@@ -231,9 +234,9 @@ func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
 		t.Skip("Skipping kbs related test as Trustee Operator is not deployed")
 	}
 	t.Parallel()
-	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	kbsEndpoint, err := getKbsEndpoint(t)
 	if err != nil {
-		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+		t.Fatalf("getting KBS endpoint: %v", err)
 	}
 	DoTestKbsKeyRelease(t, testEnv, assert, kbsEndpoint, "default/kbsres1/key1", "res1val1")
 }

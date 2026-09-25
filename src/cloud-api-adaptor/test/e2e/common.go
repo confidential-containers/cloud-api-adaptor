@@ -147,6 +147,19 @@ func isTestWithKbs() bool {
 	return os.Getenv("TEST_KBS") == "yes" || os.Getenv("TEST_KBS") == "true"
 }
 
+// getKbsEndpoint returns the KBS endpoint. It checks KBS_ENDPOINT first so
+// that pre-installed operator-managed deployments can inject the endpoint
+// directly, without needing the KBS manager to have called GetKbsEndpoint.
+func getKbsEndpoint(t *testing.T) (string, error) {
+	if ep := os.Getenv("KBS_ENDPOINT"); ep != "" {
+		return ep, nil
+	}
+	if keyBrokerService == nil {
+		return "", fmt.Errorf("KBS_ENDPOINT not set and no KBS manager available")
+	}
+	return keyBrokerService.GetCachedKbsEndpoint()
+}
+
 // Setup of Trustee Operator is required for this test
 // And is not handled as part of provisioning
 func isTestWithTrusteeOperator() bool {
