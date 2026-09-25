@@ -502,7 +502,7 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 
 }
 
-func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, kbs pv.KbsManager) {
 	// TODO create a multi-arch encrypted image. Note the Kata CI version doesn't work as the key length is 44, not 32 which is wanted
 	if runtime.GOARCH == "s390x" {
 		t.Skip("Encrypted image test not currently support on s390x")

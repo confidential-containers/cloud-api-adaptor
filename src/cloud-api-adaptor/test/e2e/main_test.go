@@ -20,7 +20,7 @@ var (
 	testEnv          env.Environment
 	cloudProvider    string
 	provisioner      pv.CloudProvisioner
-	keyBrokerService *pv.KeyBrokerService
+	keyBrokerService pv.KbsManager
 )
 
 const (
