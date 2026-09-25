@@ -13,7 +13,6 @@ import (
 
 // MockConn implements net.Conn for testing
 type MockConn struct {
-	net.Conn
 	closed bool
 	mu     sync.Mutex
 }
@@ -29,13 +28,8 @@ func (m *MockConn) Close() error {
 	return nil
 }
 
-func (m *MockConn) Read(b []byte) (n int, err error) {
-	return 0, nil
-}
-
-func (m *MockConn) Write(b []byte) (n int, err error) {
-	return len(b), nil
-}
+func (m *MockConn) Read(b []byte) (n int, err error)  { return 0, nil }
+func (m *MockConn) Write(b []byte) (n int, err error) { return len(b), nil }
 
 func (m *MockConn) LocalAddr() net.Addr {
 	return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8080}
@@ -45,17 +39,9 @@ func (m *MockConn) RemoteAddr() net.Addr {
 	return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 9090}
 }
 
-func (m *MockConn) SetDeadline(t time.Time) error {
-	return nil
-}
-
-func (m *MockConn) SetReadDeadline(t time.Time) error {
-	return nil
-}
-
-func (m *MockConn) SetWriteDeadline(t time.Time) error {
-	return nil
-}
+func (m *MockConn) SetDeadline(t time.Time) error      { return nil }
+func (m *MockConn) SetReadDeadline(t time.Time) error  { return nil }
+func (m *MockConn) SetWriteDeadline(t time.Time) error { return nil }
 
 // MockAgentServiceClient implements pb.AgentServiceService for testing
 type MockAgentServiceClient struct {

@@ -119,29 +119,32 @@ func TestConnect(t *testing.T) {
 
 // TestConnectConcurrency tests concurrent Connect calls
 func TestConnectConcurrency(t *testing.T) {
-	mockAgent := &testutil.MockAgentServiceClient{}
-	r := setupTestRedirector(t, mockAgent, nil)
-
 	ctx := context.Background()
 	const numGoroutines = 10
 
+	r := &redirector{
+		dialer: func(ctx context.Context) (net.Conn, error) {
+			return testutil.NewMockConn(), nil
+		},
+	}
+
 	var wg sync.WaitGroup
-	errors := make(chan error, numGoroutines)
+	errs := make(chan error, numGoroutines)
 
 	for i := 0; i < numGoroutines; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			if err := r.Connect(ctx); err != nil {
-				errors <- err
+				errs <- err
 			}
 		}()
 	}
 
 	wg.Wait()
-	close(errors)
+	close(errs)
 
-	for err := range errors {
+	for err := range errs {
 		t.Errorf("concurrent Connect failed: %v", err)
 	}
 }
@@ -327,28 +330,8 @@ func TestProcessOperations(t *testing.T) {
 }
 
 // TestStreamOperations tests I/O stream operations
-func runRedirectorTests(t *testing.T, tests []struct {
-	name string
-	run  func(*redirector, context.Context) error
-}) {
-	t.Helper()
-
-	mockAgent := &testutil.MockAgentServiceClient{}
-	r := setupTestRedirector(t, mockAgent, nil)
-	ctx := context.Background()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.run(r, ctx); err != nil {
-				t.Errorf("%s() error = %v", tt.name, err)
-			}
-		})
-	}
-}
-
-// TestStreamOperations tests I/O stream operations
 func TestStreamOperations(t *testing.T) {
-	runRedirectorTests(t, []struct {
+	tests := []struct {
 		name string
 		run  func(*redirector, context.Context) error
 	}{
@@ -396,12 +379,20 @@ func TestStreamOperations(t *testing.T) {
 				return err
 			},
 		},
-	})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := setupTestRedirector(t, &testutil.MockAgentServiceClient{}, nil)
+			if err := tt.run(r, context.Background()); err != nil {
+				t.Errorf("%s() error = %v", tt.name, err)
+			}
+		})
+	}
 }
 
 // TestNetworkOperations tests network operations
 func TestNetworkOperations(t *testing.T) {
-	runRedirectorTests(t, []struct {
+	tests := []struct {
 		name string
 		run  func(*redirector, context.Context) error
 	}{
@@ -440,12 +431,20 @@ func TestNetworkOperations(t *testing.T) {
 				return err
 			},
 		},
-	})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := setupTestRedirector(t, &testutil.MockAgentServiceClient{}, nil)
+			if err := tt.run(r, context.Background()); err != nil {
+				t.Errorf("%s() error = %v", tt.name, err)
+			}
+		})
+	}
 }
 
 // TestSandboxOperations tests sandbox operations
 func TestSandboxOperations(t *testing.T) {
-	runRedirectorTests(t, []struct {
+	tests := []struct {
 		name string
 		run  func(*redirector, context.Context) error
 	}{
@@ -463,12 +462,20 @@ func TestSandboxOperations(t *testing.T) {
 				return err
 			},
 		},
-	})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := setupTestRedirector(t, &testutil.MockAgentServiceClient{}, nil)
+			if err := tt.run(r, context.Background()); err != nil {
+				t.Errorf("%s() error = %v", tt.name, err)
+			}
+		})
+	}
 }
 
 // TestMountOperations tests mount operations
 func TestMountOperations(t *testing.T) {
-	runRedirectorTests(t, []struct {
+	tests := []struct {
 		name string
 		run  func(*redirector, context.Context) error
 	}{
@@ -486,12 +493,20 @@ func TestMountOperations(t *testing.T) {
 				return err
 			},
 		},
-	})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := setupTestRedirector(t, &testutil.MockAgentServiceClient{}, nil)
+			if err := tt.run(r, context.Background()); err != nil {
+				t.Errorf("%s() error = %v", tt.name, err)
+			}
+		})
+	}
 }
 
 // TestIPTablesOperations tests IPTables operations
 func TestIPTablesOperations(t *testing.T) {
-	runRedirectorTests(t, []struct {
+	tests := []struct {
 		name string
 		run  func(*redirector, context.Context) error
 	}{
@@ -509,12 +524,20 @@ func TestIPTablesOperations(t *testing.T) {
 				return err
 			},
 		},
-	})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := setupTestRedirector(t, &testutil.MockAgentServiceClient{}, nil)
+			if err := tt.run(r, context.Background()); err != nil {
+				t.Errorf("%s() error = %v", tt.name, err)
+			}
+		})
+	}
 }
 
 // TestMemoryOperations tests memory operations
 func TestMemoryOperations(t *testing.T) {
-	runRedirectorTests(t, []struct {
+	tests := []struct {
 		name string
 		run  func(*redirector, context.Context) error
 	}{
@@ -546,12 +569,20 @@ func TestMemoryOperations(t *testing.T) {
 				return err
 			},
 		},
-	})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := setupTestRedirector(t, &testutil.MockAgentServiceClient{}, nil)
+			if err := tt.run(r, context.Background()); err != nil {
+				t.Errorf("%s() error = %v", tt.name, err)
+			}
+		})
+	}
 }
 
 // TestStorageOperations tests storage operations
 func TestStorageOperations(t *testing.T) {
-	runRedirectorTests(t, []struct {
+	tests := []struct {
 		name string
 		run  func(*redirector, context.Context) error
 	}{
@@ -583,12 +614,20 @@ func TestStorageOperations(t *testing.T) {
 				return err
 			},
 		},
-	})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := setupTestRedirector(t, &testutil.MockAgentServiceClient{}, nil)
+			if err := tt.run(r, context.Background()); err != nil {
+				t.Errorf("%s() error = %v", tt.name, err)
+			}
+		})
+	}
 }
 
 // TestMiscellaneousOperations tests miscellaneous operations
 func TestMiscellaneousOperations(t *testing.T) {
-	runRedirectorTests(t, []struct {
+	tests := []struct {
 		name string
 		run  func(*redirector, context.Context) error
 	}{
@@ -648,7 +687,15 @@ func TestMiscellaneousOperations(t *testing.T) {
 				return err
 			},
 		},
-	})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := setupTestRedirector(t, &testutil.MockAgentServiceClient{}, nil)
+			if err := tt.run(r, context.Background()); err != nil {
+				t.Errorf("%s() error = %v", tt.name, err)
+			}
+		})
+	}
 }
 
 // TestHealthService tests health service operations
