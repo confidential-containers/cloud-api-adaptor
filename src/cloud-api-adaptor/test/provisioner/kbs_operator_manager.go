@@ -6,6 +6,7 @@ package provisioner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -138,6 +139,52 @@ func (p *operatorKbsManager) Delete(_ context.Context, _ *envconf.Config) error 
 	return nil
 }
 
+// RevertResources restores the pre-test state by unregistering the secrets this
+// manager added to the KbsConfig, deleting them, and restarting KBS. Resources
+// that already existed before the test are left untouched.
+func (p *operatorKbsManager) RevertResources() error {
+	if len(p.addedSecrets) == 0 {
+		return nil
+	}
+	cr, err := p.discoverKbsConfig()
+	if err != nil {
+		return err
+	}
+
+	remove := make(map[string]bool, len(p.addedSecrets))
+	for _, s := range p.addedSecrets {
+		remove[s] = true
+	}
+
+	current, err := operatorRun("kubectl", "get", "kbsconfig", cr, "-n", p.ns,
+		"-o", "jsonpath={.spec.kbsSecretResources[*]}")
+	if err != nil {
+		return err
+	}
+	kept := []string{}
+	for _, s := range strings.Fields(current) {
+		if !remove[s] {
+			kept = append(kept, s)
+		}
+	}
+	list, _ := json.Marshal(kept)
+	log.Infof("Unregistering %v from KbsConfig %s", p.addedSecrets, cr)
+	if err := operatorRunDiscard("kubectl", "patch", "kbsconfig", cr, "-n", p.ns,
+		"--type=merge",
+		"-p", fmt.Sprintf(`{"spec":{"kbsSecretResources":%s}}`, list)); err != nil {
+		return fmt.Errorf("unregistering secrets from KbsConfig: %w", err)
+	}
+
+	for s := range remove {
+		if err := operatorRunDiscard("kubectl", "delete", "secret", s, "-n", p.ns,
+			"--ignore-not-found"); err != nil {
+			log.Warnf("deleting secret %s: %v", s, err)
+		}
+	}
+	p.addedSecrets = nil
+	return p.rollout()
+}
+
 // upsertResource creates/updates the k8s Secret and registers it in the
 // KbsConfig CR's kbsSecretResources, restarting KBS if the secret is new.
 func (p *operatorKbsManager) upsertResource(secretType, tag string, data []byte) error {
@@ -166,6 +213,7 @@ func (p *operatorKbsManager) upsertResource(secretType, tag string, data []byte)
 	current, _ := operatorRun("kubectl", "get", "kbsconfig", cr, "-n", p.ns,
 		"-o", "jsonpath={.spec.kbsSecretResources}")
 	if strings.Contains(" "+current+" ", " "+secretType+" ") {
+		// Already part of the pre-test state; leave it for RevertResources to keep.
 		return nil
 	}
 	if err := operatorRunDiscard("kubectl", "patch", "kbsconfig", cr, "-n", p.ns,
@@ -173,8 +221,19 @@ func (p *operatorKbsManager) upsertResource(secretType, tag string, data []byte)
 		"-p", `[{"op":"add","path":"/spec/kbsSecretResources/-","value":"`+secretType+`"}]`); err != nil {
 		return fmt.Errorf("registering secret in KbsConfig: %w", err)
 	}
-	p.addedSecrets = append(p.addedSecrets, secretType)
+	// Track only what we newly registered so RevertResources restores exactly the
+	// pre-test state.
+	p.trackSecret(secretType)
 	return p.rollout()
+}
+
+func (p *operatorKbsManager) trackSecret(name string) {
+	for _, s := range p.addedSecrets {
+		if s == name {
+			return
+		}
+	}
+	p.addedSecrets = append(p.addedSecrets, name)
 }
 
 // applyResourcePolicy writes the rego content to the policy ConfigMap and

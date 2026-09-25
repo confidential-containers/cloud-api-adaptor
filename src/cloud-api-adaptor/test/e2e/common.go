@@ -161,6 +161,14 @@ func isTestWithKbs() bool {
 	return os.Getenv("TEST_KBS") == "yes" || os.Getenv("TEST_KBS") == "true"
 }
 
+// envOr returns the value of the environment variable key, or def if unset.
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
 // getKbsEndpoint returns the KBS endpoint. It checks KBS_ENDPOINT first so
 // that pre-installed operator-managed deployments can inject the endpoint
 // directly, without needing the KBS manager to have called GetKbsEndpoint.

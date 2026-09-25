@@ -229,6 +229,18 @@ func TestRemoteAttestationAzure(t *testing.T) {
 	}
 }
 
+func TestAzureSignedImage(t *testing.T) {
+	if !isTestWithKbs() {
+		t.Skip("Skipping kbs related test as kbs is not deployed")
+	}
+	t.Parallel()
+	kbsEndpoint, err := getKbsEndpoint(t)
+	if err != nil {
+		t.Fatalf("getting KBS endpoint: %v", err)
+	}
+	DoTestSignedImage(t, testEnv, assert, keyBrokerService, kbsEndpoint)
+}
+
 func TestTrusteeOperatorKeyReleaseForSpecificKey(t *testing.T) {
 	if !isTestWithTrusteeOperator() {
 		t.Skip("Skipping kbs related test as Trustee Operator is not deployed")

@@ -26,7 +26,12 @@ type KbsManager interface {
 	EnableKbsCustomizedResourcePolicy(customizedOpaFile string) error
 	// EnableKbsCustomizedAttestationPolicy sets the KBS attestation policy.
 	EnableKbsCustomizedAttestationPolicy(customizedOpaFile string) error
-	// Delete tears down the KBS deployment.
+	// RevertResources restores the KBS to its pre-test state, undoing the
+	// resources a test provisioned. Backends whose KBS is torn down wholesale at
+	// the end of the run (see Delete) may implement this as a no-op.
+	RevertResources() error
+	// Delete tears down a framework-deployed KBS at environment teardown. It is a
+	// no-op for a pre-installed, externally-managed KBS.
 	Delete(ctx context.Context, cfg *envconf.Config) error
 }
 
