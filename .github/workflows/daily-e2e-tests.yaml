@@ -31,7 +31,7 @@ jobs:
       caa_image_tag: latest
       git_ref: "${{ inputs.git_ref }}"
       podvm_image_tag: latest
-      registry: ghcr.io/${{ github.repository_owner }}
+      registry: ghcr.io/${{ github.actor }}
     permissions:
       id-token: write  # Required for OIDC authentication
       contents: read  # Required to checkout code
