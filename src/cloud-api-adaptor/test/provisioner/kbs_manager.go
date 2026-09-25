@@ -30,5 +30,8 @@ type KbsManager interface {
 	Delete(ctx context.Context, cfg *envconf.Config) error
 }
 
-// Ensure the kbs-client backed implementation satisfies the interface.
-var _ KbsManager = (*KeyBrokerService)(nil)
+// Compile-time interface checks.
+var (
+	_ KbsManager = (*KeyBrokerService)(nil)
+	_ KbsManager = (*operatorKbsManager)(nil)
+)

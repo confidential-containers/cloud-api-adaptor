@@ -90,6 +90,21 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	// KBS_MANAGEMENT selects the KBS backend:
+	//   "kbs-client"   (default) — deploy Trustee via the test framework and drive
+	//                  it through the kbs-client admin API (requires DEPLOY_KBS=true)
+	//   "operator"     — use a pre-installed, operator-managed Trustee where the
+	//                  admin API is disabled; resources via k8s Secrets + KbsConfig
+	kbsManagement := os.Getenv("KBS_MANAGEMENT")
+	if kbsManagement == "" {
+		kbsManagement = "kbs-client"
+	}
+
+	if kbsManagement == "operator" {
+		keyBrokerService = pv.NewOperatorKbsManager()
+		os.Setenv("TEST_KBS", "true")
+	}
+
 	// The DEPLOY_KBS is exported then provisioner will install kbs before installing CAA
 	shouldDeployKbs := false
 	if os.Getenv("DEPLOY_KBS") == "true" || os.Getenv("DEPLOY_KBS") == "yes" {
