@@ -1,6 +1,21 @@
 #!/bin/bash
-# This script must be run as root. It provisions an existing VM as a BYOM pod VM
-# by configuring SSH/SFTP access and deploying the podvm binaries and systemd services.
+#
+# setup-podvm-byom.sh — configure an existing VM as a BYOM peer-pod VM.
+#
+# NOTE: This script targets Ubuntu systems only.
+#
+# Run without cloning the repo:
+#
+#   curl -fsSL https://github.com/confidential-containers/cloud-api-adaptor/releases/latest/download/setup-podvm-byom.sh \
+#     | sudo SSH_PUBLIC_KEY_PATH=/home/$USER/.ssh/id_rsa.pub PODVM_BYOM_BINARIES_IMAGE=<image>:<tag> bash
+#
+# NOTE: Use the full path for SSH_PUBLIC_KEY_PATH.
+#       PODVM_BYOM_BINARIES_IMAGE must be set to a fully qualified image reference.
+#
+# Or download first and inspect:
+#
+#   curl -fsSL -o setup-podvm-byom.sh https://github.com/confidential-containers/cloud-api-adaptor/releases/latest/download/setup-podvm-byom.sh
+#   sudo SSH_PUBLIC_KEY_PATH=/home/$USER/.ssh/id_rsa.pub PODVM_BYOM_BINARIES_IMAGE=<image>:<tag> bash setup-podvm-byom.sh
 
 set -o errexit
 set -o pipefail
@@ -11,7 +26,13 @@ if [[ "$(id -u)" -ne 0 ]]; then
     exit 1
 fi
 
-PODVM_BYOM_BINARIES_IMAGE=${PODVM_BYOM_BINARIES_IMAGE:-"podvm-byom-binaries-ubuntu-amd64:latest"}
+if [[ "$(. /etc/os-release 2>/dev/null && echo "${ID}")" != "ubuntu" ]]; then
+    echo "Error: this script requires Ubuntu."
+    exit 1
+fi
+
+ARCH="$(dpkg --print-architecture)"
+PODVM_BYOM_BINARIES_IMAGE=${PODVM_BYOM_BINARIES_IMAGE:-"ghcr.io/confidential-containers/podvm-byom-binaries-ubuntu-${ARCH}:latest"}
 PODVM_BYOM_TAR_NAME=${PODVM_BYOM_TAR_NAME:-"podvm-byom.tar.gz"}
 DISABLE_SSH_LOGIN=${DISABLE_SSH_LOGIN:-"false"}
 USER_NAME=${USER_NAME:-"peerpod"}
@@ -19,18 +40,50 @@ SSH_PUBLIC_KEY_PATH=${SSH_PUBLIC_KEY_PATH:-""}
 
 if [ -z "${SSH_PUBLIC_KEY_PATH}" ]; then
     echo "Error: SSH_PUBLIC_KEY_PATH is not set."
+    echo "Usage: sudo SSH_PUBLIC_KEY_PATH=<absolute-path-to-public-key> bash setup-podvm-byom.sh"
     exit 1
 fi
 
-# sshd config
-SSH_CONFIG="/etc/ssh/sshd_config"
+if [ ! -f "${SSH_PUBLIC_KEY_PATH}" ]; then
+    echo "Error: SSH_PUBLIC_KEY_PATH '${SSH_PUBLIC_KEY_PATH}' does not exist or is not a regular file."
+    exit 1
+fi
 
-# Backup existing sshd_config
-cp "${SSH_CONFIG}" "/etc/ssh/sshd_config.bak.$(date +%F_%T)"
+if ! command -v docker &>/dev/null; then
+    echo "Error: Docker is not installed. Please install Docker before running this script."
+    echo "See: https://docs.docker.com/engine/install/ubuntu/"
+    exit 1
+fi
 
-# Append SSH config to disable login
+echo "Using BYOM binaries image: ${PODVM_BYOM_BINARIES_IMAGE}"
+
+if ! id "${USER_NAME}" >/dev/null 2>&1; then
+    echo "User ${USER_NAME} not found, creating new user"
+    mkdir -p "/home/${USER_NAME}"
+    useradd -r -s /sbin/nologin -d "/home/${USER_NAME}" "${USER_NAME}"
+fi
+
+mkdir -p "/home/${USER_NAME}/.ssh" && chmod 700 "/home/${USER_NAME}/.ssh"
+# Append the key only if it isn't already authorized, so re-runs stay idempotent.
+pub_key="$(cat "${SSH_PUBLIC_KEY_PATH}")"
+touch "/home/${USER_NAME}/.ssh/authorized_keys"
+grep -qxF "${pub_key}" "/home/${USER_NAME}/.ssh/authorized_keys" \
+    || echo "${pub_key}" >> "/home/${USER_NAME}/.ssh/authorized_keys"
+chmod 600 "/home/${USER_NAME}/.ssh/authorized_keys"
+chown -R "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}"
+
+# Configure sshd via drop-in configuration file
+SSHD_CONFIG_DIR="/etc/ssh/sshd_config.d"
+mkdir -p "${SSHD_CONFIG_DIR}"
+# Ensure sshd_config includes sshd_config.d/*.conf
+if ! grep -qE "^\s*Include\s+/etc/ssh/sshd_config\.d/\*\.conf" /etc/ssh/sshd_config; then
+    sed -i '1s|^|Include /etc/ssh/sshd_config.d/*.conf\n|' /etc/ssh/sshd_config
+fi
+
+BYOM_SSHD_CONF="${SSHD_CONFIG_DIR}/99-caa-byom.conf"
+
 if [[ "$DISABLE_SSH_LOGIN" == "true" ]]; then
-cat >> "$SSH_CONFIG" <<EOF
+cat > "${BYOM_SSHD_CONF}" <<EOF
 # Disable all forms of login
 PermitRootLogin no
 PasswordAuthentication no
@@ -38,31 +91,17 @@ ChallengeResponseAuthentication no
 UsePAM yes
 PubkeyAuthentication yes
 
+# Restrict ${USER_NAME} user to SFTP only with chroot
+Match User ${USER_NAME}
+    ForceCommand internal-sftp
+    ChrootDirectory /media
+    PermitTunnel no
+    AllowAgentForwarding no
+    AllowTcpForwarding no
+    X11Forwarding no
 EOF
-fi
-
-if ! id ${USER_NAME} >/dev/null 2>&1; then
-    echo "User ${USER_NAME} not found, creating new user"
-    mkdir -p /home/${USER_NAME}
-    useradd -r -s /sbin/nologin -d /home/${USER_NAME} ${USER_NAME}
-fi
-
-mkdir -p /home/${USER_NAME}/.ssh && chmod 700 /home/${USER_NAME}/.ssh
-cat ${SSH_PUBLIC_KEY_PATH} >> /home/${USER_NAME}/.ssh/authorized_keys
-chmod 600 /home/${USER_NAME}/.ssh/authorized_keys
-chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME}
-
-# Ensure internal-sftp subsystem is set; replace existing line or append if absent
-if grep -qE "^\s*Subsystem\s+sftp" "$SSH_CONFIG"; then
-    sed -i -E 's/^\s*Subsystem\s+sftp.*/Subsystem sftp internal-sftp/' "$SSH_CONFIG"
 else
-    echo "Subsystem sftp internal-sftp" >> "$SSH_CONFIG"
-fi
-
-# Write Match User block directly to sshd_config if not already present
-if ! grep -qE "^\s*Match\s+User\s+${USER_NAME}\b" "$SSH_CONFIG"; then
-    cat >> "$SSH_CONFIG" <<EOF
-
+cat > "${BYOM_SSHD_CONF}" <<EOF
 # Restrict ${USER_NAME} user to SFTP only with chroot
 Match User ${USER_NAME}
     ForceCommand internal-sftp
@@ -74,7 +113,7 @@ Match User ${USER_NAME}
 EOF
 fi
 
-# Validate config then reload or restart SSH service
+# Validate SSH config syntax before restarting service
 echo "Validating SSH config..."
 if ! sshd -t; then
     echo "Error: Invalid SSH configuration. Restart aborted."
@@ -90,18 +129,19 @@ else
     exit 1
 fi
 
-# Create a docker container to extract the contents
+# Create a docker container to extract the contents and use /tmp for the tarball
+tarball="/tmp/${PODVM_BYOM_TAR_NAME}"
 docker rm -f podvm-container 2>/dev/null || true
-docker create --name podvm-container ${PODVM_BYOM_BINARIES_IMAGE} true
-docker cp podvm-container:/${PODVM_BYOM_TAR_NAME} ./${PODVM_BYOM_TAR_NAME}
+docker create --name podvm-container "${PODVM_BYOM_BINARIES_IMAGE}" true
+docker cp "podvm-container:/${PODVM_BYOM_TAR_NAME}" "${tarball}"
 docker rm podvm-container
 
 # Create podvm contents target directory
 rm -rf /tmp/files && mkdir -p /tmp/files
 
 # Extract the tarball contents into /tmp/files
-tar xvf ./${PODVM_BYOM_TAR_NAME} -C /tmp/files
-rm -f ./${PODVM_BYOM_TAR_NAME}
+tar xvf "${tarball}" -C /tmp/files
+rm -f "${tarball}"
 
 # Run the helper scripts from /tmp/files
 source /tmp/files/copy-files.sh
@@ -127,7 +167,7 @@ services=(
 
 # Check status of agent-protocol-forwarder
 activating_service="agent-protocol-forwarder.service"
-systemctl start ${activating_service} || true
+systemctl start "${activating_service}" || true
 state=$(systemctl show -p ActiveState --value "${activating_service}")
 if [[ "$state" == "activating" ]]; then
     echo "${activating_service} is still activating (expected)"
@@ -155,4 +195,4 @@ done
 systemd-tmpfiles --create
 
 ip_address=$(hostname -I | awk '{print $1}')
-echo "VM is ready for use as a pod VM for BYOM. IP: ${ip_address}" 
+echo "VM is ready for use as a pod VM for BYOM. IP: ${ip_address}"
