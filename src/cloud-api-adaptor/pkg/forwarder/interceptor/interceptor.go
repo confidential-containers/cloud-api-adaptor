@@ -25,6 +25,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/paths"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/agentproto"
 )
@@ -159,6 +160,9 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 		logger.Printf("    %s: %q", ns.Type, ns.Path)
 	}
 
+	sp := loadStoragePolicy(paths.StoragePolicyPath)
+	mountedPoints := make(map[string]bool)
+
 	if cvJSON, ok := req.OCI.Annotations[util.CloudVolumesAnnotationKey]; ok && cvJSON != "" {
 		var cloudVolumes map[string]util.CloudVolumeAnnotation
 		if err := json.Unmarshal([]byte(cvJSON), &cloudVolumes); err != nil {
@@ -174,7 +178,6 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 		for _, volName := range volNames {
 			volInfo := cloudVolumes[volName]
 			mountPoint := volInfo.MountPoint
-			fsType := volInfo.FSType
 			lunStr := volInfo.LUN
 			if mountPoint == "" || lunStr == "" {
 				return nil, fmt.Errorf("cloud volume %s missing required mount_point or lun field", volName)
@@ -185,16 +188,32 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 				return nil, fmt.Errorf("cloud volume %q has unsafe name", volName)
 			}
 
-			if fsType == "" {
-				fsType = "ext4"
+			if mountedPoints[mountPoint] {
+				return nil, fmt.Errorf("duplicate mount_point %q in cloud_volumes annotation", mountPoint)
 			}
-			if !allowedFSTypes[fsType] {
-				return nil, fmt.Errorf("cloud volume %s requests unsupported filesystem type %q (allowed: ext4, ext3, xfs)", volName, fsType)
+
+			hostFsType := volInfo.FSType
+			if hostFsType == "" {
+				hostFsType = "ext4"
 			}
 
 			lunIdx, err := strconv.Atoi(lunStr)
 			if err != nil {
 				return nil, fmt.Errorf("cloud volume %s has invalid lun %q: %w", volName, lunStr, err)
+			}
+
+			resolved, err := sp.resolveVolume(mountPoint, volInfo.EncryptType, volInfo.KeyID, hostFsType, volInfo.FSGroup)
+			if err != nil {
+				return nil, err
+			}
+			mountedPoints[mountPoint] = true
+
+			fsType := resolved.FsType
+			if fsType == "" {
+				fsType = "ext4"
+			}
+			if !allowedFSTypes[fsType] {
+				return nil, fmt.Errorf("cloud volume %s requests unsupported filesystem type %q (allowed: ext4, ext3, xfs)", volName, fsType)
 			}
 
 			diskID := volInfo.DiskID
@@ -213,9 +232,9 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 				return nil, fmt.Errorf("cloud volume %s device %s not available: %w", volName, device, err)
 			}
 
-			if volInfo.EncryptType != "" {
+			if resolved.EncryptType != "" {
 				mapperName := "caa-" + safeName
-				if err := secureMount(ctx, device, hostMountPoint, fsType, volInfo.EncryptType, volInfo.KeyID, mapperName); err != nil {
+				if err := secureMount(ctx, device, hostMountPoint, fsType, resolved.EncryptType, resolved.KeyID, mapperName); err != nil {
 					return nil, fmt.Errorf("failed to secure-mount cloud volume %s at %s: %w", volName, hostMountPoint, err)
 				}
 				i.cloudMounts = append(i.cloudMounts, cloudMount{path: hostMountPoint, encrypted: true, mapperName: mapperName})
@@ -226,7 +245,7 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 				i.cloudMounts = append(i.cloudMounts, cloudMount{path: hostMountPoint, encrypted: false})
 			}
 
-			if fsGroupStr := volInfo.FSGroup; fsGroupStr != "" {
+			if fsGroupStr := resolved.FsGroup; fsGroupStr != "" {
 				if gid, err := strconv.Atoi(fsGroupStr); err == nil {
 					logger.Printf("cloud volume %s: applying fsGroup %d to %s", volName, gid, hostMountPoint)
 					if err := os.Chown(hostMountPoint, -1, gid); err != nil {
@@ -251,6 +270,12 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 			if !rewrote {
 				logger.Printf("WARNING: cloud volume %s mount_point %q not found in container mounts", volName, mountPoint)
 			}
+		}
+	}
+
+	if len(sp.Volumes) > 0 {
+		if err := sp.checkAllVolumesMounted(mountedPoints); err != nil {
+			return nil, err
 		}
 	}
 
@@ -845,6 +870,15 @@ func isLuks(device string) (bool, error) {
 	return true, nil
 }
 
+const kbsURIPrefix = "kbs:///"
+
+func normalizeKBSKeyURI(keyID string) string {
+	if strings.HasPrefix(keyID, kbsURIPrefix) {
+		return keyID
+	}
+	return kbsURIPrefix + keyID
+}
+
 func validateEncryptParams(encryptType, keyID string) (string, error) {
 	if keyID == "" {
 		return "", fmt.Errorf("encrypt_type %q requires a kbs-key-id but none was provided", encryptType)
@@ -887,7 +921,7 @@ func secureMount(ctx context.Context, device, mountPoint, fsType, encryptType, k
 		"targetType":     "fileSystem",
 		"encryptionType": normalized,
 		"filesystemType": fsType,
-		"key":            "kbs:///" + keyID,
+		"key":            normalizeKBSKeyURI(keyID),
 	}
 	if mapperName != "" {
 		options["mapperName"] = mapperName
