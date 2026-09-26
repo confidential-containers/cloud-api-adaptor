@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	APIKey            string
+	AccountID         string
 	Zone              string
 	ServiceInstanceID string
 	NetworkID         string

@@ -34,6 +34,10 @@ providerConfigs:
     # (default: "")
     # FORWARDER_PORT: ""
 
+    # IBM Cloud account ID
+    # (required)
+    IBMCLOUD_ACCOUNT_ID: ""
+
     # Default initdata for all Pods
     # (default: "")
     # INITDATA: ""
