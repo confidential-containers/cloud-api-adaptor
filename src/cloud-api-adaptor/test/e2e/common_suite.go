@@ -222,26 +222,6 @@ func DoTestCreatePeerPodWithLargeImage(t *testing.T, e env.Environment, assert C
 	NewTestCase(t, e, "LargeImagePeerPod", assert, "Peer pod with Large Image has been created").WithPod(pod).WithPodWatcher().Run()
 }
 
-func DoTestCreatePeerPodWithPVCAndCSIWrapper(t *testing.T, e env.Environment, assert CloudAssert, myPVC *v1.PersistentVolumeClaim, pod *v1.Pod, mountPath string) {
-	testCommands := []TestCommand{
-		{
-			Command:       []string{"lsblk"},
-			ContainerName: pod.Spec.Containers[2].Name,
-			TestCommandStdoutFn: func(stdout bytes.Buffer) bool {
-				if strings.Contains(stdout.String(), mountPath) {
-					t.Logf("PVC volume is mounted correctly: %s", stdout.String())
-					return true
-				} else {
-					t.Errorf("PVC volume failed to be mounted at target path: %s", stdout.String())
-					return false
-				}
-			},
-			TestCommandStderrFn: IsBufferEmpty,
-		},
-	}
-	NewTestCase(t, e, "PeerPodWithPVCAndCSIWrapper", assert, "PVC is created and mounted as expected").WithPod(pod).WithPVC(myPVC).WithTestCommands(testCommands).Run()
-}
-
 func DoTestCreatePeerPodWithAuthenticatedImageWithImagePullSecretInServiceAccount(t *testing.T, e env.Environment, assert CloudAssert) {
 	randseed := rand.New(rand.NewSource(time.Now().UnixNano()))
 	podName := "authenticated-image-with-creds-" + strconv.Itoa(int(randseed.Uint32())) + "-pod"
