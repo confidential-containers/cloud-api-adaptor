@@ -66,3 +66,44 @@ provider AND a TLS secret name is available (either chart-managed or external).
 true
 {{- end -}}
 {{- end -}}
+
+{{/*
+Return the BYOM SSH host key secret name:
+- "create": Use the chart-managed secret (byom-ssh-host-keys), created from
+            providerSecrets.byom.hostKeys entries.
+- "reference": Use the user-provided existing secret name.
+Only meaningful when provider is "byom".
+*/}}
+{{- define "peerpods.byomHostKeySecretName" -}}
+{{- if eq .Values.secrets.mode "reference" -}}
+{{- .Values.secrets.existingByomHostKeySecretName -}}
+{{- else -}}
+byom-ssh-host-keys
+{{- end -}}
+{{- end -}}
+
+{{/*
+Check if BYOM SSH host key allowlist is configured.
+Returns "true" when provider is "byom" AND either:
+- create mode: providerSecrets.byom.hostKeys is non-empty
+- reference mode: existingByomHostKeySecretName is set
+When true, the chart mounts the Secret at /etc/byom/ssh-host-keys and
+automatically injects SSH_HOST_KEY_ALLOWLIST_DIR pointing to that path.
+*/}}
+{{- define "peerpods.hasByomHostKeys" -}}
+{{- if eq .Values.provider "byom" -}}
+  {{- if eq .Values.secrets.mode "reference" -}}
+    {{- if .Values.secrets.existingByomHostKeySecretName -}}
+true
+    {{- end -}}
+  {{- else -}}
+    {{- $secrets := dict -}}
+    {{- if .Values.providerSecrets -}}
+      {{- $secrets = index .Values.providerSecrets .Values.provider | default dict -}}
+    {{- end -}}
+    {{- if index $secrets "hostKeys" -}}
+true
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}

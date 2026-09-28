@@ -85,6 +85,28 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  name: node-annotation-patcher
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-annotation-patcher
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: node-annotation-patcher
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
   name: node-status-patcher
 rules:
 - apiGroups: [""]

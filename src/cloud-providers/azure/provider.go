@@ -544,29 +544,26 @@ func (p *azureProvider) getVMParameters(instanceSize, diskName, cloudConfig stri
 	if len(userDataB64) > 64*1024 {
 		return nil, fmt.Errorf("base64 encoded userData is greater than 64KB")
 	}
-	var managedDiskParams *armcompute.ManagedDiskParameters
 	var securityProfile *armcompute.SecurityProfile
+
+	securityType := armcompute.SecurityTypesTrustedLaunch
+	managedDiskParams := &armcompute.ManagedDiskParameters{
+		StorageAccountType: to.Ptr(armcompute.StorageAccountTypesPremiumLRS),
+	}
+
 	if !p.serviceConfig.DisableCVM {
-		managedDiskParams = &armcompute.ManagedDiskParameters{
-			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesPremiumLRS),
-			SecurityProfile: &armcompute.VMDiskSecurityProfile{
-				SecurityEncryptionType: to.Ptr(armcompute.SecurityEncryptionTypesVMGuestStateOnly),
-			},
+		securityType = armcompute.SecurityTypesConfidentialVM
+		managedDiskParams.SecurityProfile = &armcompute.VMDiskSecurityProfile{
+			SecurityEncryptionType: to.Ptr(armcompute.SecurityEncryptionTypesVMGuestStateOnly),
 		}
+	}
 
-		securityProfile = &armcompute.SecurityProfile{
-			SecurityType: to.Ptr(armcompute.SecurityTypesConfidentialVM),
-			UefiSettings: &armcompute.UefiSettings{
-				SecureBootEnabled: to.Ptr(p.serviceConfig.EnableSecureBoot),
-				VTpmEnabled:       to.Ptr(true),
-			},
-		}
-	} else {
-		managedDiskParams = &armcompute.ManagedDiskParameters{
-			StorageAccountType: to.Ptr(armcompute.StorageAccountTypesPremiumLRS),
-		}
-
-		securityProfile = nil
+	securityProfile = &armcompute.SecurityProfile{
+		SecurityType: to.Ptr(securityType),
+		UefiSettings: &armcompute.UefiSettings{
+			SecureBootEnabled: to.Ptr(p.serviceConfig.EnableSecureBoot),
+			VTpmEnabled:       to.Ptr(true),
+		},
 	}
 
 	imgRef := &armcompute.ImageReference{

@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	podvmNamePrefix = "podvm"
+	// PodVMNamePrefix is the prefix of the name of every pod VM instance.
+	PodVMNamePrefix = "podvm"
 )
 
 func sanitize(input string) string {
@@ -28,7 +29,7 @@ func GenerateInstanceName(podName, sandboxID string, podvmNameMax int) string {
 	podName = sanitize(podName)
 	sandboxID = sanitize(sandboxID)
 
-	prefixLen := len(podvmNamePrefix)
+	prefixLen := len(PodVMNamePrefix)
 	podNameLen := len(podName)
 	if podvmNameMax > 0 && prefixLen+podNameLen+10 > podvmNameMax {
 		podNameLen = podvmNameMax - prefixLen - 10
@@ -38,7 +39,7 @@ func GenerateInstanceName(podName, sandboxID string, podvmNameMax int) string {
 		fmt.Printf("podNameLen: %d", podNameLen)
 	}
 
-	instanceName := fmt.Sprintf("%s-%.*s-%.8s", podvmNamePrefix, podNameLen, podName, sandboxID)
+	instanceName := fmt.Sprintf("%s-%.*s-%.8s", PodVMNamePrefix, podNameLen, podName, sandboxID)
 
 	return instanceName
 }

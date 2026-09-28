@@ -112,7 +112,7 @@ $ kubectl get pods -n confidential-containers-system
 NAME                                              READY   STATUS    RESTARTS   AGE
 cloud-api-adaptor-daemonset-72xm5                 1/1     Running   0          3m39s
 kata-deploy-mbc6c                                 1/1     Running   0          3m39s
-peerpodctrl-controller-manager-74b5bb8c8b-76glp   2/2     Running   0          3m39s
+peerpodctrl-controller-manager-74b5bb8c8b-76glp   1/1     Running   0          3m39s
 $ kubectl logs -l app=cloud-api-adaptor -n confidential-containers-system --tail=-1
 + exec cloud-api-adaptor libvirt -data-dir /opt/data-dir
 2026/02/23 17:31:13 [adaptor/cloud] Cloud provider external plugin loading is disabled, skipping plugin loading
@@ -249,7 +249,7 @@ $ kubectl get pods -n confidential-containers-system
 NAME                                              READY   STATUS    RESTARTS   AGE
 cloud-api-adaptor-daemonset-z7qwt                 1/1     Running   0          9m34s
 kata-deploy-6hgdq                                 1/1     Running   0          9m34s
-peerpodctrl-controller-manager-74b5bb8c8b-rrsmd   2/2     Running   0          9m34s
+peerpodctrl-controller-manager-74b5bb8c8b-rrsmd   1/1     Running   0          9m34s
 ```
 
 In order to remove all pods, run the following command from the

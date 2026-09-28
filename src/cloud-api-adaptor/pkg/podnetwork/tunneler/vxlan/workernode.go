@@ -16,11 +16,17 @@ import (
 
 var logger = log.New(log.Writer(), "[tunneler/vxlan] ", log.LstdFlags|log.Lmsgprefix)
 
+// PodInterfaceName is the name the pod side of the tunnel gets inside the pod
+// network namespace.
+const PodInterfaceName = "vxlan1"
+
+// MaxVXLANID is the largest VNI; the field is 24 bits wide.
+const MaxVXLANID = 1<<24 - 1
+
 const (
 	DefaultVXLANPort         = 4789
 	DefaultVXLANMinID        = 555000
 	hostVxlanInterfacePrefix = "ppvxlan"
-	secondPodInterface       = "vxlan1"
 )
 
 type workerNodeTunneler struct {
@@ -32,6 +38,12 @@ func NewWorkerNodeTunneler() (tunneler.Tunneler, error) {
 
 func (t *workerNodeTunneler) Configure(n *tunneler.NetworkConfig, config *tunneler.Config) error {
 
+	if n.VXLAN.MinID < 0 || n.VXLAN.MinID > MaxVXLANID {
+		return fmt.Errorf("vxlan minimum ID %d is not between 0 and %d", n.VXLAN.MinID, MaxVXLANID)
+	}
+	if config.Index < 0 || config.Index > MaxVXLANID-n.VXLAN.MinID {
+		return fmt.Errorf("pod index %d is not between 0 and %d for vxlan minimum ID %d", config.Index, MaxVXLANID-n.VXLAN.MinID, n.VXLAN.MinID)
+	}
 	config.VXLANPort = n.VXLAN.Port
 	config.VXLANID = n.VXLAN.MinID + config.Index
 
@@ -131,11 +143,11 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, confi
 
 	podVxlanInterface, err := podNS.LinkFind(hostVxlanInterface)
 	if err != nil {
-		return fmt.Errorf("failed to find vxlan interface %q on pod netns %s to %s: %w", hostVxlanInterface, podNS.Path(), secondPodInterface, err)
+		return fmt.Errorf("failed to find vxlan interface %q on pod netns %s to %s: %w", hostVxlanInterface, podNS.Path(), PodInterfaceName, err)
 	}
 
-	if err := podVxlanInterface.SetName(secondPodInterface); err != nil {
-		return fmt.Errorf("failed to change vxlan interface name %s on netns %s to %s: %w", hostVxlanInterface, podNS.Path(), secondPodInterface, err)
+	if err := podVxlanInterface.SetName(PodInterfaceName); err != nil {
+		return fmt.Errorf("failed to change vxlan interface name %s on netns %s to %s: %w", hostVxlanInterface, podNS.Path(), PodInterfaceName, err)
 	}
 
 	if err := podVxlanInterface.SetUp(); err != nil {
@@ -144,14 +156,14 @@ func (t *workerNodeTunneler) Setup(nsPath string, podNodeIPs []netip.Addr, confi
 
 	podInterface := config.InterfaceName
 
-	logger.Printf("Add tc redirect filters between %s and %s on pod network namespace %s", podInterface, secondPodInterface, nsPath)
+	logger.Printf("Add tc redirect filters between %s and %s on pod network namespace %s", podInterface, PodInterfaceName, nsPath)
 
-	if err := podNS.RedirectAdd(podInterface, secondPodInterface); err != nil {
-		return fmt.Errorf("failed to add a tc redirect filter from %s to %s: %w", podInterface, secondPodInterface, err)
+	if err := podNS.RedirectAdd(podInterface, PodInterfaceName); err != nil {
+		return fmt.Errorf("failed to add a tc redirect filter from %s to %s: %w", podInterface, PodInterfaceName, err)
 	}
 
-	if err := podNS.RedirectAdd(secondPodInterface, podInterface); err != nil {
-		return fmt.Errorf("failed to add a tc redirect filter from %s to %s: %w", secondPodInterface, podInterface, err)
+	if err := podNS.RedirectAdd(PodInterfaceName, podInterface); err != nil {
+		return fmt.Errorf("failed to add a tc redirect filter from %s to %s: %w", PodInterfaceName, podInterface, err)
 	}
 
 	return nil
@@ -182,28 +194,28 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 	logger.Printf("Delete tc redirect filters on %s and %s in the network namespace %s", config.InterfaceName, hostInterface, nsPath)
 
 	if err := podNS.RedirectDel(config.InterfaceName); err != nil {
-		return fmt.Errorf("failed to delete a tc redirect filter from %s to %s: %w", config.InterfaceName, secondPodInterface, err)
+		return fmt.Errorf("failed to delete a tc redirect filter from %s to %s: %w", config.InterfaceName, PodInterfaceName, err)
 	}
 
-	if err := podNS.RedirectDel(secondPodInterface); err != nil {
-		return fmt.Errorf("failed to delete a tc redirect filter from %s to %s: %w", secondPodInterface, config.InterfaceName, err)
+	if err := podNS.RedirectDel(PodInterfaceName); err != nil {
+		return fmt.Errorf("failed to delete a tc redirect filter from %s to %s: %w", PodInterfaceName, config.InterfaceName, err)
 	}
 
-	logger.Printf("Delete vxlan interface %s in the network namespace %s", secondPodInterface, nsPath)
+	logger.Printf("Delete vxlan interface %s in the network namespace %s", PodInterfaceName, nsPath)
 
-	podVxlanInterface, err := podNS.LinkFind(secondPodInterface)
+	podVxlanInterface, err := podNS.LinkFind(PodInterfaceName)
 	if err != nil {
-		return fmt.Errorf("failed to find vxlan interface %q on pod netns %s to %s: %w", secondPodInterface, podNS.Path(), secondPodInterface, err)
+		return fmt.Errorf("failed to find vxlan interface %q on pod netns %s to %s: %w", PodInterfaceName, podNS.Path(), PodInterfaceName, err)
 	}
 
 	device, err := podVxlanInterface.GetDevice()
 	if err != nil {
-		return fmt.Errorf("failed to get device info of %s: %w", secondPodInterface, err)
+		return fmt.Errorf("failed to get device info of %s: %w", PodInterfaceName, err)
 	}
 
 	vxlanDevice, ok := device.(*netops.VXLAN)
 	if !ok {
-		return fmt.Errorf("not a VXLAN interface: %s", secondPodInterface)
+		return fmt.Errorf("not a VXLAN interface: %s", PodInterfaceName)
 	}
 
 	dstAddr := vxlanDevice.Group
@@ -211,7 +223,7 @@ func (t *workerNodeTunneler) Teardown(nsPath, hostInterface string, config *tunn
 	vxlanID := vxlanDevice.ID
 
 	if err := podVxlanInterface.Delete(); err != nil {
-		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", secondPodInterface, podNS.Path(), err)
+		return fmt.Errorf("failed to delete vxlan interface %s at %s: %w", PodInterfaceName, podNS.Path(), err)
 	}
 
 	if err := iptablesTeardown(hostNS, dstAddr, dstPort, vxlanID); err != nil {

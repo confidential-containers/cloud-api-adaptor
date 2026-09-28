@@ -13,12 +13,19 @@ RELEASE_BUILD ?= false
 CLOUD_PROVIDER ?=
 GOOPTIONS   ?= GOOS=linux GOARCH=$(GO_ARCH) CGO_ENABLED=0
 GOFLAGS     ?=
-BINARIES    := cloud-api-adaptor agent-protocol-forwarder process-user-data az-copy-image
+BINARIES    := cloud-api-adaptor agent-protocol-forwarder process-user-data az-copy-image azure-ready
 SOURCEDIRS  := ./cmd ./pkg
 PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 # End-to-end tests overall run timeout.
 TEST_E2E_TIMEOUT ?= 60m
+# Maximum number of e2e tests to run concurrently (go's test -parallel option).
+# Defaults to go's own default (GOMAXPROCS) when left empty. Useful to stay
+# within a cloud provider's quota, as each parallel test may create a pod VM.
+TEST_E2E_PARALLEL ?=
+ifneq ($(TEST_E2E_PARALLEL),)
+TEST_E2E_PARALLEL_FLAG := -parallel $(TEST_E2E_PARALLEL)
+endif
 # To run a sub-set of tests, set an unanchored regex matching the test's name as in go's test -run option.
 RUN_TESTS ?= ''
 
@@ -102,7 +109,7 @@ versions-check: ## Validate versions.yaml against the JSON schema
 .PHONY: test-e2e
 test-e2e: ## Run end-to-end tests for single provider.
 ifneq ($(CLOUD_PROVIDER),)
-	go test -v -tags=$(CLOUD_PROVIDER) -timeout $(TEST_E2E_TIMEOUT) -count=1 -run $(RUN_TESTS) ./test/e2e
+	go test -v -tags=$(CLOUD_PROVIDER) -timeout $(TEST_E2E_TIMEOUT) $(TEST_E2E_PARALLEL_FLAG) -count=1 -run $(RUN_TESTS) ./test/e2e
 else
 	$(error CLOUD_PROVIDER is not set)
 endif

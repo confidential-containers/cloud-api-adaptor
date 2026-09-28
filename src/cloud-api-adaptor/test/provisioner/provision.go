@@ -5,7 +5,6 @@ package provisioner
 
 import (
 	"context"
-	"crypto/ed25519"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,11 +16,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	nodev1 "k8s.io/api/node/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"sigs.k8s.io/e2e-framework/klient"
 	"sigs.k8s.io/e2e-framework/klient/k8s"
+	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -45,11 +46,6 @@ type PodVMInstanceHandler interface {
 
 type NewProvisionerFunc func(properties map[string]string) (CloudProvisioner, error)
 
-// KbsInstallOverlay implements the InstallOverlay interface
-type KbsInstallOverlay struct {
-	overlay *KustomizeOverlay
-}
-
 var NewProvisionerFunctions = make(map[string]NewProvisionerFunc)
 
 type CloudAPIAdaptor struct {
@@ -62,19 +58,9 @@ type CloudAPIAdaptor struct {
 }
 
 type KeyBrokerService struct {
-	installOverlay InstallOverlay     // Pointer to the kustomize overlay
-	endpoint       string             // KBS Service endpoint, such as: http://NodeIP:Port
-	privateKey     ed25519.PrivateKey // Admin signing key, used to mint KBS admin tokens
-}
-
-// InstallOverlay defines common operations to an install overlay (install/overlays/*)
-type InstallOverlay interface {
-	// Apply applies the overlay. Equivalent to the `kubectl apply -k` command
-	Apply(ctx context.Context, cfg *envconf.Config) error
-	// Delete deletes the overlay. Equivalent to the `kubectl delete -k` command
-	Delete(ctx context.Context, cfg *envconf.Config) error
-	// Edit changes overlay files
-	Edit(ctx context.Context, cfg *envconf.Config, properties map[string]string) error
+	endpoint   string // KBS Service endpoint, such as: http://NodeIP:Port
+	adminToken string // JWT from the Helm bootstrap Secret
+	repoDir    string // path to the cloned trustee repo; removed on Delete
 }
 
 // InstallChart defines common operations to an install chart (install/charts/*)
@@ -95,6 +81,8 @@ var NewInstallChartFunctions = make(map[string]NewInstallChartFunc)
 
 // Waiting timeout for bringing up the pod
 const PodWaitTimeout = time.Second * 30
+
+const kataRuntimeNodeLabel = "katacontainers.io/kata-runtime"
 
 func NewCloudAPIAdaptor(provider string, installDir string) (*CloudAPIAdaptor, error) {
 	namespace := GetCAANamespace()
@@ -187,8 +175,31 @@ func (p *CloudAPIAdaptor) Deploy(ctx context.Context, cfg *envconf.Config, props
 		return fmt.Errorf("peerpod-ctrl deployment wait failed: %w", err)
 	}
 
+	// The first test could run without kata-deploy being ready, so we wait for it to be installed on at least one node.
+	if err := waitForKataDeploy(ctx, cfg, time.Minute*5); err != nil {
+		return fmt.Errorf("kata-deploy wait failed: %w", err)
+	}
+
 	return nil
 
+}
+
+// waitForKataDeploy blocks until kata is installed on at least one node.
+func waitForKataDeploy(ctx context.Context, cfg *envconf.Config, timeout time.Duration) error {
+	client, err := cfg.NewClient()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Wait for a node labeled %s=true", kataRuntimeNodeLabel)
+
+	nodes := &corev1.NodeList{}
+	if err := wait.For(conditions.New(client.Resources()).ResourceListN(nodes, 1, resources.WithLabelSelector(kataRuntimeNodeLabel+"=true")),
+		wait.WithTimeout(timeout)); err != nil {
+		return fmt.Errorf("no node labeled %s=true: %w", kataRuntimeNodeLabel, err)
+	}
+
+	return nil
 }
 
 // TODO: convert this into a klient/wait/conditions
@@ -305,7 +316,10 @@ func CreateAndWaitForNamespace(ctx context.Context, client klient.Client, namesp
 	nsObj := corev1.Namespace{}
 	nsObj.Name = namespaceName
 	if err := client.Resources().Create(ctx, &nsObj); err != nil {
-		return err
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+		log.Infof("Namespace '%s' already exists, reusing it", namespaceName)
 	}
 
 	if err := waitForNamespaceToBeUseable(ctx, client, namespaceName); err != nil {

@@ -19,3 +19,6 @@ data:
 {{- if .Values.tlsProfile.cipherSuites }}
   TLS_CIPHER_SUITES: "{{ .Values.tlsProfile.cipherSuites }}"
 {{- end }}
+{{- if and (include "peerpods.hasByomHostKeys" .) (not (index $config "SSH_HOST_KEY_ALLOWLIST_DIR")) }}
+  SSH_HOST_KEY_ALLOWLIST_DIR: "/etc/byom/ssh-host-keys"
+{{- end }}

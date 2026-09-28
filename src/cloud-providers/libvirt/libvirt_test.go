@@ -1,11 +1,17 @@
+//go:build cgo
+
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package libvirt
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net/netip"
 	"testing"
+	"time"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/stretchr/testify/assert"
@@ -967,6 +973,64 @@ func TestCreateDomainXMLArchitecturesWithMocks(t *testing.T) {
 	}
 }
 
+func TestCreateDomainXMLs390xLaunchSecurity(t *testing.T) {
+	mockCaps := createMockCaps(archS390x, "/usr/bin/qemu-system-s390x", libvirtxml.CapsGuestMachine{
+		Name:      "s390-ccw-virtio",
+		Canonical: "s390-ccw-virtio-rhel9.0.0",
+	})
+	mockClient := &libvirtClient{
+		caps:        mockCaps,
+		networkName: testNetworkName,
+	}
+	cfg := createTestDomainConfig("test-s390x-sec", 2, 2048, testNetworkName, testCiDataISO)
+
+	tests := []struct {
+		name           string
+		launchSecurity LaunchSecurityType
+		expectedError  string
+		expectS390PV   bool
+	}{
+		{
+			name:           "S390PV emits launchSecurity element",
+			launchSecurity: S390PV,
+			expectS390PV:   true,
+		},
+		{
+			name:           "NoLaunchSecurity omits launchSecurity element",
+			launchSecurity: NoLaunchSecurity,
+			expectS390PV:   false,
+		},
+		{
+			name:           "unknown security type returns error",
+			launchSecurity: LaunchSecurityType(99),
+			expectedError:  "launch security type unknown is not supported for s390x",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vm := &vmConfig{launchSecurityType: tt.launchSecurity}
+			domain, err := createDomainXMLs390x(mockClient, cfg, vm)
+
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+				assert.Nil(t, domain)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, domain)
+
+			if tt.expectS390PV {
+				require.NotNil(t, domain.LaunchSecurity, "LaunchSecurity should be set for S390PV")
+				assert.NotNil(t, domain.LaunchSecurity.S390PV, "S390PV field should be non-nil")
+			} else {
+				assert.Nil(t, domain.LaunchSecurity, "LaunchSecurity should be nil for NoLaunchSecurity")
+			}
+		})
+	}
+}
+
 // TestCreateDomainXMLx86_64 tests x86_64 domain XML generation
 func TestCreateDomainXMLx86_64(t *testing.T) {
 	mockCaps := createMockCaps(archX86_64, "/usr/bin/qemu-system-x86_64")
@@ -1315,4 +1379,199 @@ func TestNewDefVolumeCapacity(t *testing.T) {
 				"volume name should match input")
 		})
 	}
+}
+
+// TestCreateDomainExistingDomain verifies that an already-existing domain returns a populated instanceID equal to its UUID.
+// It pre-creates a domain via DomainDefineXML, then calls CreateDomain twice; both calls hit the existing-domain path and must return the same UUID.
+func TestCreateDomainExistingDomain(t *testing.T) {
+	checkConfig(t)
+
+	client, err := NewLibvirtClient(testCfg)
+	require.NoError(t, err)
+	defer client.connection.Close()
+
+	const domName = "TestCreateDomainExisting"
+
+	minimalXML := `<domain type='kvm'><name>` + domName + `</name>` +
+		`<memory unit='MiB'>64</memory><vcpu>1</vcpu>` +
+		`<os><type arch='x86_64'>hvm</type></os></domain>`
+	dom, err := client.connection.DomainDefineXML(minimalXML)
+	require.NoError(t, err, "failed to pre-create domain for test")
+
+	expectedUUID, err := dom.GetUUIDString()
+	require.NoError(t, err)
+	require.NoError(t, dom.Free())
+
+	defer func() {
+		d, lookupErr := client.connection.LookupDomainByName(domName)
+		if lookupErr != nil {
+			return
+		}
+		_ = d.Undefine()
+		_ = d.Free()
+	}()
+
+	// Both calls hit the existing-domain path since the domain was pre-created above.
+	v := &vmConfig{name: domName}
+	result, err := CreateDomain(context.Background(), client, v)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, result.instance)
+	assert.Equal(t, expectedUUID, result.instance.instanceID,
+		"instanceID must equal the existing domain's UUID on first call")
+
+	// Second call: same domain still exists, must return the same UUID.
+	v2 := &vmConfig{name: domName}
+	result2, err := CreateDomain(context.Background(), client, v2)
+
+	require.NoError(t, err)
+	require.NotNil(t, result2)
+	require.NotNil(t, result2.instance)
+	assert.Equal(t, expectedUUID, result2.instance.instanceID,
+		"instanceID must equal the existing domain's UUID on second call")
+}
+
+// TestCreateDomainNoExistingDomain verifies that a missing domain falls through to the normal create path.
+func TestCreateDomainNoExistingDomain(t *testing.T) {
+	checkConfig(t)
+
+	client, err := NewLibvirtClient(testCfg)
+	require.NoError(t, err)
+	defer client.connection.Close()
+
+	v := &vmConfig{
+		name:    "TestCreateDomainNonExistent",
+		volName: "nonexistent-backing.qcow2",
+	}
+
+	_, err = CreateDomain(context.Background(), client, v)
+	require.Error(t, err, "expected error from missing volume, not from domain lookup")
+	assert.ErrorContains(t, err, "volume")
+}
+
+func TestWaitForDomainIPs(t *testing.T) {
+	testIP := netip.MustParseAddr("192.168.122.50")
+
+	tests := []struct {
+		name          string
+		retries       uint
+		delay         time.Duration
+		failCount     int // number of attempts returning empty IPs before success; set > retries to never succeed
+		returnErr     error
+		wantErr       bool
+		expectedError string
+		wantCallCount int
+		wantIPs       []netip.Addr
+	}{
+		{
+			name:          "succeeds on first attempt",
+			retries:       5,
+			delay:         10 * time.Millisecond,
+			failCount:     0,
+			wantErr:       false,
+			wantCallCount: 1,
+			wantIPs:       []netip.Addr{testIP},
+		},
+		{
+			name:          "succeeds after retries",
+			retries:       5,
+			delay:         10 * time.Millisecond,
+			failCount:     2,
+			wantErr:       false,
+			wantCallCount: 3,
+			wantIPs:       []netip.Addr{testIP},
+		},
+		{
+			name:          "fails when retries exhausted",
+			retries:       3,
+			delay:         10 * time.Millisecond,
+			failCount:     4, // greater than retries — never succeeds within the budget
+			wantErr:       true,
+			expectedError: "domain has no IPs assigned yet",
+			wantCallCount: 3,
+		},
+		{
+			name:          "fails immediately on unrecoverable error without retrying",
+			retries:       5,
+			delay:         10 * time.Millisecond,
+			returnErr:     errors.New("fatal libvirt query failure"),
+			wantErr:       true,
+			expectedError: "internal error on getting domain IPs: fatal libvirt query failure",
+			wantCallCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			callCount := 0
+			getIPs := func() ([]netip.Addr, error) {
+				callCount++
+				if tt.returnErr != nil {
+					return nil, tt.returnErr
+				}
+				if callCount <= tt.failCount {
+					return []netip.Addr{}, nil
+				}
+				return []netip.Addr{testIP}, nil
+			}
+
+			ips, err := waitForDomainIPs(context.Background(), getIPs, tt.retries, tt.delay)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, ips)
+				if tt.expectedError != "" {
+					assert.ErrorContains(t, err, tt.expectedError)
+				}
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantIPs, ips)
+			}
+			assert.Equal(t, tt.wantCallCount, callCount)
+		})
+	}
+}
+
+// TestWaitForDomainIPs_ContextCancellation verifies that context cancellation
+// aborts domain IP polling promptly.
+func TestWaitForDomainIPs_ContextCancellation(t *testing.T) {
+	testIP := netip.MustParseAddr("192.168.122.50")
+
+	t.Run("pre-cancelled context aborts without calling getIPs", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		callCount := 0
+		getIPs := func() ([]netip.Addr, error) {
+			callCount++
+			return []netip.Addr{testIP}, nil
+		}
+
+		ips, err := waitForDomainIPs(ctx, getIPs, 5, 10*time.Millisecond)
+		require.Error(t, err)
+		assert.Nil(t, ips)
+		assert.Equal(t, 0, callCount, "should not call getIPs if context is already cancelled")
+		assert.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("mid-flight cancellation stops retries", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		callCount := 0
+		getIPs := func() ([]netip.Addr, error) {
+			callCount++
+			if callCount == 2 {
+				cancel()
+			}
+			return []netip.Addr{}, nil
+		}
+
+		ips, err := waitForDomainIPs(ctx, getIPs, 10, 20*time.Millisecond)
+		require.Error(t, err)
+		assert.Nil(t, ips)
+		assert.LessOrEqual(t, callCount, 3, "retries must stop promptly after cancellation")
+		assert.ErrorIs(t, err, context.Canceled)
+	})
 }

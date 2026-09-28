@@ -62,6 +62,10 @@ providerConfigs:
     # (default: "")
     # PODS_DIR: ""
 
+    # Enable developer mode for disabling Peer Pod VM auto delete
+    # (default: "false")
+    # PODVM_DEVELOPER_MODE: "false"
+
     # Pod VM instance type
     # (default: "ecs.g8i.xlarge")
     # PODVM_INSTANCE_TYPE: "ecs.g8i.xlarge"

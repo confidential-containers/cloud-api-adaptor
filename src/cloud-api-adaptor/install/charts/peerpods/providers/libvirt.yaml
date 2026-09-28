@@ -7,7 +7,7 @@ provider: libvirt
 # Dev image required for this provider (includes CGO bindings)
 # Update to <commit>-dev at release time
 image:
-  tag: "61b1aba91df646a663e60ab6b55c6a7dc93cd167-dev"
+  tag: "9b608e60b032222488adec09e61dbf40f3c71e8f-dev"
 
 providerConfigs:
   libvirt: {}
@@ -98,6 +98,10 @@ providerConfigs:
     # base directory for pod directories
     # (default: "")
     # PODS_DIR: ""
+
+    # Enable developer mode for disabling Peer Pod VM auto delete
+    # (default: "false")
+    # PODVM_DEVELOPER_MODE: "false"
 
     # [EXPERIMENTAL] Comma separated CIDRs for local pod subnets
     # (default: "")

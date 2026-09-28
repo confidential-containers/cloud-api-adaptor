@@ -90,6 +90,10 @@ providerConfigs:
     # (default: "")
     # PODS_DIR: ""
 
+    # Enable developer mode for disabling Peer Pod VM auto delete
+    # (default: "false")
+    # PODVM_DEVELOPER_MODE: "false"
+
     # [EXPERIMENTAL] Comma separated CIDRs for local pod subnets
     # (default: "")
     # POD_SUBNET_CIDRS: ""

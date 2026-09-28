@@ -15,7 +15,17 @@ spec:
     singular: peerpod
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.cloudProvider
+      name: Cloud Provider
+      type: string
+    - jsonPath: .spec.instanceID
+      name: Instance ID
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: PeerPod is the Schema for the peerpods API

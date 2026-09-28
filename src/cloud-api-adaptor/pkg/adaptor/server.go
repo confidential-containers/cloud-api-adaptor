@@ -47,10 +47,11 @@ type server struct {
 	stopOnce                sync.Once
 	enableCloudConfigVerify bool
 	PeerPodsLimitPerNode    int
+	ownerUID                string
+	isOwner                 bool
 }
 
 func NewServer(provider provider.Provider, cfg *cloud.ServerConfig, workerNode podnetwork.WorkerNode) Server {
-
 	logger.Printf("server config: %#v", cfg)
 
 	agentFactory := proxy.NewFactory(cfg.PauseImage, cfg.TLSConfig, cfg.ProxyTimeout)
@@ -66,6 +67,7 @@ func NewServer(provider provider.Provider, cfg *cloud.ServerConfig, workerNode p
 		stopCh:                  make(chan struct{}),
 		enableCloudConfigVerify: cfg.EnableCloudConfigVerify,
 		PeerPodsLimitPerNode:    cfg.PeerPodsLimitPerNode,
+		ownerUID:                os.Getenv("POD_UID"),
 	}
 }
 
@@ -78,7 +80,7 @@ func (s *server) Start(ctx context.Context) (err error) {
 	}
 	// Advertise node resources
 	if k8sops.IsKubernetesEnvironment() {
-		err = k8sops.AdvertiseExtendedResources(s.PeerPodsLimitPerNode)
+		err = k8sops.AdvertiseExtendedResources(s.PeerPodsLimitPerNode, s.ownerUID)
 		if err != nil {
 			return err
 		}
@@ -102,12 +104,24 @@ func (s *server) Start(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	if ul, ok := listener.(*net.UnixListener); ok {
+		ul.SetUnlinkOnClose(false)
+	}
 
 	ttRPCErr := make(chan error)
 	go func() {
 		defer close(ttRPCErr)
 		if err := s.ttRPC.Serve(ctx, listener); err != nil {
 			ttRPCErr <- err
+		}
+	}()
+	// Declared before the ttrpc shutdown defer so it runs after (defers are LIFO).
+	// Removes the socket only when this instance is still the current owner — skipped
+	// during rolling restarts where the new pod has already taken ownership, but runs
+	// on clean shutdown and uninstall so the file is not left on the node indefinitely.
+	defer func() {
+		if !k8sops.IsKubernetesEnvironment() || s.isOwner {
+			os.Remove(s.socketPath)
 		}
 	}()
 	defer func() {
@@ -129,6 +143,10 @@ func (s *server) Start(ctx context.Context) (err error) {
 		}
 	case <-s.stopCh:
 	case err = <-ttRPCErr:
+		shutdownErr := s.Shutdown()
+		if shutdownErr != nil && err == nil {
+			err = shutdownErr
+		}
 	}
 	return err
 }
@@ -138,7 +156,13 @@ func (s *server) Shutdown() error {
 		close(s.stopCh)
 	})
 
-	_ = k8sops.RemoveExtendedResources()
+	if k8sops.IsKubernetesEnvironment() {
+		isOwner, err := k8sops.RemoveExtendedResources(s.ownerUID)
+		if err != nil {
+			return err
+		}
+		s.isOwner = isOwner
+	}
 
 	return s.cloudService.Teardown()
 }

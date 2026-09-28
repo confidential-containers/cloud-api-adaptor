@@ -294,3 +294,22 @@ func TestProviderConfigVerifier(t *testing.T) {
 		}
 	})
 }
+
+func TestVolNameResolution(t *testing.T) {
+	const defaultVol = "podvm-base.qcow2"
+
+	tests := []struct {
+		name      string
+		specImage string
+		wantVol   string
+	}{
+		{name: "empty spec.Image uses default", specImage: "", wantVol: defaultVol},
+		{name: "spec.Image overrides default", specImage: "custom-image.qcow2", wantVol: "custom-image.qcow2"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.wantVol, resolveVolName(defaultVol, tc.specImage))
+		})
+	}
+}

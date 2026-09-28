@@ -22,7 +22,7 @@ permissions: {}
 
 jobs:
   test-helm:
-    uses: ./.github/workflows/e2e_libvirt.yaml
+    uses: $/.github/workflows/e2e_libvirt.yaml
     with:
       runner: ubuntu-24.04
       caa_image: ${{ inputs.caa_image }}

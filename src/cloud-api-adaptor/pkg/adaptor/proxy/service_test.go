@@ -328,6 +328,9 @@ func TestProxyServiceCreateContainer(t *testing.T) {
 				return ctx
 			},
 			expectError: true,
+			validateResult: func(t *testing.T, req *pb.CreateContainerRequest, err error) {
+				require.ErrorIs(t, err, context.Canceled)
+			},
 		},
 	}
 

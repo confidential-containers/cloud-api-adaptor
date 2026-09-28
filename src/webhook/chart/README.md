@@ -54,6 +54,26 @@ helm install my-webhook ./chart \
   --create-namespace
 ```
 
+## Admission controllers that rewrite the webhook configuration
+
+Some managed clusters run an admission controller that edits
+`MutatingWebhookConfiguration` objects. On AKS the admissions enforcer adds a
+`namespaceSelector` that keeps the webhook away from `kube-system` and the AKS
+internal namespaces, which is the behaviour you want. With server-side apply
+(the default for releases installed with Helm 4) the next `helm upgrade` then
+fails with a field ownership conflict against the `admissionsenforcer` manager.
+Let Helm's apply proceed:
+
+```bash
+helm upgrade my-webhook ./chart --force-conflicts ...
+```
+
+`webhook.annotations` and `webhook.labels` are rendered on the
+`MutatingWebhookConfiguration` for clusters that need it marked. AKS honours
+`admissions.enforcer/disabled: "true"` as an opt-out, but that lets the webhook
+act on AKS internal namespaces, and with `failurePolicy: Fail` a webhook outage
+then blocks pod creation there.
+
 ## Auto-Generated Manifests
 
 This chart includes auto-generated resources:

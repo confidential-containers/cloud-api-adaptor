@@ -288,3 +288,7 @@ func TestLibvirtPodWithInitContainer(t *testing.T) {
 	assert := getLibvirtAssert(t)
 	DoTestPodWithInitContainer(t, testEnv, assert)
 }
+
+func TestLibvirtExtendedResourcesAfterRollout(t *testing.T) {
+	DoTestExtendedResourcesAfterRollout(t, testEnv)
+}

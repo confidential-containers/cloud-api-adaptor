@@ -9,5 +9,5 @@ test_images:
     registry: "quay.io/prometheus/busybox"
     tag: "latest"
   curl:
-    registry: "quay.io/curl/curl"
-    tag: "8.4.0"
+    registry: "quay.io/confidential-containers/test-images"
+    tag: "curl-jq"

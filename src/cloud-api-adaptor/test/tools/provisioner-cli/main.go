@@ -101,12 +101,8 @@ func main() {
 		if shouldDeployKbs {
 			log.Info("Deploying kbs")
 
-			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg)
+			keyBrokerService, err := pv.NewKeyBrokerService(cfg)
 			if err != nil {
-				log.Fatal(err)
-			}
-
-			if err = keyBrokerService.Deploy(context.TODO(), cfg, props); err != nil {
 				log.Fatal(err)
 			}
 
@@ -131,6 +127,19 @@ func main() {
 	}
 
 	if *action == "deprovision" {
+		// Clean up auto-created VM instances before deleting the cluster. Pod VMs
+		// may be attached to cluster-owned network resources, which blocks the
+		// deletion of the cluster while they still exist.
+		var podVMErr error
+		if vmHandler, ok := provisioner.(pv.PodVMInstanceHandler); ok {
+			log.Info("Deleting PodVM instances...")
+			// Report the failure only once the remaining resources have been torn
+			// down, so that a leaked pod VM does not leak the cluster as well.
+			if podVMErr = vmHandler.DeletePodVMInstance(context.TODO(), cfg); podVMErr != nil {
+				log.Errorf("Failed to delete PodVM instances: %v", podVMErr)
+			}
+		}
+
 		log.Info("Deleting Cluster...")
 		if err := provisioner.DeleteCluster(context.TODO(), cfg); err != nil {
 			log.Fatal(err)
@@ -141,12 +150,8 @@ func main() {
 			log.Fatal(err)
 		}
 
-		// Clean up auto-created VM instances before deleting cluster
-		if vmHandler, ok := provisioner.(pv.PodVMInstanceHandler); ok {
-			log.Info("Deleting PodVM instances...")
-			if err := vmHandler.DeletePodVMInstance(context.TODO(), cfg); err != nil {
-				log.Warnf("Failed to delete PodVM instances: %v", err)
-			}
+		if podVMErr != nil {
+			log.Fatalf("Failed to delete PodVM instances: %v", podVMErr)
 		}
 	}
 
@@ -190,8 +195,7 @@ func main() {
 		}
 
 		if shouldDeployKbs {
-			props := provisioner.GetProperties(context.TODO(), cfg)
-			keyBrokerService, err := pv.NewKeyBrokerService(props["CLUSTER_NAME"], cfg)
+			keyBrokerService, err := pv.NewKeyBrokerService(cfg)
 			if err != nil {
 				log.Fatal(err)
 			}

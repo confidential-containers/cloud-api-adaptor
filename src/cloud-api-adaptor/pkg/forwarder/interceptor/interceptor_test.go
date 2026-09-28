@@ -5,16 +5,19 @@ package interceptor
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/forwarder/interceptor/cdhpb"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
 	pb "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util/agentproto"
@@ -1237,5 +1240,183 @@ func TestIsTargetPathEdgeCases(t *testing.T) {
 		path := "/path/to/../target"
 		assert.True(t, isTargetPath(path, path))
 		assert.False(t, isTargetPath(path, "/path/target"))
+	})
+}
+
+func TestCloudVolumeAnnotation_WithEncryption(t *testing.T) {
+	jsonStr := `{
+		"vol-0": {
+			"mount_point": "/mnt/encrypted",
+			"fs_type": "ext4",
+			"lun": "0",
+			"disk_id": "vol-abc123",
+			"encrypt_type": "LUKS",
+			"key_id": "default/key/my-key"
+		},
+		"vol-1": {
+			"mount_point": "/mnt/plain",
+			"fs_type": "xfs",
+			"lun": "1",
+			"disk_id": "vol-def456"
+		}
+	}`
+
+	var cloudVolumes map[string]util.CloudVolumeAnnotation
+	err := json.Unmarshal([]byte(jsonStr), &cloudVolumes)
+	require.NoError(t, err)
+
+	require.Len(t, cloudVolumes, 2)
+
+	enc := cloudVolumes["vol-0"]
+	assert.Equal(t, "/mnt/encrypted", enc.MountPoint)
+	assert.Equal(t, "ext4", enc.FSType)
+	assert.Equal(t, "0", enc.LUN)
+	assert.Equal(t, "vol-abc123", enc.DiskID)
+	assert.Equal(t, "LUKS", enc.EncryptType)
+	assert.Equal(t, "default/key/my-key", enc.KeyID)
+
+	plain := cloudVolumes["vol-1"]
+	assert.Equal(t, "/mnt/plain", plain.MountPoint)
+	assert.Equal(t, "xfs", plain.FSType)
+	assert.Equal(t, "1", plain.LUN)
+	assert.Equal(t, "vol-def456", plain.DiskID)
+	assert.Equal(t, "", plain.EncryptType)
+	assert.Equal(t, "", plain.KeyID)
+}
+
+func TestSecureMountRequest_ProtoRoundTrip(t *testing.T) {
+	req := &cdhpb.SecureMountRequest{
+		VolumeType: "block-device",
+		Options: map[string]string{
+			"devicePath":     "/dev/disk/azure/data/by-lun/0",
+			"sourceType":     "empty",
+			"targetType":     "fileSystem",
+			"encryptionType": "luks2",
+			"filesystemType": "ext4",
+			"key":            "kbs:///default/key/vol-key",
+			"mapperName":     "caa-vol-0",
+		},
+		Flags:      []string{},
+		MountPoint: "/run/cloud-volumes/vol-0",
+	}
+
+	data, err := proto.Marshal(req)
+	require.NoError(t, err, "proto.Marshal should succeed for SecureMountRequest")
+	require.NotEmpty(t, data)
+
+	decoded := &cdhpb.SecureMountRequest{}
+	require.NoError(t, proto.Unmarshal(data, decoded))
+
+	assert.Equal(t, "block-device", decoded.GetVolumeType())
+	assert.Equal(t, "/dev/disk/azure/data/by-lun/0", decoded.GetOptions()["devicePath"])
+	assert.Equal(t, "empty", decoded.GetOptions()["sourceType"])
+	assert.Equal(t, "luks2", decoded.GetOptions()["encryptionType"])
+	assert.Equal(t, "kbs:///default/key/vol-key", decoded.GetOptions()["key"])
+	assert.Equal(t, "caa-vol-0", decoded.GetOptions()["mapperName"])
+	assert.Equal(t, "/run/cloud-volumes/vol-0", decoded.GetMountPoint())
+}
+
+func TestSecureMountResponse_ProtoRoundTrip(t *testing.T) {
+	resp := &cdhpb.SecureMountResponse{
+		MountPath: "/run/cloud-volumes/vol-0",
+	}
+
+	data, err := proto.Marshal(resp)
+	require.NoError(t, err)
+
+	decoded := &cdhpb.SecureMountResponse{}
+	require.NoError(t, proto.Unmarshal(data, decoded))
+	assert.Equal(t, "/run/cloud-volumes/vol-0", decoded.GetMountPath())
+}
+
+func TestCloudMounts_EncryptedFlagTracking(t *testing.T) {
+	inter := &interceptor{
+		cloudMounts: []cloudMount{
+			{path: "/run/cloud-volumes/vol-0", encrypted: false},
+			{path: "/run/cloud-volumes/vol-1", encrypted: true, mapperName: "caa-vol-1"},
+		},
+	}
+
+	assert.Len(t, inter.cloudMounts, 2)
+	assert.False(t, inter.cloudMounts[0].encrypted)
+	assert.Equal(t, "", inter.cloudMounts[0].mapperName)
+	assert.True(t, inter.cloudMounts[1].encrypted)
+	assert.Equal(t, "caa-vol-1", inter.cloudMounts[1].mapperName)
+	assert.Equal(t, "/run/cloud-volumes/vol-0", inter.cloudMounts[0].path)
+	assert.Equal(t, "/run/cloud-volumes/vol-1", inter.cloudMounts[1].path)
+}
+
+func TestValidateEncryptParams_RejectsEmptyKeyID(t *testing.T) {
+	_, err := validateEncryptParams("LUKS", "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "requires a kbs-key-id")
+}
+
+func TestValidateEncryptParams_RejectsUnsupportedType(t *testing.T) {
+	_, err := validateEncryptParams("aes256", "default/key/k")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported encrypt_type")
+}
+
+func TestValidateEncryptParams_AcceptsValidTypes(t *testing.T) {
+	for _, et := range []string{"luks", "LUKS", "luks2", "LUKS2"} {
+		normalized, err := validateEncryptParams(et, "default/key/k")
+		require.NoError(t, err, "encrypt type %q should be accepted", et)
+		assert.Equal(t, "luks2", normalized, "CDH requires encryptionType luks2; %q should map to luks2", et)
+	}
+}
+
+func TestFindMapperForMountPoint(t *testing.T) {
+	result := findMapperForMountPoint("/nonexistent/path")
+	assert.Equal(t, "", result, "should return empty for non-mounted path")
+}
+
+func TestIsLuks(t *testing.T) {
+	t.Run("detects valid LUKS header", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "luks-device")
+		// LUKS magic: "LUKS" + 0xBA 0xBE followed by some padding
+		data := append([]byte{'L', 'U', 'K', 'S', 0xba, 0xbe}, make([]byte, 100)...)
+		require.NoError(t, os.WriteFile(f, data, 0o644))
+
+		result, err := isLuks(f)
+		require.NoError(t, err)
+		assert.True(t, result)
+	})
+
+	t.Run("returns false for non-LUKS device", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "plain-device")
+		data := make([]byte, 512)
+		require.NoError(t, os.WriteFile(f, data, 0o644))
+
+		result, err := isLuks(f)
+		require.NoError(t, err)
+		assert.False(t, result)
+	})
+
+	t.Run("returns error for partial header", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "short-device")
+		data := []byte{'L', 'U', 'K'}
+		require.NoError(t, os.WriteFile(f, data, 0o644))
+
+		result, err := isLuks(f)
+		assert.Error(t, err)
+		assert.False(t, result)
+	})
+
+	t.Run("returns error for nonexistent device", func(t *testing.T) {
+		result, err := isLuks("/dev/nonexistent-device-xyz")
+		assert.Error(t, err)
+		assert.False(t, result)
+	})
+
+	t.Run("detects LUKS2 header (same magic)", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "luks2-device")
+		// LUKS magic is the same for v1 and v2; version is in bytes 6-7
+		data := append([]byte{'L', 'U', 'K', 'S', 0xba, 0xbe, 0x00, 0x02}, make([]byte, 100)...)
+		require.NoError(t, os.WriteFile(f, data, 0o644))
+
+		result, err := isLuks(f)
+		require.NoError(t, err)
+		assert.True(t, result)
 	})
 }

@@ -12,7 +12,7 @@ permissions: {}
 
 jobs:
   caa:
-    uses: ./.github/workflows/caa_build_and_push_all_arches.yaml
+    uses: $/.github/workflows/caa_build_and_push_all_arches.yaml
     with:
       dev_tags: ${{ github.event.release.tag_name }}-dev
       release_tags: ${{ github.event.release.tag_name }}
@@ -24,7 +24,7 @@ jobs:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   peerpod-ctrl:
-    uses: ./.github/workflows/peerpod-ctrl_build_and_push_all_arches.yaml
+    uses: $/.github/workflows/peerpod-ctrl_build_and_push_all_arches.yaml
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
@@ -34,7 +34,7 @@ jobs:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm-images:
-    uses: ./.github/workflows/podvm_publish.yaml
+    uses: $/.github/workflows/podvm_publish.yaml
     with:
       git_ref: ${{ github.ref }}
       image_tag: ${{ github.event.release.tag_name }}
@@ -49,7 +49,7 @@ jobs:
 
   podvm-byom-binaries:
     needs: podvm-images  # Depends on podvm-binaries-ubuntu-{arch} images
-    uses: ./.github/workflows/podvm_byom_binaries_publish.yaml
+    uses: $/.github/workflows/podvm_byom_binaries_publish.yaml
     with:
       git_ref: ${{ github.ref }}
       image_tag: ${{ github.event.release.tag_name }}
@@ -60,10 +60,11 @@ jobs:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   webhook:
-    uses: ./.github/workflows/webhook_image.yaml
+    uses: $/.github/workflows/webhook_image_publish.yaml
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
+      registry: quay.io/confidential-containers
     permissions:
       contents: read  # Required to checkout code
       packages: write  # Required to push container images
@@ -71,7 +72,7 @@ jobs:
       QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   peerpods-chart:
-    uses: ./.github/workflows/peerpods-chart_image.yaml
+    uses: $/.github/workflows/peerpods-chart_image.yaml
     with:
       git_ref: ${{ github.event.release.tag_name }}
     permissions:

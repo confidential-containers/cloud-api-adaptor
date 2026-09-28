@@ -118,6 +118,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		c = openapi.Config{
 			AccessKeyId:     tea.String(config.AccessKeyID),
 			AccessKeySecret: tea.String(config.SecretKey),
+			SecurityToken:   tea.String(config.SecurityToken),
 			RegionId:        tea.String(config.Region),
 		}
 	}
@@ -236,16 +237,17 @@ func (p *alibabaCloudProvider) CreateInstance(ctx context.Context, podName, sand
 	}
 
 	req = &ecs.RunInstancesRequest{
-		RegionId:         tea.String(p.serviceConfig.Region),
-		MinAmount:        tea.Int32(1),
-		Amount:           tea.Int32(1),
-		ImageId:          tea.String(p.serviceConfig.ImageID),
-		InstanceType:     tea.String(instanceType),
-		SecurityGroupIds: securityGroupIds,
-		VSwitchId:        tea.String(p.serviceConfig.VswitchID),
-		UserData:         tea.String(b64EncData),
-		Tag:              tags,
-		InstanceName:     tea.String(instanceName),
+		RegionId:           tea.String(p.serviceConfig.Region),
+		MinAmount:          tea.Int32(1),
+		Amount:             tea.Int32(1),
+		ImageId:            tea.String(p.serviceConfig.ImageID),
+		InstanceType:       tea.String(instanceType),
+		InstanceChargeType: tea.String("PostPaid"), // pay-as-you-go
+		SecurityGroupIds:   securityGroupIds,
+		VSwitchId:          tea.String(p.serviceConfig.VswitchID),
+		UserData:           tea.String(b64EncData),
+		Tag:                tags,
+		InstanceName:       tea.String(instanceName),
 	}
 	if p.serviceConfig.KeyName != "" {
 		req.KeyPairName = tea.String(p.serviceConfig.KeyName)

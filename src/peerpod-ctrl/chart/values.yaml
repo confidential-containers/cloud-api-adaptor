@@ -4,15 +4,11 @@ namePrefix: peerpodctrl-
 # PeerPod controller image
 image:
   repository: quay.io/confidential-containers/peerpod-ctrl
-  tag: 61b1aba91df646a663e60ab6b55c6a7dc93cd167
+  tag: 9b608e60b032222488adec09e61dbf40f3c71e8f
   pullPolicy: IfNotPresent
 
-# kube-rbac-proxy: Sidecar container that protects the /metrics endpoint with RBAC authentication
-# When enabled, only authenticated clients with proper RBAC permissions can access metrics
-# Set to false to expose metrics without authentication (not recommended for production)
-authProxy:
-  enabled: true
-  image: registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.16.0
+# Metrics are served by the manager over TLS on port 8443. Scrapers must present
+# a ServiceAccount token bound to the metrics-reader ClusterRole.
 
 # Additional labels merged into the peerpod-ctrl controller-manager pod template.
 # For example, opt into webhook injection via

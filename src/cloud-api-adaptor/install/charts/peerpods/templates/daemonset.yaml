@@ -31,6 +31,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         envFrom:
 {{- if include "peerpods.secretName" . }}
         - secretRef:
@@ -65,6 +69,11 @@ spec:
 {{- if include "peerpods.hasTlsCerts" . }}
         - mountPath: /etc/certificates
           name: certs
+          readOnly: true
+{{- end }}
+{{- if include "peerpods.hasByomHostKeys" . }}
+        - mountPath: /etc/byom/ssh-host-keys
+          name: byom-host-keys
           readOnly: true
 {{- end }}
 {{- if include "peerpods.alibabacloudRrsaEnabled" . }}
@@ -110,6 +119,12 @@ spec:
           defaultMode: 384
           optional: true
           secretName: {{ include "peerpods.tlsSecretName" . }}
+{{- end }}
+{{- if include "peerpods.hasByomHostKeys" . }}
+      - name: byom-host-keys
+        secret:
+          defaultMode: 292
+          secretName: {{ include "peerpods.byomHostKeySecretName" . }}
 {{- end }}
 {{- if include "peerpods.alibabacloudRrsaEnabled" . }}
       - name: rrsa-oidc-token

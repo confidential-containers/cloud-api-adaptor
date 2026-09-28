@@ -35,13 +35,17 @@ type AzureProperties struct {
 	TunnelType          string
 	VxlanPort           string
 
-	InstanceSize string
-	NodeName     string
-	OsType       string
+	InstanceSize  string
+	InstanceSizes string
+	NodeName      string
+	OsType        string
 
 	ResourceGroupClient                *armresources.ResourceGroupsClient
 	ManagedVnetClient                  *armnetwork.VirtualNetworksClient
 	ManagedSubnetClient                *armnetwork.SubnetsClient
+	ManagedPublicIPClient              *armnetwork.PublicIPAddressesClient
+	ManagedNatGatewayClient            *armnetwork.NatGatewaysClient
+	ManagedNicClient                   *armnetwork.InterfacesClient
 	ManagedAksClient                   *armcontainerservice.ManagedClustersClient
 	ManagedVMClient                    *armcompute.VirtualMachinesClient
 	FederatedIdentityCredentialsClient *armmsi.FederatedIdentityCredentialsClient
@@ -65,6 +69,7 @@ func initAzureProperties(properties map[string]string) error {
 		ManagedIdentityName:     properties["MANAGED_IDENTITY_NAME"],
 		CaaImage:                properties["CAA_IMAGE"],
 		InstanceSize:            properties["AZURE_INSTANCE_SIZE"],
+		InstanceSizes:           properties["AZURE_INSTANCE_SIZES"],
 		Tags:                    properties["TAGS"],
 		FederatedCredentialName: properties["FEDERATED_CREDENTIAL_NAME"],
 		ContainerRuntime:        properties["CONTAINER_RUNTIME"],
@@ -145,6 +150,9 @@ func initManagedClients() error {
 	}
 	AzureProps.ManagedVnetClient = networkClientFactory.NewVirtualNetworksClient()
 	AzureProps.ManagedSubnetClient = networkClientFactory.NewSubnetsClient()
+	AzureProps.ManagedPublicIPClient = networkClientFactory.NewPublicIPAddressesClient()
+	AzureProps.ManagedNatGatewayClient = networkClientFactory.NewNatGatewaysClient()
+	AzureProps.ManagedNicClient = networkClientFactory.NewInterfacesClient()
 
 	AzureProps.ManagedVMClient, err = armcompute.NewVirtualMachinesClient(AzureProps.SubscriptionID, cred, nil)
 	if err != nil {
