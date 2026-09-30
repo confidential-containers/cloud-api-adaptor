@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"bytes"
-	b64 "encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -191,14 +190,6 @@ func getBusyboxTestImage(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return image
-}
-
-func encodePolicyFile(policyFilePath string) string {
-	policyString, err := os.ReadFile(policyFilePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return b64.StdEncoding.EncodeToString([]byte(policyString))
 }
 
 type PodOption func(*corev1.Pod)
@@ -504,10 +495,20 @@ func NewPodWithPolicy(namespace, podName, policyFilePath string) PodOrError {
 	if err != nil {
 		return fromError(err)
 	}
-	annotationData := map[string]string{
-		"io.katacontainers.config.agent.policy": encodePolicyFile(policyFilePath),
+	policyContent, err := os.ReadFile(policyFilePath)
+	if err != nil {
+		return fromError(err)
 	}
-	return fromPod(NewPod(namespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData)))
+	annotation, err := buildInitdataAnnotationPolicyOnly(string(policyContent))
+	if err != nil {
+		return fromError(err)
+	}
+	annotationData := map[string]string{
+		InitdataAnnotation: annotation,
+	}
+	return fromPod(NewPod(namespace, podName, containerName, imageName,
+		WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}),
+		WithAnnotations(annotationData)))
 }
 
 // NewConfigMap returns a new config map object.
