@@ -406,9 +406,16 @@ func NewPod(namespace string, podName string, containerName string, imageName st
 
 	// Don't override the policy annotation if it's already set
 	if enableAllowAllPodPolicyOverride() {
-		allowAllPolicyFilePath := "fixtures/policies/allow-all.rego"
-		if _, ok := pod.Annotations["io.katacontainers.config.agent.policy"]; !ok {
-			pod.Annotations["io.katacontainers.config.agent.policy"] = encodePolicyFile(allowAllPolicyFilePath)
+		if _, ok := pod.Annotations[InitdataAnnotation]; !ok {
+			allowAllPolicyContent, err := os.ReadFile("fixtures/policies/allow-all.rego")
+			if err != nil {
+				log.Fatalf("failed to read allow-all policy: %v", err)
+			}
+			annotation, err := buildInitdataAnnotationPolicyOnly(string(allowAllPolicyContent))
+			if err != nil {
+				log.Fatalf("failed to build initdata annotation: %v", err)
+			}
+			pod.Annotations[InitdataAnnotation] = annotation
 		}
 	}
 
