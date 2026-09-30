@@ -25,8 +25,6 @@ TEE_PLATFORM ?= none
 CDH_RESOURCE_PROVIDER ?= kbs
 SEALED_SECRET ?= yes
 
-AGENT_POLICY ?= yes
-AGENT_POLICY_PATH := $(FILES_DIR)/etc/kata-opa
 DEFAULT_AGENT_POLICY_FILE ?= allow-all.rego
 
 # Run github artifact provenance verifications
