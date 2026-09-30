@@ -1,8 +1,7 @@
 [Unit]
 Description=Kata Agent
 BindsTo=netns@podns.service
-After=netns@podns.service scratch-storage.service
-Wants=scratch-storage.service
+After=netns@podns.service
 
 [Service]
 ExecStartPre=mkdir -p /run/kata-containers

@@ -8,7 +8,6 @@ set -euo pipefail
 SOCAT_PID=""
 DESTRUCTIVE=0
 IMG=""
-TEST_MODE="basic"
 
 # Check encrypted device mount
 # Connect to qemu-ga to run lsblk and process o/p
@@ -31,55 +30,10 @@ TEST_MODE="basic"
 #    └─encrypted_disk_py7P1   252:2    0    1G  0 crypt /run/kata-containers/image
 #sr0
 
-check_scratch_space_mount() {
-  local domain="$1"  # e.g., "smoketest"
-  local exec_output exec_pid exec_status base64_data decoded_output
-
-  # Run lsblk via guest-exec
-  exec_output=$(sudo virsh qemu-agent-command "$domain" '{"execute": "guest-exec", "arguments": { "path": "/usr/bin/lsblk", "capture-output": true }}')
-  exec_pid=$(echo "$exec_output" | jq -r '.return.pid')
-
-  if [[ -z "$exec_pid" || "$exec_pid" == "null" ]]; then
-    echo "Failed to get PID from guest-exec."
-    return 1
-  fi
-
-  # Wait for the command to finish
-  exec_status=$(sudo virsh qemu-agent-command "$domain" \
-       --timeout 5 \
-      "{\"execute\": \"guest-exec-status\", \"arguments\": { \"pid\": $exec_pid }}")
-
-  exited=$(echo "$exec_status" | jq -r '.return.exited')
-
-  if [[ "$exited" != "true" ]]; then
-    echo "Command did not exit in time."
-    return 1
-  fi
-
-  # Decode the output
-  base64_data=$(echo "$exec_status" | jq -r '.return["out-data"]')
-  if [[ -z "$base64_data" || "$base64_data" == "null" ]]; then
-    echo "No output from lsblk."
-    return 1
-  fi
-
-  decoded_output=$(echo "$base64_data" | base64 -d)
-
-  # Check if an encrypted device is mounted at /run/kata-containers/image
-  if echo "$decoded_output" | grep -q "crypt.*/run/kata-containers/image"; then
-    echo "Encrypted device is mounted at /run/kata-containers/image"
-    return 0
-  else
-    echo "Encrypted device is NOT mounted at /run/kata-containers/image"
-    return 1
-  fi
-}
-
 usage() {
-	echo "Usage: $0 [-d] [-m MODE] IMG"
+	echo "Usage: $0 [-d] IMG"
 	echo "  IMG     : Required positional argument for the image file."
 	echo "  -d      : Destructive, it moves the image and avoids any cleanup (0)."
-	echo "  -m MODE : Test mode: basic, scratch-space (basic)."
 	exit 1
 }
 
@@ -88,12 +42,12 @@ cleanup() {
 	# Cleanup (only when DESTRUCTIVE!=1)
 	if [ "${exit_code}" -ne 0 ]; then
 		echo "Serial log of ${VM_NAME:-smoketest}"
-		sudo cat /var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log || echo "Failed to read /var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log"
+		sudo cat "/var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log" || echo "Failed to read /var/log/libvirt/qemu/${VM_NAME:-smoketest}.serial.log"
 	fi
 	if [ "${DESTRUCTIVE}" -ne 1 ]; then
 		set +e
 		popd >/dev/null 2>&1 || true
-		[ -n "${SOCAT_PID}" ] && kill "${SOCAT_PID}" >/dev/null 2>&1 || true
+		[ -n "${SOCAT_PID}" ] && kill "${SOCAT_PID}" >/dev/null 2>&1
 		sudo virsh destroy "${VM_NAME:-smoketest}" >/dev/null 2>&1 || true
 		sudo rm -Rf "${WORKDIR}" || true
 	fi
@@ -101,13 +55,10 @@ cleanup() {
 
 trap 'cleanup' EXIT ERR
 
-while getopts ":dm:" opt; do
+while getopts ":d" opt; do
 	case ${opt} in
 		d)
 			DESTRUCTIVE=1
-			;;
-		m)
-			TEST_MODE="$OPTARG"
 			;;
 		\?)
 			echo "Invalid option: -$OPTARG" >&2
@@ -128,22 +79,11 @@ if [ -z "$IMG" ]; then
 	exit 1
 fi
 
-# Validate test mode
-case "$TEST_MODE" in
-	basic|scratch-space)
-		;;
-	*)
-		echo "Error: Invalid test mode '$TEST_MODE'. Valid modes: basic, scratch-space"
-		exit 1
-		;;
-esac
-
-echo "::debug:: Running smoke test in mode: $TEST_MODE"
+echo "::debug:: Running smoke test"
 FMT=${IMG##*.}
 
 WORKDIR="$(mktemp -d)"
 SCRIPTDIR=$(dirname "$(realpath "$0")")
-
 
 # Ensure we have kata-agent-ctl
 KATACTL=$(which kata-agent-ctl 2>/dev/null || true)
@@ -162,8 +102,8 @@ if [ -z "$KATACTL" ]; then
 		echo "::error:: kata-agent-ctl command not cached for $(uname -m), please compile it yourself and put into PATH or current dir."
 		exit 1
 	fi
-	KATA_REF=$(yq -e '.oci.kata-containers.reference' ${SCRIPTDIR}/../../versions.yaml)
-	KATA_REG=$(yq -e '.oci.kata-containers.registry' ${SCRIPTDIR}/../../versions.yaml)
+	KATA_REF=$(yq -e '.oci.kata-containers.reference' "${SCRIPTDIR}/../../versions.yaml")
+	KATA_REG=$(yq -e '.oci.kata-containers.registry' "${SCRIPTDIR}/../../versions.yaml")
 	echo "::debug:: Pulling kata-ctl from ${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
 	oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
 	tar --ztsd -xvf kata-static-agent-ctl.tar.zst ./opt/kata/bin/kata-agent-ctl --transform='s/opt\/kata\/bin\/kata-agent-ctl/kata-agent-ctl/'
@@ -173,7 +113,7 @@ if [ -z "$KATACTL" ]; then
 fi
 
 # Create cloud-init iso
-echo "::debug:: Preparing cloud-init iso for mode: $TEST_MODE"
+echo "::debug:: Preparing cloud-init iso"
 mkdir cloud-init
 touch cloud-init/meta-data
 
@@ -217,53 +157,25 @@ write_files:
     }
 EOF
 
-if [ "$TEST_MODE" = "scratch-space" ]; then
-	echo "- { path: /run/peerpod/scratch-space.marker, content: '' }" >> cloud-init/user-data
-fi
-
 genisoimage -output cloud-init.iso -volid cidata -joliet -rock cloud-init/user-data cloud-init/meta-data
 
 # Move files to libvirt-accessible location
 echo "::debug:: Moving files to libvirt-accessible location"
-# Create unique image name for each test mode to avoid conflicts
-IMAGE_SUFFIX="${TEST_MODE//-/_}"  # Replace hyphens with underscores for filename
-IMAGE=$(realpath "./podvm_${IMAGE_SUFFIX}.${FMT}")
+IMAGE=$(realpath "./podvm.${FMT}")
+
 if [ "${DESTRUCTIVE}" -eq 1 ]; then
 	mv "${IMG}" "${IMAGE}"
 else
 	cp "${IMG}" "${IMAGE}"
 fi
+
 chmod a+rwx "${WORKDIR}"
 sudo chown -R libvirt-qemu "${WORKDIR}" || sudo chown -R qemu "${WORKDIR}" || true
 sudo chmod +x "${WORKDIR}"
 
-# Resize the VM disk image to add free space, then fix the GPT backup
-# header which qemu-img resize leaves at the wrong position. Without
-# this, systemd-repart silently skips partition creation (no trusted_store
-# partition appears) and scratch-storage.service cannot find its device.
-# sgdisk requires a block device, so expose the qcow2 via NBD first.
-sudo qemu-img resize -f "${FMT}" "${IMAGE}" +1G
-sudo modprobe nbd max_part=8
-sudo qemu-nbd --connect=/dev/nbd0 "${IMAGE}"
-sudo sgdisk -e /dev/nbd0
-sudo qemu-nbd --disconnect /dev/nbd0
-
 # Start the VM
-echo "::debug:: Starting VM for test mode: $TEST_MODE"
-VM_NAME="smoketest_${IMAGE_SUFFIX}"
-# TODO: Add AAVMF for arm
-# Set OVMF paths for UEFI boot
-if [ -e "/usr/share/OVMF/OVMF_CODE_4M.fd" ]; then
-	OVMF_CODE="/usr/share/OVMF/OVMF_CODE_4M.fd"
-	OVMF_VARS="/usr/share/OVMF/OVMF_VARS_4M.fd"
-	BOOT_OPTS="--boot loader=${OVMF_CODE},loader.readonly=yes,loader.type=pflash,nvram.template=${OVMF_VARS}"
-elif [ -e "/usr/share/OVMF/OVMF_CODE.fd" ]; then
-	OVMF_CODE="/usr/share/OVMF/OVMF_CODE.fd"
-	BOOT_OPTS="--boot loader=${OVMF_CODE}"
-else
-	BOOT_OPTS=""
-fi
-
+echo "::debug:: Starting VM"
+VM_NAME="smoketest"
 sudo virt-install \
 	--name "${VM_NAME}" \
 	--ram 2048 \
@@ -275,11 +187,11 @@ sudo virt-install \
 	--os-variant detect=on,require=off \
 	--graphics none \
 	--virt-type=kvm \
-	${BOOT_OPTS} \
+	--boot uefi \
 	--transient \
 	--noautoconsole \
-	--channel unix,mode=bind,path=${WORKDIR}/${VM_NAME}.agent,target_type=virtio,name=org.qemu.guest_agent.0 \
-	--serial file,path=/var/log/libvirt/qemu/${VM_NAME}.serial.log
+	--channel "unix,mode=bind,path=${WORKDIR}/${VM_NAME}.agent,target_type=virtio,name=org.qemu.guest_agent.0" \
+	--serial "file,path=/var/log/libvirt/qemu/${VM_NAME}.serial.log"
 
 SECONDS=0
 while [ $SECONDS -lt 120 ]; do
@@ -317,28 +229,4 @@ fi
 if ! $KATACTL connect --server-address "unix://${SOCK}" --cmd DestroySandbox; then
 	echo "::error:: Failed to DestroySandbox"
 	exit 1;
-fi
-
-if [ "$TEST_MODE" = "scratch-space" ]; then
-	if ! check_scratch_space_mount "${VM_NAME}"; then
-		echo "::error:: Encrypted scratch space not found"
-		exit 1
-	fi
-
-	# Copy a unique string to the VM under /run/kata-containers/image using virsh qemu-agent-command
-	# Search for the string in the VM image from the host (only for scratch space modes)
-	echo "::debug:: Testing encrypted scratch space by writing a unique string"
-	UNIQUE_STRING="smoketest-podvm-123456"
-
-	sudo virsh qemu-agent-command "${VM_NAME}" \
-	 '{"execute": "guest-exec", "arguments": { "path": "/bin/bash", "arg": [ "-c", "echo smoketest-podvm-123456 > /run/kata-containers/image/smoketest.txt && sync" ], "capture-output": false }}'
-
-	grep -qa "${UNIQUE_STRING}" "${IMAGE}"
-	if [ $? -eq 0 ]; then
-		echo "::error:: Unique string written to encrypted device is visible from the host"
-		exit 1
-	fi
-
-	echo "::debug:: Encrypted scratch space check passed for $TEST_MODE mode"
-
 fi
