@@ -22,10 +22,6 @@ providerConfigs:
     # (default: "false")
     # CLOUD_CONFIG_VERIFY: "false"
 
-    # Enable encrypted scratch space for pod VMs
-    # (default: "false")
-    # ENABLE_SCRATCH_SPACE: "false"
-
     # port number of agent protocol forwarder
     # (default: "")
     # FORWARDER_PORT: ""

@@ -122,7 +122,7 @@ cloud-api-adaptor version v0.17.0-dev
   go: go1.24.13
 cloud-api-adaptor: starting Cloud API Adaptor daemon for "libvirt"
 2026/02/23 17:31:17 [adaptor/cloud/libvirt] Created libvirt connection
-2026/02/23 17:31:17 [adaptor] server config: &cloud.ServerConfig{TLSConfig:(*tlsutil.TLSConfig)(0xc0003de300), SocketPath:"/run/peerpod/hypervisor.sock", PauseImage:"", PodsDir:"/run/peerpod/pods", ForwarderPort:"15150", ProxyTimeout:300000000000, Initdata:"", EnableCloudConfigVerify:false, PeerPodsLimitPerNode:10, RootVolumeSize:0, EnableScratchSpace:false}
+2026/02/23 17:31:17 [adaptor] server config: &cloud.ServerConfig{TLSConfig:(*tlsutil.TLSConfig)(0xc0003de300), SocketPath:"/run/peerpod/hypervisor.sock", PauseImage:"", PodsDir:"/run/peerpod/pods", ForwarderPort:"15150", ProxyTimeout:300000000000, Initdata:"", EnableCloudConfigVerify:false, PeerPodsLimitPerNode:10, RootVolumeSize:0}
 2026/02/23 17:31:17 [util/k8sops] initialized PeerPodService
 2026/02/23 17:31:17 [probe/probe] Using port: 8000
 2026/02/23 17:31:17 [util/k8sops] set up extended resources

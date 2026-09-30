@@ -132,7 +132,6 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		reg.StringWithEnv(&cfg.serverConfig.Initdata, "initdata", "", "INITDATA", "Default initdata for all Pods")
 		reg.BoolWithEnv(&cfg.serverConfig.EnableCloudConfigVerify, "cloud-config-verify", false, "CLOUD_CONFIG_VERIFY", "Enable cloud config verify - should use it for production")
 		reg.IntWithEnv(&cfg.serverConfig.PeerPodsLimitPerNode, "peerpods-limit-per-node", 10, "PEERPODS_LIMIT_PER_NODE", "peer pods limit per node (default=10)")
-		reg.BoolWithEnv(&cfg.serverConfig.EnableScratchSpace, "enable-scratch-space", false, "ENABLE_SCRATCH_SPACE", "Enable encrypted scratch space for pod VMs")
 		reg.BoolWithEnv(&cfg.networkConfig.ExternalNetViaPodVM, "ext-network-via-podvm", false, "EXTERNAL_NETWORK_VIA_PODVM", "[EXPERIMENTAL] Enable external networking via pod VM")
 		reg.CustomTypeWithEnv(&cfg.networkConfig.PodSubnetCIDRs, "pod-subnet-cidrs", "", "POD_SUBNET_CIDRS", "[EXPERIMENTAL] Comma separated CIDRs for local pod subnets")
 		reg.BoolWithEnv(&cfg.serverConfig.DeveloperMode, "developer-mode", false, "PODVM_DEVELOPER_MODE", "Enable developer mode for disabling Peer Pod VM auto delete")

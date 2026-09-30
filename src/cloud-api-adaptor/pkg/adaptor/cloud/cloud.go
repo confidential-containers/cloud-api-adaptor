@@ -46,7 +46,6 @@ type ServerConfig struct {
 	EnableCloudConfigVerify bool
 	PeerPodsLimitPerNode    int
 	RootVolumeSize          int
-	EnableScratchSpace      bool
 	DeveloperMode           bool
 }
 
@@ -312,14 +311,6 @@ func (s *cloudService) CreateVM(ctx context.Context, req *pb.CreateVMRequest) (r
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
 			Path:    paths.InitDataPath,
 			Content: initdataEnc,
-		})
-	}
-
-	// Set encrypted scratch space config
-	if s.serverConfig.EnableScratchSpace {
-		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, cloudinit.WriteFile{
-			Path:    paths.ScratchSpacePath,
-			Content: "",
 		})
 	}
 
