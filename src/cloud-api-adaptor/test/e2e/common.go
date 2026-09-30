@@ -103,6 +103,13 @@ kbs_cert = """{{ .KBSCert }}"""
 {{- end }}
 `
 
+var policyOnlyInitdataTmpl = `algorithm = "sha384"
+version = "0.1.0"
+
+[data]
+"policy.rego" = '''{{ . }}'''
+`
+
 // PreCreatedSecretResourcePath defines the resource path for the sealed secret.
 // NOTE: This path is embedded in the sealed secret JWS token below (PreCreatedSecret).
 // If this path needs to change, the sealed secret must be regenerated with the new path.
@@ -141,6 +148,18 @@ func buildInitdataAnnotation(kbsEndpoint string) (string, error) {
 
 	initdataToml := buf.String()
 	return initdata.Encode(initdataToml)
+}
+
+func buildInitdataAnnotationPolicyOnly(policyContent string) (string, error) {
+	tmpl, err := template.New("initdata-policy").Parse(policyOnlyInitdataTmpl)
+	if err != nil {
+		return "", fmt.Errorf("parse template: %w", err)
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, policyContent); err != nil {
+		return "", fmt.Errorf("execute template: %w", err)
+	}
+	return initdata.Encode(buf.String())
 }
 
 func isTestWithKbs() bool {
