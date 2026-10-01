@@ -58,7 +58,6 @@ publish-image: image.vhd
 		--no-progress -o none && \
 	storage_account_id="$$(az storage account show \
 		--name "$(STORAGE_ACCOUNT)" \
-		--resource-group "$(RESOURCE_GROUP)" \
 		-o tsv --query id)" && \
 	blob_url="$$(az storage blob url \
 		--account-name "$(STORAGE_ACCOUNT)" \
