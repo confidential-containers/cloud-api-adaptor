@@ -19,6 +19,8 @@ PACKAGES    := $(shell go list $(addsuffix /...,$(SOURCEDIRS)))
 SOURCES     := $(shell find $(SOURCEDIRS) -name '*.go' -print)
 # End-to-end tests overall run timeout.
 TEST_E2E_TIMEOUT ?= 60m
+TEST_PODVM_TIMEOUT ?= 5m
+TEST_PODVM_COUNT ?= 1
 # Maximum number of e2e tests to run concurrently (go's test -parallel option).
 # Defaults to go's own default (GOMAXPROCS) when left empty. Useful to stay
 # within a cloud provider's quota, as each parallel test may create a pod VM.
@@ -108,6 +110,13 @@ ifneq ($(CLOUD_PROVIDER),)
 else
 	$(error CLOUD_PROVIDER is not set)
 endif
+
+.PHONY: test-podvm
+test-podvm: ## Run local podvm image tests with QEMU.
+ifndef TEST_PODVM_IMAGE
+	$(error TEST_PODVM_IMAGE is not set)
+endif
+	TEST_PODVM_IMAGE=$(abspath $(TEST_PODVM_IMAGE)) go test -v -timeout $(TEST_PODVM_TIMEOUT) -count=$(TEST_PODVM_COUNT) -run $(RUN_TESTS) ./test/podvm
 
 .PHONY: provision-cluster
 provision-cluster: ## Provision the cluster without running tests or installing CAA.
