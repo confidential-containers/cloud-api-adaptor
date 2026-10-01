@@ -20,10 +20,13 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0
 	github.com/kata-containers/kata-containers/src/runtime v0.0.0-20260915102810-c7351e797eff
+	github.com/kdomanski/iso9660 v0.4.0
+	github.com/mdlayher/vsock v1.3.0
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/stretchr/testify v1.12.1
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
+	golang.org/x/crypto v0.57.0
 	golang.org/x/sys v0.48.0
 	google.golang.org/grpc v1.83.2
 	gopkg.in/yaml.v2 v2.4.0
@@ -50,7 +53,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.0
-	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
 	google.golang.org/api v0.279.0
 	google.golang.org/protobuf v1.36.11
@@ -72,7 +74,10 @@ require (
 
 require github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 
-require github.com/oklog/ulid/v2 v2.1.2 // indirect
+require (
+	github.com/mdlayher/socket v0.6.0 // indirect
+	github.com/oklog/ulid/v2 v2.1.2 // indirect
+)
 
 require (
 	cloud.google.com/go v0.123.0 // indirect
@@ -173,7 +178,6 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kdomanski/iso9660 v0.4.0 // indirect
 	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
