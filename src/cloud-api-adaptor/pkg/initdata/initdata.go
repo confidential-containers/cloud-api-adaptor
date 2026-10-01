@@ -23,6 +23,7 @@ type InitDataBody struct {
 type InitData struct {
 	Body   *InitDataBody
 	Digest string
+	TOML   []byte
 }
 
 func digest(alg string, body []byte) (string, error) {
@@ -71,6 +72,7 @@ func Parse(reader io.Reader) (*InitData, error) {
 	initdata := &InitData{
 		Body:   body,
 		Digest: digest,
+		TOML:   initdataToml,
 	}
 
 	return initdata, nil
