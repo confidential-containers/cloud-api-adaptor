@@ -631,6 +631,14 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	if err != nil {
 		return nil, fmt.Errorf("Error in creating volume: %s", err)
 	}
+	domainOwnsVolumes := false
+	defer func() {
+		if !domainOwnsVolumes {
+			if delErr := deleteVolume(ctx, libvirtClient, rootVolName); delErr != nil {
+				logger.Printf("Warning: failed to clean up root volume %s: %v", rootVolName, delErr)
+			}
+		}
+	}()
 
 	cloudInitIso, err := createCloudInitISO(v)
 	if err != nil {
@@ -642,6 +650,13 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	if err != nil {
 		return nil, fmt.Errorf("Error in uploading iso volume: %s", err)
 	}
+	defer func() {
+		if !domainOwnsVolumes {
+			if delErr := deleteVolume(ctx, libvirtClient, isoVolName); delErr != nil {
+				logger.Printf("Warning: failed to clean up ISO volume %s: %v", isoVolName, delErr)
+			}
+		}
+	}()
 
 	rootVol, err := getVolume(libvirtClient, rootVolName)
 	if err != nil {
@@ -688,24 +703,23 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 		}
 	}()
 
-	// Start Domain.
-	logger.Printf("Starting VM '%s'", v.name)
-	err = dom.Create()
-	if err != nil {
-		return nil, fmt.Errorf("Failed to start VM: %s", err)
-	}
-
-	// Get the domain UUID which persists across all domain states
+	// Capture UUID before Create() so instanceID is available for cleanup even
+	// if the domain starts but immediately crashes (e.g. corrupt backing image).
 	uuid, err := dom.GetUUIDString()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get domain UUID: %s", err)
 	}
-
-	// For libvirt, store the domain UUID as instanceID.
-	// UUIDs persist across all domain states (running, paused, shut off),
-	// allowing cleanup to work reliably even for crashed domains.
 	v.instanceID = uuid
-	logger.Printf("VM created: name=%s, uuid=%s", v.name, uuid)
+	logger.Printf("VM defined: name=%s, uuid=%s", v.name, uuid)
+
+	// Start Domain.
+	logger.Printf("Starting VM '%s'", v.name)
+	if err = dom.Create(); err != nil {
+		domainOwnsVolumes = true
+		return &createDomainOutput{instance: v}, fmt.Errorf("Failed to start VM: %s", err)
+	}
+
+	logger.Printf("VM started: name=%s, uuid=%s", v.name, uuid)
 
 	// Wait for sometime for the IP to be visible
 	ips, err := waitForDomainIPs(ctx, func() ([]netip.Addr, error) {
@@ -714,13 +728,14 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	if err != nil {
 		logger.Printf("Unable to get IP addresses after %d retries (sleep time=%v): %s",
 			GetDomainIPsRetries, GetDomainIPsSleep, err)
-		// Returning the instance with UUID allows the caller to clean it up properly.
+		domainOwnsVolumes = true
 		return &createDomainOutput{
 			instance: v,
 		}, fmt.Errorf("domain (uuid=%s) IP addresses not found: %w", uuid, err)
 	}
 
 	v.ips = ips
+	domainOwnsVolumes = true
 	logger.Printf("Instance created successfully")
 	return &createDomainOutput{
 		instance: v,

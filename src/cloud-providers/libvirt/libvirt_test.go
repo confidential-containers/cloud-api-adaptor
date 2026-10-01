@@ -1575,3 +1575,77 @@ func TestWaitForDomainIPs_ContextCancellation(t *testing.T) {
 		assert.ErrorIs(t, err, context.Canceled)
 	})
 }
+
+// TestCreateDomainBootFailureReturnsInstanceForCleanup verifies that CreateDomain returns
+// a non-nil result with a populated instanceID when the VM crashes immediately after
+// starting, so the caller can invoke DeleteDomain for cleanup.
+func TestCreateDomainBootFailureReturnsInstanceForCleanup(t *testing.T) {
+	checkConfig(t)
+
+	client, err := NewLibvirtClient(testCfg)
+	require.NoError(t, err)
+	defer client.connection.Close()
+
+	const baseVolName = "TestBootFailure-base.qcow2"
+	const domName = "TestCreateDomainBootFailure"
+
+	pool, err := client.connection.LookupStoragePoolByName(client.poolName)
+	require.NoError(t, err, "storage pool %q not found", client.poolName)
+	defer pool.Free() //nolint:errcheck
+
+	// Remove any stale volume from a previous interrupted run.
+	if stale, lerr := pool.LookupStorageVolByName(baseVolName); lerr == nil {
+		_ = stale.Delete(0)
+		_ = stale.Free()
+	}
+
+	// 3-byte garbage file: libvirt accepts it but QEMU crashes immediately on start,
+	// leaving the domain defined-but-shut-off with no IP.
+	volXML := `<volume type='file'><name>` + baseVolName + `</name>` +
+		`<capacity unit='bytes'>4096</capacity>` +
+		`<target><format type='qcow2'/></target></volume>`
+	baseVol, err := pool.StorageVolCreateXML(volXML, 0)
+	require.NoError(t, err)
+	defer func() {
+		if v, lerr := getVolume(client, baseVolName); lerr == nil {
+			_ = v.Delete(0)
+			_ = v.Free()
+		}
+	}()
+
+	stream, err := client.connection.NewStream(0)
+	require.NoError(t, err)
+	require.NoError(t, baseVol.Upload(stream, 0, 3, 0))
+	_, err = stream.Send([]byte("abc"))
+	require.NoError(t, err)
+	require.NoError(t, stream.Finish())
+	require.NoError(t, stream.Free())
+	require.NoError(t, baseVol.Free())
+
+	if d, lerr := client.connection.LookupDomainByName(domName); lerr == nil {
+		_ = d.Destroy()
+		_ = d.Undefine()
+		_ = d.Free()
+	}
+
+	vm := &vmConfig{
+		name:               domName,
+		cpu:                1,
+		mem:                512,
+		rootDiskSize:       1,
+		volName:            baseVolName,
+		launchSecurityType: NoLaunchSecurity,
+	}
+
+	result, createErr := CreateDomain(context.Background(), client, vm)
+
+	require.Error(t, createErr)
+	require.NotNil(t, result)
+	require.NotNil(t, result.instance)
+	assert.NotEmpty(t, result.instance.instanceID)
+
+	cleanupErr := DeleteDomain(context.Background(), client, result.instance.instanceID)
+	assert.NoError(t, cleanupErr)
+	_, lookupErr := client.connection.LookupDomainByName(domName)
+	assert.Error(t, lookupErr, "domain must be removed by DeleteDomain")
+}
