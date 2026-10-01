@@ -1,0 +1,128 @@
+# (C) Copyright Confidential Containers Contributors 2025.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Publish PodVM images to Azure Image Gallery
+
+on:
+  workflow_dispatch:
+    inputs:
+      git_ref:
+        description: Git ref to build from, usually a version tag
+        required: true
+        type: string
+      image_version:
+        description: Azure image gallery version (e.g. 1.2.3)
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: src/cloud-api-adaptor
+
+jobs:
+  build-release:
+    uses: $/.github/workflows/podvm_mkosi.yaml
+    permissions:
+      contents: read # Required if we want to run on a fork?
+      packages: write # Required to publish the oras package to ghcr
+      id-token: write # Required to publish the attestation provenance to ghcr
+      attestations: write # Required to publish the attestation provenance to ghcr
+      artifact-metadata: write # Required write attestation metadata
+    with:
+      image_tag: ${{ inputs.git_ref }}
+      git_ref: ${{ inputs.git_ref }}
+      arch: amd64
+      debug: false
+      tee-platform: az-cvm-vtpm
+
+  build-debug:
+    uses: $/.github/workflows/podvm_mkosi.yaml
+    permissions:
+      contents: read # Required if we want to run on a fork?
+      packages: write # Required to publish the oras package to ghcr
+      id-token: write # Required to publish the attestation provenance to ghcr
+      attestations: write # Required to publish the attestation provenance to ghcr
+      artifact-metadata: write # Required write attestation metadata
+    with:
+      image_tag: ${{ inputs.git_ref }}
+      git_ref: ${{ inputs.git_ref }}
+      arch: amd64
+      debug: true
+      tee-platform: az-cvm-vtpm
+
+  publish:
+    name: Publish images to azure image gallery
+    permissions:
+      id-token: write # Required to login into azure
+    needs:
+    - build-release
+    - build-debug
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 1
+        ref: ${{ inputs.git_ref }}
+        persist-credentials: false
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          qemu-utils
+
+    - name: Read versions
+      run: echo "ORAS_VERSION=$(./hack/versions.py -q 'tools.oras')" >> "$GITHUB_ENV"
+
+    - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+      with:
+        version: ${{ env.ORAS_VERSION }}
+
+    # This login uses OIDC so we deem it safe to share those ids in the context of the repo
+    - name: Azure login
+      uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }} # zizmor: ignore[secrets-outside-env]
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }} # zizmor: ignore[secrets-outside-env]
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }} # zizmor: ignore[secrets-outside-env]
+
+    - name: Publish release image
+      env:
+        PODVM_OCI_IMAGE: "${{ needs.build-release.outputs.qcow2_oras_image }}"
+        IMAGE_VERSION: "${{ inputs.image_version }}"
+        RESOURCE_GROUP: "${{ vars.AZURE_RELEASE_RESOURCE_GROUP }}"
+        IMAGE_GALLERY: "${{ vars.AZURE_RELEASE_PODVM_GALLERY_NAME }}"
+        IMAGE_DEFINITION: "${{ vars.AZURE_RELEASE_PODVM_IMAGE_DEF_NAME }}"
+        STORAGE_ACCOUNT: "${{ vars.AZURE_STORAGE_ACCOUNT }}"
+        CONTAINER: "${{ vars.AZURE_STORAGE_CONTAINER }}"
+        TARGET_REGIONS: "${{ vars.AZURE_RELEASE_PODVM_TARGET_REGIONS }}"
+        COMMUNITY_GALLERY: "${{ vars.AZURE_RELEASE_COMMUNITY_GALLERY_NAME }}"
+      working-directory: src/cloud-api-adaptor/azure
+      run: |
+        make check-tools
+        make publish-image
+        echo "${COMMUNITY_GALLERY}/Images/${IMAGE_DEFINITION}/Versions/${IMAGE_VERSION}"
+
+    - name: Publish debug image
+      env:
+        PODVM_OCI_IMAGE: "${{ needs.build-debug.outputs.qcow2_oras_image }}"
+        IMAGE_VERSION: "${{ inputs.image_version }}"
+        RESOURCE_GROUP: "${{ vars.AZURE_RELEASE_RESOURCE_GROUP }}"
+        IMAGE_GALLERY: "${{ vars.AZURE_RELEASE_PODVM_GALLERY_NAME }}"
+        IMAGE_DEFINITION: "${{ vars.AZURE_RELEASE_PODVM_IMAGE_DEF_NAME_DEBUG }}"
+        STORAGE_ACCOUNT: "${{ vars.AZURE_STORAGE_ACCOUNT }}"
+        CONTAINER: "${{ vars.AZURE_STORAGE_CONTAINER }}"
+        TARGET_REGIONS: "${{ vars.AZURE_RELEASE_PODVM_TARGET_REGIONS }}"
+        COMMUNITY_GALLERY: "${{ vars.AZURE_RELEASE_COMMUNITY_GALLERY_NAME }}"
+      working-directory: src/cloud-api-adaptor/azure
+      run: |
+        make check-tools
+        make publish-image
+        echo "${COMMUNITY_GALLERY}/Images/${IMAGE_DEFINITION}/Versions/${IMAGE_VERSION}"

@@ -44,7 +44,8 @@ REQUIRED_SIG_VARS := \
 	RESOURCE_GROUP \
 	STORAGE_ACCOUNT
 
-# Note: this uses shallow replication, which is only suited for e2e testing.
+REPLICATION := $(if $(strip $(TARGET_REGIONS)),--target-regions $(TARGET_REGIONS),--replication-mode Shallow)
+
 publish-image: image.vhd
 	@$(foreach var,$(REQUIRED_SIG_VARS), \
 		if [ -z "$($(var))" ]; then echo "error: $(var) is unset"; exit 1; fi; )
@@ -71,7 +72,7 @@ publish-image: image.vhd
 		--gallery-image-version "$(IMAGE_VERSION)" \
 		--os-vhd-storage-account "$$storage_account_id" \
 		--os-vhd-uri "$$blob_url" \
-		--replication-mode Shallow \
+		$(REPLICATION) \
 		--only-show-errors \
 		-o tsv --query id
 
