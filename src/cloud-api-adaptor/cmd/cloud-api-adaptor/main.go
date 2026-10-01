@@ -25,6 +25,10 @@ import (
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/podnetwork"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/probe"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const (
@@ -99,6 +103,25 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		printHelp(os.Stderr)
 		cmd.Exit(1)
 	}
+
+	// Resolve the cluster UID (kube-system namespace UID) so providers can
+	// tag VMs for orphan GC discovery. Each provider applies the tag in its
+	// own CreateInstance using provider.ClusterUID. Without this tag, the GC
+	// cannot discover VMs belonging to this cluster, so failure is fatal.
+	kubeConfig, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load in-cluster config for GC tagging: %w", err)
+	}
+	clientset, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create kubernetes client for GC tagging: %w", err)
+	}
+	ns, err := clientset.CoreV1().Namespaces().Get(context.Background(), "kube-system", metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get kube-system namespace UID for GC tagging: %w", err)
+	}
+	provider.ClusterUID = string(ns.UID)
+	fmt.Printf("%s: resolved cluster UID for GC tagging: %s\n", programName, ns.UID)
 
 	var (
 		disableTLS      bool

@@ -18,13 +18,9 @@ package controllers
 
 import (
 	"context"
-	"flag"
-	"fmt"
 	"os"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -42,11 +38,7 @@ type PeerPodReconciler struct {
 	Providers map[string]provider.Provider
 }
 
-const (
-	ppFinalizer = "peer.pod/finalizer"
-	ppConfigMap = "peer-pods-cm"
-	ppSecret    = "peer-pods-secret"
-)
+const ppFinalizer = "peer.pod/finalizer"
 
 //+kubebuilder:rbac:groups="",resourceNames=peer-pods-cm;peer-pods-secret,resources=configmaps;secrets,verbs=get
 
@@ -136,58 +128,7 @@ func (r *PeerPodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *PeerPodReconciler) cloudConfigsGetter() error {
-	peerpodscm := corev1.ConfigMap{}
-	peerpodssecret := corev1.Secret{}
-	ns := os.Getenv("PEERPODS_NAMESPACE")
-	if ns == "" {
-		return fmt.Errorf("PEERPODS_NAMESPACE is not set")
-	}
-
-	var cmErr error
-	if cmErr = r.Get(context.TODO(), types.NamespacedName{Name: ppConfigMap, Namespace: ns}, &peerpodscm); cmErr == nil {
-		// set all configs as env vars to make sure all the required vars for auth are set
-		for k, v := range peerpodscm.Data {
-			os.Setenv(k, v)
-		}
-	}
-
-	var secretErr error
-	if secretErr = r.Get(context.TODO(), types.NamespacedName{Name: ppSecret, Namespace: ns}, &peerpodssecret); secretErr == nil {
-		for k, v := range peerpodssecret.Data {
-			os.Setenv(k, string(v))
-		}
-	}
-
-	if peerpodscm.Data == nil && peerpodssecret.Data == nil {
-		return fmt.Errorf("ConfigMap Error: %v, Secret Error: %v", cmErr, secretErr)
-	}
-
-	return nil
-}
-
-func GetProvider(cloudName string) (provider.Provider, error) {
-	if cloud := provider.Get(cloudName); cloud != nil {
-		// Load cloud provider configuration from environment variables.
-		//
-		// cloudConfigsGetter() has already populated os.Environ() with values from
-		// the peer-pods-cm ConfigMap and peer-pods-secret Secret (e.g., AZURE_CLIENT_ID,
-		// AWS_ACCESS_KEY_ID, etc.).
-		//
-		// ParseCmd() reads these environment variables and populates the provider's
-		// configuration struct. We pass a dummy FlagSet because peerpod-ctrl doesn't
-		// use command-line flags - it only needs environment variable loading, which
-		// happens as a side effect of ParseCmd() during flag registration.
-		dummyFlags := flag.NewFlagSet(cloudName, flag.ContinueOnError)
-		cloud.ParseCmd(dummyFlags)
-
-		provider, err := cloud.NewProvider()
-		if err != nil {
-			return nil, err
-		}
-		return provider, nil
-	}
-
-	return nil, fmt.Errorf("%s cloud provider not supported", cloudName)
+	return loadCloudConfigs(context.TODO(), r.Client, os.Getenv("PEERPODS_NAMESPACE"))
 }
 
 func isOldPeerPod(pp, cur confidentialcontainersorgv1alpha1.PeerPod) bool {
