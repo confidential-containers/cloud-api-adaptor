@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -289,6 +290,142 @@ func (p *TestProvider) GetUserData(ctx context.Context) ([]byte, error) {
 
 func (p *TestProvider) GetRetryDelay() time.Duration {
 	return 1 * time.Millisecond
+}
+
+func TestNewProvider(t *testing.T) {
+	for _, tt := range []struct {
+		source string
+		want   UserDataProvider
+	}{
+		{"", FileUserDataProvider{}},
+		{"config-drive", FileUserDataProvider{}},
+		{"sftp", FileUserDataProvider{}},
+		{"imds-azure", AzureUserDataProvider{}},
+		{"imds-aws", AWSUserDataProvider{}},
+		{"imds-gcp", GCPUserDataProvider{}},
+		{"imds-alibaba", AlibabaCloudDataProvider{}},
+	} {
+		t.Run(tt.source, func(t *testing.T) {
+			t.Setenv(provisioningSourceEnv, tt.source)
+			cfg := NewConfig(1)
+			cfg.userDataPath = filepath.Join(t.TempDir(), "user-data")
+			provider, err := newProvider(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if reflect.TypeOf(provider) != reflect.TypeOf(tt.want) {
+				t.Fatalf("provider = %T; want %T", provider, tt.want)
+			}
+			if fileProvider, ok := provider.(FileUserDataProvider); ok && fileProvider.path != cfg.userDataPath {
+				t.Fatalf("file path = %q; want %q", fileProvider.path, cfg.userDataPath)
+			}
+		})
+	}
+}
+
+func provisionTestConfig(t *testing.T) *Config {
+	t.Helper()
+	dir := t.TempDir()
+	cfg := NewConfig(1)
+	cfg.userDataPath = filepath.Join(dir, "user-data")
+	cfg.parentPath = dir
+	cfg.initdataPath = filepath.Join(dir, "initdata")
+	cfg.digestPath = filepath.Join(dir, "initdata.digest")
+	cfg.writeFiles = []string{filepath.Join(dir, "apf.json"), cfg.initdataPath}
+	cfg.initdataFiles = nil
+	return cfg
+}
+
+func assertNoProvisionedFiles(t *testing.T, cfg *Config) {
+	t.Helper()
+	for _, path := range append([]string{cfg.digestPath}, cfg.writeFiles...) {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("unexpected provisioning output at %s: %v", path, err)
+		}
+	}
+}
+
+func TestProvisionFilesInvalidSource(t *testing.T) {
+	for _, source := range []string{"aws", "azure", "gcp", "alibaba", "external", "invalid", " imds-aws"} {
+		t.Run(source, func(t *testing.T) {
+			t.Setenv(provisioningSourceEnv, source)
+			cfg := provisionTestConfig(t)
+			err := ProvisionFiles(cfg)
+			if err == nil || !strings.Contains(err.Error(), "failed to select user data provider") ||
+				!strings.Contains(err.Error(), provisioningSourceEnv) {
+				t.Fatalf("expected invalid source error, got %v", err)
+			}
+			assertNoProvisionedFiles(t, cfg)
+		})
+	}
+}
+
+func TestProvisionFilesFromFile(t *testing.T) {
+	for _, source := range []string{"", "config-drive", "sftp"} {
+		t.Run(source, func(t *testing.T) {
+			t.Setenv(provisioningSourceEnv, source)
+			if source == "" {
+				if err := os.Unsetenv(provisioningSourceEnv); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cfg := provisionTestConfig(t)
+			content := fmt.Sprintf("write_files:\n- path: %s\n  content: %q\n- path: %s\n  content: %q\n",
+				cfg.writeFiles[0], testAPFConfig, cfg.initdataPath, ccInitData)
+			if err := os.WriteFile(cfg.userDataPath, []byte(content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := ProvisionFiles(cfg); err != nil {
+				t.Fatal(err)
+			}
+			apf, err := os.ReadFile(cfg.writeFiles[0])
+			if err != nil || string(apf) != testAPFConfig {
+				t.Fatalf("unexpected APF configuration: %s, error: %v", apf, err)
+			}
+			digest, err := os.ReadFile(cfg.digestPath)
+			if err != nil || string(digest) != testCheckSum {
+				t.Fatalf("unexpected initdata digest: %s, error: %v", digest, err)
+			}
+		})
+	}
+}
+
+func TestProvisionFilesFailedFileDoesNotGenerateInitdata(t *testing.T) {
+	for _, source := range []string{"", "config-drive", "sftp"} {
+		t.Run(source, func(t *testing.T) {
+			t.Setenv(provisioningSourceEnv, source)
+			for _, input := range []string{"missing", "malformed"} {
+				t.Run(input, func(t *testing.T) {
+					cfg := provisionTestConfig(t)
+					if input == "malformed" {
+						if err := os.WriteFile(cfg.userDataPath, []byte("write_files: ["), 0o600); err != nil {
+							t.Fatal(err)
+						}
+					}
+					err := ProvisionFiles(cfg)
+					if err == nil || !strings.Contains(err.Error(), "failed to retrieve cloud config") {
+						t.Fatalf("expected user-data retrieval error, got %v", err)
+					}
+					assertNoProvisionedFiles(t, cfg)
+				})
+			}
+		})
+	}
+}
+
+func TestProvisionFilesFailedIMDSDoesNotGenerateInitdata(t *testing.T) {
+	for _, source := range []string{"imds-azure", "imds-aws", "imds-gcp", "imds-alibaba"} {
+		t.Run(source, func(t *testing.T) {
+			t.Setenv(provisioningSourceEnv, source)
+			cfg := provisionTestConfig(t)
+			cfg.fetchTimeout = 0
+			err := ProvisionFiles(cfg)
+			if err == nil || !strings.Contains(err.Error(), "failed to retrieve cloud config") {
+				t.Fatalf("expected user-data retrieval error, got %v", err)
+			}
+			assertNoProvisionedFiles(t, cfg)
+		})
+	}
 }
 
 // TestRetrieveCloudConfig tests retrieving and parsing of a apf config

@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	ConfigParent = "/run/peerpod"
-	DigestPath   = "/run/peerpod/initdata.digest"
-	PolicyPath   = "/run/peerpod/policy.rego"
+	provisioningSourceEnv = "PODVM_PROVISIONING_SOURCE"
+	ConfigParent          = "/run/peerpod"
+	DigestPath            = "/run/peerpod/initdata.digest"
+	PolicyPath            = "/run/peerpod/policy.rego"
 	// Ref: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
 	AWSImdsURL         = "http://169.254.169.254/latest/dynamic/instance-identity/document"
 	AWSUserDataImdsURL = "http://169.254.169.254/latest/user-data"
@@ -43,6 +44,7 @@ var InitdDataFilesList = []string{paths.AACfgPath, paths.CDHCfgPath, PolicyPath}
 
 type Config struct {
 	fetchTimeout  int
+	userDataPath  string
 	digestPath    string
 	initdataPath  string
 	parentPath    string
@@ -53,6 +55,7 @@ type Config struct {
 func NewConfig(fetchTimeout int) *Config {
 	return &Config{
 		fetchTimeout:  fetchTimeout,
+		userDataPath:  paths.UserDataPath,
 		parentPath:    ConfigParent,
 		initdataPath:  paths.InitDataPath,
 		digestPath:    DigestPath,
@@ -106,14 +109,20 @@ func (g GCPUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
 	return imdsGet(ctx, url, true, []kvPair{{"Metadata-Flavor", "Google"}})
 }
 
-type FileUserDataProvider struct{ DefaultRetry }
+type FileUserDataProvider struct {
+	DefaultRetry
+	path string
+}
 
 func (a FileUserDataProvider) GetUserData(ctx context.Context) ([]byte, error) {
-	path := paths.UserDataPath
+	path := a.path
+	if path == "" {
+		path = paths.UserDataPath
+	}
 	logger.Printf("provider: File, userDataPath: %s\n", path)
 	userData, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %s", err)
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	return userData, nil
@@ -127,30 +136,22 @@ func (a AlibabaCloudDataProvider) GetUserData(ctx context.Context) ([]byte, erro
 	return imdsGet(ctx, url, false, nil)
 }
 
-func newProvider(ctx context.Context) (UserDataProvider, error) {
-	// This checks for the presence of a file and doesn't rely on http req like the
-	// azure, aws ones, thereby making it faster and hence checking this first
-	if hasUserDataFile() {
-		return FileUserDataProvider{}, nil
-	}
-
-	if isAzureVM() {
+func newProvider(cfg *Config) (UserDataProvider, error) {
+	source := os.Getenv(provisioningSourceEnv)
+	switch source {
+	case "", "config-drive", "sftp":
+		return FileUserDataProvider{path: cfg.userDataPath}, nil
+	case "imds-azure":
 		return AzureUserDataProvider{}, nil
-	}
-
-	if isAWSVM(ctx) {
+	case "imds-aws":
 		return AWSUserDataProvider{}, nil
-	}
-
-	if isGCPVM(ctx) {
+	case "imds-gcp":
 		return GCPUserDataProvider{}, nil
-	}
-
-	if isAlibabaCloudVM() {
+	case "imds-alibaba":
 		return AlibabaCloudDataProvider{}, nil
+	default:
+		return nil, fmt.Errorf("invalid %s value %q", provisioningSourceEnv, source)
 	}
-
-	return nil, fmt.Errorf("unsupported user data provider")
 }
 
 func retrieveCloudConfig(ctx context.Context, provider UserDataProvider) (*CloudConfig, error) {
@@ -307,21 +308,16 @@ func ProvisionFiles(cfg *Config) error {
 	ctx, cancel := context.WithTimeout(bg, duration)
 	defer cancel()
 
-	// some providers provision config files via process-user-data
-	// some providers rely on cloud-init provision config files
-	// all providers need extract files from initdata and calculate the hash value for attesters usage
-	provider, _ := newProvider(ctx)
-	if provider != nil {
-		cc, err := retrieveCloudConfig(ctx, provider)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve cloud config: %w", err)
-		}
-
-		if err = processCloudConfig(cfg, cc); err != nil {
-			return fmt.Errorf("failed to process cloud config: %w", err)
-		}
-	} else {
-		logger.Printf("unsupported user data provider, we extract and calculate initdata hash only.\n")
+	provider, err := newProvider(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to select user data provider: %w", err)
+	}
+	cc, err := retrieveCloudConfig(ctx, provider)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve cloud config: %w", err)
+	}
+	if err := processCloudConfig(cfg, cc); err != nil {
+		return fmt.Errorf("failed to process cloud config: %w", err)
 	}
 
 	if err := extractInitdataAndHash(cfg); err != nil {
