@@ -65,10 +65,11 @@ default WriteStreamRequest := true
 `
 
 type initdataParams struct {
-	CoCoASURL string
-	KBSURL    string
-	KBSCert   string
-	Policy    string
+	CoCoASURL      string
+	KBSURL         string
+	KBSCert        string
+	Policy         string
+	ImagePolicyURI string
 }
 
 var testInitdataTmpl string = `algorithm = "sha384"
@@ -96,6 +97,11 @@ url = '{{ .KBSURL }}'
 {{- if .KBSCert }}
 kbs_cert = """{{ .KBSCert }}"""
 {{- end }}
+{{- if .ImagePolicyURI }}
+
+[image]
+image_security_policy_uri = '{{ .ImagePolicyURI }}'
+{{- end }}
 '''
 {{ if .Policy }}
 
@@ -115,10 +121,18 @@ const SealedSecretSigningJWKPublicKey = `{"alg":"ES256","crv":"P-256","kid":"sea
 
 // Build gzipped and base64 encoded string
 func buildInitdataAnnotation(kbsEndpoint string) (string, error) {
+	return buildInitdataAnnotationWithImagePolicy(kbsEndpoint, "")
+}
+
+// buildInitdataAnnotationWithImagePolicy is like buildInitdataAnnotation but
+// also configures the guest to enforce an image signature policy fetched from
+// KBS (imagePolicyURI, e.g. "kbs:///default/security-policy/test").
+func buildInitdataAnnotationWithImagePolicy(kbsEndpoint, imagePolicyURI string) (string, error) {
 	params := initdataParams{
-		CoCoASURL: kbsEndpoint,
-		KBSURL:    kbsEndpoint,
-		Policy:    Policy,
+		CoCoASURL:      kbsEndpoint,
+		KBSURL:         kbsEndpoint,
+		Policy:         Policy,
+		ImagePolicyURI: imagePolicyURI,
 	}
 
 	if strings.HasPrefix(kbsEndpoint, "https") {
@@ -145,6 +159,27 @@ func buildInitdataAnnotation(kbsEndpoint string) (string, error) {
 
 func isTestWithKbs() bool {
 	return os.Getenv("TEST_KBS") == "yes" || os.Getenv("TEST_KBS") == "true"
+}
+
+// envOr returns the value of the environment variable key, or def if unset.
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+// getKbsEndpoint returns the KBS endpoint. It checks KBS_ENDPOINT first so
+// that pre-installed operator-managed deployments can inject the endpoint
+// directly, without needing the KBS manager to have called GetKbsEndpoint.
+func getKbsEndpoint(t *testing.T) (string, error) {
+	if ep := os.Getenv("KBS_ENDPOINT"); ep != "" {
+		return ep, nil
+	}
+	if keyBrokerService == nil {
+		return "", fmt.Errorf("KBS_ENDPOINT not set and no KBS manager available")
+	}
+	return keyBrokerService.GetCachedKbsEndpoint()
 }
 
 // Setup of Trustee Operator is required for this test
@@ -323,6 +358,21 @@ func WithInitdata(kbsEndpoint string) PodOption {
 			log.Fatalf("failed to build initdata %s", err)
 		}
 		p.Annotations[key] = value
+	}
+}
+
+// WithInitdataImagePolicy is like WithInitdata but also enforces an image
+// signature policy fetched from KBS at imagePolicyURI.
+func WithInitdataImagePolicy(kbsEndpoint, imagePolicyURI string) PodOption {
+	return func(p *corev1.Pod) {
+		if p.Annotations == nil {
+			p.Annotations = make(map[string]string)
+		}
+		value, err := buildInitdataAnnotationWithImagePolicy(kbsEndpoint, imagePolicyURI)
+		if err != nil {
+			log.Fatalf("failed to build initdata %s", err)
+		}
+		p.Annotations[InitdataAnnotation] = value
 	}
 }
 

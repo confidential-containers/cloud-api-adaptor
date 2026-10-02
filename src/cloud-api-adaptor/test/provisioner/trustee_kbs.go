@@ -512,6 +512,13 @@ func (p *KeyBrokerService) SetImageDecryptionKey(keyID string, key []byte) error
 	return p.setSecretKey(keyID, f.Name())
 }
 
+// RevertResources is a no-op for the framework-deployed KBS: the whole
+// deployment is torn down at environment teardown (see Delete), so per-test
+// resource reversion is unnecessary.
+func (p *KeyBrokerService) RevertResources() error {
+	return nil
+}
+
 func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) error {
 	log.Info("Uninstalling Trustee via Helm")
 	var helmErr error

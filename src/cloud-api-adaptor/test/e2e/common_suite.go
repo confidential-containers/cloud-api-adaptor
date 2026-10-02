@@ -502,7 +502,7 @@ func DoTestPodsMTLSCommunication(t *testing.T, e env.Environment, assert CloudAs
 
 }
 
-func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, kbs *pv.KeyBrokerService) {
+func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, kbs pv.KbsManager) {
 	// TODO create a multi-arch encrypted image. Note the Kata CI version doesn't work as the key length is 44, not 32 which is wanted
 	if runtime.GOARCH == "s390x" {
 		t.Skip("Encrypted image test not currently support on s390x")
@@ -548,6 +548,60 @@ func DoTestImageDecryption(t *testing.T, e env.Environment, assert CloudAssert, 
 	pod := NewPod(E2eNamespace, podName, podName, image, WithAnnotations(annotations), WithInitdata(kbsEndpoint))
 	duration := 3 * time.Minute
 	NewTestCase(t, e, "TestImageDecryption", assert, "Encrypted image layers have been decrypted").WithPod(pod).WithDeleteAssertion(&duration).Run()
+}
+
+const (
+	imageSecurityPolicyPath    = "default/security-policy/test"
+	imageCosignPublicKeyPath   = "default/cosign-public-key/test"
+	imageSecurityPolicyKbsURI  = "kbs:///default/security-policy/test"
+	imageCosignPublicKeyKbsURI = "kbs:///default/cosign-public-key/test"
+
+	// Defaults for the signed image, its registry (policy transport key) and the
+	// cosign public key it is signed with. These differ between upstream and
+	// downstream, so they are overridable via SIGNED_IMAGE, SIGNED_IMAGE_REGISTRY
+	// and SIGNED_IMAGE_COSIGN_PUBKEY.
+	defaultSignedImage                = "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed"
+	defaultSignedImageRegistry        = "ghcr.io/confidential-containers/test-container-image-rs"
+	defaultSignedImageCosignPublicKey = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWT07eR1HNK3D2iqHotE0c389aSTh
+Lj0B39PXTBcJzJpkXPO82lLGQdc47V5HPWaPZ2Fc3DWyRoz1oWbnLlvQ5Q==
+-----END PUBLIC KEY-----`
+)
+
+// DoTestSignedImage verifies that a cosign-signed image, whose signature policy
+// and public key are served by KBS, is pulled and run after signature
+// verification. The policy rejects by default, so the pod running proves the
+// signature check (not a permissive default) allowed it. The image, its registry
+// and the cosign public key are overridable via env (they differ between
+// upstream and downstream).
+func DoTestSignedImage(t *testing.T, e env.Environment, assert CloudAssert, kbs pv.KbsManager, kbsEndpoint string) {
+	image := envOr("SIGNED_IMAGE", defaultSignedImage)
+	registry := envOr("SIGNED_IMAGE_REGISTRY", defaultSignedImageRegistry)
+	cosignPublicKey := envOr("SIGNED_IMAGE_COSIGN_PUBKEY", defaultSignedImageCosignPublicKey)
+
+	policy := fmt.Sprintf(
+		`{"default":[{"type":"reject"}],"transports":{"docker":{%q:[{"type":"sigstoreSigned","keyPath":%q}]}}}`,
+		registry, imageCosignPublicKeyKbsURI)
+
+	// Revert the KBS to its pre-test state once the test finishes, regardless of
+	// outcome.
+	t.Cleanup(func() {
+		if err := kbs.RevertResources(); err != nil {
+			t.Logf("reverting KBS resources: %v", err)
+		}
+	})
+	if err := kbs.SetSecret(imageCosignPublicKeyPath, []byte(cosignPublicKey)); err != nil {
+		t.Fatalf("setting cosign public key: %v", err)
+	}
+	if err := kbs.SetSecret(imageSecurityPolicyPath, []byte(policy)); err != nil {
+		t.Fatalf("setting image security policy: %v", err)
+	}
+
+	annotations := map[string]string{"io.containerd.cri.runtime-handler": "kata-remote"}
+	pod := NewPod(E2eNamespace, "signed-image", "signed-image", image,
+		WithAnnotations(annotations),
+		WithInitdataImagePolicy(kbsEndpoint, imageSecurityPolicyKbsURI))
+	NewTestCase(t, e, "SignedImage", assert, "Signed image is verified and runs").WithPod(pod).Run()
 }
 
 func DoTestSealedSecret(t *testing.T, e env.Environment, assert CloudAssert, kbsEndpoint string, expectedSecret string) {
