@@ -25,6 +25,8 @@ import (
 	agent "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -104,6 +106,20 @@ func TestDebugPodVM(t *testing.T) {
 		require.Equal(t, "podvm-ready", string(output))
 	})
 
+	t.Run("ConfigDriveMounted", func(t *testing.T) {
+		var output []byte
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		err := retryUntil(ctx, "mounted config drive", func(ctx context.Context) error {
+			output, err = vm.runSSHCommand(ctx, signer,
+				"findmnt --evaluate --mountpoint /media/cidata --source LABEL=cidata --types iso9660 --noheadings --output TARGET")
+			return err
+		})
+		require.NoError(t, err, "findmnt output: %s", output)
+		require.Equal(t, "/media/cidata\n", string(output))
+	})
+
 	t.Run("ProvisionUserData", func(t *testing.T) {
 		var output []byte
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -173,7 +189,13 @@ func TestDebugPodVM(t *testing.T) {
 			destroyCtx, destroyCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer destroyCancel()
 			_, err := agentClient.DestroySandbox(destroyCtx, &agent.DestroySandboxRequest{})
-			require.NoError(t, err)
+			// TODO: there is race in the ttrpc client that will discard responses after
+			// a connection is closed.
+			if err != nil {
+				expectedClose := status.Code(err) == codes.Unknown &&
+					status.Convert(err).Message() == ttrpc.ErrClosed.Error()
+				require.True(t, expectedClose, "DestroySandbox failed: %v", err)
+			}
 		}()
 
 		t.Run("LaunchContainers", func(t *testing.T) {
