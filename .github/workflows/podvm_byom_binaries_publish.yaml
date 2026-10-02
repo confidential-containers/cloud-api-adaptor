@@ -53,7 +53,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-publish-podvm-byom-binaries-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 defaults:
