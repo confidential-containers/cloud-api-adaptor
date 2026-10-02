@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -115,6 +116,17 @@ func TestDebugPodVM(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.JSONEq(t, string(forwarderJSON), string(output))
+	})
+
+	t.Run("ProvisioningSource", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		output, err := runSSHCommand(ctx, client,
+			"systemctl show process-user-data.service --property=Environment --value")
+		require.NoError(t, err)
+		require.Contains(t, strings.Fields(string(output)), "PODVM_PROVISIONING_SOURCE=config-drive",
+			"process-user-data.service must explicitly select config-drive provisioning")
 	})
 
 	t.Run("SystemdServices", func(t *testing.T) {
