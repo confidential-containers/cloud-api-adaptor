@@ -25,11 +25,13 @@ import (
 	agent "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/agent/protocols/grpc"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
 	testForwarderServerName = "podvm-test"
-	testContainerImage      = "quay.io/prometheus/busybox@sha256:f07fff1d7544464a1041fc2b6be79873a335a3af8f0b747b82fa630287968d4d"
+	testContainerImage      = "quay.io/prometheus/busybox@sha256:d0a5844b58b7745187851254c7bbe9d73d8493757909ba9219978bb18d0fa7a1"
 )
 
 func TestDebugPodVM(t *testing.T) {
@@ -104,6 +106,20 @@ func TestDebugPodVM(t *testing.T) {
 		require.Equal(t, "podvm-ready", string(output))
 	})
 
+	t.Run("ConfigDriveMounted", func(t *testing.T) {
+		var output []byte
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		err := retryUntil(ctx, "mounted config drive", func(ctx context.Context) error {
+			output, err = vm.runSSHCommand(ctx, signer,
+				"findmnt --evaluate --mountpoint /media/cidata --source LABEL=cidata --types iso9660 --noheadings --output TARGET")
+			return err
+		})
+		require.NoError(t, err, "findmnt output: %s", output)
+		require.Equal(t, "/media/cidata\n", string(output))
+	})
+
 	t.Run("ProvisionUserData", func(t *testing.T) {
 		var output []byte
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -128,6 +144,7 @@ func TestDebugPodVM(t *testing.T) {
 			{name: "ConfidentialDataHub", unit: "confidential-data-hub.service"},
 			{name: "APIServerREST", unit: "api-server-rest.service"},
 			{name: "KataAgent", unit: "kata-agent.service"},
+			{name: "SetupNatForIMDS", unit: "setup-nat-for-imds.service"},
 		}
 
 		for _, service := range services {
@@ -140,6 +157,14 @@ func TestDebugPodVM(t *testing.T) {
 				require.NoError(t, waitForSystemdService(ctx, vm, signer, service.unit))
 			})
 		}
+
+		t.Run("AssertNoFailedUnits", func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), bootTimeout)
+			defer cancel()
+
+			output, err := vm.runSSHCommand(ctx, signer, "systemctl is-system-running --wait")
+			require.NoError(t, err, "system degraded: %s", output)
+		})
 	})
 
 	t.Run("ForwarderMutualTLS", func(t *testing.T) {
@@ -174,7 +199,13 @@ func TestDebugPodVM(t *testing.T) {
 			destroyCtx, destroyCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer destroyCancel()
 			_, err := agentClient.DestroySandbox(destroyCtx, &agent.DestroySandboxRequest{})
-			require.NoError(t, err)
+			// TODO: there is race in the ttrpc client that will discard responses after
+			// a connection is closed.
+			if err != nil {
+				expectedClose := status.Code(err) == codes.Unknown &&
+					status.Convert(err).Message() == ttrpc.ErrClosed.Error()
+				require.True(t, expectedClose, "DestroySandbox failed: %v", err)
+			}
 		}()
 
 		t.Run("LaunchContainers", func(t *testing.T) {
