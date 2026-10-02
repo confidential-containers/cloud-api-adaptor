@@ -74,6 +74,7 @@ ATTESTATION_AGENT = $(FILES_DIR)/usr/local/bin/attestation-agent
 CONFIDENTIAL_DATA_HUB = $(FILES_DIR)/usr/local/bin/confidential-data-hub
 API_SERVER_REST  = $(FILES_DIR)/usr/local/bin/api-server-rest
 PROCESS_USER_DATA = $(FILES_DIR)/usr/local/bin/process-user-data
+PROVISIONING_GENERATOR = $(FILES_DIR)/usr/lib/systemd/system-generators/provisioning-generator
 AZURE_READY = $(FILES_DIR)/usr/local/bin/azure-ready
 
 # Allow BINARIES to be overridden externally
@@ -86,7 +87,8 @@ BINARIES ?= \
 	$(CONFIDENTIAL_DATA_HUB) \
 	$(KATA_AGENT) \
 	$(PAUSE) \
-	$(PROCESS_USER_DATA)
+	$(PROCESS_USER_DATA) \
+	$(PROVISIONING_GENERATOR)
 
 SKOPEO_SRC ?= skopeo
 SKOPEO_BIN ?= $(SKOPEO_SRC)/bin/skopeo
@@ -160,6 +162,10 @@ $(AGENT_PROTOCOL_FORWARDER): always
 $(PROCESS_USER_DATA): always
 	cd "$(ROOT_DIR)" && ARCH=$(ARCH) $(MAKE) process-user-data
 	install -D --compare "$(ROOT_DIR)/process-user-data" "$@"
+
+$(PROVISIONING_GENERATOR): always
+	cd "$(ROOT_DIR)" && ARCH=$(ARCH) $(MAKE) provisioning-generator
+	install -D --compare "$(ROOT_DIR)/provisioning-generator" "$@"
 
 $(AZURE_READY): always
 	cd "$(ROOT_DIR)" && ARCH=$(ARCH) $(MAKE) azure-ready
