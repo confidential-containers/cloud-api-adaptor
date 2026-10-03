@@ -4,6 +4,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	cmdUtil "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/cmd"
@@ -15,6 +17,11 @@ const (
 	programName   = "process-user-data"
 	providerAzure = "azure"
 	providerAws   = "aws"
+)
+
+var (
+	ErrAssertConfigDriveFailed        = errors.New("assertion failed")
+	ErrAssertConfigDriveInternalError = errors.New("internal assertion error")
 )
 
 var versionFlag bool
@@ -45,12 +52,34 @@ func init() {
 	}
 	provisionFilesCmd.Flags().IntVarP(&fetchTimeout, "user-data-fetch-timeout", "t", 180, "Timeout (in secs) for fetching user data")
 	rootCmd.AddCommand(provisionFilesCmd)
+
+	assertConfigDrive := &cobra.Command{
+		Use:   "assert-config-drive",
+		Short: "Detect the provisioning source of the VM (IMDS vs config drive)",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			res, err := userdata.AssertConfigDrive()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error asserting config drive: %v\n", err)
+				return ErrAssertConfigDriveInternalError
+			}
+			if !res {
+				return ErrAssertConfigDriveFailed
+			}
+			return nil
+		},
+		SilenceUsage: true, // Silence usage on error
+	}
+	rootCmd.AddCommand(assertConfigDrive)
 }
 
 func main() {
 
 	err := rootCmd.Execute()
 	if err != nil {
+		// systemd uses exit code 255 to indicate internal error
+		if errors.Is(err, ErrAssertConfigDriveInternalError) {
+			os.Exit(255)
+		}
 		os.Exit(1)
 	}
 
