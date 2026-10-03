@@ -9,9 +9,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/initdata"
 )
 
 var testAPFConfig string = `{
@@ -477,6 +480,7 @@ write_files:
 	cfg := Config{
 		fetchTimeout:  180,
 		digestPath:    "",
+		tomlPath:      "",
 		initdataPath:  "",
 		parentPath:    tempDir,
 		writeFiles:    writeFilesList,
@@ -647,7 +651,7 @@ func TestFailPlainTextUserData(t *testing.T) {
 
 }
 
-func TestExtractInitdataAndHash(t *testing.T) {
+func TestProcessInitdata(t *testing.T) {
 	tempDir, _ := os.MkdirTemp("", "tmp_initdata_root")
 	defer os.RemoveAll(tempDir)
 
@@ -656,11 +660,13 @@ func TestExtractInitdataAndHash(t *testing.T) {
 	var cdhPath = filepath.Join(tempDir, "cdh.toml")
 	var policyPath = filepath.Join(tempDir, "policy.rego")
 	var digestPath = filepath.Join(tempDir, "initdata.digest")
+	var tomlPath = filepath.Join(tempDir, "initdata.toml")
 	var initdDataFilesList = []string{aaPath, cdhPath, policyPath}
 
 	cfg := Config{
 		fetchTimeout:  180,
 		digestPath:    digestPath,
+		tomlPath:      tomlPath,
 		initdataPath:  initdataPath,
 		parentPath:    tempDir,
 		writeFiles:    nil,
@@ -668,33 +674,39 @@ func TestExtractInitdataAndHash(t *testing.T) {
 	}
 
 	_ = writeFile(initdataPath, []byte(ccInitData))
-	err := extractInitdataAndHash(&cfg)
+	err := processInitdata(&cfg)
 	if err != nil {
-		t.Fatalf("extractInitdataAndHash returned err: %v", err)
+		t.Fatalf("processInitdata returned err: %v", err)
 	}
 
 	bytes, _ := os.ReadFile(aaPath)
 	aaStr := string(bytes)
 	if testAAConfig != aaStr {
-		t.Fatalf("extractInitdataAndHash returned: %s does not match %s", aaStr, testAAConfig)
+		t.Fatalf("processInitdata returned: %s does not match %s", aaStr, testAAConfig)
 	}
 
 	bytes, _ = os.ReadFile(cdhPath)
 	cdhStr := string(bytes)
 	if testCDHConfig != cdhStr {
-		t.Fatalf("extractInitdataAndHash returned: %s does not match %s", cdhStr, testCDHConfig)
+		t.Fatalf("processInitdata returned: %s does not match %s", cdhStr, testCDHConfig)
 	}
 
 	bytes, _ = os.ReadFile(policyPath)
 	regoStr := string(bytes)
 	if testPolicyConfig != regoStr {
-		t.Fatalf("extractInitdataAndHash returned: %s does not match %s", regoStr, testPolicyConfig)
+		t.Fatalf("processInitdata returned: %s does not match %s", regoStr, testPolicyConfig)
 	}
 
 	bytes, _ = os.ReadFile(digestPath)
 	sum := string(bytes)
 	if testCheckSum != sum {
-		t.Fatalf("extractInitdataAndHash returned: %s does not match %s", sum, testCheckSum)
+		t.Fatalf("processInitdata returned: %s does not match %s", sum, testCheckSum)
+	}
+
+	bytes, _ = os.ReadFile(tomlPath)
+	decoded, _ := initdata.DecodeAnnotation(ccInitData)
+	if !slices.Equal(bytes, decoded) {
+		t.Fatalf("processInitdata returned: %q does not match %q", bytes, decoded)
 	}
 }
 
@@ -705,20 +717,22 @@ func TestWithoutInitdata(t *testing.T) {
 	var initdataPath = filepath.Join(tempDir, "initdata")
 	var aaPath = filepath.Join(tempDir, "aa.toml")
 	var digestPath = filepath.Join(tempDir, "initdata.digest")
+	var tomlPath = filepath.Join(tempDir, "initdata.toml")
 	var initdDataFilesList = []string{aaPath}
 
 	cfg := Config{
 		fetchTimeout:  180,
 		digestPath:    digestPath,
+		tomlPath:      tomlPath,
 		initdataPath:  initdataPath,
 		parentPath:    tempDir,
 		writeFiles:    nil,
 		initdataFiles: initdDataFilesList,
 	}
 
-	err := extractInitdataAndHash(&cfg)
+	err := processInitdata(&cfg)
 	if err != nil {
-		t.Fatalf("extractInitdataAndHash returned err: %v", err)
+		t.Fatalf("processInitdata returned err: %v", err)
 	}
 
 	// Verify dummy initdata file was created
@@ -743,9 +757,18 @@ func TestWithoutInitdata(t *testing.T) {
 	if len(digestBytes) == 0 {
 		t.Fatalf("digest file should not be empty")
 	}
+
+	// Verify digest was created
+	tomlBytes, err := os.ReadFile(tomlPath)
+	if err != nil {
+		t.Fatalf("failed to read toml file: %v", err)
+	}
+	if len(tomlBytes) == 0 {
+		t.Fatalf("toml file should not be empty")
+	}
 }
 
-func TestExtractInitdataWithMalicious(t *testing.T) {
+func TestProcessInitdataWithMaliciousFile(t *testing.T) {
 	tempDir, _ := os.MkdirTemp("", "tmp_initdata_root")
 	defer os.RemoveAll(tempDir)
 
@@ -754,11 +777,13 @@ func TestExtractInitdataWithMalicious(t *testing.T) {
 	var cdhPath = filepath.Join(tempDir, "cdh.toml")
 	var policyPath = filepath.Join(tempDir, "malicious.rego")
 	var digestPath = filepath.Join(tempDir, "initdata.digest")
+	var tomlPath = filepath.Join(tempDir, "initdata.toml")
 	var initdDataFilesList = []string{aaPath, cdhPath, policyPath}
 
 	cfg := Config{
 		fetchTimeout:  180,
 		digestPath:    digestPath,
+		tomlPath:      tomlPath,
 		initdataPath:  initdataPath,
 		parentPath:    tempDir,
 		writeFiles:    nil,
@@ -766,21 +791,21 @@ func TestExtractInitdataWithMalicious(t *testing.T) {
 	}
 
 	_ = writeFile(initdataPath, []byte(ccInitData))
-	err := extractInitdataAndHash(&cfg)
+	err := processInitdata(&cfg)
 	if err != nil {
-		t.Fatalf("extractInitdataAndHash returned err: %v", err)
+		t.Fatalf("processInitdata returned err: %v", err)
 	}
 
 	bytes, _ := os.ReadFile(aaPath)
 	aaStr := string(bytes)
 	if testAAConfig != aaStr {
-		t.Fatalf("extractInitdataAndHash returned: %s does not match %s", aaStr, testAAConfig)
+		t.Fatalf("processInitdata returned: %s does not match %s", aaStr, testAAConfig)
 	}
 
 	bytes, _ = os.ReadFile(cdhPath)
 	cdhStr := string(bytes)
 	if testCDHConfig != cdhStr {
-		t.Fatalf("extractInitdataAndHash returned: %s does not match %s", cdhStr, testCDHConfig)
+		t.Fatalf("processInitdata returned: %s does not match %s", cdhStr, testCDHConfig)
 	}
 
 	bytes, _ = os.ReadFile(policyPath)
