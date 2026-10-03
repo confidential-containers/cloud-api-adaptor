@@ -122,7 +122,7 @@ You can use the following command to override the test pods with a relaxed agent
 POD_ALLOW_ALL_POLICY_OVERRIDE=yes TEST_PROVISION=no TEST_INSTALL_CAA=no make CLOUD_PROVIDER=azure TEST_PROVISION_FILE=azure_test.properties test-e2e
 ```
 
-The `POD_ALLOW_ALL_POLICY_OVERRIDE` variable will not override the policy for a test pod if the `io.katacontainers.config.agent.policy` already exists in the pod spec.
+The `POD_ALLOW_ALL_POLICY_OVERRIDE` variable will not override the policy for a test pod if the `io.katacontainers.config.hypervisor.cc_init_data` annotation already exists in the pod spec.
 
 ## Provision file specifics
 

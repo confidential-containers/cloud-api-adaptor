@@ -221,13 +221,11 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 }
 
 func TestLibvirtRestrictivePolicyBlocksExec(t *testing.T) {
-	t.Skip("TODO - switch annotation to initdata. See #3344")
 	assert := getLibvirtAssert(t)
 	DoTestRestrictivePolicyBlocksExec(t, testEnv, assert)
 }
 
 func TestLibvirtPermissivePolicyAllowsExec(t *testing.T) {
-	t.Skip("TODO - switch annotation to initdata. See #3344")
 	assert := getLibvirtAssert(t)
 	DoTestPermissivePolicyAllowsExec(t, testEnv, assert)
 }

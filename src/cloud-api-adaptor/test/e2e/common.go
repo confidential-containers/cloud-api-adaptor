@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"bytes"
-	b64 "encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -103,6 +102,13 @@ kbs_cert = """{{ .KBSCert }}"""
 {{- end }}
 `
 
+var policyOnlyInitdataTmpl = `algorithm = "sha384"
+version = "0.1.0"
+
+[data]
+"policy.rego" = '''{{ . }}'''
+`
+
 // PreCreatedSecretResourcePath defines the resource path for the sealed secret.
 // NOTE: This path is embedded in the sealed secret JWS token below (PreCreatedSecret).
 // If this path needs to change, the sealed secret must be regenerated with the new path.
@@ -143,6 +149,18 @@ func buildInitdataAnnotation(kbsEndpoint string) (string, error) {
 	return initdata.Encode(initdataToml)
 }
 
+func buildInitdataAnnotationPolicyOnly(policyContent string) (string, error) {
+	tmpl, err := template.New("initdata-policy").Parse(policyOnlyInitdataTmpl)
+	if err != nil {
+		return "", fmt.Errorf("parse template: %w", err)
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, policyContent); err != nil {
+		return "", fmt.Errorf("execute template: %w", err)
+	}
+	return initdata.Encode(buf.String())
+}
+
 func isTestWithKbs() bool {
 	return os.Getenv("TEST_KBS") == "yes" || os.Getenv("TEST_KBS") == "true"
 }
@@ -172,14 +190,6 @@ func getBusyboxTestImage(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return image
-}
-
-func encodePolicyFile(policyFilePath string) string {
-	policyString, err := os.ReadFile(policyFilePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return b64.StdEncoding.EncodeToString([]byte(policyString))
 }
 
 type PodOption func(*corev1.Pod)
@@ -387,9 +397,16 @@ func NewPod(namespace string, podName string, containerName string, imageName st
 
 	// Don't override the policy annotation if it's already set
 	if enableAllowAllPodPolicyOverride() {
-		allowAllPolicyFilePath := "fixtures/policies/allow-all.rego"
-		if _, ok := pod.Annotations["io.katacontainers.config.agent.policy"]; !ok {
-			pod.Annotations["io.katacontainers.config.agent.policy"] = encodePolicyFile(allowAllPolicyFilePath)
+		if _, ok := pod.Annotations[InitdataAnnotation]; !ok {
+			allowAllPolicyContent, err := os.ReadFile("fixtures/policies/allow-all.rego")
+			if err != nil {
+				log.Fatalf("failed to read allow-all policy: %v", err)
+			}
+			annotation, err := buildInitdataAnnotationPolicyOnly(string(allowAllPolicyContent))
+			if err != nil {
+				log.Fatalf("failed to build initdata annotation: %v", err)
+			}
+			pod.Annotations[InitdataAnnotation] = annotation
 		}
 	}
 
@@ -478,10 +495,20 @@ func NewPodWithPolicy(namespace, podName, policyFilePath string) PodOrError {
 	if err != nil {
 		return fromError(err)
 	}
-	annotationData := map[string]string{
-		"io.katacontainers.config.agent.policy": encodePolicyFile(policyFilePath),
+	policyContent, err := os.ReadFile(policyFilePath)
+	if err != nil {
+		return fromError(err)
 	}
-	return fromPod(NewPod(namespace, podName, containerName, imageName, WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}), WithAnnotations(annotationData)))
+	annotation, err := buildInitdataAnnotationPolicyOnly(string(policyContent))
+	if err != nil {
+		return fromError(err)
+	}
+	annotationData := map[string]string{
+		InitdataAnnotation: annotation,
+	}
+	return fromPod(NewPod(namespace, podName, containerName, imageName,
+		WithCommand([]string{"/bin/sh", "-c", "sleep 3600"}),
+		WithAnnotations(annotationData)))
 }
 
 // NewConfigMap returns a new config map object.
