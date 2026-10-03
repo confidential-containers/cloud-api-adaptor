@@ -59,7 +59,6 @@ func (i *IBMCloudInstallChart) Configure(ctx context.Context, cfg *envconf.Confi
 		"CERT_KEY",
 		"CLOUD_CONFIG_VERIFY",
 		"DISABLECVM",
-		"ENABLE_SCRATCH_SPACE",
 		"FORWARDER_PORT",
 		"IBMCLOUD_CLUSTER_ID",
 		"IBMCLOUD_DEDICATED_HOST_GROUP_IDS",
