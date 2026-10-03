@@ -192,6 +192,7 @@ func (cfg *daemonConfig) Setup() (cmd.Starter, error) {
 		}
 	}
 
+	cfg.serverConfig.CloudProvider = cloudName
 	server := adaptor.NewServer(provider, &cfg.serverConfig, workerNode)
 
 	return cmd.NewStarter(server), nil
