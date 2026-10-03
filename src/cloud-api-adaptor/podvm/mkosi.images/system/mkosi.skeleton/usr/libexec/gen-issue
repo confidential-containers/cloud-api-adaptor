@@ -11,9 +11,6 @@ set -euo pipefail
 
 main() {
   mkdir -p /run/issue.d
-  /usr/bin/fastfetch \
-	--config /etc/fastfetch/config.jsonc \
-    > /run/issue.d/20-fastfetch.issue
   {
     echo "Detected vTPM PCR values:"
     /usr/bin/tpm2_pcrread sha256:all
