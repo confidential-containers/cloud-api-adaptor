@@ -138,6 +138,7 @@ func TestDebugPodVM(t *testing.T) {
 			name string
 			unit string
 		}{
+			{name: "ConfigDrive", unit: "config-drive.service"},
 			{name: "ProcessUserData", unit: "process-user-data.service"},
 			{name: "AttestationAgent", unit: "attestation-agent.service"},
 			{name: "ConfidentialDataHub", unit: "confidential-data-hub.service"},
