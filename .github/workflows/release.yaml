@@ -24,8 +24,6 @@ jobs:
     permissions:
       contents: read  # Required to checkout code
       packages: write  # Required to push container images
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   peerpod-ctrl:
     uses: $/.github/workflows/peerpod-ctrl_build_and_push_all_arches.yaml
@@ -34,8 +32,6 @@ jobs:
       git_ref: ${{ github.ref }}
     permissions:
       packages: write  # Required for pushing to GitHub Container Registry
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm-images:
     uses: $/.github/workflows/podvm_publish.yaml
@@ -48,8 +44,6 @@ jobs:
       id-token: write          # Required for attestation signing
       attestations: write      # Required for persisting attestations
       artifact-metadata: write # Required by podvm_mkosi.yaml to write attestation metadata
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   podvm-byom-binaries:
     needs: podvm-images  # Depends on podvm-binaries-ubuntu-{arch} images
@@ -84,16 +78,13 @@ jobs:
             --clobber
 
   webhook:
-    uses: $/.github/workflows/webhook_image_publish.yaml
+    uses: $/.github/workflows/webhook_image.yaml
     with:
       image_tags: ${{ github.event.release.tag_name }}
       git_ref: ${{ github.ref }}
-      registry: quay.io/confidential-containers
     permissions:
       contents: read  # Required to checkout code
       packages: write  # Required to push container images
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
 
   peerpods-chart:
     uses: $/.github/workflows/peerpods-chart_image.yaml

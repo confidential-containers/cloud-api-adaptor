@@ -6,7 +6,7 @@
 #
 # Override it via build-args for different platforms
 
-ARG BINARIES_IMG="quay.io/confidential-containers/podvm-binaries-ubuntu-amd64"
+ARG BINARIES_IMG="ghcr.io/confidential-containers/podvm-binaries-ubuntu-amd64"
 
 FROM ${BINARIES_IMG} AS podvm_binaries
 

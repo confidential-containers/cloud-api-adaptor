@@ -94,7 +94,7 @@ jobs:
         working-directory: src/cloud-api-adaptor/podvm
         run: make podvm-binaries
         env:
-          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'ghcr.io/confidential-containers' }}
+          REGISTRY: ${{ inputs.registry != '' && inputs.registry || format('ghcr.io/{0}', github.repository_owner) }}
           PODVM_TAG: ${{ inputs.image_tag || github.sha }}
           ARCH: ${{ inputs.arch }}
           # Load the binaries image locally for the BYOM build to use as base.
@@ -104,7 +104,7 @@ jobs:
         working-directory: src/cloud-api-adaptor/podvm
         run: make podvm-byom-binaries-image
         env:
-          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'ghcr.io/confidential-containers' }}
+          REGISTRY: ${{ inputs.registry != '' && inputs.registry || format('ghcr.io/{0}', github.repository_owner) }}
           PODVM_TAG: ${{ inputs.image_tag || github.sha }}
           ARCH: ${{ inputs.arch }}
 
@@ -112,6 +112,6 @@ jobs:
         working-directory: src/cloud-api-adaptor/podvm
         run: make push-podvm-byom-binaries-image
         env:
-          REGISTRY: ${{ inputs.registry != '' && inputs.registry || 'ghcr.io/confidential-containers' }}
+          REGISTRY: ${{ inputs.registry != '' && inputs.registry || format('ghcr.io/{0}', github.repository_owner) }}
           PODVM_TAG: ${{ inputs.image_tag || github.sha }}
           ARCH: ${{ inputs.arch }}

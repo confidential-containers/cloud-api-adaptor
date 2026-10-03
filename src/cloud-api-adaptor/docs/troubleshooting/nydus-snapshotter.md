@@ -57,7 +57,7 @@ when running e2e tests:
 ```sh
 images=(
   "quay.io/prometheus/busybox:latest"
-  "quay.io/confidential-containers/test-images:testworkdir"
+  "ghcr.io/confidential-containers/caa-test-images:testworkdir"
   "docker.io/library/nginx:latest"
   "docker.io/curlimages/curl:8.4.0"
   "quay.io/curl/curl:latest"
@@ -69,4 +69,3 @@ for image in "${images[@]}"; do
     ctr -n k8s.io content fetch $image
 done
 ```
-

@@ -9,7 +9,7 @@ on:
   workflow_call:
     inputs:
       registry:
-        default: 'quay.io/confidential-containers'
+        default: 'ghcr.io/confidential-containers'
         description: 'Image registry (e.g. "ghcr.io/confidential-containers") where the built image will be pushed to'
         required: false
         type: string
@@ -22,10 +22,6 @@ on:
         description: Git ref to checkout the cloud-api-adaptor repository. Defaults to main.
         required: false
         type: string
-    secrets:
-      QUAY_PASSWORD:
-        required: true
-
 permissions: {}
 
 jobs:
@@ -47,8 +43,6 @@ jobs:
       git_ref: ${{ inputs.git_ref }}
       registry: ${{ inputs.registry }}
       runner: ${{ matrix.types.runner }}
-    secrets:
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
     permissions:
       packages: write  # Required for pushing to GitHub Container Registry
 
@@ -68,14 +62,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-
-      - name: Login to Quay Container Registry
-        if: ${{ startsWith(inputs.registry, 'quay.io') }}
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ${{ inputs.registry }}
-          username: ${{ vars.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
 
       - name: Login to Github Container Registry
         if: ${{ startsWith(inputs.registry, 'ghcr.io') }}

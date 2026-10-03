@@ -6,7 +6,7 @@ set -o nounset
 
 script_dir=$(dirname "$(readlink -f "$0")")
 
-registry="${registry:-quay.io/confidential-containers}"
+registry="${registry:-ghcr.io/confidential-containers}"
 name="cloud-api-adaptor"
 release_build=${RELEASE_BUILD:-false}
 version=${VERSION:-unknown}

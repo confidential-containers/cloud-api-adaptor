@@ -5,7 +5,7 @@ OS          ?= $(shell uname | tr '[:upper:]' '[:lower:]')
 CERT_MANAGER_VERSION ?= $(or $(shell yq '.tools.cert-manager' ../cloud-api-adaptor/versions.yaml 2>/dev/null),v1.15.3)
 
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/confidential-containers/peer-pods-webhook:latest
+IMG ?= ghcr.io/confidential-containers/peer-pods-webhook:latest
 IMG_REPO ?= $(shell echo '$(IMG)' | cut -d: -f1)
 IMG_TAG ?= $(shell echo '$(IMG)' | cut -d: -f2-)
 WEBHOOK_NAMESPACE ?= peer-pods-webhook-system
