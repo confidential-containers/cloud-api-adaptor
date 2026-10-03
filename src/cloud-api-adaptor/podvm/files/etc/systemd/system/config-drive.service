@@ -1,0 +1,12 @@
+[Unit]
+Description=Mount config drive if present
+Before=process-user-data.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecCondition=/usr/local/bin/process-user-data assert-config-drive
+ExecStart=/usr/bin/mkdir -p /media/cidata
+ExecStart=/usr/bin/udevadm wait --timeout=15 /dev/disk/by-label/cidata
+ExecStart=/bin/mount -t iso9660 -o ro /dev/disk/by-label/cidata /media/cidata
+ExecStop=/bin/umount /media/cidata

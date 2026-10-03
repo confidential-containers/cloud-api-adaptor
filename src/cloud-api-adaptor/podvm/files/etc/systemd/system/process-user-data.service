@@ -3,8 +3,11 @@
 
 [Unit]
 Description=Process user data
+Requires=config-drive.service
+Wants=network-online.target
 # some providers use cloud-init to provision config files, it does not matter if cloud-init disabled
-After=network.target cloud-init.service
+After=config-drive.service network.target cloud-init.service
+Before=kata-agent.service
 DefaultDependencies=no
 
 
