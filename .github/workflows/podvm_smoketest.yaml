@@ -126,4 +126,20 @@ jobs:
       - name: Run smoke test (${{ matrix.test-mode.name }})
         env:
           TEST_MODE: ${{ matrix.test-mode.mode }}
-        run: src/cloud-api-adaptor/podvm/hack/smoke_test.sh -m "$TEST_MODE" podvm-ubuntu-amd64.qcow2
+        run: |
+          cp podvm-ubuntu-amd64.qcow2 image.qcow2
+          src/cloud-api-adaptor/podvm/hack/smoke_test.sh -m "$TEST_MODE" image.qcow2
+
+      - name: Run smoke test (${{ matrix.test-mode.name }})
+        env:
+          TEST_MODE: ${{ matrix.test-mode.mode }}
+        run: |
+          cp podvm-ubuntu-amd64.qcow2 image.qcow2
+          src/cloud-api-adaptor/podvm/hack/smoke_test.sh -m "$TEST_MODE" image.qcow2
+
+      - name: Run smoke test (${{ matrix.test-mode.name }})
+        env:
+          TEST_MODE: ${{ matrix.test-mode.mode }}
+        run: |
+          cp podvm-ubuntu-amd64.qcow2 image.qcow2
+          src/cloud-api-adaptor/podvm/hack/smoke_test.sh -m "$TEST_MODE" image.qcow2
