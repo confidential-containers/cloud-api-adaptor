@@ -58,4 +58,4 @@ jobs:
 
       - name: Run podvm test
         working-directory: src/cloud-api-adaptor
-        run: sudo env "PATH=$PATH" "MKOSI_VERSION=$MKOSI_VERSION" make test-podvm TEST_PODVM_IMAGE=podvm/build/podvm-ubuntu-amd64.qcow2
+        run: sudo env "PATH=$PATH" "MKOSI_VERSION=$MKOSI_VERSION" make test-podvm TEST_PODVM_IMAGE=podvm/build/podvm-ubuntu-amd64.qcow2 TEST_PODVM_COUNT=20 TEST_PODVM_TIMEOUT=10m
