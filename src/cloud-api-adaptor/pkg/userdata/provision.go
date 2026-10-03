@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	retry "github.com/avast/retry-go/v4"
@@ -329,4 +330,67 @@ func ProvisionFiles(cfg *Config) error {
 	}
 
 	return nil
+}
+
+func detectCSP(root string) (string, error) {
+	vendor, err := readDMI(root, "sys_vendor")
+	if err != nil {
+		return "", err
+	}
+	product, err := readDMI(root, "product_name")
+	if err != nil {
+		return "", err
+	}
+	switch {
+	case vendor == "Amazon EC2":
+		return "aws", nil
+	case strings.HasPrefix(product, "Google Compute Engine"):
+		return "gcp", nil
+	case vendor == "Alibaba Cloud":
+		return "alibaba", nil
+	case vendor == "Microsoft Corporation" && (product == "Virtual Machine" || strings.HasPrefix(product, "Hyper-V")):
+		return "azure", nil
+	default:
+		return "", nil
+	}
+}
+
+func detectProvisioningSource() (string, error) {
+	csp, err := detectCSP("/")
+	if err != nil {
+		return "", err
+	}
+
+	switch csp {
+	case "aws":
+		return "imds-aws", nil
+	case "azure":
+		return "imds-azure", nil
+	case "gcp":
+		return "imds-gcp", nil
+	case "alibaba":
+		return "imds-alibaba", nil
+	default:
+		return "config-drive", nil
+	}
+}
+
+func readDMI(root, field string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(root, "sys/class/dmi/id", field))
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read DMI %s: %w", field, err)
+	}
+	return strings.TrimSpace(string(data)), nil
+}
+
+func AssertConfigDrive() (bool, error) {
+	source, err := detectProvisioningSource()
+	if err != nil {
+		return false, err
+	}
+
+	return source == "config-drive", nil
 }
