@@ -57,7 +57,3 @@ type PeerPodList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PeerPod `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&PeerPod{}, &PeerPodList{})
-}
