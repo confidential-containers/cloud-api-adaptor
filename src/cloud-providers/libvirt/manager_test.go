@@ -1,3 +1,5 @@
+//go:build cgo
+
 // (C) Copyright Confidential Containers Contributors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -242,8 +244,8 @@ func TestDefaultConstants(t *testing.T) {
 	assert.Equal(t, "podvm-base.qcow2", defaultVolName)
 	assert.Equal(t, "", defaultLaunchSecurity)
 	assert.Equal(t, "/usr/share/OVMF/OVMF_CODE_4M.fd", defaultFirmware)
-	assert.Equal(t, "2", defaultCPU)
-	assert.Equal(t, "8192", defaultMemory)
+	assert.Equal(t, uint(2), defaultCPU)
+	assert.Equal(t, uint(8192), defaultMemory)
 	assert.Equal(t, uint64(10), defaultRootDiskSize)
 }
 

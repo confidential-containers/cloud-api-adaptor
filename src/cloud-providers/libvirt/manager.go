@@ -23,8 +23,8 @@ const (
 	defaultVolName        = "podvm-base.qcow2"
 	defaultLaunchSecurity = ""
 	defaultFirmware       = "/usr/share/OVMF/OVMF_CODE_4M.fd"
-	defaultCPU            = "2"
-	defaultMemory         = "8192"
+	defaultCPU            = uint(2)
+	defaultMemory         = uint(8192)
 	defaultRootDiskSize   = uint64(10)
 )
 
@@ -42,8 +42,8 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.StringWithEnv(&libvirtcfg.VolName, "vol-name", defaultVolName, "LIBVIRT_VOL_NAME", "libvirt volume name")
 	reg.StringWithEnv(&libvirtcfg.LaunchSecurity, "launch-security", defaultLaunchSecurity, "LIBVIRT_LAUNCH_SECURITY", "Libvirt's LaunchSecurity element for Confidential VMs: s390-pv. If omitted, will automatically determine.")
 	reg.StringWithEnv(&libvirtcfg.Firmware, "firmware", defaultFirmware, "LIBVIRT_EFI_FIRMWARE", "Path to OVMF")
-	reg.UintWithEnv(&libvirtcfg.CPU, "cpu", 2, "LIBVIRT_CPU", "Number of processors allocated")
-	reg.UintWithEnv(&libvirtcfg.Memory, "memory", 8192, "LIBVIRT_MEMORY", "Amount of memory in MiB")
+	reg.UintWithEnv(&libvirtcfg.CPU, "cpu", defaultCPU, "LIBVIRT_CPU", "Number of processors allocated")
+	reg.UintWithEnv(&libvirtcfg.Memory, "memory", defaultMemory, "LIBVIRT_MEMORY", "Amount of memory in MiB")
 	reg.StringWithEnv(&libvirtcfg.CPUSet, "cpuset", "", "LIBVIRT_CPUSET", "CPU set for pinning vCPUs to physical CPUs (e.g., \"0,2,4,6\" or \"0-3\" or \"0-3,8,10-12\")")
 	reg.Uint64WithEnv(&libvirtcfg.RootDiskSize, "root-disk-size", defaultRootDiskSize, "LIBVIRT_ROOT_DISK_SIZE", "Root disk size in GiB for the podVM")
 
