@@ -311,7 +311,7 @@ func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfi
 		Memory:      &libvirtxml.DomainMemory{Value: cfg.mem, Unit: "MiB", DumpCore: "on"},
 		VCPU:        &libvirtxml.DomainVCPU{Value: cfg.cpu, CPUSet: vm.cpuset},
 		OS: &libvirtxml.DomainOS{
-			Type: &libvirtxml.DomainOSType{Arch: "x86_64", Type: typeHardwareVirtualMachine},
+			Type: &libvirtxml.DomainOSType{Arch: archX86_64, Type: typeHardwareVirtualMachine},
 		},
 		// For Hot-Plug Feature.
 		Features: &libvirtxml.DomainFeatureList{
