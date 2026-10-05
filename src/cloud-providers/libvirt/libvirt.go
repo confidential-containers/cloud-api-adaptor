@@ -845,8 +845,6 @@ func NewLibvirtClient(libvirtCfg Config) (*libvirtClient, error) {
 		pool:        pool,
 		poolName:    libvirtCfg.PoolName,
 		networkName: libvirtCfg.NetworkName,
-		dataDir:     libvirtCfg.DataDir,
-		volName:     libvirtCfg.VolName,
 		nodeInfo:    node,
 		caps:        caps,
 	}, nil

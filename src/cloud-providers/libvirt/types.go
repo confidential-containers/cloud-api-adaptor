@@ -57,10 +57,6 @@ type libvirtClient struct {
 	// libvirt network name
 	networkName string
 
-	dataDir string
-
-	volName string
-
 	// information about the target node
 	nodeInfo *libvirt.NodeInfo
 
