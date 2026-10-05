@@ -55,6 +55,7 @@ publish-image: image.vhd
 		--file "$<" \
 		--name "$(VHD_NAME)" \
 		--only-show-errors \
+		--overwrite true \
 		--no-progress -o none && \
 	storage_account_id="$$(az storage account show \
 		--name "$(STORAGE_ACCOUNT)" \
