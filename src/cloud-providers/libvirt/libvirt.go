@@ -127,20 +127,6 @@ func getHostCapabilities(conn *libvirt.Connect) (*libvirtxml.Caps, error) {
 	return caps, nil
 }
 
-func GetDomainCapabilities(conn *libvirt.Connect, emulatorbin string, arch string, machine string, virttype string, flags libvirt.ConnectGetDomainCapabilitiesFlags) (*libvirtxml.DomainCaps, error) {
-	capsXML, err := conn.GetDomainCapabilities(emulatorbin, arch, machine, virttype, flags)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get domain capabilities, cause: %w", err)
-	}
-	caps := &libvirtxml.DomainCaps{}
-	err = xml.Unmarshal([]byte(capsXML), caps)
-	if err != nil {
-		return nil, fmt.Errorf("unable to unmarshal domain capabilities, cause: %w", err)
-
-	}
-	return caps, nil
-}
-
 // lookupMachine finds the machine name from the set of available machines
 func lookupMachine(machines []libvirtxml.CapsGuestMachine, targetmachine string) string {
 	for _, machine := range machines {
