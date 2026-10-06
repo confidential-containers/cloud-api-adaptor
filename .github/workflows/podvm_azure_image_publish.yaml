@@ -14,6 +14,16 @@ on:
         description: Azure image gallery version (e.g. 1.2.3)
         required: true
         type: string
+  workflow_call:
+    inputs:
+      git_ref:
+        description: Git ref to build from, usually a version tag
+        required: true
+        type: string
+      image_version:
+        description: Azure image gallery version (e.g. 1.2.3)
+        required: true
+        type: string
 
 permissions: {}
 
@@ -93,10 +103,27 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }} # zizmor: ignore[secrets-outside-env]
         tenant-id: ${{ secrets.AZURE_TENANT_ID }} # zizmor: ignore[secrets-outside-env]
 
+    - name: Normalize image version
+      id: normalize-image-version
+      env:
+        IMAGE_VERSION: "${{ inputs.image_version }}"
+      run: |
+        # drop leading 'v' if present
+        normalized_image_version="${IMAGE_VERSION#v}"
+
+        # assert major.minor.patch format
+        valid_version_pattern='^[0-9]+\.[0-9]+\.[0-9]+$'
+        if [[ ! $normalized_image_version =~ $valid_version_pattern ]]; then
+          echo "::error::Invalid image version format, expected: [v]X.Y.Z (e.g., 1.2.3)"
+          exit 1
+        fi
+
+        echo "image-version=$normalized_image_version" >> "$GITHUB_OUTPUT"
+
     - name: Publish release image
       env:
         PODVM_OCI_IMAGE: "${{ needs.build-release.outputs.qcow2_oras_image }}"
-        IMAGE_VERSION: "${{ inputs.image_version }}"
+        IMAGE_VERSION: "${{ steps.normalize-image-version.outputs.image-version }}"
         RESOURCE_GROUP: "${{ vars.AZURE_RELEASE_RESOURCE_GROUP }}"
         IMAGE_GALLERY: "${{ vars.AZURE_RELEASE_PODVM_GALLERY_NAME }}"
         IMAGE_DEFINITION: "${{ vars.AZURE_RELEASE_PODVM_IMAGE_DEF_NAME }}"
