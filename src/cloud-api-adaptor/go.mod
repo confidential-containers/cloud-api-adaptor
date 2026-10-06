@@ -47,7 +47,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/moby/sys/mountinfo v0.7.2
-	github.com/pelletier/go-toml/v2 v2.1.0
+	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.57.0 // indirect
