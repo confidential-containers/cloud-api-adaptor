@@ -45,6 +45,18 @@ jobs:
       attestations: write      # Required for persisting attestations
       artifact-metadata: write # Required by podvm_mkosi.yaml to write attestation metadata
 
+  podvm-azure-images:
+    uses: $/.github/workflows/podvm_azure_image_publish.yaml
+    with:
+      git_ref: ${{ github.ref }}
+      image_version: ${{ github.event.release.tag_name }}
+    permissions:
+      contents: read           # Required for checkout
+      packages: write          # Required for pushing to GitHub Container Registry
+      id-token: write          # Required for attestation signing
+      attestations: write      # Required for persisting attestations
+      artifact-metadata: write # Required by podvm_mkosi.yaml to write attestation metadata
+
   podvm-byom-binaries:
     needs: podvm-images  # Depends on podvm-binaries-ubuntu-{arch} images
     uses: $/.github/workflows/podvm_byom_binaries_publish.yaml
