@@ -61,7 +61,7 @@ type mockProxy struct {
 	socketPath string
 }
 
-func (p *mockProxy) Start(ctx context.Context, serverURL *url.URL) error {
+func (p *mockProxy) Start(ctx context.Context, serverURL *url.URL, _ map[string]string) error {
 	close(p.readyCh)
 	<-p.stopCh
 	return nil
@@ -170,6 +170,7 @@ func TestCreateVMTLSProfilePropagation(t *testing.T) {
 
 	t.Run("TLS profile written to apf.json when TLSConfig is set", func(t *testing.T) {
 		cfg := &ServerConfig{
+			CloudProvider: "ibmcloud",
 			PodsDir:       dir,
 			ForwarderPort: forwarder.DefaultListenPort,
 			TLSConfig: &tlsutil.TLSConfig{
@@ -200,6 +201,7 @@ func TestCreateVMTLSProfilePropagation(t *testing.T) {
 
 		assert.Equal(t, "VersionTLS13", daemonCfg.MinTLSVersion)
 		assert.Equal(t, []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}, daemonCfg.CipherSuites)
+		assert.Equal(t, "ibmcloud", daemonCfg.CloudProvider)
 	})
 
 	t.Run("TLS profile fields absent from apf.json when TLSConfig is nil", func(t *testing.T) {

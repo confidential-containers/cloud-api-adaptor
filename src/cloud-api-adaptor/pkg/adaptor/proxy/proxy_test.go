@@ -95,7 +95,7 @@ func TestStartStop(t *testing.T) {
 	proxyErrCh := make(chan error)
 	go func() {
 		defer close(proxyErrCh)
-		if err := proxy.Start(context.Background(), serverURL); err != nil {
+		if err := proxy.Start(context.Background(), serverURL, nil); err != nil {
 			proxyErrCh <- err
 		}
 	}()
@@ -269,7 +269,7 @@ func TestStartInvalidSocketPath(t *testing.T) {
 		Host:   testUnreachablePort,
 	}
 
-	err := proxy.Start(context.Background(), serverURL)
+	err := proxy.Start(context.Background(), serverURL, nil)
 	assert.ErrorContains(t, err, "failed to create parent directories")
 }
 
@@ -289,7 +289,7 @@ func TestStartConnectionFailure(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout2Second)
 	defer cancel()
 
-	err := proxy.Start(ctx, serverURL)
+	err := proxy.Start(ctx, serverURL, nil)
 	assert.Error(t, err)
 }
 
