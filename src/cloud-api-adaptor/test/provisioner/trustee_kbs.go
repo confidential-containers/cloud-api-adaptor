@@ -237,6 +237,12 @@ func extractAdminToken(cfg *envconf.Config) (string, error) {
 	return string(decoded), nil
 }
 
+func init() {
+	NewKbsManagerFunctions[DefaultKbsManagement] = func(_ context.Context, cfg *envconf.Config) (KbsManager, error) {
+		return NewKeyBrokerService(cfg)
+	}
+}
+
 func NewKeyBrokerService(cfg *envconf.Config) (*KeyBrokerService, error) {
 	ibmseCredsDir := os.Getenv("IBM_SE_CREDS_DIR")
 	var workerNodeName string

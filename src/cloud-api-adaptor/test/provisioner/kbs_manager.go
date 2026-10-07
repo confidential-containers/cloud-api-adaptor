@@ -5,6 +5,9 @@ package provisioner
 
 import (
 	"context"
+	"fmt"
+	"sort"
+	"strings"
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
@@ -32,3 +35,47 @@ type KbsManager interface {
 
 // Ensure the kbs-client backed implementation satisfies the interface.
 var _ KbsManager = (*KeyBrokerService)(nil)
+
+// DefaultKbsManagement is the backend used when KBS_MANAGEMENT is unset: the
+// Trustee the test framework deploys itself.
+const DefaultKbsManagement = "kbs-client"
+
+// NewKbsManagerFunc builds a KbsManager for an already-selected backend.
+type NewKbsManagerFunc func(ctx context.Context, cfg *envconf.Config) (KbsManager, error)
+
+// NewKbsManagerFunctions maps a KBS_MANAGEMENT value to its backend
+// constructor. Backends register themselves from init(), so an out-of-tree
+// implementation only needs its package linked into the test binary.
+var NewKbsManagerFunctions = make(map[string]NewKbsManagerFunc)
+
+// RegisteredKbsManagers returns the registered backend names, sorted.
+func RegisteredKbsManagers() []string {
+	names := make([]string, 0, len(NewKbsManagerFunctions))
+	for name := range NewKbsManagerFunctions {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// LookupKbsManager returns the constructor registered under name, without
+// constructing anything.
+func LookupKbsManager(name string) (NewKbsManagerFunc, error) {
+	newKbsManager, ok := NewKbsManagerFunctions[name]
+	if !ok {
+		return nil, fmt.Errorf("no KBS manager registered for %q, registered backends are: %s",
+			name, strings.Join(RegisteredKbsManagers(), ", "))
+	}
+
+	return newKbsManager, nil
+}
+
+// GetKbsManager returns the KBS backend registered under name.
+func GetKbsManager(ctx context.Context, cfg *envconf.Config, name string) (KbsManager, error) {
+	newKbsManager, err := LookupKbsManager(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return newKbsManager(ctx, cfg)
+}

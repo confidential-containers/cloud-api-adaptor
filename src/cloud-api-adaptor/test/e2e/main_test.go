@@ -97,6 +97,17 @@ func TestMain(m *testing.M) {
 		os.Setenv("TEST_KBS", "true")
 	}
 
+	// KBS_MANAGEMENT selects the KbsManager backend. It says how the KBS is
+	// managed, not whether the KBS tests run: that stays with TEST_KBS.
+	kbsManagement := os.Getenv("KBS_MANAGEMENT")
+	if kbsManagement == "" {
+		kbsManagement = pv.DefaultKbsManagement
+	}
+	// Fail now rather than from the setup that runs after cluster provisioning.
+	if _, err := pv.LookupKbsManager(kbsManagement); err != nil {
+		log.Fatal(err)
+	}
+
 	if !shouldProvisionCluster {
 		// Look for a suitable kubeconfig file in the sequence: --kubeconfig flag,
 		// or KUBECONFIG variable, or $HOME/.kube/config.
@@ -137,9 +148,9 @@ func TestMain(m *testing.M) {
 			}
 		}
 
-		if shouldDeployKbs {
-			log.Info("Deploying kbs")
-			if keyBrokerService, err = pv.NewKeyBrokerService(cfg); err != nil {
+		if shouldDeployKbs || (isTestWithKbs() && kbsManagement != pv.DefaultKbsManagement) {
+			log.Infof("Setting up the %q KBS backend", kbsManagement)
+			if keyBrokerService, err = pv.GetKbsManager(ctx, cfg, kbsManagement); err != nil {
 				return ctx, err
 			}
 
