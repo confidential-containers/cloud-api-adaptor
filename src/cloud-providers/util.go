@@ -32,14 +32,14 @@ func VerifyCloudInstanceType(instanceType string, validInstanceTypes []string, d
 	// If instanceTypes is empty and instanceType is not default, return error
 	if len(validInstanceTypes) == 0 && instanceType != defaultInstanceType {
 		// Return error if instanceTypes is empty and instanceType is not default
-		return "", fmt.Errorf("requested instance type (%q) is not default (%q) and supported instance types list is empty",
+		return "", fmt.Errorf("requested instance type (%q) does not match the default (%q) in terms of confidentiality and supported instance types list is empty",
 			instanceType, defaultInstanceType)
 
 	}
 
 	// If instanceTypes is not empty and instanceType is not among the supported instance types, return error
 	if len(validInstanceTypes) > 0 && !util.Contains(validInstanceTypes, instanceType) {
-		return "", fmt.Errorf("requested instance type (%q) is not part of supported instance types list", instanceType)
+		return "", fmt.Errorf("requested instance type (%q) does not match the confidentiality of the supported instance types list", instanceType)
 	}
 
 	return instanceType, nil
