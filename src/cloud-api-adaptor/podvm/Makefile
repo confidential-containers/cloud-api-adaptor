@@ -229,6 +229,14 @@ push-image-byom-e2e-container:
 	@echo "Push BYOM podvm container image to remote repository..."
 	docker push $(PODVM_BYOM_E2E_CONTAINER_NAME):$(PODVM_TAG)
 
+.PHONY: oci-annotation
+oci-annotation:
+	@value=$$(jq -r -e \
+		'.sha256[] | select(.pcr == 11) | .hash' \
+		./build/system.measurement.json) || \
+		(echo "PCR11 not found in system.measurement.json" >&2; exit 1) && \
+	echo "io.systemd.pcr11.sha256=$$value"
+
 PHONY: clean
 clean:
 	rm -rf ./build
