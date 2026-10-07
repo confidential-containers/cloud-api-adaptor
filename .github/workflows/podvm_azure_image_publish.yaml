@@ -140,7 +140,7 @@ jobs:
     - name: Publish debug image
       env:
         PODVM_OCI_IMAGE: "${{ needs.build-debug.outputs.qcow2_oras_image }}"
-        IMAGE_VERSION: "${{ inputs.image_version }}"
+        IMAGE_VERSION: "${{ steps.normalize-image-version.outputs.image-version }}"
         RESOURCE_GROUP: "${{ vars.AZURE_RELEASE_RESOURCE_GROUP }}"
         IMAGE_GALLERY: "${{ vars.AZURE_RELEASE_PODVM_GALLERY_NAME }}"
         IMAGE_DEFINITION: "${{ vars.AZURE_RELEASE_PODVM_IMAGE_DEF_NAME_DEBUG }}"
