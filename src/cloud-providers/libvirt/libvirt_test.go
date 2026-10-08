@@ -240,6 +240,71 @@ func TestGetDeletableDiskPaths(t *testing.T) {
 			},
 			expected: []string{},
 		},
+		{
+			name: "skip CSI data disks by serial",
+			domain: &libvirtxml.Domain{
+				Devices: &libvirtxml.DomainDeviceList{
+					Disks: []libvirtxml.DomainDisk{
+						{
+							Source: &libvirtxml.DomainDiskSource{
+								File: &libvirtxml.DomainDiskSourceFile{File: testBootDisk},
+							},
+							Driver: &libvirtxml.DomainDiskDriver{Type: "qcow2"},
+							Target: &libvirtxml.DomainDiskTarget{Dev: "sda", Bus: "sata"},
+						},
+						{
+							Source: &libvirtxml.DomainDiskSource{
+								File: &libvirtxml.DomainDiskSourceFile{File: "/data/csi-vol-pvc-123.raw"},
+							},
+							Driver: &libvirtxml.DomainDiskDriver{Name: "qemu", Type: "raw"},
+							Target: &libvirtxml.DomainDiskTarget{Dev: "vdb", Bus: "virtio"},
+							Serial: csiDataDiskSerial,
+						},
+						{
+							Source: &libvirtxml.DomainDiskSource{
+								File: &libvirtxml.DomainDiskSourceFile{File: "/data/csi-vol-pvc-456.raw"},
+							},
+							Driver: &libvirtxml.DomainDiskDriver{Name: "qemu", Type: "raw"},
+							Target: &libvirtxml.DomainDiskTarget{Dev: "vdc", Bus: "virtio"},
+							Serial: csiDataDiskSerial,
+						},
+					},
+				},
+			},
+			expected: []string{testBootDisk},
+		},
+		{
+			name: "s390x cidata stays deletable when CSI disks have serial and IOMMU",
+			domain: &libvirtxml.Domain{
+				Devices: &libvirtxml.DomainDeviceList{
+					Disks: []libvirtxml.DomainDisk{
+						{
+							Source: &libvirtxml.DomainDiskSource{
+								File: &libvirtxml.DomainDiskSourceFile{File: testBootDisk},
+							},
+							Driver: &libvirtxml.DomainDiskDriver{Name: "qemu", Type: "qcow2", IOMMU: "on"},
+							Target: &libvirtxml.DomainDiskTarget{Dev: "vda", Bus: "virtio"},
+						},
+						{
+							Source: &libvirtxml.DomainDiskSource{
+								File: &libvirtxml.DomainDiskSourceFile{File: "/var/lib/libvirt/images/cidata.iso"},
+							},
+							Driver: &libvirtxml.DomainDiskDriver{Name: "qemu", Type: "raw", IOMMU: "on"},
+							Target: &libvirtxml.DomainDiskTarget{Dev: "vdb", Bus: "virtio"},
+						},
+						{
+							Source: &libvirtxml.DomainDiskSource{
+								File: &libvirtxml.DomainDiskSourceFile{File: "/data/csi-vol-pvc-789.raw"},
+							},
+							Driver: &libvirtxml.DomainDiskDriver{Name: "qemu", Type: "raw", IOMMU: "on"},
+							Target: &libvirtxml.DomainDiskTarget{Dev: "vdc", Bus: "virtio"},
+							Serial: csiDataDiskSerial,
+						},
+					},
+				},
+			},
+			expected: []string{testBootDisk, "/var/lib/libvirt/images/cidata.iso"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -248,6 +313,114 @@ func TestGetDeletableDiskPaths(t *testing.T) {
 			assert.Equal(t, tt.expected, paths)
 		})
 	}
+}
+
+func TestDataDisksToVirtio(t *testing.T) {
+	t.Run("empty list returns nil", func(t *testing.T) {
+		disks := dataDisksToVirtio(nil, 'b', false)
+		assert.Nil(t, disks)
+	})
+
+	t.Run("generates correct disk elements starting at vdb", func(t *testing.T) {
+		paths := []string{"/data/vol-1.raw", "/data/vol-2.raw"}
+		disks := dataDisksToVirtio(paths, 'b', false)
+		require.Len(t, disks, 2)
+
+		assert.Equal(t, "vdb", disks[0].Target.Dev)
+		assert.Equal(t, "virtio", disks[0].Target.Bus)
+		assert.Equal(t, "raw", disks[0].Driver.Type)
+		assert.Equal(t, csiDataDiskSerial, disks[0].Serial)
+		assert.Empty(t, disks[0].Driver.IOMMU)
+		assert.Equal(t, "/data/vol-1.raw", disks[0].Source.File.File)
+
+		assert.Equal(t, "vdc", disks[1].Target.Dev)
+		assert.Equal(t, "/data/vol-2.raw", disks[1].Source.File.File)
+	})
+
+	t.Run("s390x starts at vdc with IOMMU on", func(t *testing.T) {
+		paths := []string{"/data/vol-1.raw", "/data/vol-2.raw"}
+		disks := dataDisksToVirtio(paths, 'c', true)
+		require.Len(t, disks, 2)
+
+		assert.Equal(t, "vdc", disks[0].Target.Dev)
+		assert.Equal(t, "vdd", disks[1].Target.Dev)
+		assert.Equal(t, "on", disks[0].Driver.IOMMU)
+		assert.Equal(t, csiDataDiskSerial, disks[0].Serial)
+	})
+
+	t.Run("device names increment correctly", func(t *testing.T) {
+		paths := make([]string, 3)
+		for i := range paths {
+			paths[i] = fmt.Sprintf("/data/vol-%d.raw", i)
+		}
+		disks := dataDisksToVirtio(paths, 'b', false)
+		assert.Equal(t, "vdb", disks[0].Target.Dev)
+		assert.Equal(t, "vdc", disks[1].Target.Dev)
+		assert.Equal(t, "vdd", disks[2].Target.Dev)
+	})
+}
+
+func TestCreateDomainXMLWithDataDisks(t *testing.T) {
+	dataPaths := []string{"/data/csi-vol-1.raw", "/data/csi-vol-2.raw"}
+
+	t.Run("s390x appends data disks from vdc with IOMMU", func(t *testing.T) {
+		mockCaps := createMockCaps(archS390x, "/usr/bin/qemu-system-s390x", libvirtxml.CapsGuestMachine{
+			Name:      "s390-ccw-virtio",
+			Canonical: "s390-ccw-virtio-rhel9.0.0",
+		})
+		client := &libvirtClient{caps: mockCaps, networkName: testNetworkName}
+		cfg := createTestDomainConfig("test-s390x-csi", 2, 2048, testNetworkName, testCiDataISO)
+		cfg.dataDisks = dataPaths
+
+		domain, err := createDomainXMLs390x(client, cfg, &vmConfig{})
+		require.NoError(t, err)
+		require.Len(t, domain.Devices.Disks, 4)
+
+		assert.Equal(t, "vda", domain.Devices.Disks[0].Target.Dev)
+		assert.Equal(t, "vdb", domain.Devices.Disks[1].Target.Dev)
+		assert.Equal(t, "vdc", domain.Devices.Disks[2].Target.Dev)
+		assert.Equal(t, "vdd", domain.Devices.Disks[3].Target.Dev)
+		assert.Equal(t, dataPaths[0], domain.Devices.Disks[2].Source.File.File)
+		assert.Equal(t, csiDataDiskSerial, domain.Devices.Disks[2].Serial)
+		assert.Equal(t, "on", domain.Devices.Disks[2].Driver.IOMMU)
+		assert.Empty(t, domain.Devices.Disks[1].Serial)
+	})
+
+	t.Run("x86_64 appends data disks from vdb without IOMMU", func(t *testing.T) {
+		mockCaps := createMockCaps(archX86_64, "/usr/bin/qemu-system-x86_64")
+		client := &libvirtClient{caps: mockCaps, networkName: testNetworkName}
+		cfg := createTestDomainConfig("test-x86-csi", 2, 2048, testNetworkName, testCiDataISO)
+		cfg.dataDisks = dataPaths
+
+		domain, err := createDomainXMLx86_64(client, cfg, &vmConfig{launchSecurityType: NoLaunchSecurity})
+		require.NoError(t, err)
+		require.Len(t, domain.Devices.Disks, 4)
+
+		assert.Equal(t, "vdb", domain.Devices.Disks[2].Target.Dev)
+		assert.Equal(t, "vdc", domain.Devices.Disks[3].Target.Dev)
+		assert.Equal(t, csiDataDiskSerial, domain.Devices.Disks[2].Serial)
+		assert.Empty(t, domain.Devices.Disks[2].Driver.IOMMU)
+	})
+
+	t.Run("aarch64 appends data disks from vdb with IOMMU", func(t *testing.T) {
+		mockCaps := createMockCaps(archAArch64, "/usr/bin/qemu-system-aarch64", libvirtxml.CapsGuestMachine{
+			Name:      "virt",
+			Canonical: "virt-4.2",
+		})
+		client := &libvirtClient{caps: mockCaps, networkName: testNetworkName}
+		cfg := createTestDomainConfig("test-aarch64-csi", 2, 2048, testNetworkName, testCloudInitISO)
+		cfg.dataDisks = dataPaths
+
+		domain, err := createDomainXMLaarch64(client, cfg, &vmConfig{})
+		require.NoError(t, err)
+		require.Len(t, domain.Devices.Disks, 4)
+
+		assert.Equal(t, "vda", domain.Devices.Disks[0].Target.Dev)
+		assert.Equal(t, "vdb", domain.Devices.Disks[2].Target.Dev)
+		assert.Equal(t, "vdc", domain.Devices.Disks[3].Target.Dev)
+		assert.Equal(t, csiDataDiskSerial, domain.Devices.Disks[2].Serial)
+		assert.Equal(t, "on", domain.Devices.Disks[2].Driver.IOMMU)
+	})
 }
 
 func TestGetGuestForArchType(t *testing.T) {
