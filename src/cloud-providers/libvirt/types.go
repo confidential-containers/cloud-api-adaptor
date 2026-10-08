@@ -40,6 +40,7 @@ type vmConfig struct {
 	firmware           string
 	cpuset             string // CPU set for pinning vCPUs (e.g., "0,2,4,6" or "0-3")
 	volName            string
+	dataDisks          []string // Paths to CSI volume raw files to attach as data disks
 }
 
 type createDomainOutput struct {

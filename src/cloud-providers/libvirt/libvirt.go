@@ -41,6 +41,10 @@ const (
 	// cpuModeHostPassthrough exposes the exact host CPU to the guest with no
 	// model abstraction.
 	cpuModeHostPassthrough = "host-passthrough"
+
+	// csiDataDiskSerial marks CSI data disks in the domain XML so DeleteDomain
+	// can skip them. CSI owns the underlying files, not libvirt.
+	csiDataDiskSerial = "caa-csi"
 )
 
 // validateCPUSet validates the CPUSet format.
@@ -67,6 +71,7 @@ type domainConfig struct {
 	networkName string
 	bootDisk    string
 	cidataDisk  string
+	dataDisks   []string
 }
 
 // createCloudInitISO creates an ISO file with a userdata and a metadata file. The ISO image will be created in-memory since it is small
@@ -161,6 +166,31 @@ func getCanonicalMachineName(caps *libvirtxml.Caps, arch string, virttype string
 	}
 
 	return "", fmt.Errorf("cannot find machine type %s for %s/%s in %v", targetmachine, virttype, arch, caps)
+}
+
+// dataDisksToVirtio builds virtio disk elements for CSI data volumes.
+// startDev is the first device letter to use (e.g. 'c' produces vdc, vdd, ...).
+// When enableIOMMU is true the driver sets iommu=on, matching other virtio
+// devices on s390x/aarch64.
+func dataDisksToVirtio(paths []string, startDev byte, enableIOMMU bool) []libvirtxml.DomainDisk {
+	var disks []libvirtxml.DomainDisk
+	for i, path := range paths {
+		dev := fmt.Sprintf("vd%c", startDev+byte(i))
+		driver := &libvirtxml.DomainDiskDriver{Name: "qemu", Type: "raw"}
+		if enableIOMMU {
+			driver.IOMMU = "on"
+		}
+		disks = append(disks, libvirtxml.DomainDisk{
+			Device: "disk",
+			Driver: driver,
+			Source: &libvirtxml.DomainDiskSource{
+				File: &libvirtxml.DomainDiskSourceFile{File: path},
+			},
+			Target: &libvirtxml.DomainDiskTarget{Dev: dev, Bus: "virtio"},
+			Serial: csiDataDiskSerial,
+		})
+	}
+	return disks
 }
 
 func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig) (*libvirtxml.Domain, error) {
@@ -288,6 +318,9 @@ func createDomainXMLs390x(client *libvirtClient, cfg *domainConfig, vm *vmConfig
 		},
 	}
 
+	// s390x: boot=vda, cidata=vdb — data disks start at vdc
+	domain.Devices.Disks = append(domain.Devices.Disks, dataDisksToVirtio(cfg.dataDisks, 'c', true)...)
+
 	switch vm.launchSecurityType {
 	case S390PV:
 		domain.LaunchSecurity = &libvirtxml.DomainLaunchSecurity{
@@ -383,6 +416,9 @@ func createDomainXMLx86_64(client *libvirtClient, cfg *domainConfig, vm *vmConfi
 		domain.Devices.Disks[cidataDiskIndex].Target.Dev = "sdb"
 		domain.Devices.Disks[cidataDiskIndex].Address.Drive.Unit = &cidataDiskAddr
 	}
+
+	// x86_64: boot=sda (sata), cidata=hda/sdb (ide/sata) — no virtio conflict
+	domain.Devices.Disks = append(domain.Devices.Disks, dataDisksToVirtio(cfg.dataDisks, 'b', false)...)
 
 	switch l := vm.launchSecurityType; l {
 	case NoLaunchSecurity:
@@ -499,6 +535,8 @@ func createDomainXMLaarch64(client *libvirtClient, cfg *domainConfig, vm *vmConf
 		},
 	}
 
+	// aarch64: boot=vda (virtio), cidata=sda (scsi) — data disks start at vdb
+	domain.Devices.Disks = append(domain.Devices.Disks, dataDisksToVirtio(cfg.dataDisks, 'b', true)...)
 	return domain, nil
 }
 
@@ -665,6 +703,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 		networkName: libvirtClient.networkName,
 		bootDisk:    rootVolFile,
 		cidataDisk:  isoVolFile,
+		dataDisks:   v.dataDisks,
 	}
 
 	domCfg, err := createDomainXML(libvirtClient, &domainCfg, v)
@@ -799,6 +838,11 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID 
 	return nil
 }
 
+// isCSIDataDisk identifies disks added by dataDisksToVirtio via their serial.
+func isCSIDataDisk(disk libvirtxml.DomainDisk) bool {
+	return disk.Serial == csiDataDiskSerial
+}
+
 func getDeletableDiskPaths(domainDef *libvirtxml.Domain) []string {
 	if domainDef == nil {
 		return nil
@@ -807,6 +851,9 @@ func getDeletableDiskPaths(domainDef *libvirtxml.Domain) []string {
 	paths := make([]string, 0, len(domainDef.Devices.Disks))
 	for _, disk := range domainDef.Devices.Disks {
 		if disk.Source == nil || disk.Source.File == nil || disk.Source.File.File == "" {
+			continue
+		}
+		if isCSIDataDisk(disk) {
 			continue
 		}
 		paths = append(paths, disk.Source.File.File)
