@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/netip"
+	"os"
 
 	provider "github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers"
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers/util"
@@ -81,8 +82,22 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 	volName := resolveVolName(p.serviceConfig.VolName, spec.Image)
 	logger.Printf("Choosing %s as libvirt volume for the PodVM image", volName)
 
+	var dataDisks []string
+	for _, vol := range spec.Volumes {
+		if vol.DiskID == "" {
+			continue
+		}
+		if _, err := os.Stat(vol.DiskID); err != nil {
+			return nil, fmt.Errorf("CSI volume %s not accessible: %w", vol.DiskID, err)
+		}
+		dataDisks = append(dataDisks, vol.DiskID)
+	}
+	if len(dataDisks) > 0 {
+		logger.Printf("Attaching %d CSI data disk(s) to PodVM", len(dataDisks))
+	}
+
 	// TODO: Specify the maximum instance name length in Libvirt
-	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, rootDiskSize: p.serviceConfig.RootDiskSize, userData: userData, firmware: p.serviceConfig.Firmware, cpuset: p.serviceConfig.CPUSet, volName: volName}
+	vm := &vmConfig{name: instanceName, cpu: instanceVCPUs, mem: instanceMemory, rootDiskSize: p.serviceConfig.RootDiskSize, userData: userData, firmware: p.serviceConfig.Firmware, cpuset: p.serviceConfig.CPUSet, volName: volName, dataDisks: dataDisks}
 
 	if p.serviceConfig.DisableCVM {
 		vm.launchSecurityType = NoLaunchSecurity
