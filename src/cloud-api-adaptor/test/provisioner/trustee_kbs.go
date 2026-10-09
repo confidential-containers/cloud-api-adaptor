@@ -237,6 +237,12 @@ func extractAdminToken(cfg *envconf.Config) (string, error) {
 	return string(decoded), nil
 }
 
+func init() {
+	NewKbsManagerFunctions[DefaultKbsManagement] = func(_ context.Context, cfg *envconf.Config) (KbsManager, error) {
+		return NewKeyBrokerService(cfg)
+	}
+}
+
 func NewKeyBrokerService(cfg *envconf.Config) (*KeyBrokerService, error) {
 	ibmseCredsDir := os.Getenv("IBM_SE_CREDS_DIR")
 	var workerNodeName string
@@ -510,6 +516,13 @@ func (p *KeyBrokerService) SetImageDecryptionKey(keyID string, key []byte) error
 		return err
 	}
 	return p.setSecretKey(keyID, f.Name())
+}
+
+// RevertResources is a no-op for the framework-deployed KBS: the whole
+// deployment is torn down at environment teardown (see Delete), so per-test
+// resource reversion is unnecessary.
+func (p *KeyBrokerService) RevertResources() error {
+	return nil
 }
 
 func (p *KeyBrokerService) Delete(ctx context.Context, cfg *envconf.Config) error {
