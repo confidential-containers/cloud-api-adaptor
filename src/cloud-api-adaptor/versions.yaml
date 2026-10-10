@@ -1,30 +1,4 @@
 ---
-# Sources for a base cloud os images
-cloudimg:
-  ubuntu:
-    noble:
-      amd64:
-        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-amd64.img
-        checksum: "sha256:28d2f9df3ac0d24440eaf6998507df3405142cf94a55e1f90802c78e43d2d9df"
-      s390x:
-        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-s390x.img
-        checksum: "sha256:367eef35e239ebd123bd00a1fb66cd048604b70bca362eccad1f95b0021d7458"
-      arm64:
-        url: https://cloud-images.ubuntu.com/releases/noble/release-20250115/ubuntu-24.04-server-cloudimg-arm64.img
-        checksum: "sha256:f11282a728ad42f8bfe0b646a6807674d79a019bfc229d80032345dd3228a2db"
-  rhel:
-    9: # dummy links, get trial image from: https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux/server/trial
-      amd64:
-        url: https://access.redhat.com/downloads/content/479/ver=/rhel---9/9.4/x86_64/product-software
-        checksum: "sha256:d362e72518a2d7415d850b8177c814f6fd87f42ca1640bda17e98855e1d6baad"
-      s390x:
-        url: https://access.redhat.com/downloads/content/72/ver=/rhel---9/9.4/s390x/product-software
-        checksum: "sha256:e1f1868484db0b7b2fedc708b8a589a4ebbe341fae142d776cba1475d4a93642"
-  alinux:
-    3:
-      amd64:
-        url: "https://alinux3.oss-cn-hangzhou.aliyuncs.com/aliyun_3_x64_20G_nocloud_alibase_20250117.qcow2"
-        checksum: "sha256:73c7631c6a48b182e80c7c808d7e3adab3f07ad517fcf5d5eff8f3815306e37e"
 
 tools:
   cert-manager: v1.15.3
