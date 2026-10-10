@@ -780,3 +780,56 @@ func TestExtractInitdataWithMalicious(t *testing.T) {
 		t.Fatalf("Should not read malicious file but got %s", string(bytes))
 	}
 }
+
+func writeUnit(outputDir, name, contents string) error {
+	path := filepath.Join(outputDir, name)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create directory for %s: %w", name, err)
+	}
+	if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", name, err)
+	}
+	return nil
+}
+
+func writeFixture(t *testing.T, root, name, contents string) {
+	t.Helper()
+	if err := writeUnit(root, name, contents); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func platformFixture(t *testing.T, vendor, product string) string {
+	t.Helper()
+	root := t.TempDir()
+	writeFixture(t, root, "sys/class/dmi/id/sys_vendor", vendor+"\n")
+	writeFixture(t, root, "sys/class/dmi/id/product_name", product+"\n")
+	return root
+}
+
+func TestDetectCSP(t *testing.T) {
+	tests := []struct {
+		name, vendor, product, csp string
+	}{
+		{"AWS", "Amazon EC2", "c6i.large", "aws"},
+		{"GCP", "Google", "Google Compute Engine", "gcp"},
+		{"GCP product without vendor", "", "Google Compute Engine", "gcp"},
+		{"Alibaba", "Alibaba Cloud", "Alibaba Cloud ECS", "alibaba"},
+		{"Azure", "Microsoft Corporation", "Virtual Machine", "azure"},
+		{"Hyper-V", "Microsoft Corporation", "Hyper-V UEFI Release", "azure"},
+		{"QEMU", "QEMU", "Standard PC (Q35 + ICH9, 2009)", ""},
+		{"libvirt", "Red Hat", "KVM", ""},
+		{"unknown", "Unknown", "Unknown", ""},
+		{"generic KVM", "Unknown", "KVM", ""},
+		{"empty DMI", "", "", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := platformFixture(t, tt.vendor, tt.product)
+			csp, err := detectCSP(root)
+			if err != nil || csp != tt.csp {
+				t.Fatalf("CSP = %q, error = %v; want %q", csp, err, tt.csp)
+			}
+		})
+	}
+}
