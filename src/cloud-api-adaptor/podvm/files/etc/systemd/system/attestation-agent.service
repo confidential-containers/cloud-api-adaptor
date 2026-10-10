@@ -5,7 +5,14 @@ After=network.target process-user-data.service
 [Service]
 Type=simple
 ExecStartPre=mkdir -p /run/confidential-containers/attestation-agent
-ExecStart=/usr/local/bin/attestation-agent -c /run/peerpod/aa.toml
+ExecStartPre=/bin/sh -c '\
+  initdata_file=/run/peerpod/initdata.toml; \
+  env_file=/run/confidential-containers/attestation-agent/env; \
+  if [ -f "$$initdata_file" ]; then \
+  echo "INITDATA_ARG=-t $$initdata_file" > "$$env_file"; \
+  fi'
+EnvironmentFile=-/run/confidential-containers/attestation-agent/env
+ExecStart=/usr/local/bin/attestation-agent -c /run/peerpod/aa.toml $INITDATA_ARG
 RestartSec=1
 Restart=always
 

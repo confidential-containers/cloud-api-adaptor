@@ -19,6 +19,7 @@ import (
 const (
 	ConfigParent = "/run/peerpod"
 	DigestPath   = "/run/peerpod/initdata.digest"
+	TOMLPath     = "/run/peerpod/initdata.toml"
 	PolicyPath   = "/run/peerpod/policy.rego"
 	// Ref: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
 	AWSImdsURL         = "http://169.254.169.254/latest/dynamic/instance-identity/document"
@@ -44,6 +45,7 @@ var InitdDataFilesList = []string{paths.AACfgPath, paths.CDHCfgPath, PolicyPath}
 type Config struct {
 	fetchTimeout  int
 	digestPath    string
+	tomlPath      string
 	initdataPath  string
 	parentPath    string
 	writeFiles    []string
@@ -56,6 +58,7 @@ func NewConfig(fetchTimeout int) *Config {
 		parentPath:    ConfigParent,
 		initdataPath:  paths.InitDataPath,
 		digestPath:    DigestPath,
+		tomlPath:      TOMLPath,
 		writeFiles:    WriteFilesList,
 		initdataFiles: InitdDataFilesList,
 	}
@@ -257,7 +260,7 @@ version = "0.1.0"
 	return nil
 }
 
-func extractInitdataAndHash(cfg *Config) error {
+func processInitdata(cfg *Config) error {
 	path := cfg.initdataPath
 	_, err := os.Stat(path)
 	if err != nil {
@@ -279,6 +282,12 @@ func extractInitdataAndHash(cfg *Config) error {
 	id, err := initdata.Parse(fileReader)
 	if err != nil {
 		return fmt.Errorf("Error parse initdata: %w", err)
+	}
+
+	// initdata.toml will be consumed by attestation-agent
+	err = writeFile(cfg.tomlPath, []byte(id.TOML))
+	if err != nil {
+		return fmt.Errorf("failed to write file %s: %w", cfg.tomlPath, err)
 	}
 
 	for key, value := range id.Body.Data {
@@ -324,7 +333,7 @@ func ProvisionFiles(cfg *Config) error {
 		logger.Printf("unsupported user data provider, we extract and calculate initdata hash only.\n")
 	}
 
-	if err := extractInitdataAndHash(cfg); err != nil {
+	if err := processInitdata(cfg); err != nil {
 		return fmt.Errorf("failed to extract initdata hash: %w", err)
 	}
 
