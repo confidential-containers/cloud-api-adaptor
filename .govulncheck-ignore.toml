@@ -33,3 +33,52 @@ reason = "CRI checkpoint import allows local image tag poisoning in containerd. 
 [[IgnoredVulns]]
 id = "GO-2026-5064"
 reason = "containerd CRI checkpoint restore CDI annotation smuggling. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
+
+# The vulnerabilities below affect the Go standard library and golang.org/x/net
+# prior to Go 1.26.9 / golang.org/x/net v0.60.0 (October 2026 security release).
+# Suppressed pending a repository-wide toolchain upgrade to Go 1.26.9.
+
+[[IgnoredVulns]]
+id = "GO-2026-6599"
+reason = "Reset context tracking on consecutive template expressions in html/template (fixed in Go 1.26.9). Suppressed pending repository toolchain update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6600"
+reason = "Recognize yield as regexp preceder keyword in html/template (fixed in Go 1.26.9). Suppressed pending repository toolchain update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6603"
+reason = "HTTP/2 server memory exhaustion due to Trailer headers in net/http / golang.org/x/net (fixed in v0.60.0). Suppressed pending dependency update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6605"
+reason = "HTTP/1 client connection desynchronization after CONNECT rejection in net/http (fixed in Go 1.26.9). Suppressed pending repository toolchain update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6607"
+reason = "Reject malformed ECH outer extension references in crypto/tls (fixed in Go 1.26.9). Suppressed pending repository toolchain update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6608"
+reason = "Memory limit bypass when parsing MIME headers in net/textproto (fixed in Go 1.26.9). Suppressed pending repository toolchain update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6610"
+reason = "HTTP/2 transport accepts malformed framing-related headers in net/http / golang.org/x/net (fixed in v0.60.0). Suppressed pending dependency update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6611"
+reason = "Excessive CPU consumption from repeated initial window changes in net/http / golang.org/x/net (fixed in v0.60.0). Suppressed pending dependency update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6612"
+reason = "Double flow control refund on HTTP/2 server streams in net/http / golang.org/x/net (fixed in v0.60.0). Suppressed pending dependency update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6613"
+reason = "HTTP server CONNECT response smuggling in net/http (fixed in Go 1.26.9). Suppressed pending repository toolchain update."
+
+[[IgnoredVulns]]
+id = "GO-2026-6617"
+reason = "HTTP/2 server crash due to HPACK encoder race in net/http / golang.org/x/net (fixed in v0.60.0). Suppressed pending dependency update."
+
