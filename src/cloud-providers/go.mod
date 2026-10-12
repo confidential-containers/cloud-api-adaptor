@@ -10,9 +10,9 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2 v2.2.1
 	github.com/IBM-Cloud/power-go-client v1.17.0
-	github.com/IBM/go-sdk-core/v5 v5.23.4
+	github.com/IBM/go-sdk-core/v5 v5.24.0
 	github.com/IBM/platform-services-go-sdk v0.103.4
-	github.com/IBM/vpc-go-sdk v0.91.0
+	github.com/IBM/vpc-go-sdk v0.92.0
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.10
 	github.com/alibabacloud-go/tea v1.3.8
 	github.com/alibabacloud-go/vpc-20160428/v6 v6.12.5
@@ -103,7 +103,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.23.0 // indirect
-	github.com/go-openapi/errors v0.22.8 // indirect
+	github.com/go-openapi/errors v0.22.9 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
 	github.com/go-openapi/jsonreference v1.0.0 // indirect
 	github.com/go-openapi/loads v0.22.0 // indirect
@@ -112,9 +112,9 @@ require (
 	github.com/go-openapi/strfmt v0.27.2 // indirect
 	github.com/go-openapi/swag v0.27.1 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
-	github.com/go-playground/locales v0.14.1 // indirect
-	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.30.4 // indirect
+	github.com/go-playground/locales v0.14.2 // indirect
+	github.com/go-playground/universal-translator v0.18.2 // indirect
+	github.com/go-playground/validator/v10 v10.30.5 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0
