@@ -560,15 +560,15 @@ func findAWSDataDisk(lunIdx int, diskID string) (string, error) {
 
 func findLibvirtDataDisk(lunIdx int) (string, error) {
 	if lunIdx < 0 || lunIdx > 24 {
-		return "", fmt.Errorf("LUN index %d out of range for virtio devices (0-24)", lunIdx)
+		return "", fmt.Errorf("LUN index %d out of range (0-24)", lunIdx)
 	}
-	devLetter := 'b' + rune(lunIdx)
-	device := fmt.Sprintf("/dev/vd%c", devLetter)
-	if _, err := os.Stat(device); err == nil {
-		logger.Printf("Found libvirt virtio disk: %s", device)
-		return device, nil
+	byID := fmt.Sprintf("/dev/disk/by-id/virtio-caa-csi-%d", lunIdx)
+	target, err := filepath.EvalSymlinks(byID)
+	if err == nil {
+		logger.Printf("Found libvirt data disk: %s -> %s", byID, target)
+		return target, nil
 	}
-	return "", fmt.Errorf("libvirt device %s not found", device)
+	return "", fmt.Errorf("libvirt data disk %s not found: %w", byID, err)
 }
 
 // isOnSCSIHost0 checks if a block device is on SCSI host controller 0,

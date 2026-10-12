@@ -241,7 +241,7 @@ func TestGetDeletableDiskPaths(t *testing.T) {
 			expected: []string{},
 		},
 		{
-			name: "skip CSI data disks by serial",
+			name: "skip CSI data disks by serial prefix",
 			domain: &libvirtxml.Domain{
 				Devices: &libvirtxml.DomainDeviceList{
 					Disks: []libvirtxml.DomainDisk{
@@ -258,7 +258,7 @@ func TestGetDeletableDiskPaths(t *testing.T) {
 							},
 							Driver: &libvirtxml.DomainDiskDriver{Name: "qemu", Type: "raw"},
 							Target: &libvirtxml.DomainDiskTarget{Dev: "vdb", Bus: "virtio"},
-							Serial: csiDataDiskSerial,
+							Serial: "caa-csi-0",
 						},
 						{
 							Source: &libvirtxml.DomainDiskSource{
@@ -266,7 +266,7 @@ func TestGetDeletableDiskPaths(t *testing.T) {
 							},
 							Driver: &libvirtxml.DomainDiskDriver{Name: "qemu", Type: "raw"},
 							Target: &libvirtxml.DomainDiskTarget{Dev: "vdc", Bus: "virtio"},
-							Serial: csiDataDiskSerial,
+							Serial: "caa-csi-1",
 						},
 					},
 				},
@@ -298,7 +298,7 @@ func TestGetDeletableDiskPaths(t *testing.T) {
 							},
 							Driver: &libvirtxml.DomainDiskDriver{Name: "qemu", Type: "raw", IOMMU: "on"},
 							Target: &libvirtxml.DomainDiskTarget{Dev: "vdc", Bus: "virtio"},
-							Serial: csiDataDiskSerial,
+							Serial: "caa-csi-0",
 						},
 					},
 				},
@@ -329,11 +329,12 @@ func TestDataDisksToVirtio(t *testing.T) {
 		assert.Equal(t, "vdb", disks[0].Target.Dev)
 		assert.Equal(t, "virtio", disks[0].Target.Bus)
 		assert.Equal(t, "raw", disks[0].Driver.Type)
-		assert.Equal(t, csiDataDiskSerial, disks[0].Serial)
+		assert.Equal(t, "caa-csi-0", disks[0].Serial)
 		assert.Empty(t, disks[0].Driver.IOMMU)
 		assert.Equal(t, "/data/vol-1.raw", disks[0].Source.File.File)
 
 		assert.Equal(t, "vdc", disks[1].Target.Dev)
+		assert.Equal(t, "caa-csi-1", disks[1].Serial)
 		assert.Equal(t, "/data/vol-2.raw", disks[1].Source.File.File)
 	})
 
@@ -345,7 +346,8 @@ func TestDataDisksToVirtio(t *testing.T) {
 		assert.Equal(t, "vdc", disks[0].Target.Dev)
 		assert.Equal(t, "vdd", disks[1].Target.Dev)
 		assert.Equal(t, "on", disks[0].Driver.IOMMU)
-		assert.Equal(t, csiDataDiskSerial, disks[0].Serial)
+		assert.Equal(t, "caa-csi-0", disks[0].Serial)
+		assert.Equal(t, "caa-csi-1", disks[1].Serial)
 	})
 
 	t.Run("device names increment correctly", func(t *testing.T) {
@@ -381,7 +383,8 @@ func TestCreateDomainXMLWithDataDisks(t *testing.T) {
 		assert.Equal(t, "vdc", domain.Devices.Disks[2].Target.Dev)
 		assert.Equal(t, "vdd", domain.Devices.Disks[3].Target.Dev)
 		assert.Equal(t, dataPaths[0], domain.Devices.Disks[2].Source.File.File)
-		assert.Equal(t, csiDataDiskSerial, domain.Devices.Disks[2].Serial)
+		assert.Equal(t, "caa-csi-0", domain.Devices.Disks[2].Serial)
+		assert.Equal(t, "caa-csi-1", domain.Devices.Disks[3].Serial)
 		assert.Equal(t, "on", domain.Devices.Disks[2].Driver.IOMMU)
 		assert.Empty(t, domain.Devices.Disks[1].Serial)
 	})
@@ -398,7 +401,8 @@ func TestCreateDomainXMLWithDataDisks(t *testing.T) {
 
 		assert.Equal(t, "vdb", domain.Devices.Disks[2].Target.Dev)
 		assert.Equal(t, "vdc", domain.Devices.Disks[3].Target.Dev)
-		assert.Equal(t, csiDataDiskSerial, domain.Devices.Disks[2].Serial)
+		assert.Equal(t, "caa-csi-0", domain.Devices.Disks[2].Serial)
+		assert.Equal(t, "caa-csi-1", domain.Devices.Disks[3].Serial)
 		assert.Empty(t, domain.Devices.Disks[2].Driver.IOMMU)
 	})
 
@@ -418,7 +422,8 @@ func TestCreateDomainXMLWithDataDisks(t *testing.T) {
 		assert.Equal(t, "vda", domain.Devices.Disks[0].Target.Dev)
 		assert.Equal(t, "vdb", domain.Devices.Disks[2].Target.Dev)
 		assert.Equal(t, "vdc", domain.Devices.Disks[3].Target.Dev)
-		assert.Equal(t, csiDataDiskSerial, domain.Devices.Disks[2].Serial)
+		assert.Equal(t, "caa-csi-0", domain.Devices.Disks[2].Serial)
+		assert.Equal(t, "caa-csi-1", domain.Devices.Disks[3].Serial)
 		assert.Equal(t, "on", domain.Devices.Disks[2].Driver.IOMMU)
 	})
 }
