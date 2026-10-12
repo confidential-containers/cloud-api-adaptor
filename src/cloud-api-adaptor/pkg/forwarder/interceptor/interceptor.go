@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -558,11 +560,23 @@ func findAWSDataDisk(lunIdx int, diskID string) (string, error) {
 	return target, nil
 }
 
-func findLibvirtDataDisk(lunIdx int) (string, error) {
-	if lunIdx < 0 || lunIdx > 24 {
-		return "", fmt.Errorf("LUN index %d out of range for virtio devices (0-24)", lunIdx)
+// libvirtDataDiskStart returns the first virtio device letter used for CSI
+// data disks. Must stay in sync with dataDisksToVirtio in the libvirt
+// cloud provider: s390x starts at 'c' (boot=vda, cidata=vdb), others at 'b'.
+func libvirtDataDiskStart() rune {
+	if runtime.GOARCH == "s390x" {
+		return 'c'
 	}
-	devLetter := 'b' + rune(lunIdx)
+	return 'b'
+}
+
+func findLibvirtDataDisk(lunIdx int) (string, error) {
+	startDev := libvirtDataDiskStart()
+	maxLUN := int('z' - startDev)
+	if lunIdx < 0 || lunIdx > maxLUN || lunIdx > math.MaxInt32 {
+		return "", fmt.Errorf("LUN index %d out of range for virtio devices (0-%d)", lunIdx, maxLUN)
+	}
+	devLetter := startDev + rune(lunIdx) //nolint:gosec // lunIdx bounded to [0, maxLUN<=24]
 	device := fmt.Sprintf("/dev/vd%c", devLetter)
 	if _, err := os.Stat(device); err == nil {
 		logger.Printf("Found libvirt virtio disk: %s", device)

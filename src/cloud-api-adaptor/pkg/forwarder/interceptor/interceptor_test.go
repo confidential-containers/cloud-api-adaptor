@@ -6,8 +6,10 @@ package interceptor
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -1146,9 +1148,21 @@ func TestDetectCloudProvider(t *testing.T) {
 		"detectCloudProvider returned unexpected value: %s", provider)
 }
 
+func TestLibvirtDataDiskStart(t *testing.T) {
+	start := libvirtDataDiskStart()
+	if runtime.GOARCH == "s390x" {
+		assert.Equal(t, 'c', start, "s390x should start at vdc")
+	} else {
+		assert.Equal(t, 'b', start, "non-s390x should start at vdb")
+	}
+}
+
 func TestFindLibvirtDataDisk(t *testing.T) {
+	startDev := libvirtDataDiskStart()
+	maxLUN := int('z' - startDev)
+
 	t.Run("rejects out of range LUN index", func(t *testing.T) {
-		_, err := findLibvirtDataDisk(25)
+		_, err := findLibvirtDataDisk(maxLUN + 1)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "out of range")
 	})
@@ -1160,10 +1174,10 @@ func TestFindLibvirtDataDisk(t *testing.T) {
 	})
 
 	t.Run("returns error when device does not exist", func(t *testing.T) {
-		// Unless /dev/vdb exists, this should fail
 		_, err := findLibvirtDataDisk(0)
 		if err != nil {
-			assert.Contains(t, err.Error(), "not found")
+			expectedDev := fmt.Sprintf("/dev/vd%c", startDev)
+			assert.Contains(t, err.Error(), expectedDev)
 		}
 	})
 }

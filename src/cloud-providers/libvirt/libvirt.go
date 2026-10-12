@@ -173,6 +173,11 @@ func getCanonicalMachineName(caps *libvirtxml.Caps, arch string, virttype string
 // When enableIOMMU is true the driver sets iommu=on, matching other virtio
 // devices on s390x/aarch64.
 func dataDisksToVirtio(paths []string, startDev byte, enableIOMMU bool) []libvirtxml.DomainDisk {
+	maxDisks := int('z') - int(startDev) + 1
+	if len(paths) > maxDisks {
+		logger.Printf("WARNING: %d CSI data disks requested but only %d virtio slots available (vd%c-vdz), capping", len(paths), maxDisks, startDev)
+		paths = paths[:maxDisks]
+	}
 	var disks []libvirtxml.DomainDisk
 	for i, path := range paths {
 		dev := fmt.Sprintf("vd%c", startDev+byte(i))
