@@ -42,9 +42,10 @@ const (
 	// model abstraction.
 	cpuModeHostPassthrough = "host-passthrough"
 
-	// csiDataDiskSerial marks CSI data disks in the domain XML so DeleteDomain
-	// can skip them. CSI owns the underlying files, not libvirt.
-	csiDataDiskSerial = "caa-csi"
+	// csiDataDiskSerialPrefix tags CSI data disks in the domain XML.
+	// Each disk gets a unique serial (caa-csi-0, caa-csi-1, ...) so the
+	// guest can identify them via /dev/disk/by-id/virtio-caa-csi-<N>.
+	csiDataDiskSerialPrefix = "caa-csi-"
 )
 
 // validateCPUSet validates the CPUSet format.
@@ -173,6 +174,11 @@ func getCanonicalMachineName(caps *libvirtxml.Caps, arch string, virttype string
 // When enableIOMMU is true the driver sets iommu=on, matching other virtio
 // devices on s390x/aarch64.
 func dataDisksToVirtio(paths []string, startDev byte, enableIOMMU bool) []libvirtxml.DomainDisk {
+	maxDisks := int('z') - int(startDev) + 1
+	if len(paths) > maxDisks {
+		logger.Printf("WARNING: %d CSI data disks requested but only %d virtio slots available (vd%c-vdz), capping", len(paths), maxDisks, startDev)
+		paths = paths[:maxDisks]
+	}
 	var disks []libvirtxml.DomainDisk
 	for i, path := range paths {
 		dev := fmt.Sprintf("vd%c", startDev+byte(i))
@@ -187,7 +193,7 @@ func dataDisksToVirtio(paths []string, startDev byte, enableIOMMU bool) []libvir
 				File: &libvirtxml.DomainDiskSourceFile{File: path},
 			},
 			Target: &libvirtxml.DomainDiskTarget{Dev: dev, Bus: "virtio"},
-			Serial: csiDataDiskSerial,
+			Serial: fmt.Sprintf("%s%d", csiDataDiskSerialPrefix, i),
 		})
 	}
 	return disks
@@ -838,9 +844,9 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID 
 	return nil
 }
 
-// isCSIDataDisk identifies disks added by dataDisksToVirtio via their serial.
+// isCSIDataDisk identifies disks added by dataDisksToVirtio via their serial prefix.
 func isCSIDataDisk(disk libvirtxml.DomainDisk) bool {
-	return disk.Serial == csiDataDiskSerial
+	return strings.HasPrefix(disk.Serial, csiDataDiskSerialPrefix)
 }
 
 func getDeletableDiskPaths(domainDef *libvirtxml.Domain) []string {
