@@ -397,8 +397,6 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
     ```
     git clone https://github.com/confidential-containers/trustee.git
     cd trustee
-    openssl genpkey -algorithm ed25519 > kbs/config/private.key
-    openssl pkey -in kbs/config/private.key -pubout -out kbs/config/public.pub
     sudo docker compose up -d
     ```
 
@@ -410,7 +408,7 @@ The following instructions can be used to set up a simple Trustee with an HTTP e
     cat > kbsres1_key1 << EOF
     res1val1
     EOF
-    ./kbs-client --url http://127.0.0.1:8080 config --auth-private-key kbs/config/private.key set-resource --resource-file kbsres1_key1 --path default/kbsres1/key1
+    ./kbs-client --url http://127.0.0.1:8080 config --admin-token-file kbs/config/docker-compose/admin-token set-resource --resource-file kbsres1_key1 --path default/kbsres1/key1
     ```
 
 1. Configure your confidential containers environment to use the Trustee.
