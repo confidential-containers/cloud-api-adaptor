@@ -146,7 +146,17 @@ func uploadVolume(ctx context.Context, libvirtClient *libvirtClient, volumeDef l
 	if err != nil {
 		return "", fmt.Errorf("Error creating libvirt volume for device %s: %s", volumeDef.Name, err)
 	}
+	// Delete the volume on failure before freeing the handle (LIFO).
+	// volume.Free() in freeVolume is safe to call on a deleted volume —
+	// it only decrements the Go-side handle refcount.
 	defer freeVolume(volume, &err)
+	defer func() {
+		if err != nil {
+			if delErr := volume.Delete(0); delErr != nil {
+				logger.Printf("failed to delete orphan volume %s during rollback: %v", volumeDef.Name, delErr)
+			}
+		}
+	}()
 
 	// upload ISO file
 	err = img.importImage(newCopier(libvirtClient.connection, volume, volumeDef.Capacity.Value), volumeDef)
@@ -278,7 +288,17 @@ func createVolume(ctx context.Context, volName string, volSizeGiB uint64, baseVo
 	if err != nil {
 		return fmt.Errorf("Error creating libvirt volume: %s", err)
 	}
+	// Delete the volume on failure before freeing the handle (LIFO).
+	// volume.Free() in freeVolume is safe to call on a deleted volume —
+	// it only decrements the Go-side handle refcount.
 	defer freeVolume(volume, &err)
+	defer func() {
+		if err != nil {
+			if delErr := volume.Delete(0); delErr != nil {
+				logger.Printf("failed to delete orphan volume %s during rollback: %v", volName, delErr)
+			}
+		}
+	}()
 
 	// we use the key as the id
 	key, err := volume.GetKey()
