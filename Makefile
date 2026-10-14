@@ -50,8 +50,6 @@ tidy-check:
 govulncheck:
 	./hack/govulncheck.sh
 
-.PHONY: packer-format
-
 .PHONY: terraform-format
 terraform-format:
 	./hack/terraform-check.sh
