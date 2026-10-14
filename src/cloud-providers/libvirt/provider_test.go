@@ -166,6 +166,8 @@ func TestTeardownNilClient(t *testing.T) {
 
 // TestTeardown verifies that Teardown() closes the underlying libvirt
 // connection and that any subsequent operation on it fails.
+// The client has no pool handle here, exercising the nil-pool skip path
+// in Teardown().
 func TestTeardown(t *testing.T) {
 	checkConfig(t)
 
@@ -182,6 +184,34 @@ func TestTeardown(t *testing.T) {
 
 	_, err = conn.GetLibVersion()
 	assert.Error(t, err, "connection should be closed after Teardown")
+}
+
+// TestTeardownWithPool verifies that Teardown() frees the storage-pool handle
+// before closing the connection, so the connection refcount reaches zero.
+func TestTeardownWithPool(t *testing.T) {
+	checkConfig(t)
+
+	conn, err := libvirt.NewConnect(testCfg.URI)
+	require.NoError(t, err)
+
+	pool, err := conn.LookupStoragePoolByName(testCfg.PoolName)
+	require.NoError(t, err)
+
+	p := &libvirtProvider{libvirtClient: &libvirtClient{
+		connection: conn,
+		pool:       pool,
+	}}
+
+	err = p.Teardown()
+	require.NoError(t, err)
+
+	// Connection must be closed: any further operation should fail.
+	_, err = conn.GetLibVersion()
+	assert.Error(t, err, "connection should be closed after Teardown")
+
+	// Pool handle must be freed: any further operation on it should fail.
+	_, err = pool.GetName()
+	assert.Error(t, err, "pool handle should be freed after Teardown")
 }
 
 func TestDeleteInstanceEmptyID(t *testing.T) {

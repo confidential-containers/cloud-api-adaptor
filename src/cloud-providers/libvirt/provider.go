@@ -160,14 +160,22 @@ func (p *libvirtProvider) Teardown() error {
 	if p.libvirtClient == nil {
 		return nil
 	}
-	refCount, err := p.libvirtClient.connection.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close libvirt connection: %w", err)
+	// Free the pool handle before closing the connection so the refcount
+	// reaches zero. On failure, log and proceed to close the connection.
+	var poolErr error
+	if p.libvirtClient.pool != nil {
+		if poolErr = p.libvirtClient.pool.Free(); poolErr != nil {
+			logger.Printf("failed to free libvirt storage pool handle: %v", poolErr)
+		}
+	}
+	refCount, connErr := p.libvirtClient.connection.Close()
+	if connErr != nil {
+		return fmt.Errorf("failed to close libvirt connection: %w", connErr)
 	}
 	if refCount > 0 {
 		return fmt.Errorf("libvirt connection still has %d remaining references after close", refCount)
 	}
-	return nil
+	return poolErr
 }
 
 func (p *libvirtProvider) ConfigVerifier() error {
