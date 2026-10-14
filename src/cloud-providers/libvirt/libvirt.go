@@ -822,11 +822,23 @@ func NewLibvirtClient(libvirtCfg Config) (*libvirtClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			_, _ = conn.Close()
+		}
+	}()
 
 	pool, err := conn.LookupStoragePoolByName(libvirtCfg.PoolName)
 	if err != nil {
 		return nil, fmt.Errorf("can't find storage pool %q: %v", libvirtCfg.PoolName, err)
 	}
+	defer func() {
+		if err != nil {
+			if freeErr := pool.Free(); freeErr != nil {
+				logger.Printf("failed to free pool handle during constructor cleanup: %v", freeErr)
+			}
+		}
+	}()
 
 	node, err := conn.GetNodeInfo()
 	if err != nil {
