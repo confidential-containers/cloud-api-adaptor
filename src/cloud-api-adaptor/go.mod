@@ -27,7 +27,7 @@ require (
 	golang.org/x/sys v0.48.0
 	google.golang.org/grpc v1.83.2
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/cri-api v0.33.0 // indirect
+	k8s.io/cri-api v0.37.1 // indirect
 	libvirt.org/go/libvirt v1.12007.0
 	libvirt.org/go/libvirtxml v1.12007.0
 )
@@ -86,6 +86,7 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.27.1 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	k8s.io/apiextensions-apiserver v0.37.1 // indirect
 	k8s.io/streaming v0.37.1 // indirect
 )
 
