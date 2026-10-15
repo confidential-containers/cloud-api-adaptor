@@ -27,7 +27,7 @@ require (
 	golang.org/x/sys v0.48.0
 	google.golang.org/grpc v1.83.2
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/cri-api v0.33.0 // indirect
+	k8s.io/cri-api v0.37.1 // indirect
 	libvirt.org/go/libvirt v1.12007.0
 	libvirt.org/go/libvirtxml v1.12007.0
 )
@@ -42,7 +42,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.30
 	github.com/BurntSushi/toml v1.6.0
 	github.com/IBM/ibm-cos-sdk-go v1.15.1
-	github.com/avast/retry-go/v4 v4.6.1
+	github.com/avast/retry-go/v4 v4.7.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0
@@ -118,7 +118,7 @@ require (
 	github.com/alibabacloud-go/tea v1.3.8
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.7 // indirect
 	github.com/alibabacloud-go/vpc-20160428/v6 v6.12.5
-	github.com/aliyun/credentials-go v1.4.6 // indirect
+	github.com/aliyun/credentials-go v1.4.13 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.20 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.4 // indirect
