@@ -176,6 +176,14 @@ jobs:
           role-session-name: github-actions-caa-e2e
           role-session-expiration: 3600
 
+      # Reclaim VPCs left by earlier runs before CreateVpc. The regional VPC
+      # quota is small, and a full quota fails the job with QuotaExceeded.Vpc.
+      - name: Sweep stale Alibaba Cloud resources
+        working-directory: ./
+        run: |
+          ./hack/ci-e2e-alibabacloud-cleanup.sh
+        shell: bash {0}
+
       - name: Create on-prem cluster
         if: inputs.cluster_type == 'onprem'
         run: |
@@ -212,10 +220,22 @@ jobs:
         # Avoid running with `set -e` as command fails should be allowed
         shell: bash {0}
 
-        # In case the tests execution failed and deprovision code from e2e
-        # didn't run, let's try to delete any resources created.
+      # e2e-framework does not run Finish when setup fails, and the test
+      # session token expires after 3600s while the suite may run for 90m.
+      # Refresh credentials, then delete this run's VPC/vSwitch plus any
+      # stale ci-caa leftovers. always() also covers a green run whose
+      # in-test DeleteVPC logged a warning and returned.
+      - name: Refresh Alibaba Cloud credentials
+        if: always()
+        uses: aliyun/configure-aliyun-credentials-action@1e5248c8d5d93a8781ac344a68e19a43341e79e6 # v1.1.0
+        with:
+          role-to-assume: ${{ secrets.ALIBABA_CLOUD_ROLE_ARN }}
+          oidc-provider-arn: ${{ secrets.ALIBABA_CLOUD_OIDC_PROVIDER_ARN }}
+          role-session-name: github-actions-caa-e2e-cleanup
+          role-session-expiration: 3600
+
       - name: Force Alibaba Cloud clean-up
-        if: failure() && steps.runTests.outcome == 'failure'
+        if: always()
         working-directory: ./
         run: |
           ./hack/ci-e2e-alibabacloud-cleanup.sh
