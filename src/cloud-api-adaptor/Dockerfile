@@ -72,4 +72,5 @@ RUN apt-get update && \
 
 FROM base-${BUILD_TYPE}
 COPY --from=builder /work/cloud-api-adaptor/cloud-api-adaptor /work/cloud-api-adaptor/entrypoint.sh /usr/local/bin/
+ENV HOME=/tmp
 CMD ["entrypoint.sh"]
