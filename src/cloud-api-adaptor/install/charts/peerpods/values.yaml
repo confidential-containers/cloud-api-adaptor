@@ -193,5 +193,21 @@ kata-deploy:
     ppc64le: remote
   shims:
     disableAll: true
+    # kata-deploy 0.0.0-dev no longer ships the remote shim in its default
+    # values. Enabling it without this block fails template render:
+    # supportedArches is empty, so the shim would be installed on no node.
+    # Keep this in sync with kata-deploy's try-kata-remote.values.yaml.
     remote:
       enabled: true
+      supportedArches:
+        - amd64
+        - ppc64le
+        - s390x
+      allowedHypervisorAnnotations: []
+      containerd:
+        snapshotter: "nydus"
+      crio:
+        guestPull: true
+      agent:
+        httpsProxy: ""
+        noProxy: ""
