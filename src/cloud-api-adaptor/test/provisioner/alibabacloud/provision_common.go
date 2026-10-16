@@ -200,26 +200,42 @@ func (a *AlibabaCloudProvisioner) CreateCluster(ctx context.Context, cfg *envcon
 	return nil
 }
 
-func (a *AlibabaCloudProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) error {
-	if a.Vpc.ID == "" {
+func (a *AlibabaCloudProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) (err error) {
+	// Only roll back resources this call created. A properties file may already
+	// reference a VPC the caller expects to keep. e2e-framework does not run
+	// Finish after a setup failure, so a partial create would otherwise leak
+	// until the VPC quota is exhausted.
+	ownVpc := a.Vpc.ID == ""
+	ownSwitch := a.Vpc.VSwitchID == ""
+	ownSG := a.Vpc.SecurityGroupID == ""
+	defer func() {
+		if err == nil {
+			return
+		}
+		log.Warnf("CreateVPC failed, deleting resources created in this attempt: %v", err)
+		a.rollbackCreatedVPC(ownVpc, ownSwitch, ownSG)
+	}()
+
+	if ownVpc {
 		log.Infof("Create Alibaba Cloud VPC in region %s", a.Region)
-		if err := a.Vpc.createVpc(a.vpcClient); err != nil {
+		if err = a.Vpc.createVpc(a.vpcClient); err != nil {
 			return err
 		}
 		log.Infof("VPC Id: %s", a.Vpc.ID)
 	}
 
-	if a.Vpc.VSwitchID == "" {
+	if ownSwitch {
 		log.Infof("Create vSwitch on VPC %s", a.Vpc.ID)
-		if err := a.Vpc.createVSwitch(a.vpcClient, a.ecsClient, a.PodvmInstanceType); err != nil {
+		if err = a.Vpc.createVSwitch(a.vpcClient, a.ecsClient, a.PodvmInstanceType); err != nil {
 			return err
 		}
 		log.Infof("vSwitch Id: %s", a.Vpc.VSwitchID)
 	}
 
-	if a.Vpc.SecurityGroupID == "" {
+	if ownSG {
 		if len(a.Vpc.IngressCIDRs) == 0 {
-			ip, err := detectPublicIPv4()
+			var ip string
+			ip, err = detectPublicIPv4()
 			if err != nil {
 				return fmt.Errorf("detect runner public IP for security group ingress: %w (set sg_ingress_cidrs to override)", err)
 			}
@@ -227,13 +243,40 @@ func (a *AlibabaCloudProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Co
 			log.Infof("Using detected public IP for SG ingress: %s", a.Vpc.IngressCIDRs[0])
 		}
 		log.Infof("Create security group on VPC %s (ingress from %s)", a.Vpc.ID, strings.Join(a.Vpc.IngressCIDRs, ","))
-		if err := a.Vpc.setupSecurityGroup(a.ecsClient); err != nil {
+		if err = a.Vpc.setupSecurityGroup(a.ecsClient); err != nil {
 			return err
 		}
 		log.Infof("Security group Id: %s", a.Vpc.SecurityGroupID)
 	}
 
 	return nil
+}
+
+func (a *AlibabaCloudProvisioner) rollbackCreatedVPC(ownVpc, ownSwitch, ownSG bool) {
+	if ownSwitch {
+		id := a.Vpc.VSwitchID
+		if id != "" {
+			if err := a.Vpc.deleteVSwitch(a.ecsClient, a.vpcClient); err != nil {
+				log.Warnf("Rollback vSwitch %s: %v", id, err)
+			}
+		}
+	}
+	if ownSG {
+		id := a.Vpc.SecurityGroupID
+		if id != "" {
+			if err := a.Vpc.deleteSecurityGroup(a.ecsClient); err != nil {
+				log.Warnf("Rollback security group %s: %v", id, err)
+			}
+		}
+	}
+	if ownVpc {
+		id := a.Vpc.ID
+		if id != "" {
+			if err := a.Vpc.deleteVpc(a.vpcClient, a.ecsClient); err != nil {
+				log.Warnf("Rollback VPC %s: %v", id, err)
+			}
+		}
+	}
 }
 
 func (a *AlibabaCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Config) error {
@@ -760,30 +803,70 @@ func (v *Vpc) deleteVpc(vpcClient *vpc.Client, ecsClient *ecs.Client) error {
 		}
 	}
 
-	_, err = vpcClient.DeleteVpc(&vpc.DeleteVpcRequest{
+	// The security group created for this test blocks DeleteVpc. The VPC's default
+	// group is removed with the VPC. Other groups in a shared VPC are left alone.
+	v.deleteOwnedSecurityGroups(ecsClient)
+
+	deadline := time.Now().Add(2 * time.Minute)
+	var lastErr error
+	for {
+		_, lastErr = vpcClient.DeleteVpc(&vpc.DeleteVpcRequest{
+			RegionId: tea.String(v.Region),
+			VpcId:    tea.String(v.ID),
+		})
+		if lastErr == nil || isNotFound(lastErr) {
+			return nil
+		}
+		if !isDependency(lastErr) || time.Now().After(deadline) {
+			return lastErr
+		}
+		log.Warnf("VPC %s still has dependents, retrying: %v", v.ID, lastErr)
+		v.deleteOwnedSecurityGroups(ecsClient)
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func (v *Vpc) deleteOwnedSecurityGroups(ecsClient *ecs.Client) {
+	wantName := ""
+	if v.BaseName != "" {
+		wantName = v.BaseName + "-sg"
+	}
+	if v.SecurityGroupID == "" && wantName == "" {
+		return
+	}
+
+	sgs, err := ecsClient.DescribeSecurityGroups(&ecs.DescribeSecurityGroupsRequest{
 		RegionId: tea.String(v.Region),
 		VpcId:    tea.String(v.ID),
+		PageSize: tea.Int32(50),
 	})
-	if err != nil && !isNotFound(err) {
-		deadline := time.Now().Add(2 * time.Minute)
-		var lastErr error
-		for time.Now().Before(deadline) {
-			_, lastErr = vpcClient.DeleteVpc(&vpc.DeleteVpcRequest{
-				RegionId: tea.String(v.Region),
-				VpcId:    tea.String(v.ID),
-			})
-			if lastErr == nil || isNotFound(lastErr) {
-				return nil
-			}
-			if !strings.Contains(lastErr.Error(), "dependent") && !strings.Contains(lastErr.Error(), "DependencyViolation") {
-				return lastErr
-			}
-			log.Warnf("VPC %s still has dependents, retrying: %v", v.ID, lastErr)
-			time.Sleep(10 * time.Second)
-		}
-		return lastErr
+	if err != nil {
+		log.Warnf("List security groups in VPC %s: %v", v.ID, err)
+		return
 	}
-	return nil
+	if sgs.Body == nil || sgs.Body.SecurityGroups == nil {
+		return
+	}
+	for _, sg := range sgs.Body.SecurityGroups.SecurityGroup {
+		if tea.BoolValue(sg.ServiceManaged) {
+			continue
+		}
+		id := tea.StringValue(sg.SecurityGroupId)
+		name := tea.StringValue(sg.SecurityGroupName)
+		if id == "" {
+			continue
+		}
+		if id != v.SecurityGroupID && name != wantName {
+			continue
+		}
+		log.Infof("Delete security group %s (%s)", id, name)
+		if _, err := ecsClient.DeleteSecurityGroup(&ecs.DeleteSecurityGroupRequest{
+			RegionId:        tea.String(v.Region),
+			SecurityGroupId: tea.String(id),
+		}); err != nil && !isNotFound(err) {
+			log.Warnf("Delete security group %s: %v", id, err)
+		}
+	}
 }
 
 func isNotFound(err error) bool {
@@ -791,7 +874,15 @@ func isNotFound(err error) bool {
 		return false
 	}
 	msg := err.Error()
-	return strings.Contains(msg, "NotFound") || strings.Contains(msg, "InvalidVSwitchId") || strings.Contains(msg, "InvalidVpcId")
+	return strings.Contains(msg, "NotFound") || strings.Contains(msg, "InvalidVSwitchId") || strings.Contains(msg, "InvalidVpcId") || strings.Contains(msg, "InvalidSecurityGroupId")
+}
+
+func isDependency(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "dependent") || strings.Contains(msg, "DependencyViolation")
 }
 
 func NewAlibabaCloudInstallChart(installDir, provider string) (pv.InstallChart, error) {
