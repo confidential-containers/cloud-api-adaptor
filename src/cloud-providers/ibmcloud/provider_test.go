@@ -25,6 +25,7 @@ type mockVPC struct {
 	prototype vpcv1.InstancePrototypeIntf
 	// createErr, when set, decides whether each CreateInstanceWithContext call fails
 	createErr   func(call int, prototype *vpcv1.InstancePrototype) error
+	createResp  *core.DetailedResponse
 	createCalls int
 	// getInstance, when set, replaces the default GetInstanceWithContext response
 	getInstance func(call int) *vpcv1.Instance
@@ -49,11 +50,11 @@ func ptr(s string) *string {
 
 func (v *mockVPC) CreateInstanceWithContext(ctx context.Context, opt *vpcv1.CreateInstanceOptions) (*vpcv1.Instance, *core.DetailedResponse, error) {
 
-	v.prototype = opt.InstancePrototype
 	v.createCalls++
+	v.prototype = opt.InstancePrototype
 	if v.createErr != nil {
 		if err := v.createErr(v.createCalls, opt.InstancePrototype.(*vpcv1.InstancePrototype)); err != nil {
-			return nil, &core.DetailedResponse{StatusCode: http.StatusBadRequest}, err
+			return nil, v.createResp, err
 		}
 	}
 
@@ -485,6 +486,10 @@ func TestCreateInstanceWithFallback(t *testing.T) {
 
 	errHost := errors.New("dedicated host is full")
 	errGroup := errors.New("dedicated host group is full")
+	rejected := &core.DetailedResponse{StatusCode: http.StatusBadRequest}
+	fail := func(err error) func(int, *vpcv1.InstancePrototype) error {
+		return func(int, *vpcv1.InstancePrototype) error { return err }
+	}
 
 	newProvider := func(vpc *mockVPC, hostID, groupID string) *ibmcloudVPCProvider {
 		return &ibmcloudVPCProvider{
@@ -518,7 +523,7 @@ func TestCreateInstanceWithFallback(t *testing.T) {
 	})
 
 	t.Run("does not retry without a dedicated host group", func(t *testing.T) {
-		vpc := &mockVPC{createErr: func(int, *vpcv1.InstancePrototype) error { return errHost }}
+		vpc := &mockVPC{createErr: fail(errHost), createResp: rejected}
 		p := newProvider(vpc, "host-1", "")
 
 		instance, err := p.createInstanceWithFallback(t.Context(), prototype(p))
@@ -530,7 +535,7 @@ func TestCreateInstanceWithFallback(t *testing.T) {
 
 	t.Run("retries on the dedicated host group when the host fails", func(t *testing.T) {
 		var retryTarget string
-		vpc := &mockVPC{createErr: func(call int, proto *vpcv1.InstancePrototype) error {
+		vpc := &mockVPC{createResp: rejected, createErr: func(call int, proto *vpcv1.InstancePrototype) error {
 			if call == 1 {
 				return errHost
 			}
@@ -548,7 +553,7 @@ func TestCreateInstanceWithFallback(t *testing.T) {
 	})
 
 	t.Run("reports both errors when the fallback also fails", func(t *testing.T) {
-		vpc := &mockVPC{createErr: func(call int, _ *vpcv1.InstancePrototype) error {
+		vpc := &mockVPC{createResp: rejected, createErr: func(call int, _ *vpcv1.InstancePrototype) error {
 			if call == 1 {
 				return errHost
 			}
@@ -562,6 +567,55 @@ func TestCreateInstanceWithFallback(t *testing.T) {
 		require.ErrorIs(t, err, errGroup)
 		assert.Nil(t, instance)
 		assert.Equal(t, 2, vpc.createCalls)
+	})
+
+	t.Run("retries on any client error status", func(t *testing.T) {
+		for _, status := range []int{http.StatusBadRequest, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity, http.StatusTooManyRequests} {
+			vpc := &mockVPC{createErr: fail(errHost), createResp: &core.DetailedResponse{StatusCode: status}}
+			p := newProvider(vpc, "host-1", "group-1")
+
+			_, err := p.createInstanceWithFallback(t.Context(), prototype(p))
+
+			require.ErrorContains(t, err, `fallback instance creation on dedicated host group "group-1" failed`, status)
+			assert.Equal(t, 2, vpc.createCalls, status)
+			target, ok := groupTarget(vpc.prototype.(*vpcv1.InstancePrototype))
+			require.True(t, ok, status)
+			assert.Equal(t, "group-1", target, status)
+		}
+	})
+
+	t.Run("does not retry when no response was received", func(t *testing.T) {
+		vpc := &mockVPC{createErr: fail(errors.New("timeout"))}
+		p := newProvider(vpc, "host-1", "group-1")
+
+		_, err := p.createInstanceWithFallback(t.Context(), prototype(p))
+
+		require.ErrorContains(t, err, "failed to create an instance: timeout")
+		assert.Equal(t, 1, vpc.createCalls)
+	})
+
+	t.Run("does not retry an ambiguous server response", func(t *testing.T) {
+		for _, status := range []int{http.StatusInternalServerError, http.StatusGatewayTimeout} {
+			vpc := &mockVPC{createErr: fail(errors.New("server error")), createResp: &core.DetailedResponse{StatusCode: status}}
+			p := newProvider(vpc, "host-1", "group-1")
+
+			_, err := p.createInstanceWithFallback(t.Context(), prototype(p))
+
+			require.Error(t, err)
+			assert.Equal(t, 1, vpc.createCalls, status)
+		}
+	})
+
+	t.Run("does not retry a cancelled request", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		vpc := &mockVPC{createErr: fail(context.Canceled), createResp: rejected}
+		p := newProvider(vpc, "host-1", "group-1")
+
+		_, err := p.createInstanceWithFallback(ctx, prototype(p))
+
+		require.ErrorIs(t, err, context.Canceled)
+		assert.Equal(t, 1, vpc.createCalls)
 	})
 }
 
