@@ -172,8 +172,11 @@ type CloudVolumeAnnotation struct {
 	MountPoint string `json:"mount_point"`
 	FSType     string `json:"fs_type"`
 	LUN        string `json:"lun"`
-	DiskID     string `json:"disk_id"`
-	FSGroup    string `json:"fs_group,omitempty"`
+	// Device is the absolute device path in the pod VM when the cloud provider
+	// reported one at attach time. It takes precedence over LUN-based discovery.
+	Device  string `json:"device,omitempty"`
+	DiskID  string `json:"disk_id"`
+	FSGroup string `json:"fs_group,omitempty"`
 }
 
 // GetCSIVolumesForPod scans the shared direct-volumes directory for
