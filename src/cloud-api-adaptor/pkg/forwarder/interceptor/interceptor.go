@@ -165,7 +165,7 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 			}
 
 			diskID := volInfo.DiskID
-			device, err := findDataDiskDevice(lunIdx, diskID)
+			device, err := findDataDiskDevice(ctx, lunIdx, diskID)
 			if err != nil {
 				return nil, fmt.Errorf("cloud volume %s: %w", volName, err)
 			}
@@ -373,20 +373,11 @@ func detectCloudProvider() string {
 	return "generic"
 }
 
-// findDataDiskDevice locates the block device for the given LUN index.
-// It auto-detects the cloud provider and uses provider-specific paths,
-// then falls back to sysfs HCTL-based LUN matching.
-// diskID is the cloud-provider volume identifier (e.g. EBS vol-xxx); it
-// may be empty for providers that rely purely on LUN-index matching.
-//
-// Data disks may take several seconds to appear in the PodVM after boot
-// (SCSI rescan, udev rules), so the entire detection is retried.
-func findDataDiskDevice(lunIdx int, diskID string) (string, error) {
-	provider := detectCloudProvider()
-	logger.Printf("Cloud provider detected: %s (LUN %d, diskID %s)", provider, lunIdx, diskID)
-
-	maxAttempts := 15
-	retryDelay := 2 * time.Second
+// diskDetectRetry returns the attempt budget for locating a data disk. Disks
+// may take several seconds to appear after boot (SCSI rescan, udev rules).
+func diskDetectRetry() (maxAttempts int, retryDelay time.Duration) {
+	maxAttempts = 15
+	retryDelay = 2 * time.Second
 	if v := os.Getenv("CAA_DISK_DETECT_MAX_ATTEMPTS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			maxAttempts = n
@@ -397,17 +388,50 @@ func findDataDiskDevice(lunIdx int, diskID string) (string, error) {
 			retryDelay = d
 		}
 	}
+	return maxAttempts, retryDelay
+}
+
+// retryDiskDetect calls probe until it returns a device, giving up after the
+// diskDetectRetry budget or when ctx ends. what names the disk in log lines
+// and in the final error, which wraps the last probe error.
+func retryDiskDetect(ctx context.Context, what string, probe func() (string, error)) (string, error) {
+	maxAttempts, retryDelay := diskDetectRetry()
+
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			logger.Printf("Retry %d/%d for %s...", attempt, maxAttempts, what)
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(retryDelay):
+			}
+		}
+		dev, err := probe()
+		if err == nil {
+			return dev, nil
+		}
+		lastErr = err
+	}
+
+	dumpBlockDeviceDiagnostics()
+	return "", fmt.Errorf("%s not found after %d attempts: %w", what, maxAttempts, lastErr)
+}
+
+// findDataDiskDevice locates the block device for the given LUN index.
+// It auto-detects the cloud provider and uses provider-specific paths,
+// then falls back to sysfs HCTL-based LUN matching.
+// diskID is the cloud-provider volume identifier (e.g. EBS vol-xxx); it
+// may be empty for providers that rely purely on LUN-index matching.
+func findDataDiskDevice(ctx context.Context, lunIdx int, diskID string) (string, error) {
+	provider := detectCloudProvider()
+	logger.Printf("Cloud provider detected: %s (LUN %d, diskID %s)", provider, lunIdx, diskID)
 
 	if provider == "azure" {
 		triggerUdevRescan()
 	}
 
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if attempt > 1 {
-			logger.Printf("Retry %d/%d for LUN %d...", attempt, maxAttempts, lunIdx)
-			time.Sleep(retryDelay)
-		}
-
+	return retryDiskDetect(ctx, fmt.Sprintf("data disk for LUN %d (provider=%s)", lunIdx, provider), func() (string, error) {
 		switch provider {
 		case "azure":
 			if dev, err := findAzureDataDisk(lunIdx); err == nil {
@@ -422,14 +446,8 @@ func findDataDiskDevice(lunIdx int, diskID string) (string, error) {
 				return dev, nil
 			}
 		}
-
-		if dev, err := findDataDiskBySysfsHCTL(lunIdx); err == nil {
-			return dev, nil
-		}
-	}
-
-	dumpBlockDeviceDiagnostics()
-	return "", fmt.Errorf("no data disk found for LUN %d (provider=%s) after %d attempts", lunIdx, provider, maxAttempts)
+		return findDataDiskBySysfsHCTL(lunIdx)
+	})
 }
 
 // triggerUdevRescan triggers udev to process pending block device events and
