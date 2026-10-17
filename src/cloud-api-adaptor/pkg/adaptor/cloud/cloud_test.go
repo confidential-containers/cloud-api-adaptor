@@ -61,7 +61,7 @@ type mockProxy struct {
 	socketPath string
 }
 
-func (p *mockProxy) Start(ctx context.Context, serverURL *url.URL) error {
+func (p *mockProxy) Start(ctx context.Context, serverURL *url.URL, _ map[string]string) error {
 	close(p.readyCh)
 	<-p.stopCh
 	return nil

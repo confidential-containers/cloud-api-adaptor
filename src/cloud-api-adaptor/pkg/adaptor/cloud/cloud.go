@@ -405,7 +405,7 @@ func (s *cloudService) StartVM(ctx context.Context, req *pb.StartVMRequest) (res
 	go func() {
 		defer close(errCh)
 
-		if err := sandbox.agentProxy.Start(context.Background(), serverURL); err != nil {
+		if err := sandbox.agentProxy.Start(context.Background(), serverURL, instance.VolumeDevices); err != nil {
 			logger.Printf("error running agent proxy: %v", err)
 			errCh <- err
 		}

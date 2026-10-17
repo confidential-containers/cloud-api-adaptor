@@ -58,6 +58,10 @@ type Instance struct {
 	ID   string
 	Name string
 	IPs  []netip.Addr
+	// VolumeDevices maps a CloudVolume DiskID to the absolute device path the
+	// volume is attached as inside the pod VM. It is nil for providers that
+	// cannot report device paths.
+	VolumeDevices map[string]string
 }
 
 type InstanceTypeSpec struct {
