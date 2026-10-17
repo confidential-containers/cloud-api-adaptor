@@ -92,7 +92,7 @@ func TestNewInterceptor(t *testing.T) {
 	t.Run("creates interceptor with valid socket name", func(t *testing.T) {
 		socketName := "dummy.sock"
 
-		i := NewInterceptor(socketName, "")
+		i := NewInterceptor(socketName, "", "")
 		require.NotNil(t, i, "Expected non-nil interceptor")
 
 		// Verify the interceptor is properly initialized
@@ -103,7 +103,7 @@ func TestNewInterceptor(t *testing.T) {
 		socketName := "agent.sock"
 		nsPath := "/run/netns/test"
 
-		i := NewInterceptor(socketName, nsPath)
+		i := NewInterceptor(socketName, nsPath, "")
 		require.NotNil(t, i, "Expected non-nil interceptor")
 
 		// Verify the interceptor is properly initialized
@@ -115,7 +115,7 @@ func TestNewInterceptor(t *testing.T) {
 	t.Run("creates interceptor with empty namespace path", func(t *testing.T) {
 		socketName := "agent.sock"
 
-		i := NewInterceptor(socketName, "")
+		i := NewInterceptor(socketName, "", "")
 		require.NotNil(t, i, "Expected non-nil interceptor")
 
 		interceptorImpl, ok := i.(*interceptor)
