@@ -58,8 +58,9 @@ type cloudMount struct {
 type interceptor struct {
 	agentproto.Redirector
 
-	nsPath      string
-	cloudMounts []cloudMount
+	nsPath        string
+	cloudProvider string
+	cloudMounts   []cloudMount
 }
 
 func (i *interceptor) unmountCloudVolumes() {
@@ -131,7 +132,10 @@ func dial(ctx context.Context, agentSocket string) (net.Conn, error) {
 	return conn, nil
 }
 
-func NewInterceptor(agentSocket, nsPath string) Interceptor {
+// NewInterceptor wraps the kata agent at agentSocket. cloudProvider is the
+// cloud-api-adaptor provider name; leave it empty to detect the cloud from
+// device paths when locating attached volumes.
+func NewInterceptor(agentSocket, nsPath, cloudProvider string) Interceptor {
 
 	agentDialer := func(ctx context.Context) (net.Conn, error) {
 		return dial(ctx, agentSocket)
@@ -140,8 +144,9 @@ func NewInterceptor(agentSocket, nsPath string) Interceptor {
 	redirector := agentproto.NewRedirector(agentDialer)
 
 	return &interceptor{
-		Redirector: redirector,
-		nsPath:     nsPath,
+		Redirector:    redirector,
+		nsPath:        nsPath,
+		cloudProvider: cloudProvider,
 	}
 }
 
@@ -198,7 +203,7 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 			}
 
 			diskID := volInfo.DiskID
-			device, err := findDataDiskDevice(ctx, lunIdx, diskID)
+			device, err := findDataDiskDevice(ctx, i.cloudProvider, lunIdx, diskID)
 			if err != nil {
 				return nil, fmt.Errorf("cloud volume %s: %w", volName, err)
 			}
@@ -459,14 +464,17 @@ func retryDiskDetect(ctx context.Context, what string, probe func() (string, err
 	return "", fmt.Errorf("%s not found after %d attempts: %w", what, maxAttempts, lastErr)
 }
 
-// findDataDiskDevice locates the block device for the given LUN index.
-// It auto-detects the cloud provider and uses provider-specific paths,
-// then falls back to sysfs HCTL-based LUN matching.
-// diskID is the cloud-provider volume identifier (e.g. EBS vol-xxx); it
-// may be empty for providers that rely purely on LUN-index matching.
-func findDataDiskDevice(ctx context.Context, lunIdx int, diskID string) (string, error) {
-	provider := detectCloudProvider()
-	logger.Printf("Cloud provider detected: %s (LUN %d, diskID %s)", provider, lunIdx, diskID)
+// findDataDiskDevice locates the block device for the given LUN index using
+// provider-specific paths, then falls back to sysfs HCTL-based LUN matching.
+// provider is the cloud-api-adaptor provider name; when empty the cloud is
+// detected from device paths. diskID is the cloud-provider volume identifier
+// (e.g. EBS vol-xxx); it may be empty for providers that rely purely on
+// LUN-index matching.
+func findDataDiskDevice(ctx context.Context, provider string, lunIdx int, diskID string) (string, error) {
+	if provider == "" {
+		provider = detectCloudProvider()
+	}
+	logger.Printf("Cloud provider: %s (LUN %d, diskID %s)", provider, lunIdx, diskID)
 
 	if provider == "azure" {
 		triggerUdevRescan()
