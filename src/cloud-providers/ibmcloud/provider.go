@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"net/netip"
 	"os"
 	"time"
@@ -691,8 +692,10 @@ func (p *ibmcloudVPCProvider) createInstanceWithFallback(ctx context.Context, pr
 		return inst, nil
 	}
 
-	// Fallback if both IDs exist
-	if dedicatedHostID != "" && dedicatedHostGroupID != "" {
+	// a 4xx response means VPC rejected the request without creating anything;
+	// a transport or server error can leave an instance running with the
+	// volumes attached, which the fallback create would then fail on
+	if dedicatedHostID != "" && dedicatedHostGroupID != "" && isClientError(resp) && ctx.Err() == nil {
 		logger.Printf("warning, creation failed on dedicated host %q: %v; retrying on dedicated host group %q", dedicatedHostID, err, dedicatedHostGroupID)
 
 		prototype.PlacementTarget =
@@ -715,6 +718,10 @@ func (p *ibmcloudVPCProvider) createInstanceWithFallback(ctx context.Context, pr
 	}
 
 	return nil, fmt.Errorf("failed to create an instance: %w and the response is %s", err, resp)
+}
+
+func isClientError(resp *core.DetailedResponse) bool {
+	return resp != nil && resp.StatusCode >= http.StatusBadRequest && resp.StatusCode < http.StatusInternalServerError
 }
 
 // Select an instance profile based on the memory and vcpu requirements
