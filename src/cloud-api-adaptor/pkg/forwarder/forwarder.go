@@ -39,6 +39,10 @@ type Config struct {
 	PodNamespace string           `json:"pod-namespace"`
 	PodName      string           `json:"pod-name"`
 
+	// CloudProvider is the cloud-api-adaptor provider name. The guest uses it
+	// to skip device-based detection when locating attached volumes.
+	CloudProvider string `json:"cloud-provider,omitempty"`
+
 	TLSServerKey  string `json:"tls-server-key,omitempty"`
 	TLSServerCert string `json:"tls-server-cert,omitempty"`
 	TLSClientCA   string `json:"tls-client-ca,omitempty"`
