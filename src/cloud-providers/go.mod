@@ -31,6 +31,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.35.2
 	k8s.io/client-go v0.35.2
+	kubevirt.io/api v1.9.0
+	kubevirt.io/client-go v1.9.0
 	libvirt.org/go/libvirt v1.12007.0
 	libvirt.org/go/libvirtxml v1.12007.0
 )
@@ -144,3 +146,11 @@ require (
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
+
+replace k8s.io/client-go => k8s.io/client-go v0.34.3
+
+replace k8s.io/api => k8s.io/api v0.34.3
+
+replace k8s.io/apimachinery => k8s.io/apimachinery v0.34.3

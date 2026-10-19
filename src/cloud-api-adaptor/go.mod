@@ -57,7 +57,9 @@ require (
 	k8s.io/api v0.35.2
 	k8s.io/apimachinery v0.35.2
 	k8s.io/client-go v0.35.2
-	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
+	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
+	kubevirt.io/api v1.9.0 // indirect
+	kubevirt.io/client-go v1.9.0
 	sigs.k8s.io/e2e-framework v0.6.0
 )
 
@@ -244,3 +246,11 @@ require (
 replace github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers => ../cloud-providers
 
 replace github.com/confidential-containers/cloud-api-adaptor/src/peerpod-ctrl => ../peerpod-ctrl
+
+replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b
+
+replace k8s.io/client-go => k8s.io/client-go v0.34.3
+
+replace k8s.io/api => k8s.io/api v0.34.3
+
+replace k8s.io/apimachinery => k8s.io/apimachinery v0.34.3

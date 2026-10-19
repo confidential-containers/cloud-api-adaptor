@@ -176,6 +176,8 @@ func NewKubeVirtInstallChart(installDir, provider string) (pv.InstallChart, erro
 	}, nil
 }
 
+func (o *KubeVirtInstallChart) GetHelm() *pv.Helm { return o.Helm }
+
 func (o *KubeVirtInstallChart) Install(ctx context.Context, cfg *envconf.Config) error {
 	return o.Helm.Install(ctx, cfg)
 }
