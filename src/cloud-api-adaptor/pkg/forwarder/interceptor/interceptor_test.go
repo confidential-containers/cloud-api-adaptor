@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/pkg/util"
@@ -1035,6 +1036,34 @@ func TestCloudVolumesJSONParseError(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid lun")
 	})
 
+	t.Run("fs_group outside the container process groups returns error", func(t *testing.T) {
+		mock := &mockRedirector{}
+		i := &interceptor{
+			Redirector: mock,
+			nsPath:     "/run/netns/podns",
+		}
+
+		req := &pb.CreateContainerRequest{
+			ContainerId: "test-container",
+			OCI: &pb.Spec{
+				Process: &pb.Process{
+					User: &pb.User{UID: 1000, GID: 1000, AdditionalGids: []uint32{1000, 2000}},
+				},
+				Linux: &pb.Linux{
+					Namespaces: []*pb.LinuxNamespace{},
+				},
+				Annotations: map[string]string{
+					util.CloudVolumesAnnotationKey: `{"vol-0":{"mount_point":"/data","fs_type":"ext4","lun":"0","fs_group":"0"}}`,
+				},
+			},
+		}
+
+		ctx := context.Background()
+		_, err := i.CreateContainer(ctx, req)
+		assert.ErrorContains(t, err, "fs_group 0 is not a group of the container process")
+		assert.False(t, mock.createContainerCalled)
+	})
+
 	t.Run("valid cloud_volumes without device does not panic", func(t *testing.T) {
 		mock := &mockRedirector{}
 		i := &interceptor{
@@ -1084,6 +1113,109 @@ func TestCloudVolumesJSONParseError(t *testing.T) {
 		_, err := i.CreateContainer(ctx, req)
 		assert.NoError(t, err)
 		assert.True(t, mock.createContainerCalled)
+	})
+}
+
+func TestCheckFSGroup(t *testing.T) {
+	process := &pb.Process{
+		User: &pb.User{UID: 1000, GID: 1000, AdditionalGids: []uint32{1000, 2000}},
+	}
+
+	tests := []struct {
+		name    string
+		value   string
+		process *pb.Process
+		want    uint32
+		wantErr string
+	}{
+		{name: "primary group", value: "1000", process: process, want: 1000},
+		{name: "supplementary group", value: "2000", process: process, want: 2000},
+		{name: "group the process lacks", value: "3000", process: process, wantErr: "not a group of the container process"},
+		{name: "no process", value: "2000", wantErr: "not a group of the container process"},
+		{name: "not a number", value: "staff", process: process, wantErr: "invalid fs_group"},
+		{name: "out of range", value: "4294967296", process: process, wantErr: "invalid fs_group"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := checkFSGroup(tt.value, tt.process)
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMountReadOnly(t *testing.T) {
+	mounts := []*pb.Mount{
+		{Destination: "/data", Options: []string{"rbind", "ro"}},
+		{Destination: "/scratch", Options: []string{"rbind", "rw"}},
+	}
+	assert.True(t, mountReadOnly(mounts, "/data"))
+	assert.False(t, mountReadOnly(mounts, "/scratch"))
+	assert.False(t, mountReadOnly(mounts, "/missing"))
+}
+
+func TestSetVolumeOwnership(t *testing.T) {
+	// a group the test user can chown files to
+	gid := uint32(os.Getgid())
+	if os.Geteuid() == 0 {
+		gid = 2000
+	} else if groups, err := os.Getgroups(); err == nil {
+		for _, g := range groups {
+			if uint32(g) != gid {
+				gid = uint32(g)
+				break
+			}
+		}
+	}
+
+	statGID := func(t *testing.T, path string) uint32 {
+		t.Helper()
+		info, err := os.Lstat(path)
+		require.NoError(t, err)
+		return info.Sys().(*syscall.Stat_t).Gid
+	}
+
+	t.Run("applies the group and permissions to the whole volume", func(t *testing.T) {
+		root := t.TempDir()
+		require.NoError(t, os.Chmod(root, 0o755))
+		dir := filepath.Join(root, "dir")
+		require.NoError(t, os.Mkdir(dir, 0o700))
+		file := filepath.Join(dir, "file")
+		require.NoError(t, os.WriteFile(file, nil, 0o600))
+		link := filepath.Join(root, "link")
+		require.NoError(t, os.Symlink("dir/file", link))
+
+		require.NoError(t, setVolumeOwnership(root, gid))
+
+		for path, want := range map[string]os.FileMode{
+			root: os.ModeDir | os.ModeSetgid | 0o775,
+			dir:  os.ModeDir | os.ModeSetgid | 0o770,
+			file: 0o660,
+		} {
+			info, err := os.Stat(path)
+			require.NoError(t, err)
+			assert.Equal(t, want, info.Mode(), path)
+			assert.Equal(t, gid, statGID(t, path), path)
+		}
+		assert.Equal(t, gid, statGID(t, link))
+	})
+
+	t.Run("leaves the volume alone when the root already matches", func(t *testing.T) {
+		root := t.TempDir()
+		require.NoError(t, os.Chown(root, -1, int(gid)))
+		require.NoError(t, os.Chmod(root, os.ModeSetgid|0o770))
+		file := filepath.Join(root, "file")
+		require.NoError(t, os.WriteFile(file, nil, 0o600))
+
+		require.NoError(t, setVolumeOwnership(root, gid))
+
+		info, err := os.Stat(file)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o600), info.Mode())
 	})
 }
 

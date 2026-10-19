@@ -7,11 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -175,6 +177,15 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 				return nil, fmt.Errorf("cloud volume %s has invalid lun %q: %w", volName, lunStr, err)
 			}
 
+			var fsGroup *uint32
+			if volInfo.FSGroup != "" {
+				gid, err := checkFSGroup(volInfo.FSGroup, req.OCI.Process)
+				if err != nil {
+					return nil, fmt.Errorf("cloud volume %s: %w", volName, err)
+				}
+				fsGroup = &gid
+			}
+
 			var device string
 			if volInfo.Device != "" {
 				device, err = findDataDiskByPath(ctx, volInfo.Device)
@@ -200,15 +211,11 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 			}
 			i.cloudMountPaths = append(i.cloudMountPaths, hostMountPoint)
 
-			if fsGroupStr := volInfo.FSGroup; fsGroupStr != "" {
-				if gid, err := strconv.Atoi(fsGroupStr); err == nil {
-					logger.Printf("cloud volume %s: applying fsGroup %d to %s", volName, gid, hostMountPoint)
-					if err := os.Chown(hostMountPoint, -1, gid); err != nil {
-						logger.Printf("WARNING: failed to chown %s to gid %d: %v", hostMountPoint, gid, err)
-					}
-					if err := os.Chmod(hostMountPoint, 0o2775); err != nil {
-						logger.Printf("WARNING: failed to chmod %s: %v", hostMountPoint, err)
-					}
+			// kubelet skips fsGroup for read-only volumes
+			if fsGroup != nil && !mountReadOnly(req.OCI.Mounts, mountPoint) {
+				logger.Printf("cloud volume %s: applying fsGroup %d to %s", volName, *fsGroup, hostMountPoint)
+				if err := setVolumeOwnership(hostMountPoint, *fsGroup); err != nil {
+					return nil, fmt.Errorf("applying fsGroup %d to cloud volume %s: %w", *fsGroup, volName, err)
 				}
 			}
 
@@ -257,6 +264,89 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 	}
 
 	return res, err
+}
+
+// checkFSGroup parses the fs_group of a cloud volume and checks that the
+// container process runs with that group. The annotation comes from the
+// untrusted host, so an unchecked value could make the volume writable by
+// any group in the PodVM.
+func checkFSGroup(value string, process *pb.Process) (uint32, error) {
+	gid, err := strconv.ParseUint(value, 10, 32)
+	if err != nil {
+		return 0, fmt.Errorf("invalid fs_group %q: %w", value, err)
+	}
+	user := process.GetUser()
+	if user == nil || (uint64(user.GID) != gid && !slices.Contains(user.AdditionalGids, uint32(gid))) {
+		return 0, fmt.Errorf("fs_group %d is not a group of the container process", gid)
+	}
+	return uint32(gid), nil
+}
+
+func mountReadOnly(mounts []*pb.Mount, destination string) bool {
+	for _, m := range mounts {
+		if m.Destination == destination {
+			return slices.Contains(m.Options, "ro")
+		}
+	}
+	return false
+}
+
+// mode bits that kubelet adds when it applies a pod's fsGroup to a volume
+const (
+	// owner and group can read and write
+	fsGroupFileMode = os.FileMode(0o660)
+	// owner and group can also enter the directory, and setgid makes new
+	// files in it inherit the group
+	fsGroupDirMode = os.FileMode(0o770) | os.ModeSetgid
+)
+
+// setVolumeOwnership applies a pod's fsGroup to the volume mounted at root as
+// kubelet does for fsGroupChangePolicy OnRootMismatch: unless root already has
+// the group, group rwx and setgid, every file under it gets the group and group
+// rw, and every directory also gets group x and setgid.
+//
+// The change policy does not reach the CSI driver, and CreateContainer runs
+// this for every container that mounts the volume, so the root check keeps
+// later containers from walking a large volume again.
+func setVolumeOwnership(root string, gid uint32) error {
+	info, err := os.Stat(root)
+	if err != nil {
+		return err
+	}
+	if hasVolumeOwnership(info, gid) {
+		return nil
+	}
+
+	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		if err := os.Lchown(path, -1, int(gid)); err != nil {
+			return err
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+		mode := fsGroupFileMode
+		if info.IsDir() {
+			mode = fsGroupDirMode
+		}
+		return os.Chmod(path, info.Mode()|mode)
+	})
+}
+
+// hasVolumeOwnership reports whether a volume root already has the fsGroup
+// applied: it belongs to the group and has the mode bits of fsGroupDirMode.
+func hasVolumeOwnership(root fs.FileInfo, gid uint32) bool {
+	st, ok := root.Sys().(*syscall.Stat_t)
+	if !ok {
+		return false
+	}
+	return st.Gid == gid && root.Mode()&fsGroupDirMode == fsGroupDirMode
 }
 
 func isTargetPath(path, targetPath string) bool {

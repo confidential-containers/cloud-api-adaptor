@@ -227,6 +227,46 @@ func TestCSISingleDiskPersistence(t *testing.T) {
 	t.Log("PASSED: Single disk persistence verified")
 }
 
+func TestCSINonRootFSGroup(t *testing.T) {
+	skipIfNoCluster(t)
+	cs := getClient(t)
+	ensureNamespace(t, cs)
+	ctx := context.Background()
+
+	pvcName := "e2e-fsgroup-pvc"
+	testData := "hello-fsgroup-e2e"
+
+	t.Log("Creating PVC")
+	cs.CoreV1().PersistentVolumeClaims(csiTestNamespace).Delete(ctx, pvcName, metav1.DeleteOptions{}) //nolint:errcheck
+	_, err := cs.CoreV1().PersistentVolumeClaims(csiTestNamespace).Create(ctx, newCSIPVC(csiTestNamespace, pvcName, "1Gi"), metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create PVC: %v", err)
+	}
+	defer cs.CoreV1().PersistentVolumeClaims(csiTestNamespace).Delete(ctx, pvcName, metav1.DeleteOptions{}) //nolint:errcheck
+
+	t.Log("Creating non-root writer pod with fsGroup")
+	// a fresh filesystem root is owned by root, so the write only succeeds
+	// once the PodVM has applied the fsGroup
+	writerPod := newCSIWriterPod(csiTestNamespace, "e2e-fsgroup-writer", pvcName, "/mnt/data", testData)
+	runAsUser, fsGroup := int64(1000), int64(2000)
+	writerPod.Spec.SecurityContext = &corev1.PodSecurityContext{
+		RunAsUser: &runAsUser,
+		FSGroup:   &fsGroup,
+	}
+	cs.CoreV1().Pods(csiTestNamespace).Delete(ctx, writerPod.Name, metav1.DeleteOptions{}) //nolint:errcheck
+	_, err = cs.CoreV1().Pods(csiTestNamespace).Create(ctx, writerPod, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create writer pod: %v", err)
+	}
+	defer deletePodAndWait(t, cs, csiTestNamespace, writerPod.Name)
+
+	logs := waitForPodCompletion(t, cs, csiTestNamespace, writerPod.Name, podReadyTimeout)
+	t.Logf("Writer logs: %s", logs)
+	if !strings.Contains(logs, testData) {
+		t.Fatalf("non-root writer could not write to the volume: %q", strings.TrimSpace(logs))
+	}
+}
+
 func TestCSIMultiDiskPersistence(t *testing.T) {
 	skipIfNoCluster(t)
 	cs := getClient(t)
