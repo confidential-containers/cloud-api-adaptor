@@ -122,7 +122,7 @@ require (
 	github.com/IBM/go-sdk-core/v5 v5.24.0 // indirect
 	github.com/IBM/platform-services-go-sdk v0.103.4 // indirect
 	github.com/IBM/vpc-go-sdk v0.92.0 // indirect
-	github.com/avast/retry-go/v4 v4.6.1 // indirect
+	github.com/avast/retry-go/v4 v4.7.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.47.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.33.6 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.6 // indirect
