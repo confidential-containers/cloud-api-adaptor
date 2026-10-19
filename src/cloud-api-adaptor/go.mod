@@ -27,7 +27,7 @@ require (
 	golang.org/x/sys v0.48.0
 	google.golang.org/grpc v1.83.2
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/cri-api v0.33.0 // indirect
+	k8s.io/cri-api v0.37.1 // indirect
 	libvirt.org/go/libvirt v1.12007.0
 	libvirt.org/go/libvirtxml v1.12007.0
 )
