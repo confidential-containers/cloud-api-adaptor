@@ -80,8 +80,15 @@ installLibvirt() {
 	    virsh --version
     else
         echo "install required packages for ubuntu"
+        # qemu-kvm is only a virtual package on Ubuntu 26.04+, so install the
+        # architecture specific qemu system package instead.
+        case "${ARCH}" in
+            x86_64) qemu_pkg=qemu-system-x86 ;;
+            aarch64) qemu_pkg=qemu-system-arm ;;
+            *) qemu_pkg="qemu-system-${ARCH}" ;;
+        esac
         sudo DEBIAN_FRONTEND=noninteractive apt-get update -y > /dev/null
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install python3-pip genisoimage qemu-kvm libvirt-daemon-system libvirt-dev cpu-checker -y
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install python3-pip genisoimage "${qemu_pkg}" libvirt-daemon-system libvirt-dev cpu-checker -y
         kvm-ok
     fi
 
