@@ -18,9 +18,10 @@
 #   reason = "Waiting for upstream patch"
 #   ignoreUntil = 2026-12-31
 
-# All three vulns below affect github.com/containerd/containerd@v1.7.33 via the
-# CRI checkpoint/restore feature. CAA does not expose that feature, so they are
-# not exploitable in this codebase. No fix is available upstream at this time.
+# All vulns below affect github.com/containerd/containerd via the CRI
+# checkpoint/restore feature. CAA does not expose that feature, so they are
+# not exploitable in this codebase. No fix is available upstream for the v1
+# series at this time.
 
 [[IgnoredVulns]]
 id = "GO-2026-5622"
@@ -33,3 +34,7 @@ reason = "CRI checkpoint import allows local image tag poisoning in containerd. 
 [[IgnoredVulns]]
 id = "GO-2026-5064"
 reason = "containerd CRI checkpoint restore CDI annotation smuggling. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
+
+[[IgnoredVulns]]
+id = "GO-2026-6791"
+reason = "containerd CRI checkpoint restore bypasses destination security context. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
