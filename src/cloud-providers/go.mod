@@ -23,6 +23,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.4
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.332.0
+	github.com/gophercloud/gophercloud/v2 v2.8.0
 	github.com/kdomanski/iso9660 v0.4.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/crypto v0.56.0
