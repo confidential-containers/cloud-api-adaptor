@@ -88,11 +88,6 @@ jobs:
           ref: "${{ inputs.git_ref }}"
           allow-unsafe-pr-checkout: true
 
-      # Required by rootless mkosi
-      - name: Un-restrict user namespaces
-        if: inputs.arch == 'amd64'
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-
       - name: Rebase the code
         if: github.event_name == 'pull_request_target'
         working-directory: ./

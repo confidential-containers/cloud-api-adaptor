@@ -24,10 +24,6 @@ jobs:
         with:
           persist-credentials: false
 
-      # Required by rootless mkosi on Ubuntu 26.04
-      - name: Un-restrict user namespaces
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-
       - name: Install build dependencies
         run: |
           sudo apt-get update
