@@ -18,6 +18,15 @@
 #   reason = "Waiting for upstream patch"
 #   ignoreUntil = 2026-12-31
 
+[[IgnoredVulns]]
+# The golang.org/x/crypto/openpgp subpackage is permanently deprecated with no
+# fixed version. CAA and its transitive dependencies do not import openpgp:
+# `go mod why golang.org/x/crypto` returns "main module does not need package"
+# in all affected modules, and a full search of the module cache finds no
+# external consumer of the openpgp subpackage.
+id = "GO-2026-5932"
+reason = "False positive: x/crypto/openpgp is unmaintained with no fix available. CAA and its transitive deps do not import the openpgp subpackage."
+
 # All vulns below affect github.com/containerd/containerd via the CRI
 # checkpoint/restore feature. CAA does not expose that feature, so they are
 # not exploitable in this codebase. No fix is available upstream for the v1
