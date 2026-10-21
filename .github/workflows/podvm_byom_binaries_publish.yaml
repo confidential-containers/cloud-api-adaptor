@@ -63,7 +63,7 @@ defaults:
 jobs:
   build-and-push:
     name: Build and push BYOM binaries image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read   # Required for checkout
       packages: write  # Required for pushing to GHCR

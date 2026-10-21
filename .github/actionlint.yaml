@@ -9,6 +9,9 @@ self-hosted-runner:
     - S390X
     - ubuntu-24.04-ppc64le
     - ubuntu-24.04-s390x
+    # GitHub hosted, but missing from the hard coded list of the actionlint
+    # release we pin. Drop once rhysd/actionlint#683 reaches a release.
+    - ubuntu-26.04
 
 # Ignore until actionlint supports GitHub's $/ self-repository syntax (https://github.com/rhysd/actionlint/issues/711)
 paths:

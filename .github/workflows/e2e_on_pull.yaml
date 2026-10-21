@@ -35,7 +35,7 @@ permissions: {}
 jobs:
   authorize:
     name: authorize
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: |
      contains(github.event.pull_request.labels.*.name, 'test_e2e_aws') ||
      contains(github.event.pull_request.labels.*.name, 'test_e2e_alibabacloud') ||

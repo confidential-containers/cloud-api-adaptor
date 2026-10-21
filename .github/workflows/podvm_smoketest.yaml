@@ -13,7 +13,7 @@ permissions: {}
 jobs:
   build:
     name: Build the image
-    runs-on: 'ubuntu-24.04'
+    runs-on: 'ubuntu-26.04'
 
     defaults:
       run:
@@ -24,7 +24,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # Required by rootless mkosi on Ubuntu 24.04
+      # Required by rootless mkosi on Ubuntu 26.04
       - name: Un-restrict user namespaces
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
@@ -72,7 +72,7 @@ jobs:
 
   test:
     name: Test the image
-    runs-on: 'ubuntu-24.04'
+    runs-on: 'ubuntu-26.04'
     needs: build
 
     steps:
@@ -86,9 +86,15 @@ jobs:
           sudo apt-get install -y \
             gdisk \
             genisoimage \
+            libvirt-clients \
+            libvirt-daemon-system \
+            ovmf \
+            qemu-system-x86 \
             qemu-utils \
             socat \
             virt-manager
+          # Make sure the libvirt daemon is running (/var/run/libvirt/libvirt-sock)
+          sudo systemctl enable --now libvirtd.socket libvirtd.service || sudo systemctl enable --now libvirtd
 
       - name: Read properties from versions.yaml
         working-directory: src/cloud-api-adaptor

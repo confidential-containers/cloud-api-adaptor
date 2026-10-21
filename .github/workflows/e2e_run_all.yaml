@@ -134,7 +134,7 @@ jobs:
       image_tags: ${{ inputs.caa_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       arch: linux/amd64
-      runner: ubuntu-24.04
+      runner: ubuntu-26.04
     permissions:
       contents: read
       packages: write # Required to publish the image to ghcr
@@ -227,7 +227,7 @@ jobs:
     needs: [podvm_mkosi_amd64, caa_image_amd64, peerpod_ctrl_image_amd64, webhook_image]
     uses: $/.github/workflows/e2e_libvirt.yaml
     with:
-      runner: ubuntu-24.04
+      runner: ubuntu-26.04
       caa_image: ${{ inputs.registry }}/cloud-api-adaptor:${{ inputs.caa_image_tag }}-dev-amd64
       podvm_image: ${{ needs.podvm_mkosi_amd64.outputs.qcow2_oras_image }}
       git_ref: ${{ inputs.git_ref }}
