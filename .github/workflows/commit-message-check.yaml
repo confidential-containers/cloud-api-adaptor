@@ -17,7 +17,7 @@ permissions: {}
 
 jobs:
   commit-message-check:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     env:
       BOT_AUTHORED: >
         ${{ github.event.pull_request.user.login == 'dependabot[bot]' ||

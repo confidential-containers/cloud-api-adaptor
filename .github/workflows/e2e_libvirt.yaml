@@ -8,8 +8,8 @@ on:
   workflow_call:
     inputs:
       runner:
-        default: 'ubuntu-24.04'
-        description: The runner to execute the workflow on. Defaults to 'ubuntu-24.04'.
+        default: 'ubuntu-26.04'
+        description: The runner to execute the workflow on. Defaults to 'ubuntu-26.04'.
         required: false
         type: string
       podvm_image:

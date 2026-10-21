@@ -22,7 +22,7 @@ permissions: {}
 jobs:
   list-dockerfiles:
     name: list-dockerfiles
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       matrix: ${{ env.MATRIX }}
     steps:
@@ -34,7 +34,7 @@ jobs:
   build:
     name: Create Test Images
     needs: list-dockerfiles
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment: production
     strategy:
       fail-fast: false

@@ -44,7 +44,7 @@ permissions: {}
 jobs:
   test-byom:
     name: "BYOM e2e tests"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     env:
       CAA_IMAGE: "${{ inputs.caa_image }}"
       PEERPOD_CTRL_IMAGE: "${{ inputs.peerpod_ctrl_image }}"
