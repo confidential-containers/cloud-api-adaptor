@@ -1,0 +1,40 @@
+# osv-scanner.toml
+#
+# Ignore list for OSV-Scanner.
+# Add [[IgnoredVulns]] entries to suppress specific vulnerability IDs that are
+# known false-positives or have no upstream fix available yet.
+#
+# Format:
+#
+#   [[IgnoredVulns]]
+#   id = "GO-YYYY-NNNN"
+#   reason = "Why this is suppressed"
+#
+# Optionally add ignoreUntil (TOML local date). An expired entry still suppresses
+# the finding but prints a warning so the team knows to review it:
+#
+#   [[IgnoredVulns]]
+#   id = "GO-YYYY-NNNN"
+#   reason = "Waiting for upstream patch"
+#   ignoreUntil = 2026-12-31
+
+# All vulns below affect github.com/containerd/containerd via the CRI
+# checkpoint/restore feature. CAA does not expose that feature, so they are
+# not exploitable in this codebase. No fix is available upstream for the v1
+# series at this time.
+
+[[IgnoredVulns]]
+id = "GO-2026-5622"
+reason = "Arbitrary host CRI log file read via symlink in containerd. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
+
+[[IgnoredVulns]]
+id = "GO-2026-5338"
+reason = "CRI checkpoint import allows local image tag poisoning in containerd. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
+
+[[IgnoredVulns]]
+id = "GO-2026-5064"
+reason = "containerd CRI checkpoint restore CDI annotation smuggling. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
+
+[[IgnoredVulns]]
+id = "GO-2026-6791"
+reason = "containerd CRI checkpoint restore bypasses destination security context. Not exploitable in CAA: CRI checkpoint/restore is not exposed."
