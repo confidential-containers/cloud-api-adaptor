@@ -34,7 +34,7 @@ jobs:
           { arch: linux/amd64,   runner: ubuntu-26.04 },
           { arch: linux/arm64,   runner: ubuntu-26.04-arm },
           { arch: linux/ppc64le, runner: ubuntu-24.04-ppc64le },
-          { arch: linux/s390x,   runner: ubuntu-24.04-s390x },
+          { arch: linux/s390x,   runner: ubuntu-26.04-s390x },
         ]
     uses: $/.github/workflows/peerpod-ctrl_build_and_push.yaml
     with:

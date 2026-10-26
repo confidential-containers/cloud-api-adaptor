@@ -121,7 +121,7 @@ jobs:
       dev_tags: ${{ inputs.caa_image_tag }}-dev
       release_tags: ${{ inputs.caa_image_tag }}
       git_ref: ${{ inputs.git_ref }}
-      runner: 'ubuntu-24.04-s390x'
+      runner: 'ubuntu-26.04-s390x'
     permissions:
       contents: read  # Required to checkout code
       packages: write  # Required to push container images
@@ -146,7 +146,7 @@ jobs:
       image_tags: ${{ inputs.caa_image_tag }}
       git_ref: ${{ inputs.git_ref }}
       arch: linux/s390x
-      runner: ubuntu-24.04-s390x
+      runner: ubuntu-26.04-s390x
     permissions:
       contents: read
       packages: write # Required to publish the image to ghcr
