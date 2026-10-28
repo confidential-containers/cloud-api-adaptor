@@ -24,7 +24,7 @@ src/cloud-api-adaptor/azure-ready
 !src/cloud-api-adaptor/cmd/*
 
 # Ignore the contents of the certificates directory
-src/cloud-api-adaptor/podvm/files/etc/certificates/*
+src/podvm/files/etc/certificates/*
 
 # IDEs
 .vscode

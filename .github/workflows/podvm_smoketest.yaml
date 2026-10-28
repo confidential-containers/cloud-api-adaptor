@@ -17,7 +17,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: src/cloud-api-adaptor/podvm
+        working-directory: src/podvm
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -64,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: podvm-build
-          path: src/cloud-api-adaptor/podvm/build/podvm-ubuntu-amd64.qcow2
+          path: src/podvm/build/podvm-ubuntu-amd64.qcow2
 
   test:
     name: Test the image
@@ -118,4 +118,4 @@ jobs:
           path: .
 
       - name: Run smoke test
-        run: src/cloud-api-adaptor/podvm/hack/smoke_test.sh podvm-ubuntu-amd64.qcow2
+        run: src/podvm/hack/smoke_test.sh podvm-ubuntu-amd64.qcow2

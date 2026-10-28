@@ -6,7 +6,7 @@
 
 There are various ways to install mkosi documented on the [project page](https://github.com/systemd/mkosi). Different distributions also package mkosi in their repositories, alongside the dependencies.
 
-Refer to the [CI workflow](../../../.github/workflows/podvm_mkosi.yaml) to see which additional tools are required to build an image.
+Refer to the [CI workflow](../../.github/workflows/podvm_mkosi.yaml) to see which additional tools are required to build an image.
 
 ### Building the image
 

@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # Very simple podvm image check intended to be executed on disposable machine
 # DO NOT RUN THIS ON YOUR LAPTOP, files might be left behind.
-# Requirements listed in ../../../.github/workflows/podvm_smoketest.yaml
+# Requirements listed in ../../.github/workflows/podvm_smoketest.yaml
 
 set -euo pipefail
 
@@ -102,8 +102,8 @@ if [ -z "$KATACTL" ]; then
 		echo "::error:: kata-agent-ctl command not cached for $(uname -m), please compile it yourself and put into PATH or current dir."
 		exit 1
 	fi
-	KATA_REF=$(yq -e '.oci.kata-containers.reference' "${SCRIPTDIR}/../../versions.yaml")
-	KATA_REG=$(yq -e '.oci.kata-containers.registry' "${SCRIPTDIR}/../../versions.yaml")
+	KATA_REF=$(yq -e '.oci.kata-containers.reference' "${SCRIPTDIR}/../../cloud-api-adaptor/versions.yaml")
+	KATA_REG=$(yq -e '.oci.kata-containers.registry' "${SCRIPTDIR}/../../cloud-api-adaptor/versions.yaml")
 	echo "::debug:: Pulling kata-ctl from ${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
 	oras pull "${KATA_REG}/agent-ctl:${KATA_REF}-x86_64"
 	tar --ztsd -xvf kata-static-agent-ctl.tar.zst ./opt/kata/bin/kata-agent-ctl --transform='s/opt\/kata\/bin\/kata-agent-ctl/kata-agent-ctl/'
