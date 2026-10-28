@@ -58,9 +58,22 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		serviceConfig:   config,
 		instancesClient: nil,
 	}
-	if config.GcpCredentials != "" {
-		creds, err := credentials.NewCredentialsFromJSON(credentials.ServiceAccount, []byte(config.GcpCredentials), &credentials.DetectOptions{
-			Scopes: []string{computeScope},
+	// Workload Identity Federation (external_account) credentials take
+	// precedence over a static service account key when both are provided.
+	gcpCredentials := config.GcpCredentials
+	if config.GcpWifCredentials != "" {
+		gcpCredentials = config.GcpWifCredentials
+	}
+	if gcpCredentials != "" {
+		// Let the auth library detect the credential type from the JSON's
+		// "type" field: "service_account" for a static key, "external_account"
+		// for WIF. DetectDefault with CredentialsJSON set is self-contained and
+		// never falls back to the GCE metadata server, so this works in
+		// peerpod-ctrl too (no entrypoint.sh to write the creds file and export
+		// GOOGLE_APPLICATION_CREDENTIALS).
+		creds, err := credentials.DetectDefault(&credentials.DetectOptions{
+			CredentialsJSON: []byte(gcpCredentials),
+			Scopes:          []string{computeScope},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("configuration error when using creds: %s", err)
