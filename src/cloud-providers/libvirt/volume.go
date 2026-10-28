@@ -20,8 +20,8 @@ import (
 	libvirtxml "libvirt.org/go/libvirtxml"
 )
 
-// ErrVolumeNotFound is returned when a domain is not found
-var ErrVolumeNotFound = errors.New("Domain not found")
+// ErrVolumeNotFound is returned when a volume is not found
+var ErrVolumeNotFound = errors.New("volume not found")
 
 var waitSleepInterval = 1 * time.Second
 
@@ -130,7 +130,7 @@ func uploadVolume(ctx context.Context, libvirtClient *libvirtClient, volumeDef l
 
 	// Refresh the pool of the volume so that libvirt knows it is
 	// not longer in use.
-	err = waitForSuccess(ctx, "Error refreshing pool for volume", func() error {
+	err = waitForSuccess(ctx, "error refreshing pool for volume", func() error {
 		return libvirtClient.pool.Refresh(0)
 	})
 	if err != nil {
@@ -139,12 +139,12 @@ func uploadVolume(ctx context.Context, libvirtClient *libvirtClient, volumeDef l
 
 	volumeDefXML, err := xml.Marshal(volumeDef)
 	if err != nil {
-		return "", fmt.Errorf("Error serializing libvirt volume: %s", err)
+		return "", fmt.Errorf("error serializing libvirt volume: %s", err)
 	}
 	// create the volume
 	volume, err := libvirtClient.pool.StorageVolCreateXML(string(volumeDefXML), 0)
 	if err != nil {
-		return "", fmt.Errorf("Error creating libvirt volume for device %s: %s", volumeDef.Name, err)
+		return "", fmt.Errorf("error creating libvirt volume for device %s: %s", volumeDef.Name, err)
 	}
 	// Delete the volume on failure before freeing the handle (LIFO).
 	// volume.Free() in freeVolume is safe to call on a deleted volume —
@@ -161,12 +161,12 @@ func uploadVolume(ctx context.Context, libvirtClient *libvirtClient, volumeDef l
 	// upload ISO file
 	err = img.importImage(newCopier(libvirtClient.connection, volume, volumeDef.Capacity.Value), volumeDef)
 	if err != nil {
-		return "", fmt.Errorf("Error while uploading volume %s: %s", img.string(), err)
+		return "", fmt.Errorf("error while uploading volume %s: %s", img.string(), err)
 	}
 
 	volumeKey, err = volume.GetKey()
 	if err != nil {
-		return "", fmt.Errorf("Error retrieving volume key: %s", err)
+		return "", fmt.Errorf("error retrieving volume key: %s", err)
 	}
 	logger.Printf("Volume ID: %s", volumeKey)
 	return volumeKey, nil
@@ -247,14 +247,14 @@ func createVolume(ctx context.Context, volName string, volSizeGiB uint64, baseVo
 	baseVolume, err := getVolume(libvirtClient, baseVolName)
 
 	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s", baseVolName)
+		return fmt.Errorf("can't retrieve volume %s", baseVolName)
 	}
 	defer freeVolume(baseVolume, &err)
 
 	var baseVolumeInfo *libvirt.StorageVolInfo
 	baseVolumeInfo, err = baseVolume.GetInfo()
 	if err != nil {
-		return fmt.Errorf("Can't retrieve volume info %s", baseVolName)
+		return fmt.Errorf("can't retrieve volume info %s", baseVolName)
 	}
 
 	capacityBytes, err := volumeCapacityBytes(volSizeGiB, baseVolumeInfo.Capacity)
@@ -265,13 +265,13 @@ func createVolume(ctx context.Context, volName string, volSizeGiB uint64, baseVo
 
 	backingStoreDef, err := newDefBackingStoreFromLibvirt(baseVolume)
 	if err != nil {
-		return fmt.Errorf("Could not retrieve backing store %s", baseVolName)
+		return fmt.Errorf("could not retrieve backing store %s", baseVolName)
 	}
 	volumeDef.BackingStore = &backingStoreDef
 
 	volumeDefXML, err := xml.Marshal(volumeDef)
 	if err != nil {
-		return fmt.Errorf("Error serializing libvirt volume: %s", err)
+		return fmt.Errorf("error serializing libvirt volume: %s", err)
 	}
 
 	// create the volume
@@ -286,7 +286,7 @@ func createVolume(ctx context.Context, volName string, volSizeGiB uint64, baseVo
 
 	volume, err := libvirtClient.pool.StorageVolCreateXML(string(volumeDefXML), 0)
 	if err != nil {
-		return fmt.Errorf("Error creating libvirt volume: %s", err)
+		return fmt.Errorf("error creating libvirt volume: %s", err)
 	}
 	// Delete the volume on failure before freeing the handle (LIFO).
 	// volume.Free() in freeVolume is safe to call on a deleted volume —
@@ -303,7 +303,7 @@ func createVolume(ctx context.Context, volName string, volSizeGiB uint64, baseVo
 	// we use the key as the id
 	key, err := volume.GetKey()
 	if err != nil {
-		return fmt.Errorf("Error retrieving volume key: %s", err)
+		return fmt.Errorf("error retrieving volume key: %s", err)
 	}
 
 	logger.Printf("Uploaded volume key %s", key)
@@ -375,7 +375,7 @@ func deleteVolume(ctx context.Context, libvirtClient *libvirtClient, name string
 
 	volume, err := getVolume(libvirtClient, name)
 	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s", name)
+		return fmt.Errorf("can't retrieve volume %s", name)
 	}
 	defer freeVolume(volume, &err)
 
@@ -383,7 +383,7 @@ func deleteVolume(ctx context.Context, libvirtClient *libvirtClient, name string
 	// not longer in use.
 	volPool, err := volume.LookupPoolByVolume()
 	if err != nil {
-		return fmt.Errorf("Error retrieving pool for volume: %s", err)
+		return fmt.Errorf("error retrieving pool for volume: %s", err)
 	}
 	defer func() {
 		newErr := volPool.Free()
@@ -392,7 +392,7 @@ func deleteVolume(ctx context.Context, libvirtClient *libvirtClient, name string
 		}
 	}()
 
-	err = waitForSuccess(ctx, "Error refreshing pool for volume", func() error {
+	err = waitForSuccess(ctx, "error refreshing pool for volume", func() error {
 		return volPool.Refresh(0)
 	})
 	if err != nil {
@@ -401,7 +401,7 @@ func deleteVolume(ctx context.Context, libvirtClient *libvirtClient, name string
 
 	err = volume.Delete(0)
 	if err != nil {
-		return fmt.Errorf("Can't delete volume %s: %s", name, err)
+		return fmt.Errorf("can't delete volume %s: %s", name, err)
 	}
 
 	return nil

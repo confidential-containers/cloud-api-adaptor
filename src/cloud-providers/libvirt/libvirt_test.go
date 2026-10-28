@@ -731,7 +731,7 @@ func TestConfigVerifier(t *testing.T) {
 					c.PoolName = ""
 				}),
 			},
-			expectedError: "PoolName is empty",
+			expectedError: "pool name is empty",
 		},
 		{
 			name: "empty network name fails",
@@ -740,7 +740,7 @@ func TestConfigVerifier(t *testing.T) {
 					c.NetworkName = ""
 				}),
 			},
-			expectedError: "NetworkName is empty",
+			expectedError: "network name is empty",
 		},
 		{
 			name: "empty volume name fails",
@@ -749,7 +749,7 @@ func TestConfigVerifier(t *testing.T) {
 					c.VolName = ""
 				}),
 			},
-			expectedError: "VolName is empty",
+			expectedError: "volume name is empty",
 		},
 		{
 			name: "zero CPU fails",
@@ -767,7 +767,7 @@ func TestConfigVerifier(t *testing.T) {
 					c.Memory = 0
 				}),
 			},
-			expectedError: "Memory must be greater than zero",
+			expectedError: "memory must be greater than zero",
 		},
 		{
 			name: "invalid cpuset fails",

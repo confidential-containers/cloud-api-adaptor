@@ -288,17 +288,17 @@ func TestProviderConfigVerifier(t *testing.T) {
 			{
 				name:          "empty PoolName",
 				configOpts:    []func(*Config){withPoolName("")},
-				errorContains: "PoolName is empty",
+				errorContains: "pool name is empty",
 			},
 			{
 				name:          "empty NetworkName",
 				configOpts:    []func(*Config){withNetworkName("")},
-				errorContains: "NetworkName is empty",
+				errorContains: "network name is empty",
 			},
 			{
 				name:          "empty VolName",
 				configOpts:    []func(*Config){withVolName("")},
-				errorContains: "VolName is empty",
+				errorContains: "volume name is empty",
 			},
 			{
 				name:          "zero CPU",
@@ -308,7 +308,7 @@ func TestProviderConfigVerifier(t *testing.T) {
 			{
 				name:          "zero Memory",
 				configOpts:    []func(*Config){withMemory(0)},
-				errorContains: "Memory must be greater than zero",
+				errorContains: "memory must be greater than zero",
 			},
 		}
 
