@@ -177,6 +177,7 @@ PHONY: image-container
 image-container:
 	@echo "Building podvm container image..."
 	cd .. && docker buildx build \
+		--build-arg IPTABLES_WRAPPER_VERSION=$(IPTABLES_WRAPPER_VERSION) \
 		-t $(PODVM_CONTAINER_NAME):$(PODVM_TAG) \
 		-t $(PODVM_CONTAINER_NAME):latest \
 		-f podvm/Dockerfile.podvm_docker_provider .
