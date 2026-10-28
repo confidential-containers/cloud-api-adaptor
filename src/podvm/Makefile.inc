@@ -7,11 +7,11 @@
 # It can be included via
 # ```
 # ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
-# include $(ROOT_DIR)podvm/Makefile.inc
+# include $(ROOT_DIR)../podvm/Makefile.inc
 # ```
 # in each of the cloud provider podvm image Makefiles
 
-ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../
+ROOT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../cloud-api-adaptor)/
 FILES_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/files
 
 include $(ROOT_DIR)Makefile.defaults
@@ -209,7 +209,7 @@ $(API_SERVER_REST): $(FORCE_TARGET)
 	install -D --compare api-server-rest "$@"
 
 clean_sources:
-	[ -d "$(ROOT_DIR)" ] && cd "$(ROOT_DIR)" && git clean -xfd -e podvm
+	[ -d "$(ROOT_DIR)" ] && cd "$(ROOT_DIR)" && git clean -xfd
 	[ -d "$(PAUSE_SRC)" ] && cd "$(PAUSE_SRC)" && rm -rf *
 	[ -d "$(UMOCI_SRC)" ] && cd "$(UMOCI_SRC)" && git clean -xfd -e umoci
 
