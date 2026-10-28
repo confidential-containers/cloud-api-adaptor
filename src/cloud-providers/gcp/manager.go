@@ -21,7 +21,8 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg := provider.NewFlagRegistrar(flags)
 
 	// Flags with environment variable support
-	reg.StringWithEnv(&gcpcfg.GcpCredentials, "gcp-credentials", "", "GCP_CREDENTIALS", "Google Application Credentials", provider.Secret())
+	reg.StringWithEnv(&gcpcfg.GcpCredentials, "gcp-credentials", "", "GCP_CREDENTIALS", "Google Application Credentials (static service account key). Set only one of GCP_CREDENTIALS or GCP_WIF_CREDENTIALS, not both", provider.Secret())
+	reg.StringWithEnv(&gcpcfg.GcpWifCredentials, "gcp-wif-credentials", "", "GCP_WIF_CREDENTIALS", "GCP Workload Identity Federation (external_account) credentials. Set only one of GCP_CREDENTIALS or GCP_WIF_CREDENTIALS, not both", provider.Secret())
 	reg.StringWithEnv(&gcpcfg.ProjectID, "gcp-project-id", "", "GCP_PROJECT_ID", "GCP Project ID", provider.Required())
 	reg.StringWithEnv(&gcpcfg.Zone, "zone", "", "GCP_ZONE", "Zone", provider.Required())
 	reg.StringWithEnv(&gcpcfg.ImageName, "image-name", "", "PODVM_IMAGE_NAME", "Pod VM image name")
