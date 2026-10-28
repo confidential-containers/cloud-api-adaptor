@@ -49,7 +49,7 @@ Pod VM will be using TLS.
 
 ### Add the server certificate to the Pod VM image
 
-- Copy the server certificate, key and (optionally) the CA certificate to `~/cloud-api-adaptor/podvm/files/etc/certificates`.
+- Copy the server certificate, key and (optionally) the CA certificate to `~/cloud-api-adaptor/src/podvm/files/etc/certificates`.
 You will need CA certificate if using self-signed certificates.
 
 - Build the Pod VM image

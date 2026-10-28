@@ -2,8 +2,7 @@
 # copy-files.sh is used to copy required files into
 # the correct location on the podvm image
 
-REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/../..
-PODVM_DIR=${REPO_ROOT}/podvm
+PODVM_DIR=$(dirname "${BASH_SOURCE[0]}")/../../../podvm
 
 sudo mkdir -p /etc/containers
 sudo cp "${PODVM_DIR}"/files/etc/agent-config.toml /etc/agent-config.toml

@@ -1,4 +1,4 @@
-include ../Makefile.defaults
+include ../cloud-api-adaptor/Makefile.defaults
 include ./Makefile.inc
 
 SE_BOOT   ?= false
@@ -85,7 +85,7 @@ endif
 		$(if $(DEFAULT_AGENT_POLICY_FILE),--build-arg DEFAULT_AGENT_POLICY_FILE=$(DEFAULT_AGENT_POLICY_FILE),) \
 		$(if $(filter $(EXPORT_BINARIES),false),--load,-o type=local,dest="./resources/binaries-tree") \
 		$(DOCKER_OPTS) \
-		-f Dockerfile.podvm_binaries ../../
+		-f Dockerfile.podvm_binaries ..
 
 PHONY: insecure-builder
 insecure-builder:
@@ -100,10 +100,10 @@ image: insecure-builder
 	@echo "Building image..."
 ifeq ($(SE_BOOT),true)
 	$(call run_mkosi_in_container,--profile production)
-	sudo -E ../hack/build-s390x-se-image.sh
+	sudo -E ../cloud-api-adaptor/hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
 	$(call run_mkosi_in_container,--profile production)
-	sudo -E ../hack/build-s390x-image.sh
+	sudo -E ../cloud-api-adaptor/hack/build-s390x-image.sh
 else
 	mkdir -p build
 	docker buildx build \
@@ -126,10 +126,10 @@ image-debug: insecure-builder
 	@echo "Building debug image..."
 ifeq ($(SE_BOOT),true)
 	$(call run_mkosi_in_container,--profile debug)
-	sudo -E ../hack/build-s390x-se-image.sh
+	sudo -E ../cloud-api-adaptor/hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
 	$(call run_mkosi_in_container,--profile debug)
-	sudo -E ../hack/build-s390x-image.sh
+	sudo -E ../cloud-api-adaptor/hack/build-s390x-image.sh
 else
 
 	mkdir -p build
@@ -153,10 +153,10 @@ image-sftp: insecure-builder
 	@echo "Building sftp image..."
 ifeq ($(SE_BOOT),true)
 	$(call run_mkosi_in_container,--profile sftp)
-	sudo -E ../hack/build-s390x-se-image.sh
+	sudo -E ../cloud-api-adaptor/hack/build-s390x-se-image.sh
 else ifeq ($(ARCH),s390x)
 	$(call run_mkosi_in_container,--profile sftp)
-	sudo -E ../hack/build-s390x-image.sh
+	sudo -E ../cloud-api-adaptor/hack/build-s390x-image.sh
 else
 	mkdir -p build
 	docker buildx build \
