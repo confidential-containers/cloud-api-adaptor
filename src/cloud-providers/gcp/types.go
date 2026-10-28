@@ -27,6 +27,7 @@ func (m *machineTypes) Set(value string) error {
 
 type Config struct {
 	GcpCredentials      string
+	GcpWifCredentials   string
 	ProjectID           string
 	Zone                string
 	ImageName           string
@@ -44,5 +45,5 @@ type Config struct {
 }
 
 func (c Config) Redact() Config {
-	return *util.RedactStruct(&c, "GcpCredentials").(*Config)
+	return *util.RedactStruct(&c, "GcpCredentials", "GcpWifCredentials").(*Config)
 }

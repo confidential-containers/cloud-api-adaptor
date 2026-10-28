@@ -6,6 +6,7 @@ package gcp
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/netip"
@@ -39,12 +40,8 @@ func (p *gcpProvider) ConfigVerifier() error {
 	return nil
 }
 
-// authOptions returns the client options needed for GCP API clients to use
-// the explicit credentials from GCP_CREDENTIALS, if any were configured.
-// Without this, clients silently fall back to Application Default
-// Credentials (the node's own service account), which can fail with
-// "insufficient authentication scopes" when that account lacks compute
-// scope.
+// authOptions returns options to use the configured credentials, or nil to
+// use Application Default Credentials.
 func (p *gcpProvider) authOptions() []option.ClientOption {
 	if p.authCreds == nil {
 		return nil
@@ -58,14 +55,29 @@ func NewProvider(config *Config) (provider.Provider, error) {
 		serviceConfig:   config,
 		instancesClient: nil,
 	}
-	if config.GcpCredentials != "" {
-		creds, err := credentials.NewCredentialsFromJSON(credentials.ServiceAccount, []byte(config.GcpCredentials), &credentials.DetectOptions{
+	// Workload Identity Federation (external_account) credentials take
+	// precedence over a static service account key when both are provided.
+	gcpCredentials := config.GcpCredentials
+	if config.GcpWifCredentials != "" {
+		gcpCredentials = config.GcpWifCredentials
+	}
+	if gcpCredentials != "" {
+		// Determine the credential type from the JSON's "type" field and reject
+		// anything other than a static key ("service_account") or WIF
+		// ("external_account").
+		credType, err := gcpCredType(gcpCredentials)
+		if err != nil {
+			return nil, err
+		}
+		creds, err := credentials.NewCredentialsFromJSON(credType, []byte(gcpCredentials), &credentials.DetectOptions{
 			Scopes: []string{computeScope},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("configuration error when using creds: %s", err)
 		}
 		provider.authCreds = creds
+	} else {
+		logger.Printf("no GCP credentials configured")
 	}
 
 	var err error
@@ -79,6 +91,25 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	}
 
 	return provider, nil
+}
+
+// gcpCredType reads the "type" field of a GCP credentials JSON and returns the
+// matching credentials.CredType. Only "service_account" (a static key) and
+// "external_account" (Workload Identity Federation) are supported; any other
+// type is rejected rather than handed to the auth library.
+func gcpCredType(credsJSON string) (credentials.CredType, error) {
+	var header struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal([]byte(credsJSON), &header); err != nil {
+		return "", fmt.Errorf("parsing GCP credentials JSON: %w", err)
+	}
+	switch t := credentials.CredType(header.Type); t {
+	case credentials.ServiceAccount, credentials.ExternalAccount:
+		return t, nil
+	default:
+		return "", fmt.Errorf("unsupported GCP credential type %q: only service_account and external_account are supported", header.Type)
+	}
 }
 
 func parseIPString(ipStr string) (netip.Addr, error) {
