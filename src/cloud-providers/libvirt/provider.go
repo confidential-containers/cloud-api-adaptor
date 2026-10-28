@@ -145,7 +145,7 @@ func (p *libvirtProvider) CreateInstance(ctx context.Context, podName, sandboxID
 
 func (p *libvirtProvider) DeleteInstance(ctx context.Context, instanceID string) error {
 	if instanceID == "" {
-		return fmt.Errorf("DeleteInstance called with empty instanceID")
+		return fmt.Errorf("cannot delete instance: empty instanceID")
 	}
 
 	err := DeleteDomain(ctx, p.libvirtClient, instanceID)
@@ -186,15 +186,15 @@ func (p *libvirtProvider) ConfigVerifier() error {
 	}
 
 	if config.PoolName == "" {
-		return fmt.Errorf("PoolName is empty")
+		return fmt.Errorf("pool name is empty")
 	}
 
 	if config.NetworkName == "" {
-		return fmt.Errorf("NetworkName is empty")
+		return fmt.Errorf("network name is empty")
 	}
 
 	if config.VolName == "" {
-		return fmt.Errorf("VolName is empty")
+		return fmt.Errorf("volume name is empty")
 	}
 
 	if config.CPU == 0 {
@@ -202,7 +202,7 @@ func (p *libvirtProvider) ConfigVerifier() error {
 	}
 
 	if config.Memory == 0 {
-		return fmt.Errorf("Memory must be greater than zero")
+		return fmt.Errorf("memory must be greater than zero")
 	}
 
 	if err := validateCPUSet(config.CPUSet); err != nil {
