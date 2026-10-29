@@ -50,7 +50,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/crypto v0.57.0
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
 	google.golang.org/api v0.288.0
 	google.golang.org/protobuf v1.36.12
@@ -70,7 +70,10 @@ require (
 	github.com/fenglyu/go-dmidecode v0.0.0-20220417074508-03f52eb45fe9
 )
 
-require github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
+require (
+	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
+	github.com/mdlayher/vsock v1.2.1
+)
 
 require (
 	github.com/go-openapi/swag/cmdutils v0.27.1 // indirect
@@ -84,6 +87,7 @@ require (
 	github.com/go-openapi/swag/stringutils v0.27.1 // indirect
 	github.com/go-openapi/swag/typeutils v0.27.1 // indirect
 	github.com/go-openapi/swag/yamlutils v0.27.1 // indirect
+	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	k8s.io/streaming v0.37.1 // indirect
@@ -187,7 +191,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kdomanski/iso9660 v0.4.0 // indirect
+	github.com/kdomanski/iso9660 v0.4.0
 	github.com/klauspost/compress v1.19.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect

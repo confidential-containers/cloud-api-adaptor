@@ -1,0 +1,61 @@
+name: PodVM test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  test:
+    name: Test PodVM
+    runs-on: 'ubuntu-24.04'
+    permissions:
+      contents: read  # Required to checkout code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            alien \
+            bubblewrap \
+            dnf \
+            qemu-system-x86 \
+            qemu-utils \
+            ovmf \
+            uidmap
+
+      - name: Read properties from versions.yaml
+        working-directory: src/cloud-api-adaptor
+        run: |
+          {
+            echo "GO_VERSION=$(./hack/versions.py -q tools.golang)"
+            echo "MKOSI_VERSION=$(./hack/versions.py -q tools.mkosi)"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup Golang version ${{ env.GO_VERSION }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
+
+      - name: Build binaries
+        id: build_binaries
+        working-directory: src/cloud-api-adaptor/podvm
+        run: make podvm-binaries
+
+      - name: Build mkosi debug image
+        working-directory: src/cloud-api-adaptor/podvm
+        run: make image-debug
+
+      - name: Run podvm test
+        working-directory: src/cloud-api-adaptor
+        run: sudo env "PATH=$PATH" "MKOSI_VERSION=$MKOSI_VERSION" make test-podvm TEST_PODVM_IMAGE=podvm/build/podvm-ubuntu-amd64.qcow2 TEST_PODVM_COUNT=20 TEST_PODVM_TIMEOUT=10m

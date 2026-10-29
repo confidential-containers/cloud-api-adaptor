@@ -1,5 +1,6 @@
 [Unit]
 Description=Generate issue to print to serial console at startup
+ConditionSecurity=tpm2
 
 [Service]
 Type=oneshot

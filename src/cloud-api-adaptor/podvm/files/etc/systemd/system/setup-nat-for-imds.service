@@ -8,6 +8,7 @@ DefaultDependencies=no
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/setup-nat-for-imds.sh
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
