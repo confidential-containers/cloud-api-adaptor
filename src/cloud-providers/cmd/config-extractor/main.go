@@ -24,6 +24,7 @@ type FlagInfo struct {
 	Description string `json:"description"`
 	Required    bool   `json:"required"`
 	Secret      bool   `json:"secret"`
+	Generated   bool   `json:"generated"`
 }
 
 type ProviderConfig struct {
@@ -80,6 +81,9 @@ func main() {
 	}
 
 	config.Flags = append(config.Flags, providerFlags...)
+
+	// Generated flags are populated by the chart, not users; keep them out of templates.
+	config.Flags = filterFlags(config.Flags, func(f FlagInfo) bool { return !f.Generated })
 
 	// Filter secrets
 	if *noSecrets {
@@ -303,6 +307,7 @@ func extractFlagRegistrarCall(call *ast.CallExpr, fset *token.FileSet, constants
 		// These are function calls like Required(), Secret(), provider.Required(), or provider.Secret()
 		flagInfo.Required = false
 		flagInfo.Secret = false
+		flagInfo.Generated = false
 		for i := 5; i < len(call.Args); i++ {
 			if optCall, ok := call.Args[i].(*ast.CallExpr); ok {
 				optName := getFunctionName(optCall.Fun)
@@ -311,6 +316,8 @@ func extractFlagRegistrarCall(call *ast.CallExpr, fset *token.FileSet, constants
 					flagInfo.Required = true
 				case "Secret":
 					flagInfo.Secret = true
+				case "Generated":
+					flagInfo.Generated = true
 				}
 			}
 		}

@@ -168,8 +168,9 @@ type FlagOption func(*flagOptions)
 
 // flagOptions holds optional metadata for a flag.
 type flagOptions struct {
-	required bool
-	secret   bool
+	required  bool
+	secret    bool
+	generated bool
 }
 
 // Required marks a flag as required.
@@ -180,6 +181,12 @@ func Required() FlagOption {
 // Secret marks a flag as containing sensitive data.
 func Secret() FlagOption {
 	return func(o *flagOptions) { o.secret = true }
+}
+
+// Generated marks a flag the chart populates, not the user; config-extractor
+// omits it from the generated templates.
+func Generated() FlagOption {
+	return func(o *flagOptions) { o.generated = true }
 }
 
 // applyOptions applies functional options and returns the resulting flagOptions.
@@ -202,7 +209,7 @@ func NewFlagRegistrar(flags *flag.FlagSet) *FlagRegistrar {
 }
 
 // StringWithEnv registers a string flag with environment variable support.
-// Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
+// Optional FlagOption parameters (Required(), Secret(), Generated()) are metadata-only (used by config-extractor).
 // Usage: reg.StringWithEnv(&field, "flag", "", "ENV", "desc", Required(), Secret())
 func (r *FlagRegistrar) StringWithEnv(field *string, flagName, hardcodedDefault, envVarName, usage string, opts ...FlagOption) {
 	_ = applyOptions(opts) // metadata-only, used by config-extractor
@@ -219,7 +226,7 @@ func (r *FlagRegistrar) StringWithEnv(field *string, flagName, hardcodedDefault,
 }
 
 // IntWithEnv registers an int flag with environment variable support.
-// Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
+// Optional FlagOption parameters (Required(), Secret(), Generated()) are metadata-only (used by config-extractor).
 func (r *FlagRegistrar) IntWithEnv(field *int, flagName string, hardcodedDefault int, envVarName, usage string, opts ...FlagOption) {
 	_ = applyOptions(opts) // metadata-only, used by config-extractor
 
@@ -238,7 +245,7 @@ func (r *FlagRegistrar) IntWithEnv(field *int, flagName string, hardcodedDefault
 }
 
 // UintWithEnv registers a uint flag with environment variable support.
-// Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
+// Optional FlagOption parameters (Required(), Secret(), Generated()) are metadata-only (used by config-extractor).
 func (r *FlagRegistrar) UintWithEnv(field *uint, flagName string, hardcodedDefault uint, envVarName, usage string, opts ...FlagOption) {
 	_ = applyOptions(opts) // metadata-only, used by config-extractor
 
@@ -256,7 +263,7 @@ func (r *FlagRegistrar) UintWithEnv(field *uint, flagName string, hardcodedDefau
 }
 
 // Uint64WithEnv registers a uint64 flag with environment variable support.
-// Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
+// Optional FlagOption parameters (Required(), Secret(), Generated()) are metadata-only (used by config-extractor).
 func (r *FlagRegistrar) Uint64WithEnv(field *uint64, flagName string, hardcodedDefault uint64, envVarName, usage string, opts ...FlagOption) {
 	_ = applyOptions(opts) // metadata-only, used by config-extractor
 
@@ -274,7 +281,7 @@ func (r *FlagRegistrar) Uint64WithEnv(field *uint64, flagName string, hardcodedD
 }
 
 // Float64WithEnv registers a float64 flag with environment variable support.
-// Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
+// Optional FlagOption parameters (Required(), Secret(), Generated()) are metadata-only (used by config-extractor).
 func (r *FlagRegistrar) Float64WithEnv(field *float64, flagName string, hardcodedDefault float64, envVarName, usage string, opts ...FlagOption) {
 	_ = applyOptions(opts) // metadata-only, used by config-extractor
 
@@ -293,7 +300,7 @@ func (r *FlagRegistrar) Float64WithEnv(field *float64, flagName string, hardcode
 
 // BoolWithEnv registers a bool flag with environment variable support.
 // Accepts: "1" or "true" (case-insensitive) for true, anything else for false.
-// Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
+// Optional FlagOption parameters (Required(), Secret(), Generated()) are metadata-only (used by config-extractor).
 func (r *FlagRegistrar) BoolWithEnv(field *bool, flagName string, hardcodedDefault bool, envVarName, usage string, opts ...FlagOption) {
 	_ = applyOptions(opts) // metadata-only, used by config-extractor
 
@@ -310,7 +317,7 @@ func (r *FlagRegistrar) BoolWithEnv(field *bool, flagName string, hardcodedDefau
 }
 
 // DurationWithEnv registers a duration flag with environment variable support.
-// Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
+// Optional FlagOption parameters (Required(), Secret(), Generated()) are metadata-only (used by config-extractor).
 func (r *FlagRegistrar) DurationWithEnv(field *time.Duration, flagName string, hardcodedDefault time.Duration, envVarName, usage string, opts ...FlagOption) {
 	_ = applyOptions(opts) // metadata-only, used by config-extractor
 
@@ -329,7 +336,7 @@ func (r *FlagRegistrar) DurationWithEnv(field *time.Duration, flagName string, h
 
 // CustomTypeWithEnv registers a custom flag type (like comma-separated lists or key-value maps) with environment variable support.
 // The field must implement flag.Value interface.
-// Optional FlagOption parameters (Required(), Secret()) are metadata-only (used by config-extractor).
+// Optional FlagOption parameters (Required(), Secret(), Generated()) are metadata-only (used by config-extractor).
 func (r *FlagRegistrar) CustomTypeWithEnv(field flag.Value, flagName, hardcodedDefault, envVarName, usage string, opts ...FlagOption) {
 	_ = applyOptions(opts) // metadata-only, used by config-extractor
 
