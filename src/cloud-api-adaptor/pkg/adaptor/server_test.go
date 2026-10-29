@@ -193,8 +193,9 @@ func (n *mockWorkerNode) Teardown(nsPath string, config *tunneler.Config) error 
 }
 
 type mockProvider struct {
-	primaryIP   string
-	secondaryIP string
+	primaryIP         string
+	secondaryIP       string
+	configVerifierErr error
 }
 
 func (p *mockProvider) CreateInstance(ctx context.Context, podName, sandboxID string, cloudConfig cloudinit.CloudConfigGenerator, spec provider.InstanceTypeSpec) (*provider.Instance, error) {
@@ -231,5 +232,34 @@ func (p *mockProvider) Teardown() error {
 }
 
 func (p *mockProvider) ConfigVerifier() error {
-	return nil
+	return p.configVerifierErr
+}
+
+var errBadConfig = errors.New("bad config")
+
+func TestStartFailsWhenConfigVerifierErrors(t *testing.T) {
+	dir := t.TempDir()
+	socketPath := filepath.Join(dir, "hypervisor.sock")
+
+	p := &mockProvider{configVerifierErr: errBadConfig}
+	serverConfig := &cloud.ServerConfig{
+		SocketPath:              socketPath,
+		PodsDir:                 filepath.Join(dir, "pods"),
+		ForwarderPort:           "0",
+		ProxyTimeout:            5 * time.Second,
+		EnableCloudConfigVerify: true,
+		PeerPodsLimitPerNode:    -1,
+	}
+	s := NewServer(p, serverConfig, &mockWorkerNode{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := s.Start(ctx)
+	if err == nil {
+		t.Fatal("expected Start to return an error when ConfigVerifier fails, got nil")
+	}
+	if !errors.Is(err, errBadConfig) {
+		t.Fatalf("expected errors.Is(err, errBadConfig), got %v", err)
+	}
 }
