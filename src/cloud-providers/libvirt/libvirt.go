@@ -596,12 +596,15 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 			return nil, fmt.Errorf("existing domain UUID retrieval failed: %w", uuidErr)
 		}
 		v.instanceID = uuid
-		ips, ipsErr := getDomainIPs(domain)
+		// Use the same retry loop as the create path: a lease may not be
+		// visible yet even though the domain is running.
+		ips, ipsErr := waitForDomainIPs(ctx, func() ([]netip.Addr, error) {
+			return getDomainIPs(domain)
+		}, GetDomainIPsRetries, GetDomainIPsSleep)
 		if ipsErr != nil {
-			// UUID is valid; return the instance so the caller can clean up
-			// even if IP retrieval fails (e.g. domain is shut off).
-			logger.Printf("existing domain IP retrieval failed (uuid=%s): %v", uuid, ipsErr)
-			return &createDomainOutput{instance: v}, fmt.Errorf("existing domain IP retrieval failed: %w", ipsErr)
+			// Return the instance so the caller can clean up via DeleteInstance.
+			logger.Printf("existing domain IP addresses not found (uuid=%s): %v", uuid, ipsErr)
+			return &createDomainOutput{instance: v}, fmt.Errorf("existing domain (uuid=%s) IP addresses not found: %w", uuid, ipsErr)
 		}
 		v.ips = ips
 		logger.Printf("Instance already exists (uuid=%s)", uuid)
