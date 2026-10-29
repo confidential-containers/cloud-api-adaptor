@@ -73,8 +73,7 @@ func NewServer(provider provider.Provider, cfg *cloud.ServerConfig, workerNode p
 
 func (s *server) Start(ctx context.Context) (err error) {
 	if s.enableCloudConfigVerify {
-		verifierErr := s.cloudService.ConfigVerifier()
-		if verifierErr != nil {
+		if err = s.cloudService.ConfigVerifier(); err != nil {
 			return err
 		}
 	}
