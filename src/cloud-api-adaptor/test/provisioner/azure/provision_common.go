@@ -549,7 +549,7 @@ func (p *AzureCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.
 
 	_, err = pollerResp.PollUntilDone(ctx, nil)
 	if err != nil {
-		err = fmt.Errorf("waiting for cluster %q to be ready: %w.", AzureProps.ClusterName, err)
+		err = fmt.Errorf("waiting for cluster %q to be ready: %w", AzureProps.ClusterName, err)
 		log.Errorf("%v", err)
 		return err
 	}
