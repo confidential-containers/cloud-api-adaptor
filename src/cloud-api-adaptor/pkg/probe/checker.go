@@ -57,11 +57,11 @@ func (c *Checker) GetAllPeerPods(startTime time.Time) (ready bool, err error) {
 			}
 			logger.Printf("Dealing with PeerPod: %s, with Ready condition: %v", pod.Name, condition)
 			if condition.Status != corev1.ConditionTrue {
-				return false, fmt.Errorf("PeerPod %s is not Ready.", pod.Name)
+				return false, fmt.Errorf("PeerPod %s is not Ready", pod.Name)
 			}
 
 			if condition.LastTransitionTime.Time.Before(startTime) {
-				return false, fmt.Errorf("PeerPod %s has not been restarted.", pod.Name)
+				return false, fmt.Errorf("PeerPod %s has not been restarted", pod.Name)
 			}
 		}
 	}
