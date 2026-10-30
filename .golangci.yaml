@@ -21,7 +21,6 @@ linters:
     staticcheck:
       checks:
         - all
-        - "-ST1005" # TODO fix "ST1005: error strings should not end with punctuation or newlines" in a later change
   exclusions:
     generated: lax
     presets:
@@ -32,6 +31,10 @@ linters:
     rules:
       - path: (.+)\.go$
         text: declaration of "(err|ctx)" shadows declaration at
+      - linters:
+          - staticcheck
+        text: "ST1005: error strings should not be capitalized"
+        source: '(?:"Azure\b|`Azure\b|"Alibaba\b|`Alibaba\b)'
     paths:
       - third_party$
       - builtin$
