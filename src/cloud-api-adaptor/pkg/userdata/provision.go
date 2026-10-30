@@ -271,18 +271,18 @@ func processInitdata(cfg *Config) error {
 				return fmt.Errorf("failed to generate dummy initdata: %w", err)
 			}
 		} else {
-			return fmt.Errorf("Error stat initdata file: %w", err)
+			return fmt.Errorf("error stat initdata file: %w", err)
 		}
 	}
 
 	fileReader, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("Error read initdata file: %w", err)
+		return fmt.Errorf("error read initdata file: %w", err)
 	}
 
 	id, err := initdata.Parse(fileReader)
 	if err != nil {
-		return fmt.Errorf("Error parse initdata: %w", err)
+		return fmt.Errorf("error parse initdata: %w", err)
 	}
 
 	// initdata.toml will be consumed by attestation-agent
@@ -295,7 +295,7 @@ func processInitdata(cfg *Config) error {
 		path := filepath.Join(cfg.parentPath, key)
 		if isAllowed(path, cfg.initdataFiles) {
 			if err := writeFile(path, []byte(value)); err != nil {
-				return fmt.Errorf("Error write a file in initdata: %w", err)
+				return fmt.Errorf("error write a file in initdata: %w", err)
 			}
 		} else {
 			logger.Printf("File: %s is not allowed in initdata.\n", key)
