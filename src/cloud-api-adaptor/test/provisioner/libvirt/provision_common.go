@@ -160,11 +160,11 @@ func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config)
 	)
 
 	if _, err := l.conn.LookupNetworkByName(l.network); err != nil {
-		return fmt.Errorf("Network '%s' not found. It should be created beforehand", l.network)
+		return fmt.Errorf("network '%s' not found. It should be created beforehand", l.network)
 	}
 
 	if sPool, err = l.conn.LookupStoragePoolByName(l.storage); err != nil {
-		return fmt.Errorf("Storage pool '%s' not found. It should be created beforehand", l.storage)
+		return fmt.Errorf("storage pool '%s' not found. It should be created beforehand", l.storage)
 	}
 
 	// Create two volumes to test the multiple podvm image scenario.
@@ -308,7 +308,7 @@ func (l *LibvirtProvisioner) UploadPodvm(imagePath string, ctx context.Context, 
 func (l *LibvirtProvisioner) GetStoragePool() (*libvirt.StoragePool, error) {
 	sp, err := l.conn.LookupStoragePoolByName(l.storage)
 	if err != nil {
-		return nil, fmt.Errorf("Storage pool '%s' not found. It should be created beforehand", l.storage)
+		return nil, fmt.Errorf("storage pool '%s' not found. It should be created beforehand", l.storage)
 	}
 
 	return sp, nil

@@ -186,7 +186,7 @@ func InitIBMCloudProperties(properties map[string]string) error {
 			return errors.New("APIKEY is required for provisioning")
 		}
 		if len(IBMCloudProps.Region) <= 0 {
-			return errors.New("REGION was not set.")
+			return errors.New("REGION was not set")
 		}
 	}
 
@@ -215,13 +215,13 @@ func InitIBMCloudProperties(properties map[string]string) error {
 	podvmImage := os.Getenv("TEST_PODVM_IMAGE")
 	if len(podvmImage) > 0 {
 		if len(IBMCloudProps.CosAPIKey) <= 0 {
-			return errors.New("COS_APIKEY was not set.")
+			return errors.New("COS_APIKEY was not set")
 		}
 		if len(IBMCloudProps.CosInstanceID) <= 0 {
-			return errors.New("COS_INSTANCE_ID was not set.")
+			return errors.New("COS_INSTANCE_ID was not set")
 		}
 		if len(IBMCloudProps.Bucket) <= 0 {
-			return errors.New("COS_BUCKET was not set.")
+			return errors.New("COS_BUCKET was not set")
 		}
 		if len(IBMCloudProps.CosServiceURL) <= 0 {
 			return errors.New("COS_SERVICE_URL was not set, example: s3.us.cloud-object-storage.appdomain.cloud")

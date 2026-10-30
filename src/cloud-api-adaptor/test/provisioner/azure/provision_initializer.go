@@ -90,20 +90,20 @@ func initAzureProperties(properties map[string]string) error {
 	}
 
 	if AzureProps.SubscriptionID == "" {
-		return errors.New("AZURE_SUBSCRIPTION_ID was not set.")
+		return errors.New("AZURE_SUBSCRIPTION_ID was not set")
 	}
 
 	// TODO: Right now AZURE_CLIENT_ID can be used by the provisioner
 	// application and the same value is passed on to the CAA app inside the
 	// daemonset. Figure out a way to separate these two.
 	if AzureProps.ClientID == "" {
-		return errors.New("AZURE_CLIENT_ID was not set.")
+		return errors.New("AZURE_CLIENT_ID was not set")
 	}
 	if AzureProps.Location == "" {
-		return errors.New("LOCATION was not set.")
+		return errors.New("LOCATION was not set")
 	}
 	if AzureProps.ImageID == "" {
-		return errors.New("AZURE_IMAGE_ID was not set.")
+		return errors.New("AZURE_IMAGE_ID was not set")
 	}
 	if AzureProps.ClusterName == "" {
 		AzureProps.ClusterName = "e2e_test_cluster"

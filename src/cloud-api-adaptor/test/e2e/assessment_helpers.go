@@ -39,7 +39,7 @@ func reverseSlice(slice []string) []string {
 func timeExtractor(log string) (string, error) {
 	matchString := regexp.MustCompile(`\b(\d{2}):(\d{2}):(\d{2})\b`).FindStringSubmatch(log)
 	if len(matchString) != 4 {
-		return "", errors.New("Invalid Time Data")
+		return "", errors.New("invalid time data")
 	}
 	return matchString[0], nil
 }
@@ -107,10 +107,10 @@ func WatchImagePullTime(ctx context.Context, client klient.Client, caaPod *corev
 				}
 			}
 		} else {
-			return "", errors.New("Pod Failed to Log expected Output")
+			return "", errors.New("pod failed to log expected output")
 		}
 	} else {
-		return "", errors.New("Pod Failed to Start")
+		return "", errors.New("pod failed to start")
 	}
 
 	pullingtime = endTime.Sub(startTime).String()
@@ -163,7 +163,7 @@ func IsPulledWithNydusSnapshotter(ctx context.Context, t *testing.T, client klie
 			return true, nil
 		}
 	}
-	return false, fmt.Errorf("Didn't find pull image for snapshotter")
+	return false, fmt.Errorf("didn't find pull image for snapshotter")
 }
 
 func GetPodLog(ctx context.Context, client klient.Client, pod *corev1.Pod) (string, error) {
@@ -210,7 +210,7 @@ func ComparePodLogString(ctx context.Context, client klient.Client, customPod *c
 	}
 
 	if !strings.Contains(podLogString, expectedPodLogString) {
-		return podLogString, errors.New("Error: Pod Log doesn't contain Expected String")
+		return podLogString, errors.New("pod log doesn't contain expected string")
 	}
 
 	return podLogString, nil
@@ -340,7 +340,7 @@ func getPodvmName(ctx context.Context, client klient.Client, pod *corev1.Pod) (s
 			return strings.Join([]string{"podvm", pod.Name, id[:8]}, "-"), nil
 		}
 	}
-	return "", fmt.Errorf("Failed to get the podvm name from CAA logs after multiple retries")
+	return "", fmt.Errorf("failed to get the podvm name from CAA logs after multiple retries")
 }
 
 func VerifyNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Client, pod *corev1.Pod) error {
@@ -361,7 +361,7 @@ func VerifyNydusSnapshotter(ctx context.Context, t *testing.T, client klient.Cli
 		return fmt.Errorf("IsPulledWithNydusSnapshotter:  failed with %v", err)
 	}
 	if !usedNydusSnapshotter {
-		return fmt.Errorf("Expected to pull with nydus, but that didn't happen")
+		return fmt.Errorf("expected to pull with nydus, but that didn't happen")
 	}
 	return nil
 }
@@ -546,14 +546,14 @@ func AssessPodRequestAndLimit(ctx context.Context, client klient.Client, pod *co
 func findPod(ctx context.Context, client klient.Client, pod *corev1.Pod) (*corev1.Pod, error) {
 	var podList corev1.PodList
 	if err := client.Resources(pod.Namespace).List(ctx, &podList); err != nil {
-		return nil, fmt.Errorf("Failed to list pod, error : %s", err.Error())
+		return nil, fmt.Errorf("failed to list pod, error : %s", err.Error())
 	}
 	for _, podItem := range podList.Items {
 		if podItem.Name == pod.Name {
 			return &podItem, nil
 		}
 	}
-	return nil, fmt.Errorf("Pod not found with name %s in namespace %s", pod.Name, pod.Namespace)
+	return nil, fmt.Errorf("pod not found with name %s in namespace %s", pod.Name, pod.Namespace)
 }
 
 func AssessPodTestCommands(t *testing.T, ctx context.Context, client klient.Client, pod *corev1.Pod, testCommands []TestCommand) error {
@@ -579,19 +579,19 @@ func assessPodTestCommand(t *testing.T, ctx context.Context, client klient.Clien
 		if testCommand.TestErrorFn != nil {
 			if !testCommand.TestErrorFn(err) {
 				t.Logf("Output when execute test command : %s", err.Error())
-				return fmt.Errorf("Command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
+				return fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
 			}
 		} else {
 			t.Logf("Output when execute test command : %s", err.Error())
-			return fmt.Errorf("Command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
+			return fmt.Errorf("command %v running in container %s produced unexpected output on error: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, err.Error(), stderr.String())
 		}
 	} else if testCommand.TestErrorFn != nil {
-		return fmt.Errorf("We expected an error from Pod %s, but it was not found", pod.Name)
+		return fmt.Errorf("we expected an error from Pod %s, but it was not found", pod.Name)
 	}
 	if testCommand.TestCommandStderrFn != nil {
 		if !testCommand.TestCommandStderrFn(stderr) {
 			t.Logf("Output when execute test command : %s", stderr.String())
-			return fmt.Errorf("Command %v running in container %s produced unexpected output on stderr: %s, stdout: %s", testCommand.Command, testCommand.ContainerName, stderr.String(), stdout.String())
+			return fmt.Errorf("command %v running in container %s produced unexpected output on stderr: %s, stdout: %s", testCommand.Command, testCommand.ContainerName, stderr.String(), stdout.String())
 		} else {
 			t.Logf("Output when execute test command : %s", stderr.String())
 		}
@@ -599,7 +599,7 @@ func assessPodTestCommand(t *testing.T, ctx context.Context, client klient.Clien
 	if testCommand.TestCommandStdoutFn != nil {
 		if !testCommand.TestCommandStdoutFn(stdout) {
 			t.Logf("Output when execute test command : %s", stdout.String())
-			return fmt.Errorf("Command %v running in container %s produced unexpected output on stdout: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, stdout.String(), stderr.String())
+			return fmt.Errorf("command %v running in container %s produced unexpected output on stdout: %s, stderr: %s", testCommand.Command, testCommand.ContainerName, stdout.String(), stderr.String())
 		} else {
 			t.Logf("Output when execute test command : %s", stdout.String())
 		}

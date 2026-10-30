@@ -116,7 +116,7 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 		for provisioner := range NewProvisionerFunctions {
 			log.Info(provisioner)
 		}
-		return nil, fmt.Errorf("Not implemented provisioner for %s\n", provider)
+		return nil, fmt.Errorf("not implemented provisioner for %s", provider)
 	}
 
 	return newProvisioner(properties)
@@ -126,7 +126,7 @@ func GetCloudProvisioner(provider string, propertiesFile string) (CloudProvision
 func GetInstallChart(provider string, installDir string) (InstallChart, error) {
 	chartFunc, ok := NewInstallChartFunctions[provider]
 	if !ok {
-		return nil, fmt.Errorf("Not implemented install chart for %s\n", provider)
+		return nil, fmt.Errorf("not implemented install chart for %s", provider)
 	}
 
 	return chartFunc(installDir, provider)

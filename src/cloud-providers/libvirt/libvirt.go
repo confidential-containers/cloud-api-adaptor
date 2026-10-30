@@ -525,14 +525,14 @@ func getDomainIPs(dom *libvirt.Domain) ([]netip.Addr, error) {
 	domIfList, err := dom.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 	if err != nil {
 		domName, _ := dom.GetName()
-		return nil, fmt.Errorf("Failed to get domain %s interfaces: %s", domName, err)
+		return nil, fmt.Errorf("failed to get domain %s interfaces: %s", domName, err)
 	}
 
 	for _, domIf := range domIfList {
 		for _, addr := range domIf.Addrs {
 			parsedAddr, err := netip.ParseAddr(addr.Addr)
 			if err != nil {
-				return nil, fmt.Errorf("Failed to parse address: %s", err)
+				return nil, fmt.Errorf("failed to parse address: %s", err)
 			}
 			ips = append(ips, parsedAddr)
 		}
@@ -615,7 +615,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	rootVolName := v.name + "-root.qcow2"
 	err = createVolume(ctx, rootVolName, v.rootDiskSize, v.volName, libvirtClient)
 	if err != nil {
-		return nil, fmt.Errorf("Error in creating volume: %s", err)
+		return nil, fmt.Errorf("error in creating volume: %s", err)
 	}
 	domainOwnsVolumes := false
 	defer func() {
@@ -634,7 +634,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	isoVolName := v.name + "-cloudinit.iso"
 	isoVolFile, err := uploadIso(ctx, cloudInitIso, isoVolName, libvirtClient)
 	if err != nil {
-		return nil, fmt.Errorf("Error in uploading iso volume: %s", err)
+		return nil, fmt.Errorf("error in uploading iso volume: %s", err)
 	}
 	defer func() {
 		if !domainOwnsVolumes {
@@ -646,7 +646,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 
 	rootVol, err := getVolume(libvirtClient, rootVolName)
 	if err != nil {
-		return nil, fmt.Errorf("Error retrieving volume: %s", err)
+		return nil, fmt.Errorf("error retrieving volume: %s", err)
 	}
 
 	rootVolFile, err := rootVol.GetPath()
@@ -655,7 +655,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 		logger.Printf("Warning: failed to free root volume handle: %v", freeErr)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("Error retrieving volume path: %s", err)
+		return nil, fmt.Errorf("error retrieving volume path: %s", err)
 	}
 
 	domainCfg := domainConfig{
@@ -675,13 +675,13 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	logger.Printf("Create XML for '%s'", v.name)
 	domXML, err := domCfg.Marshal()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create domain xml: %s", err)
+		return nil, fmt.Errorf("failed to create domain xml: %s", err)
 	}
 
 	logger.Printf("Creating VM '%s'", v.name)
 	dom, err := libvirtClient.connection.DomainDefineXML(domXML)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to define domain: %s", err)
+		return nil, fmt.Errorf("failed to define domain: %s", err)
 	}
 	defer func() {
 		if freeErr := dom.Free(); freeErr != nil {
@@ -693,7 +693,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	// if the domain starts but immediately crashes (e.g. corrupt backing image).
 	uuid, err := dom.GetUUIDString()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get domain UUID: %s", err)
+		return nil, fmt.Errorf("failed to get domain UUID: %s", err)
 	}
 	v.instanceID = uuid
 	logger.Printf("VM defined: name=%s, uuid=%s", v.name, uuid)
@@ -702,7 +702,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	logger.Printf("Starting VM '%s'", v.name)
 	if err = dom.Create(); err != nil {
 		domainOwnsVolumes = true
-		return &createDomainOutput{instance: v}, fmt.Errorf("Failed to start VM: %s", err)
+		return &createDomainOutput{instance: v}, fmt.Errorf("failed to start VM: %s", err)
 	}
 
 	logger.Printf("VM started: name=%s, uuid=%s", v.name, uuid)

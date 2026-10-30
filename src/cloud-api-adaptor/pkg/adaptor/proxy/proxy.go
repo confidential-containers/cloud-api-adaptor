@@ -80,7 +80,7 @@ func (p *agentProxy) dial(ctx context.Context, address string) (net.Conn, error)
 		// Create a TLS configuration object
 		config, err := tlsutil.GetTLSConfigFor(p.tlsConfig)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to create tls config: %v", err)
+			return nil, fmt.Errorf("failed to create tls config: %v", err)
 		}
 		// This is important otherwise you'll hit the following error
 		// cannot validate certificate for <IP> because it doesn't contain any IP SAN

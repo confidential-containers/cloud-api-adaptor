@@ -91,7 +91,7 @@ func (c IBMCloudAssert) GetInstanceType(t *testing.T, podName string) (string, e
 			return *profile, nil
 		}
 	}
-	return "", errors.New("Failed to Create PodVM Instance")
+	return "", errors.New("failed to create PodVM instance")
 }
 
 type IBMRollingUpdateAssert struct {

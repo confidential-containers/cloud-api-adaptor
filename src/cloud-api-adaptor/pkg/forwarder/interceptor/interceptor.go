@@ -265,7 +265,7 @@ func waitForDeviceMounted(ctx context.Context, path string) error {
 				logger.Printf("Device has been mounted to %s", path)
 				return nil
 			} else {
-				err = fmt.Errorf("Device has not been mounted to %s", path)
+				err = fmt.Errorf("device has not been mounted to %s", path)
 				logger.Print(err)
 				return err
 			}
@@ -276,7 +276,7 @@ func waitForDeviceMounted(ctx context.Context, path string) error {
 	)
 
 	if err != nil {
-		err = fmt.Errorf("Timeout waiting for device to mount to %s: %w", path, err)
+		err = fmt.Errorf("timeout waiting for device to mount to %s: %w", path, err)
 		logger.Print(err)
 		return err
 	}
@@ -471,7 +471,7 @@ func findAzureDataDisk(lunIdx int) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("Azure data disk LUN %d not found", lunIdx)
+	return "", fmt.Errorf("azure data disk LUN %d not found", lunIdx)
 }
 
 func findAWSDataDisk(lunIdx int, diskID string) (string, error) {

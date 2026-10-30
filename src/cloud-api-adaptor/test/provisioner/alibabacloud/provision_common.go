@@ -95,7 +95,7 @@ type AlibabaCloudInstallChart struct {
 func NewAlibabaCloudProvisioner(properties map[string]string) (pv.CloudProvisioner, error) {
 	accessKeyID, accessKeySecret, securityToken := credentialsFromEnv()
 	if accessKeyID == "" || accessKeySecret == "" {
-		return nil, fmt.Errorf("Alibaba Cloud credentials not found in environment (ALIBABACLOUD_ACCESS_KEY_ID/SECRET or ALIBABA_CLOUD_ACCESS_KEY_ID/SECRET)")
+		return nil, fmt.Errorf("alibaba cloud credentials not found in environment (ALIBABACLOUD_ACCESS_KEY_ID/SECRET or ALIBABA_CLOUD_ACCESS_KEY_ID/SECRET)")
 	}
 
 	region := properties["region"]
