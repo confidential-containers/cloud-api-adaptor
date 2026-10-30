@@ -150,7 +150,7 @@ func createVPC() error {
 		log.Infof("Created VPC with ID %s in ResourceGroupID %s.", IBMCloudProps.VpcID, IBMCloudProps.ResourceGroupID)
 
 		if len(IBMCloudProps.VpcID) <= 0 {
-			return errors.New("VpcID is empty, unknown error happened when create VPC.")
+			return errors.New("VpcID is empty, unknown error happened when create VPC")
 		}
 	}
 
@@ -260,7 +260,7 @@ func createSubnet() error {
 	} else {
 		cidrBlock := getCidrBlock(IBMCloudProps.Region, IBMCloudProps.Zone)
 		if cidrBlock == "" {
-			return errors.New("Can not calculate cidrBlock from Region and Zone.")
+			return errors.New("cannot calculate cidrBlock from Region and Zone")
 		}
 		options := &vpcv1.CreateSubnetOptions{}
 		options.SetSubnetPrototype(&vpcv1.SubnetPrototype{
@@ -286,7 +286,7 @@ func createSubnet() error {
 	}
 
 	if len(IBMCloudProps.SubnetID) <= 0 {
-		return errors.New("SubnetID is empty, unknown error happened when create Subnet.")
+		return errors.New("SubnetID is empty, unknown error happened when create Subnet")
 	}
 
 	gateway, _ := getSubnetPublicGateway(IBMCloudProps.SubnetID)
@@ -301,7 +301,7 @@ func createSubnet() error {
 	}
 
 	if len(IBMCloudProps.PublicGatewayID) <= 0 {
-		return errors.New("PublicGatewayID is empty, unknown error happened when create PublicGateway in Subnet.")
+		return errors.New("PublicGatewayID is empty, unknown error happened when create PublicGateway in Subnet")
 	}
 
 	return nil
@@ -481,7 +481,7 @@ func deleteSSHKey() error {
 		log.Infof("Waited %d minutes...", i)
 		time.Sleep(60 * time.Second)
 	}
-	return errors.New("Failed to Delete SSH Key")
+	return errors.New("failed to delete SSH key")
 }
 
 func isClusterReady(clrName string) (bool, error) {
@@ -687,7 +687,7 @@ func (p *IBMCloudProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Co
 	}
 
 	if !clusterReady {
-		return fmt.Errorf("Cluster %s was created but not ready in %d minutes.", IBMCloudProps.ClusterName, waitMinutes)
+		return fmt.Errorf("cluster %s was created but not ready in %d minutes", IBMCloudProps.ClusterName, waitMinutes)
 	}
 
 	home, _ := os.UserHomeDir()
@@ -745,7 +745,7 @@ func (p *IBMCloudProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Co
 	}
 
 	if !clusterRemoved {
-		return fmt.Errorf("Cluster %s was not removed completely in %d minutes.", IBMCloudProps.ClusterName, waitMinutes)
+		return fmt.Errorf("cluster %s was not removed completely in %d minutes", IBMCloudProps.ClusterName, waitMinutes)
 	}
 	return nil
 }
