@@ -212,7 +212,7 @@ func (p *gcpProvider) getImageSizeGB(ctx context.Context, image string) (int64, 
 
 	img, err := client.Get(ctx, req)
 	if err != nil {
-		return 0, fmt.Errorf("Failed to get image for %s: %w", image, err)
+		return 0, fmt.Errorf("failed to get image for %s: %w", image, err)
 	}
 
 	return img.GetDiskSizeGb(), nil
@@ -276,7 +276,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 	// Otherwise, abort the instance creation
 	allTags, err := p.ListAllTags(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Aborting: Failed to list tags: %w", err)
+		return nil, fmt.Errorf("aborting: failed to list tags: %w", err)
 	}
 
 	allTagValues := make([]*resourcemanagerpb.TagValue, 0)
@@ -317,7 +317,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	imageSizeGB, err := p.getImageSizeGB(ctx, *srcImage)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get image size: %w", err)
+		return nil, fmt.Errorf("failed to get image size: %w", err)
 	}
 
 	// If user provided RootVolumeSize, use the larger of the two
@@ -405,7 +405,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 	if !p.serviceConfig.DisableCVM {
 		if p.serviceConfig.ConfidentialType == "" {
-			return nil, fmt.Errorf("ConfidentialType must be set when using Confidential VM.")
+			return nil, fmt.Errorf("ConfidentialType must be set when using Confidential VM")
 		}
 
 		instanceResource.ConfidentialInstanceConfig = &computepb.ConfidentialInstanceConfig{
@@ -494,7 +494,7 @@ func (p *gcpProvider) CreateInstance(ctx context.Context, podName, sandboxID str
 
 		_, err = op.Wait(ctx)
 		if err != nil {
-			return instance, fmt.Errorf("Long-running operation for tag binding %s failed: %v", tagValue, err)
+			return instance, fmt.Errorf("long-running operation for tag binding %s failed: %v", tagValue, err)
 		}
 
 		logger.Printf("Created tag binding for %s on %s successfully", tagValue, parent)
