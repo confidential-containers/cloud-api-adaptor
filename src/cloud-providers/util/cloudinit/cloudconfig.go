@@ -82,13 +82,13 @@ func splitLines(text string) []string {
 func (config *CloudConfig) Generate() (string, error) {
 	tpl, err := template.New("base").Funcs(templateFuncMap).Parse(cloudInitText)
 	if err != nil {
-		return "", fmt.Errorf("Error initializing a template for cloudinit userdata: %w", err)
+		return "", fmt.Errorf("error initializing a template for cloudinit userdata: %w", err)
 	}
 
 	var buf bytes.Buffer
 
 	if err := tpl.Execute(&buf, config); err != nil {
-		return "", fmt.Errorf("Error executing a template for cloudinit userdata: %w", err)
+		return "", fmt.Errorf("error executing a template for cloudinit userdata: %w", err)
 	}
 
 	return buf.String(), nil
