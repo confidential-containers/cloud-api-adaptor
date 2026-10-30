@@ -153,7 +153,7 @@ func (p *ibmcloudPowerVSProvider) CreateInstance(ctx context.Context, podName, s
 				return nil
 			}
 
-			return fmt.Errorf("Instance: %s failed to reach ACTIVE state", instanceID)
+			return fmt.Errorf("instance: %s failed to reach ACTIVE state", instanceID)
 		},
 		retry.Context(getctx),
 		retry.Attempts(0),
