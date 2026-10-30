@@ -1156,11 +1156,12 @@ func TestFindLibvirtDataDisk(t *testing.T) {
 		assert.Contains(t, err.Error(), "out of range")
 	})
 
-	t.Run("returns error when device does not exist", func(t *testing.T) {
-		// Unless /dev/vdb exists, this should fail
+	t.Run("resolves by-id symlink when present", func(t *testing.T) {
+		// On a real guest with serial-tagged disks, /dev/disk/by-id/virtio-caa-csi-0
+		// would be a symlink. On this test machine it won't exist.
 		_, err := findLibvirtDataDisk(0)
 		if err != nil {
-			assert.Contains(t, err.Error(), "not found")
+			assert.Contains(t, err.Error(), "virtio-caa-csi-0")
 		}
 	})
 }
