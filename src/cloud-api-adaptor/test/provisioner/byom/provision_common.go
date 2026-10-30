@@ -471,7 +471,7 @@ func (b *ByomProvisioner) destroyContainer(containerName string) error {
 	}
 
 	if err := exec.Command("docker", "rm", "-f", containerName).Run(); err != nil {
-		return fmt.Errorf("Failed to remove container %s: %v", containerName, err)
+		return fmt.Errorf("failed to remove container %s: %v", containerName, err)
 	}
 
 	log.Infof("Container %s destroyed successfully", containerName)
