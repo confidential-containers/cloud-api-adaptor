@@ -361,7 +361,7 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 
 	vm, err := p.create(ctx, vmParameters)
 	if err != nil {
-		return nil, fmt.Errorf("Creating instance (%v): %s", vm, err)
+		return nil, fmt.Errorf("creating instance (%v): %s", vm, err)
 	}
 
 	vmID := *vm.ID
