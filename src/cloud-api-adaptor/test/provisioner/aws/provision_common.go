@@ -557,7 +557,7 @@ func (v *Vpc) setupVpcNetworking() error {
 	)
 
 	if v.SubnetID == "" {
-		return fmt.Errorf("Missing subnet Id to setup the VPC %s network\n", v.ID)
+		return fmt.Errorf("missing subnet Id to setup the VPC %s network", v.ID)
 	}
 
 	if igwOutput, err = v.Client.CreateInternetGateway(context.TODO(),
@@ -1073,7 +1073,7 @@ func (i *AMIImage) importEBSSnapshot(bucket *S3Bucket) error {
 func (i *AMIImage) registerImage(imageName string) error {
 
 	if i.EBSSnapshotID == "" {
-		return fmt.Errorf("EBS Snapshot ID not found\n")
+		return fmt.Errorf("EBS Snapshot ID not found")
 	}
 
 	result, err := i.Client.RegisterImage(context.TODO(), &ec2.RegisterImageInput{
@@ -1637,7 +1637,7 @@ func (o *OnPremCluster) DeleteCluster() error {
 func (o *OnPremCluster) GetKubeconfigFile() (string, error) {
 	kubeconfigPath := kconf.ResolveKubeConfigFile()
 	if kubeconfigPath == "" {
-		return "", fmt.Errorf("Unabled to find a kubeconfig file")
+		return "", fmt.Errorf("unable to find a kubeconfig file")
 	}
 
 	return kubeconfigPath, nil
