@@ -186,7 +186,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect; indirect// indirect
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
 	libvirt.org/go/libvirt v1.12007.0 // indirect
-	libvirt.org/go/libvirtxml v1.12007.0 // indirect
+	libvirt.org/go/libvirtxml v1.12008.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )

@@ -670,8 +670,8 @@ k8s.io/utils v0.0.0-20260626114624-be93311217bd h1:Ea7fgQ5we8Y9T0OX5o0dAHzQOBRI0
 k8s.io/utils v0.0.0-20260626114624-be93311217bd/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
 libvirt.org/go/libvirt v1.12007.0 h1:y8QrAZQXac5lfOXj3NRwT18uT81bILtSvIZL92EQ/hs=
 libvirt.org/go/libvirt v1.12007.0/go.mod h1:1WiFE8EjZfq+FCVog+rvr1yatKbKZ9FaFMZgEqxEJqQ=
-libvirt.org/go/libvirtxml v1.12007.0 h1:gdomG2dDDsPSydxjela/I87YHdGsnkHXPLOAQ6iCQBQ=
-libvirt.org/go/libvirtxml v1.12007.0/go.mod h1:7Oq2BLDstLr/XtoQD8Fr3mfDNrzlI3utYKySXF2xkng=
+libvirt.org/go/libvirtxml v1.12008.0 h1:lxE2sL6vTrEeox76TWwAO3XCelA7QxptNf2hpPO+Ubw=
+libvirt.org/go/libvirtxml v1.12008.0/go.mod h1:7Oq2BLDstLr/XtoQD8Fr3mfDNrzlI3utYKySXF2xkng=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.36.0 h1:/YpDJ4vReG7ZmzSpBGxduXgywWkJU9zHubgJG03MT+Y=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.36.0/go.mod h1:tJo1aepTXyR+8Xs3sUsGBDk4Ub2AM5dPAPKJx0mpm5c=
 sigs.k8s.io/controller-runtime v0.25.2 h1:bEkK3PVOIVK9X8QWLGVhJgmFc++47vfT6wakSzAOLsQ=
