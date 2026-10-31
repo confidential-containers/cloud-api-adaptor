@@ -3,8 +3,8 @@ module github.com/confidential-containers/cloud-api-adaptor/src/cloud-providers
 go 1.26.10
 
 require (
-	cloud.google.com/go/compute v1.71.0
-	cloud.google.com/go/resourcemanager v1.17.0
+	cloud.google.com/go/compute v1.74.0
+	cloud.google.com/go/resourcemanager v1.18.0
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.3
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.15.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1
@@ -80,7 +80,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/auth v0.24.0
+	cloud.google.com/go/auth v0.24.1
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.12.0 // indirect
