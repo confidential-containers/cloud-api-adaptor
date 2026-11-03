@@ -132,6 +132,7 @@ func (n *podNode) Setup() error {
 			Device:      route.Dev,
 			Protocol:    route.Protocol,
 			Scope:       route.Scope,
+			Onlink:      route.Onlink,
 		}
 		if err := podNS.RouteAdd(&nRoute); err != nil {
 			return fmt.Errorf("failed to add a route to %s via %s on pod network namespace %s: %w", route.Dst, route.GW, podNS.Path(), err)

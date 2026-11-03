@@ -286,6 +286,7 @@ func (n *workerNode) Inspect(nsPath string) (*tunneler.Config, error) {
 			GW:       route.Gateway,
 			Protocol: route.Protocol,
 			Scope:    route.Scope,
+			Onlink:   route.Onlink,
 		}
 		config.Routes = append(config.Routes, r)
 	}

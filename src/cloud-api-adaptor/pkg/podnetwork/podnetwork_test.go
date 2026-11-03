@@ -4,6 +4,7 @@
 package podnetwork
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/netip"
 	"os"
@@ -73,7 +74,12 @@ func TestWorkerNode(t *testing.T) {
 
 	tuntest.BridgeAdd(t, workerPodNS, "eth0")
 	tuntest.AddrAdd(t, workerPodNS, "eth0", "172.16.0.2/24")
-	tuntest.RouteAdd(t, workerPodNS, "", "172.16.0.1", "eth0")
+	require.NoError(t, workerPodNS.RouteAdd(&netops.Route{
+		Destination: netip.MustParsePrefix("0.0.0.0/0"),
+		Gateway:     netip.MustParseAddr("172.16.0.1"),
+		Device:      "eth0",
+		Onlink:      true,
+	}))
 
 	for hostInterface, expected := range map[string]struct {
 		podNodeIP    string
@@ -98,6 +104,13 @@ func TestWorkerNode(t *testing.T) {
 			config, err := workerNode.Inspect(workerPodNS.Path())
 			require.Nil(t, err, "hostInterface=%q", hostInterface)
 
+			// Route flags must survive the worker-to-guest JSON transport.
+			data, err := json.Marshal(config)
+			require.NoError(t, err)
+			var received tunneler.Config
+			require.NoError(t, json.Unmarshal(data, &received))
+			config = &received
+
 			err = workerNode.Setup(workerPodNS.Path(), []netip.Addr{netip.MustParseAddr("192.168.0.3"), netip.MustParseAddr("192.168.0.3")}, config)
 			require.Nil(t, err, "hostInterface=%q", hostInterface)
 
@@ -113,9 +126,11 @@ func TestWorkerNode(t *testing.T) {
 			require.Equal(t, dstRoute, "0.0.0.0/0", "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[0].GW.String(), "172.16.0.1", "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[0].Dev, "eth0", "hostInterface=%q", hostInterface)
+			require.True(t, config.Routes[0].Onlink, "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[1].Dst.String(), "172.16.0.0/24", "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[1].GW.IsValid(), false, "hostInterface=%q", hostInterface)
 			require.Equal(t, config.Routes[1].Dev, "eth0", "hostInterface=%q", hostInterface)
+			require.False(t, config.Routes[1].Onlink, "hostInterface=%q", hostInterface)
 
 			err = workerNode.Teardown(workerPodNS.Path(), config)
 			require.Nil(t, err, "hostInterface=%q", hostInterface)
@@ -179,6 +194,13 @@ func TestPodNode(t *testing.T) {
 							Dst: netip.MustParsePrefix("172.16.0.0/24"),
 							Dev: "eth0",
 						},
+						{
+							// This gateway is outside the interface's connected subnet.
+							Dst:    netip.MustParsePrefix("10.0.0.0/24"),
+							GW:     netip.MustParseAddr("169.254.1.1"),
+							Dev:    "eth0",
+							Onlink: true,
+						},
 					},
 					InterfaceName: "eth0",
 					MTU:           1500,
@@ -192,6 +214,11 @@ func TestPodNode(t *testing.T) {
 
 				err := podNode.Setup()
 				require.Nil(t, err, "hostInterface=%q", hostInterface)
+
+				routes, err := podNS.RouteList(&netops.Route{Destination: netip.MustParsePrefix("10.0.0.0/24")})
+				require.NoError(t, err)
+				require.Len(t, routes, 1)
+				require.True(t, routes[0].Onlink)
 
 				err = podNode.Teardown()
 				require.Nil(t, err, "hostInterface=%q", hostInterface)
