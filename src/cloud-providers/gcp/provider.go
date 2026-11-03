@@ -96,16 +96,28 @@ func NewProvider(config *Config) (provider.Provider, error) {
 // gcpCredType reads the "type" field of a GCP credentials JSON and returns the
 // matching credentials.CredType. Only "service_account" (a static key) and
 // "external_account" (Workload Identity Federation) are supported; any other
-// type is rejected rather than handed to the auth library.
+// type is rejected rather than handed to the auth library. external_account
+// must use a file credential source; url and executable sources are rejected.
 func gcpCredType(credsJSON string) (credentials.CredType, error) {
 	var header struct {
-		Type string `json:"type"`
+		Type             string `json:"type"`
+		CredentialSource struct {
+			File       string          `json:"file"`
+			URL        string          `json:"url"`
+			Executable json.RawMessage `json:"executable"`
+		} `json:"credential_source"`
 	}
 	if err := json.Unmarshal([]byte(credsJSON), &header); err != nil {
 		return "", fmt.Errorf("parsing GCP credentials JSON: %w", err)
 	}
 	switch t := credentials.CredType(header.Type); t {
-	case credentials.ServiceAccount, credentials.ExternalAccount:
+	case credentials.ServiceAccount:
+		return t, nil
+	case credentials.ExternalAccount:
+		src := header.CredentialSource
+		if src.File == "" || src.URL != "" || src.Executable != nil {
+			return "", fmt.Errorf("external_account credentials must use a file credential_source")
+		}
 		return t, nil
 	default:
 		return "", fmt.Errorf("unsupported GCP credential type %q: only service_account and external_account are supported", header.Type)

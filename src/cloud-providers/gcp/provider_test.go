@@ -27,6 +27,21 @@ func TestGcpCredType(t *testing.T) {
 			want:  credentials.ExternalAccount,
 		},
 		{
+			name:    "external_account without file source is rejected",
+			creds:   `{"type":"external_account"}`,
+			wantErr: true,
+		},
+		{
+			name:    "external_account with url source is rejected",
+			creds:   `{"type":"external_account","credential_source":{"url":"http://example.com/token"}}`,
+			wantErr: true,
+		},
+		{
+			name:    "external_account with executable source is rejected",
+			creds:   `{"type":"external_account","credential_source":{"executable":{"command":"id"}}}`,
+			wantErr: true,
+		},
+		{
 			name:    "unsupported type is rejected",
 			creds:   `{"type":"impersonated_service_account"}`,
 			wantErr: true,
