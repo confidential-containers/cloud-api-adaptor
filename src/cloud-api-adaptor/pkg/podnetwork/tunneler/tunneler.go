@@ -37,6 +37,7 @@ type Route struct {
 	Dev      string               `json:"dev,omitempty"`
 	Protocol netops.RouteProtocol `json:"protocol,omitempty"`
 	Scope    netops.RouteScope    `json:"scope,omitempty"`
+	Onlink   bool                 `json:"onlink,omitempty"`
 }
 
 type Neighbor struct {
