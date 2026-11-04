@@ -26,7 +26,7 @@ import (
 )
 
 var logger = log.New(log.Writer(), "[adaptor/cloud/gcp] ", log.LstdFlags|log.Lmsgprefix)
-var computeScope = "https://www.googleapis.com/auth/compute"
+var cloudPlatformScope = "https://www.googleapis.com/auth/cloud-platform"
 
 const maxInstanceNameLen = 63
 
@@ -70,7 +70,7 @@ func NewProvider(config *Config) (provider.Provider, error) {
 			return nil, err
 		}
 		creds, err := credentials.NewCredentialsFromJSON(credType, []byte(gcpCredentials), &credentials.DetectOptions{
-			Scopes: []string{computeScope},
+			Scopes: []string{cloudPlatformScope},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("configuration error when using creds: %s", err)
@@ -177,13 +177,13 @@ func getIPs(intfcs []*computepb.NetworkInterface, usePublicIPs bool) ([]netip.Ad
 }
 
 func (p *gcpProvider) ListAllTags(ctx context.Context) (map[string]map[string]*resourcemanagerpb.TagValue, error) {
-	tagKeysClient, err := crm.NewTagKeysClient(ctx)
+	tagKeysClient, err := crm.NewTagKeysClient(ctx, p.authOptions()...)
 	if err != nil {
 		return nil, err
 	}
 	defer tagKeysClient.Close()
 
-	tagValuesClient, err := crm.NewTagValuesClient(ctx)
+	tagValuesClient, err := crm.NewTagValuesClient(ctx, p.authOptions()...)
 	if err != nil {
 		return nil, err
 	}
