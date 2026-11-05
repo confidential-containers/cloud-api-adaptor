@@ -214,6 +214,7 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 	}
 
 	volumeTargetPath := req.OCI.Annotations[volumeTargetPathKey]
+	delete(req.OCI.Annotations, volumeTargetPathKey)
 	volumeTargetPathSlice := strings.Split(volumeTargetPath, ",")
 	if len(req.OCI.Mounts) > 0 {
 		for _, m := range req.OCI.Mounts {

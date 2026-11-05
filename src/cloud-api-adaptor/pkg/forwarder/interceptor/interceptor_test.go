@@ -165,6 +165,7 @@ func TestInterceptorCreateContainer(t *testing.T) {
 		req := &pb.CreateContainerRequest{
 			ContainerId: "test-container",
 			OCI: &pb.Spec{
+				Annotations: map[string]string{volumeTargetPathKey: "/run/guest-volume"},
 				Linux: &pb.Linux{
 					Namespaces: []*pb.LinuxNamespace{},
 				},
@@ -176,6 +177,7 @@ func TestInterceptorCreateContainer(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, mock.CreateContainerCalled)
+		assert.NotContains(t, req.OCI.Annotations, volumeTargetPathKey)
 
 		// Verify network namespace was added
 		found := false
