@@ -7,9 +7,9 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.15.0
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20230120122421-afb48116b8f1
 	github.com/IBM-Cloud/power-go-client v1.17.0
-	github.com/IBM/go-sdk-core/v5 v5.24.0
-	github.com/IBM/platform-services-go-sdk v0.103.4 // indirect
-	github.com/IBM/vpc-go-sdk v0.92.0
+	github.com/IBM/go-sdk-core/v5 v5.25.2
+	github.com/IBM/platform-services-go-sdk v0.103.5 // indirect
+	github.com/IBM/vpc-go-sdk v0.93.0
 	github.com/aws/aws-sdk-go-v2 v1.47.1
 	github.com/aws/aws-sdk-go-v2/config v1.33.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.6 // indirect
@@ -41,7 +41,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
 	github.com/Azure/go-autorest/autorest v0.11.30
 	github.com/BurntSushi/toml v1.6.0
-	github.com/IBM/ibm-cos-sdk-go v1.15.1
+	github.com/IBM/ibm-cos-sdk-go v1.15.2
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
@@ -156,7 +156,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.16 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -167,7 +167,7 @@ require (
 	github.com/go-openapi/loads v0.22.0 // indirect
 	github.com/go-openapi/runtime v0.28.0 // indirect
 	github.com/go-openapi/spec v0.21.0 // indirect
-	github.com/go-openapi/strfmt v0.27.2 // indirect
+	github.com/go-openapi/strfmt v0.27.4 // indirect
 	github.com/go-openapi/swag v0.27.1 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
 	github.com/go-playground/locales v0.14.2 // indirect
