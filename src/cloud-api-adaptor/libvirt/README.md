@@ -69,7 +69,7 @@ peer-pods-worker-0   Ready    worker                 2m47s   v1.30.0
 
 # Prepare the Pod VM volume
 
-In order to build the Pod VM without installing the build tools, you can use the Dockerfiles hosted on [../podvm](../podvm) directory to run the entire process inside a container. Refer to [podvm/README.md](../podvm/README.md) for further details. Alternatively you can consume pre-built podvm images as explained [here](../docs/consuming-prebuilt-podvm-images.md).
+In order to build the Pod VM without installing the build tools, you can use the Dockerfiles hosted on [../../podvm](../../podvm) directory to run the entire process inside a container. Refer to [podvm/README.md](../../podvm/README.md) for further details. Alternatively you can consume pre-built podvm images as explained [here](../docs/consuming-prebuilt-podvm-images.md).
 
 Next you will need to create a volume on libvirt's system storage and upload the image content. That volume is used by
 the cloud-api-adaptor program to instantiate a new Pod VM. Run the following commands:
@@ -222,7 +222,7 @@ $ virsh -c qemu:///system list
 Now when you're all set you can run the CAA e2e [tests/e2e/README.md](../test/e2e/README.md) by running ``make test-e2e``. You might want to modify some of the env variables, for example:
 
 ```
-make TEST_PROVISION=no TEST_TEARDOWN=no TEST_PODVM_IMAGE=$PWD/podvm/podvm.qcow2 CLOUD_PROVIDER=libvirt TEST_E2E_TIMEOUT=40m TEST_PROVISION_FILE=$PWD/libvirt.properties test-e2e
+make TEST_PROVISION=no TEST_TEARDOWN=no TEST_PODVM_IMAGE=$PWD/../podvm/podvm.qcow2 CLOUD_PROVIDER=libvirt TEST_E2E_TIMEOUT=40m TEST_PROVISION_FILE=$PWD/libvirt.properties test-e2e
 ```
 
 * ``TEST_PROVISION`` - whether to perform the setup steps (we just did thated for it)

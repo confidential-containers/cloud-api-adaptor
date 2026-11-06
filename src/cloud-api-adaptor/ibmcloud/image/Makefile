@@ -4,7 +4,7 @@
 #
 
 ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../
-include $(ROOT_DIR)podvm/Makefile.inc
+include $(ROOT_DIR)../podvm/Makefile.inc
 
 .PHONY: build push verify ubuntu clean
 

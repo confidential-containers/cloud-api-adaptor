@@ -15,6 +15,6 @@ The following makefile option is available when building CAA pod VM images:
 For example, to build the pod VM image with the default policy set to `disallow-all-except-setpolicy.rego`:
 
 ```
-cd podvm
+cd ../podvm
 DEFAULT_AGENT_POLICY_FILE=disallow-all-except-setpolicy.rego make image
 ```
