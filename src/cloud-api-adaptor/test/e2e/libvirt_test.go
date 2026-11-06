@@ -166,9 +166,9 @@ func TestLibvirtSealedSecret(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
 	}
-	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	kbsEndpoint, err := getKbsEndpoint(t)
 	if err != nil {
-		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+		t.Fatalf("getting KBS endpoint: %v", err)
 	}
 	assert := getLibvirtAssert(t)
 	DoTestSealedSecret(t, testEnv, assert, kbsEndpoint, testSecret)
@@ -189,9 +189,9 @@ func TestLibvirtKbsKeyRelease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EnableKbsCustomizedResourcePolicy failed with: %v", err)
 	}
-	kbsEndpoint, err := keyBrokerService.GetCachedKbsEndpoint()
+	kbsEndpoint, err := getKbsEndpoint(t)
 	if err != nil {
-		t.Fatalf("GetCachedKbsEndpoint failed with: %v", err)
+		t.Fatalf("getting KBS endpoint: %v", err)
 	}
 	assert := getLibvirtAssert(t)
 	t.Parallel()

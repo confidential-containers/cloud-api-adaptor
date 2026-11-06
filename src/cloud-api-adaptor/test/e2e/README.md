@@ -86,6 +86,37 @@ To deploy the KBS service and test attestation related cases, export the followi
 export DEPLOY_KBS=yes
 ```
 
+### Selecting a KBS backend
+
+`KBS_MANAGEMENT` selects which implementation of the `KbsManager` interface the
+tests use to drive the KBS. It defaults to `kbs-client`: the Trustee that the
+test framework deploys itself (gated on `DEPLOY_KBS`, as above) and drives
+through the kbs-client admin API.
+
+Any other backend is expected to talk to a KBS that is already running by the
+time the tests start, so it is set up whenever the KBS tests are enabled,
+independently of `DEPLOY_KBS`.
+
+`KBS_MANAGEMENT` only says *how* a KBS is managed, never *whether* the KBS
+tests run — that remains `TEST_KBS` (which `DEPLOY_KBS` implies). Selecting a
+backend without enabling `TEST_KBS` leaves the test selection untouched.
+
+Setting `KBS_MANAGEMENT` to a name that is not registered fails immediately,
+listing the backends that are.
+
+Backends register themselves from `init()`, so an out-of-tree implementation
+only needs its package linked into the test binary. Add a package under
+`test/provisioner/` that implements `provisioner.KbsManager` and registers it:
+
+```go
+func init() {
+	pv.NewKbsManagerFunctions["my-backend"] = NewMyKbsManager
+}
+```
+
+then blank-import that package from the `e2e` package so its `init()` runs. The
+backend is now selectable with `KBS_MANAGEMENT=my-backend`.
+
 ## Other end-to-end test customizations
 
 Other options are provided via environment variables if you need to further customize the e2e test cases:
