@@ -17,6 +17,18 @@ fi
 
 sudo cp -a "${PODVM_DIR}"/files/etc/containers/* /etc/containers/
 sudo cp -a "${PODVM_DIR}"/files/etc/systemd/* /etc/systemd/
+
+# PowerVS attaches an OpenStack config drive (label "config-2") that cloud-init
+# consumes, and there is no "cidata" disk. config-drive.service has nothing to
+# mount here, so skip it (and its assert-config-drive check). A skipped
+# unit still satisfies Requires= in process-user-data.service.
+sudo mkdir -p /etc/systemd/system/config-drive.service.d
+sudo tee /etc/systemd/system/config-drive.service.d/10-powervs-skip.conf >/dev/null <<'END'
+[Service]
+ExecCondition=
+ExecCondition=/bin/false
+END
+
 if [ -e "${PODVM_DIR}"/files/etc/aa-offline_fs_kbc-resources.json ]; then
     sudo cp "${PODVM_DIR}"/files/etc/aa-offline_fs_kbc-resources.json /etc/aa-offline_fs_kbc-resources.json
 fi
