@@ -91,7 +91,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build podvm binaries image
-        working-directory: src/cloud-api-adaptor/podvm
+        working-directory: src/podvm
         run: make podvm-binaries
         env:
           REGISTRY: ${{ inputs.registry != '' && inputs.registry || format('ghcr.io/{0}', github.repository_owner) }}
@@ -101,7 +101,7 @@ jobs:
           EXPORT_BINARIES: "false"
 
       - name: Build BYOM binaries image
-        working-directory: src/cloud-api-adaptor/podvm
+        working-directory: src/podvm
         run: make podvm-byom-binaries-image
         env:
           REGISTRY: ${{ inputs.registry != '' && inputs.registry || format('ghcr.io/{0}', github.repository_owner) }}
@@ -109,7 +109,7 @@ jobs:
           ARCH: ${{ inputs.arch }}
 
       - name: Push BYOM binaries image
-        working-directory: src/cloud-api-adaptor/podvm
+        working-directory: src/podvm
         run: make push-podvm-byom-binaries-image
         env:
           REGISTRY: ${{ inputs.registry != '' && inputs.registry || format('ghcr.io/{0}', github.repository_owner) }}

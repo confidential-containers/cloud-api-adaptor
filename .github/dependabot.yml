@@ -17,7 +17,7 @@ updates:
   - package-ecosystem: "gomod"
     directories:
       - "src/cloud-api-adaptor"
-      - "src/cloud-api-adaptor/podvm"
+      - "src/podvm"
       - "src/cloud-providers"
       - "src/csi-wrapper"
       - "src/peerpod-ctrl"

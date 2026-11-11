@@ -5,16 +5,14 @@ ARG BASE_IMAGE=ubuntu:24.04
 FROM $BASE_IMAGE AS iptables
 
 ARG DEBIAN_FRONTEND=noninteractive
-
-COPY ./versions.yaml /versions.yaml
+ARG IPTABLES_WRAPPER_VERSION
 
 RUN echo "Building iptables-wrapper... " \
     && apt-get update \
     && apt-get install -y git golang build-essential \
     && git clone https://github.com/kubernetes-sigs/iptables-wrappers.git /iptables \
     && cd /iptables \
-    && version=$(grep 'iptables-wrapper:' /versions.yaml | awk '{print $2}') \
-    && git checkout $version \
+    && git checkout $IPTABLES_WRAPPER_VERSION \
     && make BIN_DIR=. build \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
