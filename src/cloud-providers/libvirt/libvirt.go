@@ -828,7 +828,9 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID 
 
 	// Undefine the domain
 	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
-		if e := err.(libvirt.Error); e.Code == libvirt.ERR_NO_SUPPORT || e.Code == libvirt.ERR_INVALID_ARG {
+		var libvirtErr libvirt.Error
+		if errors.As(err, &libvirtErr) &&
+			(libvirtErr.Code == libvirt.ERR_NO_SUPPORT || libvirtErr.Code == libvirt.ERR_INVALID_ARG) {
 			logger.Printf("libvirt does not support undefine flags: will try again without flags")
 			if err = domain.Undefine(); err != nil {
 				logger.Printf("couldn't undefine libvirt domain: %v", err)
