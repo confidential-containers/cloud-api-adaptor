@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
@@ -40,6 +41,7 @@ const (
 type azureProvider struct {
 	azureClient   azcore.TokenCredential
 	serviceConfig *Config
+	clientOptions *arm.ClientOptions // nil in production; tests set a fake transport
 }
 
 func NewProvider(config *Config) (provider.Provider, error) {
@@ -207,7 +209,7 @@ func (p *azureProvider) getIPs(ctx context.Context, vm *armcompute.VirtualMachin
 }
 
 func (p *azureProvider) create(ctx context.Context, parameters *armcompute.VirtualMachine) (*armcompute.VirtualMachine, error) {
-	vmClient, err := armcompute.NewVirtualMachinesClient(p.serviceConfig.SubscriptionID, p.azureClient, nil)
+	vmClient, err := armcompute.NewVirtualMachinesClient(p.serviceConfig.SubscriptionID, p.azureClient, p.clientOptions)
 	if err != nil {
 		return nil, fmt.Errorf("creating VM client: %w", err)
 	}
@@ -221,7 +223,10 @@ func (p *azureProvider) create(ctx context.Context, parameters *armcompute.Virtu
 
 	resp, err := pollerResponse.PollUntilDone(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("waiting for the VM creation: %w", err)
+		// Azure accepted the request, so the VM may exist; return its ID so the caller can delete it
+		vmID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s",
+			p.serviceConfig.SubscriptionID, p.serviceConfig.ResourceGroupName, vmName)
+		return &armcompute.VirtualMachine{ID: to.Ptr(vmID), Name: to.Ptr(vmName)}, fmt.Errorf("waiting for the VM creation: %w", err)
 	}
 
 	logger.Printf("created VM successfully: %s", *resp.ID)
@@ -361,6 +366,9 @@ func (p *azureProvider) CreateInstance(ctx context.Context, podName, sandboxID s
 
 	vm, err := p.create(ctx, vmParameters)
 	if err != nil {
+		if vm != nil && vm.ID != nil {
+			return &provider.Instance{ID: *vm.ID, Name: instanceName}, fmt.Errorf("creating instance: %w", err)
+		}
 		return nil, fmt.Errorf("creating instance (%v): %s", vm, err)
 	}
 
