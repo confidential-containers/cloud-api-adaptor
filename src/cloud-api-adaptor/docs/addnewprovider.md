@@ -219,8 +219,8 @@ go mod tidy
 
 ```bash
 cat > Dockerfile <<EOF
-# golang:1.26.10
-ARG BUILDER_BASE=golang@sha256:fb456410ab4c979617acaf28c46b2b9fe60b11bcc3dc8ceea0eaeb3e7cd0f8a8
+# golang:1.26.11
+ARG BUILDER_BASE=golang@sha256:7af425da11f4fc1a9308eb704369e3f6d1c44e35bac0f874a59ade3f20fdc07e
 FROM --platform="\$TARGETPLATFORM" \$BUILDER_BASE AS builder
 RUN apt-get update && apt-get install -y libvirt-dev pkg-config && rm -rf /var/lib/apt/lists/*
 WORKDIR /work
