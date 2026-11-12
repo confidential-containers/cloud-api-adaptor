@@ -34,10 +34,15 @@ jobs:
       packages: write  # Required for pushing to GitHub Container Registry
 
   podvm-images:
+    strategy:
+      fail-fast: false
+      matrix:
+        debug: [false, true]
     uses: $/.github/workflows/podvm_publish.yaml
     with:
       git_ref: ${{ github.ref }}
       image_tag: ${{ github.event.release.tag_name }}
+      debug: ${{ matrix.debug }}
     permissions:
       contents: read           # Required for checkout
       packages: write          # Required for pushing to GitHub Container Registry

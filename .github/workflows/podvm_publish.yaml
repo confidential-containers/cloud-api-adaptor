@@ -18,11 +18,16 @@ on:
         required: false
         type: string
         default: ''
+      debug:
+        description: 'Build debug image'
+        required: false
+        type: boolean
+        default: false
 
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-publish-podvm-${{ github.event.pull_request.number || inputs.git_ref || github.run_id }}
+  group: ${{ github.workflow }}-publish-podvm${{ inputs.debug && '-debug' || ''}}-${{ github.event.pull_request.number || inputs.git_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -42,5 +47,5 @@ jobs:
       git_ref: ${{ inputs.git_ref || github.sha }}
       image_tag: ${{ inputs.image_tag || github.sha }}
       arch: ${{ matrix.arch}}
-      debug: false
+      debug: ${{ inputs.debug }}
 
