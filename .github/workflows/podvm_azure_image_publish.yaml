@@ -14,6 +14,14 @@ on:
         description: Azure image gallery version (e.g. 1.2.3)
         required: true
         type: string
+      oci-image:
+        description: OCI image to publish to Azure Image Gallery
+        required: true
+        type: string
+      oci-image-debug:
+        description: OCI debug image to publish to Azure Image Gallery
+        required: true
+        type: string
   workflow_call:
     inputs:
       git_ref:
@@ -22,6 +30,14 @@ on:
         type: string
       image_version:
         description: Azure image gallery version (e.g. 1.2.3)
+        required: true
+        type: string
+      oci-image:
+        description: OCI image to publish to Azure Image Gallery
+        required: true
+        type: string
+      oci-image-debug:
+        description: OCI debug image to publish to Azure Image Gallery
         required: true
         type: string
 
@@ -36,43 +52,10 @@ defaults:
     working-directory: src/cloud-api-adaptor
 
 jobs:
-  build-release:
-    uses: $/.github/workflows/podvm_mkosi.yaml
-    permissions:
-      contents: read # Required if we want to run on a fork?
-      packages: write # Required to publish the oras package to ghcr
-      id-token: write # Required to publish the attestation provenance to ghcr
-      attestations: write # Required to publish the attestation provenance to ghcr
-      artifact-metadata: write # Required write attestation metadata
-    with:
-      image_tag: ${{ inputs.git_ref }}
-      git_ref: ${{ inputs.git_ref }}
-      arch: amd64
-      debug: false
-      tee-platform: az-cvm-vtpm
-
-  build-debug:
-    uses: $/.github/workflows/podvm_mkosi.yaml
-    permissions:
-      contents: read # Required if we want to run on a fork?
-      packages: write # Required to publish the oras package to ghcr
-      id-token: write # Required to publish the attestation provenance to ghcr
-      attestations: write # Required to publish the attestation provenance to ghcr
-      artifact-metadata: write # Required write attestation metadata
-    with:
-      image_tag: ${{ inputs.git_ref }}
-      git_ref: ${{ inputs.git_ref }}
-      arch: amd64
-      debug: true
-      tee-platform: az-cvm-vtpm
-
   publish:
     name: Publish images to azure image gallery
     permissions:
       id-token: write # Required to login into azure
-    needs:
-    - build-release
-    - build-debug
     runs-on: ubuntu-26.04
     steps:
     - name: Checkout Code
@@ -122,7 +105,7 @@ jobs:
 
     - name: Publish release image
       env:
-        PODVM_OCI_IMAGE: "${{ needs.build-release.outputs.qcow2_oras_image }}"
+        PODVM_OCI_IMAGE: "${{ inputs.oci-image }}"
         IMAGE_VERSION: "${{ steps.normalize-image-version.outputs.image-version }}"
         RESOURCE_GROUP: "${{ vars.AZURE_RELEASE_RESOURCE_GROUP }}"
         IMAGE_GALLERY: "${{ vars.AZURE_RELEASE_PODVM_GALLERY_NAME }}"
@@ -139,7 +122,7 @@ jobs:
 
     - name: Publish debug image
       env:
-        PODVM_OCI_IMAGE: "${{ needs.build-debug.outputs.qcow2_oras_image }}"
+        PODVM_OCI_IMAGE: "${{ inputs.oci-image-debug }}"
         IMAGE_VERSION: "${{ steps.normalize-image-version.outputs.image-version }}"
         RESOURCE_GROUP: "${{ vars.AZURE_RELEASE_RESOURCE_GROUP }}"
         IMAGE_GALLERY: "${{ vars.AZURE_RELEASE_PODVM_GALLERY_NAME }}"

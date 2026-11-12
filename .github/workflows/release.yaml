@@ -45,11 +45,29 @@ jobs:
       attestations: write      # Required for persisting attestations
       artifact-metadata: write # Required by podvm_mkosi.yaml to write attestation metadata
 
+  podvm-images-debug:
+    uses: $/.github/workflows/podvm_publish.yaml
+    with:
+      git_ref: ${{ github.ref }}
+      image_tag: ${{ github.event.release.tag_name }}
+      debug: true
+    permissions:
+      contents: read           # Required for checkout
+      packages: write          # Required for pushing to GitHub Container Registry
+      id-token: write          # Required for attestation signing
+      attestations: write      # Required for persisting attestations
+      artifact-metadata: write # Required by podvm_mkosi.yaml to write attestation metadata
+
   podvm-azure-images:
+    needs:
+    - podvm-images
+    - podvm-images-debug
     uses: $/.github/workflows/podvm_azure_image_publish.yaml
     with:
       git_ref: ${{ github.ref }}
       image_version: ${{ github.event.release.tag_name }}
+      oci-image: ${{ needs.podvm-images.outputs.oci-image }}
+      oci-image-debug: ${{ needs.podvm-images-debug.outputs.oci-image }}
     permissions:
       contents: read           # Required for checkout
       packages: write          # Required for pushing to GitHub Container Registry

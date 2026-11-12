@@ -35,4 +35,4 @@ oci:
     reference: d130fbdb929291c8c8c60cf5fdf7cbc7b06d02f9
   guest-components:
     registry: ghcr.io/confidential-containers/guest-components
-    reference: 258351fa000837ebfc20cd2ca2d1dc18f8f7ca3e
+    reference: 73819c62c66931839de68dd394ff8f31e1c1832f

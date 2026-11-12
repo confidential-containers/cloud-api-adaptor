@@ -22,8 +22,6 @@ make # this will rebuild the builder, the binaries and the OS image
 make image # this will only rebuild the pod VM image
 ```
 
-The default built pod VM image have support for only filesystem attester.
-
 Set the `TEE_PLATFORM` variable to build the image with specific attester support.
 
 For example, this will build the pod VM image with support for SNP attester.
