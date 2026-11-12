@@ -153,7 +153,10 @@ jobs:
         id: publish_oras_qcow2
         working-directory: src/cloud-api-adaptor/podvm
         run: |
-          annotation="$(make oci-annotation)"
+          annotation_args=()
+          if [ "$ARCH" = "amd64" ]; then
+            annotation_args=(--annotation "$(make oci-annotation)")
+          fi
 
           mkdir oras
           cd oras
@@ -161,11 +164,11 @@ jobs:
           tar cJf podvm.tar.xz podvm-*.qcow2
           image="${REGISTRY}/podvm-${ARCH}${TEE_PLATFORM:+-${TEE_PLATFORM}}${DEBUG:+-debug}"
           tag="$(git rev-parse --short HEAD)"
-          oras push --annotation "${annotation}" "${image}:${tag}" podvm.tar.xz
+          oras push "${annotation_args[@]}" "${image}:${tag}" podvm.tar.xz
 
           # If the input has a different image-tag then also push it with that tag
           if [ -n "${IMAGE_TAG}" ] && [ "${IMAGE_TAG}" != "${tag}" ];then
-            oras push --annotation "${annotation}" "${image}:${IMAGE_TAG}" podvm.tar.xz
+            oras push "${annotation_args[@]}" "${image}:${IMAGE_TAG}" podvm.tar.xz
           fi
 
           # add image and digest to output for attestation
