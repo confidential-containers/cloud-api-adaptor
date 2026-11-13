@@ -120,7 +120,7 @@ require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.10.1 // indirect
 	github.com/IBM-Cloud/power-go-client v1.17.0 // indirect
 	github.com/IBM/go-sdk-core/v5 v5.25.2 // indirect
-	github.com/IBM/platform-services-go-sdk v0.103.5 // indirect
+	github.com/IBM/platform-services-go-sdk v0.103.6 // indirect
 	github.com/IBM/vpc-go-sdk v0.93.0 // indirect
 	github.com/avast/retry-go/v4 v4.7.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.47.1 // indirect
