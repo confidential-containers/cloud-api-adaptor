@@ -331,7 +331,10 @@ func volumeExists(libvirtClient *libvirtClient, volumeName string) (exist bool, 
 	logger.Printf("Check if %s volume exists", volumeName)
 	volume, err := getVolume(libvirtClient, volumeName)
 	if err != nil {
-		return false, nil
+		if isLibvirtErrorCode(err, libvirt.ERR_NO_STORAGE_VOL) {
+			return false, nil
+		}
+		return false, err
 	}
 	defer freeVolume(volume, &err)
 
@@ -344,6 +347,10 @@ func deleteVolumeByPath(ctx context.Context, libvirtClient *libvirtClient, path 
 
 	volume, err := libvirtClient.connection.LookupStorageVolByPath(path)
 	if err != nil {
+		if isLibvirtErrorCode(err, libvirt.ERR_NO_STORAGE_VOL) {
+			logger.Printf("volume %q does not exist", path)
+			return ErrVolumeNotFound
+		}
 		logger.Printf("can't retrieve volume %q: %v", path, err)
 		return err
 	}
