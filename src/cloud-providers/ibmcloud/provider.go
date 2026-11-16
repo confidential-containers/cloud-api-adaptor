@@ -834,12 +834,37 @@ func (p *ibmcloudVPCProvider) getImageDetails(ctx context.Context, imageID strin
 	return *result.OperatingSystem.Architecture, *result.OperatingSystem.Name, nil
 }
 
+// isInstanceNotFound reports whether the VPC API returned a not_found error
+// with HTTP status 404. The error code distinguishes a missing instance from
+// a 404 returned by a wrong endpoint or proxy.
+func isInstanceNotFound(resp *core.DetailedResponse) bool {
+	if resp == nil || resp.StatusCode != http.StatusNotFound {
+		return false
+	}
+	result, ok := resp.GetResultAsMap()
+	if !ok {
+		return false
+	}
+	apiErrors, _ := result["errors"].([]any)
+	for _, apiError := range apiErrors {
+		if fields, ok := apiError.(map[string]any); ok && fields["code"] == "not_found" {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *ibmcloudVPCProvider) DeleteInstance(ctx context.Context, instanceID string) error {
 
 	options := &vpcv1.DeleteInstanceOptions{}
 	options.SetID(instanceID)
 	resp, err := p.vpc.DeleteInstanceWithContext(ctx, options)
 	if err != nil {
+		// an already missing instance must not leave the PeerPod stuck on its finalizer
+		if isInstanceNotFound(resp) {
+			logger.Printf("instance %s not found, nothing to delete", instanceID)
+			return nil
+		}
 		logger.Printf("failed to delete an instance: %v and the response is %v", err, resp)
 		return err
 	}

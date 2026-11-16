@@ -35,6 +35,8 @@ type mockVPC struct {
 	readyAfter  int
 	volumeCalls int
 	detachAfter int
+	// deleteResp, when set, is returned by DeleteInstanceWithContext with an error
+	deleteResp *core.DetailedResponse
 }
 
 func readyNIC(id, address string) *vpcv1.NetworkInterfaceInstanceContextReference {
@@ -176,6 +178,9 @@ func (c *mockCloudConfig) Generate() (string, error) {
 }
 
 func (v *mockVPC) DeleteInstanceWithContext(context.Context, *vpcv1.DeleteInstanceOptions) (*core.DetailedResponse, error) {
+	if v.deleteResp != nil {
+		return v.deleteResp, errors.New(http.StatusText(v.deleteResp.StatusCode))
+	}
 
 	res := &core.DetailedResponse{
 		StatusCode: http.StatusOK,
@@ -667,15 +672,61 @@ func TestPickIDInZone(t *testing.T) {
 }
 
 func TestDeleteInstance(t *testing.T) {
-
-	provider := &ibmcloudVPCProvider{
-		vpc:           &mockVPC{},
-		serviceConfig: &Config{},
-		globalTagging: &mockTagging{},
+	apiError := func(status int, code string) *core.DetailedResponse {
+		return &core.DetailedResponse{
+			StatusCode: status,
+			Result:     map[string]any{"errors": []any{map[string]any{"code": code}}},
+		}
 	}
 
-	err := provider.DeleteInstance(context.Background(), "123")
-	assert.NoError(t, err)
+	tests := []struct {
+		name    string
+		resp    *core.DetailedResponse
+		wantErr bool
+	}{
+		{
+			name: "an existing instance",
+		},
+		{
+			name: "an instance that is already gone",
+			resp: apiError(http.StatusNotFound, "not_found"),
+		},
+		{
+			name:    "a 404 without an API error code",
+			resp:    &core.DetailedResponse{StatusCode: http.StatusNotFound},
+			wantErr: true,
+		},
+		{
+			name:    "a 404 with a different API error code",
+			resp:    apiError(http.StatusNotFound, "other_error"),
+			wantErr: true,
+		},
+		{
+			name:    "a different status with not_found",
+			resp:    apiError(http.StatusInternalServerError, "not_found"),
+			wantErr: true,
+		},
+		{
+			name:    "any other failure",
+			resp:    apiError(http.StatusInternalServerError, "internal_error"),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			provider := &ibmcloudVPCProvider{
+				vpc:           &mockVPC{deleteResp: tt.resp},
+				serviceConfig: &Config{},
+				globalTagging: &mockTagging{},
+			}
+			err := provider.DeleteInstance(t.Context(), "123")
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestGetInstanceTypeInformation(t *testing.T) {
