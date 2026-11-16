@@ -654,8 +654,7 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 		logger.Printf("Instance already exists (uuid=%s)", uuid)
 		return &createDomainOutput{instance: v}, nil
 	}
-	var libvirtErr libvirt.Error
-	if !errors.As(err, &libvirtErr) || libvirtErr.Code != libvirt.ERR_NO_DOMAIN {
+	if !isLibvirtErrorCode(err, libvirt.ERR_NO_DOMAIN) {
 		return nil, fmt.Errorf("error checking instance: %w", err)
 	}
 
@@ -776,6 +775,22 @@ func CreateDomain(ctx context.Context, libvirtClient *libvirtClient, v *vmConfig
 	}, nil
 }
 
+// isLibvirtErrorCode reports whether err wraps a libvirt.Error whose code is one of codes.
+func isLibvirtErrorCode(err error, codes ...libvirt.ErrorNumber) bool {
+	var libvirtErr libvirt.Error
+	if !errors.As(err, &libvirtErr) {
+		return false
+	}
+	for _, code := range codes {
+		if libvirtErr.Code == code {
+			return true
+		}
+	}
+	return false
+}
+
+// DeleteDomain is safe to retry: a domain or volume that is already gone is
+// treated as success.
 func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID string) (err error) {
 
 	logger.Printf("Deleting instance (uuid: %s)", domainUUID)
@@ -783,20 +798,24 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID 
 	// Look up domain by UUID.
 	domain, err := libvirtClient.connection.LookupDomainByUUIDString(domainUUID)
 	if err != nil {
+		if isLibvirtErrorCode(err, libvirt.ERR_NO_DOMAIN) {
+			logger.Printf("Instance (uuid: %s) does not exist, nothing to delete", domainUUID)
+			return nil
+		}
 		logger.Printf("Error retrieving libvirt domain by UUID %s: %v", domainUUID, err)
 		return fmt.Errorf("failed to lookup domain by UUID: %w", err)
 	}
 
 	defer freeDomain(domain, &err)
 
-	// Stop domain if running, then undefine and remove storage
-	state, _, err := domain.GetState()
+	// Stop domain if active, then remove storage and undefine
+	active, err := domain.IsActive()
 	if err != nil {
 		logger.Printf("Couldn't get info about domain: %s", err)
 		return err
 	}
 
-	if state == libvirt.DOMAIN_RUNNING || state == libvirt.DOMAIN_PAUSED {
+	if active {
 		if err = domain.Destroy(); err != nil {
 			logger.Printf("Couldn't destroy libvirt domain: %s", err)
 			return err
@@ -818,6 +837,10 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID 
 			logger.Printf("domainDef %v", domainDef.Devices.Disks)
 			for _, diskPath := range getDeletableDiskPaths(&domainDef) {
 				err = deleteVolumeByPath(ctx, libvirtClient, diskPath)
+				if errors.Is(err, ErrVolumeNotFound) {
+					logger.Printf("Volume (%s) is already gone", diskPath)
+					continue
+				}
 				if err != nil {
 					logger.Printf("Deleting volume (%s) returned error: %s", diskPath, err)
 					cleanupErrs = append(cleanupErrs, fmt.Sprintf("delete volume %s: %v", diskPath, err))
@@ -826,11 +849,15 @@ func DeleteDomain(ctx context.Context, libvirtClient *libvirtClient, domainUUID 
 		}
 	}
 
+	// Keep the domain defined if any volume could not be removed, so that
+	// a retry can still discover the volumes from the domain definition.
+	if len(cleanupErrs) > 0 {
+		return errors.New(strings.Join(cleanupErrs, "; "))
+	}
+
 	// Undefine the domain
 	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
-		var libvirtErr libvirt.Error
-		if errors.As(err, &libvirtErr) &&
-			(libvirtErr.Code == libvirt.ERR_NO_SUPPORT || libvirtErr.Code == libvirt.ERR_INVALID_ARG) {
+		if isLibvirtErrorCode(err, libvirt.ERR_NO_SUPPORT, libvirt.ERR_INVALID_ARG) {
 			logger.Printf("libvirt does not support undefine flags: will try again without flags")
 			if err = domain.Undefine(); err != nil {
 				logger.Printf("couldn't undefine libvirt domain: %v", err)

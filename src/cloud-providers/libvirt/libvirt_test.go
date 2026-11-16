@@ -1828,3 +1828,54 @@ func TestCreateDomainBootFailureReturnsInstanceForCleanup(t *testing.T) {
 	_, lookupErr := client.connection.LookupDomainByName(domName)
 	assert.Error(t, lookupErr, "domain must be removed by DeleteDomain")
 }
+
+func TestIsLibvirtErrorCode(t *testing.T) {
+	noDomain := libvirt.Error{Code: libvirt.ERR_NO_DOMAIN}
+
+	tests := []struct {
+		name  string
+		err   error
+		codes []libvirt.ErrorNumber
+		want  bool
+	}{
+		{"nil error", nil, []libvirt.ErrorNumber{libvirt.ERR_NO_DOMAIN}, false},
+		{"non-libvirt error", errors.New("boom"), []libvirt.ErrorNumber{libvirt.ERR_NO_DOMAIN}, false},
+		{"matching code", noDomain, []libvirt.ErrorNumber{libvirt.ERR_NO_DOMAIN}, true},
+		{"wrapped matching code", fmt.Errorf("lookup: %w", noDomain), []libvirt.ErrorNumber{libvirt.ERR_NO_DOMAIN}, true},
+		{"one of several codes", noDomain, []libvirt.ErrorNumber{libvirt.ERR_NO_SUPPORT, libvirt.ERR_NO_DOMAIN}, true},
+		{"different code", noDomain, []libvirt.ErrorNumber{libvirt.ERR_NO_STORAGE_VOL}, false},
+		{"no codes", noDomain, nil, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isLibvirtErrorCode(tt.err, tt.codes...))
+		})
+	}
+}
+
+func TestDeleteDomainAlreadyGone(t *testing.T) {
+	checkConfig(t)
+
+	client, err := NewLibvirtClient(testCfg)
+	require.NoError(t, err)
+	defer client.connection.Close()
+
+	const missingUUID = "00000000-0000-0000-0000-000000000000"
+	assert.NoError(t, DeleteDomain(context.Background(), client, missingUUID))
+}
+
+func TestVolumeExistsMissingVolume(t *testing.T) {
+	checkConfig(t)
+
+	client, err := NewLibvirtClient(testCfg)
+	require.NoError(t, err)
+	defer client.connection.Close()
+
+	exists, err := volumeExists(client, "TestVolumeExistsMissingVolume-does-not-exist.qcow2")
+	assert.NoError(t, err)
+	assert.False(t, exists)
+
+	err = deleteVolumeByPath(context.Background(), client, "/nonexistent/TestVolumeExistsMissingVolume.qcow2")
+	assert.ErrorIs(t, err, ErrVolumeNotFound)
+}
