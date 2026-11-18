@@ -16,7 +16,8 @@ import (
 
 // LibvirtAssert implements the CloudAssert interface for Libvirt.
 type LibvirtAssert struct {
-	conn libvirt.Connect
+	conn    libvirt.Connect
+	timeout time.Duration
 }
 
 func NewLibvirtAssert() (*LibvirtAssert, error) {
@@ -28,11 +29,19 @@ func NewLibvirtAssertWithURI(uri string) (*LibvirtAssert, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &LibvirtAssert{conn: *conn}, nil
+	return &LibvirtAssert{conn: *conn, timeout: 1 * time.Minute}, nil
+}
+
+func (l *LibvirtAssert) SetTimeout(timeout time.Duration) *LibvirtAssert {
+	l.timeout = timeout
+	return l
 }
 
 func (l LibvirtAssert) DefaultTimeout() time.Duration {
-	return 1 * time.Minute
+	if l.timeout == 0 {
+		return 1 * time.Minute
+	}
+	return l.timeout
 }
 
 func (l LibvirtAssert) HasPodVM(t *testing.T, podvmName string) {
