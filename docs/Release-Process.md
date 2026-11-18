@@ -49,13 +49,13 @@ The flow of releases should roughly be:
 Once the pre-release versions are tested and stable, then we can go ahead and cut the release of "peer pods".
 
 As part of the release we should pin the cloud-api-adaptor image used on the deployment files. You should use the
-commit SHA-1 of the last built `quay.io/confidential-containers/cloud-api-adaptor` image to update the
+commit SHA-1 of the last built `https://github.com/confidential-containers/cloud-api-adaptor/pkgs/container/cloud-api-adaptor` image to update the
 Helm chart values. For example, suppose the release image is
-`quay.io/confidential-containers/cloud-api-adaptor:6d7d2a3fe8243809b3c3a710792c8498292e2fc3`, we can use the
+`ghcr.io/confidential-containers/cloud-api-adaptor:2f695fb669e84e12c894a5c4d41dccac1149926f`, we can use the
 `release-helper.sh` script's `caa-image-tag` command to update all the cloud-providers:
 
 ```
-RELEASE_TAG="6d7d2a3fe8243809b3c3a710792c8498292e2fc3"
+RELEASE_TAG="2f695fb669e84e12c894a5c4d41dccac1149926f"
 ./hack/release-helper.sh caa-image-tag ${RELEASE_TAG}
 ```
 
