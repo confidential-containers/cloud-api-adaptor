@@ -775,3 +775,11 @@ func getStringFromPod(ctx context.Context, client klient.Client, pod *corev1.Pod
 	}
 	return "", fmt.Errorf("no pod matching %v, was found", pod)
 }
+
+func skipPodVMValidation() bool {
+	if pv.SkipPodVMValidation() {
+		log.Info("skipPodvmValidation: skipping podvm validation")
+		return true
+	}
+	return false
+}

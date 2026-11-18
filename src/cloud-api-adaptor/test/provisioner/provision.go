@@ -379,3 +379,7 @@ func waitForNamespaceToBeUseable(ctx context.Context, client klient.Client, name
 	}
 	return fmt.Errorf("default service account not found in namespace '%s' after %.0f seconds wait", namespaceName, WaitNamespaceAvailableTimeout.Seconds())
 }
+
+func SkipPodVMValidation() bool {
+	return os.Getenv("SKIP_PODVM_VALIDATION") == "true"
+}

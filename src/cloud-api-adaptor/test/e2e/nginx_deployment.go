@@ -142,14 +142,16 @@ func DoTestNginxDeployment(t *testing.T, testEnv env.Environment, assert CloudAs
 				t.Error(err)
 				return ctx
 			}
-			for _, pod := range podlist.Items {
-				if pod.Labels["app"] == "nginx" {
-					podvmName, err := getPodvmName(ctx, client, &pod)
-					if err != nil {
-						t.Errorf("GetPodvmName failed: %v", err)
+			if !skipPodVMValidation() {
+				for _, pod := range podlist.Items {
+					if pod.Labels["app"] == "nginx" {
+						podvmName, err := getPodvmName(ctx, client, &pod)
+						if err != nil {
+							t.Errorf("GetPodvmName failed: %v", err)
+						}
+						t.Logf("Checking PodVM for pod %s with PodVM name %s", pod.Name, podvmName)
+						assert.HasPodVM(t, podvmName)
 					}
-					t.Logf("Checking PodVM for pod %s with PodVM name %s", pod.Name, podvmName)
-					assert.HasPodVM(t, podvmName)
 				}
 			}
 			return ctx
