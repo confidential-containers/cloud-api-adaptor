@@ -1,0 +1,12 @@
+dependencies:
+- name: kata-deploy
+  repository: oci://ghcr.io/kata-containers/kata-deploy-charts
+  version: 4.4.0
+- name: peerpodctrl
+  repository: file://../../../../peerpod-ctrl/chart
+  version: 0.5.0
+- name: peerpods-webhook
+  repository: file://../../../../webhook/chart
+  version: 0.5.0
+digest: sha256:2951b6f21e7343e04e6e9a297735208f9b4da308891acf023d81acc7c998425a
+generated: "2026-11-18T10:51:10.716638Z"
