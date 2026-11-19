@@ -4,7 +4,7 @@ namePrefix: peerpodctrl-
 # PeerPod controller image
 image:
   repository: ghcr.io/confidential-containers/peerpod-ctrl
-  tag: 2f695fb669e84e12c894a5c4d41dccac1149926f
+  tag: latest
   pullPolicy: IfNotPresent
 
 # Metrics are served by the manager over TLS on port 8443. Scrapers must present
