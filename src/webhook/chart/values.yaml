@@ -15,7 +15,7 @@ replicas: 2
 # Webhook image
 image:
   repository: ghcr.io/confidential-containers/peer-pods-webhook
-  tag: 2f695fb669e84e12c894a5c4d41dccac1149926f
+  tag: latest
   pullPolicy: IfNotPresent
 
 # Manager container resource limits and requests
