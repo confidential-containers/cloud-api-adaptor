@@ -69,8 +69,8 @@ func ReadinessHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		logger.Printf("All PeerPods standup. we do not check the PeerPods status any more.")
 	}
-	logger.Printf("All PeerPods standup. we do not check the PeerPods status any more.")
 	w.WriteHeader(http.StatusOK)
 }
 
