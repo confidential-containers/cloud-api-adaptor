@@ -45,7 +45,7 @@ jobs:
       attestations: write # Required to publish the attestation provenance to ghcr
       artifact-metadata: write # Required write attestation metadata
     with:
-      image_tag: ${{ inputs.git_ref }}
+      image_tag: v${{ inputs.image_version }}
       git_ref: ${{ inputs.git_ref }}
       arch: amd64
       debug: false
@@ -60,7 +60,7 @@ jobs:
       attestations: write # Required to publish the attestation provenance to ghcr
       artifact-metadata: write # Required write attestation metadata
     with:
-      image_tag: ${{ inputs.git_ref }}
+      image_tag: v${{ inputs.image_version }}
       git_ref: ${{ inputs.git_ref }}
       arch: amd64
       debug: true
