@@ -206,9 +206,9 @@ func clientsetWithPeerPods(ready corev1.ConditionStatus) *fake.Clientset {
 	return getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, ready, timeAfter)
 }
 
-func statusOf(handler http.HandlerFunc, path string) int {
+func statusOf(handler http.HandlerFunc) int {
 	rr := httptest.NewRecorder()
-	handler(rr, httptest.NewRequest(http.MethodGet, path, nil))
+	handler(rr, httptest.NewRequest(http.MethodGet, "/", nil))
 	return rr.Code
 }
 
@@ -222,7 +222,7 @@ func TestStartupHandler(t *testing.T) {
 			SocketPath:       closedSocket,
 		}
 
-		assert.Equal(t, http.StatusInternalServerError, statusOf(StartupHandler, "/startup"))
+		assert.Equal(t, http.StatusInternalServerError, statusOf(StartupHandler))
 	})
 
 	t.Run("succeeds while peer pods are not ready", func(t *testing.T) {
@@ -232,7 +232,7 @@ func TestStartupHandler(t *testing.T) {
 			SocketPath:       listenOnSocket(t),
 		}
 
-		assert.Equal(t, http.StatusOK, statusOf(StartupHandler, "/startup"))
+		assert.Equal(t, http.StatusOK, statusOf(StartupHandler))
 	})
 }
 
@@ -247,7 +247,7 @@ func TestReadinessHandler(t *testing.T) {
 			SocketPath:       closedSocket,
 		}
 
-		assert.Equal(t, http.StatusInternalServerError, statusOf(ReadinessHandler, "/ready"))
+		assert.Equal(t, http.StatusInternalServerError, statusOf(ReadinessHandler))
 	})
 
 	t.Run("fails while a peer pod is not ready", func(t *testing.T) {
@@ -258,7 +258,7 @@ func TestReadinessHandler(t *testing.T) {
 			SocketPath:       listenOnSocket(t),
 		}
 
-		assert.Equal(t, http.StatusInternalServerError, statusOf(ReadinessHandler, "/ready"))
+		assert.Equal(t, http.StatusInternalServerError, statusOf(ReadinessHandler))
 	})
 
 	t.Run("succeeds when every peer pod is ready", func(t *testing.T) {
@@ -269,7 +269,7 @@ func TestReadinessHandler(t *testing.T) {
 			SocketPath:       listenOnSocket(t),
 		}
 
-		assert.Equal(t, http.StatusOK, statusOf(ReadinessHandler, "/ready"))
+		assert.Equal(t, http.StatusOK, statusOf(ReadinessHandler))
 	})
 
 	t.Run("stays ready when a peer pod later stops being ready", func(t *testing.T) {
@@ -279,11 +279,11 @@ func TestReadinessHandler(t *testing.T) {
 			RuntimeclassName: DefaultCCRuntimeClassName,
 			SocketPath:       listenOnSocket(t),
 		}
-		require.Equal(t, http.StatusOK, statusOf(ReadinessHandler, "/ready"))
+		require.Equal(t, http.StatusOK, statusOf(ReadinessHandler))
 
 		checker.Clientset = clientsetWithPeerPods(corev1.ConditionFalse)
 
-		assert.Equal(t, http.StatusOK, statusOf(ReadinessHandler, "/ready"))
+		assert.Equal(t, http.StatusOK, statusOf(ReadinessHandler))
 	})
 
 	t.Run("fails when the pods cannot be listed", func(t *testing.T) {
@@ -298,6 +298,6 @@ func TestReadinessHandler(t *testing.T) {
 			SocketPath:       listenOnSocket(t),
 		}
 
-		assert.Equal(t, http.StatusInternalServerError, statusOf(ReadinessHandler, "/ready"))
+		assert.Equal(t, http.StatusInternalServerError, statusOf(ReadinessHandler))
 	})
 }
