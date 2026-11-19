@@ -18,6 +18,7 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -186,122 +187,117 @@ func Test_IsSocketOpen_BeNotOpen(t *testing.T) {
 	assert.False(t, opened)
 }
 
-func Test_StartupHandler_BeReady(t *testing.T) {
-	os.Setenv("NODE_NAME", "node-name-1")
+const closedSocket = "/tmp/caa-probe-test-no-such-socket.sock"
 
+// listenOnSocket returns the path of a socket that accepts connections until
+// the test ends.
+func listenOnSocket(t *testing.T) string {
+	t.Helper()
 	socketPath := "/tmp/caa-probe-test-socket.sock"
 	socket, err := net.Listen("unix", socketPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer socket.Close()
-
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionFalse, timeAfter)
-	checker = Checker{
-		Clientset:        clientset,
-		RuntimeclassName: DefaultCCRuntimeClassName,
-		SocketPath:       socketPath,
-	}
-
-	req, err := http.NewRequest("GET", "/startup", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	podsReadizProbesDone = true
-	rr := httptest.NewRecorder()
-	http.HandlerFunc(StartupHandler).ServeHTTP(rr, req)
-
-	assert.Equal(t, rr.Code, http.StatusOK)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = socket.Close() })
+	return socketPath
 }
 
-func Test_StartupHandler_NotBeAllPodsReady(t *testing.T) {
-	os.Setenv("NODE_NAME", "node-name-1")
-
-	socketPath := "/tmp/caa-probe-test-socket.sock"
-	socket, err := net.Listen("unix", socketPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer socket.Close()
-
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionFalse, timeAfter)
-	checker = Checker{
-		Clientset:        clientset,
-		RuntimeclassName: DefaultCCRuntimeClassName,
-		SocketPath:       socketPath,
-	}
-
-	req, err := http.NewRequest("GET", "/startup", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	podsReadizProbesDone = false
-	rr := httptest.NewRecorder()
-	http.HandlerFunc(StartupHandler).ServeHTTP(rr, req)
-
-	assert.Equal(t, rr.Code, http.StatusInternalServerError)
+// clientsetWithPeerPods returns a clientset with two peer pods on node-name-1
+// whose Ready condition has the given status.
+func clientsetWithPeerPods(ready corev1.ConditionStatus) *fake.Clientset {
+	return getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, ready, timeAfter)
 }
 
-func Test_StartupHandler_BeAllPodsReady(t *testing.T) {
-	os.Setenv("NODE_NAME", "node-name-1")
-
-	socketPath := "/tmp/caa-probe-test-socket.sock"
-	socket, err := net.Listen("unix", socketPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer socket.Close()
-
-	clientset := getFakeClientSetWithParas("pod", "default", "node-name-1", DefaultCCRuntimeClassName, corev1.ConditionTrue, timeAfter)
-	checker = Checker{
-		Clientset:        clientset,
-		RuntimeclassName: DefaultCCRuntimeClassName,
-		SocketPath:       socketPath,
-	}
-
-	req, err := http.NewRequest("GET", "/startup", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	podsReadizProbesDone = false
+func statusOf(handler http.HandlerFunc) int {
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(StartupHandler).ServeHTTP(rr, req)
-
-	assert.Equal(t, rr.Code, http.StatusOK)
+	handler(rr, httptest.NewRequest(http.MethodGet, "/", nil))
+	return rr.Code
 }
 
-func Test_StartupHandler_BeErrorListPods(t *testing.T) {
-	os.Setenv("NODE_NAME", "node-name-1")
+func TestStartupHandler(t *testing.T) {
+	t.Setenv("NODE_NAME", "node-name-1")
 
-	socketPath := "/tmp/caa-probe-test-socket.sock"
-	socket, err := net.Listen("unix", socketPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer socket.Close()
+	t.Run("fails while the socket does not accept connections", func(t *testing.T) {
+		checker = Checker{
+			Clientset:        clientsetWithPeerPods(corev1.ConditionTrue),
+			RuntimeclassName: DefaultCCRuntimeClassName,
+			SocketPath:       closedSocket,
+		}
 
-	clientset := fake.NewClientset()
-	clientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("list", "pods", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, nil, errors.New("Error creating secret")
+		assert.Equal(t, http.StatusInternalServerError, statusOf(StartupHandler))
 	})
 
-	checker = Checker{
-		Clientset:        clientset,
-		RuntimeclassName: DefaultCCRuntimeClassName,
-		SocketPath:       socketPath,
-	}
+	t.Run("succeeds while peer pods are not ready", func(t *testing.T) {
+		checker = Checker{
+			Clientset:        clientsetWithPeerPods(corev1.ConditionFalse),
+			RuntimeclassName: DefaultCCRuntimeClassName,
+			SocketPath:       listenOnSocket(t),
+		}
 
-	req, err := http.NewRequest("GET", "/startup", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+		assert.Equal(t, http.StatusOK, statusOf(StartupHandler))
+	})
+}
 
-	podsReadizProbesDone = false
-	rr := httptest.NewRecorder()
-	http.HandlerFunc(StartupHandler).ServeHTTP(rr, req)
+func TestReadinessHandler(t *testing.T) {
+	t.Setenv("NODE_NAME", "node-name-1")
 
-	assert.Equal(t, rr.Code, http.StatusInternalServerError)
+	t.Run("fails while the socket does not accept connections", func(t *testing.T) {
+		podsReadizProbesDone = false
+		checker = Checker{
+			Clientset:        clientsetWithPeerPods(corev1.ConditionTrue),
+			RuntimeclassName: DefaultCCRuntimeClassName,
+			SocketPath:       closedSocket,
+		}
+
+		assert.Equal(t, http.StatusInternalServerError, statusOf(ReadinessHandler))
+	})
+
+	t.Run("fails while a peer pod is not ready", func(t *testing.T) {
+		podsReadizProbesDone = false
+		checker = Checker{
+			Clientset:        clientsetWithPeerPods(corev1.ConditionFalse),
+			RuntimeclassName: DefaultCCRuntimeClassName,
+			SocketPath:       listenOnSocket(t),
+		}
+
+		assert.Equal(t, http.StatusInternalServerError, statusOf(ReadinessHandler))
+	})
+
+	t.Run("succeeds when every peer pod is ready", func(t *testing.T) {
+		podsReadizProbesDone = false
+		checker = Checker{
+			Clientset:        clientsetWithPeerPods(corev1.ConditionTrue),
+			RuntimeclassName: DefaultCCRuntimeClassName,
+			SocketPath:       listenOnSocket(t),
+		}
+
+		assert.Equal(t, http.StatusOK, statusOf(ReadinessHandler))
+	})
+
+	t.Run("stays ready when a peer pod later stops being ready", func(t *testing.T) {
+		podsReadizProbesDone = false
+		checker = Checker{
+			Clientset:        clientsetWithPeerPods(corev1.ConditionTrue),
+			RuntimeclassName: DefaultCCRuntimeClassName,
+			SocketPath:       listenOnSocket(t),
+		}
+		require.Equal(t, http.StatusOK, statusOf(ReadinessHandler))
+
+		checker.Clientset = clientsetWithPeerPods(corev1.ConditionFalse)
+
+		assert.Equal(t, http.StatusOK, statusOf(ReadinessHandler))
+	})
+
+	t.Run("fails when the pods cannot be listed", func(t *testing.T) {
+		clientset := fake.NewClientset()
+		clientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("list", "pods", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			return true, nil, errors.New("cannot list pods")
+		})
+		podsReadizProbesDone = false
+		checker = Checker{
+			Clientset:        clientset,
+			RuntimeclassName: DefaultCCRuntimeClassName,
+			SocketPath:       listenOnSocket(t),
+		}
+
+		assert.Equal(t, http.StatusInternalServerError, statusOf(ReadinessHandler))
+	})
 }

@@ -22,16 +22,42 @@ var startTime time.Time
 
 const DefaultCCRuntimeClassName string = "kata-remote"
 
-func StartupHandler(w http.ResponseWriter, r *http.Request) {
+// socketReady answers 500 and returns false unless the adaptor's socket
+// accepts connections.
+func socketReady(w http.ResponseWriter) bool {
 	opened, err := checker.IsSocketOpen()
 	if err != nil {
 		logger.Printf("UDS not opened, because %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return false
 	}
 	if !opened {
 		logger.Printf("UDS not opened")
 		w.WriteHeader(http.StatusInternalServerError)
+		return false
+	}
+	return true
+}
+
+// StartupHandler reports whether the adaptor itself is serving. A failing
+// startup probe makes kubelet restart the container, so it must not depend on
+// the peer pods on the node: one that is not Ready, because it is itself
+// waiting for the adaptor to create its VM, would keep the probe failing until
+// the restart cancels that very request.
+func StartupHandler(w http.ResponseWriter, r *http.Request) {
+	if !socketReady(w) {
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// ReadinessHandler additionally waits until every peer pod on the node has
+// become Ready since the adaptor started, so that a DaemonSet rolling update
+// does not move on to the next node before then. A failing readiness probe
+// only holds the rollout back and does not restart the adaptor. Once all peer
+// pods have been Ready it does not check them again.
+func ReadinessHandler(w http.ResponseWriter, r *http.Request) {
+	if !socketReady(w) {
 		return
 	}
 
@@ -43,8 +69,8 @@ func StartupHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		logger.Printf("All PeerPods standup. we do not check the PeerPods status any more.")
 	}
-	logger.Printf("All PeerPods standup. we do not check the PeerPods status any more.")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -84,6 +110,7 @@ func Start(ctx context.Context, socketPath string) {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/startup", StartupHandler)
+	mux.HandleFunc("/ready", ReadinessHandler)
 	server := &http.Server{Handler: mux}
 	serveCtx, serveCancel := context.WithCancel(ctx)
 	defer serveCancel()
