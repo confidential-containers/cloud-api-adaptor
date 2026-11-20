@@ -20,28 +20,6 @@ type AzureCloudAssert struct{}
 
 var assert = &AzureCloudAssert{}
 
-// findVM is a helper function to find a VM by its prefix name in a resource group.
-func findVM(resourceGroupName, podvmName string) (*armcompute.VirtualMachine, error) {
-	pager := pv.AzureProps.ManagedVMClient.NewListPager(resourceGroupName, nil)
-
-	for pager.More() {
-		page, err := pager.NextPage(context.Background())
-		if err != nil {
-			log.Errorf("failed to advance page: %v", err)
-			return nil, err
-		}
-
-		for _, vm := range page.Value {
-			if *vm.Name == podvmName {
-				// VM found
-				return vm, nil
-			}
-		}
-	}
-
-	return nil, nil
-}
-
 // findVMByPrefix is a helper function to find a VM whose name starts with the
 // given prefix. Pod VM names are suffixed with a truncated sandbox ID, so
 // callers that only know the pod name cannot match exactly.
@@ -56,7 +34,7 @@ func findVMByPrefix(resourceGroupName, prefix string) (*armcompute.VirtualMachin
 		}
 
 		for _, vm := range page.Value {
-			if strings.HasPrefix(*vm.Name, prefix) {
+			if vmNameHasPrefix(vm, prefix) {
 				return vm, nil
 			}
 		}
@@ -65,8 +43,12 @@ func findVMByPrefix(resourceGroupName, prefix string) (*armcompute.VirtualMachin
 	return nil, nil
 }
 
+func vmNameHasPrefix(vm *armcompute.VirtualMachine, prefix string) bool {
+	return vm != nil && vm.Name != nil && strings.HasPrefix(*vm.Name, prefix)
+}
+
 func checkVMExistence(resourceGroupName, podvmName string) bool {
-	vm, err := findVM(resourceGroupName, podvmName)
+	vm, err := findVMByPrefix(resourceGroupName, podvmName)
 	if err != nil {
 		return false
 	}
