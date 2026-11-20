@@ -1,0 +1,16 @@
+[Unit]
+Description=Detect the TEE and cloud provider
+Before=attestation-agent.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Make sure the TEE guest drivers are loaded, so the device for this hardware
+# exists before detection. Errors are ignored: a driver may be missing or for
+# other hardware.
+ExecStartPre=-/usr/sbin/modprobe tdx_guest
+ExecStartPre=-/usr/sbin/modprobe sev-guest
+ExecStart=/usr/local/bin/process-user-data detect-platform
+
+[Install]
+WantedBy=multi-user.target

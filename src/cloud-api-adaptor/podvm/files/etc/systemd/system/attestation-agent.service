@@ -1,14 +1,20 @@
 [Unit]
 Description=Attestation Agent TTRPC API Server
-After=network.target process-user-data.service
+Wants=detect-platform.service
+After=network.target process-user-data.service detect-platform.service
 
 [Service]
 Type=simple
+EnvironmentFile=-/run/peerpod/platform.env
 ExecStartPre=mkdir -p /run/confidential-containers/attestation-agent
+# SNP outside Azure can neither check nor record initdata, so AA would exit
+# if given -t.
 ExecStartPre=/bin/sh -c '\
   initdata_file=/run/peerpod/initdata.toml; \
   env_file=/run/confidential-containers/attestation-agent/env; \
-  if [ -f "$$initdata_file" ]; then \
+  if [ "$$TEE" = sev-snp ] && [ "$$CSP" != azure ]; then \
+  echo "Not binding initdata: not supported on $$TEE with CSP=$$CSP"; \
+  elif [ -f "$$initdata_file" ]; then \
   echo "INITDATA_ARG=-t $$initdata_file" > "$$env_file"; \
   fi'
 EnvironmentFile=-/run/confidential-containers/attestation-agent/env
