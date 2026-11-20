@@ -33,9 +33,9 @@ RESOURCE_CTRL ?= true
 WEBHOOK_ENABLED ?= true
 # BUILTIN_CLOUD_PROVIDERS is used for binary build -- what providers are built in the binaries.
 ifeq ($(RELEASE_BUILD),true)
-	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom gcp ibmcloud ibmcloud_powervs
+	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom ecloud gcp ibmcloud ibmcloud_powervs
 else
-	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom gcp ibmcloud ibmcloud_powervs libvirt
+	BUILTIN_CLOUD_PROVIDERS ?= alibabacloud aws azure byom ecloud gcp ibmcloud ibmcloud_powervs libvirt
 endif
 
 all: build
