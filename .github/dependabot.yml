@@ -14,6 +14,9 @@ updates:
       codeql:
         patterns:
           - "github/codeql-action*"
+      osv-scanner:
+        patterns:
+          - "google/osv-scanner-action/*"
   - package-ecosystem: "gomod"
     directories:
       - "src/cloud-api-adaptor"
