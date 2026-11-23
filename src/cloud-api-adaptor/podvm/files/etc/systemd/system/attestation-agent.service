@@ -1,14 +1,19 @@
 [Unit]
 Description=Attestation Agent TTRPC API Server
-After=network.target process-user-data.service
+Wants=detect-platform.service
+After=network.target process-user-data.service detect-platform.service
 
 [Service]
 Type=simple
+EnvironmentFile=-/run/peerpod/platform.env
 ExecStartPre=mkdir -p /run/confidential-containers/attestation-agent
+# Pass -t only where detect-platform.service found that AA can bind initdata.
 ExecStartPre=/bin/sh -c '\
   initdata_file=/run/peerpod/initdata.toml; \
   env_file=/run/confidential-containers/attestation-agent/env; \
-  if [ -f "$$initdata_file" ]; then \
+  if [ "$$INITDATA_BINDING" != yes ]; then \
+  echo "Not binding initdata: INITDATA_BINDING=$$INITDATA_BINDING CSP=$$CSP"; \
+  elif [ -f "$$initdata_file" ]; then \
   echo "INITDATA_ARG=-t $$initdata_file" > "$$env_file"; \
   fi'
 EnvironmentFile=-/run/confidential-containers/attestation-agent/env
