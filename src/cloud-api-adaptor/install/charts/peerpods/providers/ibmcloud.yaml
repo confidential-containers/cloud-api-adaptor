@@ -34,6 +34,10 @@ providerConfigs:
     # (default: "")
     # FORWARDER_PORT: ""
 
+    # IBM Cloud Kubernetes Service URL
+    # (default: "https://containers.cloud.ibm.com/global")
+    # IBMCLOUD_CLUSTER_ENDPOINT: "https://containers.cloud.ibm.com/global"
+
     # Cluster ID
     # (default: "")
     # IBMCLOUD_CLUSTER_ID: ""
@@ -45,6 +49,10 @@ providerConfigs:
     # List of Dedicated Host IDs, provide one from each Zone
     # (default: "")
     # IBMCLOUD_DEDICATED_HOST_IDS: ""
+
+    # IBM Cloud Global Tagging Service URL
+    # (default: "")
+    # IBMCLOUD_GLOBAL_TAGGING_ENDPOINT: ""
 
     # IBM Cloud IAM Service URL
     # (default: "https://iam.cloud.ibm.com/identity/token")

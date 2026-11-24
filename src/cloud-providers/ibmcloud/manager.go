@@ -26,6 +26,8 @@ func (*Manager) ParseCmd(flags *flag.FlagSet) {
 	reg.StringWithEnv(&ibmcloudVPCConfig.IAMProfileID, "iam-profile-id", "", "IBMCLOUD_IAM_PROFILE_ID", "IBM IAM Profile ID", provider.Secret())
 	reg.StringWithEnv(&ibmcloudVPCConfig.IamServiceURL, "iam-service-url", "https://iam.cloud.ibm.com/identity/token", "IBMCLOUD_IAM_ENDPOINT", "IBM Cloud IAM Service URL")
 	reg.StringWithEnv(&ibmcloudVPCConfig.VpcServiceURL, "vpc-service-url", "", "IBMCLOUD_VPC_ENDPOINT", "IBM Cloud VPC Service URL")
+	reg.StringWithEnv(&ibmcloudVPCConfig.ClusterServiceURL, "cluster-service-url", DefaultServiceURL, "IBMCLOUD_CLUSTER_ENDPOINT", "IBM Cloud Kubernetes Service URL")
+	reg.StringWithEnv(&ibmcloudVPCConfig.GlobalTaggingServiceURL, "global-tagging-service-url", "", "IBMCLOUD_GLOBAL_TAGGING_ENDPOINT", "IBM Cloud Global Tagging Service URL")
 	reg.StringWithEnv(&ibmcloudVPCConfig.ResourceGroupID, "resource-group-id", "", "IBMCLOUD_RESOURCE_GROUP_ID", "Resource Group ID")
 	reg.StringWithEnv(&ibmcloudVPCConfig.ProfileName, "profile-name", "", "IBMCLOUD_PODVM_INSTANCE_PROFILE_NAME", "Default instance profile name to be used for the Pod VMs")
 	reg.StringWithEnv(&ibmcloudVPCConfig.ZoneName, "zone-name", "", "IBMCLOUD_ZONE", "Zone name")

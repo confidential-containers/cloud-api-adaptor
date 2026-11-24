@@ -188,12 +188,16 @@ func NewProvider(config *Config) (provider.Provider, error) {
 	gTaggingV1, err := globaltaggingv1.NewGlobalTaggingV1(
 		&globaltaggingv1.GlobalTaggingV1Options{
 			Authenticator: authenticator,
+			URL:           config.GlobalTaggingServiceURL,
 		})
 	if err != nil {
 		return nil, err
 	}
 
-	clusterV2, err := NewClusterV2Service(&ClusterOptions{Authenticator: authenticator})
+	clusterV2, err := NewClusterV2Service(&ClusterOptions{
+		URL:           config.ClusterServiceURL,
+		Authenticator: authenticator,
+	})
 	if err != nil {
 		return nil, err
 	}

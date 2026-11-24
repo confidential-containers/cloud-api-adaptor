@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -621,6 +622,36 @@ func TestCreateInstanceWithFallback(t *testing.T) {
 
 		require.ErrorIs(t, err, context.Canceled)
 		assert.Equal(t, 1, vpc.createCalls)
+	})
+}
+
+func TestNewClusterV2Service(t *testing.T) {
+	t.Run("uses the public endpoint by default", func(t *testing.T) {
+		cluster, err := NewClusterV2Service(&ClusterOptions{Authenticator: &core.NoAuthAuthenticator{}})
+		require.NoError(t, err)
+
+		assert.Equal(t, DefaultServiceURL, cluster.Service.GetServiceURL())
+	})
+
+	t.Run("sends requests to a configured endpoint", func(t *testing.T) {
+		var requested string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requested = r.URL.Path + "?" + r.URL.RawQuery
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `[{"id":"sg-1","name":"kube-cluster-1"}]`)
+		}))
+		t.Cleanup(server.Close)
+
+		cluster, err := NewClusterV2Service(&ClusterOptions{
+			URL:           server.URL + "/global",
+			Authenticator: &core.NoAuthAuthenticator{},
+		})
+		require.NoError(t, err)
+
+		id, err := fetchClusterSG(cluster, "cluster-1")
+		require.NoError(t, err)
+		assert.Equal(t, "sg-1", id)
+		assert.Equal(t, "/global/network/v2/security-group/getSecurityGroups?cluster=cluster-1&type=cluster", requested)
 	})
 }
 

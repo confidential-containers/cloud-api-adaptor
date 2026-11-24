@@ -121,6 +121,8 @@ type Config struct {
 	CRTokenFileName          string
 	IamServiceURL            string
 	VpcServiceURL            string
+	ClusterServiceURL        string
+	GlobalTaggingServiceURL  string
 	ResourceGroupID          string
 	ProfileName              string
 	ZoneName                 string

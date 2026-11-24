@@ -19,6 +19,8 @@ type ClusterV2 struct {
 const DefaultServiceURL = "https://containers.cloud.ibm.com/global"
 
 type ClusterOptions struct {
+	// URL defaults to DefaultServiceURL when empty.
+	URL           string
 	Authenticator core.Authenticator
 }
 
@@ -26,6 +28,9 @@ func NewClusterV2Service(options *ClusterOptions) (service *ClusterV2, err error
 	serviceOptions := &core.ServiceOptions{
 		URL:           DefaultServiceURL,
 		Authenticator: options.Authenticator,
+	}
+	if options.URL != "" {
+		serviceOptions.URL = options.URL
 	}
 
 	err = core.ValidateStruct(options, "options")
