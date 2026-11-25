@@ -17,6 +17,9 @@ import (
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -436,19 +439,38 @@ func (l *LibvirtInstallChart) createSSHKeySecret(ctx context.Context, cfg *envco
 		return fmt.Errorf("failed to create Namespace: %w", err)
 	}
 
-	// TODO rewrite this to use go's k8s framework once stable
-	args := []string{
-		"create", "secret", "generic", secretName,
-		"--from-file=id_rsa=" + sshKeyPath,
-		"-n", l.Helm.Namespace,
-	}
-	cmd := exec.Command("kubectl", args...)
-	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
-	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	keyData, err := os.ReadFile(sshKeyPath)
 	if err != nil {
-		return fmt.Errorf("failed to create ssh-key-secret: %w, output: %s", err, string(stdoutStderr))
+		return fmt.Errorf("failed to read ssh key file %s: %w", sshKeyPath, err)
 	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: l.Helm.Namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"id_rsa": keyData,
+		},
+	}
+
+	client := cfg.Client()
+	if err := client.Resources().Create(ctx, secret); err != nil {
+		if k8serrors.IsAlreadyExists(err) {
+			existingSecret := &corev1.Secret{}
+			if err := client.Resources().Get(ctx, secretName, l.Helm.Namespace, existingSecret); err != nil {
+				return fmt.Errorf("failed to get existing ssh-key-secret: %w", err)
+			}
+			existingSecret.Data = secret.Data
+			if err := client.Resources().Update(ctx, existingSecret); err != nil {
+				return fmt.Errorf("failed to update existing ssh-key-secret: %w", err)
+			}
+		} else {
+			return fmt.Errorf("failed to create ssh-key-secret: %w", err)
+		}
+	}
+
 	log.Infof("Created ssh-key-secret from %s", sshKeyPath)
 	return nil
 }
