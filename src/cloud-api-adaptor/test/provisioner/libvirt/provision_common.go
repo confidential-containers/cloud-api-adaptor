@@ -157,50 +157,54 @@ func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Con
 func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) error {
 	// TODO: create a temporary Network and storage pool to use on
 	// the tests.
-	var (
-		sPool *libvirt.StoragePool
-		err   error
-	)
-
-	if _, err := l.conn.LookupNetworkByName(l.network); err != nil {
+	net, err := l.conn.LookupNetworkByName(l.network)
+	if err != nil {
 		return fmt.Errorf("network '%s' not found. It should be created beforehand", l.network)
 	}
+	_ = net.Free()
 
-	if sPool, err = l.conn.LookupStoragePoolByName(l.storage); err != nil {
+	sPool, err := l.conn.LookupStoragePoolByName(l.storage)
+	if err != nil {
 		return fmt.Errorf("storage pool '%s' not found. It should be created beforehand", l.storage)
 	}
+	defer func() { _ = sPool.Free() }()
 
 	// Create two volumes to test the multiple podvm image scenario.
 	lVolumes := [2]string{l.volumeName, AlternateVolumeName}
 
 	// Create the podvm storage volumes if it does not exist.
 	for _, volume := range lVolumes {
-		if _, err = sPool.LookupStorageVolByName(volume); err != nil {
-			volCfg := libvirtxml.StorageVolume{
-				Name: volume,
-				Capacity: &libvirtxml.StorageVolumeSize{
-					Unit:  "GiB",
-					Value: 20,
-				},
-				Allocation: &libvirtxml.StorageVolumeSize{
-					Unit:  "GiB",
-					Value: 2,
-				},
-				Target: &libvirtxml.StorageVolumeTarget{
-					Format: &libvirtxml.StorageVolumeTargetFormat{
-						Type: "qcow2",
-					},
-				},
-			}
-			xml, err := volCfg.Marshal()
-			if err != nil {
-				return err
-			}
-			if _, err = sPool.StorageVolCreateXML(xml, libvirt.STORAGE_VOL_CREATE_PREALLOC_METADATA); err != nil {
-				return err
-			}
-			l.createdVolumes = append(l.createdVolumes, volume)
+		sVol, err := sPool.LookupStorageVolByName(volume)
+		if err == nil {
+			_ = sVol.Free()
+			continue
 		}
+		volCfg := libvirtxml.StorageVolume{
+			Name: volume,
+			Capacity: &libvirtxml.StorageVolumeSize{
+				Unit:  "GiB",
+				Value: 20,
+			},
+			Allocation: &libvirtxml.StorageVolumeSize{
+				Unit:  "GiB",
+				Value: 2,
+			},
+			Target: &libvirtxml.StorageVolumeTarget{
+				Format: &libvirtxml.StorageVolumeTargetFormat{
+					Type: "qcow2",
+				},
+			},
+		}
+		xml, err := volCfg.Marshal()
+		if err != nil {
+			return err
+		}
+		newVol, err := sPool.StorageVolCreateXML(xml, libvirt.STORAGE_VOL_CREATE_PREALLOC_METADATA)
+		if err != nil {
+			return err
+		}
+		_ = newVol.Free()
+		l.createdVolumes = append(l.createdVolumes, volume)
 	}
 	return nil
 }
@@ -265,12 +269,18 @@ func (l *LibvirtProvisioner) UploadPodvm(imagePath string, ctx context.Context, 
 	if err != nil {
 		return err
 	}
+	defer func() { _ = sPool.Free() }()
 
 	fileStat, err := os.Stat(imagePath)
 	if err != nil {
 		return err
 	}
 	length := fileStat.Size()
+
+	fileByteSlice, err := os.ReadFile(imagePath)
+	if err != nil {
+		return err
+	}
 
 	lVolumes := [2]string{l.volumeName, AlternateVolumeName}
 
@@ -282,45 +292,45 @@ func (l *LibvirtProvisioner) UploadPodvm(imagePath string, ctx context.Context, 
 
 		stream, err := l.conn.NewStream(0)
 		if err != nil {
+			_ = sVol.Free()
 			return err
 		}
 
-		if err := sVol.Upload(stream, 0, uint64(length), libvirt.STORAGE_VOL_UPLOAD_SPARSE_STREAM); err != nil {
-			return err
-		}
+		uploadErr := func() error {
+			defer func() { _ = sVol.Free() }()
+			defer func() { _ = stream.Free() }()
 
-		fileByteSlice, err := os.ReadFile(imagePath)
-		if err != nil {
-			return err
-		}
-
-		sent := 0
-		source := func(stream *libvirt.Stream, nbytes int) ([]byte, error) {
-			tosend := nbytes
-			if tosend > (len(fileByteSlice) - sent) {
-				tosend = len(fileByteSlice) - sent
+			if err := sVol.Upload(stream, 0, uint64(length), libvirt.STORAGE_VOL_UPLOAD_SPARSE_STREAM); err != nil {
+				_ = stream.Abort()
+				return err
 			}
 
-			if tosend == 0 {
-				return []byte{}, nil
+			sent := 0
+			source := func(stream *libvirt.Stream, nbytes int) ([]byte, error) {
+				tosend := nbytes
+				if tosend > (len(fileByteSlice) - sent) {
+					tosend = len(fileByteSlice) - sent
+				}
+
+				if tosend == 0 {
+					return []byte{}, nil
+				}
+
+				data := fileByteSlice[sent : sent+tosend]
+				sent += tosend
+
+				return data, nil
 			}
 
-			data := fileByteSlice[sent : sent+tosend]
-			sent += tosend
+			if err := stream.SendAll(source); err != nil {
+				_ = stream.Abort()
+				return err
+			}
 
-			return data, nil
-		}
-
-		if err := stream.SendAll(source); err != nil {
-			return err
-		}
-
-		if err := stream.Finish(); err != nil {
-			return err
-		}
-
-		if err := stream.Free(); err != nil {
-			return err
+			return stream.Finish()
+		}()
+		if uploadErr != nil {
+			return uploadErr
 		}
 	}
 
