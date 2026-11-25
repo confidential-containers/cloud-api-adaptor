@@ -110,7 +110,6 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		initdata = properties["INITDATA"]
 	}
 
-	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
 		caaImage:         properties["CAA_IMAGE"],
 		conn:             conn,
