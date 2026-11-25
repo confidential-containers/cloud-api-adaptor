@@ -190,5 +190,20 @@ data:
 kind: ConfigMap
 ```
 
+## Security considerations
+
+Initdata is not confidential. It is delivered to the pod VM through the provider's user-data
+or config-drive mechanisms in plain text. Anything that can read a VM's user-data can read the
+initdata: VM root always can, and on peer pods a workload author who may choose the pod VM
+image (the `image` annotation) controls the VM that receives it. Treat the cluster-wide
+`INITDATA` as tenant-visible configuration and keep secrets out of it.
+
+More important for CoCo is the untrusted nature of initdata: its integrity must be guaranteed
+and trust established by a verification that binds it to the TEE, for example by measuring it
+into a TEE-bound runtime register that is verified during remote attestation. The
+[initdata digest and its use in attestation-service policy](#provision-initdata-files) is one
+mechanism for establishing that binding. Per-pod `cc_init_data` is authored by the pod author
+and is untrusted, tenant-owned input unless such a binding is in place.
+
 ## TODO
 A large policy bodies that cannot be provisioned via IMDS user-data, the limitation depends on providers IMDS limitation. We need add checking and limitations according to test result future.
