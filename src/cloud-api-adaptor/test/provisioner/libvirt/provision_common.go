@@ -41,6 +41,7 @@ type LibvirtProvisioner struct {
 	tunnelType       string           // Tunnel Type
 	vxlanPort        string           // VXLAN port number
 	initdata         string           // InitData
+	createdVolumes   []string         // Podvm volumes created by CreateVPC
 }
 
 type LibvirtInstallChart struct {
@@ -198,6 +199,7 @@ func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config)
 			if _, err = sPool.StorageVolCreateXML(xml, libvirt.STORAGE_VOL_CREATE_PREALLOC_METADATA); err != nil {
 				return err
 			}
+			l.createdVolumes = append(l.createdVolumes, volume)
 		}
 	}
 	return nil
@@ -218,8 +220,26 @@ func (l *LibvirtProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Con
 }
 
 func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
-	// TODO: delete the resources created on CreateVPC() that currently only checks
-	// the Libvirt's storage and network exist.
+	sPool, err := l.conn.LookupStoragePoolByName(l.storage)
+	if err != nil {
+		return fmt.Errorf("storage pool '%s' not found: %w", l.storage, err)
+	}
+	defer func() { _ = sPool.Free() }()
+
+	// Only delete the volumes created by CreateVPC, so that pre-existing
+	// volumes are left untouched.
+	for _, volume := range l.createdVolumes {
+		sVol, err := sPool.LookupStorageVolByName(volume)
+		if err != nil {
+			// Volume does not exist or already deleted
+			continue
+		}
+		if err := sVol.Delete(0); err != nil {
+			log.Warnf("failed to delete storage volume '%s': %v", volume, err)
+		}
+		_ = sVol.Free()
+	}
+	l.createdVolumes = nil
 	return nil
 }
 
