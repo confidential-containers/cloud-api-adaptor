@@ -317,26 +317,41 @@ func setVolumeOwnership(root string, gid uint32) error {
 		return nil
 	}
 
-	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if path == root {
+			return nil
 		}
 		info, err := d.Info()
 		if err != nil {
 			return err
 		}
-		if err := os.Lchown(path, -1, int(gid)); err != nil {
-			return err
-		}
-		if info.Mode()&os.ModeSymlink != 0 {
-			return nil
-		}
-		mode := fsGroupFileMode
-		if info.IsDir() {
-			mode = fsGroupDirMode
-		}
-		return os.Chmod(path, info.Mode()|mode)
+		return setFileOwnership(path, info, gid)
 	})
+	if err != nil {
+		return err
+	}
+	// root goes last, so a walk that failed part way is repeated by the next
+	// container rather than passing the check above
+	return setFileOwnership(root, info, gid)
+}
+
+// setFileOwnership gives one file or directory the group and the fsGroup mode
+// bits. A symlink only gets the group, as chmod would follow it.
+func setFileOwnership(path string, info fs.FileInfo, gid uint32) error {
+	if err := os.Lchown(path, -1, int(gid)); err != nil {
+		return err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return nil
+	}
+	mode := fsGroupFileMode
+	if info.IsDir() {
+		mode = fsGroupDirMode
+	}
+	return os.Chmod(path, info.Mode()|mode)
 }
 
 // hasVolumeOwnership reports whether a volume root already has the fsGroup
