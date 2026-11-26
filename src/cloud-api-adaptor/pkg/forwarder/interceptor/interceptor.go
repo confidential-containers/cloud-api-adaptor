@@ -271,7 +271,8 @@ func (i *interceptor) CreateContainer(ctx context.Context, req *pb.CreateContain
 // untrusted host, so an unchecked value could make the volume writable by
 // any group in the PodVM.
 func checkFSGroup(value string, process *pb.Process) (uint32, error) {
-	gid, err := strconv.ParseUint(value, 10, 32)
+	// 31 bits, as chown takes the group as an int and reads -1 as no change
+	gid, err := strconv.ParseUint(value, 10, 31)
 	if err != nil {
 		return 0, fmt.Errorf("invalid fs_group %q: %w", value, err)
 	}

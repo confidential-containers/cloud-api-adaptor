@@ -1133,7 +1133,7 @@ func TestCheckFSGroup(t *testing.T) {
 		{name: "group the process lacks", value: "3000", process: process, wantErr: "not a group of the container process"},
 		{name: "no process", value: "2000", wantErr: "not a group of the container process"},
 		{name: "not a number", value: "staff", process: process, wantErr: "invalid fs_group"},
-		{name: "out of range", value: "4294967296", process: process, wantErr: "invalid fs_group"},
+		{name: "out of range", value: "2147483648", process: process, wantErr: "invalid fs_group"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
