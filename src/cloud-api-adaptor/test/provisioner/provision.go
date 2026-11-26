@@ -256,6 +256,18 @@ func GetCAANamespace() string {
 	return namespace
 }
 
+func GetCAAPodLabel() (string, string) {
+	labelName := os.Getenv("TEST_CAA_POD_LABEL_NAME")
+	if labelName == "" {
+		labelName = "app"
+	}
+	labelValue := os.Getenv("TEST_CAA_POD_LABEL_VALUE")
+	if labelValue == "" {
+		labelValue = "cloud-api-adaptor"
+	}
+	return labelName, labelValue
+}
+
 // installCertManager installs cert-manager which is required for the webhook
 func (p *CloudAPIAdaptor) installCertManager(ctx context.Context, cfg *envconf.Config) error {
 	log.Info("Installing cert-manager")
@@ -366,4 +378,8 @@ func waitForNamespaceToBeUseable(ctx context.Context, client klient.Client, name
 		time.Sleep(5 * time.Second)
 	}
 	return fmt.Errorf("default service account not found in namespace '%s' after %.0f seconds wait", namespaceName, WaitNamespaceAvailableTimeout.Seconds())
+}
+
+func SkipPodVMValidation() bool {
+	return os.Getenv("SKIP_PODVM_VALIDATION") == "true"
 }
