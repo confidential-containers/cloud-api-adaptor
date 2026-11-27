@@ -145,9 +145,15 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 			}
 
 			diskID := ""
+			fsGroup := ""
 			if md, ok := mountInfo["metadata"].(map[string]interface{}); ok {
 				if cp, ok := md["cloud-volume-path"].(string); ok && cp != "" {
 					diskID = cp
+				}
+				// set by the CSI driver from the pod's fsGroup, under the key
+				// kata-runtime direct-volume uses
+				if fg, ok := md["fsGroup"].(string); ok {
+					fsGroup = fg
 				}
 			}
 			if diskID == "" {
@@ -196,6 +202,7 @@ func (s *proxyService) CreateContainer(ctx context.Context, req *pb.CreateContai
 				LUN:        fmt.Sprintf("%d", canonicalIdx),
 				Device:     device,
 				DiskID:     diskID,
+				FSGroup:    fsGroup,
 			}
 			logger.Printf("Detected cloud volume %s -> %s (lun=%d, disk=%s, fs=%s)", volKey, mountDest, canonicalIdx, diskID, fsType)
 			canonicalIdx++

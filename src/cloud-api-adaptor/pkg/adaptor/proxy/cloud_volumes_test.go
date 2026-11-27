@@ -53,6 +53,7 @@ func TestCloudVolumes_SingleVolumeAnnotation(t *testing.T) {
 		"fstype": "ext4",
 		"metadata": map[string]interface{}{
 			"cloud-volume-path": "/subscriptions/sub/disks/csi-vol-pvc-test",
+			"fsGroup":           "2000",
 		},
 	})
 
@@ -82,6 +83,7 @@ func TestCloudVolumes_SingleVolumeAnnotation(t *testing.T) {
 	assert.Equal(t, "0", cloudVolumes["vol-0"]["lun"])
 	assert.Equal(t, "/dev/disk/by-id/virtio-0757-9c534b6c-b446-4", cloudVolumes["vol-0"]["device"])
 	assert.Equal(t, "/subscriptions/sub/disks/csi-vol-pvc-test", cloudVolumes["vol-0"]["disk_id"])
+	assert.Equal(t, "2000", cloudVolumes["vol-0"]["fs_group"])
 }
 
 func TestCloudVolumes_MultipleVolumes(t *testing.T) {
