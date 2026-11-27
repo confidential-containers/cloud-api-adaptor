@@ -17,6 +17,9 @@ import (
 
 	pv "github.com/confidential-containers/cloud-api-adaptor/src/cloud-api-adaptor/test/provisioner"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -41,6 +44,7 @@ type LibvirtProvisioner struct {
 	tunnelType       string           // Tunnel Type
 	vxlanPort        string           // VXLAN port number
 	initdata         string           // InitData
+	createdVolumes   []string         // Podvm volumes created by CreateVPC
 }
 
 type LibvirtInstallChart struct {
@@ -106,7 +110,6 @@ func NewLibvirtProvisioner(properties map[string]string) (pv.CloudProvisioner, e
 		initdata = properties["INITDATA"]
 	}
 
-	// TODO: Check network and storage are not nil?
 	return &LibvirtProvisioner{
 		caaImage:         properties["CAA_IMAGE"],
 		conn:             conn,
@@ -156,49 +159,54 @@ func (l *LibvirtProvisioner) CreateCluster(ctx context.Context, cfg *envconf.Con
 func (l *LibvirtProvisioner) CreateVPC(ctx context.Context, cfg *envconf.Config) error {
 	// TODO: create a temporary Network and storage pool to use on
 	// the tests.
-	var (
-		sPool *libvirt.StoragePool
-		err   error
-	)
-
-	if _, err := l.conn.LookupNetworkByName(l.network); err != nil {
+	net, err := l.conn.LookupNetworkByName(l.network)
+	if err != nil {
 		return fmt.Errorf("network '%s' not found. It should be created beforehand", l.network)
 	}
+	_ = net.Free()
 
-	if sPool, err = l.conn.LookupStoragePoolByName(l.storage); err != nil {
+	sPool, err := l.conn.LookupStoragePoolByName(l.storage)
+	if err != nil {
 		return fmt.Errorf("storage pool '%s' not found. It should be created beforehand", l.storage)
 	}
+	defer func() { _ = sPool.Free() }()
 
 	// Create two volumes to test the multiple podvm image scenario.
 	lVolumes := [2]string{l.volumeName, AlternateVolumeName}
 
 	// Create the podvm storage volumes if it does not exist.
 	for _, volume := range lVolumes {
-		if _, err = sPool.LookupStorageVolByName(volume); err != nil {
-			volCfg := libvirtxml.StorageVolume{
-				Name: volume,
-				Capacity: &libvirtxml.StorageVolumeSize{
-					Unit:  "GiB",
-					Value: 20,
-				},
-				Allocation: &libvirtxml.StorageVolumeSize{
-					Unit:  "GiB",
-					Value: 2,
-				},
-				Target: &libvirtxml.StorageVolumeTarget{
-					Format: &libvirtxml.StorageVolumeTargetFormat{
-						Type: "qcow2",
-					},
-				},
-			}
-			xml, err := volCfg.Marshal()
-			if err != nil {
-				return err
-			}
-			if _, err = sPool.StorageVolCreateXML(xml, libvirt.STORAGE_VOL_CREATE_PREALLOC_METADATA); err != nil {
-				return err
-			}
+		sVol, err := sPool.LookupStorageVolByName(volume)
+		if err == nil {
+			_ = sVol.Free()
+			continue
 		}
+		volCfg := libvirtxml.StorageVolume{
+			Name: volume,
+			Capacity: &libvirtxml.StorageVolumeSize{
+				Unit:  "GiB",
+				Value: 20,
+			},
+			Allocation: &libvirtxml.StorageVolumeSize{
+				Unit:  "GiB",
+				Value: 2,
+			},
+			Target: &libvirtxml.StorageVolumeTarget{
+				Format: &libvirtxml.StorageVolumeTargetFormat{
+					Type: "qcow2",
+				},
+			},
+		}
+		xml, err := volCfg.Marshal()
+		if err != nil {
+			return err
+		}
+		newVol, err := sPool.StorageVolCreateXML(xml, libvirt.STORAGE_VOL_CREATE_PREALLOC_METADATA)
+		if err != nil {
+			return err
+		}
+		_ = newVol.Free()
+		l.createdVolumes = append(l.createdVolumes, volume)
 	}
 	return nil
 }
@@ -218,8 +226,26 @@ func (l *LibvirtProvisioner) DeleteCluster(ctx context.Context, cfg *envconf.Con
 }
 
 func (l *LibvirtProvisioner) DeleteVPC(ctx context.Context, cfg *envconf.Config) error {
-	// TODO: delete the resources created on CreateVPC() that currently only checks
-	// the Libvirt's storage and network exist.
+	sPool, err := l.conn.LookupStoragePoolByName(l.storage)
+	if err != nil {
+		return fmt.Errorf("storage pool '%s' not found: %w", l.storage, err)
+	}
+	defer func() { _ = sPool.Free() }()
+
+	// Only delete the volumes created by CreateVPC, so that pre-existing
+	// volumes are left untouched.
+	for _, volume := range l.createdVolumes {
+		sVol, err := sPool.LookupStorageVolByName(volume)
+		if err != nil {
+			// Volume does not exist or already deleted
+			continue
+		}
+		if err := sVol.Delete(0); err != nil {
+			log.Warnf("failed to delete storage volume '%s': %v", volume, err)
+		}
+		_ = sVol.Free()
+	}
+	l.createdVolumes = nil
 	return nil
 }
 
@@ -245,12 +271,18 @@ func (l *LibvirtProvisioner) UploadPodvm(imagePath string, ctx context.Context, 
 	if err != nil {
 		return err
 	}
+	defer func() { _ = sPool.Free() }()
 
 	fileStat, err := os.Stat(imagePath)
 	if err != nil {
 		return err
 	}
 	length := fileStat.Size()
+
+	fileByteSlice, err := os.ReadFile(imagePath)
+	if err != nil {
+		return err
+	}
 
 	lVolumes := [2]string{l.volumeName, AlternateVolumeName}
 
@@ -262,45 +294,45 @@ func (l *LibvirtProvisioner) UploadPodvm(imagePath string, ctx context.Context, 
 
 		stream, err := l.conn.NewStream(0)
 		if err != nil {
+			_ = sVol.Free()
 			return err
 		}
 
-		if err := sVol.Upload(stream, 0, uint64(length), libvirt.STORAGE_VOL_UPLOAD_SPARSE_STREAM); err != nil {
-			return err
-		}
+		uploadErr := func() error {
+			defer func() { _ = sVol.Free() }()
+			defer func() { _ = stream.Free() }()
 
-		fileByteSlice, err := os.ReadFile(imagePath)
-		if err != nil {
-			return err
-		}
-
-		sent := 0
-		source := func(stream *libvirt.Stream, nbytes int) ([]byte, error) {
-			tosend := nbytes
-			if tosend > (len(fileByteSlice) - sent) {
-				tosend = len(fileByteSlice) - sent
+			if err := sVol.Upload(stream, 0, uint64(length), libvirt.STORAGE_VOL_UPLOAD_SPARSE_STREAM); err != nil {
+				_ = stream.Abort()
+				return err
 			}
 
-			if tosend == 0 {
-				return []byte{}, nil
+			sent := 0
+			source := func(stream *libvirt.Stream, nbytes int) ([]byte, error) {
+				tosend := nbytes
+				if tosend > (len(fileByteSlice) - sent) {
+					tosend = len(fileByteSlice) - sent
+				}
+
+				if tosend == 0 {
+					return []byte{}, nil
+				}
+
+				data := fileByteSlice[sent : sent+tosend]
+				sent += tosend
+
+				return data, nil
 			}
 
-			data := fileByteSlice[sent : sent+tosend]
-			sent += tosend
+			if err := stream.SendAll(source); err != nil {
+				_ = stream.Abort()
+				return err
+			}
 
-			return data, nil
-		}
-
-		if err := stream.SendAll(source); err != nil {
-			return err
-		}
-
-		if err := stream.Finish(); err != nil {
-			return err
-		}
-
-		if err := stream.Free(); err != nil {
-			return err
+			return stream.Finish()
+		}()
+		if uploadErr != nil {
+			return uploadErr
 		}
 	}
 
@@ -406,19 +438,38 @@ func (l *LibvirtInstallChart) createSSHKeySecret(ctx context.Context, cfg *envco
 		return fmt.Errorf("failed to create Namespace: %w", err)
 	}
 
-	// TODO rewrite this to use go's k8s framework once stable
-	args := []string{
-		"create", "secret", "generic", secretName,
-		"--from-file=id_rsa=" + sshKeyPath,
-		"-n", l.Helm.Namespace,
-	}
-	cmd := exec.Command("kubectl", args...)
-	cmd.Env = append(os.Environ(), "KUBECONFIG="+cfg.KubeconfigFile())
-	stdoutStderr, err := cmd.CombinedOutput()
-	log.Tracef("%v, output: %s", cmd, stdoutStderr)
+	keyData, err := os.ReadFile(sshKeyPath)
 	if err != nil {
-		return fmt.Errorf("failed to create ssh-key-secret: %w, output: %s", err, string(stdoutStderr))
+		return fmt.Errorf("failed to read ssh key file %s: %w", sshKeyPath, err)
 	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: l.Helm.Namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"id_rsa": keyData,
+		},
+	}
+
+	client := cfg.Client()
+	if err := client.Resources().Create(ctx, secret); err != nil {
+		if k8serrors.IsAlreadyExists(err) {
+			existingSecret := &corev1.Secret{}
+			if err := client.Resources().Get(ctx, secretName, l.Helm.Namespace, existingSecret); err != nil {
+				return fmt.Errorf("failed to get existing ssh-key-secret: %w", err)
+			}
+			existingSecret.Data = secret.Data
+			if err := client.Resources().Update(ctx, existingSecret); err != nil {
+				return fmt.Errorf("failed to update existing ssh-key-secret: %w", err)
+			}
+		} else {
+			return fmt.Errorf("failed to create ssh-key-secret: %w", err)
+		}
+	}
+
 	log.Infof("Created ssh-key-secret from %s", sshKeyPath)
 	return nil
 }
