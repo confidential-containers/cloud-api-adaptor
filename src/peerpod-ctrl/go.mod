@@ -92,7 +92,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
@@ -113,7 +113,7 @@ require (
 )
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.3 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.24.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.15.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.13.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1 // indirect
