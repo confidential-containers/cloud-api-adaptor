@@ -1,0 +1,11 @@
+[Unit]
+Description=Detect the platform for attestation-agent.service
+Before=attestation-agent.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/process-user-data detect-platform
+
+[Install]
+WantedBy=multi-user.target

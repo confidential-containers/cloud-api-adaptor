@@ -70,6 +70,16 @@ func init() {
 		SilenceUsage: true, // Silence usage on error
 	}
 	rootCmd.AddCommand(assertConfigDrive)
+
+	detectPlatform := &cobra.Command{
+		Use:   "detect-platform",
+		Short: "Detect the platform and write the result to " + userdata.PlatformEnvPath,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return userdata.WritePlatformEnv(userdata.PlatformEnvPath)
+		},
+		SilenceUsage: true, // Silence usage on error
+	}
+	rootCmd.AddCommand(detectPlatform)
 }
 
 func main() {
